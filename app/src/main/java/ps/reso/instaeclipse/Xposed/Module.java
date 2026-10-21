@@ -201,7 +201,11 @@ public class Module {
                         android.content.pm.PackageInfo pi =
                                 context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
                         long vc = pi.getLongVersionCode();
-                        DexKitCache.init(context, String.valueOf(vc));
+                        // The module APK is part of the key: a new module build may look things up
+                        // differently, so it must not reuse what an older build cached for this IG.
+                        String module = moduleSourceDir == null ? ""
+                                : moduleSourceDir + "|" + new java.io.File(moduleSourceDir).length();
+                        DexKitCache.init(context, vc + "|" + module);
                     } catch (Throwable e) {
                         ModuleLog.line("(DexKitCache) ❌ init failed: " + e.getMessage());
                     }
