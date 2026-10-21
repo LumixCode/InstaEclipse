@@ -62,6 +62,7 @@ public class FeatureFlags {
     public static volatile boolean hideDmSuggestions = false; // no "Suggested for you" accounts under the DM inbox (#282)
     public static volatile boolean chatExport = false; // header button: export the open chat to HTML (#225)
     public static volatile boolean jumpToFirstMessage = false; // header button: scroll a DM to its first message (#244)
+    public static volatile boolean hideChatMenuButton = false; // chat header: hide the InstaEclipse menu button; a triple tap after the chat name opens the menu
     public static volatile boolean translateMessages = false; // "Translate" in the DM message long-press menu
     public static volatile boolean bulkUnsend = false; // "Unsend multiple" in the DM message long-press menu (#245)
     public static volatile boolean keepEditHistory = false; // show previous text of edited DMs (#243)

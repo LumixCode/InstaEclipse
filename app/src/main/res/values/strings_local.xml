@@ -2,6 +2,10 @@
 <!-- Strings of the local custom build. Kept out of strings.xml so upstream's file and its
      translations stay byte-identical; these fall back to English in every locale. -->
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <!-- Chat header menu -->
+    <string name="ig_hide_chat_menu_button">Hide chat menu button</string>
+    <string name="ig_hide_chat_menu_button_hint">Triple-tap the empty space between the chat name and the call buttons to open the menu</string>
+
 
     <!-- Unsent messages: local behaviour keeps them in the chat (upstream only logs them) -->
     <string name="ig_dialog_ghost_keep_unsent_chat">Keep Unsent Messages</string>

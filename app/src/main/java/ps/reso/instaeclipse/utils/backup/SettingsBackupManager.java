@@ -66,6 +66,7 @@ public class SettingsBackupManager {
         s.put("holdLeftSlowMotion",         FeatureFlags.holdLeftSlowMotion);
         s.put("keepEditHistory",            FeatureFlags.keepEditHistory);
         s.put("jumpToFirstMessage",         FeatureFlags.jumpToFirstMessage);
+        s.put("hideChatMenuButton",         FeatureFlags.hideChatMenuButton);
         s.put("translateMessages",          FeatureFlags.translateMessages);
         s.put("bulkUnsend",                 FeatureFlags.bulkUnsend);
         s.put("chatExport",                 FeatureFlags.chatExport);
@@ -234,6 +235,7 @@ public class SettingsBackupManager {
         if (s.has("holdLeftSlowMotion"))        FeatureFlags.holdLeftSlowMotion        = s.getBoolean("holdLeftSlowMotion");
         if (s.has("keepEditHistory"))           FeatureFlags.keepEditHistory           = s.getBoolean("keepEditHistory");
         if (s.has("jumpToFirstMessage"))        FeatureFlags.jumpToFirstMessage        = s.getBoolean("jumpToFirstMessage");
+        if (s.has("hideChatMenuButton"))        FeatureFlags.hideChatMenuButton        = s.getBoolean("hideChatMenuButton");
         if (s.has("translateMessages"))         FeatureFlags.translateMessages         = s.getBoolean("translateMessages");
         if (s.has("bulkUnsend"))                FeatureFlags.bulkUnsend                = s.getBoolean("bulkUnsend");
         if (s.has("chatExport"))                FeatureFlags.chatExport                = s.getBoolean("chatExport");

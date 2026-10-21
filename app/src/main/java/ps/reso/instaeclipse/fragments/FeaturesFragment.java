@@ -1128,6 +1128,8 @@ public class FeaturesFragment extends Fragment {
 
     private List<Object> buildMessagesDefs() {
         List<Object> defs = new ArrayList<>();
+        FeatureItem hideMenuButton = createSwitch(R.drawable.ic_tune, "#5E5CE6", getString(R.string.ig_hide_chat_menu_button), "hideChatMenuButton");
+        hideMenuButton.subtitle = getString(R.string.ig_hide_chat_menu_button_hint);
 
         defs.add(getString(R.string.feat_features));
         defs.add(Arrays.asList(

@@ -108,6 +108,7 @@ public class SettingsManager {
         editor.putBoolean("holdLeftSlowMotion", FeatureFlags.holdLeftSlowMotion);
         editor.putBoolean("keepEditHistory", FeatureFlags.keepEditHistory);
         editor.putBoolean("jumpToFirstMessage", FeatureFlags.jumpToFirstMessage);
+        editor.putBoolean("hideChatMenuButton", FeatureFlags.hideChatMenuButton);
         editor.putBoolean("translateMessages", FeatureFlags.translateMessages);
         editor.putBoolean("bulkUnsend", FeatureFlags.bulkUnsend);
         editor.putBoolean("chatExport", FeatureFlags.chatExport);
@@ -324,6 +325,7 @@ public class SettingsManager {
         FeatureFlags.holdLeftSlowMotion = prefs.getBoolean("holdLeftSlowMotion", false);
         FeatureFlags.keepEditHistory = prefs.getBoolean("keepEditHistory", false);
         FeatureFlags.jumpToFirstMessage = prefs.getBoolean("jumpToFirstMessage", false);
+        FeatureFlags.hideChatMenuButton = prefs.getBoolean("hideChatMenuButton", false);
         FeatureFlags.translateMessages = prefs.getBoolean("translateMessages", false);
         FeatureFlags.bulkUnsend = prefs.getBoolean("bulkUnsend", false);
         FeatureFlags.chatExport = prefs.getBoolean("chatExport", false);
