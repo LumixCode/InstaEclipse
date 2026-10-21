@@ -10,13 +10,10 @@ import ps.reso.instaeclipse.utils.feature.FeatureManager;
 public class SettingsManager {
     private static final String PREF_NAME = "instaeclipse_prefs";
     private static SharedPreferences prefs;
-    private static Boolean appliedHideState;
-    private static boolean hostProcess;
     /** Application context, for pushing in-app changes to the companion (CompanionSync). */
     private static Context appContext;
 
     public static void init(Context context) {
-        hostProcess = context != null && CommonUtils.SUPPORTED_PACKAGES.contains(context.getPackageName());
         if (appContext == null && context != null) {
             appContext = context.getApplicationContext() != null ? context.getApplicationContext() : context;
         }
@@ -219,13 +216,6 @@ public class SettingsManager {
         CompanionSync.pushAsync(appContext);
 
         FeatureManager.refreshFeatureStatus();
-        if (hostProcess) {
-            ps.reso.instaeclipse.mods.ghost.KeepUnsentMessagesHook.onSettingsChanged();
-            ps.reso.instaeclipse.mods.ghost.ConversationMenuHook.refreshAll();
-            if (appliedHideState != null && appliedHideState != FeatureFlags.hideSpecificChats)
-                ps.reso.instaeclipse.mods.ghost.HideChatsHook.refreshKnownAccounts();
-            appliedHideState = FeatureFlags.hideSpecificChats;
-        }
     }
 
     /** Marks keys whose value this save changed, so an older companion value never overrides them. */
@@ -442,13 +432,6 @@ public class SettingsManager {
         for (String flag : ExtrasFeatures.flags()) ExtrasFeatures.set(flag, prefs.getBoolean(flag, false));
 
         FeatureManager.refreshFeatureStatus();
-        if (hostProcess) {
-            ps.reso.instaeclipse.mods.ghost.KeepUnsentMessagesHook.onSettingsChanged();
-            ps.reso.instaeclipse.mods.ghost.ConversationMenuHook.refreshAll();
-            if (appliedHideState != null && appliedHideState != FeatureFlags.hideSpecificChats)
-                ps.reso.instaeclipse.mods.ghost.HideChatsHook.refreshKnownAccounts();
-            appliedHideState = FeatureFlags.hideSpecificChats;
-        }
     }
 
     private static double readDoublePref(SharedPreferences p, String key, double fallback) {

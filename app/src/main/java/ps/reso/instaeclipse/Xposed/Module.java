@@ -225,7 +225,6 @@ public class Module {
                     ps.reso.instaeclipse.utils.core.CompanionSync.pushAsync(context);
                     // ...and while it sat frozen in the background: check again on every resume.
                     if (param.thisObject instanceof android.app.Application) {
-                        ps.reso.instaeclipse.utils.ghost.CurrentConversation.registerApplication((android.app.Application) param.thisObject);
                         ((android.app.Application) param.thisObject).registerActivityLifecycleCallbacks(
                                 new android.app.Application.ActivityLifecycleCallbacks() {
                                     @Override public void onActivityResumed(android.app.Activity a) {
@@ -328,8 +327,6 @@ public class Module {
                     }
 
                     try {
-                        ps.reso.instaeclipse.utils.ghost.CurrentConversation.install(dexKitBridge, lpparam.classLoader);
-                        ps.reso.instaeclipse.mods.ghost.ConversationMenuHook.install();
                         if (!skip("KeepUnsentMessagesHook")) new KeepUnsentMessagesHook().install(dexKitBridge, lpparam.classLoader); // Keep Unsent
                     } catch (Throwable ignored) {
                         ModuleLog.line("(InstaEclipse | KeepUnsent): ❌ Failed to hook");

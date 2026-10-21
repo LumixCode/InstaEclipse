@@ -108,6 +108,7 @@ public class UIHookManager {
         // Lock DMs: arm the inbox passcode watcher on the main activity (its onCreate is
         // obfuscated, so a direct hook fails — this runs from the module's resolved main hook).
         ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.watchActivity(activity);
+        ps.reso.instaeclipse.mods.ghost.HideChatsHook.watchActivity(activity);
 
         // Remove Meta AI: collapse the "About this reel" Content Deep Dive section (AI summary +
         // "Ask Meta AI…" composer) inside the reel/post action sheet. It is a Litho-rendered

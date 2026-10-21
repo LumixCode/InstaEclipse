@@ -134,7 +134,10 @@ public final class CurrentThreadTracker {
                 Object v = b.get(k);
                 if (v == null) continue;
                 if (DTK.equals(v.getClass().getName())) {
-                    String id = firstStringField(v);
+                    // Same canonical id (mThreadId) as the hidden/locked/unsent stores; the first
+                    // String field is only a fallback, its order can change between builds.
+                    String id = UnsentIdentity.threadId(v.toString());
+                    if (id == null) id = firstStringField(v);
                     if (id != null) return id;
                 } else if (v instanceof Bundle nested) {
                     String id = threadIdFromBundle(nested, cl, depth + 1);

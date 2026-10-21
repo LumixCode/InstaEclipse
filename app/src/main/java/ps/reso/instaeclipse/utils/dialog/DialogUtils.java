@@ -1852,32 +1852,43 @@ public class DialogUtils {
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_misc_lock_section), layout, () -> {});
     }
 
-    /** Hide Specific Chats: account-scoped manager and an independent optional header shortcut. */
+    /** Top-level "Hide Specific Chats" section (Privacy group) with an inbox-backed selector.
+     *  A chat can also be hidden from inside it (the chat header menu entry). */
     private static void showHideChatsOptions(Context context) {
         LinearLayout layout = createSwitchLayout(context);
 
         LinearLayout hideCard = card(context);
         ToggleRow hideChats = createSwitch(context, R.drawable.ic_eye_off, A_PRIVACY,
                 I18n.t(context, R.string.ig_dialog_misc_hide_chats), FeatureFlags.hideSpecificChats);
+        ToggleRow showButton = createSwitch(context, R.drawable.ic_eye, A_PRIVACY,
+                I18n.t(context, R.string.ig_hide_chats_show_button), FeatureFlags.showHideChatButton);
+        View selectChats = createActionRow(context, R.drawable.ic_eye,
+                I18n.t(context, R.string.ig_hide_chats_select), A_PRIVACY, v -> showChatPicker(context));
+        setDependentToggle(context, showButton, FeatureFlags.hideSpecificChats,
+                R.string.ig_hide_chats_show_button, R.string.ig_hide_chats_show_button_requires);
+        selectChats.setEnabled(FeatureFlags.hideSpecificChats);
+        selectChats.setAlpha(FeatureFlags.hideSpecificChats ? 1f : 0.38f);
         hideChats.setOnCheckedChangeListener((b, checked) -> {
             FeatureFlags.hideSpecificChats = checked;
+            setDependentToggle(context, showButton, checked,
+                    R.string.ig_hide_chats_show_button, R.string.ig_hide_chats_show_button_requires);
+            selectChats.setEnabled(checked);
+            selectChats.setAlpha(checked ? 1f : 0.38f);
             SettingsManager.saveAllFlags();
-            ps.reso.instaeclipse.mods.ghost.ConversationMenuHook.refreshAll();
-            ps.reso.instaeclipse.mods.ghost.HideChatsHook.refreshKnownAccounts();
+            ps.reso.instaeclipse.mods.ghost.HideChatsHook.refreshVisibleButtons();
+        });
+        showButton.setOnCheckedChangeListener((b, checked) -> {
+            FeatureFlags.showHideChatButton = checked;
+            SettingsManager.saveAllFlags();
+            ps.reso.instaeclipse.mods.ghost.HideChatsHook.refreshVisibleButtons();
         });
         hideCard.addView(hideChats);
-        hideCard.addView(flagSwitch(context, R.drawable.ic_eye_off, A_PRIVACY,
-                R.string.ie_show_hide_button, "showHideChatButton",
-                ps.reso.instaeclipse.mods.ghost.ConversationMenuHook::refreshAll));
-        hideCard.addView(createActionRow(context, R.drawable.ic_chat,
-                I18n.t(context, R.string.ie_chat_actions), A_PRIVACY,
-                v -> ps.reso.instaeclipse.mods.ghost.ConversationMenuHook.show(activityOf(context))));
-        hideCard.addView(createActionRow(context, R.drawable.ic_eye,
-                I18n.t(context, R.string.ig_hide_chats_manage), A_PRIVACY, v -> showHiddenChats(context)));
+        hideCard.addView(showButton);
+        hideCard.addView(selectChats);
         layout.addView(hideCard);
 
         layout.addView(createInfoSection(context, "",
-                I18n.t(context, R.string.ig_hide_chats_hint)));
+                I18n.t(context, R.string.ig_hide_chats_picker_hint)));
 
         showSectionDialog(context, I18n.t(context, R.string.ig_hide_chats_title), layout, () -> {});
     }
@@ -1891,53 +1902,55 @@ public class DialogUtils {
         return null;
     }
 
-    /** Manager listing hidden chats with per-row unhide buttons. */
-    private static void showHiddenChats(Context context) {
+    /** Lists local inbox threads. Each switch explicitly sets hidden state; it never toggles blindly. */
+    private static void showChatPicker(Context context) {
+        showChatPicker(context, false);
+    }
+
+    /** Inbox chats plus the already hidden (or locked) ones, each with an explicit on/off switch. */
+    private static void showChatPicker(Context context, boolean locking) {
         LinearLayout layout = createSwitchLayout(context);
-        Activity activity = activityOf(context);
-        String account = ps.reso.instaeclipse.utils.ghost.CurrentConversation.accountId(activity);
-        if (account == null) {
-            layout.addView(createInfoSection(context, "", I18n.t(context, R.string.ie_chat_account_unresolved)));
-            showSectionDialog(context, I18n.t(context, R.string.ig_hide_chats_manage), layout, () -> {});
-            return;
+        java.util.Map<String, String> chats =
+                ps.reso.instaeclipse.mods.ghost.HideChatsHook.knownThreads();
+        java.util.Map<String, String> selectedChats = locking
+                ? ps.reso.instaeclipse.utils.ghost.LockedThreads.all()
+                : ps.reso.instaeclipse.utils.ghost.HiddenThreads.all();
+        int pickerTitle = locking ? R.string.ig_lock_select_chats : R.string.ig_hide_chats_select;
+        for (java.util.Map.Entry<String, String> entry : selectedChats.entrySet()) {
+            String knownTitle = chats.get(entry.getKey());
+            if (knownTitle == null || knownTitle.isEmpty()) chats.put(entry.getKey(), entry.getValue());
         }
-        java.util.Map<String, String> hidden = ps.reso.instaeclipse.utils.ghost.HiddenThreads.all(account);
-        if (ps.reso.instaeclipse.utils.ghost.HiddenThreads.lastError() != null) {
-            layout.addView(createInfoSection(context, "", I18n.t(context, R.string.ie_hidden_state_unavailable)));
-        }
-        if (!ps.reso.instaeclipse.utils.ghost.HiddenThreads.legacyEntries().isEmpty()) {
-            layout.addView(createInfoSection(context, "", I18n.t(context, R.string.ie_hidden_legacy)));
-        }
-        if (hidden.isEmpty()) {
-            layout.addView(createInfoSection(context, I18n.t(context, R.string.ig_hide_chats_title),
-                    I18n.t(context, R.string.ig_hide_chats_empty)));
-            showSectionDialog(context, I18n.t(context, R.string.ig_hide_chats_manage), layout, () -> {});
+        if (chats.isEmpty()) {
+            layout.addView(createInfoSection(context, I18n.t(context, pickerTitle),
+                    I18n.t(context, locking ? R.string.ig_lock_selected_empty : R.string.ig_hide_chats_picker_empty)));
+            showSectionDialog(context, I18n.t(context, pickerTitle), layout, () -> {});
             return;
         }
         LinearLayout cardView = card(context);
-        for (java.util.Map.Entry<String, String> e : hidden.entrySet()) {
-            final String id = e.getKey();
-            String label = (e.getValue() == null || e.getValue().isEmpty()) ? id : e.getValue();
-            cardView.addView(createActionRow(context, R.drawable.ic_eye, label + "  ·  "
-                    + I18n.t(context, R.string.ig_hide_chats_unhide), "#BF5AF2", v -> {
-                if (!account.equals(ps.reso.instaeclipse.utils.ghost.CurrentConversation.accountId(activity))) {
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(context,
-                            I18n.t(context, R.string.ie_chat_changed), Toast.LENGTH_SHORT).show();
+        for (java.util.Map.Entry<String, String> entry : chats.entrySet()) {
+            final String id = entry.getKey();
+            final String storedTitle = entry.getValue() == null ? "" : entry.getValue().trim();
+            String suffix = id.length() > 6 ? id.substring(id.length() - 6) : id;
+            String label = storedTitle.isEmpty()
+                    ? I18n.t(context, R.string.ig_hide_chats_unknown) + "  ·  …" + suffix
+                    : storedTitle;
+            ToggleRow row = createSwitch(context, R.drawable.ic_chat, A_PRIVACY, label,
+                    selectedChats.containsKey(id));
+            row.setOnCheckedChangeListener((button, checked) -> {
+                if (locking) {
+                    ps.reso.instaeclipse.utils.ghost.LockedThreads.set(id, storedTitle, checked);
                     return;
                 }
-                if (!ps.reso.instaeclipse.utils.ghost.HiddenThreads.unhide(account, id).success) {
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(context,
-                            I18n.t(context, R.string.ie_hidden_save_failed), Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                ps.reso.instaeclipse.mods.ghost.HideChatsHook.refreshAccount(account);
-                ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_hide_chat_unhidden), Toast.LENGTH_SHORT).show();
-                ((View) v).setEnabled(false);
-                ((View) v).setAlpha(0.4f);
-            }));
+                ps.reso.instaeclipse.utils.ghost.HiddenThreads.setHidden(id, storedTitle, checked);
+                ps.reso.instaeclipse.mods.ghost.HideChatsHook.refreshVisibleButtons();
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, checked
+                                ? R.string.ig_hide_chat_hidden : R.string.ig_hide_chat_unhidden),
+                        Toast.LENGTH_SHORT).show();
+            });
+            cardView.addView(row);
         }
         layout.addView(cardView);
-        showSectionDialog(context, I18n.t(context, R.string.ig_hide_chats_manage), layout, () -> {});
+        showSectionDialog(context, I18n.t(context, pickerTitle), layout, () -> {});
     }
 
     private static boolean suppressLockToggle = false;

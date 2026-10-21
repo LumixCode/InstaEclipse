@@ -2,6 +2,14 @@
 <!-- Strings of the local custom build. Kept out of strings.xml so upstream's file and its
      translations stay byte-identical; these fall back to English in every locale. -->
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <!-- Hide specific chats -->
+    <string name="ig_hide_chats_show_button">Show Hide / Unhide chat in the chat menu</string>
+    <string name="ig_hide_chats_show_button_requires">Requires Hide specific chats</string>
+    <string name="ig_hide_chats_unknown">Chat</string>
+    <string name="ig_hide_chats_select">Select chats to hide</string>
+    <string name="ig_hide_chats_picker_empty">No chats are loaded yet. Open your inbox once, then return here.</string>
+    <string name="ig_hide_chats_picker_hint">Select chats here, or open a chat, open its InstaEclipse menu (the button in its header, or a triple tap after the chat name when that button is hidden) and choose Hide chat. Hidden chats can be restored from this list.</string>
+
     <!-- Chat header menu -->
     <string name="ig_hide_chat_menu_button">Hide chat menu button</string>
     <string name="ig_hide_chat_menu_button_hint">Triple-tap the empty space between the chat name and the call buttons to open the menu</string>

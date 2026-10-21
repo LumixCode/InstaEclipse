@@ -1872,7 +1872,8 @@ public class FeaturesFragment extends Fragment {
         defs.add(getString(R.string.feat_features));
         defs.add(Arrays.asList(
                 createSwitch(R.drawable.ic_eye_off, "#5E5CE6", getString(R.string.ig_dialog_misc_hide_chats), "hideSpecificChats"),
-                createSwitch(R.drawable.ic_eye_off, "#5E5CE6", getString(R.string.ie_show_hide_button), "showHideChatButton")
+                createDependentSwitch(R.drawable.ic_eye, "#5E5CE6", R.string.ig_hide_chats_show_button,
+                        "showHideChatButton", "hideSpecificChats", R.string.ig_hide_chats_show_button_requires)
         ));
 
         // Note: hiding/unhiding a specific chat is done from inside Instagram.
