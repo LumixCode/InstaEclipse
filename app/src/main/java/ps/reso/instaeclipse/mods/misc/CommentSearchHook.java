@@ -939,6 +939,8 @@ public class CommentSearchHook {
                 String file = folder + ".html";
                 final int cCount = comments.size();
 
+                String page = h.toString();
+
                 // Preferred path: hand the HTML + comment media to the companion service, which saves
                 // everything into <SAF folder>/comments/<folder>/ and inlines the media as base64 data
                 // URIs — so GIF/image comments are kept on device and never expire.
@@ -952,7 +954,7 @@ public class CommentSearchHook {
                         it.putExtra("chatExportSubdir", "comments/" + folder);
                         it.putExtra("htmlFilename", file);
                         it.putExtra("htmlB64", android.util.Base64.encodeToString(
-                                h.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8), android.util.Base64.NO_WRAP));
+                                page.getBytes(java.nio.charset.StandardCharsets.UTF_8), android.util.Base64.NO_WRAP));
                         it.putExtra("saveUri", saf);
                         if (!media.isEmpty()) {
                             String[] us = new String[media.size()], ns = new String[media.size()], ms = new String[media.size()];
@@ -961,34 +963,48 @@ public class CommentSearchHook {
                             it.putExtra("mediaNames", ns);
                             it.putExtra("mediaMimes", ms);
                         }
-                        ps.reso.instaeclipse.utils.ipc.CompanionBridge.downloadLegacy(ctx, it, error -> {
-                            if (error != null) new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
-                                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, error, android.widget.Toast.LENGTH_LONG).show());
-                        });
-                        delegated = true;
-                        ModuleLog.line(TAG + "delegated comment export (" + cCount + " comments, "
-                                + media.size() + " media) to companion service: " + folder);
+                        // A long export the broker would refuse takes the in-process write below
+                        // instead of ending with an error toast (see ExportDelegate).
+                        delegated = ps.reso.instaeclipse.utils.ipc.ExportDelegate.delegate(ctx, it, TAG,
+                                () -> writeExportInProcess(ctx, page, media, file, cCount));
+                        if (!delegated) {
+                            ModuleLog.line(TAG + "comment export outside the companion's limits (" + cCount + " comments, "
+                                    + media.size() + " media, " + page.length() + " html chars), writing locally");
+                        } else {
+                            ModuleLog.line(TAG + "delegated comment export (" + cCount + " comments, "
+                                    + media.size() + " media) to companion service: " + folder);
+                        }
                     } catch (Throwable t) {
                         ModuleLog.line(TAG + "comment export delegate failed, writing locally: " + t);
                     }
                 }
 
-                if (!delegated) {
-                    // No SAF folder set: fall back to the old single-file export with the media still
-                    // pointing at the Instagram CDN links (which work only until they expire).
-                    String html = h.toString();
-                    for (String[] m : media) html = html.replace("src=\"" + m[1] + "\"", "src=\"" + esc(m[0]) + "\"");
-                    try (java.io.OutputStream out = ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook.openCommentsExport(ctx, file)) {
-                        out.write(html.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                    }
-                    ModuleLog.line(TAG + "exported " + cCount + " comments to " + file);
-                    MAIN.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_comment_export_done, cCount, file), Toast.LENGTH_LONG).show());
-                }
+                if (!delegated) writeExportInProcess(ctx, page, media, file, cCount);
             } catch (Throwable t) {
                 ModuleLog.line(TAG + "❌ export: " + t);
                 MAIN.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_download_failed, String.valueOf(t.getMessage())), Toast.LENGTH_SHORT).show());
             }
         }).start();
+    }
+
+    /**
+     * The single-file export written inside Instagram, with the media still pointing at the
+     * Instagram CDN links (which work only until they expire). Used when no SAF folder is set, or
+     * when the companion refuses or fails the export. Call it off the main thread.
+     */
+    private static void writeExportInProcess(Context ctx, String page, List<String[]> media, String file, int count) {
+        try {
+            String html = page;
+            for (String[] m : media) html = html.replace("src=\"" + m[1] + "\"", "src=\"" + esc(m[0]) + "\"");
+            try (java.io.OutputStream out = ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook.openCommentsExport(ctx, file)) {
+                out.write(html.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+            ModuleLog.line(TAG + "exported " + count + " comments to " + file);
+            MAIN.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_comment_export_done, count, file), Toast.LENGTH_LONG).show());
+        } catch (Throwable t) {
+            ModuleLog.line(TAG + "❌ export: " + t);
+            MAIN.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_download_failed, String.valueOf(t.getMessage())), Toast.LENGTH_SHORT).show());
+        }
     }
 
     private static void commentHtml(StringBuilder h, String[] r, java.text.SimpleDateFormat fmt,

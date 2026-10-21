@@ -253,6 +253,7 @@ public class ChatExportHook {
                         .append(ps.reso.instaeclipse.utils.core.ExportBrand.htmlFooter()).append("</div></body></html>");
 
                 final int count = n;
+                final String page = html.toString();
                 // Preferred path: hand the HTML + media list to the companion app's DownloadSaveService,
                 // which owns the user's SAF folder (Instagram's own process can't write there, so a
                 // local write would land in Download/ and be hidden from file managers). The service
@@ -267,7 +268,7 @@ public class ChatExportHook {
                         it.putExtra("chatExportSubdir", "chats/" + folder);
                         it.putExtra("htmlFilename", file);
                         it.putExtra("htmlB64", android.util.Base64.encodeToString(
-                                html.toString().getBytes(StandardCharsets.UTF_8), android.util.Base64.NO_WRAP));
+                                page.getBytes(StandardCharsets.UTF_8), android.util.Base64.NO_WRAP));
                         it.putExtra("saveUri", saf);
                         it.putExtra("messageCount", count);
                         if (!mUrls.isEmpty()) {
@@ -275,62 +276,75 @@ public class ChatExportHook {
                             it.putExtra("mediaNames", mNames.toArray(new String[0]));
                             it.putExtra("mediaMimes", mMimes.toArray(new String[0]));
                         }
-                        ps.reso.instaeclipse.utils.ipc.CompanionBridge.downloadLegacy(a, it, error -> {
-                            if (error != null) new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
-                                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, error, android.widget.Toast.LENGTH_LONG).show());
+                        // Long chats the broker would refuse stay in-process (see ExportDelegate).
+                        delegated = ps.reso.instaeclipse.utils.ipc.ExportDelegate.delegate(a, it, TAG, () -> {
+                            try { writeLocally(a, folder, file, page, count, mUrls, mNames, mMimes); }
+                            catch (Throwable t) { exportFailed(a, t); }
                         });
-                        delegated = true;
-                        ModuleLog.line(TAG + "delegated export (" + count + " msgs, " + mUrls.size()
-                                + " media) to companion service: " + folder);
+                        if (!delegated) {
+                            ModuleLog.line(TAG + "outside the companion's limits (" + count + " msgs, " + mUrls.size()
+                                    + " media, " + page.length() + " html chars), writing locally");
+                        } else {
+                            ModuleLog.line(TAG + "delegated export (" + count + " msgs, " + mUrls.size()
+                                    + " media) to companion service: " + folder);
+                        }
                     } catch (Throwable t) {
                         ModuleLog.line(TAG + "delegate failed, writing locally: " + t);
                     }
                 }
 
-                if (!delegated) {
-                    // No SAF folder set: write in-process via MediaStore (lands in Download/… and is
-                    // only reachable via the gallery or a PC, but at least the data is saved).
-                    int saved = 0;
-                    for (int i = 0; i < mUrls.size(); i++) {
-                        File tmp = null;
-                        try {
-                            tmp = File.createTempFile("ie_chat_media", null, a.getCacheDir());
-                            boolean ok;
-                            try (OutputStream fout = new FileOutputStream(tmp)) { ok = httpGet(mUrls.get(i), fout); }
-                            if (ok && tmp.length() > 0) {
-                                try (InputStream in = new FileInputStream(tmp);
-                                     OutputStream mout = ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook
-                                             .openChatExportFile(a, folder, mNames.get(i), mMimes.get(i))) {
-                                    byte[] buf = new byte[32768];
-                                    int rd;
-                                    while ((rd = in.read(buf)) != -1) mout.write(buf, 0, rd);
-                                }
-                                saved++;
-                            }
-                        } catch (Throwable ignored) {
-                        } finally {
-                            //noinspection ResultOfMethodCallIgnored
-                            if (tmp != null) tmp.delete();
-                        }
-                    }
-                    try (OutputStream out = ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook.openChatExportFile(a, folder, file, "text/html")) {
-                        out.write(html.toString().getBytes(StandardCharsets.UTF_8));
-                    }
-                    final int fsaved = saved;
-                    ModuleLog.line(TAG + "exported locally " + count + " messages, " + fsaved + " media to " + folder);
-                    new Handler(Looper.getMainLooper()).post(() -> {
-                        if (fsaved > 0)
-                            ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_done_media, count, fsaved, folder), Toast.LENGTH_LONG).show();
-                        else
-                            ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_done, count, file), Toast.LENGTH_LONG).show();
-                    });
-                }
+                if (!delegated) writeLocally(a, folder, file, page, count, mUrls, mNames, mMimes);
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "❌ export: " + t);
-                new Handler(Looper.getMainLooper()).post(() ->
-                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_toast_download_failed, String.valueOf(t.getMessage())), Toast.LENGTH_SHORT).show());
+                exportFailed(a, t);
             }
         }).start();
+    }
+
+    /** Writes the export in-process via MediaStore: with no SAF folder set, or when the companion
+     *  can't take it. It lands in Download/… and is only reachable via the gallery or a PC, but at
+     *  least the data is saved. Downloads the media, so never on the main thread. */
+    private static void writeLocally(Activity a, String folder, String file, String page, int count,
+                                     List<String> mUrls, List<String> mNames, List<String> mMimes) throws Exception {
+        int saved = 0;
+        for (int i = 0; i < mUrls.size(); i++) {
+            File tmp = null;
+            try {
+                tmp = File.createTempFile("ie_chat_media", null, a.getCacheDir());
+                boolean ok;
+                try (OutputStream fout = new FileOutputStream(tmp)) { ok = httpGet(mUrls.get(i), fout); }
+                if (ok && tmp.length() > 0) {
+                    try (InputStream in = new FileInputStream(tmp);
+                         OutputStream mout = ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook
+                                 .openChatExportFile(a, folder, mNames.get(i), mMimes.get(i))) {
+                        byte[] buf = new byte[32768];
+                        int rd;
+                        while ((rd = in.read(buf)) != -1) mout.write(buf, 0, rd);
+                    }
+                    saved++;
+                }
+            } catch (Throwable ignored) {
+            } finally {
+                //noinspection ResultOfMethodCallIgnored
+                if (tmp != null) tmp.delete();
+            }
+        }
+        try (OutputStream out = ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook.openChatExportFile(a, folder, file, "text/html")) {
+            out.write(page.getBytes(StandardCharsets.UTF_8));
+        }
+        final int fsaved = saved;
+        ModuleLog.line(TAG + "exported locally " + count + " messages, " + fsaved + " media to " + folder);
+        new Handler(Looper.getMainLooper()).post(() -> {
+            if (fsaved > 0)
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_done_media, count, fsaved, folder), Toast.LENGTH_LONG).show();
+            else
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_done, count, file), Toast.LENGTH_LONG).show();
+        });
+    }
+
+    private static void exportFailed(Activity a, Throwable t) {
+        ModuleLog.line(TAG + "❌ export: " + t);
+        new Handler(Looper.getMainLooper()).post(() ->
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_toast_download_failed, String.valueOf(t.getMessage())), Toast.LENGTH_SHORT).show());
     }
 
     /** Downloads a URL straight into {@code out}. Returns false (leaving {@code out} to the caller) on any error. */
