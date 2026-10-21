@@ -7,6 +7,47 @@
     <string name="ig_dialog_ghost_keep_unsent_chat">Keep Unsent Messages</string>
     <string name="ig_feature_keep_unsent_in_chat">Keep unsent messages in the chat</string>
 
+    <!-- Unsent messages: what a message without text was (the viewer adds " · 0:29" and ": words") -->
+    <string name="ig_unsent_detail_unknown">Details not saved</string>
+    <string name="ig_unsent_detail_no_text">Message without text</string>
+    <string name="ig_unsent_detail_reel">Reel</string>
+    <string name="ig_unsent_detail_reel_by">Reel by @%1$s</string>
+    <string name="ig_unsent_detail_post">Post</string>
+    <string name="ig_unsent_detail_post_by">Post by @%1$s</string>
+    <string name="ig_unsent_detail_story">Story</string>
+    <string name="ig_unsent_detail_story_by">Story by @%1$s</string>
+    <string name="ig_unsent_detail_story_reply">Story reply</string>
+    <string name="ig_unsent_detail_story_reply_by">Reply to @%1$s\'s story</string>
+    <string name="ig_unsent_detail_story_mention">Story mention</string>
+    <string name="ig_unsent_detail_story_mention_by">Story mention by @%1$s</string>
+    <string name="ig_unsent_detail_voice">Voice message</string>
+    <string name="ig_unsent_detail_photo">Photo</string>
+    <string name="ig_unsent_detail_video">Video</string>
+    <string name="ig_unsent_detail_album">Album</string>
+    <string name="ig_unsent_detail_disappearing_photo">Disappearing photo</string>
+    <string name="ig_unsent_detail_disappearing_video">Disappearing video</string>
+    <string name="ig_unsent_detail_sticker">Sticker</string>
+    <string name="ig_unsent_detail_gif">GIF</string>
+    <string name="ig_unsent_detail_link">Link</string>
+    <string name="ig_unsent_detail_like">Like</string>
+    <string name="ig_unsent_detail_location">Location</string>
+    <string name="ig_unsent_detail_profile">Profile</string>
+    <string name="ig_unsent_detail_profile_by">Profile @%1$s</string>
+    <string name="ig_unsent_detail_video_share">Shared video</string>
+    <string name="ig_unsent_detail_video_share_by">Video by @%1$s</string>
+    <string name="ig_unsent_detail_live">Live video</string>
+    <string name="ig_unsent_detail_live_by">Live video by @%1$s</string>
+    <string name="ig_unsent_detail_music">Music</string>
+    <string name="ig_unsent_detail_audio">Audio</string>
+    <string name="ig_unsent_detail_call">Call</string>
+    <string name="ig_unsent_detail_effect">Effect</string>
+    <string name="ig_unsent_detail_product">Product</string>
+    <string name="ig_unsent_detail_poll">Poll</string>
+    <string name="ig_unsent_detail_note_reply">Note reply</string>
+    <string name="ig_unsent_detail_unavailable">Unavailable message</string>
+    <string name="ig_unsent_detail_activity">Chat activity</string>
+    <string name="ig_unsent_detail_shared">Shared content</string>
+    <string name="ig_unsent_detail_shared_by">Shared by @%1$s</string>
 
 
 

@@ -933,7 +933,10 @@ public class DialogUtils {
                 meta.addView(when);
 
                 TextView body = new TextView(context);
-                body.setText(e.text);
+                // A message without text shows what it was ("Reel by @user", "Voice message · 0:29"),
+                // in italics so it never reads as words the sender wrote.
+                body.setText(ps.reso.instaeclipse.utils.ghost.UnsentDetailText.body(context, e));
+                if (ps.reso.instaeclipse.utils.ghost.UnsentDetailText.isDescription(e)) body.setTypeface(null, Typeface.ITALIC);
                 body.setTextColor(C_TEXT);
                 body.setTextSize(15);
                 body.setPadding(0, dp(context, 5), 0, 0);
@@ -985,7 +988,11 @@ public class DialogUtils {
                 o.put("time", e.time);
                 o.put("time_iso", iso.format(new java.util.Date(e.time)));
                 if (e.sender != null && !e.sender.isEmpty()) o.put("sender", e.sender);
-                o.put("text", e.text);
+                o.put("text", ps.reso.instaeclipse.utils.ghost.UnsentDetailText.body(context, e));
+                // Marks "text" as a description of a message without text, not its words.
+                if (ps.reso.instaeclipse.utils.ghost.UnsentDetailText.isDescription(e)) {
+                    o.put("kind", e.detail != null ? e.detail.kind.id : "unknown");
+                }
                 arr.put(o);
             }
             root.put("messages", arr);
