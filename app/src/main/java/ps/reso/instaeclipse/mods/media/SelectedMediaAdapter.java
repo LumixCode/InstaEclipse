@@ -106,11 +106,7 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
                         : FeedVideoDownloadHook.originalImageFromSelected(context, receiver, carouselChild);
             }
         };
-        SelectedMediaSnapshot result;
-        Boolean previous = ForceReelQualityHook.RAW.get();
-        ForceReelQualityHook.RAW.set(Boolean.TRUE);
-        try { result = SelectedMediaSnapshot.capture(media, access); }
-        finally { if (previous == null) ForceReelQualityHook.RAW.remove(); else ForceReelQualityHook.RAW.set(previous); }
+        SelectedMediaSnapshot result = ForceReelQualityHook.raw(() -> SelectedMediaSnapshot.capture(media, access));
         ModuleLog.line("(IE|MediaAdapter) snapshot video=" + result.video + " manifest="
                 + (result.manifest != null) + " direct=" + result.renditions.size()
                 + " carousel=" + result.children.size());

@@ -8,6 +8,7 @@ import org.luckypray.dexkit.result.MethodData;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -57,9 +58,21 @@ public class ForceReelQualityHook {
     private static final String CACHE_GETTER_KEY = "ForceReelQuality_VideoVersionsGetter";
     private static final String CACHE_HEIGHT_KEY = "ForceReelQuality_HeightGetterName";
 
-    /** Set while a download reads the qualities: it gets the full list, not the forced one. */
+    /** Set while a download reads the qualities: it gets the full list, not the forced one. Use {@link #raw}. */
     static final ThreadLocal<Boolean> RAW = new ThreadLocal<>();
     private static volatile String heightGetter;
+
+    /**
+     * Runs {@code read} with RAW set, then restores the caller's value instead of clearing it:
+     * reads nest (the media snapshot's originalVideo reads video_versions inside the snapshot's
+     * own scope), and a cleared flag hands the outer read the forced single rendition.
+     */
+    static <T> T raw(Callable<T> read) throws Exception {
+        Boolean previous = RAW.get();
+        RAW.set(Boolean.TRUE);
+        try { return read.call(); }
+        finally { if (previous == null) RAW.remove(); else RAW.set(previous); }
+    }
 
     /** A video version's height in pixels, or -1 when unknown. */
     static int heightOf(Object item) {

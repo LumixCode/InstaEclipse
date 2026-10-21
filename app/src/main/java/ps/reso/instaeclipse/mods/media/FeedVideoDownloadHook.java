@@ -855,10 +855,8 @@ public class FeedVideoDownloadHook {
                                                             List<String> out,
                                                             boolean trustedVideoList) {
         try {
-            Object result;
             // read every quality, not the one "Force reel quality" leaves for the player
-            ForceReelQualityHook.RAW.set(Boolean.TRUE);
-            try { result = getter.invoke(dict); } finally { ForceReelQualityHook.RAW.remove(); }
+            Object result = ForceReelQualityHook.raw(() -> getter.invoke(dict));
             if (!(result instanceof List<?> items) || items.isEmpty()) return;
 
             List<String> found = new ArrayList<>();
