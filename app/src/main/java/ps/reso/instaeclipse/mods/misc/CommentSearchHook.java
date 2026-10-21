@@ -56,8 +56,9 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
  *   is re-run on every update; after it we collect the rows that carry a User (author) and the
  *   comment text (longest String field) — i.e. every comment loaded so far.
  * - Sheet fragment = class whose onViewCreated uses "Failed to ingest comments close signal"
- *   (X.0Ivg on 452, X.0RtS on 451); a small "Search comments" pill is added there.
- * - The pill opens a dialog: type to filter by author or text; tap a result to copy it.
+ *   (X.0Ivg on 452, X.0RtS on 451); Instagram's Explore magnifier is added at the end of the
+ *   sheet's "For you" sort row there (see addPill).
+ * - The icon opens a dialog: type to filter by author or text; tap a result to copy it.
  * Only comments IG has loaded are searched (scroll to load more first).
  */
 public class CommentSearchHook {
@@ -104,9 +105,21 @@ public class CommentSearchHook {
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                        if (!FeatureFlags.commentSearch || param.getResult() == null) return;
-                        List<String[]> rows = collect(param.getResult());
-                        if (!rows.isEmpty()) { latest = rows; lastState = param.getResult(); }
+                        if ((!FeatureFlags.commentSearch && !FeatureFlags.enableCaptionCopy) || param.getResult() == null) return;
+                        if (!FeatureFlags.commentSearch) {
+                            // Caption copy only needs the sheet's post: no comment rows.
+                            Object post = postOf(findSortRow(param.getResult()));
+                            if (post != null) sheetPost = new java.lang.ref.WeakReference<>(post);
+                            return;
+                        }
+                        Object[] sortRow = new Object[1];
+                        List<String[]> rows = collect(param.getResult(), sortRow);
+                        stateHasSortRow = sortRow[0] != null;
+                        Object post = postOf(sortRow[0]);
+                        if (post != null) sheetPost = new java.lang.ref.WeakReference<>(post);
+                        stateAt = android.os.SystemClock.uptimeMillis();
+                        if (!rows.isEmpty()) { latest = rows; lastState = param.getResult(); stateUpdates++; }
+                        SortRowOverlay.poke();
                     }
                 });
                 builders++;
@@ -132,6 +145,39 @@ public class CommentSearchHook {
             } catch (Throwable t) {
                 ModuleLog.line(TAG + "⚠️ comment json: " + t);
             }
+            try {
+                // The sort selector row's model takes the sort-order enum, whose int field is the label.
+                // Both sort-row queries are cached: no full-dex scan on later starts.
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                        .usingEqStrings("sort_order_selector_row")))) {
+                    Class<?> model = cl.loadClass(md.getClassName());
+                    for (java.lang.reflect.Constructor<?> c : model.getDeclaredConstructors())
+                        for (Class<?> t : c.getParameterTypes()) if (t.isEnum()) sortEnum = t;
+                    if (sortEnum != null) { sortRowModel = model; break; }
+                }
+                ModuleLog.line(TAG + "sort order enum: " + (sortEnum != null ? sortEnum.getName() : "not found"));
+            } catch (Throwable t) {
+                ModuleLog.line(TAG + "⚠️ sort order enum: " + t);
+            }
+            try {
+                // The sort row's composable: the moment it composes, look for it on screen.
+                int selectors = 0;
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                        .usingStrings("CommentSortOrderSelector.kt")))) {
+                    Method m = md.getMethodInstance(cl);
+                    if (!Modifier.isStatic(m.getModifiers()) || m.getReturnType() != void.class) continue;
+                    XposedBridge.hookMethod(m, new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                            if (FeatureFlags.commentSearch) SortRowOverlay.poke();
+                        }
+                    });
+                    selectors++;
+                }
+                if (selectors == 0) ModuleLog.line(TAG + "sort row composable not found (icon finds the row by polling)");
+            } catch (Throwable t) {
+                ModuleLog.line(TAG + "⚠️ sort row composable: " + t);
+            }
             int frags = 0;
             for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("Failed to ingest comments close signal")))) {
@@ -142,7 +188,8 @@ public class CommentSearchHook {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                             if (param.thisObject != null) lastFragment = new java.lang.ref.WeakReference<>(param.thisObject);
-                            if (FeatureFlags.commentSearch && param.args[0] instanceof View root) root.post(() -> addPill(host(root)));
+                            Object frag = param.thisObject;
+                            if (FeatureFlags.commentSearch && param.args[0] instanceof View root) root.post(() -> addPill(host(root), frag));
                         }
                     });
                     frags++;
@@ -156,8 +203,9 @@ public class CommentSearchHook {
         }
     }
 
-    /** Every (author, text) row reachable from the UI state, in order, de-duplicated. */
-    private static List<String[]> collect(Object state) {
+    /** Every (author, text) row reachable from the UI state, in order, de-duplicated.
+     *  sortRow[0] is set to the "For you" sort row's model when the state holds one. */
+    private static List<String[]> collect(Object state, Object[] sortRow) {
         Map<String, String[]> out = new LinkedHashMap<>();
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         java.util.ArrayDeque<Object[]> q = new java.util.ArrayDeque<>();
@@ -173,6 +221,7 @@ public class CommentSearchHook {
             }
             String n = o.getClass().getName();
             if (!n.startsWith("X.") && !n.startsWith("com.instagram.")) continue;
+            if (sortRowModel != null && sortRowModel.isInstance(o)) sortRow[0] = o;
             Object user = null;
             String text = null;
             for (Class<?> k = o.getClass(); k != null && k != Object.class; k = k.getSuperclass())
@@ -210,6 +259,41 @@ public class CommentSearchHook {
         List<String[]> rows = new ArrayList<>();
         for (String[] r : out.values()) if (!r[2].isEmpty() || !withId.contains(r[0] + "\u0000" + r[1])) rows.add(r);
         return rows;
+    }
+
+    /**
+     * The "For you" sort row's model in the UI state, or null: collect()'s walk without reading any
+     * comment (no text, author or serializer), stopping at the first hit. For caption copy alone.
+     */
+    private static Object findSortRow(Object state) {
+        if (sortRowModel == null) return null;
+        Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+        java.util.ArrayDeque<Object[]> q = new java.util.ArrayDeque<>();
+        q.add(new Object[]{state, 0});
+        while (!q.isEmpty() && seen.size() < 6000) {
+            Object[] e = q.poll();
+            Object o = e[0];
+            int d = (int) e[1];
+            if (o == null || !seen.add(o)) continue;
+            if (o instanceof List<?> l) {
+                for (Object it : l) q.add(new Object[]{it, d + 1});
+                continue;
+            }
+            if (sortRowModel.isInstance(o)) return o;
+            String n = o.getClass().getName();
+            if (d >= 4 || (!n.startsWith("X.") && !n.startsWith("com.instagram."))) continue;
+            for (Class<?> k = o.getClass(); k != null && k != Object.class; k = k.getSuperclass())
+                for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
+                    if (Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive()) continue;
+                    try {
+                        f.setAccessible(true);
+                        Object v = f.get(o);
+                        if (v != null && !(v instanceof String) && !(v instanceof Number) && !(v instanceof Boolean))
+                            q.add(new Object[]{v, d + 1});
+                    } catch (Throwable ignored) {}
+                }
+        }
+        return null;
     }
 
     /** A Comment model as a row, via IG's own serializer (cached: the models are immutable). */
@@ -295,42 +379,91 @@ public class CommentSearchHook {
         return v != null ? v : root;
     }
 
-    private static void addPill(View root) {
-        sheet = new java.lang.ref.WeakReference<>(root);
-        if (!(root instanceof ViewGroup g) || root.findViewWithTag("ie_comment_search") != null) return;
-        ViewGroup row = headerRow(g);
-        if (row != null && row.findViewWithTag("ie_comment_search") != null) return;
-        Context ctx = root.getContext();
+    private static final String ICON_TAG = "ie_comment_search";
+
+    /**
+     * Instagram's own Explore magnifier at the end of the sheet's "For you ⌄" sort row. That row is
+     * an item of the Compose comment list and scrolls with it, so the icon sits in an overlay above
+     * the list and follows the row (see {@link SortRowOverlay}). Without a sort row to follow (the
+     * Litho sheet, or a sheet whose list has none) it goes to the end of the sheet header.
+     */
+    private static void addPill(View root, Object fragment) {
+        // The sheet's content container: the Compose sheet's host, or the Litho sheet's parent.
+        ViewGroup content = root instanceof FrameLayout f ? f
+                : root.getParent() instanceof FrameLayout p ? p
+                : root instanceof ViewGroup g ? g : null;
+        if (content == null) return;
+        sheet = new java.lang.ref.WeakReference<>(content);
+        if (content.findViewWithTag(ICON_TAG) != null) return;
+        ViewGroup header = headerRow(content);
+        if (header != null && header.findViewWithTag(ICON_TAG) != null) return;
+        Context ctx = content.getContext();
+        int tint = iconTint(ctx, fragment);
+        if (content instanceof FrameLayout frame && !sortLabels(ctx).isEmpty()) {
+            frame.addView(new SortRowOverlay(ctx, frame, newIcon(ctx, tint), newIcon(ctx, tint)),
+                    new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            return;
+        }
+        ModuleLog.line(TAG + "search icon: no sort labels / frame, header fallback");
+        headerIcon(content, newIcon(ctx, tint));
+    }
+
+    /** The magnifier: 24dp glyph in a 44dp touch target, tinted like Instagram's primary icons. */
+    @android.annotation.SuppressLint({"DiscouragedApi", "UseCompatLoadingForDrawables", "ClickableViewAccessibility"})
+    private static android.widget.ImageView newIcon(Context ctx, int tint) {
         float d = ctx.getResources().getDisplayMetrics().density;
-        TextView pill = new TextView(ctx);
-        pill.setTag("ie_comment_search");
-        pill.setText("🔍 " + I18n.t(ctx, R.string.ig_comment_search));
-        pill.setTextColor(Color.WHITE);
-        pill.setTextSize(13);
-        int ph = (int) (12 * d), pv = (int) (6 * d);
-        pill.setPadding(ph, pv, ph, pv);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xCC3A3A3C);
-        bg.setCornerRadius(16 * d);
-        pill.setBackground(bg);
-        pill.setOnClickListener(v -> {
+        android.widget.ImageView icon = new android.widget.ImageView(ctx);
+        icon.setTag(ICON_TAG);
+        android.graphics.drawable.Drawable glyph = null;
+        for (String name : new String[]{"instagram_search_outline_24", "instagram_search_pano_outline_24", "tab_search_drawable"}) {
+            int id = ctx.getResources().getIdentifier(name, "drawable", ctx.getPackageName());
+            if (id == 0) continue;
+            try { glyph = ctx.getDrawable(id); } catch (Throwable ignored) {}
+            if (glyph != null) break;
+        }
+        if (glyph == null) glyph = ctx.getDrawable(android.R.drawable.ic_menu_search);
+        if (glyph != null) {
+            glyph = glyph.mutate();
+            glyph.setTint(tint);
+        }
+        icon.setImageDrawable(glyph);
+        icon.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        int pad = (int) (10 * d);
+        icon.setPadding(pad, pad, pad, pad);
+        android.util.TypedValue ripple = new android.util.TypedValue();
+        if (ctx.getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, ripple, true) && ripple.resourceId != 0) {
+            try { icon.setBackground(ctx.getDrawable(ripple.resourceId)); } catch (Throwable ignored) {}
+        }
+        String label = I18n.t(ctx, R.string.ig_comment_search);
+        icon.setContentDescription(label);
+        icon.setTooltipText(label);
+        icon.setClickable(true);
+        icon.setOnClickListener(v -> {
             try {
                 showSearch(v.getContext());
             } catch (Throwable t) {
                 ModuleLog.line(TAG + "⚠️ search dialog: " + t);
             }
         });
-        // In the sheet header the bottom sheet's touch handling swallows the click (DOWN/UP reach
-        // the pill but performClick never runs), so act on UP ourselves.
-        pill.setOnTouchListener((v, e) -> {
+        // The bottom sheet's touch handling can swallow the click (DOWN/UP reach the icon but
+        // performClick never runs), so act on UP ourselves; a drag that leaves the icon cancels.
+        final int slop = android.view.ViewConfiguration.get(ctx).getScaledTouchSlop();
+        final float[] down = new float[2];
+        icon.setOnTouchListener((v, e) -> {
             switch (e.getActionMasked()) {
                 case android.view.MotionEvent.ACTION_DOWN:
                     if (v.getParent() != null) v.getParent().requestDisallowInterceptTouchEvent(true);
+                    down[0] = e.getX();
+                    down[1] = e.getY();
                     v.setPressed(true);
                     return true;
+                case android.view.MotionEvent.ACTION_MOVE:
+                    if (Math.abs(e.getX() - down[0]) > slop || Math.abs(e.getY() - down[1]) > slop) v.setPressed(false);
+                    return true;
                 case android.view.MotionEvent.ACTION_UP:
+                    boolean tap = v.isPressed();
                     v.setPressed(false);
-                    if (e.getX() >= 0 && e.getY() >= 0 && e.getX() <= v.getWidth() && e.getY() <= v.getHeight()) v.performClick();
+                    if (tap && e.getX() >= 0 && e.getY() >= 0 && e.getX() <= v.getWidth() && e.getY() <= v.getHeight()) v.performClick();
                     return true;
                 case android.view.MotionEvent.ACTION_CANCEL:
                     v.setPressed(false);
@@ -339,45 +472,82 @@ public class CommentSearchHook {
                     return true;
             }
         });
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START);
-        lp.topMargin = (int) (34 * d);   // header row, left of the centered "Comments" title
-        lp.leftMargin = (int) (12 * d);
-        pill.setClickable(true);
-        pill.setElevation(30 * d);
-        pill.setTranslationZ(30 * d);
-        // Preferred: in the sheet's header row next to the "Comments" title (on 452 the list
-        // container starts below the header, so a fixed top margin put the pill on the first comment).
-        if (row != null) {
+        int size = (int) (44 * d);
+        icon.setLayoutParams(new ViewGroup.LayoutParams(size, size));
+        return icon;
+    }
+
+    /**
+     * igds_color_primary_icon from the comments fragment's themed context: the reel sheet is dark
+     * through the fragment (NIGHT day-night mode), not through the views' own context.
+     */
+    private static int iconTint(Context ctx, Object fragment) {
+        Context themed = null;
+        try {
+            for (Class<?> k = fragment != null ? fragment.getClass() : null; k != null && themed == null; k = k.getSuperclass()) {
+                for (Method m : k.getDeclaredMethods()) {
+                    if (!m.getName().equals("getThemedContext") || m.getParameterCount() != 0
+                            || !Context.class.isAssignableFrom(m.getReturnType())) continue;
+                    m.setAccessible(true);
+                    themed = (Context) m.invoke(fragment);
+                    break;
+                }
+            }
+        } catch (Throwable ignored) {}
+        for (Context c : new Context[]{themed, ctx}) {
+            if (c == null) continue;
             try {
-                ViewGroup.LayoutParams hl = headerParams(row, (int) (12 * d));
+                @android.annotation.SuppressLint("DiscouragedApi")
+                int attr = c.getResources().getIdentifier("igds_color_primary_icon", "attr", c.getPackageName());
+                android.util.TypedValue v = new android.util.TypedValue();
+                if (attr == 0 || !c.getTheme().resolveAttribute(attr, v, true)) continue;
+                if (v.resourceId != 0) return c.getColor(v.resourceId);
+                if (v.type >= android.util.TypedValue.TYPE_FIRST_COLOR_INT && v.type <= android.util.TypedValue.TYPE_LAST_COLOR_INT) return v.data;
+            } catch (Throwable ignored) {}
+        }
+        boolean night = (ctx.getResources().getConfiguration().uiMode
+                & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+        return night ? 0xFFF5F5F5 : 0xFF000000;
+    }
+
+    /** Fallback: the icon at the end of the sheet header (next to the "Comments" title). */
+    private static void headerIcon(ViewGroup content, android.widget.ImageView icon) {
+        if (icon.getParent() != null) return;
+        float d = content.getResources().getDisplayMetrics().density;
+        final int margin = (int) (6 * d);
+        ViewGroup row = headerRow(content);
+        if (row != null && row.findViewWithTag(ICON_TAG) == null) {
+            try {
+                ViewGroup.LayoutParams hl = headerParams(row, margin, icon.getLayoutParams().width);
                 if (hl != null) {
-                    // compact in the header (the full label would cover the centred title)
-                    pill.setText("🔍");
-                    pill.setContentDescription(I18n.t(ctx, R.string.ig_comment_search));
-                    row.addView(pill, hl);
-                    if (!(row instanceof FrameLayout)) { // centred like the title: move it to the row start
-                        final int margin = (int) (12 * d);
-                        pill.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+                    row.addView(icon, hl);
+                    if (!(row instanceof FrameLayout)) { // centred like the title: move it to the row end
+                        icon.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
                             boolean rtl = row.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
-                            v.setTranslationX(rtl ? (row.getWidth() - margin) - r : margin - l);
+                            v.setTranslationX(rtl ? margin - l : (row.getWidth() - margin) - r);
                         });
                     }
                     return;
                 }
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "⚠️ header pill: " + t);
+                ModuleLog.line(TAG + "⚠️ header icon: " + t);
             }
         }
         try {
-            if (g instanceof FrameLayout) { g.addView(pill, lp); pill.bringToFront(); }
-            else {
-                FrameLayout overlay = new FrameLayout(ctx);
-                overlay.addView(pill, lp);
-                g.addView(overlay, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(icon.getLayoutParams().width,
+                    icon.getLayoutParams().height, Gravity.TOP | Gravity.END);
+            lp.setMarginEnd(margin);
+            if (content instanceof FrameLayout) {
+                content.addView(icon, lp);
+                icon.bringToFront();
+            } else {
+                FrameLayout overlay = new FrameLayout(content.getContext());
+                overlay.addView(icon, lp);
+                content.addView(overlay, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             }
+            icon.setElevation(30 * d);
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ pill: " + t);
+            ModuleLog.line(TAG + "⚠️ icon: " + t);
         }
     }
 
@@ -393,17 +563,16 @@ public class CommentSearchHook {
         return null;
     }
 
-    /** Layout params that put the pill at the start of the header row, vertically centred
+    /** Layout params that put the icon at the end of the header row, vertically centred
      *  (FrameLayout gravity, or ConstraintLayout constraints to the parent). */
-    private static ViewGroup.LayoutParams headerParams(ViewGroup row, int startMargin) throws Exception {
-        int w = ViewGroup.LayoutParams.WRAP_CONTENT;
+    private static ViewGroup.LayoutParams headerParams(ViewGroup row, int endMargin, int size) throws Exception {
         if (row instanceof FrameLayout) {
-            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(w, w, Gravity.START | Gravity.CENTER_VERTICAL);
-            lp.setMarginStart(startMargin);
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(size, size, Gravity.END | Gravity.CENTER_VERTICAL);
+            lp.setMarginEnd(endMargin);
             return lp;
         }
         // ConstraintLayout (its LayoutParams class is renamed by R8): copy the title's params, which
-        // centre it in the row, then slide the pill to the row start once it is laid out.
+        // centre it in the row, then slide the icon to the row end once it is laid out.
         View title = null;
         for (int i = 0; i < row.getChildCount(); i++)
             if (row.getChildAt(i) instanceof TextView t && t.getId() != View.NO_ID
@@ -411,21 +580,501 @@ public class CommentSearchHook {
         if (title == null) return null;
         ViewGroup.LayoutParams src = title.getLayoutParams();
         // Only (int,int) survives R8: build one and copy the primitive fields (the constraints);
-        // object fields (the layout's internal widget) must stay the pill's own.
+        // object fields (the layout's internal widget) must stay the icon's own.
         ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams)
-                src.getClass().getConstructor(int.class, int.class).newInstance(w, w);
+                src.getClass().getConstructor(int.class, int.class).newInstance(size, size);
         for (Class<?> k = src.getClass(); k != null && k != Object.class; k = k.getSuperclass())
             for (java.lang.reflect.Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
                 if (java.lang.reflect.Modifier.isStatic(f.getModifiers()) || !f.getType().isPrimitive()) continue;
                 try { f.setAccessible(true); f.set(lp, f.get(src)); } catch (Throwable ignored) {}
             }
-        lp.width = w;
-        lp.height = w;
+        lp.width = size;
+        lp.height = size;
         return lp;
     }
 
+    /** Labels of the sort selector ("For you", "Newest", ...), from its enum's string ids. */
+    private static Set<String> sortLabels(Context ctx) {
+        String locale = ctx.getResources().getConfiguration().getLocales().toLanguageTags();
+        if (locale.equals(sortLabelsLocale)) return sortLabelSet;
+        Set<String> labels = new java.util.HashSet<>();
+        if (sortEnum != null) {
+            for (Object constant : sortEnum.getEnumConstants()) {
+                for (Field f : sortEnum.getDeclaredFields()) {
+                    if (Modifier.isStatic(f.getModifiers()) || f.getType() != int.class) continue;
+                    try {
+                        f.setAccessible(true);
+                        int id = f.getInt(constant);
+                        if (id > 0) labels.add(ctx.getString(id).trim());
+                    } catch (Throwable ignored) {}
+                }
+            }
+        }
+        labels.remove("");
+        sortLabelSet = labels;
+        sortLabelsLocale = locale;
+        return labels;
+    }
+
+    private static Class<?> sortEnum;
+    /** The "For you" sort row's list item model (0Bqq on 451). */
+    private static Class<?> sortRowModel;
+    private static Set<String> sortLabelSet = Collections.emptySet();
+    private static String sortLabelsLocale;
+    /** Bumped whenever the comment UI state carries comments (the sort row is built with them). */
+    private static volatile int stateUpdates;
+    /** Whether the latest comment UI state holds the sort row, and when it was built (uptime ms). */
+    private static volatile boolean stateHasSortRow;
+    private static volatile long stateAt;
+    /** The post of the open comment sheet (the sort row model's Media), for copying its caption. */
+    private static volatile java.lang.ref.WeakReference<Object> sheetPost = new java.lang.ref.WeakReference<>(null);
+    private static Field postField;
+
+    static Object sheetPost() {
+        return sheetPost.get();
+    }
+
+    private static Object postOf(Object sortRow) {
+        if (sortRow == null) return null;
+        try {
+            if (postField == null || postField.getDeclaringClass() != sortRow.getClass()) {
+                for (Field f : sortRow.getClass().getDeclaredFields()) {
+                    if (Modifier.isStatic(f.getModifiers()) || !f.getType().getName().equals("com.instagram.feed.media.Media")) continue;
+                    f.setAccessible(true);
+                    postField = f;
+                    break;
+                }
+            }
+            return postField != null && postField.getDeclaringClass() == sortRow.getClass() ? postField.get(sortRow) : null;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /**
+     * Full-size, click-through layer over the comment list holding the search icon. It reads the
+     * sort row's position during its own draw: from the Compose list's accessibility tree, or, in
+     * the Litho sheet a reel caption's "…" opens, from the label view (an RCTextView in a
+     * RecyclerView row). The overlay draws after the list, which lays out inside its dispatchDraw,
+     * so the position is from the same frame and the icon moves with the row while scrolling.
+     */
+    @android.annotation.SuppressLint("ViewConstructor")
+    private static final class SortRowOverlay extends FrameLayout {
+        private static final int NONE = Integer.MIN_VALUE;
+        private static final long SCAN_INTERVAL = 100, FALLBACK_AFTER = 3000;
+        private static java.lang.ref.WeakReference<SortRowOverlay> live = new java.lang.ref.WeakReference<>(null);
+        private final FrameLayout content;
+        private final android.widget.ImageView icon, headerIcon;
+        private final int iconSize, edge;
+        /** The Compose views of the sheet (from the last scan), and the one holding the sort row. */
+        private final List<java.lang.ref.WeakReference<View>> lists = new ArrayList<>();
+        private java.lang.ref.WeakReference<View> list = new java.lang.ref.WeakReference<>(null);
+        /** The sort label when it is a real view (the Litho sheet's RCTextView), else null. */
+        private java.lang.ref.WeakReference<View> labelView = new java.lang.ref.WeakReference<>(null);
+        private int nodeId = NONE, fullHeight, startUpdates, waits;
+        private long nextScan, attachedAt;
+        private boolean found, fallbackUsed, logged, waitLogged, rescanPending;
+        private final android.graphics.Rect bounds = new android.graphics.Rect();
+        private android.graphics.Rect clip;
+        private final int[] loc = new int[2], listLoc = new int[2];
+        private final Runnable rescan = () -> {
+            rescanPending = false;
+            invalidate();
+        };
+        private final android.view.ViewTreeObserver.OnPreDrawListener preDraw = () -> {
+            // Must always return true: a cancelling pre-draw listener freezes Instagram.
+            if (lists.isEmpty()) {
+                // No list tracked yet (still loading, or the Litho sheet's row is off screen): look
+                // again only when something in the sheet content (the parent) changed. An
+                // unconditional invalidate here schedules the next frame itself, so the window
+                // redrew nonstop. A sheet without a list has the header icon.
+                if (!fallbackUsed && getParent() instanceof View c && c.isDirty()) invalidate();
+                return true;
+            }
+            for (java.lang.ref.WeakReference<View> r : lists) {
+                View l = r.get();
+                if (l != null && l.isDirty()) { invalidate(); break; }
+            }
+            return true;
+        };
+
+        SortRowOverlay(Context ctx, FrameLayout content, android.widget.ImageView icon, android.widget.ImageView headerIcon) {
+            super(ctx);
+            this.content = content;
+            this.icon = icon;
+            this.headerIcon = headerIcon;
+            float d = ctx.getResources().getDisplayMetrics().density;
+            iconSize = icon.getLayoutParams().width;
+            edge = (int) (48 * d);
+            setClickable(false);
+            setFocusable(false);
+            setElevation(30 * d);
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(iconSize, iconSize, Gravity.TOP | Gravity.END);
+            lp.setMarginEnd((int) (6 * d)); // glyph centred on the comments' like-heart column
+            icon.setVisibility(INVISIBLE);
+            addView(icon, lp);
+        }
+
+        /** The comment state changed or the sort row just composed: look for it on the next frame. */
+        static void poke() {
+            SortRowOverlay o = live.get();
+            if (o == null) return;
+            o.post(() -> {
+                o.nextScan = 0;
+                o.invalidate();
+                if (android.os.SystemClock.uptimeMillis() - o.attachedAt >= FALLBACK_AFTER) o.checkFallback();
+            });
+        }
+
+        @Override
+        protected void onAttachedToWindow() {
+            super.onAttachedToWindow();
+            live = new java.lang.ref.WeakReference<>(this);
+            attachedAt = android.os.SystemClock.uptimeMillis();
+            startUpdates = stateUpdates;
+            getViewTreeObserver().addOnPreDrawListener(preDraw);
+            // An idle sheet draws nothing new: look for the row a few times while it opens.
+            for (long delay : new long[]{100, 300, 700, 1500}) postDelayed(this::invalidate, delay);
+            postDelayed(this::checkFallback, FALLBACK_AFTER);
+        }
+
+        @Override
+        protected void onDetachedFromWindow() {
+            getViewTreeObserver().removeOnPreDrawListener(preDraw);
+            if (live.get() == this) live = new java.lang.ref.WeakReference<>(null);
+            super.onDetachedFromWindow();
+        }
+
+        @Override
+        protected void dispatchDraw(android.graphics.Canvas canvas) {
+            try {
+                track();
+            } catch (Throwable t) {
+                if (!logged) { logged = true; ModuleLog.line(TAG + "⚠️ sort row: " + t); }
+                show(false);
+            }
+            super.dispatchDraw(canvas);
+        }
+
+        /**
+         * The header is only for a list without a sort row. While this sheet's state has one, the
+         * icon waits for the row to scroll into view: a sheet opened from the caption puts the
+         * caption above it, which can push the row below the fold.
+         */
+        private void checkFallback() {
+            if (found || fallbackUsed || !isAttachedToWindow()) return;
+            if (stateHasSortRow && stateAt >= attachedAt - 1500) {
+                if (!waitLogged) { waitLogged = true; ModuleLog.line(TAG + "search icon waits for the sort row to scroll into view"); }
+                return;
+            }
+            // No sort row yet: wait while comments are still loading, then use the header.
+            if (stateUpdates == startUpdates && ++waits < 8) { postDelayed(this::checkFallback, 1500); return; }
+            useFallback("no sort row in the list");
+        }
+
+        private void useFallback(String why) {
+            if (fallbackUsed) return;
+            fallbackUsed = true;
+            ModuleLog.line(TAG + "search icon in the header: " + why);
+            post(() -> headerIcon(content, headerIcon));
+        }
+
+        /** One redraw once the scan throttle ends, so a row that appeared meanwhile isn't missed. */
+        private void rescanIn(long delay) {
+            if (rescanPending) return;
+            rescanPending = true;
+            postDelayed(rescan, Math.max(16, delay));
+        }
+
+        private void track() throws Exception {
+            // The Litho sheet (opened from the caption) shows the sort label as a real view.
+            View label = labelView.get();
+            if (label != null && label.isAttachedToWindow() && label.isShown() && showsSortLabel(label)) {
+                place(label);
+                return;
+            }
+            labelView = new java.lang.ref.WeakReference<>(null);
+            View l = list.get();
+            android.view.accessibility.AccessibilityNodeProvider p = null;
+            android.view.accessibility.AccessibilityNodeInfo n = null;
+            if (l != null && l.isAttachedToWindow() && nodeId != NONE) {
+                p = l.getAccessibilityNodeProvider();
+                n = p != null ? p.createAccessibilityNodeInfo(nodeId) : null;
+                if (n != null && !isSortLabel(n)) n = null;
+            }
+            if (n == null) {
+                nodeId = NONE;
+                long now = android.os.SystemClock.uptimeMillis();
+                if (now < nextScan) { show(false); rescanIn(nextScan - now); return; }
+                nextScan = now + SCAN_INTERVAL;
+                n = scanAll();
+                l = list.get();
+                p = l != null ? l.getAccessibilityNodeProvider() : null;
+                if (n == null || p == null) {
+                    label = scanViews();
+                    if (label == null) { show(false); return; }
+                    labelView = new java.lang.ref.WeakReference<>(label);
+                    fullHeight = 0;
+                    clip = scrollerBounds(label);
+                    setClipBounds(clip);
+                    place(label);
+                    return;
+                }
+                fullHeight = 0;
+                clip = scrollBounds(p, n, l);
+                setClipBounds(clip);
+            }
+            n.getBoundsInScreen(bounds);
+            place(n.getText());
+        }
+
+        /** Puts the icon on the label's row: a label view, or a Compose node whose screen bounds are in `bounds`. */
+        private void place(Object what) {
+            if (what instanceof View label) {
+                label.getLocationOnScreen(listLoc);
+                bounds.set(listLoc[0], listLoc[1], listLoc[0] + label.getWidth(), listLoc[1] + label.getHeight());
+            }
+            getLocationOnScreen(loc);
+            bounds.offset(-loc[0], -loc[1]);
+            if (bounds.isEmpty()) { show(false); return; }
+            fullHeight = Math.max(fullHeight, bounds.height());
+            // Compose clips a partly scrolled-off row's bounds: keep the centre of its full height.
+            int cy = bounds.centerY();
+            if (bounds.height() < fullHeight && clip != null) {
+                if (bounds.top <= clip.top) cy = bounds.bottom - fullHeight / 2;
+                else if (bounds.bottom >= clip.bottom) cy = bounds.top + fullHeight / 2;
+            }
+            float y = cy - iconSize / 2f;
+            if (icon.getTranslationY() != y) icon.setTranslationY(y);
+            show(true);
+            if (!found) {
+                found = true;
+                ModuleLog.line(TAG + "search icon on sort row " + (what instanceof View v ? v.getClass().getSimpleName() : "'" + what + "'")
+                        + " at " + bounds.toShortString()
+                        + " after " + (android.os.SystemClock.uptimeMillis() - attachedAt) + " ms");
+                // The header fallback ran while comments were slow to load: keep a single icon.
+                if (headerIcon.getParent() instanceof ViewGroup g) g.removeView(headerIcon);
+            }
+        }
+
+        private void show(boolean visible) {
+            int v = visible ? VISIBLE : INVISIBLE;
+            if (icon.getVisibility() != v) icon.setVisibility(v);
+        }
+
+        /**
+         * The sort label among real views (the Litho sheet: an RCTextView in a RecyclerView row):
+         * a view whose text is a label, starting at the list's leading edge. Topmost wins.
+         */
+        private View scanViews() {
+            View best = null;
+            int bestTop = Integer.MAX_VALUE;
+            java.util.ArrayDeque<View> stack = new java.util.ArrayDeque<>();
+            stack.push(content);
+            int visited = 0;
+            while (!stack.isEmpty() && visited++ < 600) {
+                View v = stack.pop();
+                if (!v.isShown() || v instanceof SortRowOverlay || v.getClass().getName().endsWith("AndroidComposeView")) continue;
+                if (showsSortLabel(v)) {
+                    View scroller = scroller(v);
+                    View edgeOf = scroller != null ? scroller : content;
+                    edgeOf.getLocationOnScreen(listLoc);
+                    v.getLocationOnScreen(loc);
+                    boolean rtl = edgeOf.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+                    int lead = rtl ? listLoc[0] + edgeOf.getWidth() - (loc[0] + v.getWidth()) : loc[0] - listLoc[0];
+                    if (lead < edge && loc[1] < bestTop) {
+                        best = v;
+                        bestTop = loc[1];
+                    }
+                }
+                if (v instanceof ViewGroup g) for (int i = g.getChildCount() - 1; i >= 0; i--) stack.push(g.getChildAt(i));
+            }
+            if (best != null) {
+                View scroller = scroller(best);
+                lists.clear();
+                lists.add(new java.lang.ref.WeakReference<>(scroller != null ? scroller : content));
+            }
+            return best;
+        }
+
+        private boolean showsSortLabel(View v) {
+            for (CharSequence t : viewTexts(v)) {
+                String s = t.toString().trim();
+                for (String label : sortLabelSet) if (s.equals(label)) return true;
+            }
+            return false;
+        }
+
+        /** The nearest RecyclerView above a view: the list it scrolls in. */
+        private View scroller(View v) {
+            for (View p = v.getParent() instanceof View pv ? pv : null; p != null && p != content;
+                 p = p.getParent() instanceof View pv ? pv : null) {
+                for (Class<?> k = p.getClass(); k != null && k != View.class; k = k.getSuperclass())
+                    if (k.getName().equals("androidx.recyclerview.widget.RecyclerView")) return p;
+            }
+            return null;
+        }
+
+        /** Where a view-based row can show: its RecyclerView, else the sheet content. */
+        private android.graphics.Rect scrollerBounds(View label) {
+            View s = scroller(label);
+            View area = s != null ? s : content;
+            getLocationOnScreen(loc);
+            area.getLocationOnScreen(listLoc);
+            return new android.graphics.Rect(listLoc[0] - loc[0], listLoc[1] - loc[1],
+                    listLoc[0] - loc[0] + area.getWidth(), listLoc[1] - loc[1] + area.getHeight());
+        }
+
+        /** The topmost sort label across the sheet's Compose views; remembers its view and node. */
+        private android.view.accessibility.AccessibilityNodeInfo scanAll() throws Exception {
+            lists.clear();
+            boolean anyProvider = false;
+            int bestTop = Integer.MAX_VALUE;
+            android.view.accessibility.AccessibilityNodeInfo best = null;
+            for (View v : composeViews(content)) {
+                lists.add(new java.lang.ref.WeakReference<>(v));
+                android.view.accessibility.AccessibilityNodeProvider p = v.getAccessibilityNodeProvider();
+                if (p == null) continue;
+                anyProvider = true;
+                int id = scan(p, v);
+                android.view.accessibility.AccessibilityNodeInfo n = id != NONE ? p.createAccessibilityNodeInfo(id) : null;
+                if (n == null) continue;
+                n.getBoundsInScreen(bounds);
+                if (bounds.top < bestTop) {
+                    bestTop = bounds.top;
+                    best = n;
+                    nodeId = id;
+                    list = new java.lang.ref.WeakReference<>(v);
+                }
+            }
+            if (!anyProvider && !lists.isEmpty()) useFallback("list has no accessibility provider");
+            return best;
+        }
+
+        /**
+         * The sort label node: its text is a label, and it starts at the list's leading edge (a
+         * comment that just says "Newest" starts after its avatar). Depth-first in list order, so
+         * the first hit is the topmost and a visible sort row (one of the first items) is found
+         * after a few nodes; the cap keeps a scan cheap while the row is scrolled away.
+         */
+        private int scan(android.view.accessibility.AccessibilityNodeProvider p, View l) throws Exception {
+            l.getLocationOnScreen(listLoc);
+            boolean rtl = l.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+            int nodes = 0;
+            java.util.ArrayDeque<Integer> stack = new java.util.ArrayDeque<>();
+            stack.push(View.NO_ID);
+            Set<Integer> seen = new java.util.HashSet<>();
+            while (!stack.isEmpty() && nodes < 150) {
+                int id = stack.pop();
+                if (!seen.add(id)) continue;
+                android.view.accessibility.AccessibilityNodeInfo n = p.createAccessibilityNodeInfo(id);
+                if (n == null) continue;
+                nodes++;
+                if (id != View.NO_ID && isSortLabel(n)) {
+                    n.getBoundsInScreen(bounds);
+                    int lead = rtl ? listLoc[0] + l.getWidth() - bounds.right : bounds.left - listLoc[0];
+                    if (!bounds.isEmpty() && lead < edge) return id;
+                }
+                for (int i = n.getChildCount() - 1; i >= 0; i--) stack.push((int) (((long) childIdMethod().invoke(n, i)) >> 32));
+            }
+            return NONE;
+        }
+
+        private boolean isSortLabel(android.view.accessibility.AccessibilityNodeInfo n) {
+            CharSequence t = n.getText() != null ? n.getText() : n.getContentDescription();
+            if (t == null) return false;
+            String s = t.toString().trim();
+            for (String label : sortLabelSet) if (s.equals(label) || s.startsWith(label + ",")) return true;
+            return false;
+        }
+
+        /** Where the row can show: the nearest scrolling node above it, else the list view. */
+        private android.graphics.Rect scrollBounds(android.view.accessibility.AccessibilityNodeProvider p,
+                                                   android.view.accessibility.AccessibilityNodeInfo n, View l) {
+            android.graphics.Rect r = new android.graphics.Rect();
+            getLocationOnScreen(loc);
+            try {
+                android.view.accessibility.AccessibilityNodeInfo cur = n;
+                for (int up = 0; up < 8 && cur != null; up++) {
+                    int parent = (int) (((long) parentIdMethod().invoke(cur)) >> 32);
+                    cur = p.createAccessibilityNodeInfo(parent);
+                    if (cur != null && cur.isScrollable()) {
+                        cur.getBoundsInScreen(r);
+                        r.offset(-loc[0], -loc[1]);
+                        if (!r.isEmpty()) return r;
+                    }
+                }
+            } catch (Throwable ignored) {}
+            l.getLocationOnScreen(listLoc);
+            r.set(listLoc[0] - loc[0], listLoc[1] - loc[1], listLoc[0] - loc[0] + l.getWidth(), listLoc[1] - loc[1] + l.getHeight());
+            return r;
+        }
+    }
+
+    private static final Map<Class<?>, Object[]> TEXT_ACCESS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * The texts a view shows: a TextView's text, a Litho host's text items, or a rendercore
+     * RCTextView's text (kept in its CharSequence / Layout fields; it has no public getter).
+     */
+    static List<CharSequence> viewTexts(View v) {
+        List<CharSequence> out = new ArrayList<>();
+        try {
+            if (v instanceof TextView tv) {
+                if (tv.getText() != null) out.add(tv.getText());
+                return out;
+            }
+            Object[] access = TEXT_ACCESS.computeIfAbsent(v.getClass(), CommentSearchHook::textAccess);
+            if (access.length == 0) return out;
+            if (access[0] instanceof Method m) {
+                if (m.invoke(v) instanceof List<?> texts)
+                    for (Object t : texts) if (t instanceof CharSequence cs) out.add(cs);
+            } else {
+                for (Object f : access) {
+                    Object value = ((Field) f).get(v);
+                    if (value instanceof CharSequence cs) { out.add(cs); break; }
+                    if (value instanceof android.text.Layout layout && layout.getText() != null) { out.add(layout.getText()); break; }
+                }
+            }
+        } catch (Throwable ignored) {}
+        return out;
+    }
+
+    private static Object[] textAccess(Class<?> type) {
+        try {
+            return new Object[]{type.getMethod("getTextContentText")};
+        } catch (NoSuchMethodException ignored) {}
+        if (!type.getName().endsWith(".RCTextView")) return new Object[0];
+        List<Object> fields = new ArrayList<>();
+        for (Class<?> k = type; k != null && k != View.class; k = k.getSuperclass()) {
+            for (Field f : k.getDeclaredFields()) {
+                if (Modifier.isStatic(f.getModifiers())) continue;
+                if (f.getType() == CharSequence.class || f.getType() == android.text.Layout.class) {
+                    f.setAccessible(true);
+                    fields.add(f);
+                }
+            }
+        }
+        return fields.toArray();
+    }
+
+    /** The shown Compose views in the sheet content, tallest (the comment list) first. */
+    private static List<View> composeViews(View root) {
+        List<View> out = new ArrayList<>();
+        java.util.ArrayDeque<View> st = new java.util.ArrayDeque<>();
+        st.push(root);
+        while (!st.isEmpty()) {
+            View v = st.pop();
+            if (!v.isShown() || v instanceof SortRowOverlay) continue;
+            if (v.getClass().getName().equals("androidx.compose.ui.platform.AndroidComposeView")) out.add(v);
+            if (v instanceof ViewGroup g) for (int i = 0; i < g.getChildCount(); i++) st.push(g.getChildAt(i));
+        }
+        out.sort((a, b) -> Integer.compare(b.getHeight(), a.getHeight()));
+        return out;
+    }
+
     private static void showSearch(Context c) {
-        // The pill's own activity: the "current" one can be a different, hidden activity (e.g. the
+        // The icon's own activity: the "current" one can be a different, hidden activity (e.g. the
         // main activity behind UrlHandlerActivity when the post was opened from a link).
         Activity act = null;
         for (Context k = c; k != null; k = k instanceof android.content.ContextWrapper w ? w.getBaseContext() : null)
@@ -1280,10 +1929,6 @@ public class CommentSearchHook {
         try {
             android.view.accessibility.AccessibilityNodeProvider p = list.getAccessibilityNodeProvider();
             if (p == null) { logA11y("no node provider"); return 0; }
-            if (childIdMethod == null) {
-                childIdMethod = android.view.accessibility.AccessibilityNodeInfo.class.getDeclaredMethod("getChildId", int.class);
-                childIdMethod.setAccessible(true);
-            }
             int clicked = 0, nodes = 0;
             java.util.ArrayDeque<Integer> q = new java.util.ArrayDeque<>();
             q.add(View.NO_ID);
@@ -1310,7 +1955,7 @@ public class CommentSearchHook {
                     logA11y("click '" + t + "' via " + (target == id ? "itself" : "parent " + target) + " -> " + ok);
                     if (ok) clicked++;
                 }
-                for (int i = 0; i < n.getChildCount(); i++) q.add((int) (((long) childIdMethod.invoke(n, i)) >> 32));
+                for (int i = 0; i < n.getChildCount(); i++) q.add((int) (((long) childIdMethod().invoke(n, i)) >> 32));
             }
             if (!a11yLogged) { a11yLogged = true; logA11y("nodes=" + nodes + " clicked=" + clicked); }
             if (clicked > 0) ModuleLog.line(TAG + "load all: opened " + clicked + " reply thread(s)");
@@ -1322,6 +1967,15 @@ public class CommentSearchHook {
     }
 
     private static Method parentIdMethod;
+
+    @android.annotation.SuppressLint("SoonBlockedPrivateApi") // guarded; callers fall back when blocked
+    private static Method childIdMethod() throws NoSuchMethodException {
+        if (childIdMethod == null) {
+            childIdMethod = android.view.accessibility.AccessibilityNodeInfo.class.getDeclaredMethod("getChildId", int.class);
+            childIdMethod.setAccessible(true);
+        }
+        return childIdMethod;
+    }
 
     @android.annotation.SuppressLint("SoonBlockedPrivateApi") // guarded; callers fall back when blocked
     private static Method parentIdMethod() throws NoSuchMethodException {
