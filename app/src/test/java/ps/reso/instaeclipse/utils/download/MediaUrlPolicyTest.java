@@ -90,6 +90,30 @@ public class MediaUrlPolicyTest {
         }
     }
 
+    /** Comment GIFs and DM stickers come from Giphy's media servers; lookalikes stay out. */
+    @Test
+    public void giphysMediaServersPassAndLookalikesDoNot() throws Exception {
+        assertNull(refusal(resolvingTo(PUBLIC), "https://media2.giphy.com/media/3oge84qhopFbFFkwec/200.gif"));
+        assertNull(refusal(resolvingTo(PUBLIC), "https://media.giphy.com/media/v1.Y2lk/giphy.webp?cid=1&rid=giphy.webp"));
+        assertNull(refusal(resolvingTo(PUBLIC), "https://i.giphy.com/media/x/200w.mp4"));
+        assertTrue(MediaUrlPolicy.isMetaMediaHost("MEDIA4.GIPHY.COM."));
+
+        assertEquals("it is not HTTPS", refusal(resolvingTo(PUBLIC), "http://media.giphy.com/media/x/200.gif"));
+        assertEquals("it carries a user name",
+                refusal(resolvingTo(PUBLIC), "https://media.giphy.com@example.com/x.gif"));
+        for (String url : new String[] {
+                "https://giphy.com.evil.com/x.gif",
+                "https://notgiphy.com/x.gif",
+                "https://media.giphy.co/x.gif",
+                "https://giphy.example.com/x.gif",
+        }) {
+            assertFalse(url, MediaUrlPolicy.isMetaMediaHost(new URL(url).getHost()));
+            assertEquals(url, "its host is not one of Meta's media servers", refusal(resolvingTo(PUBLIC), url));
+        }
+        assertEquals("its host resolves to a private address",
+                refusal(resolvingTo("192.168.1.1"), "https://media.giphy.com/media/x/200.gif"));
+    }
+
     @Test
     public void plainHttpIsRefused() throws Exception {
         assertEquals("it is not HTTPS", refusal(resolvingTo(PUBLIC), CDN.replace("https://", "http://")));

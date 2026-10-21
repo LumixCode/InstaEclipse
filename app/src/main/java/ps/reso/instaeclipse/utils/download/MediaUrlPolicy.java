@@ -60,8 +60,11 @@ class MediaUrlPolicy {
     /** No VPN and no proxy between the phone and the address. */
     static final Route DIRECT = url -> true;
 
-    /** Meta's media CDNs. A save never needs anything else. */
-    private static final String[] META_MEDIA_DOMAINS = { "fbcdn.net", "fbsbx.com", "cdninstagram.com" };
+    /**
+     * Meta's media CDNs, plus Giphy: Instagram's comment GIFs and DM stickers/GIFs are served from
+     * its media servers (media*.giphy.com). A save never needs anything else.
+     */
+    private static final String[] META_MEDIA_DOMAINS = { "fbcdn.net", "fbsbx.com", "cdninstagram.com", "giphy.com" };
 
     /** The rules with a direct route, for a caller that knows no better and for tests. */
     static final MediaUrlPolicy META = new MediaUrlPolicy(DNS);

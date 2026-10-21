@@ -15,6 +15,7 @@ public final class DownloadRequestValidator {
             "cdninstagram.com",
             "fbcdn.net",
             "fbsbx.com",
+            "giphy.com", // GIF comments
     };
 
     static final int MAX_NAME_LENGTH = 120;

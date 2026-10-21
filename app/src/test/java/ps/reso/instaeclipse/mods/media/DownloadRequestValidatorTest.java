@@ -17,6 +17,14 @@ public class DownloadRequestValidatorTest {
     }
 
     @Test
+    public void acceptsGiphyHttpsForGifComments() {
+        assertTrue(DownloadRequestValidator.isAllowedMediaUrl("https://media2.giphy.com/media/3oge84qhopFbFFkwec/200.gif"));
+        assertFalse(DownloadRequestValidator.isAllowedMediaUrl("http://media.giphy.com/media/x/200.gif"));
+        assertFalse(DownloadRequestValidator.isAllowedMediaUrl("https://giphy.com.evil.com/x.gif"));
+        assertFalse(DownloadRequestValidator.isAllowedMediaUrl("https://notgiphy.com/x.gif"));
+    }
+
+    @Test
     public void rejectsOtherHostsAndSchemes() {
         assertFalse(DownloadRequestValidator.isAllowedMediaUrl("http://scontent.cdninstagram.com/x.jpg"));
         assertFalse(DownloadRequestValidator.isAllowedMediaUrl("https://evil.com/cdninstagram.com/x.jpg"));
@@ -24,6 +32,26 @@ public class DownloadRequestValidatorTest {
         assertFalse(DownloadRequestValidator.isAllowedMediaUrl("https://user@evil.cdninstagram.com/x.jpg"));
         assertFalse(DownloadRequestValidator.isAllowedMediaUrl("file:///sdcard/x.jpg"));
         assertFalse(DownloadRequestValidator.isAllowedMediaUrl(null));
+    }
+
+    // Cases from the former DownloadSaveServiceUrlTest (the local build's own allowlist).
+    @Test
+    public void metaCdnAllowlistEdgeCases() {
+        for (String url : new String[]{
+                "https://scontent-ams2-1.cdninstagram.com/v/t51.2885-15/1.jpg?oh=a&oe=b",
+                "https://instagram.fams1-2.fna.fbcdn.net/o1/v/t16/f2/m86/video.mp4",
+                "https://cdn.fbsbx.com/v/t59.3654-21/audio.mp4",
+                "https://CDNINSTAGRAM.COM/x.jpg"}) {
+            assertTrue(url, DownloadRequestValidator.isAllowedMediaUrl(url));
+        }
+        for (String url : new String[]{
+                "", "not a url", "/sdcard/x.jpg",
+                "https://evil.test/?u=cdninstagram.com",            // CDN name only in the query
+                "https://evilfbcdn.net/x.jpg",                      // not a subdomain
+                "https://user@scontent.cdninstagram.com/x.jpg",     // credentials in authority
+                "https://192.168.0.1/x.jpg"}) {
+            assertFalse(url, DownloadRequestValidator.isAllowedMediaUrl(url));
+        }
     }
 
     @Test
