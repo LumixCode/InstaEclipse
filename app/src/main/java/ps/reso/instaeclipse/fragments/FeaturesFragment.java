@@ -164,21 +164,74 @@ public class FeaturesFragment extends Fragment {
                 // itself is skipped below (CommonUtils.STALE_CACHE_KEYS).
                 if (Boolean.TRUE.equals(s.opt("blockLocationPrompts"))) s.put("hideOnboardingPrompts", true);
                 SharedPreferences.Editor editor = localCache.edit();
-                Iterator<String> keys = s.keys();
-                while (keys.hasNext()) {
-                    String key = keys.next();
+                Map<String, ?> current = localCache.getAll();
+                List<String> keys = new ArrayList<>();
+                for (Iterator<String> it = s.keys(); it.hasNext(); ) keys.add(it.next());
+                // Restored restrictions must reach Instagram before Extreme Mode locks them.
+                keys.sort(java.util.Comparator.comparing(key -> "isExtremeMode".equals(key)));
+                // Settings in the file that are not restored, so the toast doesn't claim them.
+                int skipped = 0;
+                for (String key : keys) {
+                    String target = key;
+                    if ("hideCreateGroupButton".equals(key)) {
+                        // Local pre-0.8 backups: the same share-sheet switch under its old name.
+                        if (s.has("hideShareCreateGroup")) continue;
+                        target = "hideShareCreateGroup";
+                    } else if (ps.reso.instaeclipse.utils.core.CommonUtils.STALE_CACHE_KEYS.contains(key)) {
+                        continue; // never settings (see CommonUtils.STALE_CACHE_KEYS)
+                    }
+                    // Sync stamps and Instagram's private keys are never settings (PrefsMerge).
+                    if (target.startsWith("__") || ps.reso.instaeclipse.utils.core.PrefsMerge.isPrivate(target)) continue;
                     Object val = s.get(key);
+                    // A restore only turns locks on: turning one off, or changing the locked
+                    // collections, is done inside Instagram, which asks for the passcode
+                    // (Instagram refuses it from here, SettingsManager.isLockedByPasscode).
+                    if (ps.reso.instaeclipse.utils.core.SettingsManager.isPasscodeLock(target) && !Boolean.TRUE.equals(val)) {
+                        if (Boolean.TRUE.equals(current.get(target))) skipped++;
+                        continue;
+                    }
+                    if ("lockedCollections".equals(target)) {
+                        skipped++;
+                        continue;
+                    }
+                    if ("storyCacheHours".equals(key)) {
+                        val = ps.reso.instaeclipse.utils.media.StoryCacheRetention.normalize(
+                                s.optInt(key, ps.reso.instaeclipse.utils.media.StoryCacheRetention.DEFAULT_HOURS));
+                    }
                     if (val instanceof Boolean) {
-                        editor.putBoolean(key, (Boolean) val);
+                        editor.putBoolean(target, (Boolean) val);
                         Intent intent = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF");
-                        intent.putExtra("key", key);
+                        intent.putExtra("key", target);
                         intent.putExtra("value", (boolean) (Boolean) val);
                         ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), intent);
+                    } else if (val instanceof Number) {
+                        int value = ((Number) val).intValue();
+                        editor.putInt(target, value);
+                        Intent intent = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_INT");
+                        intent.putExtra("key", target);
+                        intent.putExtra("value", value);
+                        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), intent);
+                    } else if (val instanceof String) {
+                        // Checked as Instagram's own restore checks it (SettingsBackupManager.fromJson).
+                        String value = ps.reso.instaeclipse.utils.backup.SettingsBackupManager.restorableString(target, (String) val);
+                        if (value == null) {
+                            skipped++;
+                            continue;
+                        }
+                        editor.putString(target, value);
+                        Intent intent = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
+                        intent.putExtra("key", target);
+                        intent.putExtra("value", value);
+                        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), intent);
+                    } else {
+                        skipped++; // null, a list or an object: no setting has that type
                     }
                 }
                 editor.apply();
                 refreshVisibleMenu();
-                ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_toast_settings_restored), Toast.LENGTH_SHORT).show();
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), skipped == 0
+                        ? getString(R.string.ig_toast_settings_restored)
+                        : getString(R.string.ig_toast_settings_restored_skipped, skipped), Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
             }
@@ -2443,7 +2496,8 @@ public class FeaturesFragment extends Fragment {
     /** Quality: image, reel, upload and HDR video quality in one place. */
     private List<Object> buildQualityDefs() {
         List<Object> defs = new ArrayList<>();
-        int current = localCache.getInt("forceReelQuality", 0);
+        // Older builds stored a boolean here; getInt would throw ClassCastException.
+        int current = ps.reso.instaeclipse.utils.core.SettingsManager.readReelQuality(localCache);
         defs.add(Arrays.asList(
                 createClickable(R.drawable.ic_movie, "#FF9F0A",
                         getString(R.string.ig_dialog_quality_force_reels) + ": " + qualityLabel(current), () -> pickQuality(current)),
@@ -2528,9 +2582,14 @@ public class FeaturesFragment extends Fragment {
             JSONObject settings = new JSONObject();
             Map<String, ?> all = localCache.getAll();
             for (Map.Entry<String, ?> entry : all.entrySet()) {
-                if (entry.getValue() instanceof Boolean) {
-                    settings.put(entry.getKey(), entry.getValue());
-                }
+                String key = entry.getKey();
+                // Every switch, number and text setting; not Instagram's private keys, the "__" sync
+                // stamps (PrefsMerge), pre-0.8 leftovers, or the locked collections, which only
+                // Instagram changes (a restore skips them).
+                if (!ps.reso.instaeclipse.utils.core.PrefsMerge.isSharedSetting(key, entry.getValue())
+                        || ps.reso.instaeclipse.utils.core.CommonUtils.STALE_CACHE_KEYS.contains(key)
+                        || "lockedCollections".equals(key)) continue;
+                settings.put(key, entry.getValue());
             }
             settings.put("storyCacheHours", ps.reso.instaeclipse.utils.media.StoryCacheRetention.fromStored(
                     all.get("storyCacheHours")));

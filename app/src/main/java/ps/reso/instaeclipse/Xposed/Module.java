@@ -1069,20 +1069,6 @@ public class Module {
                         ps.reso.instaeclipse.utils.ipc.ModuleReplies.reply(intent, reply.getExtras());
                         ModuleLog.line("(IE|Config) Configuration export failed");
                     }
-
-                } else if ("ps.reso.instaeclipse.ACTION_BACKUP_SETTINGS".equals(action)) {
-                    ModuleLog.line("(InstaEclipse) Sync: Companion app requested Settings backup.");
-                    try {
-                        String json = ps.reso.instaeclipse.utils.backup.SettingsBackupManager.toJson();
-                        Intent exportIntent = new Intent();
-                        exportIntent.setComponent(new android.content.ComponentName("ps.reso.instaeclipse", "ps.reso.instaeclipse.mods.devops.config.JsonExportActivity"));
-                        exportIntent.putExtra("json_content", json);
-                        exportIntent.putExtra("file_name", "instaeclipse_settings.json");
-                        exportIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        ps.reso.instaeclipse.utils.ipc.CompanionBridge.launchActivity(ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity(), exportIntent);
-                    } catch (Exception e) {
-                        ModuleLog.line("(InstaEclipse) Failed to create backup: " + e.getMessage());
-                    }
                 }
             }
         };
@@ -1095,7 +1081,6 @@ public class Module {
         filter.addAction(CommonUtils.ACTION_CLEAR_LOGS);
         filter.addAction("ps.reso.instaeclipse.ACTION_REQUEST_PREFS");
         filter.addAction("ps.reso.instaeclipse.ACTION_EXPORT_CONFIG");
-        filter.addAction("ps.reso.instaeclipse.ACTION_BACKUP_SETTINGS");
 
         // Only the companion (holding the signature permission) can reach this receiver.
         ps.reso.instaeclipse.utils.core.IpcSecurity.registerCompanionOnlyReceiver(context, receiver, filter);
