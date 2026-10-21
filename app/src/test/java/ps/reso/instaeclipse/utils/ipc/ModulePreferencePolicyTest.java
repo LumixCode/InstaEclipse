@@ -25,7 +25,7 @@ public class ModulePreferencePolicyTest {
         assertTrue(ModuleReplies.isPreferenceValue("spoofLng", "0.0"));
         assertFalse(ModuleReplies.isPreferenceValue("spoofLat", 0.0));
         assertTrue(ModuleReplies.isPreferenceValue("showHideChatButton", false));
-        assertTrue(ModuleReplies.isPreferenceValue("showDeletedMessagesButton", false));
+        assertTrue(ModuleReplies.isPreferenceValue("showUnsentButton", false));
         assertFalse(ModuleReplies.isPreferenceValue("pathJustSetLocally", false));
         assertFalse(ModuleReplies.isPreferenceValue("synthetic_unknown_marker", true));
         assertFalse(ModuleReplies.isPreferenceValue(null, true));

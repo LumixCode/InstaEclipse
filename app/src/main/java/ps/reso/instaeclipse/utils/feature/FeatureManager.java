@@ -69,7 +69,7 @@ public class FeatureManager {
         }
 
         if (FeatureFlags.keepUnsentMessages) {
-            FeatureStatusTracker.setEnabled("KeepUnsentMessages", R.string.ig_dialog_ghost_keep_unsent);
+            FeatureStatusTracker.setEnabled("KeepUnsentMessages", R.string.ig_dialog_ghost_keep_unsent_chat);
         } else {
             FeatureStatusTracker.setDisabled("KeepUnsentMessages");
         }

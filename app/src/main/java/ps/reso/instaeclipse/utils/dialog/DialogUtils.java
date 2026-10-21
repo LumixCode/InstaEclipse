@@ -863,7 +863,7 @@ public class DialogUtils {
         // Never widen to every chat: an unknown thread (null) shows only the entries that were
         // logged without a chat, so one chat's unsent messages can't appear inside another.
         final java.util.List<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry> entries =
-                ps.reso.instaeclipse.utils.ghost.UnsentLog.getForThread(threadId != null ? threadId : "");
+                ps.reso.instaeclipse.utils.ghost.UnsentLog.getForThread(context, threadId != null ? threadId : "");
 
         java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat("MMM d, HH:mm", java.util.Locale.getDefault());
         final String who = (chatName != null && !chatName.trim().isEmpty()) ? chatName.trim()
@@ -876,16 +876,20 @@ public class DialogUtils {
                         ? I18n.t(context, R.string.ig_dialog_unsent_exported, path)
                         : I18n.t(context, R.string.ig_toast_download_failed, "export"), Toast.LENGTH_LONG).show();
             }));
-            layout.addView(createActionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_dialog_unsent_clear), "#FF453A", v -> {
+            layout.addView(createActionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_unsent_clear_saved), "#FF453A", v -> {
                 try {
                     IeDialog dlg = new IeDialog(context)
-                            .title(I18n.t(context, R.string.ig_dialog_unsent_clear))
-                            .message(I18n.t(context, R.string.ig_dialog_unsent_clear_confirm));
+                            .title(I18n.t(context, R.string.ig_unsent_clear_saved))
+                            .message(I18n.t(context, R.string.ig_unsent_clear_saved_confirm));
                     dlg.secondary(context.getString(android.R.string.cancel), null);
                     dlg.primary(I18n.t(context, R.string.ig_dialog_unsent_clear_yes), () -> {
-                        ps.reso.instaeclipse.utils.ghost.UnsentLog.clearThread(threadId != null ? threadId : "");
-                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_dialog_unsent_cleared), Toast.LENGTH_SHORT).show();
-                        showThreadUnsent(context, threadId);
+                        // clearSaved(null) means every chat, so an unknown thread is never cleared from here.
+                        if (threadId == null || !ps.reso.instaeclipse.mods.ghost.KeepUnsentMessagesHook.clearSaved(context, threadId)) {
+                            ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_unsent_clear_failed), Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_unsent_cleared_saved), Toast.LENGTH_SHORT).show();
+                        reopenThreadUnsent(context, threadId, chatName, onBack);
                     });
                     dlg.show();
                 } catch (Throwable ignored) {}
@@ -937,27 +941,6 @@ public class DialogUtils {
                 row.addView(meta);
                 row.addView(body);
 
-                row.addView(createActionRow(context, R.drawable.ic_delete,
-                        I18n.t(context, R.string.ie_unsent_remove_copy), "#FF453A", v -> {
-                    IeDialog confirmation = new IeDialog(context)
-                            .title(I18n.t(context, R.string.ie_unsent_remove_copy))
-                            .message(I18n.t(context, R.string.ie_unsent_remove_copy_confirm));
-                    confirmation.secondary(context.getString(android.R.string.cancel), null);
-                    confirmation.primary(I18n.t(context, R.string.ie_unsent_remove_copy), () -> {
-                                ps.reso.instaeclipse.utils.ghost.UnsentLog.RemovalResult result =
-                                        ps.reso.instaeclipse.utils.ghost.UnsentLog.removeEntry(e);
-                                int notice = result == ps.reso.instaeclipse.utils.ghost.UnsentLog.RemovalResult.REMOVED
-                                        ? R.string.ie_unsent_copy_removed
-                                        : result == ps.reso.instaeclipse.utils.ghost.UnsentLog.RemovalResult.STALE
-                                        ? R.string.ie_unsent_copy_stale : R.string.ie_unsent_copy_remove_failed;
-                                if (result != ps.reso.instaeclipse.utils.ghost.UnsentLog.RemovalResult.FAILED)
-                                    layout.removeView(row);
-                                ps.reso.instaeclipse.utils.toast.IeToast.makeText(context,
-                                        I18n.t(context, notice), Toast.LENGTH_SHORT).show();
-                            });
-                    confirmation.show();
-                }));
-
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                 lp.setMargins(0, i == 0 ? dp(context, 4) : dp(context, 8), 0, 0);
@@ -966,6 +949,20 @@ public class DialogUtils {
         }
 
         showSectionDialog(context, who != null && !who.isEmpty() ? who : I18n.t(context, R.string.ig_dialog_unsent_title), layout, () -> {});
+    }
+
+    /** Reopens a chat's unsent page after a clear, under the same title so it replaces the old one.
+     *  The hidden Unsent list behind it would still show the cleared chat on Back, so that list is
+     *  rebuilt first and the reopened page is stacked on the fresh one. */
+    private static void reopenThreadUnsent(Context context, String threadId, String chatName, Runnable onBack) {
+        Object[] parent = sectionStack.peek();
+        if (parent != null && I18n.t(context, R.string.ig_dialog_unsent_title).equals(parent[1])) {
+            sectionStack.pop();
+            try { ((AlertDialog) parent[0]).dismiss(); } catch (Exception ignored) {}
+            if (currentDialog != null) { try { currentDialog.dismiss(); } catch (Exception ignored) {} currentDialog = null; }
+            showUnsentMessages(context);
+        }
+        showThreadUnsent(context, threadId, chatName, onBack);
     }
 
     /** Write the thread's unsent messages as JSON into Download/InstaEclipse/<chat>/ ; returns a
@@ -1029,10 +1026,10 @@ public class DialogUtils {
         LinearLayout layout = createSwitchLayout(context);
 
         java.util.List<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry> entries =
-                ps.reso.instaeclipse.utils.ghost.UnsentLog.getAll();
+                ps.reso.instaeclipse.utils.ghost.UnsentLog.getAll(context);
 
         if (entries.isEmpty()) {
-            layout.addView(createInfoSection(context, I18n.t(context, R.string.ig_dialog_ghost_keep_unsent),
+            layout.addView(createInfoSection(context, I18n.t(context, R.string.ig_dialog_ghost_keep_unsent_chat),
                     I18n.t(context, R.string.ig_dialog_unsent_empty)));
             showSectionDialog(context, I18n.t(context, R.string.ig_dialog_unsent_title), layout, () -> {});
             return;
@@ -1055,10 +1052,11 @@ public class DialogUtils {
         for (java.util.Map.Entry<String, java.util.List<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry>> t : byThread.entrySet()) {
             final String threadId = t.getKey();
             final int count = t.getValue().size();
-            // Prefer the live resolved thread name (updated from the header on every thread open) over
-            // the per-entry sender captured at log time — the latter can be stale/wrong (e.g. a token
-            // grabbed before the name resolved), and the live map is always the most current label.
-            String name = ps.reso.instaeclipse.utils.ghost.ThreadNames.resolve(threadId);
+            // Prefer Instagram's own inbox title, then the live resolved thread name, over the
+            // per-entry sender captured at log time — the latter can be stale/wrong (e.g. a token
+            // grabbed before the name resolved, or the viewer's own handle from an older capture bug).
+            String name = ps.reso.instaeclipse.mods.ghost.HideChatsHook.knownThreadTitle(threadId);
+            if (name == null || name.isEmpty()) name = ps.reso.instaeclipse.utils.ghost.ThreadNames.resolve(threadId);
             if (name == null || name.isEmpty()) {
                 name = nameFor.get(threadId); // stored per-entry sender fallback
             }
@@ -1072,15 +1070,19 @@ public class DialogUtils {
         }
         layout.addView(foldersCard);
 
-        layout.addView(createActionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_dialog_unsent_clear), "#FF453A", v -> {
+        layout.addView(createActionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_unsent_clear_saved), "#FF453A", v -> {
             try {
                 IeDialog dlg = new IeDialog(context)
-                        .title(I18n.t(context, R.string.ig_dialog_unsent_clear))
-                        .message(I18n.t(context, R.string.ig_dialog_unsent_clear_confirm));
+                        .title(I18n.t(context, R.string.ig_unsent_clear_saved))
+                        .message(I18n.t(context, R.string.ig_unsent_clear_saved_confirm));
                 dlg.secondary(context.getString(android.R.string.cancel), null);
                 dlg.primary(I18n.t(context, R.string.ig_dialog_unsent_clear_yes), () -> {
-                    ps.reso.instaeclipse.utils.ghost.UnsentLog.clear();
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_dialog_unsent_cleared), Toast.LENGTH_SHORT).show();
+                    // Also releases the copies kept in the chats, not only the log.
+                    if (!ps.reso.instaeclipse.mods.ghost.KeepUnsentMessagesHook.clearSaved(context, null)) {
+                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_unsent_clear_failed), Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_unsent_cleared_saved), Toast.LENGTH_SHORT).show();
                     showUnsentMessages(context); // refresh
                 });
                 dlg.show();
@@ -1121,21 +1123,37 @@ public class DialogUtils {
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_ghost_mode), layout, () -> {});
     }
 
+    /** Disables a row whose parent feature is off and says which feature it needs. */
+    private static void setDependentToggle(Context context, ToggleRow row, boolean enabled,
+                                           int label, int requirement) {
+        row.setEnabled(enabled);
+        row.labelView.setText(I18n.t(context, label) + (enabled ? "" : "\n" + I18n.t(context, requirement)));
+    }
+
     /** DM extras: keep disappearing/unsent messages, edit history, chat tools, inbox cleanup. */
     private static void showMessagesOptions(Context context) {
         LinearLayout layout = createSwitchLayout(context);
+        // The unsent options only apply while unsent messages are kept. The header-menu entry
+        // follows showUnsentButton the next time a chat opens.
+        ToggleRow keepInChat = flagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ig_feature_keep_unsent_in_chat, "keepUnsentInChat");
+        ToggleRow unsentButton = flagSwitch(context, R.drawable.ic_delete, "#5E5CE6", R.string.ig_feature_show_unsent_button, "showUnsentButton");
+        ToggleRow unsentIndicator = flagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ig_feature_unsent_indicator, "showUnsentIndicator");
+        Runnable refreshUnsentRows = () -> {
+            boolean keep = FeatureFlags.keepUnsentMessages;
+            setDependentToggle(context, keepInChat, keep, R.string.ig_feature_keep_unsent_in_chat, R.string.ig_feature_unsent_indicator_requires);
+            setDependentToggle(context, unsentButton, keep, R.string.ig_feature_show_unsent_button, R.string.ig_feature_unsent_indicator_requires);
+            setDependentToggle(context, unsentIndicator, keep, R.string.ig_feature_unsent_indicator, R.string.ig_feature_unsent_indicator_requires);
+        };
+        // The header applies this on the next chat open; the gesture reads the flag on every touch.
+        ToggleRow hideMenuButton = flagSwitch(context, R.drawable.ic_tune, "#5E5CE6", R.string.ig_hide_chat_menu_button, "hideChatMenuButton");
+        hideMenuButton.labelView.setText(I18n.t(context, R.string.ig_hide_chat_menu_button)
+                + "\n" + I18n.t(context, R.string.ig_hide_chat_menu_button_hint));
         layout.addView(cardOf(context,
                 flagSwitch(context, R.drawable.ic_timer, "#5E5CE6", R.string.ig_dialog_ghost_keep_disappearing, "keepEphemeralMessages"),
-                flagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ig_dialog_ghost_keep_unsent, "keepUnsentMessages", () -> {
-                    ps.reso.instaeclipse.mods.ghost.KeepUnsentMessagesHook.onSettingsChanged();
-                    ps.reso.instaeclipse.mods.ghost.ConversationMenuHook.refreshAll();
-                }),
-                flagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ie_keep_unsent_in_chat, "keepUnsentInChat",
-                        ps.reso.instaeclipse.mods.ghost.KeepUnsentMessagesHook::onSettingsChanged),
-                flagSwitch(context, R.drawable.ic_delete, "#5E5CE6", R.string.ie_show_deleted_button, "showDeletedMessagesButton",
-                        ps.reso.instaeclipse.mods.ghost.ConversationMenuHook::refreshAll),
-                createActionRow(context, R.drawable.ic_chat, I18n.t(context, R.string.ie_chat_actions), "#5E5CE6",
-                        v -> ps.reso.instaeclipse.mods.ghost.ConversationMenuHook.show(activityOf(context))),
+                flagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ig_dialog_ghost_keep_unsent_chat, "keepUnsentMessages", refreshUnsentRows),
+                keepInChat,
+                unsentButton,
+                unsentIndicator,
                 createActionRow(context, R.drawable.ic_chat, I18n.t(context, R.string.ig_dialog_unsent_title), "#5E5CE6", v -> showUnsentMessages(context)),
                 flagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ig_dialog_ghost_edit_history, "keepEditHistory"),
                 flagSwitch(context, R.drawable.ic_jump_first, "#5E5CE6", R.string.ig_dialog_ghost_jump_first, "jumpToFirstMessage"),
@@ -1149,7 +1167,7 @@ public class DialogUtils {
                 flagSwitch(context, R.drawable.ic_block, "#5E5CE6", R.string.ig_hide_dm_suggestions, "hideDmSuggestions"),
                 flagSwitch(context, R.drawable.ic_block, "#5E5CE6", R.string.ig_dialog_hide_dm_blend, "hideDmBlend"),
                 flagSwitch(context, R.drawable.ic_block, "#5E5CE6", R.string.ig_dialog_misc_hide_share_create_group, "hideShareCreateGroup")));
-        layout.addView(createInfoSection(context, "", I18n.t(context, R.string.ie_keep_unsent_in_chat_hint)));
+        refreshUnsentRows.run();
         showSectionDialog(context, I18n.t(context, R.string.menu_messages), layout, () -> {});
     }
 

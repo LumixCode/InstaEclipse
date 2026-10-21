@@ -3,9 +3,6 @@ package ps.reso.instaeclipse.utils.feature;
 // Written from the settings receiver / menus, read from hook threads: volatile for visibility.
 public class FeatureFlags {
     // Upstream selection stays the default; Custom opts into the verified downloader.
-    public static volatile boolean showHideChatButton = false;
-    public static volatile boolean showDeletedMessagesButton = false;
-    public static volatile boolean keepUnsentInChat = false;
     public static volatile boolean downloaderUseOriginal = true;
     public static volatile int downloaderQualityMaxShortSide = 0;
     public static volatile int feedCornerRadius = 0;       // rounded feed post corners in dp (#276), 0 = square
@@ -29,6 +26,9 @@ public class FeatureFlags {
     public static volatile boolean keepEphemeralMessages = false;
     public static volatile boolean permanentViewMode = false;
     public static volatile boolean keepUnsentMessages = false;
+    public static volatile boolean keepUnsentInChat = true; // false = log only: IG removes the message, the Unsent log keeps it
+    public static volatile boolean showUnsentIndicator = false;
+    public static volatile boolean showUnsentButton = true; // "Unsent messages" entry in the chat header menu
 
     // Auto-clear cache
     public static volatile boolean autoClearCache = false;

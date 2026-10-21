@@ -44,6 +44,9 @@ public class SettingsManager {
         editor.putBoolean("keepEphemeralMessages", FeatureFlags.keepEphemeralMessages);
         editor.putBoolean("permanentViewMode", FeatureFlags.permanentViewMode);
         editor.putBoolean("keepUnsentMessages", FeatureFlags.keepUnsentMessages);
+        editor.putBoolean("keepUnsentInChat", FeatureFlags.keepUnsentInChat);
+        editor.putBoolean("showUnsentIndicator", FeatureFlags.showUnsentIndicator);
+        editor.putBoolean("showUnsentButton", FeatureFlags.showUnsentButton);
         editor.putBoolean("autoClearCache", FeatureFlags.autoClearCache);
         editor.putInt("autoClearCacheSizeMb", FeatureFlags.autoClearCacheSizeMb);
         editor.putBoolean("removeMetaAI", FeatureFlags.removeMetaAI);
@@ -54,8 +57,6 @@ public class SettingsManager {
         editor.putBoolean("lockWholeApp", FeatureFlags.lockWholeApp);
         editor.putBoolean("hideSpecificChats", FeatureFlags.hideSpecificChats);
         editor.putBoolean("showHideChatButton", FeatureFlags.showHideChatButton);
-        editor.putBoolean("showDeletedMessagesButton", FeatureFlags.showDeletedMessagesButton);
-        editor.putBoolean("keepUnsentInChat", FeatureFlags.keepUnsentInChat);
         editor.putBoolean("downloaderUseOriginal", FeatureFlags.downloaderUseOriginal);
         editor.putInt("downloaderQualityMaxShortSide", FeatureFlags.downloaderQualityMaxShortSide);
         editor.putInt("storyTrayScale", FeatureFlags.storyTrayScale);
@@ -259,6 +260,9 @@ public class SettingsManager {
         FeatureFlags.keepEphemeralMessages = prefs.getBoolean("keepEphemeralMessages", false);
         FeatureFlags.permanentViewMode = prefs.getBoolean("permanentViewMode", false);
         FeatureFlags.keepUnsentMessages = prefs.getBoolean("keepUnsentMessages", false);
+        FeatureFlags.keepUnsentInChat = prefs.getBoolean("keepUnsentInChat", true);
+        FeatureFlags.showUnsentIndicator = prefs.getBoolean("showUnsentIndicator", false);
+        FeatureFlags.showUnsentButton = prefs.getBoolean("showUnsentButton", true);
         FeatureFlags.autoClearCache = prefs.getBoolean("autoClearCache", false);
         FeatureFlags.autoClearCacheSizeMb = prefs.getInt("autoClearCacheSizeMb", 100);
         FeatureFlags.removeMetaAI = prefs.getBoolean("removeMetaAI", false);
@@ -268,9 +272,7 @@ public class SettingsManager {
         FeatureFlags.lockDirectAlways = prefs.getBoolean("lockDirectAlways", false);
         FeatureFlags.lockWholeApp = prefs.getBoolean("lockWholeApp", false);
         FeatureFlags.hideSpecificChats = prefs.getBoolean("hideSpecificChats", false);
-        FeatureFlags.showHideChatButton = prefs.getBoolean("showHideChatButton", false);
-        FeatureFlags.showDeletedMessagesButton = prefs.getBoolean("showDeletedMessagesButton", false);
-        FeatureFlags.keepUnsentInChat = prefs.getBoolean("keepUnsentInChat", false);
+        FeatureFlags.showHideChatButton = prefs.getBoolean("showHideChatButton", true);
         FeatureFlags.downloaderUseOriginal = prefs.getBoolean("downloaderUseOriginal", true);
         FeatureFlags.downloaderQualityMaxShortSide = prefs.getInt("downloaderQualityMaxShortSide", 0);
         FeatureFlags.storyTrayScale = prefs.getInt("storyTrayScale", 100);

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- New optional features use English until localized resources are available. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="ig_feature_unsent_indicator">Show unsent message indicators</string>
+    <string name="ig_feature_show_unsent_button">Show Unsent messages in the chat menu</string>
+    <string name="ig_feature_unsent_indicator_requires">Requires Keep unsent messages</string>
+</resources>

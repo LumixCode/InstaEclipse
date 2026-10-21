@@ -362,6 +362,8 @@ public class FeaturesFragment extends Fragment {
 
         public int type;
         public String title;
+        /** Title shown while the row is disabled, e.g. with the "Requires …" line. */
+        public String disabledTitle;
         public String prefKey;
         public Runnable onClick;
         public int textColor;
@@ -466,7 +468,6 @@ public class FeaturesFragment extends Fragment {
             } else if (holder instanceof ItemViewHolder) {
                 ItemViewHolder itemHolder = (ItemViewHolder) holder;
 
-                itemHolder.tvTitle.setText(item.title);
                 bindIcon(itemHolder.ivIcon, item.iconRes, item.accentColor);
 
                 // Master switches get a tinted card + bold text to stand out from regular items
@@ -537,6 +538,7 @@ public class FeaturesFragment extends Fragment {
                 if (item.disabledWhenTrue != null && getCurrentState(item.disabledWhenTrue)) {
                     switchEnabled = false;
                 }
+                itemHolder.tvTitle.setText(!switchEnabled && item.disabledTitle != null ? item.disabledTitle : item.title);
                 itemHolder.itemView.setEnabled(switchEnabled);
                 itemHolder.swToggle.setEnabled(switchEnabled);
                 itemHolder.itemView.setAlpha(switchEnabled ? 1f : 0.4f);
@@ -816,6 +818,18 @@ public class FeaturesFragment extends Fragment {
         FeatureItem item = createSwitchWithCascadeOff(title, prefKey, cascadeOffKey);
         item.iconRes = iconRes;
         item.accentColor = Color.parseColor(accentHex);
+        return item;
+    }
+
+    /**
+     * A switch that stays disabled, with a "Requires …" line, until {@code parent} is on. Unlike
+     * {@link #createSwitchWithDependency}, turning it on never turns the parent on.
+     */
+    private FeatureItem createDependentSwitch(int icon, String accent, int label, String key,
+                                              String parent, int requirement) {
+        FeatureItem item = createSwitch(icon, accent, getString(label), key);
+        item.requiresAnyOf = java.util.Collections.singletonList(parent);
+        item.disabledTitle = getString(label) + "\n" + getString(requirement);
         return item;
     }
 
@@ -1118,9 +1132,13 @@ public class FeaturesFragment extends Fragment {
         defs.add(getString(R.string.feat_features));
         defs.add(Arrays.asList(
                 createSwitch(R.drawable.ic_timer, "#5E5CE6", getString(R.string.ig_dialog_ghost_keep_disappearing), "keepEphemeralMessages"),
-                createSwitch(R.drawable.ic_chat, "#5E5CE6", getString(R.string.ig_dialog_ghost_keep_unsent), "keepUnsentMessages"),
-                createSwitch(R.drawable.ic_chat, "#5E5CE6", getString(R.string.ie_keep_unsent_in_chat), "keepUnsentInChat"),
-                createSwitch(R.drawable.ic_delete, "#5E5CE6", getString(R.string.ie_show_deleted_button), "showDeletedMessagesButton"),
+                createSwitch(R.drawable.ic_chat, "#5E5CE6", getString(R.string.ig_dialog_ghost_keep_unsent_chat), "keepUnsentMessages"),
+                createDependentSwitch(R.drawable.ic_chat, "#5E5CE6", R.string.ig_feature_keep_unsent_in_chat,
+                        "keepUnsentInChat", "keepUnsentMessages", R.string.ig_feature_unsent_indicator_requires),
+                createDependentSwitch(R.drawable.ic_delete, "#5E5CE6", R.string.ig_feature_show_unsent_button,
+                        "showUnsentButton", "keepUnsentMessages", R.string.ig_feature_unsent_indicator_requires),
+                createDependentSwitch(R.drawable.ic_chat, "#5E5CE6", R.string.ig_feature_unsent_indicator,
+                        "showUnsentIndicator", "keepUnsentMessages", R.string.ig_feature_unsent_indicator_requires),
                 createSwitch(R.drawable.ic_chat, "#5E5CE6", getString(R.string.ig_dialog_ghost_edit_history), "keepEditHistory"),
                 createSwitch(R.drawable.ic_jump_first, "#5E5CE6", getString(R.string.ig_dialog_ghost_jump_first), "jumpToFirstMessage"),
                 createSwitch(R.drawable.ic_shield, "#5E5CE6", getString(R.string.ig_call_confirm), "confirmCalls"),

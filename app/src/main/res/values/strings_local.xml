@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings of the local custom build. Kept out of strings.xml so upstream's file and its
+     translations stay byte-identical; these fall back to English in every locale. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+
+    <!-- Unsent messages: local behaviour keeps them in the chat (upstream only logs them) -->
+    <string name="ig_dialog_ghost_keep_unsent_chat">Keep Unsent Messages</string>
+    <string name="ig_feature_keep_unsent_in_chat">Keep unsent messages in the chat</string>
+
+
+
+
+</resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- New optional features use English until localized resources are available. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="ig_unsent_indicator_label">Unsent</string>
+    <string name="ig_unsent_clear_failed">Could not clear saved messages. Please reopen this chat and try again.</string>
+    <string name="ig_unsent_clear_saved">Clear saved unsent messages</string>
+    <string name="ig_unsent_clear_saved_confirm">Remove these retained messages from the trash and local chat history? This cannot be undone.</string>
+    <string name="ig_unsent_cleared_saved">Saved unsent messages cleared</string>
+</resources>
