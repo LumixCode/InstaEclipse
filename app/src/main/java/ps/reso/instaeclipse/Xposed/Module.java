@@ -377,7 +377,7 @@ public class Module {
 
                     // Disable Repost (feed + reels) — UI/action level; network drop is ineffective
                     try {
-                        if (!skip("DisableRepostHook")) new ps.reso.instaeclipse.mods.ui.DisableRepostHook().install(dexKitBridge, lpparam.classLoader);
+                        if (!skip("DisableRepostHook")) new ps.reso.instaeclipse.mods.ui.DisableRepostHook().install(context, dexKitBridge, lpparam.classLoader);
                     } catch (Throwable ignored) {
                         ModuleLog.line("(InstaEclipse | DisableRepost): ❌ Failed to hook");
                     }

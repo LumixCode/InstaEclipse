@@ -1,8 +1,14 @@
 package ps.reso.instaeclipse.mods.ui;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.res.Resources;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.luckypray.dexkit.DexKitBridge;
@@ -12,6 +18,7 @@ import org.luckypray.dexkit.result.MethodData;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
+import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -22,7 +29,8 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
  *
  * Repost is created optimistically/client-side, so dropping the network request does NOT stop
  * it — IG applies the repost locally regardless. We neutralise IG's OWN repost code paths.
- * There are two independent paths on 447.0.0.21.81, so this installs two hooks:
+ * There are two independent paths on 447.0.0.21.81, so this neutralises both and also removes
+ * the buttons:
  *
  * 1) REELS + PROFILE-GRID — the shared RepostActionHandler. We swallow its void entry points,
  *    anchored on IG's stable {@code android_purge_26_q3_*} trace-scope markers (never obfuscated
@@ -50,6 +58,9 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
  *    launcher. likeRepost launches from other classes, so this can't touch it; removeRepost is a
  *    different method, so undo still works.
  *
+ * 3) THE BUTTONS — the feed and reels repost buttons (and the reels repost count) are removed
+ *    from the UFI, see {@link #installButtonRemoval}.
+ *
  * Everything is gated behind {@link FeatureFlags#disableRepost} and wrapped in try/catch: a miss
  * logs and no-ops, it never crashes IG.
  */
@@ -66,9 +77,17 @@ public class DisableRepostHook {
     private static final String POST_REPOST_COROUTINE =
             "com.instagram.reposts.data.RepostsRepository$postRepost$2";
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
+    // Reels UFI repost button renders (the animated wrapper and the icon it holds).
+    private static final String[] REELS_BUTTON_ANCHORS = {
+            "android_purge_26_q3_ClipsAnimatedRepostButtonComponent_render",
+            "android_purge_26_q3_ClipsRepostButtonComponent_render",
+    };
+    private static final String BUTTON_CACHE = "DisableRepost_buttons_v2";
+
+    public void install(Context context, DexKitBridge bridge, ClassLoader classLoader) {
         int total = installActionHandler(bridge, classLoader);
         total += installFeedCommit(classLoader);
+        total += installButtonRemoval(context, bridge, classLoader);
 
         if (total > 0) FeatureStatusTracker.setHooked("DisableRepost");
         ModuleLog.line("(IE|Repost) ✅ installed: " + total + " method(s)");
@@ -156,6 +175,93 @@ public class DisableRepostHook {
         }
         ModuleLog.line("(IE|Repost) feed postRepost launcher: " + total + " method(s)");
         return total;
+    }
+
+    // The repost buttons themselves. Feed and reels UFIs are Litho components: a component whose
+    // render returns null takes no space, and the reels count helper already returns null when a
+    // reel has no repost count. Results are replaced after the original runs, so Litho's hook state
+    // stays consistent when the setting changes.
+    private int installButtonRemoval(Context context, DexKitBridge bridge, ClassLoader classLoader) {
+        List<Method> targets = DexKitCache.isCacheValid()
+                ? DexKitCache.loadMethods(BUTTON_CACHE, classLoader) : null;
+        if (targets == null || targets.isEmpty()) {
+            targets = findButtonBuilders(context, bridge, classLoader);
+            if (!targets.isEmpty()) DexKitCache.saveMethods(BUTTON_CACHE, targets);
+        }
+        targets.removeIf(m -> !ownRender(m));
+        XC_MethodHook drawNothing = new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                if (FeatureFlags.disableRepost && !param.hasThrowable()) param.setResult(null);
+            }
+        };
+        int total = 0;
+        for (Method m : targets) {
+            try {
+                XposedBridge.hookMethod(m, drawNothing);
+                total++;
+            } catch (Throwable t) {
+                ModuleLog.line("(IE|Repost) ⚠️ button hook " + m.getName() + ": " + t.getMessage());
+            }
+        }
+        ModuleLog.line("(IE|Repost) repost buttons: " + total + " builder(s)");
+        return total;
+    }
+
+    @SuppressLint("DiscouragedApi")
+    private static List<Method> findButtonBuilders(Context context, DexKitBridge bridge, ClassLoader classLoader) {
+        List<Method> found = new ArrayList<>();
+        try {
+            for (String anchor : REELS_BUTTON_ANCHORS) {
+                for (MethodData md : bridge.findMethod(FindMethod.create()
+                        .matcher(MethodMatcher.create().usingStrings(anchor)))) {
+                    addBuilder(found, md, classLoader);
+                }
+            }
+            Resources res = context.getResources();
+            String pkg = context.getPackageName();
+            // Feed: the component drawing the repost icon and its count (the legacy View binder
+            // using the same id returns void and is skipped).
+            int feedButton = res.getIdentifier("reposts_ufi_icon", "id", pkg);
+            if (feedButton != 0) {
+                for (MethodData md : bridge.findMethod(FindMethod.create()
+                        .matcher(MethodMatcher.create().paramCount(1).usingNumbers(feedButton)))) {
+                    addBuilder(found, md, classLoader);
+                }
+            }
+            int reelCount = res.getIdentifier("repost_count", "id", pkg);
+            if (reelCount != 0) {
+                for (MethodData md : bridge.findMethod(FindMethod.create()
+                        .matcher(MethodMatcher.create().usingStrings("ufi_count").usingNumbers(reelCount)))) {
+                    addBuilder(found, md, classLoader);
+                }
+            }
+        } catch (Throwable t) {
+            ModuleLog.line("(IE|Repost) ⚠️ button discovery: " + t.getMessage());
+        }
+        return found;
+    }
+
+    private static void addBuilder(List<Method> found, MethodData md, ClassLoader classLoader) {
+        if (!md.isMethod()) return;
+        try {
+            Method m = md.getMethodInstance(classLoader);
+            if (m.getReturnType() == void.class || m.getReturnType().isPrimitive() || found.contains(m)) return;
+            if (!ownRender(m)) {
+                ModuleLog.line("(IE|Repost) shared render skipped: " + m.getDeclaringClass().getName() + "." + m.getName());
+                return;
+            }
+            found.add(m);
+        } catch (Throwable ignored) {}
+    }
+
+    /**
+     * Only a component's own render may draw nothing. R8 can merge the renders of unrelated final
+     * components into their abstract base (IG 451: the feed repost button shares one with the
+     * carousel pager, post header and like animation), and nulling that blanks all of them.
+     */
+    private static boolean ownRender(Method m) {
+        return ps.reso.instaeclipse.utils.core.HookTargetGuard.ownClass(m.getDeclaringClass());
     }
 
     /**
