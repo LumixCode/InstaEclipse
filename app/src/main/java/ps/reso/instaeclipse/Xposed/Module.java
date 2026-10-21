@@ -971,7 +971,7 @@ public class Module {
                     }
                     reply.putExtras(bundle);
                     ps.reso.instaeclipse.utils.core.IpcSecurity.echoNonce(intent, reply);
-                            ps.reso.instaeclipse.utils.ipc.ModuleReplies.reply(intent, reply.getExtras());
+                    ps.reso.instaeclipse.utils.ipc.ModuleReplies.reply(intent, reply.getExtras());
 
                 } else if ("ps.reso.instaeclipse.ACTION_EXPORT_CONFIG".equals(action)) {
                     ModuleLog.line("(InstaEclipse) Sync: Companion app requested Dev Config export.");

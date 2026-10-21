@@ -14,7 +14,7 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
  * ViewPager2's user-input ("swipe enabled") flag, resolved without hardcoded obfuscated names.
  * IG's R8 build keeps the androidx.viewpager2.widget.ViewPager2 class name, but some builds drop
  * setUserInputEnabled() and the backing {@code mUserInputEnabled} field is renamed (A09 on 452).
- * Shared by DistractionFreeUIHook (main tab pager) and ReelsControlsHook (Reels pager).
+ * Shared by DistractionFreeUIHook (main tab pager) and ReelViewerHook (Reels pager).
  */
 public final class ViewPager2Input {
 
