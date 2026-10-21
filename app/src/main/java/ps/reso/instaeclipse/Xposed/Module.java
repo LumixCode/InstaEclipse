@@ -601,11 +601,17 @@ public class Module {
                         ModuleLog.line("(InstaEclipse | ShareSheet): ❌ Failed to hook");
                     }
 
-                    // Open links in the external browser (#229)
+                    // Open links in the external browser (#229): Activity launches here, and the
+                    // fragment-hosted in-app browser modes in OpenLinksExternallyHook.
                     try {
                         if (!skip("ExternalBrowserHook")) new ps.reso.instaeclipse.mods.misc.ExternalBrowserHook().install();
                     } catch (Throwable ignored) {
                         ModuleLog.line("(InstaEclipse | ExternalBrowser): ❌ Failed to hook");
+                    }
+                    try {
+                        if (!skip("OpenLinksExternallyHook")) new ps.reso.instaeclipse.mods.misc.OpenLinksExternallyHook().install(dexKitBridge, hostClassLoader);
+                    } catch (Throwable t) {
+                        ModuleLog.line("(InstaEclipse | OpenLinksExternally): ❌ Failed to hook: " + t);
                     }
 
                     // Miscellaneous
