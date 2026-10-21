@@ -19,7 +19,8 @@ import java.util.Map;
  * Lives in the companion app. Instagram -> companion settings sync: the hooked Instagram process
  * calls {@link #METHOD_PUSH} with its settings (and their {@code __igts_} / {@code __applied_}
  * stamps) at startup and after every change made in its own menu, and the companion's
- * {@code instaeclipse_cache} is updated per {@link PrefsMerge} (newer change wins).
+ * {@code instaeclipse_cache} is updated per {@link PrefsMerge} (newer change wins). The reply
+ * carries the companion's still-pending changes ({@link PrefsMerge#pending}) the other way.
  *
  * <p>Unlike the {@code ACTION_REQUEST_PREFS} round trip, this works when the companion is not
  * running (the call starts it) and doesn't depend on Instagram being alive and unfrozen when the
@@ -55,6 +56,7 @@ public class PrefsSyncProvider extends ContentProvider {
         }
 
         int updated;
+        Map<String, Object> pending;
         synchronized (PrefsSyncProvider.class) {
             SharedPreferences cache = CommonUtils.companionCache(ctx);
             Map<String, Object> changes = PrefsMerge.select(incoming, cache.getAll());
@@ -69,9 +71,19 @@ public class PrefsSyncProvider extends ContentProvider {
                 }
                 e.commit();
             }
+            pending = PrefsMerge.pending(cache.getAll(), incoming);
         }
         Bundle result = new Bundle();
         result.putInt(RESULT_UPDATED, updated);
+        // Companion changes Instagram never received (it wasn't running, and it usually can't read
+        // this cache through XSharedPreferences): hand them back for CompanionSync to apply.
+        for (Map.Entry<String, Object> p : pending.entrySet()) {
+            Object v = p.getValue();
+            if (v instanceof Long) result.putLong(p.getKey(), (Long) v);
+            else if (v instanceof Boolean) result.putBoolean(p.getKey(), (Boolean) v);
+            else if (v instanceof Integer) result.putInt(p.getKey(), (Integer) v);
+            else if (v instanceof String) result.putString(p.getKey(), (String) v);
+        }
         return result;
     }
 

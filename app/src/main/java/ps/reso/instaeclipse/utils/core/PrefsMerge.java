@@ -76,6 +76,29 @@ public final class PrefsMerge {
         return out;
     }
 
+    /**
+     * The other direction: the companion's pending values (with their {@code __ts_} stamps) that
+     * Instagram has neither applied nor overridden, so Instagram can apply the changes its live
+     * broadcast missed. Values equal to Instagram's are included too, so Instagram stamps them
+     * applied and they stop being pending.
+     */
+    public static Map<String, Object> pending(Map<String, ?> companion, Map<String, ?> instagram) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (companion == null) return out;
+        for (Map.Entry<String, ?> entry : companion.entrySet()) {
+            String tsKey = entry.getKey();
+            if (tsKey == null || !tsKey.startsWith(TS) || !(entry.getValue() instanceof Long)) continue;
+            String key = tsKey.substring(TS.length());
+            Object value = companion.get(key);
+            if (!isSharedSetting(key, value)) continue;
+            long ts = (Long) entry.getValue();
+            if (ts <= stamp(instagram, IG_TS + key) || ts <= stamp(instagram, APPLIED + key)) continue;
+            out.put(key, value);
+            out.put(tsKey, ts);
+        }
+        return out;
+    }
+
     private static long stamp(Map<String, ?> map, String key) {
         if (map == null) return 0;
         Object v = map.get(key);

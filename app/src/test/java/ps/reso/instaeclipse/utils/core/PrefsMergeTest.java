@@ -79,4 +79,66 @@ public class PrefsMergeTest {
         assertTrue(PrefsMerge.isSharedStamp("__applied_x", 5L));
         assertFalse(PrefsMerge.isSharedStamp("__ts_x", 5L));
     }
+
+    @Test
+    public void lockedChatListNeverReachesCompanion() {
+        Map<String, Object> ig = new HashMap<>();
+        ig.put("lockedDirectThreads", "{\"123\":\"Chat title\"}");
+        ig.put("lockSpecificMessages", true);
+
+        Map<String, Object> out = PrefsMerge.select(ig, new HashMap<>());
+        assertFalse(out.containsKey("lockedDirectThreads"));
+        assertEquals(Boolean.TRUE, out.get("lockSpecificMessages"));
+        assertTrue(PrefsMerge.isPrivate("lockedDirectThreads"));
+        assertTrue(PrefsMerge.isPrivate("lockDirectPasscode"));
+        assertFalse(PrefsMerge.isPrivate("lockSpecificMessages"));
+        assertFalse(PrefsMerge.isPrivate(null));
+    }
+
+    @Test
+    public void pendingCompanionChangeGoesBackToInstagram() {
+        // Changed in the companion while Instagram was closed: newer than both Instagram stamps.
+        Map<String, Object> cc = new HashMap<>();
+        cc.put("isGhostSeen", true);
+        cc.put("__ts_isGhostSeen", 300L);
+        Map<String, Object> ig = new HashMap<>();
+        ig.put("isGhostSeen", false);
+        ig.put("__igts_isGhostSeen", 100L);
+        ig.put("__applied_isGhostSeen", 50L);
+
+        Map<String, Object> out = PrefsMerge.pending(cc, ig);
+        assertEquals(Boolean.TRUE, out.get("isGhostSeen"));
+        assertEquals(300L, out.get("__ts_isGhostSeen"));
+        // ...and it is exactly what select() keeps out of Instagram's push.
+        assertTrue(PrefsMerge.select(ig, cc).isEmpty());
+    }
+
+    @Test
+    public void appliedOrOverriddenCompanionValuesAreNotPending() {
+        Map<String, Object> cc = new HashMap<>();
+        cc.put("hideTabReels", true);
+        cc.put("__ts_hideTabReels", 300L);
+        cc.put("startupTab", "reels");
+        cc.put("__ts_startupTab", 300L);
+        cc.put("unstamped", true);
+        Map<String, Object> ig = new HashMap<>();
+        ig.put("__applied_hideTabReels", 300L);
+        ig.put("__igts_startupTab", 400L);
+
+        assertTrue(PrefsMerge.pending(cc, ig).isEmpty());
+    }
+
+    @Test
+    public void privateOrNonSettingKeysAreNeverPending() {
+        Map<String, Object> cc = new HashMap<>();
+        cc.put("lockDirectPasscode", "hash");
+        cc.put("__ts_lockDirectPasscode", 300L);
+        cc.put("__ts_missingValue", 300L);
+        cc.put("someLong", 7L);
+        cc.put("__ts_someLong", 300L);
+        cc.put("__ts_badStamp", "300");
+
+        assertTrue(PrefsMerge.pending(cc, new HashMap<>()).isEmpty());
+        assertTrue(PrefsMerge.pending(null, new HashMap<>()).isEmpty());
+    }
 }
