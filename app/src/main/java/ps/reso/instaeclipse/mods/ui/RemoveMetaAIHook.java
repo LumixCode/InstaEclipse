@@ -99,10 +99,10 @@ public class RemoveMetaAIHook {
                     if (result == null) return;
                     // PROBE: surface any inflated layout whose name mentions meta/ai, to confirm the
                     // Meta AI surfaces are XML-inflated (vs Litho/Compose, which this hook can't catch).
-                    try {
+                    if (ModuleLog.verbose) try {
                         String rn = result.getResources().getResourceEntryName(resource);
                         if (rn != null && (rn.contains("meta") || rn.contains("_ai_") || rn.endsWith("_ai")))
-                            ModuleLog.line("(IE|RemoveMetaAI|PROBE) inflated: " + rn);
+                            ModuleLog.probe("(IE|RemoveMetaAI|PROBE) inflated: " + rn);
                     } catch (Throwable ignored) {}
                     ensureIds(result);
                     if (targetLayoutIds.isEmpty() || !targetLayoutIds.contains(resource)) return;
@@ -431,11 +431,11 @@ public class RemoveMetaAIHook {
                 try {
                     List<?> src = (List<?>) r;
                     long now = System.currentTimeMillis();
-                    if (now - lastMenuLog > 1500) {
+                    if (ModuleLog.verbose && now - lastMenuLog > 1500) {
                         lastMenuLog = now;
                         StringBuilder sb = new StringBuilder();
                         for (Object o : src) sb.append(o).append(",");
-                        ModuleLog.line("(IE|RemoveMetaAI|PROBE) menu opts=[" + sb + "]");
+                        ModuleLog.probe("(IE|RemoveMetaAI|PROBE) menu opts=[" + sb + "]");
                     }
                     List<Object> keep = new java.util.ArrayList<>(src.size());
                     boolean changed = false;
@@ -550,9 +550,20 @@ public class RemoveMetaAIHook {
         if (lp != null) { lp.height = 0; lp.width = 0; v.setLayoutParams(lp); }
     }
 
+    private static void collapseIfShown(View v) {
+        if (v != null && v.getVisibility() != View.GONE) collapse(v);
+    }
+
     // ── Reel/post action-sheet "About this reel" Content Deep Dive section (view-level) ──────────
 
     private static final java.util.Set<View> watchedSheetDecors =
+            java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    // Global layout fires many times per second on the feed; a whole-decor walk on each pass is
+    // a battery drain (see DistractionFreeUIHook, #257). Sweep at once (so an opening sheet never
+    // shows the section), then at most once more per window until SHEET_SWEEP_MS has passed.
+    private static final long SHEET_SWEEP_MS = 150;
+    private static final android.os.Handler MAIN = new android.os.Handler(android.os.Looper.getMainLooper());
+    private static final java.util.Set<View> pendingSheetSweeps =
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
     /** Arm a one-time global-layout listener that collapses the Content Deep Dive section whenever
@@ -563,18 +574,20 @@ public class RemoveMetaAIHook {
             final View decor = a.getWindow() != null ? a.getWindow().getDecorView() : null;
             if (decor == null || !watchedSheetDecors.add(decor)) return;
             decor.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
-                if (FeatureFlags.removeMetaAI) sweepActionSheet(decor);
+                if (!FeatureFlags.removeMetaAI || !pendingSheetSweeps.add(decor)) return;
+                sweepActionSheet(decor);
+                MAIN.postDelayed(() -> {
+                    pendingSheetSweeps.remove(decor);
+                    if (FeatureFlags.removeMetaAI) sweepActionSheet(decor);
+                }, SHEET_SWEEP_MS);
             });
         } catch (Throwable ignored) {}
     }
 
-    @SuppressLint("DiscouragedApi")
     private static void sweepActionSheet(View root) {
         try {
-            Resources res = root.getResources();
-            String pkg = root.getContext().getPackageName();
-            int composerId = res.getIdentifier("row_thread_composer_container", "id", pkg);
-            int sheetId = res.getIdentifier("action_sheet_container", "id", pkg);
+            int composerId = ps.reso.instaeclipse.utils.ui.ResIds.id(root.getContext(), "row_thread_composer_container");
+            int sheetId = ps.reso.instaeclipse.utils.ui.ResIds.id(root.getContext(), "action_sheet_container");
             if (composerId == 0) return;
             java.util.List<View> composers = new java.util.ArrayList<>();
             findViewsById(root, composerId, composers);
@@ -582,13 +595,15 @@ public class RemoveMetaAIHook {
                 // Only inside an action sheet — never the DM thread composer.
                 if (sheetId != 0 && findAncestorById(composer, sheetId) == null) continue;
                 View recycler = findAncestorOfClass(composer, "RecyclerView");
-                if (!(recycler instanceof ViewGroup rv)) { collapse(composer); continue; }
+                // Already-collapsed views are skipped: collapse() always requests a layout, which
+                // would fire this listener again and re-lay out the window every frame.
+                if (!(recycler instanceof ViewGroup rv)) { collapseIfShown(composer); continue; }
                 // Find the recycler item (direct child of the RecyclerView) that holds the composer.
                 View item = composer;
                 while (item.getParent() != rv && item.getParent() instanceof View p) item = p;
-                if (item.getParent() != rv) { collapse(composer); continue; }
+                if (item.getParent() != rv) { collapseIfShown(composer); continue; }
                 int idx = rv.indexOfChild(item);
-                collapse(item); // the "Ask Meta AI…" composer row
+                collapseIfShown(item); // the "Ask Meta AI…" composer row
                 // Collapse the section's header + summary directly above it: contiguous
                 // non-clickable, text-bearing items. Stop at the first interactive (action) row.
                 for (int i = idx - 1; i >= 0 && i >= idx - 3; i--) {
