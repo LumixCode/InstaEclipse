@@ -83,6 +83,34 @@ public class IGNetworkInterceptor {
         }
     }
 
+    /**
+     * Disable Explore: the Explore grid and search's top results. IG 446/451 only call
+     * fbsearch/top_serp_stream/ (X.0WJF on 451); the "/top_serp" prefix still covers the older top_serp/.
+     */
+    static boolean isExploreRequest(String host, String path) {
+        return path.contains("/discover/topical_explore")
+                || path.contains("/discover/topical_explore_stream")
+                || (host != null && host.contains("i.instagram.com") && path.contains("/fbsearch/top_serp"));
+    }
+
+    /**
+     * Spoof last seen's REST rules, kept for older builds. On IG 451 only set_presence_disabled/
+     * (the activity-status setting) and banyan/banyan/ (share-sheet ranking) still exist, and
+     * neither reports activity: presence goes over MQTT (/t_fs foreground state,
+     * XplatNativeClientWrapper.setForeground) and the distribgw PresenceStreamHandler, which never
+     * pass through Tigon. So the feature is not reported as hooked from here.
+     */
+    static boolean isLastSeenRequest(String path) {
+        return path.contains("/push/setForegroundState/")
+                || path.contains("/accounts/update_active_status")
+                || path.contains("/notes/create_note")
+                || path.contains("/accounts/set_presence_disabled")
+                || path.contains("/update_active_status")
+                || path.contains("/banyan/banyan/")
+                || path.endsWith("/last_active/")
+                || path.contains("/presence/");
+    }
+
     public void handleInterceptor(XC_LoadPackage.LoadPackageParam lpparam) {
         try {
             ClassLoader classLoader = lpparam.classLoader;
@@ -203,9 +231,7 @@ public class IGNetworkInterceptor {
                                             reelReason != ReelBlockPolicy.Reason.NONE,
                                             ReelBlockPolicy.requestAllowsDm(reelReason));
                                     if (FeatureFlags.disableExplore) {
-                                        shouldDrop |= uri.getPath().contains("/discover/topical_explore")
-                                                || uri.getPath().contains("/discover/topical_explore_stream")
-                                                || (host != null && host.contains("i.instagram.com") && uri.getPath().contains("/api/v1/fbsearch/top_serp/"));
+                                        shouldDrop |= isExploreRequest(host, uri.getPath());
                                     }
                                     // Suggested accounts under the DM inbox (#282): the inbox's
                                     // "empty state" unit carries them; the chat list is unaffected.
@@ -232,17 +258,9 @@ public class IGNetworkInterceptor {
                                     }
 
                                     // Misc
+                                    // Not marked hooked: no request here reports presence on IG 451.
                                     if (FeatureFlags.spoofLastSeen) {
-                                        String p = uri.getPath();
-                                        shouldDrop |= p.contains("/push/setForegroundState/")
-                                                || p.contains("/accounts/update_active_status")
-                                                || p.contains("/notes/create_note")
-                                                || p.contains("/accounts/set_presence_disabled")
-                                                || p.contains("/update_active_status")
-                                                || p.contains("/banyan/banyan/")
-                                                || p.endsWith("/last_active/")
-                                                || p.contains("/presence/");
-                                        FeatureStatusTracker.setHooked("SpoofLastSeen");
+                                        shouldDrop |= isLastSeenRequest(uri.getPath());
                                     }
                                     // NOTE: Disable Repost is handled at the UI/action level in
                                     // mods.ui.DisableRepostHook — NOT here. Dropping the repost network
