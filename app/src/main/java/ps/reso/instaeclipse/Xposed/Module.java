@@ -46,7 +46,7 @@ import ps.reso.instaeclipse.mods.media.ProfilePicDownloadHook;
 import ps.reso.instaeclipse.mods.media.ReelDownloadHook;
 import ps.reso.instaeclipse.mods.media.StoryDownloadHook;
 import ps.reso.instaeclipse.mods.misc.CommentCopyHook;
-import ps.reso.instaeclipse.mods.misc.CaptionCopyContextMenuHook;
+import ps.reso.instaeclipse.mods.misc.CaptionCopyHook;
 import ps.reso.instaeclipse.mods.misc.DisableDoubleTapLikeHook;
 import ps.reso.instaeclipse.mods.misc.DisableStoryFlippingHook;
 import ps.reso.instaeclipse.mods.misc.DisableVideoAutoPlayHook;
@@ -632,9 +632,9 @@ public class Module {
                         ModuleLog.line("(InstaEclipse | CopyComment): ❌ Failed to hook");
                     }
 
-                    // Caption Copy
+                    // Caption Copy (hold a caption to copy it)
                     try {
-                        if (!skip("CaptionCopyContextMenuHook")) new CaptionCopyContextMenuHook().install(dexKitBridge, lpparam.classLoader);
+                        if (!skip("CaptionCopyHook")) new CaptionCopyHook().install(dexKitBridge, lpparam.classLoader);
                     } catch (Throwable ignored) {
                         ModuleLog.line("(InstaEclipse | Caption): ❌ Failed to hook");
                     }

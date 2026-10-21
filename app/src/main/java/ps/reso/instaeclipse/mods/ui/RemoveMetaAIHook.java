@@ -339,7 +339,7 @@ public class RemoveMetaAIHook {
     // true; the sheet builder checks it and skips the whole entrypoint block otherwise, and the
     // header binder re-checks it at render. It is a boolean(UserSession) that reads exactly two
     // MobileConfig ids — anchored on those (both present + co-located in this build), never an
-    // obfuscated name. The standard rows (Download / Copy Link / Save / Copy Caption) are built in
+    // obfuscated name. The standard rows (Download / Copy Link / Save) are built in
     // a different method that doesn't consult this gate, so they're unaffected.
     private static final long META_AI_GATE_ID_1 = 0x81111100005b47L;
     private static final long META_AI_GATE_ID_2 = 0x81106e000057c2L;
