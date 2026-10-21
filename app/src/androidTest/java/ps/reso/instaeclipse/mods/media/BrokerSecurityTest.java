@@ -25,6 +25,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import ps.reso.instaeclipse.BuildConfig;
+import ps.reso.instaeclipse.utils.core.PrefsMerge;
 import ps.reso.instaeclipse.utils.ipc.BrokerPayload;
 import ps.reso.instaeclipse.utils.ipc.CompanionBridge;
 import ps.reso.instaeclipse.utils.ipc.ModuleReplies;
@@ -83,8 +84,12 @@ public class BrokerSecurityTest {
             assertTrue("Running host did not answer protected request", answered.await(10, TimeUnit.SECONDS));
             Bundle data = received.get();
             assertFalse("Host returned no preferences", data.isEmpty());
-            for (String key : data.keySet())
-                assertTrue("Unexpected preference schema", ModuleReplies.isPreferenceValue(key, data.get(key)));
+            for (String key : data.keySet()) {
+                // The local host also returns its sync stamps and the daily-reel usage counters.
+                if (PrefsMerge.isSharedStamp(key, data.get(key))
+                        || "dailyReelsWatchedToday".equals(key) || "dailyReelUsageDate".equals(key)) continue;
+                assertTrue("Unexpected preference schema: " + key, ModuleReplies.isPreferenceValue(key, data.get(key)));
+            }
         } finally { pending.cancel(); received.set(null); }
     }
 
