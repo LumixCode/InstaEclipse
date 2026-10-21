@@ -159,6 +159,10 @@ public class FeaturesFragment extends Fragment {
                 String json = scanner.hasNext() ? scanner.next() : "";
                 JSONObject root = new JSONObject(json);
                 JSONObject s = root.has("settings") ? root.getJSONObject("settings") : root;
+                // "Block location permission prompts" was folded into "Hide onboarding prompts":
+                // either switch on keeps it on, as in Instagram's prefs migration. The old key
+                // itself is skipped below (CommonUtils.STALE_CACHE_KEYS).
+                if (Boolean.TRUE.equals(s.opt("blockLocationPrompts"))) s.put("hideOnboardingPrompts", true);
                 SharedPreferences.Editor editor = localCache.edit();
                 Iterator<String> keys = s.keys();
                 while (keys.hasNext()) {

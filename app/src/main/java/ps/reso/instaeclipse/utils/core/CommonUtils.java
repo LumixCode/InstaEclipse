@@ -78,6 +78,31 @@ public class CommonUtils {
         }
     }
 
+    /**
+     * Keys the pre-0.8 local build left in instaeclipse_cache: Instagram's lock passcode hash,
+     * salt and locked-chat list (PrefsMerge keeps them out now), the old names of the share-sheet
+     * switch and of the location switch folded into "hideOnboardingPrompts", and extras that were
+     * never settings. Kept, they ride along in backups.
+     */
+    public static final java.util.Set<String> STALE_CACHE_KEYS = new java.util.HashSet<>(java.util.Arrays.asList(
+            "lockDirectPasscode", "lockDirectSalt", "lockedDirectThreads", "hideCreateGroupButton", "blockLocationPrompts",
+            "loadedModuleVersion", "dailyReelHooksAvailable", "dailyReelTrackingAvailable",
+            "dailyReelBlockingAvailable"));
+
+    /** Drops {@link #STALE_CACHE_KEYS} from the companion cache; writes nothing when none is there. */
+    public static void dropStaleCacheKeys(Context context) {
+        try {
+            android.content.SharedPreferences cache = companionCache(context);
+            android.content.SharedPreferences.Editor e = null;
+            for (String key : STALE_CACHE_KEYS) {
+                if (!cache.contains(key)) continue;
+                if (e == null) e = cache.edit();
+                e.remove(key);
+            }
+            if (e != null) e.apply();
+        } catch (Throwable ignored) {}
+    }
+
     private static void stampSetting(Context context, Intent intent) {
         String action = intent.getAction();
         String key = intent.getStringExtra("key");
