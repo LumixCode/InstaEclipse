@@ -127,8 +127,8 @@ public class PostDownloadContextMenuHook {
                     countsOptionValue = v;
                 }
             }
-            ps.reso.instaeclipse.mods.misc.CaptionCopyContextMenuHook.EXTRA_REEL_LABELS.put(MEDIA_INFO_CARRIER, R.string.ig_media_info_title);
-            ps.reso.instaeclipse.mods.misc.CaptionCopyContextMenuHook.EXTRA_REEL_LABELS.put(SPEED_CARRIER, R.string.ig_playback_speed_title);
+            ps.reso.instaeclipse.mods.ui.ReelMenuLabels.EXTRA_REEL_LABELS.put(MEDIA_INFO_CARRIER, R.string.ig_media_info_title);
+            ps.reso.instaeclipse.mods.ui.ReelMenuLabels.EXTRA_REEL_LABELS.put(SPEED_CARRIER, R.string.ig_playback_speed_title);
             for (Object v : values) {
                 if (v == null) continue;
             }

@@ -697,6 +697,13 @@ public class Module {
                         ModuleLog.line("(InstaEclipse | PostDownload): ❌ Failed to hook");
                     }
 
+                    // Titles for our rows in the reel ⋮ menu (Media info, Playback speed)
+                    try {
+                        if (!skip("ReelMenuLabels")) ps.reso.instaeclipse.mods.ui.ReelMenuLabels.install(dexKitBridge, lpparam.classLoader);
+                    } catch (Throwable t) {
+                        ModuleLog.line("(InstaEclipse | ReelMenuLabels): ❌ Failed to hook: " + t);
+                    }
+
                     // Save Instants (#184) — long-press a received Instant (quicksnap) to save it
                     try {
                         if (!skip("InstantSaveHook")) new ps.reso.instaeclipse.mods.media.InstantSaveHook().install(lpparam.classLoader);
