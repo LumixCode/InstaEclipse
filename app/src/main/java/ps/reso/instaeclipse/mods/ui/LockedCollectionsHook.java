@@ -24,6 +24,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
  * Locked Saved collections (#219): a 🔒 button in a saved collection's action bar locks it;
@@ -43,6 +44,8 @@ public class LockedCollectionsHook {
     private static java.lang.ref.WeakReference<View> active;
     private static String activeId;
     private static final Set<View> watchedBars = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    /** bars with a re-add already posted by their layout listener */
+    private static final Set<View> queuedBars = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
     /** screen root -> its fragment, hidden while the passcode prompt is up */
     private static final java.util.Map<View, Object> hidden = new java.util.WeakHashMap<>();
     /** fragments unlocked by a prompt (stay unlocked until they are gone, e.g. back from a post) */
@@ -60,8 +63,10 @@ public class LockedCollectionsHook {
                     try { root = (View) param.thisObject.getClass().getMethod("getView").invoke(param.thisObject); } catch (Throwable t) { return; }
                     if (id == null) {
                         // another screen came up (e.g. back to the Saved list): the action bar is
-                        // shared, so take our button off once the collection is no longer shown
-                        if (root != null) root.postDelayed(() -> removeIfLeft(activityOf(root)), 300);
+                        // shared, so take our button off once the collection is no longer shown.
+                        // Runs on every fragment resume: skip it until a collection was opened
+                        // (before that there is no button, only a window walk).
+                        if (root != null && active != null) root.postDelayed(() -> removeIfLeft(activityOf(root)), 300);
                         return;
                     }
                     Activity a = activityOf(root);
@@ -147,13 +152,12 @@ public class LockedCollectionsHook {
     }
 
     /** Removes the lock button when the collection screen it belongs to is no longer shown. */
-    @android.annotation.SuppressLint("DiscouragedApi")
     private static void removeIfLeft(Activity a) {
         try {
             if (a == null) return;
             View r = active != null ? active.get() : null;
             if (r != null && r.isShown()) return;
-            int barId = a.getResources().getIdentifier("action_bar", "id", a.getPackageName());
+            int barId = ResIds.id(a, "action_bar");
             View bar = barId != 0 ? a.findViewById(barId) : null;
             View btn = bar != null ? bar.findViewWithTag(BTN_TAG) : null;
             if (btn != null && btn.getParent() instanceof ViewGroup p) p.removeView(btn);
@@ -161,10 +165,9 @@ public class LockedCollectionsHook {
     }
 
     /** 🔒 / 🔓 before the action bar's last button (the collection's ⋮ Options). */
-    @android.annotation.SuppressLint("DiscouragedApi")
     private static void addButton(Activity a, String id) {
         try {
-            int barId = a.getResources().getIdentifier("action_bar", "id", a.getPackageName());
+            int barId = ResIds.id(a, "action_bar"); // cached: this runs from the layout listener below
             View bar = barId != 0 ? a.findViewById(barId) : null;
             if (!(bar instanceof ViewGroup g)) return;
             // IG rebuilds the shared action bar (e.g. when the ⋮ sheet opens), dropping our button:
@@ -178,7 +181,13 @@ public class LockedCollectionsHook {
                         return;
                     }
                     if (!FeatureFlags.lockSavedCollections || activeId == null) return;
-                    if (g.findViewWithTag(BTN_TAG) == null) g.post(() -> addButton(a, activeId));
+                    // The listener fires on every layout of the window (a loading collection grid
+                    // lays out every frame) while Options isn't there yet: one queued retry per bar.
+                    if (g.findViewWithTag(BTN_TAG) == null && queuedBars.add(g))
+                        g.post(() -> {
+                            queuedBars.remove(g);
+                            addButton(a, activeId);
+                        });
                 });
             View old = g.findViewWithTag(BTN_TAG);
             if (old != null && old.getParent() instanceof ViewGroup p) p.removeView(old);
@@ -188,9 +197,12 @@ public class LockedCollectionsHook {
             for (int i = g.getChildCount() - 1; i >= 0 && options == null; i--)
                 if (g.getChildAt(i).isClickable() && g.getChildAt(i).getVisibility() == View.VISIBLE) options = g.getChildAt(i);
             // While the collection loads (and while leaving it) there is no Options button yet and
-            // the right-most clickable is the back arrow + title block; going before it would push
-            // them aside. Wait for Options: the bar's layout listener calls this again.
-            if (options == null || options.getWidth() == 0 || options.getLeft() < g.getWidth() / 2) return;
+            // the end-most clickable is the back arrow + title block; going before it would push
+            // them aside. Wait for Options (on the bar's end half: the left one in RTL): the bar's
+            // layout listener calls this again.
+            boolean rtl = g.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+            if (options == null || options.getWidth() == 0
+                    || (rtl ? options.getRight() > g.getWidth() / 2 : options.getLeft() < g.getWidth() / 2)) return;
             android.widget.ImageView btn = new android.widget.ImageView(a);
             btn.setTag(BTN_TAG);
             btn.setScaleType(android.widget.ImageView.ScaleType.CENTER);
@@ -220,10 +232,8 @@ public class LockedCollectionsHook {
     }
 
     /** Locked: solid white lock. Unlocked: dimmed outline lock (Instagram has no unlock icon). */
-    @android.annotation.SuppressLint("DiscouragedApi")
     private static void showState(Activity a, android.widget.ImageView btn, boolean locked) {
-        int icon = a.getResources().getIdentifier(locked ? "instagram_lock_pano_filled_24" : "instagram_lock_pano_outline_24",
-                "drawable", a.getPackageName());
+        int icon = ResIds.drawable(a, locked ? "instagram_lock_pano_filled_24" : "instagram_lock_pano_outline_24");
         if (icon != 0) btn.setImageResource(icon);
         btn.setColorFilter(android.graphics.Color.WHITE);
         btn.setAlpha(locked ? 1f : 0.45f);
