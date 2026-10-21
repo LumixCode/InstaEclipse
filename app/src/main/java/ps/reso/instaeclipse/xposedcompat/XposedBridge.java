@@ -32,7 +32,9 @@ public final class XposedBridge {
         if (Modifier.isAbstract(method.getModifiers())) {
             throw new IllegalArgumentException("Cannot hook abstract methods: " + method);
         }
-        return backend().hook(method, callback);
+        XC_MethodHook.Unhook unhook = backend().hook(method, callback);
+        ps.reso.instaeclipse.utils.log.CrashForensics.noteHook(method);
+        return unhook;
     }
 
     public static Set<XC_MethodHook.Unhook> hookAllMethods(Class<?> clazz, String name, XC_MethodHook callback) {

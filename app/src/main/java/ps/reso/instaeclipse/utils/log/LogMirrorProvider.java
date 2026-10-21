@@ -25,6 +25,9 @@ import ps.reso.instaeclipse.utils.core.CommonUtils;
  * so the companion's Logs tab can read Instagram's log straight from disk even when Instagram
  * is backgrounded, frozen or dead — no live request/reply round-trip needed.
  *
+ * <p>{@code crash/<name>} instead hands out a fresh file in {@code files/ig_crash/} for one crash
+ * dump or tombstone that {@link CrashForensics} saves after a crash.
+ *
  * <p>Only the supported Instagram packages may open it, and only for writing.
  */
 public class LogMirrorProvider extends ContentProvider {
@@ -32,10 +35,26 @@ public class LogMirrorProvider extends ContentProvider {
     public static final String AUTHORITY = CommonUtils.MY_PACKAGE_NAME + ".logmirror";
     public static final Uri URI = Uri.parse("content://" + AUTHORITY + "/log");
     private static final String DIR = "ig_logs";
+    private static final String CRASH_DIR = "ig_crash";
+    private static final int MAX_CRASH_FILES = 24;
 
     /** Directory (in the companion's private storage) holding one mirrored log per package. */
     public static File mirrorDir(Context context) {
         return new File(context.getFilesDir(), DIR);
+    }
+
+    /** Crash dumps and tombstones Instagram saved after a crash ({@code files/ig_crash/}). */
+    public static File crashDir(Context context) {
+        return new File(context.getFilesDir(), CRASH_DIR);
+    }
+
+    /** Keeps the newest {@link #MAX_CRASH_FILES} - 1 files, making room for the one being written. */
+    private static void pruneCrashDir(File dir) {
+        File[] files = dir.listFiles(File::isFile);
+        if (files == null || files.length < MAX_CRASH_FILES) return;
+        java.util.Arrays.sort(files, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+        for (int i = MAX_CRASH_FILES - 1; i < files.length; i++) //noinspection ResultOfMethodCallIgnored
+            files[i].delete();
     }
 
     @Override
@@ -66,6 +85,19 @@ public class LogMirrorProvider extends ContentProvider {
             }
         }
         if (pkg == null) throw new SecurityException("caller is not a supported Instagram package");
+
+        // crash/<name>: a crash dump saved by CrashForensics, written whole (truncating)
+        java.util.List<String> seg = uri.getPathSegments();
+        if (seg.size() == 2 && "crash".equals(seg.get(0))) {
+            String name = seg.get(1).replaceAll("[^A-Za-z0-9._~-]", "_");
+            if (name.isEmpty() || name.startsWith(".") || name.length() > 160)
+                throw new FileNotFoundException("bad crash file name");
+            File dir = crashDir(ctx);
+            if (!dir.isDirectory() && !dir.mkdirs()) throw new FileNotFoundException("cannot create " + dir);
+            pruneCrashDir(dir);
+            return ParcelFileDescriptor.open(new File(dir, name), ParcelFileDescriptor.MODE_WRITE_ONLY
+                    | ParcelFileDescriptor.MODE_CREATE | ParcelFileDescriptor.MODE_TRUNCATE);
+        }
 
         File dir = mirrorDir(ctx);
         if (!dir.isDirectory() && !dir.mkdirs()) throw new FileNotFoundException("cannot create " + dir);
