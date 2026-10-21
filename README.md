@@ -461,7 +461,7 @@ Run the unit tests with `./gradlew testDebugUnitTest`.
 
 **Release builds.** `./gradlew assembleRelease` signs with your own key when a `keystore.properties` file sits in the project root, with the keys `storeFile`, `storePassword`, `keyAlias` and `keyPassword`. The file is ignored by git. Without it, the release APK is signed with the debug key, so it still installs over a debug build of the same machine.
 
-The published releases come from the [Release workflow](.github/workflows/release.yml). It works out the next version, runs the unit tests, builds and signs the APK with the fork's key from the repository secrets, checks the signature and version, and publishes the release with notes grouped from the commit messages.
+The published releases come from the [Release workflow](.github/workflows/release.yml). It works out the next version, runs the unit tests, builds and signs the APK with the fork's key from the repository secrets, checks the signature and version, and publishes the release with notes grouped from the commit messages. Started from a branch other than `main`, it only makes a pre-release (or a dry run), to try a change before it is merged.
 
 ---
 

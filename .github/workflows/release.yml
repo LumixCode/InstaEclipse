@@ -2,6 +2,8 @@ name: Release
 
 # Builds, signs and publishes the APK as a GitHub release, numbered by .github/scripts/release-version.sh.
 # Start it from the Actions tab, or with: gh workflow run release.yml -R LumixCode/InstaEclipse
+# A release comes from main. A pre-release or a dry run can come from any branch, to try a change before
+# it is merged: gh workflow run release.yml -R LumixCode/InstaEclipse --ref <branch> -f prerelease=true
 #
 # The build job runs Gradle (and with it every plugin and dependency) without the signing key. Only the
 # publish job, which runs no build code, gets the key from the repository secrets and signs the APK with
@@ -34,7 +36,7 @@ env:
 
 jobs:
   build:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || inputs.prerelease || inputs.dry_run
     runs-on: ubuntu-latest
     outputs:
       base: ${{ steps.version.outputs.base }}
@@ -73,7 +75,7 @@ jobs:
           PREVIOUS: ${{ steps.version.outputs.previous }}
         run: |
           if [ "$(git rev-parse "$PREVIOUS^{commit}")" = "$(git rev-parse HEAD)" ]; then
-            echo "::error::main is still at $PREVIOUS, so there is nothing new to release"
+            echo "::error::$GITHUB_REF_NAME is still at $PREVIOUS, so there is nothing new to release"
             exit 1
           fi
 
