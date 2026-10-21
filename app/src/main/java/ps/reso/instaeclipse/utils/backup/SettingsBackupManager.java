@@ -337,9 +337,14 @@ public class SettingsBackupManager {
         if (s.has("spoofLocation"))          FeatureFlags.spoofLocation          = s.getBoolean("spoofLocation");
         if (s.has("spoofLat"))               FeatureFlags.spoofLat               = parseDouble(s.get("spoofLat"), 0.0);
         if (s.has("spoofLng"))               FeatureFlags.spoofLng               = parseDouble(s.get("spoofLng"), 0.0);
-        if (s.has("forceReelQuality"))        FeatureFlags.forceReelQuality       = s.getInt("forceReelQuality");
+        // "Block location permission prompts" was folded into "Hide onboarding prompts" (restored by
+        // the Extras loop above): either switch on keeps it on, as in the prefs migration.
+        if (Boolean.TRUE.equals(s.opt("blockLocationPrompts"))) FeatureFlags.hideOnboardingPrompts = true;
+        if (s.has("forceReelQuality"))       FeatureFlags.forceReelQuality       = readReelQuality(s.get("forceReelQuality"));
         if (s.has("disableRepost"))          FeatureFlags.disableRepost          = s.getBoolean("disableRepost");
         if (s.has("hideShareCreateGroup"))   FeatureFlags.hideShareCreateGroup   = s.getBoolean("hideShareCreateGroup");
+        // Local builds before 0.8 saved the same share-sheet switch as "hideCreateGroupButton".
+        else if (s.has("hideCreateGroupButton")) FeatureFlags.hideShareCreateGroup = s.getBoolean("hideCreateGroupButton");
         if (s.has("exactTimestamps"))        FeatureFlags.exactTimestamps        = s.getBoolean("exactTimestamps");
         if (s.has("likeUndo"))               FeatureFlags.likeUndo               = s.getBoolean("likeUndo");
         if (s.has("showFollowStatusLabel"))  FeatureFlags.showFollowStatusLabel  = s.getBoolean("showFollowStatusLabel");

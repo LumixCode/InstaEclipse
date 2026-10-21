@@ -402,8 +402,10 @@ public class SettingsManager {
         FeatureFlags.spoofLng = readDoublePref(prefs, "spoofLng", 0.0);
         FeatureFlags.spoofLabel = prefs.getString("spoofLabel", "");
         FeatureFlags.spoofRecent = prefs.getString("spoofRecent", "");
-        FeatureFlags.forceReelQuality = prefs.getInt("forceReelQuality", 0);
+        migrateLocationPromptKey(prefs);
+        FeatureFlags.forceReelQuality = readReelQuality(prefs);
         FeatureFlags.disableRepost = prefs.getBoolean("disableRepost", false);
+        migrateCreateGroupKey(prefs);
         FeatureFlags.hideShareCreateGroup = prefs.getBoolean("hideShareCreateGroup", false);
         FeatureFlags.exactTimestamps = prefs.getBoolean("exactTimestamps", false);
         FeatureFlags.likeUndo = prefs.getBoolean("likeUndo", false);
