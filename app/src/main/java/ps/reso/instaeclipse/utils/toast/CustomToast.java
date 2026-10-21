@@ -8,7 +8,6 @@ import android.util.Log;
 import android.view.Gravity;
 import android.widget.TextView;
 
-import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 public class CustomToast {
@@ -40,17 +39,20 @@ public class CustomToast {
         switch (key) {
             case "CustomTheme": case "CustomFont": case "CustomEmoji": case "ForceReelQuality":
             case "HideSuggestionsInFeed": case "HideThreadsSuggestions": case "HideLikedPosts":
-            case "HideNotesTray": case "HideDmSuggestions": case "HideInstants": case "StoryRingColor": case "StoryTraySize": case "RoundedFeedPosts":
+            case "HideNotesTray": case "DisableDiscoverPeople": case "ExactTimestamps":
+            case "FollowStatusLabel": case "FollowingFollowStatus":
+            case "HideDmSuggestions": case "HideInstants": case "StoryRingColor": case "StoryTraySize": case "RoundedFeedPosts":
             case "HidePlusUpsells": case "HideNavTabs": case "SpoofDevice":
                 return "Appearance";
             case "GhostSeen": case "GhostTyping": case "GhostStories": case "GhostLive":
             case "GhostViewOnce": case "GhostScreenshot": case "AllowScreenshots":
             case "KeepEphemeralMessages": case "KeepUnsentMessages": case "PermanentViewMode":
+            case "UnsentIndicator": case "ManualStorySeen":
             case "LockDirectMessages": case "HideSpecificChats": case "AdBlocker":
             case "DisableTrackingLinks": case "OpenLinksExternally": case "RemoveMetaAI": case "SpoofLastSeen":
-            case "DisableDiscoverPeople": case "ChatExport": case "EditHistory":
+            case "hideOnboardingPrompts": case "ChatExport": case "EditHistory":
             case "LockSavedCollections": case "DisableRepost": case "BlockAnalytics": case "LockWholeApp":
-            case "DisableSearchHistory": case "ConfirmCalls":
+            case "DisableSearchHistory": case "ConfirmCalls": case "ChatMenuTripleTap": case "NightReelBlock":
                 return "Privacy";
             case "PostDownload": case "ReelDownload": case "StoryDownload": case "ProfileDownload":
             case "CopyMediaLink": case "SaveInstants": case "UploadInstants": case "CacheStories":
