@@ -570,6 +570,13 @@ public class Module {
                         ModuleLog.line("(IE|ViewerSearch) ❌ Failed to hook");
                     }
 
+                    // Unlock Plus benefits (local override of Instagram's Plus eligibility checks)
+                    try {
+                        if (!skip("UnlockPlusBenefitsHook")) new ps.reso.instaeclipse.mods.misc.UnlockPlusBenefitsHook().install(dexKitBridge, hostClassLoader);
+                    } catch (Throwable t) {
+                        ModuleLog.line("(InstaEclipse | UnlockPlus): ❌ Failed to hook: " + t);
+                    }
+
                     // Search inside the comments sheet (#230)
                     try {
                         if (!skip("CommentSearchHook")) new ps.reso.instaeclipse.mods.misc.CommentSearchHook().install(dexKitBridge, hostClassLoader);

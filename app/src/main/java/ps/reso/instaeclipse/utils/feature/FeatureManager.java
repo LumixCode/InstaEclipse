@@ -334,6 +334,15 @@ public class FeatureManager {
         reg(FeatureFlags.enableCaptionCopy,    "CaptionCopy",          R.string.ig_dialog_misc_copy_caption);
         reg(FeatureFlags.enableCopyComment,    "CopyComment",          R.string.ig_dialog_misc_copy_comment);
         reg(FeatureFlags.enablePhotoZoom,      "PhotoZoom",            R.string.ig_feat_photo_zoom);
+        reg(FeatureFlags.unlockPlusBenefits,   "UnlockPlusBenefits",   R.string.ig_feature_unlock_plus);
+        reg(FeatureFlags.nightReelBlockEnabled, "NightReelBlock",      R.string.ig_night_reels_enable);
+        // Child rows count only while their parent feature is on; the child preference is kept.
+        reg(FeatureFlags.showUnsentIndicator && FeatureFlags.keepUnsentMessages,
+                "UnsentIndicator", R.string.ig_feature_unsent_indicator);
+        reg(FeatureFlags.manualStorySeen && FeatureFlags.isGhostStory,
+                "ManualStorySeen", R.string.ig_feature_manual_story_seen);
+        reg(FeatureFlags.showFollowingFollowStatus, "FollowingFollowStatus", R.string.ig_feature_following_follow_status);
+        reg(FeatureFlags.hideChatMenuButton,   "ChatMenuTripleTap",    R.string.ig_hide_chat_menu_button);
         reg(FeatureFlags.isAdBlockEnabled,     "AdBlocker",            R.string.ig_dialog_ad_block_ads);
         reg(FeatureFlags.isAnalyticsBlocked,   "BlockAnalytics",       R.string.ig_dialog_ad_block_analytics);
         reg(FeatureFlags.hidePlusUpsells,      "HidePlusUpsells",      R.string.ig_dialog_clean_feed_hide_plus);

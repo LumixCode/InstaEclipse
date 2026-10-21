@@ -205,7 +205,7 @@ public class DialogUtils {
         // ---- TOOLS ---- app & account, developer, backup, restart, cache, about
         mainLayout.addView(sectionHeader(context, I18n.t(context, R.string.feat_group_tools)));
         LinearLayout tools = createGroupCard(context);
-        tools.addView(createMenuRow(context, R.drawable.ic_settings_gear, I18n.t(context, R.string.menu_app), A_TOOLS, () -> showAppOptions(context), onCount(context, "unlimitedAccounts", "fixNotificationRegistration", "showFeatureToasts", "openLinksExternally")));
+        tools.addView(createMenuRow(context, R.drawable.ic_settings_gear, I18n.t(context, R.string.menu_app), A_TOOLS, () -> showAppOptions(context), onCount(context, "unlimitedAccounts", "fixNotificationRegistration", "showFeatureToasts", "unlockPlusBenefits", "openLinksExternally")));
         tools.addView(createMenuRow(context, R.drawable.ic_tune, I18n.t(context, R.string.ig_dialog_menu_dev_options), A_TOOLS, () -> showDevOptions(context), onCount(context, "isDevEnabled", "removeBuildExpiredPopup")));
         tools.addView(createMenuRow(context, R.drawable.ic_save, I18n.t(context, R.string.ig_dialog_menu_backup_restore), A_TOOLS, () -> showBackupRestoreOptions(context)));
         tools.addView(createMenuRow(context, R.drawable.ic_restart, I18n.t(context, R.string.ig_dialog_menu_restart), A_TOOLS, () -> showRestartSection(context)));
@@ -2175,13 +2175,14 @@ public class DialogUtils {
         }
     }
 
-    /** App & Account: account limit, notification fix, InstaEclipse's own toasts. */
+    /** App & Account: account limit, notification fix, InstaEclipse's own toasts, Plus benefits, links. */
     private static void showAppOptions(Context context) {
         LinearLayout layout = createSwitchLayout(context);
         layout.addView(cardOf(context,
                 extraSwitch(context, "#0A84FF", "unlimitedAccounts"),
                 extraSwitch(context, "#0A84FF", "fixNotificationRegistration"),
                 flagSwitch(context, R.drawable.ic_notification, "#0A84FF", R.string.ig_dialog_misc_show_feature_toasts, "showFeatureToasts"),
+                flagSwitch(context, R.drawable.ic_sparkle, "#0A84FF", R.string.ig_feature_unlock_plus, "unlockPlusBenefits"),
                 flagSwitch(context, R.drawable.ic_link, "#0A84FF", R.string.ig_dialog_open_links_externally, "openLinksExternally"),
                 createActionRow(context, R.drawable.ic_link, shareDomainLabel(context), "#0A84FF",
                         v -> showShareDomainDialog(context, (TextView) findFirstText(v)))));
