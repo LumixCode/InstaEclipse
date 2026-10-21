@@ -16,8 +16,11 @@ import java.util.List;
 import java.util.Set;
 
 import org.luckypray.dexkit.DexKitBridge;
+import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
+import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
+import org.luckypray.dexkit.result.ClassData;
 import org.luckypray.dexkit.result.MethodData;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -38,6 +41,8 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
  * Meta AI from replying) is handled in IGNetworkInterceptor under the same flag.
  */
 public class RemoveMetaAIHook {
+
+    private static final String ADD_BUTTON_CACHE = "RemoveMetaAI_addButton";
 
     private static final String[] TARGET_LAYOUTS = {
             // DM composer Meta AI buttons
@@ -145,6 +150,7 @@ public class RemoveMetaAIHook {
         installVideoAttribution(bridge, classLoader);     // Meta AI attribution subtitle (video posts)
         installReelsOverflowGate(bridge, classLoader);    // reel ⋮ "Ask Meta AI" entrypoint
         installMenuOptionFilter(bridge, classLoader);     // GEN_AI MediaOption rows in overflow menus
+        installAddButtonFilter(bridge, classLoader);      // ... and rows added one at a time
         installSearchSerpMetaAiHcm(bridge, classLoader);  // "Ask Meta AI" card in search results (446+)
         installReelContentDeepDive(bridge, classLoader);  // reel "Ask Meta AI about this" (Content Deep Dive)
     }
@@ -464,6 +470,58 @@ public class RemoveMetaAIHook {
                 .returnType("java.util.ArrayList")
                 .addUsingField(od + "->PLAYBACK_CONTROLS:" + od)
                 .addUsingField(od + "->UNSAVE:" + od)), "reel-options");
+    }
+
+    /**
+     * The post and reel ⋮ menus also add rows one at a time through MediaOptionsOverflowMenuCreator's
+     * static add-button method, which the option lists above never see. Skip a Meta AI row there.
+     */
+    private void installAddButtonFilter(DexKitBridge bridge, ClassLoader cl) {
+        try {
+            Class<?> option = cl.loadClass("com.instagram.feed.media.mediaoption.MediaOption$Option");
+            Method addButton = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(ADD_BUTTON_CACHE, cl) : null;
+            if (addButton == null) {
+                addButton = findAddButton(bridge, cl, option);
+                if (addButton == null) {
+                    ModuleLog.line("(IE|RemoveMetaAI) ⚠️ overflow add-button not found");
+                    return;
+                }
+                DexKitCache.saveMethod(ADD_BUTTON_CACHE, addButton);
+            }
+            int optionIndex = Arrays.asList(addButton.getParameterTypes()).indexOf(option);
+            if (optionIndex < 0) return;
+            XposedBridge.hookMethod(addButton, new XC_MethodHook() {
+                @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    Object opt = param.args[optionIndex];
+                    if (FeatureFlags.removeMetaAI && opt != null && isMetaAiOption(opt.toString())) {
+                        param.setResult(null); // void row-adder: the row is never added
+                    }
+                }
+            });
+            ModuleLog.line("(IE|RemoveMetaAI) overflow add-button filter: 1 method(s)");
+        } catch (Throwable t) {
+            ModuleLog.line("(IE|RemoveMetaAI) ⚠️ add-button filter: " + t.getMessage());
+        }
+    }
+
+    private static Method findAddButton(DexKitBridge bridge, ClassLoader cl, Class<?> option) {
+        List<ClassData> creators = bridge.findClass(FindClass.create().matcher(
+                ClassMatcher.create().usingStrings("MediaOptionsOverflowMenuCreator")));
+        if (creators.isEmpty()) return null;
+        for (MethodData md : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+                .declaredClass(creators.get(0).getName()).returnType("void")))) {
+            try {
+                Method m = md.getMethodInstance(cl);
+                if (!Modifier.isStatic(m.getModifiers()) || m.getParameterCount() < 4) continue;
+                boolean takesList = false;
+                for (Class<?> p : m.getParameterTypes()) takesList |= ArrayList.class.isAssignableFrom(p);
+                if (takesList && Arrays.asList(m.getParameterTypes()).contains(option)) {
+                    m.setAccessible(true);
+                    return m;
+                }
+            } catch (Throwable ignored) {}
+        }
+        return null;
     }
 
     private void hookBuilder(DexKitBridge bridge, ClassLoader cl, XC_MethodHook hook, FindMethod q, String label) {
