@@ -27,9 +27,16 @@ public final class ModernBackend implements HookBackend {
     @Override
     public XC_MethodHook.Unhook hook(Member member, XC_MethodHook callback) {
         Executable target = (Executable) member;
-        XposedInterface.HookHandle handle = xposed.hook(target)
-                .setPriority(callback.priority)
-                .intercept(chain -> intercept(chain, member, callback));
+        XposedInterface.HookBuilder builder = xposed.hook(target).setPriority(callback.priority);
+        try {
+            // module.prop's default (PROTECTIVE) would log a throwable set on purpose and run the
+            // original anyway. intercept() already catches callback crashes, so only that throwable
+            // or the original's own exception reaches the framework.
+            builder = builder.setExceptionMode(XposedInterface.ExceptionMode.PASSTHROUGH);
+        } catch (LinkageError noExceptionModes) {
+            // framework API without exception modes: keep its default
+        }
+        XposedInterface.HookHandle handle = builder.intercept(chain -> intercept(chain, member, callback));
         return new XC_MethodHook.Unhook() {
             @Override public Member getHookedMethod() { return member; }
             @Override public void unhook() { handle.unhook(); }
