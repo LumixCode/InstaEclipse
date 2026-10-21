@@ -18,7 +18,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import ps.reso.instaeclipse.R;
-import ps.reso.instaeclipse.Xposed.Module;
+import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 /**
@@ -44,7 +44,8 @@ public final class IeToast {
 
     public static IeToast makeText(Context ctx, int resId, int duration) {
         CharSequence t;
-        try { t = ctx.getText(resId); } catch (Throwable e) { t = ""; }
+        // Inside Instagram ctx.getText would read Instagram's table, where our ids mean nothing.
+        try { t = ModuleResources.get(ctx).getText(resId); } catch (Throwable e) { t = ""; }
         return new IeToast(ctx, t, duration);
     }
 
@@ -91,7 +92,7 @@ public final class IeToast {
         badge.setShape(GradientDrawable.OVAL);
         badge.setColor(accent);
         mark.setBackground(badge);
-        Drawable logo = moduleDrawable(app, R.drawable.ic_logo);
+        Drawable logo = ModuleResources.drawable(app, R.drawable.ic_logo);
         if (logo != null) mark.setImageDrawable(logo);
         int pad = (int) (5 * d);
         mark.setPadding(pad, pad, pad, pad);
@@ -139,18 +140,6 @@ public final class IeToast {
             return info.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND;
         } catch (Throwable t) {
             return true;
-        }
-    }
-
-    /** Module drawable: from our own APK inside Instagram, from resources in the companion app. */
-    private static Drawable moduleDrawable(Context c, int res) {
-        try {
-            if ("ps.reso.instaeclipse".equals(c.getPackageName())) return c.getDrawable(res);
-            if (Module.moduleSourceDir == null) return null;
-            return ps.reso.instaeclipse.xposedcompat.ModuleResources.get()
-                    .getDrawable(res, null);
-        } catch (Throwable t) {
-            return null;
         }
     }
 }

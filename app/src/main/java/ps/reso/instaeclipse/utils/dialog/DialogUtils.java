@@ -39,6 +39,7 @@ import ps.reso.instaeclipse.mods.ghost.ui.GhostEmojiManager;
 import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.core.ModuleActivityLauncher;
+import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -484,7 +485,7 @@ public class DialogUtils {
         labelBlock.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
         android.widget.ImageView chevron = new android.widget.ImageView(context);
-        Drawable chev = loadModuleIcon(R.drawable.ic_chevron_right, C_TEXT2);
+        Drawable chev = loadModuleIcon(context, R.drawable.ic_chevron_right, C_TEXT2);
         if (chev != null) chevron.setImageDrawable(chev);
         LinearLayout.LayoutParams chevLp = new LinearLayout.LayoutParams(dp(context, 20), dp(context, 20));
         chevLp.rightMargin = dp(context, 4);
@@ -2779,7 +2780,7 @@ public class DialogUtils {
         glow.setShape(GradientDrawable.OVAL);
         halo.setBackground(glow);
         ImageView icon = new ImageView(context);
-        Drawable launcher = loadModuleDrawable(R.mipmap.ic_launcher_round);
+        Drawable launcher = ModuleResources.drawable(context, R.mipmap.ic_launcher_round);
         if (launcher != null) icon.setImageDrawable(launcher);
         android.widget.FrameLayout.LayoutParams ilp = new android.widget.FrameLayout.LayoutParams(dp(context, 76), dp(context, 76));
         ilp.gravity = Gravity.CENTER;
@@ -2854,16 +2855,6 @@ public class DialogUtils {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(i);
         } catch (Throwable ignored) {
-        }
-    }
-
-    /** A drawable from the module's own APK, in its own colours. */
-    private static Drawable loadModuleDrawable(int res) {
-        try {
-            return ps.reso.instaeclipse.xposedcompat.ModuleResources.get()
-                    .getDrawable(res, null);
-        } catch (Throwable t) {
-            return null;
         }
     }
 
@@ -3182,7 +3173,7 @@ public class DialogUtils {
     private static View buildIconChip(Context context, int iconRes, String accentHex) {
         android.widget.ImageView iconView = new android.widget.ImageView(context);
         int accent = Color.parseColor(accentHex);
-        Drawable icon = loadModuleIcon(iconRes, accent);
+        Drawable icon = loadModuleIcon(context, iconRes, accent);
         if (icon != null) iconView.setImageDrawable(icon);
         iconView.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
         int iconPad = dp(context, 8);
@@ -3246,30 +3237,33 @@ public class DialogUtils {
     /** Same visual chip as the emoji variant, but with a real vector logo (tinted to match). */
     private static View createActionRow(Context context, int iconRes, String label, String accentHex, View.OnClickListener onClick) {
         android.widget.ImageView iconView = new android.widget.ImageView(context);
-        Drawable icon = loadModuleIcon(iconRes, Color.parseColor(accentHex));
+        Drawable icon = loadModuleIcon(context, iconRes, Color.parseColor(accentHex));
         if (icon != null) iconView.setImageDrawable(icon);
         return createActionRow(context, iconView, label, accentHex, onClick);
     }
 
-    /** This dialog runs inside Instagram's own process, so a drawable resource ID must be
-     *  resolved against our OWN module's resource table (via XModuleResources), not Instagram's
-     *  — ContextCompat.getDrawable(context, iconRes) would resolve against whatever Instagram's
-     *  own resource table happens to have at that numeric ID, since IDs aren't portable across
-     *  APKs. Same pattern already used by GhostDMMarkAsReadHook for its icon. */
-    @SuppressLint("UseCompatLoadingForDrawables")
     /** Public wrapper so hooks (e.g. the DM thread button) can load a tinted module vector. */
-    public static Drawable moduleIcon(int iconRes, int tintColor) {
-        return loadModuleIcon(iconRes, tintColor);
+    public static Drawable moduleIcon(Context context, int iconRes, int tintColor) {
+        return loadModuleIcon(context, iconRes, tintColor);
     }
 
-    private static Drawable loadModuleIcon(int iconRes, int tintColor) {
+    /** Same, for callers without a Context at hand (resolved against Instagram's Application). */
+    public static Drawable moduleIcon(int iconRes, int tintColor) {
+        return loadModuleIcon(ps.reso.instaeclipse.xposedcompat.AndroidAppHelper.currentApplication(), iconRes, tintColor);
+    }
+
+    /** This dialog runs inside Instagram's own process, so a drawable resource ID must be resolved
+     *  against the loaded module APK's resource table (ModuleResources), not Instagram's — IDs aren't
+     *  portable across APKs, and under embedded LSPatch the installed companion may be another build. */
+    @SuppressLint("UseCompatLoadingForDrawables")
+    private static Drawable loadModuleIcon(Context context, int iconRes, int tintColor) {
         try {
-            Drawable icon = ps.reso.instaeclipse.xposedcompat.ModuleResources.get()
-                    .getDrawable(iconRes, null);
+            Drawable icon = ModuleResources.get(context).getDrawable(iconRes, null);
             icon = icon.mutate();
             icon.setColorFilter(new android.graphics.PorterDuffColorFilter(tintColor, android.graphics.PorterDuff.Mode.SRC_IN));
             return icon;
-        } catch (Throwable ignored) {
+        } catch (Exception e) {
+            ModuleLog.line("(IE|Resources) Missing icon " + Integer.toHexString(iconRes), e);
             return null;
         }
     }
