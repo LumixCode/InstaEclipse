@@ -48,9 +48,10 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
  * ((UserSession, long, boolean, boolean)boolean using its purge-flag string); forced true.
  *
  * Hold for slow motion: IG's hold-for-2x fires on both halves of a reel. With
- * FeatureFlags.holdLeftSlowMotion on, a 2x request from a hold that started on the left half of
- * the screen becomes 0.5x (touch side from Activity.dispatchTouchEvent; the rewrite happens in the
- * same Hero / player setters as the chosen speed), and IG's "2X" hint reads "½X" meanwhile.
+ * FeatureFlags.holdLeftSlowMotion on, a 2x request while a touch that went down on the left half
+ * of a reel is still held becomes 0.5x (touch from Activity.dispatchTouchEvent; the rewrite happens
+ * in the same Hero / player setters as the chosen speed, see {@link HoldGate}), and IG's "2X" hint
+ * reads "½X" meanwhile.
  */
 public class PlaybackSpeedHook {
 
@@ -62,27 +63,74 @@ public class PlaybackSpeedHook {
     private static final List<Method> WRAPPERS = new ArrayList<>();
     private static final ThreadLocal<Boolean> APPLYING = new ThreadLocal<>();
     static final float SLOW = 0.5f;
-    private static volatile boolean leftDown;
-    private static volatile boolean slowActive;
+    private static final HoldGate HOLD = new HoldGate();
     private static volatile WeakReference<Activity> touchActivity;
     private static final java.util.regex.Pattern TWO_X =
             java.util.regex.Pattern.compile("(?<![\\d.,])2(\\s?[xX×])(?![\\p{L}\\d])");
 
-    /** Hold-for-2x from the left half becomes slow motion; IG's 1x reset ends it. */
-    private static float holdSpeed(float f) {
+    /**
+     * Hold-for-2x from the left half becomes slow motion; IG's 1x reset or the finger lifting
+     * ends it.
+     * @param hero the Hero setter, which the module's own speed changes reach after a Handler hop
+     */
+    private static float holdSpeed(float f, boolean hero) {
         if (!FeatureFlags.holdLeftSlowMotion) return f;
-        if (f == 2f && leftDown) {
-            if (!slowActive) {
-                ModuleLog.line(TAG + "hold on the left: " + SLOW + "x");
-                slowActive = true;
-                // IG shows its "2X" hint before it sets the speed: fix the one already on screen
-                FeedVideoDownloadHook.mainHandler.post(PlaybackSpeedHook::relabel);
-                FeedVideoDownloadHook.mainHandler.postDelayed(PlaybackSpeedHook::relabel, 200);
-            }
-            return SLOW;
+        boolean was = HOLD.slowActive();
+        float out = HOLD.speedFor(f, hero, android.os.SystemClock.uptimeMillis());
+        if (out != f && !was) {
+            ModuleLog.line(TAG + "hold on the left: " + SLOW + "x");
+            // IG shows its "2X" hint before it sets the speed: fix the one already on screen
+            FeedVideoDownloadHook.mainHandler.post(PlaybackSpeedHook::relabel);
+            FeedVideoDownloadHook.mainHandler.postDelayed(PlaybackSpeedHook::relabel, 200);
         }
-        if (f == 1f) slowActive = false;
-        return f;
+        return out;
+    }
+
+    /**
+     * Hold-left slow motion state. A 2x request becomes {@code SLOW} only while a touch that went
+     * down on the left half of a reel is still down (IG's hold-for-2x), so taps on 2x controls
+     * (voice messages, IG's speed sheet, our chooser) keep 2x. The module's own speed changes
+     * reach the Hero setter later, on a Handler message outside {@code APPLYING}, so a Hero 2x
+     * matching the module's own request of the last {@code OWN_MS} is left alone too. Slow
+     * motion (and the "½X" hint) ends with the gesture, with IG's 1x, or at the next touch-down.
+     */
+    static final class HoldGate {
+        static final long OWN_MS = 1000;
+        private volatile boolean leftHeld, slow;
+        private float ownSpeed = Float.NaN;
+        private long ownUntil;
+
+        /** A gesture starts: a hold on the left half of a reel, or not. */
+        synchronized void down(boolean leftOnReel) {
+            leftHeld = leftOnReel;
+            slow = false;
+        }
+
+        /** The gesture ended (ACTION_UP / ACTION_CANCEL). */
+        synchronized void up() {
+            leftHeld = false;
+            slow = false;
+        }
+
+        /** The module sets speed {@code s} itself; its Hero call may arrive a little later. */
+        synchronized void own(float s, long now) {
+            ownSpeed = s;
+            ownUntil = now + OWN_MS;
+        }
+
+        /** The speed a player gets for a request of {@code f}; {@code hero} = at the Hero setter. */
+        synchronized float speedFor(float f, boolean hero, long now) {
+            if (f == 2f && leftHeld && !(hero && f == ownSpeed && now <= ownUntil)) {
+                slow = true;
+                return SLOW;
+            }
+            if (f == 1f) slow = false;
+            return f;
+        }
+
+        boolean slowActive() {
+            return slow;
+        }
     }
     private static final java.util.Map<Object, Boolean> PLAYERS =
             java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
@@ -94,6 +142,7 @@ public class PlaybackSpeedHook {
     /** Applies the speed to every live story/reel player; true if any accepted it. */
     private static boolean applyToPlayers(float s) {
         boolean ok = false;
+        HOLD.own(s, android.os.SystemClock.uptimeMillis()); // reaches the Hero setter after a hop
         Object[] live;
         synchronized (PLAYERS) { live = PLAYERS.keySet().toArray(); }
         for (Object p : live) {
@@ -124,7 +173,11 @@ public class PlaybackSpeedHook {
             XposedBridge.hookMethod(Activity.class.getDeclaredMethod("dispatchTouchEvent", MotionEvent.class), new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (!FeatureFlags.holdLeftSlowMotion || INJECTING || !(param.args[0] instanceof MotionEvent ev)) return;
+                    if (!FeatureFlags.holdLeftSlowMotion) {
+                        if (HOLD.slowActive()) HOLD.up(); // turned off during a hold: end it
+                        return;
+                    }
+                    if (INJECTING || !(param.args[0] instanceof MotionEvent ev)) return;
                     if (onTouch((Activity) param.thisObject, ev)) param.setResult(true);
                 }
             });
@@ -134,7 +187,9 @@ public class PlaybackSpeedHook {
             XC_MethodHook hint = new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (!slowActive || param.args.length == 0 || !(param.args[0] instanceof CharSequence cs) || cs.length() > 80) return;
+                    if (!HOLD.slowActive() || !FeatureFlags.holdLeftSlowMotion || param.args.length == 0
+                            || !(param.args[0] instanceof CharSequence cs) || cs.length() > 80
+                            || param.thisObject instanceof android.widget.EditText) return; // never a typed draft
                     java.util.regex.Matcher m = TWO_X.matcher(cs);
                     if (!m.find()) return;
                     String out = m.replaceAll("½$1"); // same width as "2X": the hint stays on one line
@@ -195,10 +250,10 @@ public class PlaybackSpeedHook {
                     if (param.args[0] != null) HEROES.put(param.args[0], Boolean.TRUE);
                     if (APPLYING.get() == Boolean.TRUE) return;
                     if (param.args[1] instanceof Float f0 && f0 == 2f && FeatureFlags.holdLeftSlowMotion) {
-                        param.args[1] = holdSpeed(f0);
+                        param.args[1] = holdSpeed(f0, true);
                         return;
                     }
-                    if (param.args[1] instanceof Float f1) holdSpeed(f1);
+                    if (param.args[1] instanceof Float f1) holdSpeed(f1, true);
                     // IG resets to 1x on its own (e.g. after hold-for-2x); keep the chosen speed.
                     if (FeatureFlags.offerPlaybackSpeed && speed != 1f && param.args[1] instanceof Float f && f == 1f)
                         param.args[1] = speed;
@@ -255,8 +310,9 @@ public class PlaybackSpeedHook {
                 android.util.DisplayMetrics dm = a.getResources().getDisplayMetrics();
                 downX = ev.getRawX();
                 downY = ev.getRawY();
-                leftDown = downX < dm.widthPixels / 2f;
-                if (!leftDown && downX < dm.widthPixels * 0.82f && downY > dm.heightPixels * 0.15f
+                boolean left = downX < dm.widthPixels / 2f;
+                HOLD.down(left && reelOnScreen(a)); // a possible slow-motion hold, until UP/CANCEL
+                if (!left && downX < dm.widthPixels * 0.82f && downY > dm.heightPixels * 0.15f
                         && downY < dm.heightPixels * 0.85f && reelOnScreen(a)) {
                     rightPending = true;
                     // a bit before IG's own long press (getLongPressTimeout) so IG never pauses
@@ -272,6 +328,7 @@ public class PlaybackSpeedHook {
                 return false;
             }
             case MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if (ev.getActionMasked() != MotionEvent.ACTION_POINTER_DOWN) HOLD.up();
                 boolean was = rightActive;
                 cancelRight();
                 if (was) {
@@ -307,12 +364,13 @@ public class PlaybackSpeedHook {
     private static void relabel() {
         WeakReference<Activity> ref = touchActivity;
         Activity a = ref != null ? ref.get() : null;
-        if (!slowActive || a == null || a.getWindow() == null) return;
+        if (!HOLD.slowActive() || !FeatureFlags.holdLeftSlowMotion || a == null || a.getWindow() == null) return;
         relabel(a.getWindow().getDecorView(), 0);
     }
 
     private static void relabel(android.view.View v, int depth) {
         if (depth > 40 || v.getVisibility() != android.view.View.VISIBLE) return;
+        if (v instanceof android.widget.EditText) return; // a typed draft: never rewritten
         if (v instanceof TextView tv) {
             CharSequence cs = tv.getText();
             if (cs != null && cs.length() <= 80 && TWO_X.matcher(cs).find()) tv.setText(cs.toString());
@@ -439,10 +497,10 @@ public class PlaybackSpeedHook {
                             remember(param.thisObject);
                             if (APPLYING.get() == Boolean.TRUE) return;
                             if (param.args[0] instanceof Float f0 && f0 == 2f && FeatureFlags.holdLeftSlowMotion) {
-                                param.args[0] = holdSpeed(f0);
+                                param.args[0] = holdSpeed(f0, false);
                                 return;
                             }
-                            if (param.args[0] instanceof Float f1) holdSpeed(f1);
+                            if (param.args[0] instanceof Float f1) holdSpeed(f1, false);
                             if (FeatureFlags.offerPlaybackSpeed && speed != 1f && param.args[0] instanceof Float f && f == 1f)
                                 param.args[0] = speed;
                         }
@@ -533,14 +591,18 @@ public class PlaybackSpeedHook {
             ModuleLog.line(TAG + "⚠️ no player object for speed");
             return false;
         }
+        HOLD.own(s, android.os.SystemClock.uptimeMillis()); // reaches the Hero setter after a hop
         for (Method m : SETTERS) {
             if (!m.getDeclaringClass().isInstance(target)) continue;
             try {
+                APPLYING.set(Boolean.TRUE);
                 m.invoke(target, s);
                 ModuleLog.line(TAG + "speed " + s + "× via " + m.getDeclaringClass().getName() + "." + m.getName());
                 return true;
             } catch (Throwable t) {
                 ModuleLog.line(TAG + "⚠️ set speed: " + t);
+            } finally {
+                APPLYING.remove();
             }
         }
         return false;
