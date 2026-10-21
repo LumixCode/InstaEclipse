@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 
+import ps.reso.instaeclipse.BuildConfig;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
@@ -24,7 +25,8 @@ import java.util.concurrent.Executors;
 public class VersionCheckUtility {
 
     private static final String VERSION_CHECK_URL = "https://raw.githubusercontent.com/ReSo7200/InstaEclipse/refs/heads/main/version.json";
-    private static final String RELEASES_URL = "https://github.com/ReSo7200/InstaEclipse/releases/latest";
+    private static final String RELEASES_PREFIX = "https://github.com/ReSo7200/InstaEclipse/";
+    private static final String RELEASES_URL = RELEASES_PREFIX + "releases/latest";
     private static final int TIMEOUT_MS = 10_000;
     private static final int MAX_RESPONSE_CHARS = 16 * 1024;
 
@@ -35,14 +37,12 @@ public class VersionCheckUtility {
         WeakReference<Activity> ref = new WeakReference<>(activity);
         EXECUTOR.execute(() -> {
             VersionCheck result = fetch();
+            // Offline or unreachable: an update check must never interrupt the app (fetch() logs it).
+            if (result == null) return;
             new Handler(Looper.getMainLooper()).post(() -> {
                 Activity a = ref.get();
                 if (a == null || a.isFinishing() || a.isDestroyed()) return;
-                if (result != null) {
-                    handleVersionCheckResult(a, result);
-                } else {
-                    showErrorDialog(a);
-                }
+                handleVersionCheckResult(a, result);
             });
         });
     }
@@ -78,18 +78,16 @@ public class VersionCheckUtility {
         String latestVersion = versionCheck.getLatestVersion();
         if (latestVersion == null) return;
         // Only prompt when the published version is actually newer (dev builds are often ahead).
-        if (VersionComparator.compare(latestVersion, installedVersion(activity)) > 0) {
+        // BuildConfig can't fail like a PackageManager lookup, which would read as "0" and prompt
+        // on every start; VersionComparator ignores the "-debug" suffix.
+        if (VersionComparator.compare(latestVersion, BuildConfig.VERSION_NAME) > 0) {
             showUpdateDialog(activity, safeUpdateUrl(versionCheck.getUpdateUrl()), latestVersion);
         }
     }
 
-    /** The URL comes from the network: only open https links, otherwise fall back to Releases. */
+    /** The URL comes from the network: only ever open this project's GitHub pages. */
     private static String safeUpdateUrl(String url) {
-        if (url != null) {
-            Uri uri = Uri.parse(url);
-            if ("https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null) return url;
-        }
-        return RELEASES_URL;
+        return url != null && url.startsWith(RELEASES_PREFIX) ? url : RELEASES_URL;
     }
 
     private static void showUpdateDialog(Activity activity, String updateUrl, String newVersion) {
@@ -106,22 +104,5 @@ public class VersionCheckUtility {
                 })
                 .setNegativeButton(activity.getString(R.string.ig_update_later), (dialogInterface, which) -> dialogInterface.dismiss())
                 .show();
-    }
-
-    private static void showErrorDialog(Activity activity) {
-        new MaterialAlertDialogBuilder(activity)
-                .setTitle(activity.getString(R.string.ig_dialog_error))
-                .setMessage(activity.getString(R.string.ig_update_error_message))
-                .setPositiveButton(activity.getString(R.string.ig_dialog_ok), (dialogInterface, which) -> dialogInterface.dismiss())
-                .show();
-    }
-
-    /** This app's own versionName (BuildConfig is not generated in this build). */
-    private static String installedVersion(Activity activity) {
-        try {
-            return activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0).versionName;
-        } catch (Exception e) {
-            return "0";
-        }
     }
 }

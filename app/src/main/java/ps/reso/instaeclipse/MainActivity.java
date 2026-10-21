@@ -29,7 +29,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         Logging.init(this, "instaeclipse_companion.log");
         ps.reso.instaeclipse.mods.media.FrameSessionCache.cleanupOrphans(getCacheDir());
-        VersionCheckUtility.checkForUpdates(this);
+        if (savedInstanceState == null) VersionCheckUtility.checkForUpdates(this); // not again on rotation
+        // Stale companion-cache keys are dropped once per process in InstaEclipseApp.onCreate.
 
         setContentView(R.layout.activity_main);
 
