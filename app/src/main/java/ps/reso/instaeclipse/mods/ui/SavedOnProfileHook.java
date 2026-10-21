@@ -1,10 +1,10 @@
 package ps.reso.instaeclipse.mods.ui;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.graphics.Color;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
@@ -25,6 +25,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 
 /**
@@ -111,10 +112,22 @@ public class SavedOnProfileHook {
                     if (root == null) return;
                     root.postDelayed(() -> inject(frag, root), 500);
                     // IG rebuilds the action bar buttons after resume (dropping ours): re-add when missing
-                    if (watched.add(root))
-                        root.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+                    if (watched.add(root)) {
+                        ViewTreeObserver.OnGlobalLayoutListener relayout = () -> {
                             if (FeatureFlags.savedOnProfile && root.findViewWithTag(BTN_TAG) == null) inject(frag, root);
+                        };
+                        root.getViewTreeObserver().addOnGlobalLayoutListener(relayout);
+                        // The listener lands on the activity window's observer and holds frag + root,
+                        // so without this every visited profile would stay alive and keep listening.
+                        root.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+                            @Override public void onViewAttachedToWindow(View v) {}
+                            @Override public void onViewDetachedFromWindow(View v) {
+                                v.getViewTreeObserver().removeOnGlobalLayoutListener(relayout);
+                                v.removeOnAttachStateChangeListener(this);
+                                watched.remove(v);
+                            }
                         });
+                    }
                 }
             });
             FeatureStatusTracker.setHooked("SavedOnProfile");
@@ -131,18 +144,18 @@ public class SavedOnProfileHook {
         return false;
     }
 
-    @SuppressLint("DiscouragedApi")
     private static void inject(Object frag, View root) {
         try {
-            String pkg = root.getContext().getPackageName();
+            android.content.Context ctx = root.getContext();
             android.content.res.Resources r = root.getResources();
-            int createId = r.getIdentifier("profile_header_create_button", "id", pkg);
-            int rightId = r.getIdentifier("right_action_bar_buttons", "id", pkg);
+            // Cached: this runs on every global layout of other users' profiles too.
+            int createId = ResIds.id(ctx, "profile_header_create_button");
+            int rightId = ResIds.id(ctx, "right_action_bar_buttons");
             if (createId == 0 || rightId == 0 || root.findViewById(createId) == null) return; // not your profile
             if (!(root.findViewById(rightId) instanceof ViewGroup bar) || bar.findViewWithTag(BTN_TAG) != null) return;
             ImageView btn = new ImageView(root.getContext());
             btn.setTag(BTN_TAG);
-            int icon = r.getIdentifier("instagram_save_outline_24", "drawable", pkg);
+            int icon = ResIds.drawable(ctx, "instagram_save_outline_24");
             if (icon != 0) {
                 btn.setImageResource(icon);
                 // tint like the neighbouring action bar icons
