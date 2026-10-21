@@ -486,7 +486,10 @@ public class VoiceMessageDownloadHook {
                 if (FeatureFlags.enableDmMediaDownload) FeatureStatusTracker.setBroken("DmMediaDownload");
             }
             if (factories > 0 && labelFieldRef != null) FeatureStatusTracker.setHooked("ChatTranslate");
-            ps.reso.instaeclipse.mods.ghost.BulkUnsend.install(bridge, cl, messageClass);
+            else if (FeatureFlags.translateMessages) FeatureStatusTracker.setBroken("ChatTranslate");
+            // Bulk unsend runs its own DexKit sweeps, so only while it is on (switching it on needs an
+            // Instagram restart, like the other DexKit features).
+            if (FeatureFlags.bulkUnsend) ps.reso.instaeclipse.mods.ghost.BulkUnsend.install(bridge, cl, messageClass);
         } catch (Throwable t) {
             ModuleLog.line(TAG + "❌ " + t);
             if (FeatureFlags.enableVoiceDownload) FeatureStatusTracker.setBroken("VoiceDownload");

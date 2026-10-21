@@ -1189,7 +1189,7 @@ public class DialogUtils {
                 flagSwitch(context, R.drawable.ic_camera, "#5E5CE6", R.string.ig_dialog_ghost_allow_screenshots_dms, "allowScreenshots"),
                 flagSwitch(context, R.drawable.ic_eye, "#5E5CE6", R.string.ig_dialog_ghost_permanent_view_once, "permanentViewMode"),
                 flagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ig_dialog_translate_messages, "translateMessages"),
-                flagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ig_dialog_bulk_unsend, "bulkUnsend"),
+                restartFlagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ig_dialog_bulk_unsend, "bulkUnsend"),
                 flagSwitch(context, R.drawable.ic_download, "#5E5CE6", R.string.ig_dialog_ghost_chat_export, "chatExport"),
                 flagSwitch(context, R.drawable.ic_block, "#5E5CE6", R.string.ig_dialog_distraction_hide_notes_tray, "hideNotesTray"),
                 flagSwitch(context, R.drawable.ic_block, "#5E5CE6", R.string.ig_hide_dm_suggestions, "hideDmSuggestions"),
