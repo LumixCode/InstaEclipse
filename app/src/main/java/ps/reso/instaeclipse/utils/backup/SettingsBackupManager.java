@@ -28,6 +28,7 @@ public class SettingsBackupManager {
         s.put("isGhostScreenshot",       FeatureFlags.isGhostScreenshot);
         s.put("isGhostViewOnce",         FeatureFlags.isGhostViewOnce);
         s.put("isGhostStory",            FeatureFlags.isGhostStory);
+        s.put("manualStorySeen",         FeatureFlags.manualStorySeen);
         s.put("isGhostLive",             FeatureFlags.isGhostLive);
         s.put("allowScreenshots",        FeatureFlags.allowScreenshots);
         s.put("keepEphemeralMessages",   FeatureFlags.keepEphemeralMessages);
@@ -198,6 +199,7 @@ public class SettingsBackupManager {
         if (s.has("isGhostScreenshot"))      FeatureFlags.isGhostScreenshot      = s.getBoolean("isGhostScreenshot");
         if (s.has("isGhostViewOnce"))        FeatureFlags.isGhostViewOnce        = s.getBoolean("isGhostViewOnce");
         if (s.has("isGhostStory"))           FeatureFlags.isGhostStory           = s.getBoolean("isGhostStory");
+        if (s.has("manualStorySeen"))        FeatureFlags.manualStorySeen        = s.getBoolean("manualStorySeen");
         if (s.has("isGhostLive"))            FeatureFlags.isGhostLive            = s.getBoolean("isGhostLive");
         if (s.has("allowScreenshots"))         FeatureFlags.allowScreenshots         = s.getBoolean("allowScreenshots");
         if (s.has("keepEphemeralMessages"))    FeatureFlags.keepEphemeralMessages    = s.getBoolean("keepEphemeralMessages");

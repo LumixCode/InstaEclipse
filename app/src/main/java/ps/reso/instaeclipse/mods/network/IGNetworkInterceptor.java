@@ -8,6 +8,7 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.xposedcompat.XC_LoadPackage;
+import ps.reso.instaeclipse.mods.ghost.ManualStorySeenHook;
 import ps.reso.instaeclipse.mods.misc.FollowStatusHook;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -150,12 +151,23 @@ public class IGNetworkInterceptor {
                                         shouldDrop |= uri.getPath().endsWith("/item_replayed/");
                                         shouldDrop |= (uri.getPath().contains("/direct") && uri.getPath().endsWith("/item_seen/"));
                                     }
-                                    if (FeatureFlags.isGhostStory) {
-                                        // Version-agnostic: getPath() excludes the ?reel=... query, so it
-                                        // reads /api/vN/media/seen/ on both old (v2) and new (447: v1) builds.
-                                        shouldDrop |= uri.getPath().contains("/media/seen/");
-                                        FeatureStatusTracker.setHooked("GhostStories");
+                                    // Version-agnostic: getPath() excludes the ?reel=... query, so it
+                                    // reads /api/vN/media/seen/ on both old (v2) and new (447: v1) builds.
+                                    // A manual receipt (marked) is authorized in the Tigon pass only: the
+                                    // approval is one-shot and needs the Tigon layer's session, and the
+                                    // chain-entry pass runs first. Unmarked receipts are dropped in both
+                                    // passes, as upstream does, in case one never reaches Tigon.
+                                    if (uri.getPath().contains("/media/seen/")) {
+                                        boolean marked = ManualStorySeenHook.hasManualMarker(uri);
+                                        if (param.method.getDeclaringClass() == tigonClass) {
+                                            boolean manualSeen = marked && ManualStorySeenHook
+                                                    .allowManualRequest(requestObj, uri, param.thisObject);
+                                            shouldDrop |= !manualSeen && (FeatureFlags.isGhostStory || marked);
+                                        } else if (!marked) {
+                                            shouldDrop |= FeatureFlags.isGhostStory;
+                                        }
                                     }
+                                    if (FeatureFlags.isGhostStory) FeatureStatusTracker.setHooked("GhostStories");
                                     if (FeatureFlags.isGhostLive) {
                                         shouldDrop |= uri.getPath().contains("/heartbeat_and_get_viewer_count/");
                                         FeatureStatusTracker.setHooked("GhostLive");

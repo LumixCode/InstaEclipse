@@ -176,8 +176,8 @@ public class DialogUtils {
         // ---- PRIVACY ---- ghost, messages, hidden chats, lock, ads/tracking, location, distraction-free
         mainLayout.addView(sectionHeader(context, I18n.t(context, R.string.feat_group_privacy)));
         LinearLayout privacy = createGroupCard(context);
-        privacy.addView(createMenuRow(context, R.drawable.ic_eye, I18n.t(context, R.string.ig_dialog_menu_ghost_settings), A_PRIVACY, () -> showGhostOptions(context), onCount(context, "isGhostSeen", "isGhostTyping", "isGhostStory", "isGhostLive", "isGhostScreenshot", "isGhostViewOnce", "readReceiptChats", "spoofLastSeen", "airplaneMode")));
-        privacy.addView(createMenuRow(context, R.drawable.ic_chat, I18n.t(context, R.string.menu_messages), A_PRIVACY, () -> showMessagesOptions(context), onCount(context, "keepEphemeralMessages", "keepUnsentMessages", "keepEditHistory", "jumpToFirstMessage", "confirmCalls", "allowScreenshots", "permanentViewMode", "translateMessages", "bulkUnsend", "chatExport", "hideNotesTray", "hideDmSuggestions", "hideDmBlend", "hideShareCreateGroup")));
+        privacy.addView(createMenuRow(context, R.drawable.ic_eye, I18n.t(context, R.string.ig_dialog_menu_ghost_settings), A_PRIVACY, () -> showGhostOptions(context), onCount(context, "isGhostSeen", "isGhostTyping", "isGhostStory", "isGhostLive", "isGhostScreenshot", "isGhostViewOnce", "readReceiptChats", "spoofLastSeen", "airplaneMode", "manualStorySeen")));
+        privacy.addView(createMenuRow(context, R.drawable.ic_chat, I18n.t(context, R.string.menu_messages), A_PRIVACY, () -> showMessagesOptions(context), onCount(context, "keepEphemeralMessages", "keepUnsentMessages", "showUnsentIndicator", "keepEditHistory", "jumpToFirstMessage", "hideChatMenuButton", "confirmCalls", "allowScreenshots", "permanentViewMode", "translateMessages", "bulkUnsend", "chatExport", "hideNotesTray", "hideDmSuggestions", "hideDmBlend", "hideShareCreateGroup")));
         privacy.addView(createMenuRow(context, R.drawable.ic_eye_off, I18n.t(context, R.string.ig_hide_chats_title), A_PRIVACY, () -> showHideChatsOptions(context), onCount(context, "hideSpecificChats")));
         privacy.addView(createMenuRow(context, R.drawable.ic_shield, I18n.t(context, R.string.ig_dialog_misc_lock_section), A_PRIVACY, () -> showLockOptions(context), onCount(context, "lockDirectMessages", "lockWholeApp", "lockSpecificMessages", "lockSavedCollections", "lockUseFingerprint")));
         privacy.addView(createMenuRow(context, R.drawable.ic_block, I18n.t(context, R.string.menu_ads_tracking), A_PRIVACY, () -> showAdOptions(context), onCount(context, "isAdBlockEnabled", "isAnalyticsBlocked", "disableTrackingLinks", "disableSearchHistory")));
@@ -1114,21 +1114,30 @@ public class DialogUtils {
                 GhostEmojiManager.addGhostEmojiNextToInbox(activity, GhostModeUtils.isGhostModeActive());
             }
         };
+        // Marking a story seen by hand only makes sense while story views are hidden.
+        ToggleRow manualSeen = flagSwitch(context, R.drawable.ic_eye, "#5E5CE6", R.string.ig_feature_manual_story_seen, "manualStorySeen");
+        Runnable refreshManualSeen = () -> setDependentToggle(context, manualSeen, FeatureFlags.isGhostStory,
+                R.string.ig_feature_manual_story_seen, R.string.ig_feature_manual_story_seen_requires);
         addMasterGroup(context, layout,
                 flagSwitch(context, R.drawable.ic_eye_off, "#5E5CE6", R.string.ig_dialog_ghost_hide_dm_seen, "isGhostSeen", refreshGhostEmoji),
                 flagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ig_dialog_ghost_hide_typing, "isGhostTyping", refreshGhostEmoji),
-                flagSwitch(context, R.drawable.ic_story_ring, "#5E5CE6", R.string.ig_dialog_ghost_hide_story_views, "isGhostStory", refreshGhostEmoji),
+                flagSwitch(context, R.drawable.ic_story_ring, "#5E5CE6", R.string.ig_dialog_ghost_hide_story_views, "isGhostStory", () -> {
+                    refreshGhostEmoji.run();
+                    refreshManualSeen.run();
+                }),
                 flagSwitch(context, R.drawable.ic_live, "#5E5CE6", R.string.ig_dialog_ghost_hide_live_presence, "isGhostLive", refreshGhostEmoji),
                 flagSwitch(context, R.drawable.ic_camera, "#5E5CE6", R.string.ig_dialog_ghost_bypass_screenshot, "isGhostScreenshot", refreshGhostEmoji),
                 flagSwitch(context, R.drawable.ic_eye_off, "#5E5CE6", R.string.ig_dialog_ghost_hide_view_once, "isGhostViewOnce", refreshGhostEmoji));
 
-        // Outside the master switch: last-seen spoofing and airplane mode.
+        // Outside the master switch: manual story seen, last-seen spoofing and airplane mode.
         layout.addView(createDivider(context));
         layout.addView(cardOf(context,
+                manualSeen,
                 flagSwitch(context, R.drawable.ic_eye, "#5E5CE6", R.string.ig_dialog_ghost_read_receipt_chats, "readReceiptChats"),
                 flagSwitch(context, R.drawable.ic_timer, "#5E5CE6", R.string.ig_dialog_misc_spoof_last_seen, "spoofLastSeen"),
                 // Airplane mode takes effect at once: stop / restart the live MQTT connection.
                 extraSwitch(context, "#5E5CE6", "airplaneMode", ps.reso.instaeclipse.mods.extras.AirplaneModeHook::apply)));
+        refreshManualSeen.run();
 
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_ghost_mode), layout, () -> {});
     }

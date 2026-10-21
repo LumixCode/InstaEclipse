@@ -21,6 +21,7 @@ public class FeatureFlags {
     public static volatile boolean isGhostScreenshot = false;
     public static volatile boolean isGhostViewOnce = false;
     public static volatile boolean isGhostStory = false;
+    public static volatile boolean manualStorySeen = false; // "Mark as seen" story-menu row; needs isGhostStory
     public static volatile boolean isGhostLive = false;
     public static volatile boolean allowScreenshots = false;
     public static volatile boolean keepEphemeralMessages = false;

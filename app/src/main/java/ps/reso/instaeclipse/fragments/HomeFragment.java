@@ -74,7 +74,8 @@ public class HomeFragment extends Fragment {
             // Ghost mode
             "isGhostSeen", "isGhostTyping", "isGhostStory", "isGhostLive", "allowScreenshots",
             "isGhostScreenshot", "isGhostViewOnce", "permanentViewMode", "keepEphemeralMessages",
-            "keepUnsentMessages", "keepEditHistory", "jumpToFirstMessage", "translateMessages", "bulkUnsend", "chatExport",
+            "keepUnsentMessages", "keepEditHistory", "jumpToFirstMessage", "hideChatMenuButton", "translateMessages", "bulkUnsend", "chatExport",
+            "manualStorySeen", "showUnsentIndicator",
             // Ads & analytics
             "isAdBlockEnabled", "isAnalyticsBlocked", "disableTrackingLinks", "openLinksExternally",
             // Clean feed

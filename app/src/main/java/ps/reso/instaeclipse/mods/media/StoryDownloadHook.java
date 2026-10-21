@@ -418,7 +418,7 @@ public class StoryDownloadHook {
     /**
      * Hooks the story viewer's per-page bind (ReelViewerFragment.onCurrentActiveItemBound — anchored
      * by that stable string; the method name is obfuscated) which fires for EVERY story shown. Its
-     * first ReelItem param is the current story; we record it to the 24h cache.
+     * first ReelItem param is the current story; we record it to the story cache.
      */
     private void installStoryCaptureHook(DexKitBridge bridge, ClassLoader cl) {
         XC_MethodHook capture = new XC_MethodHook() {
@@ -550,17 +550,12 @@ public class StoryDownloadHook {
             XC_MethodHook injector = new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (!FeatureFlags.enableStoryDownload && !FeatureFlags.isGhostStory && !FeatureFlags.offerPlaybackSpeed) return;
+                    if (!FeatureFlags.enableStoryDownload && !FeatureFlags.offerPlaybackSpeed) return;
                     if (!(param.getResult() instanceof CharSequence[] original) || original == null) return;
 
                     java.util.List<CharSequence> add = new java.util.ArrayList<>();
                     if (FeatureFlags.enableStoryDownload)
                         add.add(I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_dl_title));
-                    // Selective "Mark as seen" (#226): only meaningful while Hide Story Views is on.
-                    // Not on your own story (its menu comes from the static builder): you can't
-                    // "see" your own story.
-                    if (FeatureFlags.isGhostStory && !java.lang.reflect.Modifier.isStatic(param.method.getModifiers()))
-                        add.add(I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_story_mark_seen));
                     // Highlight "Download all" (#250)
                     if (FeatureFlags.enableStoryDownload && highlightFromParam(param) != null)
                         add.add(I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_highlight_download_all));
@@ -687,7 +682,7 @@ public class StoryDownloadHook {
         XC_MethodHook clickHook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (!FeatureFlags.enableStoryDownload && !FeatureFlags.isGhostStory && !FeatureFlags.offerPlaybackSpeed) return;
+                if (!FeatureFlags.enableStoryDownload && !FeatureFlags.offerPlaybackSpeed) return;
 
                 // 1. Find which button was tapped
                 CharSequence tapped = null;
@@ -728,20 +723,6 @@ public class StoryDownloadHook {
                         }
                     };
                     if (ctx != null) PlaybackSpeedHook.showChooser(ctx, resume);
-                    return;
-                }
-
-                // Selective "Mark as seen" (#226)
-                String seenLabel = I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_story_mark_seen);
-                if (FeatureFlags.isGhostStory && seenLabel.contentEquals(tapped)) {
-                    param.setResult(null);
-                    Object holder = findReelItemHolder(param);
-                    Object effective = holder != null ? holder : param.thisObject;
-                    Context ctx = findContextAcrossParam(param, effective);
-                    String id = extractMediaIdFromReelItemHolder(effective);
-                    int n = ps.reso.instaeclipse.mods.ghost.GhostStorySeenHook.markSeen(id);
-                    if (ctx != null) ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, n > 0
-                            ? R.string.ig_story_marked_seen : R.string.ig_story_mark_seen_none), Toast.LENGTH_SHORT).show();
                     return;
                 }
 

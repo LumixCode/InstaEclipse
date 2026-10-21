@@ -1106,6 +1106,8 @@ public class FeaturesFragment extends Fragment {
         // Outside the master switch
         defs.add(getString(R.string.feat_options));
         defs.add(Arrays.asList(
+                createDependentSwitch(R.drawable.ic_eye, "#5E5CE6", R.string.ig_feature_manual_story_seen,
+                        "manualStorySeen", "isGhostStory", R.string.ig_feature_manual_story_seen_requires),
                 createSwitch(R.drawable.ic_eye, "#5E5CE6", getString(R.string.ig_dialog_ghost_read_receipt_chats), "readReceiptChats"),
                 createSwitch(R.drawable.ic_timer, "#5E5CE6", getString(R.string.ig_dialog_misc_spoof_last_seen), "spoofLastSeen"),
                 createExtrasSwitch("#5E5CE6", "airplaneMode")

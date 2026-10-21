@@ -607,7 +607,8 @@ public class Module {
                         ModuleLog.line("(InstaEclipse | StoryMentions): ❌ Failed to hook");
                     }
 
-                    // Comment Copy
+                    // Manual "Mark as seen" story row; after StoryMentionHook, whose cached menu
+                    // builders it reuses.
                     try {
                         if (!skip("CommentCopyHook")) new CommentCopyHook().install(dexKitBridge, lpparam.classLoader);
                     } catch (Throwable ignored) {
