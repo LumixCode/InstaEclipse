@@ -64,15 +64,16 @@ public class HideChatsHook {
     /** The corner runs from the window's left edge (the old 8 dp inset only dropped taps). */
     private static final int INBOX_GESTURE_WIDTH_DP = 108;
     /**
-     * The hidden inbox's back arrow in that corner. It used to sit in the corner's middle, 24 dp
-     * but never more than the corner's height less 28 dp; it is now that plus BACK_ARROW_GROW_DP,
-     * centred BACK_ARROW_CENTER_X_DP from the left edge and BACK_ARROW_RAISE_DP above the middle.
-     * The whole corner stays its touch target.
+     * The hidden inbox's back arrow in that corner: 24 dp but never more than the corner's height
+     * less 28 dp, plus BACK_ARROW_GROW_DP, centred BACK_ARROW_CENTER_X_DP from the left edge and
+     * level with the account name (the corner's middle when the name isn't found). The whole
+     * corner stays its touch target.
      */
     private static final int BACK_ARROW_DP = 24;
     private static final int BACK_ARROW_GROW_DP = 2;
     private static final int BACK_ARROW_CENTER_X_DP = 34;
-    private static final int BACK_ARROW_RAISE_DP = 2;
+    /** The account name in the inbox header, the text first. */
+    private static final String[] ACCOUNT_NAME_IDS = {"action_bar_title_textview", "action_bar_title"};
 
     private static final Map<View, WeakReference<Activity>> watchedRoots = new WeakHashMap<>();
     private static final Map<Activity, MenuBinding> menuBindings = new WeakHashMap<>();
@@ -781,7 +782,9 @@ public class HideChatsHook {
             params.height = area.height();
             binding.control.setLayoutParams(params);
         }
-        placeBackArrow(activity, binding.control, area.width(), area.height());
+        int nameMiddle = accountNameMiddle(activity, decor);
+        placeBackArrow(activity, binding.control, area.width(), area.height(),
+                nameMiddle < 0 ? -1 : nameMiddle - area.top);
         binding.control.setX(area.left - contentLocation[0]);
         binding.control.setY(area.top - contentLocation[1]);
         binding.control.setVisibility(View.VISIBLE);
@@ -794,13 +797,31 @@ public class HideChatsHook {
         control.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
     }
 
-    /** Pads the corner control so that its fitted arrow gets the size and spot described above. */
-    private static void placeBackArrow(Activity activity, ImageView control, int width, int height) {
+    /**
+     * Pads the corner control so that its fitted arrow gets the size and spot described above;
+     * {@code middle} is the account name's middle from the corner's top, or -1.
+     */
+    private static void placeBackArrow(Activity activity, ImageView control, int width, int height, int middle) {
         int size = Math.max(dp(activity, 16), Math.min(dp(activity, BACK_ARROW_DP), height - dp(activity, 28))
                 + dp(activity, BACK_ARROW_GROW_DP));
         int left = Math.max(0, Math.min(width - size, dp(activity, BACK_ARROW_CENTER_X_DP) - size / 2));
-        int top = Math.max(0, Math.min(height - size, (height - size) / 2 - dp(activity, BACK_ARROW_RAISE_DP)));
+        int top = Math.max(0, Math.min(height - size, middle < 0 ? (height - size) / 2 : middle - size / 2));
         control.setPadding(left, top, Math.max(0, width - left - size), Math.max(0, height - top - size));
+    }
+
+    /** The vertical middle of the account name in the inbox header, on screen, or -1. */
+    private static int accountNameMiddle(Activity activity, View decor) {
+        View bar = ThreadHeaderMenu.findShown(decor, inboxActionBarId);
+        if (bar == null) return -1;
+        for (String name : ACCOUNT_NAME_IDS) {
+            int id = ps.reso.instaeclipse.utils.ui.ResIds.id(activity, name);
+            View title = id == 0 ? null : bar.findViewById(id);
+            if (title == null || !title.isShown() || title.getHeight() == 0) continue;
+            int[] at = new int[2];
+            title.getLocationOnScreen(at);
+            return at[1] + title.getHeight() / 2;
+        }
+        return -1;
     }
 
     private static void setHiddenOnlyMode(Activity activity, boolean enabled) {
