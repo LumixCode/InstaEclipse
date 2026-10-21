@@ -513,6 +513,20 @@ public class Module {
                         ModuleLog.line("(InstaEclipse | FollowsYou): ❌ Failed to hook");
                     }
 
+                    // Follower toast: hooks IG's friendship-status handling here, once, never at runtime
+                    try {
+                        if (!skip("FollowStatusHook")) new ps.reso.instaeclipse.mods.misc.FollowStatusHook().install(dexKitBridge, hostClassLoader);
+                    } catch (Throwable t) {
+                        ModuleLog.line("(InstaEclipse | FollowerToast): ❌ Failed to hook: " + t);
+                    }
+
+                    // Follow status in your own following list
+                    try {
+                        if (!skip("FollowingFollowStatusHook")) new ps.reso.instaeclipse.mods.misc.FollowingFollowStatusHook().install(context, dexKitBridge, hostClassLoader);
+                    } catch (Throwable t) {
+                        ModuleLog.line("(InstaEclipse | FollowingFollowStatus): ❌ Failed to hook: " + t);
+                    }
+
                     // Playback speed for feed videos + forced reel seek bar (#247)
                     try {
                         if (!skip("PlaybackSpeedHook")) new ps.reso.instaeclipse.mods.media.PlaybackSpeedHook().install(dexKitBridge, hostClassLoader);

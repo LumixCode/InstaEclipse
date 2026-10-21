@@ -4,6 +4,7 @@
     <string name="ig_feature_unsent_indicator">Show unsent message indicators</string>
     <string name="ig_feature_show_unsent_button">Show Unsent messages in the chat menu</string>
     <string name="ig_feature_unsent_indicator_requires">Requires Keep unsent messages</string>
+    <string name="ig_feature_following_follow_status">Show follow status in my following list</string>
     <string name="ig_feature_manual_story_seen">Mark a story seen manually</string>
     <string name="ig_feature_manual_story_seen_requires">Requires Hide story views</string>
 </resources>
