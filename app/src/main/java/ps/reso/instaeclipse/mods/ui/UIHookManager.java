@@ -15,16 +15,10 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 
-import java.util.List;
-import java.util.Map;
-
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
-import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
-import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.mods.devops.config.ConfigManager;
-import ps.reso.instaeclipse.mods.ui.utils.BottomSheetHookUtil;
 import ps.reso.instaeclipse.mods.ui.utils.LifecycleHookUtil;
 import ps.reso.instaeclipse.mods.ui.utils.VibrationUtil;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
@@ -204,9 +198,6 @@ public class UIHookManager {
         } catch (Throwable t) {
             ModuleLog.line("(InstaEclipse): ❌ main onResume hook failed: " + t);
         }
-
-        // Hook getBottomSheetNavigator - Instagram Main
-        BottomSheetHookUtil.hookBottomSheetNavigator(Module.dexKitBridge);
 
         // Hook View.performLongClick — inbox long-press override.
         // setOnLongClickListener is unreliable when Instagram has a parent-level touch
