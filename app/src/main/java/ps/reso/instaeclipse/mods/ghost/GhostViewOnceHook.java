@@ -94,8 +94,50 @@ public class GhostViewOnceHook {
                 // "raven_media" on 447 / hardcoded "visual_item_seen" on 436). Skipping it
                 // suppresses just the view-once "seen/opened" report; voice/other sends are
                 // different methods and are untouched.
-                if (FeatureFlags.isGhostViewOnce) param.setResult(null);
+                if (FeatureFlags.isGhostViewOnce) skipMutation(param, "ViewOnce");
             }
         };
+    }
+
+    /**
+     * Skips a DM mutation processor's send, Gx1(context, callback, mutation) on 451, and still
+     * completes the mutation. DirectMutationManager (X.04xt.A03) marks the mutation "executing"
+     * before calling the processor and only the callback completes it; the next-mutation picker
+     * (X.04xt.A00) stops at an executing entry, so a bare skip stalled every later mutation of that
+     * queue (the chat's seen/voice markers, or its text sends). IG's own fire-and-forget processor
+     * X.05uj.Gx1 ends with callback.FpP(null, null): the success path, which marks the mutation
+     * "uploaded" and schedules the next one without sending anything. Without such a callback
+     * (legacy anchors) this is a plain skip.
+     */
+    static void skipMutation(XC_MethodHook.MethodHookParam param, String tag) {
+        param.setResult(null);
+        try {
+            if (param.args == null || param.args.length != 3 || param.args[1] == null
+                    || !(param.method instanceof Method)) return;
+            Method done = completionMethod(((Method) param.method).getParameterTypes()[1]);
+            if (done == null) return;
+            done.setAccessible(true);
+            done.invoke(param.args[1], new Object[]{null, null});
+        } catch (Throwable t) {
+            ModuleLog.line("(IE|" + tag + ") ⚠️ mutation skipped but not completed: " + t);
+        }
+    }
+
+    /**
+     * The mutation callback's completion method: the interface's only instance void (error, String)
+     * method (X.0lfj.FpP on 451, null error = success). Null for a class (the 451 replay of the
+     * legacy anchor gets a message model here) or when the pick is ambiguous.
+     */
+    static Method completionMethod(Class<?> callback) {
+        if (callback == null || !callback.isInterface()) return null;
+        Method found = null;
+        for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(callback)) {
+            if (java.lang.reflect.Modifier.isStatic(m.getModifiers()) || m.getReturnType() != void.class) continue;
+            Class<?>[] p = m.getParameterTypes();
+            if (p.length != 2 || p[0].isPrimitive() || p[0] == String.class || p[1] != String.class) continue;
+            if (found != null) return null;
+            found = m;
+        }
+        return found;
     }
 }

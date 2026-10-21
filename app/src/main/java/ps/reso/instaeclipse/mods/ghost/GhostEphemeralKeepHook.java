@@ -137,12 +137,16 @@ public class GhostEphemeralKeepHook {
         }
     }
 
-    /** Blocks any void method that dispatches mark_ephemeral_item_ranges_viewed. */
+    /**
+     * Blocks any void method that dispatches mark_ephemeral_item_ranges_viewed. On 451 that is a
+     * DM mutation processor (X.05uj.Gx1) on the chat's "thread-<id>" queue, which text sends share,
+     * so the skip also completes the mutation (see GhostViewOnceHook.skipMutation).
+     */
     private void hookServerPing(DexKitBridge bridge) {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (FeatureFlags.keepEphemeralMessages) param.setResult(null);
+                if (FeatureFlags.keepEphemeralMessages) GhostViewOnceHook.skipMutation(param, "Ephemeral");
             }
         };
 
