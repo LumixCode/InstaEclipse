@@ -627,7 +627,14 @@ public class Module {
                     // Manual "Mark as seen" story row; after StoryMentionHook, whose cached menu
                     // builders it reuses.
                     try {
-                        if (!skip("CommentCopyHook")) new CommentCopyHook().install(dexKitBridge, lpparam.classLoader);
+                        if (!skip("ManualStorySeenHook")) new ps.reso.instaeclipse.mods.ghost.ManualStorySeenHook().install(dexKitBridge, lpparam.classLoader);
+                    } catch (Throwable t) {
+                        ModuleLog.line("(InstaEclipse | ManualStorySeen): ❌ Failed to hook: " + t);
+                    }
+
+                    // Comment Copy (Instagram's own long-press Copy row)
+                    try {
+                        if (!skip("CommentCopyHook")) new CommentCopyHook().install(lpparam.classLoader);
                     } catch (Throwable ignored) {
                         ModuleLog.line("(InstaEclipse | CopyComment): ❌ Failed to hook");
                     }

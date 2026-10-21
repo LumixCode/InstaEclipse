@@ -1,395 +1,134 @@
 package ps.reso.instaeclipse.mods.misc;
 
-import android.app.Activity;
+import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
-import android.widget.EditText;
+import android.graphics.drawable.Drawable;
+import android.widget.PopupWindow;
 import android.widget.Toast;
 
-import org.luckypray.dexkit.DexKitBridge;
-import org.luckypray.dexkit.query.FindClass;
-import org.luckypray.dexkit.query.FindMethod;
-import org.luckypray.dexkit.query.matchers.ClassMatcher;
-import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.ClassData;
-import org.luckypray.dexkit.result.MethodData;
-
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
-import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
-import ps.reso.instaeclipse.utils.dialog.IeDialog;
-import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.mods.media.CommentMediaDownload;
+import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
-import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.toast.IeToast;
+import ps.reso.instaeclipse.utils.users.UserUtils;
 
+/**
+ * Adds a Copy Comment row (comments with text) and a Download GIF / image row (comments with a
+ * GIF or photo, see {@link CommentMediaDownload}) to Instagram's own comment long-press menu
+ * (IG 446+).
+ *
+ * The menu is a PopupWindow whose rows the comment presenter builds from (icon, label, callback)
+ * row models. Everything is found by shape from the stable effect-handler class, so obfuscated
+ * renames don't break discovery:
+ *   presenter: a handler field type with a (..., List, float) void method; it gets the comment
+ *   popup:     the presenter's PopupWindow field, whose (List) void methods receive the rows
+ *   row:       the list's element class and its (Drawable, Drawable, callback, Integer,
+ *              String, String, boolean x5) constructor. Instagram calls the callback's void
+ *              method on tap, then dismisses the menu when its boolean method returns true.
+ */
 public class CommentCopyHook {
 
-    private static final Handler MAIN = new Handler(Looper.getMainLooper());
-    private static volatile Activity currentActivity = null;
-
-    private static final String CACHE_KEY = "CommentCopy_ShowMenu";
-    private static final String CACHE_RESOLVER_KEY = "CommentCopy_Resolver";
-
-    // ── Install ───────────────────────────────────────────────────────────────
-    //
-    // Instagram rewrote comments on top of a modern MVVM/reducer architecture in newer builds;
-    // the classic GestureDetector.onLongPress handlers this hook originally targeted (found via
-    // the "fb_comment_long_press" string) become dead code once a build migrates — their
-    // GestureDetector gets constructed but never actually receives touch events (confirmed by
-    // live tracing on a build that had already migrated).
-    // So the new mechanism is tried FIRST, and the old one kept as a fallback for any
-    // Instagram version that hasn't migrated yet — never assume the newer architecture is
-    // universal, always have a path back to what worked before.
-    //
-    // New mechanism: the trigger is Dcq.FmJ(String commentId, String mediaId, float, boolean)
-    // — the concrete implementation of the shared LX/mxm interface. Dcq itself is obfuscated
-    // and renames every build, but it's found without DexKit at all: it's the field on the
-    // stable, non-obfuscated effect-handler class whose type has a method matching that exact
-    // (String,String,float,boolean)V shape.
-    // To get the actual comment MODEL (not just its id), the same repository lookup chain
-    // Dcq.FmJ itself uses is replicated:
-    //   1) Dcq's MediaCommentListRepository-typed field (stable class name, found by reflection)
-    //   2) a field on that repository whose type exposes a public no-arg getValue() (a
-    //      Kotlin State/Lazy-style holder — the method name itself is preserved since it's a
-    //      real SDK interface, so this survives Dcq's own field/class renaming)
-    //   3) the static resolver method (LX/DjK;->A01 in this build) that turns
-    //      (thatValue, commentId, mediaId) into the comment model (LX/EGL;) — found via
-    //      DexKit's addCaller from the already-resolved Dcq.FmJ, so renames of DjK/EGL don't
-    //      break discovery either.
-    // From the resolved model, the comment text is the longest non-trivial String field —
-    // the same heuristic the old mechanism (and other features in this codebase) also use.
     private static final String EFFECT_HANDLER_CLASS =
             "com.instagram.comments.mvvm.view.fragment.CommentViewUiEffectHandler$handleCommentUiEffects$1";
-    private static final String REPO_CLASS =
-            "com.instagram.comments.mvvm.data.MediaCommentListRepository";
 
-    private static java.lang.reflect.Field repoField;   // Dcq -> MediaCommentListRepository
-    private static java.lang.reflect.Method resolverMethod; // static (Object,String,String) -> EGL
-
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
-        ps.reso.instaeclipse.mods.media.CommentMedia.trackCommentSheet(bridge, classLoader);
-        // Track current Activity for showing dialogs
-        try {
-            XposedHelpers.findAndHookMethod(Activity.class, "onResume", new XC_MethodHook() {
-                @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
-                    currentActivity = (Activity) p.thisObject;
-                }
-            });
-            XposedHelpers.findAndHookMethod(Activity.class, "onDestroy", new XC_MethodHook() {
-                @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
-                    if (currentActivity == p.thisObject) currentActivity = null;
-                }
-            });
-        } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | CopyComment): ⚠️ Activity tracker – " + t);
-        }
-
-        // Cache path — try the new mechanism's cache, then the old mechanism's
-        if (DexKitCache.isCacheValid()) {
-            java.lang.reflect.Method cachedFmj = DexKitCache.loadMethod(CACHE_KEY, classLoader);
-            java.lang.reflect.Method cachedResolver = DexKitCache.loadMethod(CACHE_RESOLVER_KEY, classLoader);
-            if (cachedFmj != null && cachedResolver != null
-                    && resolveRepoField(cachedFmj.getDeclaringClass())) {
-                resolverMethod = cachedResolver;
-                resolverMethod.setAccessible(true);
-                XposedBridge.hookMethod(cachedFmj, SHOW_MENU_HOOK);
-                ModuleLog.line("(InstaEclipse | CopyComment): ✅ Hooked (cached, new) "
-                        + cachedFmj.getDeclaringClass().getName() + "." + cachedFmj.getName());
-                FeatureStatusTracker.setHooked("CopyComment");
-                return;
-            }
-
-            List<java.lang.reflect.Method> cachedLongPress =
-                    DexKitCache.loadMethods(CACHE_KEY_OLD, classLoader);
-            if (cachedLongPress != null && !cachedLongPress.isEmpty()) {
-                for (java.lang.reflect.Method m : cachedLongPress) {
-                    XposedBridge.hookMethod(m, LONG_PRESS_HOOK);
-                }
-                ModuleLog.line("(InstaEclipse | CopyComment): ✅ Hooked (cached, legacy) – "
-                        + cachedLongPress.size() + " method(s)");
-                FeatureStatusTracker.setHooked("CopyComment");
-                return;
-            }
-        }
-
-        try {
-            if (findAndHookNew(bridge, classLoader)) return;
-        } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | CopyComment): ⚠️ new-architecture path failed, "
-                    + "falling back to legacy – " + t);
-        }
-
-        try {
-            findAndHookOld(bridge, classLoader);
-        } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | CopyComment): ❌ install – " + t.getMessage());
-        }
+    private static final class MenuCall {
+        final Object comment;
+        boolean rowsSeen, rowAdded;
+        MenuCall(Object comment) { this.comment = comment; }
     }
+    private static final ThreadLocal<MenuCall> menuCall = new ThreadLocal<>();
+    private static final Map<Class<?>, Constructor<?>> rowConstructors = new ConcurrentHashMap<>();
+    private static volatile boolean loggedShapeMismatch;
 
-    private boolean findAndHookNew(DexKitBridge bridge, ClassLoader classLoader) {
+    public void install(ClassLoader classLoader) {
         try {
-            Class<?> effectHandlerClass = classLoader.loadClass(EFFECT_HANDLER_CLASS);
-
-            java.lang.reflect.Method fmj = null;
-            for (java.lang.reflect.Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(effectHandlerClass)) {
-                Class<?> t = f.getType();
-                for (java.lang.reflect.Method cand : ps.reso.instaeclipse.utils.core.SafeReflect.methods(t)) {
-                    Class<?>[] p = cand.getParameterTypes();
-                    if (cand.getReturnType() == void.class && p.length == 4
-                            && p[0] == String.class && p[1] == String.class
-                            && p[2] == float.class && p[3] == boolean.class) {
-                        fmj = cand;
+            Class<?> handler = classLoader.loadClass(EFFECT_HANDLER_CLASS);
+            Method presenter = null;
+            for (Field f : handler.getDeclaredFields()) {
+                for (Method m : f.getType().getDeclaredMethods()) {
+                    Class<?>[] p = m.getParameterTypes();
+                    if (m.getReturnType() == void.class && p.length == 5
+                            && p[3] == List.class && p[4] == float.class) {
+                        presenter = m;
                         break;
                     }
                 }
-                if (fmj != null) break;
+                if (presenter != null) break;
             }
-
-            if (fmj == null) {
-                ModuleLog.line("(InstaEclipse | CopyComment): ❌ Dcq.FmJ-equivalent not found "
-                        + "(older Instagram version? falling back to legacy)");
-                return false;
+            Class<?> popup = null;
+            if (presenter != null) {
+                for (Field f : presenter.getDeclaringClass().getDeclaredFields()) {
+                    if (PopupWindow.class.isAssignableFrom(f.getType())) popup = f.getType();
+                }
             }
-            fmj.setAccessible(true);
-
-            if (!resolveRepoField(fmj.getDeclaringClass())) {
-                ModuleLog.line("(InstaEclipse | CopyComment): ❌ repository field not found on "
-                        + fmj.getDeclaringClass().getName());
-                return false;
+            int hooked = 0;
+            if (popup != null) {
+                for (Method m : popup.getDeclaredMethods()) {
+                    Class<?>[] p = m.getParameterTypes();
+                    if (m.getReturnType() != void.class || p.length != 1 || p[0] != List.class
+                            || Modifier.isStatic(m.getModifiers())) continue;
+                    XposedBridge.hookMethod(m, ADD_ROW_HOOK);
+                    hooked++;
+                }
             }
-
-            List<MethodData> callees = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                    .matcher(MethodMatcher.create()
-                            .paramCount(3)
-                            .addCaller(MethodMatcher.create(fmj))));
-
-            for (MethodData md : callees) {
-                try {
-                    java.lang.reflect.Method cm = md.getMethodInstance(classLoader);
-                    if (!java.lang.reflect.Modifier.isStatic(cm.getModifiers())) continue;
-                    Class<?>[] p = cm.getParameterTypes();
-                    if (p[1] != String.class || p[2] != String.class) continue;
-                    if (cm.getReturnType() == void.class || cm.getReturnType().isPrimitive()) continue;
-                    resolverMethod = cm;
-                    resolverMethod.setAccessible(true);
-                    break;
-                } catch (Throwable ignored) {}
+            if (hooked == 0) {
+                if (FeatureFlags.enableCopyComment) FeatureStatusTracker.setBroken("CopyComment", R.string.ig_dialog_misc_copy_comment);
+                ModuleLog.line("(InstaEclipse | CopyComment): ❌ comment long-press menu not found");
+                return;
             }
-
-            if (resolverMethod == null) {
-                ModuleLog.line("(InstaEclipse | CopyComment): ❌ resolver method not found among FmJ's callees");
-                return false;
-            }
-
-            XposedBridge.hookMethod(fmj, SHOW_MENU_HOOK);
-            DexKitCache.saveMethod(CACHE_KEY, fmj);
-            DexKitCache.saveMethod(CACHE_RESOLVER_KEY, resolverMethod);
+            XposedBridge.hookMethod(presenter, new XC_MethodHook() {
+                @Override protected void beforeHookedMethod(MethodHookParam param) {
+                    JitGuard.tick(param.method);
+                    menuCall.set(new MenuCall(commentArg(param.args)));
+                }
+                @Override protected void afterHookedMethod(MethodHookParam param) {
+                    JitGuard.tick(param.method);
+                    MenuCall call = menuCall.get();
+                    menuCall.remove();
+                    if (call != null && call.rowsSeen && !call.rowAdded && FeatureFlags.enableCopyComment
+                            && !loggedShapeMismatch) {
+                        loggedShapeMismatch = true;
+                        ModuleLog.line("(InstaEclipse | CopyComment): ⚠️ menu rows no longer match, no Copy row");
+                    }
+                }
+            });
             FeatureStatusTracker.setHooked("CopyComment");
-            ModuleLog.line("(InstaEclipse | CopyComment): ✅ Hooked " + fmj.getDeclaringClass().getName()
-                    + "." + fmj.getName() + " (resolver=" + resolverMethod.getDeclaringClass().getName()
-                    + "." + resolverMethod.getName() + ")");
-            return true;
+            ModuleLog.line("(InstaEclipse | CopyComment): ✅ menu rows via " + presenter.getDeclaringClass().getName()
+                    + "." + presenter.getName() + " + " + popup.getName() + " (" + hooked + " list methods)");
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | CopyComment): ❌ findAndHookNew – " + t);
-            return false;
+            if (FeatureFlags.enableCopyComment) FeatureStatusTracker.setBroken("CopyComment", R.string.ig_dialog_misc_copy_comment);
+            ModuleLog.line("(InstaEclipse | CopyComment): ❌ install – " + t);
         }
     }
 
-    // ── Legacy fallback (pre-MVVM Instagram versions) ───────────────────────────
-
-    private static final String CACHE_KEY_OLD = "CommentCopy_LongPress";
-
-    private void findAndHookOld(DexKitBridge bridge, ClassLoader classLoader) {
-        List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                .matcher(MethodMatcher.create()
-                        .name("onLongPress")
-                        .usingStrings("fb_comment_long_press")
-                )
-        );
-
-        if (found.isEmpty()) {
-            found = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                    .matcher(MethodMatcher.create()
-                            .name("onLongPress")
-                            .usingStrings("comment_row_component")
-                    )
-            );
-        }
-
-        if (found.isEmpty()) {
-            List<ClassData> classes = DexKitQueryCache.findClass(bridge, FindClass.create()
-                    .matcher(ClassMatcher.create()
-                            .usingStrings("fb_comment_long_press")
-                    )
-            );
-            for (ClassData cd : classes) {
-                found.addAll(DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                        .matcher(MethodMatcher.create()
-                                .declaredClass(cd.getName())
-                                .name("onLongPress")
-                        )
-                ));
-            }
-        }
-
-        if (found.isEmpty()) {
-            ModuleLog.line("(InstaEclipse | CopyComment): ❌ legacy onLongPress not found via DexKit either");
-            return;
-        }
-
-        List<java.lang.reflect.Method> hooked = new ArrayList<>();
-        for (MethodData md : found) {
-            try {
-                java.lang.reflect.Method m = md.getMethodInstance(classLoader);
-                XposedBridge.hookMethod(m, LONG_PRESS_HOOK);
-                hooked.add(m);
-                ModuleLog.line("(InstaEclipse | CopyComment): ✅ Hooked (legacy) "
-                        + md.getClassName() + ".onLongPress");
-            } catch (Throwable t) {
-                ModuleLog.line("(InstaEclipse | CopyComment): ❌ legacy hook – " + t.getMessage());
-            }
-        }
-
-        if (!hooked.isEmpty()) {
-            DexKitCache.saveMethods(CACHE_KEY_OLD, hooked);
-            FeatureStatusTracker.setHooked("CopyComment");
-        }
-    }
-
-    private static final XC_MethodHook LONG_PRESS_HOOK = new XC_MethodHook() {
-        @Override
-        protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-            if (!FeatureFlags.enableCopyComment) return;
-            try {
-                String text = extractCommentTextLegacy(param.thisObject);
-                if (text == null || text.trim().isEmpty()) return;
-
-                Context ctx = currentActivity;
-                if (ctx == null) return;
-
-                showCopyPopup(ctx, text.trim());
-            } catch (Throwable t) {
-                ModuleLog.line("(InstaEclipse | CopyComment): ❌ legacy hook body – " + t);
-            }
-        }
-    };
-
-    private static final String CACHE_ITEM_CLASS = "CommentCopy_ItemClass";
-    private static final String CACHE_TEXT_FIELD = "CommentCopy_TextField";
-
-    private static String extractCommentTextLegacy(Object gestureListener) {
-        if (DexKitCache.isCacheValid()) {
-            String itemClass = DexKitCache.loadString(CACHE_ITEM_CLASS);
-            String textField = DexKitCache.loadString(CACHE_TEXT_FIELD);
-            if (itemClass != null && textField != null) {
-                try {
-                    Object item = findItemByClass(gestureListener, itemClass);
-                    if (item == null) return null;
-                    Field tf = item.getClass().getDeclaredField(textField);
-                    tf.setAccessible(true);
-                    String val = (String) tf.get(item);
-                    return (val != null && !val.isEmpty()) ? val : null;
-                } catch (Throwable ignored) {
-                }
-            }
-        }
-
-        return discoverAndCacheLegacy(gestureListener);
-    }
-
-    private static Object findItemByClass(Object gestureListener, String targetClassName) {
+    /** The comment model is the presenter argument that carries its author. */
+    private static Object commentArg(Object[] args) {
         try {
-            for (Field f1 : ps.reso.instaeclipse.utils.core.SafeReflect.fields(gestureListener.getClass())) {
-                if (!isObfuscatedObject(f1)) continue;
-                f1.setAccessible(true);
-                Object holder = f1.get(gestureListener);
-                if (holder == null) continue;
-                for (Field f2 : ps.reso.instaeclipse.utils.core.SafeReflect.fields(holder.getClass())) {
-                    if (!isObfuscatedObject(f2)) continue;
-                    f2.setAccessible(true);
-                    Object item = f2.get(holder);
-                    if (item != null && item.getClass().getName().equals(targetClassName))
-                        return item;
-                }
+            Class<?> user = Class.forName("com.instagram.user.model.User", false,
+                    args[1] != null ? args[1].getClass().getClassLoader() : CommentCopyHook.class.getClassLoader());
+            for (Object arg : args) {
+                if (arg != null && !(arg instanceof List) && hasFieldOfType(arg.getClass(), user)) return arg;
             }
         } catch (Throwable ignored) {}
-        return null;
-    }
-
-    private static String discoverAndCacheLegacy(Object gestureListener) {
-        try {
-            ClassLoader cl = gestureListener.getClass().getClassLoader();
-            Class<?> userClass = Class.forName(
-                    "com.instagram.user.model.User", false, cl);
-
-            for (Field f1 : ps.reso.instaeclipse.utils.core.SafeReflect.fields(gestureListener.getClass())) {
-                if (!isObfuscatedObject(f1)) continue;
-                f1.setAccessible(true);
-                Object holder = f1.get(gestureListener);
-                if (holder == null) continue;
-
-                for (Field f2 : ps.reso.instaeclipse.utils.core.SafeReflect.fields(holder.getClass())) {
-                    if (!isObfuscatedObject(f2)) continue;
-                    f2.setAccessible(true);
-                    Object item = f2.get(holder);
-                    if (item == null) continue;
-                    if (!hasFieldOfType(item.getClass(), userClass)) continue;
-
-                    String[] found = findTextFieldLegacy(item);
-                    if (found != null) {
-                        DexKitCache.saveString(CACHE_ITEM_CLASS, item.getClass().getName());
-                        DexKitCache.saveString(CACHE_TEXT_FIELD, found[0]);
-                        ModuleLog.line("(InstaEclipse | CopyComment): cached (legacy) "
-                                + item.getClass().getName() + "." + found[0]);
-                        return found[1];
-                    }
-                    return null;
-                }
-            }
-        } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | CopyComment): ❌ legacy discover – " + t);
-        }
-        return null;
-    }
-
-    private static String[] findTextFieldLegacy(Object item) {
-        String bestName = null;
-        String bestVal  = null;
-        for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(item.getClass())) {
-            if (f.getType() != String.class) continue;
-            try {
-                f.setAccessible(true);
-                String val = (String) f.get(item);
-                if (val == null || val.isEmpty()) continue;
-                if (val.matches("\\d+")) continue;
-                if (val.matches("\\d+_\\d+")) continue;
-                if (val.startsWith("http")) continue;
-                if (bestVal == null || val.length() > bestVal.length()) {
-                    bestName = f.getName();
-                    bestVal  = val;
-                }
-            } catch (Throwable ignored) {}
-        }
-        return (bestName != null) ? new String[]{bestName, bestVal} : null;
-    }
-
-    private static boolean isObfuscatedObject(Field f) {
-        Class<?> t = f.getType();
-        if (t.isPrimitive() || t == String.class) return false;
-        String n = t.getName();
-        return !n.startsWith("android.") && !n.startsWith("java.")
-                && !n.startsWith("kotlin.") && !n.startsWith("androidx.");
+        return args.length > 1 ? args[1] : null;
     }
 
     private static boolean hasFieldOfType(Class<?> clazz, Class<?> target) {
@@ -399,77 +138,176 @@ public class CommentCopyHook {
         return false;
     }
 
-    private static boolean resolveRepoField(Class<?> dcqClass) {
-        try {
-            Class<?> repoClass = dcqClass.getClassLoader().loadClass(REPO_CLASS);
-            for (java.lang.reflect.Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(dcqClass)) {
-                if (f.getType() == repoClass) {
-                    f.setAccessible(true);
-                    repoField = f;
-                    return true;
-                }
-            }
-        } catch (Throwable ignored) {}
-        return false;
-    }
-
-    // Finds a field on `repo` whose type has a public no-arg "getValue" method (a Kotlin
-    // State/Lazy-style holder) that yields an instance of targetType — the repository has
-    // several such holders (loading state, ui state, etc.), so the resolver's own expected
-    // parameter type disambiguates which one is the actual comment cache.
-    private static Object resolveHeldValue(Object repo, Class<?> targetType) {
-        for (java.lang.reflect.Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(repo.getClass())) {
-            try {
-                java.lang.reflect.Method getValue = f.getType().getMethod("getValue");
-                f.setAccessible(true);
-                Object holder = f.get(repo);
-                if (holder == null) continue;
-                Object value = getValue.invoke(holder);
-                if (targetType.isInstance(value)) return value;
-            } catch (NoSuchMethodException ignored) {
-            } catch (Throwable ignored) {}
-        }
-        return null;
-    }
-
-    private static final XC_MethodHook SHOW_MENU_HOOK = new XC_MethodHook() {
+    private static final XC_MethodHook ADD_ROW_HOOK = new XC_MethodHook() {
         @Override
-        protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-            if (!FeatureFlags.enableCopyComment) return;
+        protected void beforeHookedMethod(MethodHookParam param) {
+            JitGuard.tick(param.method);
+            MenuCall call = menuCall.get();
+            if (call == null || call.rowAdded || !FeatureFlags.enableCopyComment) return; // one menu, one row
+            if (!(param.args[0] instanceof List<?> rows) || rows.isEmpty()) return;
+            call.rowsSeen = true;
             try {
-                Activity ctx = currentActivity;
-                if (ctx == null) return;
-
-                String commentId = (String) param.args[0];
-                String mediaId = (String) param.args[1];
-
-                Object repo = repoField.get(param.thisObject);
-                if (repo == null) return;
-                Object heldValue = resolveHeldValue(repo, resolverMethod.getParameterTypes()[0]);
-                if (heldValue == null) return;
-
-                Object comment = resolverMethod.invoke(null, heldValue, commentId, mediaId);
-                if (comment == null) return;
-
-                String text = findLongestTextField(comment);
-                // #242: image / GIF comments get a Download button (GIF-only comments have no text)
-                java.util.List<String> media = ps.reso.instaeclipse.mods.media.CommentMedia.urls(ctx, comment);
-                if ((text == null || text.trim().isEmpty()) && media.isEmpty()) return;
-
-                String[] names = media.isEmpty() ? new String[2] // {commenter, post author} for the file name
-                        : ps.reso.instaeclipse.mods.media.CommentMedia.names(comment, mediaId, heldValue, repo, param.thisObject);
-                showCopyPopup(ctx, text == null ? "" : text.trim(), media, commentId, names);
+                Constructor<?> row = rowConstructor(rows.get(0).getClass());
+                if (row == null) return; // not rows we can build
+                call.rowAdded = true;
+                Object[] comment = CommentMediaDownload.comment(call.comment);
+                String text = commentText(call.comment, comment);
+                CommentMediaDownload.Found media = comment == null ? null
+                        : CommentMediaDownload.find((Class<?>) comment[0], comment[1]);
+                if (text == null && media == null) return;
+                Context ctx = ((PopupWindow) param.thisObject).getContentView().getContext();
+                List<Object> out = new ArrayList<>(rows);
+                // Before Instagram's tinted (destructive) rows such as Report, like its own order.
+                int at = firstTintedRow(rows);
+                if (text != null) {
+                    out.add(at++, newRow(row, rows.get(0), ctx, "instagram_copy_pano_outline_24",
+                            I18n.t(ctx, R.string.ig_comment_copy_title), () -> copyToClipboard(ctx, text)));
+                }
+                if (media != null) {
+                    String commenter = commenter(call.comment);
+                    out.add(at, newRow(row, rows.get(0), ctx, "instagram_download_pano_outline_24",
+                            I18n.t(ctx, media.gif ? R.string.ig_comment_download_gif : R.string.ig_comment_download_image),
+                            () -> CommentMediaDownload.save(ctx, media, commenter)));
+                }
+                param.args[0] = out;
             } catch (Throwable t) {
-                ModuleLog.line("(InstaEclipse | CopyComment): ❌ hook body – " + t);
+                ModuleLog.line("(InstaEclipse | CopyComment): ❌ menu row – " + t);
             }
         }
     };
 
-    // ── Comment text extraction from the resolved model ─────────────────────────
+    /** (Drawable, Drawable, callback, Integer, String, String, boolean...): 5 flags on 446, 6 on 451. */
+    private static Constructor<?> rowConstructor(Class<?> rowClass) {
+        Constructor<?> cached = rowConstructors.get(rowClass);
+        if (cached != null) return cached;
+        for (Constructor<?> c : rowClass.getDeclaredConstructors()) {
+            Class<?>[] p = c.getParameterTypes();
+            if (p.length < 11 || p[0] != Drawable.class || p[1] != Drawable.class || !tapAndDismissOnly(p[2])
+                    || p[3] != Integer.class || p[4] != String.class || p[5] != String.class) continue;
+            boolean flags = true;
+            for (int i = 6; i < p.length; i++) flags &= p[i] == boolean.class;
+            if (!flags) continue;
+            c.setAccessible(true);
+            rowConstructors.put(rowClass, c);
+            return c;
+        }
+        return null;
+    }
 
+    /**
+     * The row callback must be exactly Instagram's tap + dismiss pair. Any other shape could have
+     * our proxy run the action without a tap, or return null where Instagram needs a value.
+     */
+    private static boolean tapAndDismissOnly(Class<?> callback) {
+        if (!callback.isInterface()) return false;
+        Method[] methods = callback.getMethods();
+        if (methods.length != 2) return false;
+        boolean tap = false, dismiss = false;
+        for (Method m : methods) {
+            if (m.getParameterCount() != 0) return false;
+            tap |= m.getReturnType() == void.class;
+            dismiss |= m.getReturnType() == boolean.class;
+        }
+        return tap && dismiss;
+    }
+
+    /** Destructive rows carry a tint colour; ours goes just before the first one. */
+    private static int firstTintedRow(List<?> rows) {
+        for (int i = 0; i < rows.size(); i++) {
+            Object row = rows.get(i);
+            for (Field f : row.getClass().getDeclaredFields()) {
+                if (f.getType() != Integer.class) continue;
+                try {
+                    f.setAccessible(true);
+                    if (f.get(row) != null) return i;
+                } catch (Throwable ignored) {}
+            }
+        }
+        return rows.size();
+    }
+
+    @SuppressLint({"DiscouragedApi", "UseCompatLoadingForDrawables"}) // Instagram's own icons
+    private static Object newRow(Constructor<?> row, Object template, Context ctx, String icon,
+                                 String label, Runnable onTap) throws Exception {
+        Class<?> callbackType = row.getParameterTypes()[2];
+        Object callback = Proxy.newProxyInstance(callbackType.getClassLoader(),
+                new Class<?>[]{callbackType}, (proxy, method, args) -> {
+                    if (method.getDeclaringClass() == Object.class) {
+                        switch (method.getName()) {
+                            case "equals": return proxy == args[0];
+                            case "hashCode": return System.identityHashCode(proxy);
+                            default: return "CopyCommentRow";
+                        }
+                    }
+                    if (method.getReturnType() == boolean.class) return true; // dismiss after tap
+                    if (method.getReturnType() == void.class) onTap.run();
+                    return null;
+                });
+        Drawable drawable = null;
+        int id = ctx.getResources().getIdentifier(icon, "drawable", ctx.getPackageName());
+        if (id != 0) drawable = ctx.getDrawable(id);
+        // Same arguments Instagram passes for its own untinted rows; the flags follow below.
+        Object[] args = new Object[row.getParameterCount()];
+        args[1] = drawable;
+        args[2] = callback;
+        args[4] = label;
+        for (int i = 6; i < args.length; i++) args[i] = false;
+        Object created = row.newInstance(args);
+        copyFlags(template, created);
+        return created;
+    }
+
+    /**
+     * Instagram passes the same flag constants for every row of this menu, but their number and
+     * order change between versions (5 on 446, 6 on 451): copy them from one of its own rows.
+     */
+    private static void copyFlags(Object from, Object to) {
+        for (Field f : to.getClass().getDeclaredFields()) {
+            if (f.getType() != boolean.class || Modifier.isStatic(f.getModifiers())) continue;
+            try {
+                f.setAccessible(true);
+                f.setBoolean(to, f.getBoolean(from));
+            } catch (Throwable ignored) {}
+        }
+    }
+
+    /**
+     * The comment's text, or null when it has none (a GIF or photo on its own). Read through the
+     * comment interface's text accessor (02Rd.DhX on 451, which CaptionCopyHook resolves): the menu
+     * model also holds ids and other strings, so the length guess is only the fallback.
+     */
+    private static String commentText(Object holder, Object[] comment) {
+        Method accessor = CaptionCopyHook.textAccessor();
+        if (comment != null && accessor != null && accessor.getDeclaringClass().isInstance(comment[1])) {
+            try {
+                Object text = accessor.invoke(comment[1]);
+                return text instanceof String s && !s.trim().isEmpty() ? s.trim() : null;
+            } catch (Throwable ignored) {} // unfetched Pando field: fall back to the guess
+        }
+        String text = holder == null ? null : findLongestTextField(holder);
+        return text == null || text.trim().isEmpty() ? null : text.trim();
+    }
+
+    /** The comment author's username, for the saved file's name. */
+    private static String commenter(Object holder) {
+        if (holder == null) return null;
+        for (Class<?> c = holder.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+            for (Field f : c.getDeclaredFields()) {
+                if (!f.getType().getName().equals("com.instagram.user.model.User")) continue;
+                try {
+                    f.setAccessible(true);
+                    Object user = f.get(holder);
+                    if (user != null) return UserUtils.callUsernameGetter(user);
+                } catch (Throwable ignored) {}
+            }
+        }
+        return null;
+    }
+
+    /** The comment text is the model's longest String that isn't an id or a URL. */
     private static String findLongestTextField(Object model) {
         String best = null;
-        for (java.lang.reflect.Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(model.getClass())) {
+        for (Field f : model.getClass().getDeclaredFields()) {
             if (f.getType() != String.class) continue;
             try {
                 f.setAccessible(true);
@@ -477,6 +315,8 @@ public class CommentCopyHook {
                 if (val == null || val.isEmpty()) continue;
                 if (val.matches("\\d+")) continue;
                 if (val.matches("\\d+_\\d+")) continue;
+                // A just-posted comment's temporary id is a UUID, longer than a short reply.
+                if (val.matches("[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}")) continue;
                 if (val.startsWith("http")) continue;
                 if (best == null || val.length() > best.length()) best = val;
             } catch (Throwable ignored) {}
@@ -484,77 +324,15 @@ public class CommentCopyHook {
         return best;
     }
 
-    // ── Copy popup ────────────────────────────────────────────────────────────
-
-    private static void showCopyPopup(final Context ctx, final String text) {
-        showCopyPopup(ctx, text, java.util.Collections.emptyList(), null, new String[2]);
-    }
-
-    private static void showCopyPopup(final Context ctx, final String text,
-                                      final java.util.List<String> media, final String commentId,
-                                      final String[] names) {
-        MAIN.post(() -> {
-            try {
-                IeDialog dlg = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_comment_copy_title));
-                if (!text.isEmpty()) dlg.quote(text, 5);
-
-                java.util.List<CharSequence> labels = new java.util.ArrayList<>();
-                java.util.List<Runnable> actions = new java.util.ArrayList<>();
-                if (!media.isEmpty()) {
-                    labels.add(I18n.t(ctx, R.string.ig_dl_title));
-                    actions.add(() -> ps.reso.instaeclipse.mods.media.CommentMedia.download(ctx, media, commentId, names[0], names[1]));
-                    // GIF / photo comments: copy the media link (Android can't put an animated GIF on the clipboard)
-                    labels.add(I18n.t(ctx, R.string.ig_comment_copy_media_link));
-                    actions.add(() -> copyToClipboard(ctx, media.get(0)));
-                }
-                if (!text.isEmpty()) {
-                    labels.add(I18n.t(ctx, R.string.ig_comment_copy_full));
-                    actions.add(() -> copyToClipboard(ctx, text));
-                    labels.add(I18n.t(ctx, R.string.ig_comment_select_part));
-                    actions.add(() -> showSelectDialog(ctx, text));
-                    // Translate (#233): hand the text to the user's translation app.
-                    labels.add(I18n.t(ctx, R.string.ig_translate_text));
-                    actions.add(() -> ps.reso.instaeclipse.utils.core.TextTranslator.translate(ctx, text));
-                }
-                dlg.choices(labels.toArray(new CharSequence[0]), -1, which -> actions.get(which).run());
-                dlg.show();
-            } catch (Throwable t) {
-                ModuleLog.line("(InstaEclipse | CopyComment): ❌ Popup – " + t.getMessage());
-            }
-        });
-    }
-
-    // ── Select dialog ─────────────────────────────────────────────────────────
-
-    private static void showSelectDialog(final Context ctx, final String text) {
-        MAIN.post(() -> {
-            try {
-                IeDialog dlg = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_comment_select_title));
-                final EditText et = dlg.selectableText(text, 8);
-                dlg.secondary(I18n.t(ctx, R.string.ig_mention_copy_all), () -> copyToClipboard(ctx, text));
-                dlg.primary(I18n.t(ctx, R.string.ig_comment_copy_selected), () -> {
-                    int s = et.getSelectionStart(), e = et.getSelectionEnd();
-                    copyToClipboard(ctx, (s >= 0 && e > s) ? text.substring(s, e) : text);
-                });
-                dlg.show();
-                et.requestFocus();
-            } catch (Throwable t) {
-                ModuleLog.line("(InstaEclipse | CopyComment): ❌ SelectDialog – " + t.getMessage());
-            }
-        });
-    }
-
-    // ── Clipboard ─────────────────────────────────────────────────────────────
-
     private static void copyToClipboard(final Context ctx, final String text) {
         try {
             ClipboardManager cm = (ClipboardManager)
                     ctx.getSystemService(Context.CLIPBOARD_SERVICE);
             if (cm != null) {
                 cm.setPrimaryClip(ClipData.newPlainText("comment", text));
-                MAIN.post(() ->
-                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_comment_copied),
-                                Toast.LENGTH_SHORT).show());
+                // Android 13+ confirms every copy itself; a second toast would just repeat it.
+                if (android.os.Build.VERSION.SDK_INT < 33) IeToast.makeText(ctx,
+                        I18n.t(ctx, R.string.ig_toast_comment_copied), Toast.LENGTH_SHORT).show();
             }
         } catch (Throwable t) {
             ModuleLog.line("(InstaEclipse | CopyComment): ❌ Copy – " + t.getMessage());

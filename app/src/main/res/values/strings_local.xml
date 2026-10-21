@@ -91,6 +91,9 @@
     <string name="ig_night_reels_same_time">Start and end times must be different.</string>
     <string name="ig_night_reels_blocked">Reels are blocked until %1$s.</string>
 
+    <!-- Comment long-press menu: save a comment's GIF or photo -->
+    <string name="ig_comment_download_gif">Download GIF</string>
+    <string name="ig_comment_download_image">Download image</string>
 
     <!-- Companion: a lock it can turn on but not off; restore that left settings out -->
     <string name="ig_lock_turn_off_in_ig">Turn it off inside Instagram: InstaEclipse menu &gt; Lock</string>
