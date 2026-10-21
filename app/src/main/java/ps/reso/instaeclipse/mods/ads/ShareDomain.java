@@ -32,7 +32,8 @@ public final class ShareDomain {
         int slash = d.indexOf('/');
         if (slash >= 0) d = d.substring(0, slash);
         if (d.isEmpty()) return "";
-        if (d.length() > 253 || !VALID.matcher(d).matches() || d.endsWith("instagram.com")) return null;
+        if (d.length() > 253 || !VALID.matcher(d).matches()
+                || d.equals("instagram.com") || d.endsWith(".instagram.com")) return null;
         return d;
     }
 }
