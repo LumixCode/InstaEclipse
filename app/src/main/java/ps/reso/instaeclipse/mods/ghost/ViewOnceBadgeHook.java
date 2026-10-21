@@ -118,7 +118,7 @@ public class ViewOnceBadgeHook {
                         if (hit != null) { original = hit; break; }
                     }
                     args[modeIdx] = (original != null) ? original : "once";
-                    ModuleLog.line("(IE|VOBadge|PROBE) resolved=" + args[modeIdx]
+                    ModuleLog.probe("(IE|VOBadge|PROBE) resolved=" + args[modeIdx]
                             + " match=" + (original != null) + " candLongs=" + candidates);
                 } catch (Throwable t) {
                     ModuleLog.line("(IE|VOBadge) ❌ hook body: " + t);
