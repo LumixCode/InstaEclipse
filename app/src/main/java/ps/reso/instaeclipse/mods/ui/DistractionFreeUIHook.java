@@ -2,7 +2,9 @@ package ps.reso.instaeclipse.mods.ui;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
 import android.content.res.Resources;
+import android.util.SparseBooleanArray;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -17,12 +19,12 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
  * not block), so they stay visible. To make them actually disappear we collapse the real Views by
  * their stable public resource names (verified from the live view tree, never obfuscated X.* ids):
  *   - story tray  -> com.instagram.android:id/reels_tray_container   (disableStories or hideStoriesTray)
- *   - Reels tab   -> com.instagram.android:id/clips_tab              (gated on disableReels)
+ *   - Reels tab   -> com.instagram.android:id/clips_tab              (disableReels or hideTabReels)
  *
  * Armed from {@link UIHookManager#setupHooks} on every resume; a one-time global-layout listener per
- * window re-applies the collapse because IG rebuilds these views as you navigate. Everything is
- * gated per-flag and wrapped in try/catch, so nothing changes unless the toggle is on and a miss can
- * never crash Instagram.
+ * window re-applies the collapse because IG rebuilds these views as you navigate, and restores what
+ * it collapsed once a toggle is turned off. Everything is wrapped in try/catch, so a miss can never
+ * crash Instagram.
  */
 public class DistractionFreeUIHook {
 
@@ -67,6 +69,8 @@ public class DistractionFreeUIHook {
 
     private static final java.util.Set<View> watchedDecors =
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    // Views this hook collapsed -> {visibility, width, height} before collapsing, for a live restore.
+    private static final java.util.Map<View, int[]> collapsedViews = new java.util.WeakHashMap<>();
 
     // Global layout fires many times per second on the main feed (video, animations). Walking the
     // whole decor tree on every pass was a measurable battery drain (#257), so sweeps triggered by
@@ -81,8 +85,13 @@ public class DistractionFreeUIHook {
                 || !FeatureFlags.navTabOrder.isEmpty() || FeatureFlags.disableDiscoverPeople || FeatureFlags.hideInstants;
     }
 
+    /** A sweep is needed while a flag is on, or to restore views collapsed before a flag went off. */
+    private static boolean needsSweep() {
+        return anyFlag() || !collapsedViews.isEmpty();
+    }
+
     @SuppressLint("DiscouragedApi")
-    private static void ensureIds(Activity a) {
+    private static void ensureIds(Context a) {
         if (idsResolved) return;
         try {
             Resources res = a.getResources();
@@ -104,17 +113,19 @@ public class DistractionFreeUIHook {
     /** Collapse the enabled targets in this activity, and keep them collapsed via a one-time
      *  global-layout listener on the window decor. Called on every main/modal resume. */
     public static void watchActivity(final Activity a) {
-        if (a == null || !anyFlag()) return;
+        if (a == null) return;
         try {
             ensureIds(a);
-            sweep(a);
+            if (needsSweep()) sweep(a);
             final View decor = a.getWindow() != null ? a.getWindow().getDecorView() : null;
             if (decor == null || !watchedDecors.add(decor)) return;
+            // Registered even with every flag off: a toggle flipped in the in-app dialog causes no
+            // resume, so this listener is what applies or restores it live.
             decor.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
-                if (!anyFlag() || !pendingSweeps.add(decor)) return;
+                if (!needsSweep() || !pendingSweeps.add(decor)) return;
                 MAIN.postDelayed(() -> {
                     pendingSweeps.remove(decor);
-                    if (anyFlag()) sweep(a);
+                    if (needsSweep()) sweep(a);
                 }, SWEEP_DEBOUNCE_MS);
             });
         } catch (Throwable ignored) {}
@@ -124,23 +135,22 @@ public class DistractionFreeUIHook {
         try {
             View root = a.getWindow() != null ? a.getWindow().getDecorView() : null;
             if (!(root instanceof ViewGroup)) return;
-            if ((FeatureFlags.disableStories || FeatureFlags.hideStoriesTray) && trayId != 0) collapseAllById((ViewGroup) root, trayId);
-            if (FeatureFlags.disableReels && clipsTabId != 0) collapseAllById((ViewGroup) root, clipsTabId);
-            if (FeatureFlags.disableReels && tabPagerId != 0) disableTabSwipe((ViewGroup) root);
+            // One hide decision per id, applied in one pass: restoring a view for one flag must
+            // never undo another flag's hide (clips_tab is hidden by Disable Reels or Hide Reels tab).
+            SparseBooleanArray hide = new SparseBooleanArray();
+            if (trayId != 0) hide.put(trayId, FeatureFlags.disableStories || FeatureFlags.hideStoriesTray);
             for (int i = 0; i < NAV_TAB_NAMES.length; i++)
-                if (navTabIds[i] != 0 && navTabHidden(i)) {
-                    collapseAllById((ViewGroup) root, navTabIds[i]);
-                    ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("HideNavTabs");
-                }
-            if (FeatureFlags.hidePlusUpsells) {
-                for (int id : plusUpsellIds) if (id != 0) collapseAllById((ViewGroup) root, id);
-                ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("HidePlusUpsells");
-            }
-            if (FeatureFlags.disableDiscoverPeople && discoverPeopleId != 0) collapseAllById((ViewGroup) root, discoverPeopleId);
-            if (FeatureFlags.hideInstants && instantsId != 0) {
-                collapseAllById((ViewGroup) root, instantsId);
+                if (navTabIds[i] != 0) hide.put(navTabIds[i], navTabHidden(i));
+            if (clipsTabId != 0) hide.put(clipsTabId, FeatureFlags.disableReels || FeatureFlags.hideTabReels);
+            for (int id : plusUpsellIds) if (id != 0) hide.put(id, FeatureFlags.hidePlusUpsells);
+            if (discoverPeopleId != 0) hide.put(discoverPeopleId, FeatureFlags.disableDiscoverPeople);
+            if (instantsId != 0) hide.put(instantsId, FeatureFlags.hideInstants);
+            collapseAllById((ViewGroup) root, hide);
+            if (anyNavTabHidden()) ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("HideNavTabs");
+            if (FeatureFlags.hidePlusUpsells) ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("HidePlusUpsells");
+            if (FeatureFlags.hideInstants && instantsId != 0)
                 ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("HideInstants");
-            }
+            if (FeatureFlags.disableReels && tabPagerId != 0) disableTabSwipe((ViewGroup) root);
             if (!FeatureFlags.navTabOrder.isEmpty()) reorderTabs(a, (ViewGroup) root);
         } catch (Throwable ignored) {}
     }
@@ -303,21 +313,38 @@ public class DistractionFreeUIHook {
         }
     }
 
-    private static void collapseAllById(ViewGroup root, int id) {
+    private static void collapseAllById(ViewGroup root, SparseBooleanArray hide) {
         java.util.ArrayDeque<View> stack = new java.util.ArrayDeque<>();
         stack.push(root);
         while (!stack.isEmpty()) {
             View v = stack.pop();
-            if (v.getId() == id && v.getVisibility() != View.GONE) collapse(v);
+            int index = v.getId() == View.NO_ID ? -1 : hide.indexOfKey(v.getId());
+            if (index >= 0) {
+                if (hide.valueAt(index)) collapse(v);
+                else restore(v);
+            }
             if (v instanceof ViewGroup vg)
                 for (int i = 0; i < vg.getChildCount(); i++) stack.push(vg.getChildAt(i));
         }
     }
 
     private static void collapse(View v) {
-        if (v == null) return;
-        v.setVisibility(View.GONE);
+        // A constructor may expose a still-hidden control before the host binds its real state.
+        // Do not remember that placeholder as the visibility to restore when the feature is off.
+        if (v == null || v.getVisibility() == View.GONE) return;
         ViewGroup.LayoutParams lp = v.getLayoutParams();
+        if (!collapsedViews.containsKey(v)) {
+            collapsedViews.put(v, new int[]{v.getVisibility(), lp != null ? lp.width : -2, lp != null ? lp.height : -2});
+        }
+        v.setVisibility(View.GONE);
         if (lp != null) { lp.height = 0; lp.width = 0; v.setLayoutParams(lp); }
+    }
+
+    private static void restore(View view) {
+        int[] original = collapsedViews.remove(view);
+        if (original == null) return;
+        view.setVisibility(original[0]);
+        ViewGroup.LayoutParams lp = view.getLayoutParams();
+        if (lp != null) { lp.width = original[1]; lp.height = original[2]; view.setLayoutParams(lp); }
     }
 }
