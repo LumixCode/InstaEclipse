@@ -2,14 +2,15 @@ package ps.reso.instaeclipse.mods.ghost;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.graphics.Color;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.Toast;
+
+import java.lang.ref.WeakReference;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -24,7 +25,7 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
  * A header button (next to IG's right-side action buttons) keeps scrolling the thread's message
  * list up. IG loads older pages itself when the list nears its oldest end, so we only stop once
  * the list can't scroll further up and has stopped growing for a while. UI-only: no IG internals,
- * just the RecyclerView (by class name) and View scrolling. Tap again to stop.
+ * just the RecyclerView (by class name) and View scrolling. Tap again, or scroll the list, to stop.
  */
 public class JumpToFirstMessageHook {
 
@@ -32,6 +33,12 @@ public class JumpToFirstMessageHook {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static int threadHeaderId, actionBarEndId;
     private static volatile Runnable running;
+    // The user's own jump: its activity and message list, and where a touch on the list started.
+    // Fed by ThreadHeaderMenu's startup dispatchTouchEvent hook (main thread); never a runtime hook.
+    private static WeakReference<Activity> watchedActivity = new WeakReference<>(null);
+    private static WeakReference<View> watchedList = new WeakReference<>(null);
+    private static float downY = Float.NaN;
+    private static int dragSlop;
 
     public void install() {
         CurrentThreadTracker.addListener((activity, threadId) -> {
@@ -77,12 +84,11 @@ public class JumpToFirstMessageHook {
     }
 
     /** Scrolls to the first message; {@code onDone} runs once it's reached (or the list is
-     *  missing / the 5 min cap hits), not when the user stops it. Tapping again stops. */
+     *  missing / the 5 min cap hits), not when the user stops it. Tapping again stops; scrolling
+     *  the list stops only a jump without {@code onDone}. */
     static void run(Activity a, Runnable onDone) {
         if (running != null) {
-            MAIN.removeCallbacks(running);
-            running = null;
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_jump_first_stopped), Toast.LENGTH_SHORT).show();
+            stop(a);
             return;
         }
         View list = findMessageList(a.getWindow().getDecorView());
@@ -101,7 +107,7 @@ public class JumpToFirstMessageHook {
             public void run() {
                 if (running != this) return;
                 if (!list.isAttachedToWindow() || System.currentTimeMillis() - started > 5 * 60_000) {
-                    running = null;
+                    end();
                     if (onDone != null) onDone.run();
                     return;
                 }
@@ -113,7 +119,7 @@ public class JumpToFirstMessageHook {
                     lastChange[0] = System.currentTimeMillis();
                 } else if (System.currentTimeMillis() - lastChange[0] > 3000) {
                     // nothing moved and nothing new loaded for 3 s: this is the first message
-                    running = null;
+                    end();
                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_jump_first_done), Toast.LENGTH_SHORT).show();
                     if (onDone != null) onDone.run();
                     return;
@@ -121,7 +127,60 @@ public class JumpToFirstMessageHook {
                 MAIN.postDelayed(this, 250);
             }
         };
+        // Only the user's own jump: an export's "load all" must not be dropped by a stray drag.
+        if (onDone == null) watchDrags(a, list);
         MAIN.post(running);
+    }
+
+    /** Stops the jump in progress (tap again, or the user scrolled); its onDone does not run. */
+    private static void stop(Activity a) {
+        Runnable r = running;
+        if (r == null) return;
+        MAIN.removeCallbacks(r);
+        end();
+        ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_jump_first_stopped), Toast.LENGTH_SHORT).show();
+    }
+
+    private static void end() {
+        running = null;
+        watchedActivity = new WeakReference<>(null);
+        watchedList = new WeakReference<>(null);
+        downY = Float.NaN;
+    }
+
+    /** A drag on {@code list} in {@code a} stops this jump (see {@link #onTouch}). */
+    private static void watchDrags(Activity a, View list) {
+        dragSlop = ViewConfiguration.get(a).getScaledTouchSlop() * 2;
+        downY = Float.NaN;
+        watchedActivity = new WeakReference<>(a);
+        watchedList = new WeakReference<>(list);
+    }
+
+    /**
+     * Every touch of Instagram's activities, from ThreadHeaderMenu's dispatchTouchEvent hook
+     * (installed once at startup: hooking it per jump is the runtime hooking that corrupted the
+     * heap on LSPatch 1.2). A drag on the message list stops the jump: the user took over the
+     * scrolling. Either way counts, as "scroll down" can mean the finger or the content. The
+     * jump's own scrollBy never goes through touch dispatch, so it can't trip this.
+     */
+    static void onTouch(Activity a, MotionEvent e) {
+        if (running == null || watchedActivity.get() != a) return;
+        View list = watchedList.get();
+        if (list == null) return;
+        if (e.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            downY = contains(list, e.getRawX(), e.getRawY()) ? e.getRawY() : Float.NaN;
+        } else if (e.getActionMasked() == MotionEvent.ACTION_MOVE && !Float.isNaN(downY)
+                && Math.abs(e.getRawY() - downY) > dragSlop) {
+            downY = Float.NaN;
+            ModuleLog.line("(IE|JumpFirst) stopped by a scroll");
+            stop(a);
+        }
+    }
+
+    private static boolean contains(View v, float x, float y) {
+        int[] loc = new int[2];
+        v.getLocationOnScreen(loc);
+        return x >= loc[0] && x < loc[0] + v.getWidth() && y >= loc[1] && y < loc[1] + v.getHeight();
     }
 
     private static int itemCount(View list) {
