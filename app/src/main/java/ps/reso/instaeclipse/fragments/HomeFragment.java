@@ -84,6 +84,7 @@ public class HomeFragment extends Fragment {
             // Distraction-free
             "disableStories", "disableFeed", "disableReels", "disableReelsExceptDM", "disableExplore",
             "disableComments", "hideNotesTray", "hideDmSuggestions", "hideInstants", "hideDmBlend", "hideThreadsButton", "readReceiptChats",
+            "dailyReelLimitEnabled", "nightReelBlockEnabled",
             // Navigation bar
             "hideTabHome", "hideTabReels", "hideTabCreate", "hideTabMessages", "hideTabActivity", "hideTabProfile", "backLeavesHome",
             // Misc
@@ -109,7 +110,8 @@ public class HomeFragment extends Fragment {
     /** Distraction keys FeaturesFragment locks while Extreme Mode is on. */
     private static final List<String> EXTREME_LOCKED = Arrays.asList(
             "disableStories", "disableFeed", "disableReels", "disableReelsExceptDM",
-            "disableExplore", "disableComments");
+            "disableExplore", "disableComments", "dailyReelLimitEnabled", "dailyReelLimitAllowDM",
+            "nightReelBlockEnabled", "nightReelBlockAllowDM");
 
     /** A pinnable toggle on the Home dashboard. */
     private static final class Shortcut {

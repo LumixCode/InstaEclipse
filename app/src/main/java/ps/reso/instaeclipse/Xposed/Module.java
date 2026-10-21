@@ -245,6 +245,16 @@ public class Module {
                     // Mirror the buffer into a file owned by the companion app (LogMirrorProvider)
                     // so its Logs tab works even when Instagram is backgrounded or killed.
                     Logging.enableMirror(context);
+                    // Logs the previous exits and saves the last crash's tombstone and Breakpad
+                    // minidumps to the companion, before Instagram uploads and deletes them.
+                    ps.reso.instaeclipse.utils.log.CrashForensics.collectAsync(context);
+
+                    // Process-wide stores, before any hook or I18n.t: module strings and icons come
+                    // from the loaded APK (LSPatch-safe), and the unsent/reel stores load once here.
+                    ps.reso.instaeclipse.utils.core.ModuleResources.init(context, moduleSourceDir);
+                    ps.reso.instaeclipse.utils.ghost.UnsentLog.init(context);
+                    ps.reso.instaeclipse.utils.ghost.UnsentMessageStore.init(context);
+                    ps.reso.instaeclipse.mods.reels.DailyReelLimit.init(context);
 
                     // Pull downloader path from companion app's cache so it's available even
                     // when Instagram was started without ever receiving the sync broadcast.
@@ -275,6 +285,13 @@ public class Module {
                     final Runnable installFeatureHooks = () -> {
                     UIHookManager instagramUI = new UIHookManager();
                     if (!skip("instagramUI")) instagramUI.mainActivity(hostClassLoader);
+
+                    // Reels viewer: daily limit, nighttime block, Disable Reels covers, scroll lock
+                    try {
+                        if (!skip("ReelViewerHook")) new ps.reso.instaeclipse.mods.reels.ReelViewerHook().install(dexKitBridge, hostClassLoader);
+                    } catch (Throwable t) {
+                        ModuleLog.line("(InstaEclipse | ReelViewer): ❌ Failed to hook: " + t);
+                    }
 
                     IGNetworkInterceptor interceptor = new IGNetworkInterceptor();
 
@@ -413,7 +430,7 @@ public class Module {
                         ModuleLog.line("(InstaEclipse | CommunityNotes): ❌ Failed to hook");
                     }
 
-                    // Extras: tapping a reel mutes instead of pausing
+                    // Extras: Reels auto-scroll (the scroll lock lives in ReelViewerHook)
                     try {
                         if (!skip("ReelsControlsHook")) new ps.reso.instaeclipse.mods.extras.ReelsControlsHook().install(dexKitBridge, hostClassLoader);
                     } catch (Throwable t) {
@@ -973,6 +990,11 @@ public class Module {
                         } else if (entry.getValue() instanceof Integer) {
                             bundle.putInt(entry.getKey(), (Integer) entry.getValue());
                         }
+                    }
+                    // Today's reel count for the companion's Distraction-Free page (not a setting).
+                    if (ps.reso.instaeclipse.mods.reels.DailyReelLimit.isInitialized()) {
+                        bundle.putInt("dailyReelsWatchedToday", ps.reso.instaeclipse.mods.reels.DailyReelLimit.watchedToday());
+                        bundle.putString("dailyReelUsageDate", java.time.LocalDate.now().toString());
                     }
                     reply.putExtras(bundle);
                     ps.reso.instaeclipse.utils.core.IpcSecurity.echoNonce(intent, reply);

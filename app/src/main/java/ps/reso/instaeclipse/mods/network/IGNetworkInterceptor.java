@@ -10,6 +10,8 @@ import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.xposedcompat.XC_LoadPackage;
 import ps.reso.instaeclipse.mods.ghost.ManualStorySeenHook;
 import ps.reso.instaeclipse.mods.misc.FollowStatusHook;
+import ps.reso.instaeclipse.mods.reels.ReelBlockPolicy;
+import ps.reso.instaeclipse.mods.reels.ReelRequestPolicy;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -193,29 +195,13 @@ public class IGNetworkInterceptor {
                                     if (FeatureFlags.disableFeed) {
                                         shouldDrop |= uri.getPath().endsWith("/feed/timeline/");
                                     }
-                                    // Full Disable Reels takes precedence over the except-DM exception:
-                                    // when it is on, every clips endpoint is dropped — including
-                                    // "Allow in DM" (disableReelsExceptDM) is the switch that controls DM
-                                    // reels: when it is ON, DM-opened reels (/api/v1/clips/items/) are
-                                    // allowed and only the reels feed/discover is dropped; when it is OFF,
-                                    // full Disable Reels drops every clips endpoint including clips/items/.
-                                    if (FeatureFlags.disableReels && !FeatureFlags.disableReelsExceptDM) {
-                                        shouldDrop |= uri.getPath().endsWith("/qp/batch_fetch/")
-                                                || uri.getPath().contains("api/v1/clips")
-                                                || uri.getPath().contains("clips")
-                                                || uri.getPath().contains("mixed_media")
-                                                || uri.getPath().contains("mixed_media/discover/stream/");
-                                    }
-                                    if (FeatureFlags.disableReelsExceptDM) {
-                                        if (uri.getPath().startsWith("/api/v1/direct_v2/")) {
-                                            return;
-                                        }
-                                        shouldDrop |= (uri.getPath().startsWith("/api/v1/clips/") && uri.getQuery() != null
-                                                && (uri.getQuery().contains("next_media_ids=")
-                                                || uri.getQuery().contains("max_id=")))
-                                                || uri.getPath().contains("/clips/discover/")
-                                                || uri.getPath().contains("/mixed_media/discover/stream/");
-                                    }
+                                    // Disable Reels, quiet hours and the daily cap share one policy. Its
+                                    // DM exception only lets single reel items through and never returns
+                                    // early, so the privacy drops above and below still apply.
+                                    ReelBlockPolicy.Reason reelReason = ReelBlockPolicy.requestReason();
+                                    shouldDrop |= ReelRequestPolicy.shouldBlock(uri,
+                                            reelReason != ReelBlockPolicy.Reason.NONE,
+                                            ReelBlockPolicy.requestAllowsDm(reelReason));
                                     if (FeatureFlags.disableExplore) {
                                         shouldDrop |= uri.getPath().contains("/discover/topical_explore")
                                                 || uri.getPath().contains("/discover/topical_explore_stream")

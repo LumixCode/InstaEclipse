@@ -87,6 +87,8 @@ public class FeaturesFragment extends Fragment {
     private ActivityResultLauncher<String> profilePhotoLauncher;
 
     private String currentMenu = "main";
+    /** True once Instagram answered the current request with today's reel count. */
+    private boolean reelUsageSynced;
 
     // STAGING SYSTEM: Holds changes before applying
     private final Map<String, Boolean> stagedChanges = new HashMap<>();
@@ -130,11 +132,14 @@ public class FeaturesFragment extends Fragment {
                         }
                     }
                     editor.apply();
-                    // Rebuild downloader/reels menus so the current value reflects immediately
+                    if (bundle.containsKey("dailyReelsWatchedToday")) reelUsageSynced = true;
+                    // Rebuild downloader/reels/distraction menus so the current value reflects immediately
                     if ("downloader".equals(currentMenu)) {
                         loadDownloaderMenu();
                     } else if ("quality".equals(currentMenu)) {
                         loadQualityMenu();
+                    } else if ("distract".equals(currentMenu)) {
+                        loadDistractionMenu();
                     } else {
                         // Also recomputes the main-menu "N on" counts
                         refreshVisibleMenu();
@@ -379,6 +384,8 @@ public class FeaturesFragment extends Fragment {
         public List<String> requiresAnyOf;
         /** Switch is locked (disabled) when this key is currently true. */
         public String disabledWhenTrue;
+        /** False when another setting overrides this row (fixed when the menu is built). */
+        public boolean enabled = true;
 
         public int segmentPosition;
         public int segmentSize;
@@ -528,13 +535,7 @@ public class FeaturesFragment extends Fragment {
                 itemHolder.cardView.setShapeAppearanceModel(shapeBuilder.build());
 
                 // Compute enabled state from conditions
-                boolean switchEnabled = true;
-                if (item.requiresAnyOf != null) {
-                    switchEnabled = false;
-                    for (String k : item.requiresAnyOf) {
-                        if (getCurrentState(k)) { switchEnabled = true; break; }
-                    }
-                }
+                boolean switchEnabled = item.enabled && requirementMet(item);
                 if (item.disabledWhenTrue != null && getCurrentState(item.disabledWhenTrue)) {
                     switchEnabled = false;
                 }
@@ -630,6 +631,13 @@ public class FeaturesFragment extends Fragment {
 
         /** Refreshes any item whose enabled state depends on runtime conditions. */
         void refreshConditionalItems() {
+            // Distraction-Free rows appear and lock depending on other switches: rebuild the page.
+            if ("distract".equals(currentMenu)) {
+                recyclerFeatures.post(() -> {
+                    if (isAdded() && "distract".equals(currentMenu)) loadDistractionMenu();
+                });
+                return;
+            }
             for (int i = 0; i < items.size(); i++) {
                 FeatureItem fi = items.get(i);
                 if (fi.requiresAnyOf != null || fi.disabledWhenTrue != null) {
@@ -891,7 +899,7 @@ public class FeaturesFragment extends Fragment {
         c.add(new Category("lock", GROUP_PRIVACY, R.drawable.ic_shield, A_PRIVACY, getString(R.string.ig_dialog_misc_lock_section), this::buildLockDefs, this::loadLockMenu));
         c.add(new Category("ads", GROUP_PRIVACY, R.drawable.ic_block, A_PRIVACY, getString(R.string.menu_ads_tracking), this::buildAdsDefs, this::loadAdsMenu));
         c.add(new Category("location", GROUP_PRIVACY, R.drawable.ic_pin, A_PRIVACY, getString(R.string.ig_dialog_menu_location), this::buildLocationDefs, this::loadLocationMenu));
-        c.add(new Category("distract", GROUP_PRIVACY, R.drawable.ic_notification, A_PRIVACY, getString(R.string.ig_dialog_menu_distraction_free), this::buildDistractionDefs, this::loadDistractionMenu));
+        c.add(new Category("distract", GROUP_PRIVACY, R.drawable.ic_notification, A_PRIVACY, getString(R.string.ig_dialog_menu_distraction_free), this::buildDistractionDefs, this::openDistractionMenu));
 
         c.add(new Category("downloader", GROUP_MEDIA, R.drawable.ic_download, A_MEDIA, getString(R.string.ig_dialog_menu_downloader), this::buildDownloaderDefs, this::loadDownloaderMenu));
         c.add(new Category("postmenu", GROUP_MEDIA, R.drawable.ic_save, A_MEDIA, getString(R.string.menu_post_menu), this::buildPostMenuDefs, this::loadPostMenuMenu));
@@ -959,6 +967,8 @@ public class FeaturesFragment extends Fragment {
      * Sets the "N on" / "Off" subtitle of a main-menu category row: the number of plain boolean
      * switches (master switches excluded, keys de-duplicated) in that sub-menu that are currently on,
      * including staged-but-unapplied changes. Sub-menus without switches get no subtitle.
+     * A switch whose parent is off or that another setting overrides does not count, so default-on
+     * children (e.g. showUnsentButton) don't inflate the count.
      */
     private void applyCategorySubtitle(FeatureItem nav) {
         Category cat = nav.category;
@@ -967,7 +977,7 @@ public class FeaturesFragment extends Fragment {
         int on = 0;
         for (FeatureItem fi : flattenItems(cat.builder.build())) {
             if (fi.type != FeatureItem.TYPE_SWITCH || fi.prefKey == null || !seen.add(fi.prefKey)) continue;
-            if (getCurrentState(fi.prefKey)) on++;
+            if (getCurrentState(fi.prefKey) && fi.enabled && requirementMet(fi)) on++;
         }
         if (seen.isEmpty()) {
             nav.subtitle = null;
@@ -982,6 +992,15 @@ public class FeaturesFragment extends Fragment {
             nav.subtitle = nav.subtitle + " · " + getString(R.string.nav_tab_order_changed);
             nav.subtitleActive = true;
         }
+    }
+
+    /** True when the row has no {@link FeatureItem#requiresAnyOf} or one of those keys is on. */
+    private boolean requirementMet(FeatureItem item) {
+        if (item.requiresAnyOf == null) return true;
+        for (String key : item.requiresAnyOf) {
+            if (getCurrentState(key)) return true;
+        }
+        return false;
     }
 
     /** Recomputes the category counts when the main menu is showing, then rebinds the visible rows. */
@@ -1267,17 +1286,31 @@ public class FeaturesFragment extends Fragment {
                 }).setNegativeButton(android.R.string.cancel, null).show();
     }
 
+    /** Main-menu entry: the reel counter waits for a fresh reply from Instagram. */
+    private void openDistractionMenu() {
+        reelUsageSynced = false;
+        loadDistractionMenu();
+        requestPrefs();
+    }
+
+    /** Rebuilds in place (keeping the scroll position) when the page is already showing. */
     private void loadDistractionMenu() {
-        showMenu(getString(R.string.ig_dialog_section_distraction_free), buildDistractionDefs());
+        boolean reload = "distract".equals(currentMenu);
+        RecyclerView.LayoutManager manager = recyclerFeatures.getLayoutManager();
+        android.os.Parcelable scroll = reload && manager != null ? manager.onSaveInstanceState() : null;
+        showMenu(getString(R.string.ig_dialog_section_distraction_free), buildDistractionDefs(), !reload);
+        if (scroll != null) manager.onRestoreInstanceState(scroll);
         currentMenu = "distract";
     }
 
     private List<Object> buildDistractionDefs() {
         List<Object> defs = new ArrayList<>();
+        addDailyReelStatus(defs);
 
         List<String> distractionKeys = Arrays.asList(
                 "disableStories", "disableFeed", "disableReels",
-                "disableReelsExceptDM", "disableExplore", "disableComments"
+                "disableReelsExceptDM", "dailyReelLimitEnabled", "nightReelBlockEnabled",
+                "disableExplore", "disableComments"
         );
 
         // Extreme Mode: only enabled once the user has selected at least one feature
@@ -1299,16 +1332,83 @@ public class FeaturesFragment extends Fragment {
         FeatureItem disableReelsExceptDM = createSwitchWithDependency(R.drawable.ic_movie, "#30D158", getString(R.string.ig_dialog_distraction_disable_reels_except_dm), "disableReelsExceptDM", "disableReels");
         disableReelsExceptDM.disabledWhenTrue = "isExtremeMode";
 
-        defs.add(getString(R.string.feat_features));
-        defs.add(Arrays.asList(
+        List<FeatureItem> controls = new ArrayList<>(Arrays.asList(
                 masterSwitch,
                 createSwitchLockedByExtreme(R.drawable.ic_story_ring, "#30D158", getString(R.string.ig_dialog_distraction_disable_stories), "disableStories"),
                 createSwitchLockedByExtreme(R.drawable.ic_block, "#30D158", getString(R.string.ig_dialog_distraction_disable_feed), "disableFeed"),
-                disableReels,
-                disableReelsExceptDM,
-                createSwitchLockedByExtreme(R.drawable.ic_search, "#30D158", getString(R.string.ig_dialog_distraction_disable_explore), "disableExplore"),
-                createSwitchLockedByExtreme(R.drawable.ic_chat, "#30D158", getString(R.string.ig_dialog_distraction_disable_comments), "disableComments")
-        ));
+                disableReels));
+        if (getCurrentState("disableReels")) controls.add(disableReelsExceptDM);
+        // Disable Reels overrides both limits; Extreme Mode locks them.
+        boolean reelsAllowed = !getCurrentState("disableReels");
+        FeatureItem daily = createSwitchLockedByExtreme(R.drawable.ic_movie, "#30D158", getString(R.string.ig_reel_limit_enable), "dailyReelLimitEnabled");
+        daily.enabled = reelsAllowed;
+        controls.add(daily);
+        if (getCurrentState("dailyReelLimitEnabled")) {
+            FeatureItem dailyDM = createSwitchLockedByExtreme(R.drawable.ic_chat, "#30D158", getString(R.string.ig_reel_limit_allow_dm), "dailyReelLimitAllowDM");
+            dailyDM.enabled = reelsAllowed;
+            controls.add(dailyDM);
+            int limit = ps.reso.instaeclipse.mods.reels.DailyReelLimit.validLimit(localCache.getInt("dailyReelLimit", 100));
+            FeatureItem amount = createClickable(R.drawable.ic_movie, "#30D158", getString(R.string.ig_reel_limit_allowance) + ": " + limit,
+                    () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showDailyReelLimitPicker(requireContext(), limit, value -> {
+                        if (!reelLimitsEditable() || !getCurrentState("dailyReelLimitEnabled")) return;
+                        putIntPref("dailyReelLimit", value);
+                        loadDistractionMenu();
+                    }));
+            amount.enabled = reelsAllowed;
+            amount.disabledWhenTrue = "isExtremeMode";
+            controls.add(amount);
+        }
+        FeatureItem night = createSwitchLockedByExtreme(R.drawable.ic_timer, "#30D158",
+                getString(R.string.ig_night_reels_enable), "nightReelBlockEnabled");
+        night.enabled = reelsAllowed;
+        controls.add(night);
+        if (getCurrentState("nightReelBlockEnabled")) {
+            int startMinutes = ps.reso.instaeclipse.mods.reels.NightReelSchedule.validMinutes(
+                    localCache.getInt("nightReelBlockStartMinutes", 22 * 60), 22 * 60);
+            int endMinutes = ps.reso.instaeclipse.mods.reels.NightReelSchedule.validMinutes(
+                    localCache.getInt("nightReelBlockEndMinutes", 7 * 60), 7 * 60);
+            String start = ps.reso.instaeclipse.utils.dialog.DialogUtils.formatNightReelTime(requireContext(), startMinutes);
+            String end = ps.reso.instaeclipse.utils.dialog.DialogUtils.formatNightReelTime(requireContext(), endMinutes);
+            boolean active = ps.reso.instaeclipse.mods.reels.NightReelSchedule.isActiveAt(
+                    ps.reso.instaeclipse.mods.reels.NightReelSchedule.currentMinutes(), startMinutes, endMinutes);
+            String state = getString(active ? R.string.ig_night_reels_status_active
+                    : R.string.ig_night_reels_status_inactive, active ? end : start);
+            FeatureItem startItem = createClickable(R.drawable.ic_timer, "#30D158",
+                    getString(R.string.ig_night_reels_start, start) + "\n" + state,
+                    () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showNightReelTimePicker(
+                            requireContext(), startMinutes, selected -> {
+                                if (selected == endMinutes) {
+                                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_night_reels_same_time), Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+                                updateNightReelTime("nightReelBlockStartMinutes", selected);
+                            }));
+            startItem.enabled = reelsAllowed;
+            startItem.disabledWhenTrue = "isExtremeMode";
+            controls.add(startItem);
+            FeatureItem endItem = createClickable(R.drawable.ic_timer, "#30D158",
+                    getString(R.string.ig_night_reels_end, end),
+                    () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showNightReelTimePicker(
+                            requireContext(), endMinutes, selected -> {
+                                if (selected == startMinutes) {
+                                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_night_reels_same_time), Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+                                updateNightReelTime("nightReelBlockEndMinutes", selected);
+                            }));
+            endItem.enabled = reelsAllowed;
+            endItem.disabledWhenTrue = "isExtremeMode";
+            controls.add(endItem);
+            FeatureItem nightDM = createSwitchLockedByExtreme(R.drawable.ic_chat, "#30D158",
+                    getString(R.string.ig_night_reels_allow_dm), "nightReelBlockAllowDM");
+            nightDM.enabled = reelsAllowed;
+            controls.add(nightDM);
+        }
+        controls.add(createSwitchLockedByExtreme(R.drawable.ic_search, "#30D158", getString(R.string.ig_dialog_distraction_disable_explore), "disableExplore"));
+        controls.add(createSwitchLockedByExtreme(R.drawable.ic_chat, "#30D158", getString(R.string.ig_dialog_distraction_disable_comments), "disableComments"));
+        defs.add(getString(R.string.feat_features));
+        defs.add(controls);
+
         // Outside extreme mode: parts of the app removed (Meta AI, prompts, upsells)
         defs.add(getString(R.string.feat_options));
         defs.add(Arrays.asList(
@@ -1318,6 +1418,31 @@ public class FeaturesFragment extends Fragment {
                 createSwitch(R.drawable.ic_block, "#30D158", getString(R.string.ig_hide_instants), "hideInstants")
         ));
         return defs;
+    }
+
+    private boolean reelLimitsEditable() {
+        return !getCurrentState("isExtremeMode") && !getCurrentState("disableReels");
+    }
+
+    private void updateNightReelTime(String key, int value) {
+        if (!reelLimitsEditable() || !getCurrentState("nightReelBlockEnabled")) return;
+        putIntPref(key, value);
+        loadDistractionMenu();
+    }
+
+    /** Today's reel count from Instagram; "—" until a reply to the current request arrives. */
+    private void addDailyReelStatus(List<Object> defs) {
+        int limit = ps.reso.instaeclipse.mods.reels.DailyReelLimit.validLimit(localCache.getInt("dailyReelLimit", 100));
+        boolean today = java.time.LocalDate.now().toString().equals(localCache.getString("dailyReelUsageDate", ""));
+        String count = getString(R.string.ig_reel_debug_waiting);
+        if (reelUsageSynced && today) {
+            int watched = localCache.getInt("dailyReelsWatchedToday", 0);
+            count = getCurrentState("dailyReelLimitEnabled")
+                    ? getString(R.string.ig_reel_limit_usage, watched, limit)
+                    : getString(R.string.ig_reel_usage_count, watched);
+        }
+        defs.add(getString(R.string.ig_reel_limit_title));
+        defs.add(Arrays.asList(createClickable(R.drawable.ic_timer, "#30D158", count, this::openDistractionMenu)));
     }
 
     /** Navigation (#238): hide and reorder the bottom-nav tabs, startup tab and gestures. */
@@ -2632,7 +2757,7 @@ public class FeaturesFragment extends Fragment {
     /** A switch applies at once, like in Instagram's menu: saved, stamped and sent to Instagram
      *  live (or picked up by Instagram's sync on its next start / resume). No Save step. */
     private void stageChange(String prefKey, boolean isChecked) {
-        if (localCache.getBoolean(prefKey, "downloaderUseOriginal".equals(prefKey)) == isChecked) return;
+        if (localCache.getBoolean(prefKey, defaultState(prefKey)) == isChecked) return;
         putBoolPref(prefKey, isChecked);
     }
 
@@ -2660,7 +2785,15 @@ public class FeaturesFragment extends Fragment {
     private boolean getCurrentState(String prefKey) {
         if (prefKey == null) return false;
         if (stagedChanges.containsKey(prefKey)) return stagedChanges.get(prefKey);
-        return localCache.getBoolean(prefKey, "downloaderUseOriginal".equals(prefKey));
+        return localCache.getBoolean(prefKey, defaultState(prefKey));
+    }
+
+    /** Defaults of the settings that are on until the user turns them off (as SettingsManager loads them). */
+    private static boolean defaultState(String prefKey) {
+        return "dailyReelLimitAllowDM".equals(prefKey) || "nightReelBlockAllowDM".equals(prefKey)
+                || "showUnsentButton".equals(prefKey) || "showHideChatButton".equals(prefKey)
+                || "keepUnsentInChat".equals(prefKey) || "lockUseFingerprint".equals(prefKey)
+                || "downloaderUseOriginal".equals(prefKey);
     }
 
     // =========================================================
@@ -2678,19 +2811,28 @@ public class FeaturesFragment extends Fragment {
         v.postDelayed(syncRefresh, 250);
     };
 
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (localCache != null) localCache.registerOnSharedPreferenceChangeListener(prefsListener);
-        IntentFilter filter = new IntentFilter("ps.reso.instaeclipse.ACTION_SEND_PREFS");
+    /** Asks Instagram for its current settings; only the reply carrying this nonce is accepted. */
+    private void requestPrefs() {
         if (prefsReply != null) prefsReply.cancel();
         prefsNonce = ps.reso.instaeclipse.utils.core.IpcSecurity.newNonce();
         prefsReply = ps.reso.instaeclipse.utils.core.IpcSecurity.requestReply(requireContext(),
                 new Intent("ps.reso.instaeclipse.ACTION_REQUEST_PREFS")
                         .putExtra(ps.reso.instaeclipse.utils.core.IpcSecurity.EXTRA_NONCE, prefsNonce),
                 "ps.reso.instaeclipse.ACTION_SEND_PREFS", prefsReceiver);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        reelUsageSynced = false;
+        if (localCache != null) localCache.registerOnSharedPreferenceChangeListener(prefsListener);
+        requestPrefs();
         // Prefs may have changed while away (e.g. toggled from inside Instagram): refresh counts
-        refreshVisibleMenu();
+        if ("distract".equals(currentMenu)) {
+            loadDistractionMenu();
+        } else {
+            refreshVisibleMenu();
+        }
     }
 
     @Override

@@ -119,6 +119,13 @@ public class FeatureFlags {
     public static volatile boolean disableReelsExceptDM = false;
     public static volatile boolean disableExplore = false;
     public static volatile boolean disableComments = false;
+    public static volatile boolean dailyReelLimitEnabled = false;
+    public static volatile boolean dailyReelLimitAllowDM = true;
+    public static volatile int dailyReelLimit = 100;
+    public static volatile boolean nightReelBlockEnabled = false;
+    public static volatile int nightReelBlockStartMinutes = 22 * 60;
+    public static volatile int nightReelBlockEndMinutes = 7 * 60;
+    public static volatile boolean nightReelBlockAllowDM = true;
 
     // Ads and Analytics
     public static volatile boolean isAdBlockEnabled = false;

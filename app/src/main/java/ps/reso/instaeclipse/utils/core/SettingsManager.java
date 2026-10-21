@@ -4,6 +4,12 @@ import ps.reso.instaeclipse.utils.feature.ExtrasFeatures;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+import ps.reso.instaeclipse.mods.reels.DailyReelLimit;
+import ps.reso.instaeclipse.mods.reels.NightReelSchedule;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureManager;
 
@@ -99,6 +105,13 @@ public class SettingsManager {
         editor.putBoolean("disableReelsExceptDM", FeatureFlags.disableReelsExceptDM);
         editor.putBoolean("disableExplore", FeatureFlags.disableExplore);
         editor.putBoolean("disableComments", FeatureFlags.disableComments);
+        editor.putBoolean("dailyReelLimitEnabled", FeatureFlags.dailyReelLimitEnabled);
+        editor.putBoolean("dailyReelLimitAllowDM", FeatureFlags.dailyReelLimitAllowDM);
+        editor.putInt("dailyReelLimit", FeatureFlags.dailyReelLimit);
+        editor.putBoolean("nightReelBlockEnabled", FeatureFlags.nightReelBlockEnabled);
+        editor.putInt("nightReelBlockStartMinutes", FeatureFlags.nightReelBlockStartMinutes);
+        editor.putInt("nightReelBlockEndMinutes", FeatureFlags.nightReelBlockEndMinutes);
+        editor.putBoolean("nightReelBlockAllowDM", FeatureFlags.nightReelBlockAllowDM);
 
         // Clean Feed
         editor.putBoolean("hideSuggestionsInFeed", FeatureFlags.hideSuggestionsInFeed);
@@ -312,6 +325,19 @@ public class SettingsManager {
         FeatureFlags.disableReelsExceptDM = prefs.getBoolean("disableReelsExceptDM", false);
         FeatureFlags.disableExplore = prefs.getBoolean("disableExplore", false);
         FeatureFlags.disableComments = prefs.getBoolean("disableComments", false);
+        FeatureFlags.dailyReelLimitEnabled = prefs.getBoolean("dailyReelLimitEnabled", false);
+        FeatureFlags.dailyReelLimitAllowDM = prefs.getBoolean("dailyReelLimitAllowDM", true);
+        FeatureFlags.dailyReelLimit = DailyReelLimit.validLimit(prefs.getInt("dailyReelLimit", 100));
+        FeatureFlags.nightReelBlockEnabled = prefs.getBoolean("nightReelBlockEnabled", false);
+        FeatureFlags.nightReelBlockStartMinutes = NightReelSchedule.validMinutes(
+                prefs.getInt("nightReelBlockStartMinutes", 22 * 60), 22 * 60);
+        FeatureFlags.nightReelBlockEndMinutes = NightReelSchedule.validMinutes(
+                prefs.getInt("nightReelBlockEndMinutes", 7 * 60), 7 * 60);
+        if (FeatureFlags.nightReelBlockStartMinutes == FeatureFlags.nightReelBlockEndMinutes) {
+            FeatureFlags.nightReelBlockStartMinutes = 22 * 60;
+            FeatureFlags.nightReelBlockEndMinutes = 7 * 60;
+        }
+        FeatureFlags.nightReelBlockAllowDM = prefs.getBoolean("nightReelBlockAllowDM", true);
 
         // Clean Feed
         FeatureFlags.hideSuggestionsInFeed = prefs.getBoolean("hideSuggestionsInFeed", false);

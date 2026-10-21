@@ -4,6 +4,9 @@ import ps.reso.instaeclipse.mods.ads.ShareDomain;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import ps.reso.instaeclipse.mods.reels.DailyReelLimit;
+import ps.reso.instaeclipse.mods.reels.NightReelSchedule;
+import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 
 /**
@@ -103,6 +106,13 @@ public class SettingsBackupManager {
         s.put("disableReelsExceptDM",    FeatureFlags.disableReelsExceptDM);
         s.put("disableExplore",          FeatureFlags.disableExplore);
         s.put("disableComments",         FeatureFlags.disableComments);
+        s.put("dailyReelLimitEnabled",   FeatureFlags.dailyReelLimitEnabled);
+        s.put("dailyReelLimitAllowDM",   FeatureFlags.dailyReelLimitAllowDM);
+        s.put("dailyReelLimit",          FeatureFlags.dailyReelLimit);
+        s.put("nightReelBlockEnabled",   FeatureFlags.nightReelBlockEnabled);
+        s.put("nightReelBlockStartMinutes", FeatureFlags.nightReelBlockStartMinutes);
+        s.put("nightReelBlockEndMinutes", FeatureFlags.nightReelBlockEndMinutes);
+        s.put("nightReelBlockAllowDM",   FeatureFlags.nightReelBlockAllowDM);
         s.put("disableDiscoverPeople",   FeatureFlags.disableDiscoverPeople);
 
         // Miscellaneous
@@ -264,13 +274,31 @@ public class SettingsBackupManager {
         if (s.has("disableTrackingLinks"))   FeatureFlags.disableTrackingLinks   = s.getBoolean("disableTrackingLinks");
         if (s.has("openLinksExternally"))    FeatureFlags.openLinksExternally    = s.getBoolean("openLinksExternally");
 
-        if (s.has("isExtremeMode"))          FeatureFlags.isExtremeMode          = s.getBoolean("isExtremeMode");
-        if (s.has("disableStories"))         FeatureFlags.disableStories         = s.getBoolean("disableStories");
-        if (s.has("disableFeed"))            FeatureFlags.disableFeed            = s.getBoolean("disableFeed");
-        if (s.has("disableReels"))           FeatureFlags.disableReels           = s.getBoolean("disableReels");
-        if (s.has("disableReelsExceptDM"))   FeatureFlags.disableReelsExceptDM   = s.getBoolean("disableReelsExceptDM");
-        if (s.has("disableExplore"))         FeatureFlags.disableExplore         = s.getBoolean("disableExplore");
-        if (s.has("disableComments"))        FeatureFlags.disableComments        = s.getBoolean("disableComments");
+        // Distraction Free: checked against Extreme Mode as it was before this restore
+        // (isExtremeMode itself is applied last, below).
+        if (restorable(s, "disableStories"))         FeatureFlags.disableStories         = s.getBoolean("disableStories");
+        if (restorable(s, "disableFeed"))            FeatureFlags.disableFeed            = s.getBoolean("disableFeed");
+        if (restorable(s, "disableReels"))           FeatureFlags.disableReels           = s.getBoolean("disableReels");
+        if (restorable(s, "disableReelsExceptDM"))   FeatureFlags.disableReelsExceptDM   = s.getBoolean("disableReelsExceptDM");
+        if (restorable(s, "disableExplore"))         FeatureFlags.disableExplore         = s.getBoolean("disableExplore");
+        if (restorable(s, "disableComments"))        FeatureFlags.disableComments        = s.getBoolean("disableComments");
+        if (restorable(s, "dailyReelLimitEnabled"))  FeatureFlags.dailyReelLimitEnabled  = s.getBoolean("dailyReelLimitEnabled");
+        if (restorable(s, "dailyReelLimitAllowDM"))  FeatureFlags.dailyReelLimitAllowDM  = s.getBoolean("dailyReelLimitAllowDM");
+        if (restorable(s, "dailyReelLimit"))
+            FeatureFlags.dailyReelLimit = DailyReelLimit.validLimit(s.optInt("dailyReelLimit", FeatureFlags.dailyReelLimit));
+        if (restorable(s, "nightReelBlockEnabled"))  FeatureFlags.nightReelBlockEnabled  = s.getBoolean("nightReelBlockEnabled");
+        if (restorable(s, "nightReelBlockAllowDM"))  FeatureFlags.nightReelBlockAllowDM  = s.getBoolean("nightReelBlockAllowDM");
+        int nightStart = restorable(s, "nightReelBlockStartMinutes")
+                ? NightReelSchedule.validMinutes(s.optInt("nightReelBlockStartMinutes", -1), FeatureFlags.nightReelBlockStartMinutes)
+                : FeatureFlags.nightReelBlockStartMinutes;
+        int nightEnd = restorable(s, "nightReelBlockEndMinutes")
+                ? NightReelSchedule.validMinutes(s.optInt("nightReelBlockEndMinutes", -1), FeatureFlags.nightReelBlockEndMinutes)
+                : FeatureFlags.nightReelBlockEndMinutes;
+        // An empty window (start == end) would block nothing; keep the current one instead.
+        if (nightStart != nightEnd) {
+            FeatureFlags.nightReelBlockStartMinutes = nightStart;
+            FeatureFlags.nightReelBlockEndMinutes = nightEnd;
+        }
         if (s.has("disableDiscoverPeople"))  FeatureFlags.disableDiscoverPeople  = s.getBoolean("disableDiscoverPeople");
 
         if (s.has("disableStoryFlipping"))   FeatureFlags.disableStoryFlipping   = s.getBoolean("disableStoryFlipping");

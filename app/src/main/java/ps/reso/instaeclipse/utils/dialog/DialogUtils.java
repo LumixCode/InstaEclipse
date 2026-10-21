@@ -36,6 +36,8 @@ import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.mods.devops.config.ConfigManager;
 import ps.reso.instaeclipse.mods.ghost.ui.GhostEmojiManager;
 import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
+import ps.reso.instaeclipse.mods.reels.DailyReelLimit;
+import ps.reso.instaeclipse.mods.reels.NightReelSchedule;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.core.ModuleActivityLauncher;
 import ps.reso.instaeclipse.utils.core.ModuleResources;
@@ -182,7 +184,7 @@ public class DialogUtils {
         privacy.addView(createMenuRow(context, R.drawable.ic_shield, I18n.t(context, R.string.ig_dialog_misc_lock_section), A_PRIVACY, () -> showLockOptions(context), onCount(context, "lockDirectMessages", "lockWholeApp", "lockSpecificMessages", "lockSavedCollections", "lockUseFingerprint")));
         privacy.addView(createMenuRow(context, R.drawable.ic_block, I18n.t(context, R.string.menu_ads_tracking), A_PRIVACY, () -> showAdOptions(context), onCount(context, "isAdBlockEnabled", "isAnalyticsBlocked", "disableTrackingLinks", "disableSearchHistory")));
         privacy.addView(createMenuRow(context, R.drawable.ic_pin, I18n.t(context, R.string.ig_dialog_menu_location), A_PRIVACY, () -> showLocationOptions(context), onCount(context, "spoofLocation")));
-        privacy.addView(createMenuRow(context, R.drawable.ic_notification, I18n.t(context, R.string.ig_dialog_menu_distraction_free), A_PRIVACY, () -> showDistractionOptions(context), onCount(context, "isExtremeMode", "disableStories", "disableFeed", "disableReels", "disableReelsExceptDM", "disableExplore", "disableComments", "removeMetaAI", "hideOnboardingPrompts", "hidePlusUpsells", "hideInstants")));
+        privacy.addView(createMenuRow(context, R.drawable.ic_notification, I18n.t(context, R.string.ig_dialog_menu_distraction_free), A_PRIVACY, () -> showDistractionOptions(context), onCount(context, "isExtremeMode", "disableStories", "disableFeed", "disableReels", "disableReelsExceptDM", "dailyReelLimitEnabled", "nightReelBlockEnabled", "disableExplore", "disableComments", "removeMetaAI", "hideOnboardingPrompts", "hidePlusUpsells", "hideInstants")));
         mainLayout.addView(privacy);
 
         // ---- MEDIA ---- downloading, post-menu extras and uploads
@@ -1210,140 +1212,196 @@ public class DialogUtils {
 
     private static void showDistractionOptions(Context context) {
         LinearLayout layout = createSwitchLayout(context);
+        Runnable refreshUsage = addDailyReelStatus(context, layout);
+        ToggleRow extreme = createSwitch(context, R.drawable.ic_block, "#FF453A", I18n.t(context, R.string.ig_dialog_distraction_extreme_mode), FeatureFlags.isExtremeMode);
+        ToggleRow stories = createSwitch(context, R.drawable.ic_story_ring, "#30D158", I18n.t(context, R.string.ig_dialog_distraction_disable_stories), FeatureFlags.disableStories);
+        ToggleRow feed = createSwitch(context, R.drawable.ic_block, "#30D158", I18n.t(context, R.string.ig_dialog_distraction_disable_feed), FeatureFlags.disableFeed);
+        ToggleRow reels = createSwitch(context, R.drawable.ic_movie, "#30D158", I18n.t(context, R.string.ig_dialog_distraction_disable_reels), FeatureFlags.disableReels);
+        ToggleRow exceptDM = createSwitch(context, R.drawable.ic_movie, "#30D158", I18n.t(context, R.string.ig_dialog_distraction_disable_reels_except_dm), FeatureFlags.disableReelsExceptDM);
+        ToggleRow daily = createSwitch(context, R.drawable.ic_movie, "#30D158", I18n.t(context, R.string.ig_reel_limit_enable), FeatureFlags.dailyReelLimitEnabled);
+        ToggleRow dailyDM = createSwitch(context, R.drawable.ic_chat, "#30D158", I18n.t(context, R.string.ig_reel_limit_allow_dm), FeatureFlags.dailyReelLimitAllowDM);
+        ToggleRow night = createSwitch(context, R.drawable.ic_timer, "#30D158", I18n.t(context, R.string.ig_night_reels_enable), FeatureFlags.nightReelBlockEnabled);
+        ToggleRow nightDM = createSwitch(context, R.drawable.ic_chat, "#30D158", I18n.t(context, R.string.ig_night_reels_allow_dm), FeatureFlags.nightReelBlockAllowDM);
+        ToggleRow explore = createSwitch(context, R.drawable.ic_search, "#30D158", I18n.t(context, R.string.ig_dialog_distraction_disable_explore), FeatureFlags.disableExplore);
+        ToggleRow comments = createSwitch(context, R.drawable.ic_chat, "#30D158", I18n.t(context, R.string.ig_dialog_distraction_disable_comments), FeatureFlags.disableComments);
+        // Keep the DM allowance preference when switching the daily feature off and back on.
+        ToggleRow[] switches = {stories, feed, reels, exceptDM, daily, night, explore, comments};
+        ToggleRow master = createSwitch(context, I18n.t(context, R.string.ig_dialog_enable_disable_all), areAllEnabled(switches));
+        LinearLayout amount = (LinearLayout) createInfoSection(context,
+                I18n.t(context, R.string.ig_reel_limit_allowance), String.valueOf(FeatureFlags.dailyReelLimit));
+        TextView value = (TextView) amount.getChildAt(1);
+        value.setTextColor(accent());
+        amount.setMinimumHeight(dp(context, 48));
+        amount.setFocusable(true);
+        amount.setOnClickListener(v -> showDailyReelLimitPicker(context, FeatureFlags.dailyReelLimit, limit -> {
+            if (FeatureFlags.isExtremeMode || !DailyReelLimit.isActive()) return;
+            FeatureFlags.dailyReelLimit = limit;
+            SettingsManager.saveAllFlags();
+            value.setText(String.valueOf(limit));
+            refreshUsage.run();
+        }));
 
-        // Child switches
-        ToggleRow extremeModeSwitch = createSwitch(context, R.drawable.ic_block, "#FF453A", I18n.t(context, R.string.ig_dialog_distraction_extreme_mode), FeatureFlags.isExtremeMode);
-        ToggleRow disableStoriesSwitch = createSwitch(context, R.drawable.ic_story_ring, "#30D158", I18n.t(context, R.string.ig_dialog_distraction_disable_stories), FeatureFlags.disableStories);
-        ToggleRow disableFeedSwitch = createSwitch(context, R.drawable.ic_block, "#30D158", I18n.t(context, R.string.ig_dialog_distraction_disable_feed), FeatureFlags.disableFeed);
-        ToggleRow disableReelsSwitch = createSwitch(context, R.drawable.ic_movie, "#30D158", I18n.t(context, R.string.ig_dialog_distraction_disable_reels), FeatureFlags.disableReels);
-        ToggleRow onlyInDMSwitch = createSwitch(context, R.drawable.ic_movie, "#30D158", I18n.t(context, R.string.ig_dialog_distraction_disable_reels_except_dm), FeatureFlags.disableReelsExceptDM);
-        ToggleRow disableExploreSwitch = createSwitch(context, R.drawable.ic_search, "#30D158", I18n.t(context, R.string.ig_dialog_distraction_disable_explore), FeatureFlags.disableExplore);
-        ToggleRow disableCommentsSwitch = createSwitch(context, R.drawable.ic_chat, "#30D158", I18n.t(context, R.string.ig_dialog_distraction_disable_comments), FeatureFlags.disableComments);
+        LinearLayout nightStart = (LinearLayout) createInfoSection(context,
+                I18n.t(context, R.string.ig_night_reels_start_label),
+                formatNightReelTime(context, FeatureFlags.nightReelBlockStartMinutes));
+        LinearLayout nightEnd = (LinearLayout) createInfoSection(context,
+                I18n.t(context, R.string.ig_night_reels_end_label),
+                formatNightReelTime(context, FeatureFlags.nightReelBlockEndMinutes));
+        TextView nightStartValue = (TextView) nightStart.getChildAt(1);
+        TextView nightEndValue = (TextView) nightEnd.getChildAt(1);
+        nightStartValue.setTextColor(accent());
+        nightEndValue.setTextColor(accent());
+        nightStartValue.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        nightEndValue.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        nightStart.setMinimumHeight(dp(context, 48));
+        nightEnd.setMinimumHeight(dp(context, 48));
+        nightStart.setFocusable(true);
+        nightEnd.setFocusable(true);
+        nightStart.setBackground(rowRipple(context, 16));
+        nightEnd.setBackground(rowRipple(context, 16));
+        TextView nightStatus = new TextView(context);
+        nightStatus.setTextColor(C_TEXT2);
+        nightStatus.setTextSize(13);
+        nightStatus.setFontFeatureSettings("tnum");
+        nightStatus.setPadding(40, 0, 32, 20);
 
-        ToggleRow[] switches = new ToggleRow[]{disableStoriesSwitch, disableFeedSwitch, disableReelsSwitch, onlyInDMSwitch, disableExploreSwitch, disableCommentsSwitch};
-
-
-        // Enable/Disable All
-        ToggleRow enableAllSwitch = createSwitch(context, I18n.t(context, R.string.ig_dialog_enable_disable_all), areAllEnabled(switches));
-
-        if (FeatureFlags.isExtremeMode) {
-            disableAllSwitches(switches, enableAllSwitch, onlyInDMSwitch);
-            extremeModeSwitch.setChecked(true);
-            extremeModeSwitch.setEnabled(false);
-        }
-
-        // Helper: extreme mode is only available when at least one feature is selected
-        Runnable updateExtremeSwitchEnabled = () -> {
-            if (!FeatureFlags.isExtremeMode) {
-                boolean anyEnabled = false;
-                for (ToggleRow s : switches) {
-                    if (s.isChecked()) { anyEnabled = true; break; }
-                }
-                extremeModeSwitch.setEnabled(anyEnabled);
-            }
+        Runnable refreshNight = () -> {
+            boolean visible = night.isChecked();
+            boolean editable = !FeatureFlags.isExtremeMode && !reels.isChecked() && visible;
+            nightStart.setVisibility(visible ? View.VISIBLE : View.GONE);
+            nightEnd.setVisibility(visible ? View.VISIBLE : View.GONE);
+            nightDM.setVisibility(visible ? View.VISIBLE : View.GONE);
+            nightStatus.setVisibility(visible ? View.VISIBLE : View.GONE);
+            nightStart.setEnabled(editable);
+            nightEnd.setEnabled(editable);
+            nightDM.setEnabled(editable);
+            float alpha = editable ? 1f : 0.38f;
+            nightStart.setAlpha(alpha);
+            nightEnd.setAlpha(alpha);
+            nightStatus.setAlpha(alpha);
+            String start = formatNightReelTime(context, FeatureFlags.nightReelBlockStartMinutes);
+            String end = formatNightReelTime(context, FeatureFlags.nightReelBlockEndMinutes);
+            nightStartValue.setText(start);
+            nightEndValue.setText(end);
+            boolean active = NightReelSchedule.isActiveAt(NightReelSchedule.currentMinutes(),
+                    FeatureFlags.nightReelBlockStartMinutes, FeatureFlags.nightReelBlockEndMinutes);
+            nightStatus.setText(I18n.t(context, active ? R.string.ig_night_reels_status_active
+                    : R.string.ig_night_reels_status_inactive, active ? end : start));
         };
-
-        // Initial state: disable extreme mode toggle if nothing is selected yet
-        updateExtremeSwitchEnabled.run();
-
-        extremeModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (isChecked) {
-                IeDialog builder = new IeDialog(context)
-                        .title(I18n.t(context, R.string.ig_dialog_distraction_extreme_title))
-                        .message(I18n.t(context, R.string.ig_dialog_distraction_extreme_message));
-                Runnable cancelExtreme = () -> extremeModeSwitch.setChecked(false);
-                builder.secondary(I18n.t(context, R.string.ig_dialog_cancel), cancelExtreme);
-                builder.onClose(cancelExtreme); // ✕ = Cancel
-                builder.primary(I18n.t(context, R.string.ig_dialog_yes), () -> {
-                    FeatureFlags.isExtremeMode = true;
-                    FeatureFlags.isDistractionFree = true;
-
-                    // Save user’s current selections before freezing them
-                    FeatureFlags.disableStories = disableStoriesSwitch.isChecked();
-                    FeatureFlags.disableFeed = disableFeedSwitch.isChecked();
-                    FeatureFlags.disableReels = disableReelsSwitch.isChecked();
-                    FeatureFlags.disableReelsExceptDM = onlyInDMSwitch.isChecked();
-                    FeatureFlags.disableExplore = disableExploreSwitch.isChecked();
-                    FeatureFlags.disableComments = disableCommentsSwitch.isChecked();
+        nightStart.setOnClickListener(v -> showNightReelTimePicker(context,
+                FeatureFlags.nightReelBlockStartMinutes, selected -> {
+                    if (selected == FeatureFlags.nightReelBlockEndMinutes) {
+                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_night_reels_same_time), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    FeatureFlags.nightReelBlockStartMinutes = selected;
                     SettingsManager.saveAllFlags();
+                    refreshNight.run();
+                }));
+        nightEnd.setOnClickListener(v -> showNightReelTimePicker(context,
+                FeatureFlags.nightReelBlockEndMinutes, selected -> {
+                    if (selected == FeatureFlags.nightReelBlockStartMinutes) {
+                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_night_reels_same_time), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    FeatureFlags.nightReelBlockEndMinutes = selected;
+                    SettingsManager.saveAllFlags();
+                    refreshNight.run();
+                }));
 
-                    // Disable all UI switches to lock them
-                    disableAllSwitches(switches, enableAllSwitch, onlyInDMSwitch);
-                    extremeModeSwitch.setEnabled(false);
-                });
-                builder.show();
+        boolean[] updatingMaster = {false};
+        Runnable refresh = () -> {
+            updatingMaster[0] = true;
+            master.setChecked(areAllEnabled(switches));
+            updatingMaster[0] = false;
+            boolean locked = FeatureFlags.isExtremeMode;
+            boolean any = false;
+            for (ToggleRow row : switches) {
+                any |= row.isChecked();
+                row.setEnabled(!locked || !row.isChecked());
             }
-        });
-
-        // Master switch listener
-        enableAllSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            for (ToggleRow s : switches) {
-                s.setChecked(isChecked);
-                s.setEnabled(true);
-            }
-            if (!isChecked) {
-                onlyInDMSwitch.setChecked(false);
-                onlyInDMSwitch.setEnabled(false);
-            }
-            updateExtremeSwitchEnabled.run();
-        });
-
-        // Parent-child logic for Reels. Set the live FeatureFlag immediately (not only on dialog
-        // dismiss) so the network interceptor picks up the change on the very next request — no
-        // Instagram restart needed to switch the option.
-        disableReelsSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            FeatureFlags.disableReels = isChecked;
-            onlyInDMSwitch.setEnabled(isChecked);
-            if (!isChecked) {
-                onlyInDMSwitch.setChecked(false);
-                onlyInDMSwitch.setEnabled(false);
-                FeatureFlags.disableReelsExceptDM = false;
-            }
-            updateMasterSwitch(enableAllSwitch, switches, disableReelsSwitch, onlyInDMSwitch);
-            updateExtremeSwitchEnabled.run();
-            SettingsManager.saveAllFlags();
-        });
-
-        // Child logic for "Except in DMs"
-        onlyInDMSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            FeatureFlags.disableReelsExceptDM = isChecked;
-            if (isChecked && !disableReelsSwitch.isChecked()) {
-                disableReelsSwitch.setChecked(true);
-                FeatureFlags.disableReels = true;
-            }
-            updateMasterSwitch(enableAllSwitch, switches, disableReelsSwitch, onlyInDMSwitch);
-            updateExtremeSwitchEnabled.run();
-            SettingsManager.saveAllFlags();
-        });
-
-        // All other switches — set the matching live FeatureFlag immediately too.
-        for (ToggleRow s : new ToggleRow[]{disableStoriesSwitch, disableFeedSwitch, disableExploreSwitch, disableCommentsSwitch}) {
-            s.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (s == disableStoriesSwitch) FeatureFlags.disableStories = isChecked;
-                else if (s == disableFeedSwitch) FeatureFlags.disableFeed = isChecked;
-                else if (s == disableExploreSwitch) FeatureFlags.disableExplore = isChecked;
-                else if (s == disableCommentsSwitch) FeatureFlags.disableComments = isChecked;
-                updateMasterSwitch(enableAllSwitch, switches, disableReelsSwitch, onlyInDMSwitch);
-                updateExtremeSwitchEnabled.run();
+            master.setEnabled(!locked);
+            extreme.setEnabled(!locked && any);
+            exceptDM.setVisibility(reels.isChecked() ? View.VISIBLE : View.GONE);
+            exceptDM.setEnabled(reels.isChecked() && (!locked || exceptDM.isChecked()));
+            daily.setEnabled(!locked && !reels.isChecked());
+            dailyDM.setVisibility(daily.isChecked() ? View.VISIBLE : View.GONE);
+            dailyDM.setEnabled(daily.isEnabled() && daily.isChecked());
+            night.setEnabled(!locked && !reels.isChecked());
+            amount.setVisibility(daily.isChecked() ? View.VISIBLE : View.GONE);
+            amount.setEnabled(dailyDM.isEnabled());
+            amount.setAlpha(amount.isEnabled() ? 1f : 0.38f);
+            refreshUsage.run();
+            refreshNight.run();
+        };
+        // Every row writes its live flag at once, so the hooks apply it without an Instagram restart.
+        for (ToggleRow row : switches) {
+            row.setOnCheckedChangeListener((button, checked) -> {
+                if (row == stories) FeatureFlags.disableStories = checked;
+                else if (row == feed) FeatureFlags.disableFeed = checked;
+                else if (row == reels) {
+                    FeatureFlags.disableReels = checked;
+                    if (!checked) exceptDM.setChecked(false);
+                } else if (row == exceptDM) FeatureFlags.disableReelsExceptDM = checked;
+                else if (row == daily) FeatureFlags.dailyReelLimitEnabled = checked;
+                else if (row == night) FeatureFlags.nightReelBlockEnabled = checked;
+                else if (row == explore) FeatureFlags.disableExplore = checked;
+                else if (row == comments) FeatureFlags.disableComments = checked;
+                if (!updatingMaster[0]) refresh.run();
                 SettingsManager.saveAllFlags();
             });
         }
-
-        // Init "Except in DMs" state
-        onlyInDMSwitch.setEnabled(disableReelsSwitch.isChecked());
-
-        // Layout building
-        layout.addView(extremeModeSwitch);
+        dailyDM.setOnCheckedChangeListener((button, checked) -> {
+            FeatureFlags.dailyReelLimitAllowDM = checked;
+            SettingsManager.saveAllFlags();
+        });
+        nightDM.setOnCheckedChangeListener((button, checked) -> {
+            FeatureFlags.nightReelBlockAllowDM = checked;
+            SettingsManager.saveAllFlags();
+        });
+        master.setOnCheckedChangeListener((button, checked) -> {
+            if (updatingMaster[0] || FeatureFlags.isExtremeMode) return;
+            updatingMaster[0] = true;
+            for (ToggleRow row : switches) row.setChecked(checked);
+            updatingMaster[0] = false;
+            refresh.run();
+        });
+        extreme.setOnCheckedChangeListener((button, checked) -> {
+            if (!checked) return;
+            IeDialog dlg = new IeDialog(context)
+                    .title(I18n.t(context, R.string.ig_dialog_distraction_extreme_title))
+                    .message(I18n.t(context, R.string.ig_dialog_distraction_extreme_message));
+            Runnable cancelExtreme = () -> extreme.setChecked(false);
+            dlg.secondary(I18n.t(context, R.string.ig_dialog_cancel), cancelExtreme);
+            dlg.onClose(cancelExtreme); // ✕ / Back / outside = Cancel
+            dlg.primary(I18n.t(context, R.string.ig_dialog_yes), () -> {
+                FeatureFlags.isExtremeMode = true;
+                FeatureFlags.isDistractionFree = true;
+                SettingsManager.saveAllFlags();
+                refresh.run();
+            });
+            dlg.show();
+        });
+        refresh.run();
+        layout.addView(extreme);
         layout.addView(createDivider(context));
-        layout.addView(createEnableAllSwitch(context, enableAllSwitch));
+        layout.addView(createEnableAllSwitch(context, master));
         layout.addView(createDivider(context));
-
-        LinearLayout groupCard = card(context);
-        for (ToggleRow s :switches) {
-            groupCard.addView(s);
+        LinearLayout group = card(context);
+        for (ToggleRow row : switches) {
+            group.addView(row);
+            if (row == daily) {
+                group.addView(dailyDM);
+                group.addView(amount);
+            }
+            if (row == night) {
+                group.addView(nightStart);
+                group.addView(nightEnd);
+                group.addView(nightStatus);
+                group.addView(nightDM);
+            }
         }
-        layout.addView(groupCard);
-
+        layout.addView(group);
         // Outside the extreme-mode group: parts of the app removed (Meta AI, prompts, upsells).
         layout.addView(createDivider(context));
         layout.addView(cardOf(context,
@@ -1351,17 +1409,269 @@ public class DialogUtils {
                 extraSwitch(context, "#30D158", "hideOnboardingPrompts"),
                 flagSwitch(context, R.drawable.ic_sparkle, "#30D158", R.string.ig_dialog_clean_feed_hide_plus, "hidePlusUpsells"),
                 flagSwitch(context, R.drawable.ic_block, "#30D158", R.string.ig_hide_instants, "hideInstants")));
+        showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_distraction_free), layout, () -> {});
+    }
 
-        showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_distraction_free), layout, () -> {
-            FeatureFlags.disableStories = disableStoriesSwitch.isChecked();
-            FeatureFlags.disableFeed = disableFeedSwitch.isChecked();
-            FeatureFlags.disableReels = disableReelsSwitch.isChecked();
-            FeatureFlags.disableReelsExceptDM = onlyInDMSwitch.isChecked();
-            FeatureFlags.disableExplore = disableExploreSwitch.isChecked();
-            FeatureFlags.disableComments = disableCommentsSwitch.isChecked();
+    private static Runnable addDailyReelStatus(Context context, LinearLayout layout) {
+        layout.addView(sectionHeader(context, I18n.t(context, R.string.ig_reel_limit_title)));
+        LinearLayout group = card(context);
+        TextView usage = new TextView(context);
+        usage.setTextColor(C_TEXT);
+        usage.setTextSize(18);
+        usage.setTypeface(null, Typeface.BOLD);
+        usage.setFontFeatureSettings("tnum");
+        usage.setPadding(40, 24, 32, 24);
+        usage.setMinimumHeight(dp(context, 48));
+        usage.setFocusable(true);
+        usage.setBackground(rowRipple(context, 16));
+        Runnable refreshUsage = () -> {
+            int watched = DailyReelLimit.watchedToday();
+            usage.setText(FeatureFlags.dailyReelLimitEnabled
+                    ? I18n.t(context, R.string.ig_reel_limit_usage, watched, FeatureFlags.dailyReelLimit)
+                    : I18n.t(context, R.string.ig_reel_usage_count, watched));
+        };
+        refreshUsage.run();
+        usage.setOnClickListener(v -> refreshUsage.run());
+        group.addView(usage);
+
+        layout.addView(group);
+        return refreshUsage;
+    }
+
+    /** Also used by the companion app's Distraction-Free menu. */
+    public static void showDailyReelLimitPicker(Context context, int current, java.util.function.IntConsumer save) {
+        showAmountPicker(context, current, false, save);
+    }
+
+    /** Also used by the companion app's Downloader menu. */
+    public static void showStoryCacheDurationPicker(Context context, int current, java.util.function.IntConsumer save) {
+        showAmountPicker(context, ps.reso.instaeclipse.utils.media.StoryCacheRetention.normalize(current), true, save);
+    }
+
+    private static void showAmountPicker(Context context, int current, boolean durationHours,
+                                         java.util.function.IntConsumer save) {
+        final int minimum = 1;
+        final int maximum = durationHours ? ps.reso.instaeclipse.utils.media.StoryCacheRetention.MAX_HOURS : 10_000;
+        final int step = durationHours ? 1 : 5;
+        final int initial = Math.max(minimum, Math.min(maximum, current));
+
+        LinearLayout content = new LinearLayout(context);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setFocusableInTouchMode(true);
+        content.requestFocus();
+        int outerPadding = dp(context, 24);
+        content.setPadding(outerPadding, dp(context, 22), outerPadding, dp(context, 18));
+        content.setBackground(roundedColor(C_SHEET, dp(context, 28)));
+
+        TextView title = new TextView(context);
+        title.setText(I18n.t(context, durationHours ? R.string.ig_story_cache_duration : R.string.ig_reel_limit_allowance));
+        title.setTextColor(C_TEXT);
+        title.setTextSize(21);
+        title.setTypeface(null, Typeface.BOLD);
+        content.addView(title);
+
+        TextView help = new TextView(context);
+        help.setText(I18n.t(context, durationHours ? R.string.ig_story_cache_picker_help : R.string.ig_reel_limit_picker_help));
+        help.setTextColor(C_TEXT2);
+        help.setTextSize(14);
+        help.setPadding(0, dp(context, 4), 0, dp(context, 20));
+        content.addView(help);
+
+        LinearLayout allowanceCard = new LinearLayout(context);
+        allowanceCard.setOrientation(LinearLayout.VERTICAL);
+        allowanceCard.setGravity(Gravity.CENTER);
+        allowanceCard.setPadding(dp(context, 16), dp(context, 18), dp(context, 16), dp(context, 16));
+        GradientDrawable allowanceBackground = roundedColor(C_CARD, dp(context, 20));
+        allowanceBackground.setStroke(dp(context, 1), C_HAIRLINE);
+        allowanceCard.setBackground(allowanceBackground);
+
+        LinearLayout stepper = new LinearLayout(context);
+        stepper.setOrientation(LinearLayout.HORIZONTAL);
+        stepper.setGravity(Gravity.CENTER);
+
+        TextView decrement = reelLimitAction(context, "− " + step, false);
+        android.widget.EditText input = new android.widget.EditText(context);
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        input.setSingleLine(true);
+        input.setSelectAllOnFocus(true);
+        input.setContentDescription(title.getText());
+        input.setText(String.valueOf(initial));
+        input.setTextColor(C_TEXT);
+        input.setTextSize(32);
+        input.setTypeface(null, Typeface.BOLD);
+        input.setFontFeatureSettings("tnum");
+        input.setGravity(Gravity.CENTER);
+        input.setPadding(dp(context, 8), 0, dp(context, 8), 0);
+        input.setBackground(reelLimitInputBackground(context));
+        LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(0, dp(context, 64), 1f);
+        inputParams.leftMargin = dp(context, 12);
+        inputParams.rightMargin = dp(context, 12);
+        input.setLayoutParams(inputParams);
+        TextView increment = reelLimitAction(context, "+ " + step, false);
+
+        stepper.addView(decrement);
+        stepper.addView(input);
+        stepper.addView(increment);
+        allowanceCard.addView(stepper);
+
+        TextView unit = new TextView(context);
+        unit.setText(I18n.t(context, durationHours ? R.string.ig_story_cache_picker_unit : R.string.ig_reel_limit_picker_unit));
+        unit.setTextColor(C_TEXT2);
+        unit.setTextSize(12);
+        unit.setGravity(Gravity.CENTER);
+        unit.setPadding(0, dp(context, 8), 0, 0);
+        allowanceCard.addView(unit);
+        content.addView(allowanceCard);
+
+        TextView quickLabel = new TextView(context);
+        quickLabel.setText(I18n.t(context, R.string.ig_reel_limit_picker_quick));
+        quickLabel.setTextColor(C_TEXT2);
+        quickLabel.setTextSize(12);
+        quickLabel.setTypeface(null, Typeface.BOLD);
+        quickLabel.setLetterSpacing(0.06f);
+        quickLabel.setPadding(0, dp(context, 20), 0, dp(context, 8));
+        content.addView(quickLabel);
+
+        LinearLayout presets = new LinearLayout(context);
+        presets.setOrientation(LinearLayout.HORIZONTAL);
+        int[] presetValues = durationHours ? new int[]{6, 24, 72, 168} : new int[]{25, 50, 100, 200};
+        TextView[] presetViews = new TextView[presetValues.length];
+        for (int i = 0; i < presetValues.length; i++) {
+            TextView preset = new TextView(context);
+            preset.setText(String.valueOf(presetValues[i]));
+            preset.setTextSize(14);
+            preset.setTypeface(null, Typeface.BOLD);
+            preset.setGravity(Gravity.CENTER);
+            preset.setMinHeight(dp(context, 44));
+            preset.setFocusable(true);
+            LinearLayout.LayoutParams presetParams = new LinearLayout.LayoutParams(0, dp(context, 44), 1f);
+            if (i > 0) presetParams.leftMargin = dp(context, 8);
+            preset.setLayoutParams(presetParams);
+            final int value = presetValues[i];
+            preset.setOnClickListener(v -> input.setText(String.valueOf(value)));
+            presetViews[i] = preset;
+            presets.addView(preset);
+        }
+        content.addView(presets);
+
+        Runnable refreshPresets = () -> {
+            int selected = parseReelLimit(input.getText().toString(), -1);
+            for (int i = 0; i < presetViews.length; i++) {
+                boolean active = selected == presetValues[i];
+                presetViews[i].setTextColor(active ? C_TEXT : C_TEXT2);
+                presetViews[i].setBackground(reelLimitPresetBackground(context, active));
+                presetViews[i].setSelected(active);
+            }
+        };
+        input.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(android.text.Editable editable) {
+                input.setError(null);
+                refreshPresets.run();
+            }
         });
+        refreshPresets.run();
 
-        SettingsManager.saveAllFlags();
+        decrement.setOnClickListener(v -> input.setText(String.valueOf(Math.max(minimum,
+                (long) parseReelLimit(input.getText().toString(), initial) - step))));
+        increment.setOnClickListener(v -> input.setText(String.valueOf(Math.min(maximum,
+                (long) parseReelLimit(input.getText().toString(), initial) + step))));
+
+        LinearLayout actions = new LinearLayout(context);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setGravity(Gravity.END);
+        actions.setPadding(0, dp(context, 22), 0, 0);
+        TextView cancel = reelLimitAction(context, I18n.t(context, R.string.ig_dialog_cancel), false);
+        TextView confirm = reelLimitAction(context, I18n.t(context, R.string.ig_dialog_ok), true);
+        LinearLayout.LayoutParams confirmParams = (LinearLayout.LayoutParams) confirm.getLayoutParams();
+        confirmParams.leftMargin = dp(context, 8);
+        actions.addView(cancel);
+        actions.addView(confirm);
+        content.addView(actions);
+
+        AlertDialog dialog = new AlertDialog.Builder(context).setView(content).setCancelable(true).create();
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        confirm.setOnClickListener(v -> {
+            int limit = parseReelLimit(input.getText().toString(), -1);
+            if (limit < minimum || limit > maximum) {
+                input.setError(I18n.t(context, durationHours ? R.string.ig_story_cache_invalid : R.string.ig_reel_limit_invalid));
+                input.requestFocus();
+                return;
+            }
+            save.accept(limit);
+            dialog.dismiss();
+        });
+        dialog.setOnShowListener(ignored -> {
+            Window window = dialog.getWindow();
+            if (window == null) return;
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            int width = Math.min(dp(context, 420),
+                    context.getResources().getDisplayMetrics().widthPixels - dp(context, 32));
+            window.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT);
+            window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        });
+        dialog.show();
+    }
+
+    private static int parseReelLimit(String text, int fallback) {
+        try { return Integer.parseInt(text.trim()); }
+        catch (NumberFormatException ignored) { return fallback; }
+    }
+
+    private static GradientDrawable reelLimitInputBackground(Context context) {
+        GradientDrawable background = roundedColor(C_PRESSED, dp(context, 14));
+        background.setStroke(dp(context, 1), C_HAIRLINE);
+        return background;
+    }
+
+    private static StateListDrawable reelLimitPresetBackground(Context context, boolean active) {
+        int accent = accent();
+        GradientDrawable normal = roundedColor(active
+                ? ((accent & 0x00FFFFFF) | 0x46000000) : C_CARD, dp(context, 12));
+        normal.setStroke(dp(context, 1), active ? accent : C_HAIRLINE);
+        StateListDrawable background = new StateListDrawable();
+        background.addState(new int[]{android.R.attr.state_pressed}, roundedColor(C_PRESSED, dp(context, 12)));
+        background.addState(new int[]{}, normal);
+        return background;
+    }
+
+    private static TextView reelLimitAction(Context context, String label, boolean primary) {
+        TextView button = new TextView(context);
+        button.setText(label);
+        button.setTextSize(14);
+        button.setTypeface(null, Typeface.BOLD);
+        button.setGravity(Gravity.CENTER);
+        button.setTextColor(primary ? C_TEXT : accent());
+        button.setClickable(true);
+        button.setFocusable(true);
+        button.setMinWidth(dp(context, 72));
+        button.setMinimumHeight(dp(context, 48));
+        button.setPadding(dp(context, 16), 0, dp(context, 16), 0);
+        StateListDrawable background = new StateListDrawable();
+        background.addState(new int[]{android.R.attr.state_pressed}, roundedColor(C_PRESSED, dp(context, 14)));
+        background.addState(new int[]{}, roundedColor(primary ? accent() : C_CARD, dp(context, 14)));
+        button.setBackground(background);
+        button.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, dp(context, 48)));
+        return button;
+    }
+
+    /** Also used by the companion app's Distraction-Free menu. */
+    public static void showNightReelTimePicker(Context context, int currentMinutes,
+                                                java.util.function.IntConsumer save) {
+        int valid = NightReelSchedule.validMinutes(currentMinutes,
+                NightReelSchedule.DEFAULT_START_MINUTES);
+        new android.app.TimePickerDialog(context, (view, hour, minute) -> save.accept(hour * 60 + minute),
+                valid / 60, valid % 60, android.text.format.DateFormat.is24HourFormat(context)).show();
+    }
+
+    public static String formatNightReelTime(Context context, int minutes) {
+        int valid = NightReelSchedule.validMinutes(minutes, 0);
+        java.util.Calendar time = java.util.Calendar.getInstance();
+        time.set(java.util.Calendar.HOUR_OF_DAY, valid / 60);
+        time.set(java.util.Calendar.MINUTE, valid % 60);
+        return android.text.format.DateFormat.getTimeFormat(context).format(time.getTime());
     }
 
     /** Bottom navigation bar (#238): hide tabs, reorder them, pick the startup tab, gestures. */
@@ -1483,29 +1793,6 @@ public class DialogUtils {
         dlg.primary(context.getString(android.R.string.ok), () -> { FeatureFlags.navTabOrder = String.join(",", order); SettingsManager.saveAllFlags(); });
         dlg.show();
     }
-
-    private static void disableAllSwitches(ToggleRow[] switches, ToggleRow master, ToggleRow onlyInDMSwitch) {
-        for (ToggleRow s : switches) {
-            if (s == onlyInDMSwitch) {
-                s.setEnabled(s.isChecked());
-            } else {
-                s.setEnabled(!s.isChecked());
-            }
-        }
-        master.setEnabled(false);
-    }
-
-    private static void updateMasterSwitch(ToggleRow enableAllRow, ToggleRow[] switches, ToggleRow disableReelsSwitch, ToggleRow onlyInDMSwitch) {
-        enableAllRow.setOnCheckedChangeListener(null);
-        enableAllRow.setChecked(areAllEnabled(switches));
-        enableAllRow.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            for (ToggleRow s : switches) {
-                s.setChecked(isChecked);
-            }
-            onlyInDMSwitch.setEnabled(disableReelsSwitch.isChecked());
-        });
-    }
-
 
     /** Feed: what shows up in it (clean-feed filters) and how posts render. */
     private static void showFeedOptions(Context context) {

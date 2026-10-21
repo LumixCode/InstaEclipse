@@ -61,6 +61,33 @@
     <string name="ig_unsent_detail_shared">Shared content</string>
     <string name="ig_unsent_detail_shared_by">Shared by @%1$s</string>
 
+    <!-- Daily reel limit -->
+    <string name="ig_reel_limit_title">Daily reel limit</string>
+    <string name="ig_reel_limit_enable">Limit reels per day</string>
+    <string name="ig_reel_limit_allow_dm">Allow DM reels</string>
+    <string name="ig_reel_limit_warning">Reels left today: %1$d</string>
+    <string name="ig_reel_limit_allowance">Reels per day</string>
+    <string name="ig_reel_limit_picker_help">Choose your daily scrolling allowance.</string>
+    <string name="ig_reel_limit_picker_quick">Quick choices</string>
+    <string name="ig_reel_limit_picker_unit">reels per day</string>
+    <string name="ig_reel_limit_usage">Watched today: %1$d / %2$d</string>
+    <string name="ig_reel_usage_count">Watched today: %1$d</string>
+    <string name="ig_reel_debug_waiting">Watched today: —</string>
+    <string name="ig_reel_limit_invalid">Enter a number from 1 to 10000.</string>
+    <string name="ig_reels_blocked">Reels are disabled in Distraction-Free settings.</string>
+    <string name="ig_reel_limit_reached">Daily reel limit reached. Come back tomorrow.</string>
+
+    <!-- Nighttime reel block -->
+    <string name="ig_night_reels_enable">Block reels at night</string>
+    <string name="ig_night_reels_allow_dm">Allow the reel opened from a DM</string>
+    <string name="ig_night_reels_start_label">Start time</string>
+    <string name="ig_night_reels_end_label">End time</string>
+    <string name="ig_night_reels_start">Starts at %1$s</string>
+    <string name="ig_night_reels_end">Ends at %1$s</string>
+    <string name="ig_night_reels_status_active">Blocked now · until %1$s</string>
+    <string name="ig_night_reels_status_inactive">Starts at %1$s</string>
+    <string name="ig_night_reels_same_time">Start and end times must be different.</string>
+    <string name="ig_night_reels_blocked">Reels are blocked until %1$s.</string>
 
 
     <!-- Companion: a lock it can turn on but not off; restore that left settings out -->
