@@ -803,6 +803,13 @@ public class FeaturesFragment extends Fragment {
         return item;
     }
 
+    /** A switch whose hook Instagram installs only when it is on at its start (Module): says so. */
+    private FeatureItem createRestartSwitch(int iconRes, String accentHex, String title, String prefKey) {
+        FeatureItem item = createSwitch(iconRes, accentHex, title, prefKey);
+        item.subtitle = getString(R.string.ig_restart_to_apply_hint);
+        return item;
+    }
+
     private FeatureItem createSwitchWithDependency(String title, String prefKey, String dependsOn) {
         FeatureItem item = createSwitch(title, prefKey);
         item.dependsOn = dependsOn;
@@ -2204,7 +2211,7 @@ public class FeaturesFragment extends Fragment {
                 createExtrasSwitch("#32D74B", "reelsAutoScroll"),
                 createExtrasSwitch("#32D74B", "reelsLockScroll"),
                 createSwitch(R.drawable.ic_movie, "#32D74B", getString(R.string.ig_dialog_downloader_reel_scrubber), "forceReelScrubber"),
-                createSwitch(R.drawable.ic_movie, "#32D74B", getString(R.string.ig_dialog_reels_hold_left_slow), "holdLeftSlowMotion"),
+                createRestartSwitch(R.drawable.ic_movie, "#32D74B", getString(R.string.ig_dialog_reels_hold_left_slow), "holdLeftSlowMotion"),
                 createSwitch(R.drawable.ic_movie, "#32D74B", getString(R.string.ig_dialog_downloader_offer_speed), "offerPlaybackSpeed")
         ));
 

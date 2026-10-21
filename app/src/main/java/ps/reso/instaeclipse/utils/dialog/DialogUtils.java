@@ -315,6 +315,13 @@ public class DialogUtils {
         return flagSwitch(context, iconRes, accentHex, labelRes, flag, null);
     }
 
+    /** A switch whose hook is installed only when it is on at Instagram's start (Module): says so. */
+    private static ToggleRow restartFlagSwitch(Context context, int iconRes, String accentHex, int labelRes, String flag) {
+        ToggleRow row = flagSwitch(context, iconRes, accentHex, labelRes, flag);
+        row.labelView.setText(I18n.t(context, labelRes) + "\n" + I18n.t(context, R.string.ig_restart_to_apply_hint));
+        return row;
+    }
+
     /** Switch for an Extras feature, with the label and icon from its ExtrasFeatures entry. */
     private static ToggleRow extraSwitch(Context context, String accentHex, String flag, Runnable after) {
         ExtrasFeatures.Entry e = ExtrasFeatures.entry(flag);
@@ -1863,7 +1870,7 @@ public class DialogUtils {
                 extraSwitch(context, "#FF375F", "reelsAutoScroll"),
                 extraSwitch(context, "#FF375F", "reelsLockScroll"),
                 flagSwitch(context, R.drawable.ic_movie, "#FF375F", R.string.ig_dialog_downloader_reel_scrubber, "forceReelScrubber"),
-                flagSwitch(context, R.drawable.ic_movie, "#FF375F", R.string.ig_dialog_reels_hold_left_slow, "holdLeftSlowMotion"),
+                restartFlagSwitch(context, R.drawable.ic_movie, "#FF375F", R.string.ig_dialog_reels_hold_left_slow, "holdLeftSlowMotion"),
                 flagSwitch(context, R.drawable.ic_movie, "#FF375F", R.string.ig_dialog_downloader_offer_speed, "offerPlaybackSpeed")));
 
         showSectionDialog(context, I18n.t(context, R.string.menu_reels), layout, () -> {});

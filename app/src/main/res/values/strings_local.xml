@@ -14,6 +14,8 @@
     <string name="ig_hide_chat_menu_button">Hide chat menu button</string>
     <string name="ig_hide_chat_menu_button_hint">Triple-tap the empty space between the chat name and the call buttons to open the menu</string>
 
+    <!-- Features whose hook is installed only when they are on at Instagram's start -->
+    <string name="ig_restart_to_apply_hint">Turning it on takes effect after restarting Instagram</string>
 
     <!-- Unsent messages: local behaviour keeps them in the chat (upstream only logs them) -->
     <string name="ig_dialog_ghost_keep_unsent_chat">Keep Unsent Messages</string>

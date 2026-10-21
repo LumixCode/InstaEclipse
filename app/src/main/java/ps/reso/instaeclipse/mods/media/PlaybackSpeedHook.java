@@ -165,7 +165,11 @@ public class PlaybackSpeedHook {
         installFeed(bridge, cl);
         installHero(bridge, cl);
         installReelScrubber(bridge, cl);
-        installHoldSide();
+        // The hold-side hooks sit on very hot framework methods (Activity.dispatchTouchEvent,
+        // TextView.setText, StaticLayout/BoringLayout); hooking those app-wide triggers ART's JIT
+        // SIGSEGV on IG 451+ / Android 13, so they are only installed when the feature is on
+        // (turning it on later applies after an Instagram restart).
+        if (FeatureFlags.holdLeftSlowMotion) installHoldSide();
     }
 
     private void installHoldSide() {
