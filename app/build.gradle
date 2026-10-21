@@ -2,6 +2,11 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+// Release signing secrets live outside git (see .gitignore); keys: storeFile, storePassword, keyAlias, keyPassword.
+def releaseKeystoreFile = rootProject.file('keystore.properties')
+def releaseKeystore = new Properties()
+if (releaseKeystoreFile.exists()) releaseKeystoreFile.withInputStream { releaseKeystore.load(it) }
+
 android {
     namespace 'ps.reso.instaeclipse'
     compileSdk 34
@@ -17,10 +22,24 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        release {
+            if (releaseKeystoreFile.exists()) {
+                storeFile file(releaseKeystore['storeFile'])
+                storePassword releaseKeystore['storePassword']
+                keyAlias releaseKeystore['keyAlias']
+                keyPassword releaseKeystore['keyPassword']
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Without keystore.properties, fall back to the debug key: the APK can't be published,
+            // but it still installs over an existing debug build, so module settings survive.
+            signingConfig releaseKeystoreFile.exists() ? signingConfigs.release : signingConfigs.debug
         }
     }
 

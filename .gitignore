@@ -18,3 +18,8 @@ local.properties
 /app/debug
 /.claude
 /APK
+
+# Release signing secrets
+keystore.properties
+*.jks
+*.keystore
