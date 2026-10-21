@@ -16,8 +16,9 @@ android {
         applicationId "ps.reso.instaeclipse"
         minSdkVersion 28
         targetSdk 36
-        versionCode 20
-        versionName '0.8.2'
+        // The fork's release workflow passes -PforkVersionCode/-PforkVersionName; other builds keep upstream's version.
+        versionCode project.findProperty('forkVersionCode')?.toInteger() ?: 20
+        versionName project.findProperty('forkVersionName') ?: '0.8.2'
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
