@@ -165,6 +165,9 @@ final class IgThemeColorSourceHooks {
     // touch resources, so their colors are themed at Paint.setColor — but only while a Compose view
     // is recording its drawing (UI thread), leaving ordinary views and the module's own UI alone.
     private static int composeDrawDepth;
+    // Paint.setColor runs on every frame long before the first Compose draw: each member ticks once
+    // up front, so JitGuard marks its stub before the JIT can compile it (Android 13 crash).
+    private static boolean setColorIntTicked, setColorLongTicked;
 
     private static int hookComposeDrawing(ClassLoader cl) {
         try {
@@ -181,6 +184,10 @@ final class IgThemeColorSourceHooks {
                     });
             XposedHelpers.findAndHookMethod(android.graphics.Paint.class, "setColor", int.class, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam p) {
+                    if (!setColorIntTicked) {
+                        setColorIntTicked = true;
+                        JitGuard.tick(p.method);
+                    }
                     if (composeDrawDepth == 0) return;
                     JitGuard.tick(p.method);
                     if (!active()) return;
@@ -192,6 +199,10 @@ final class IgThemeColorSourceHooks {
             if (Build.VERSION.SDK_INT >= 29) {
                 XposedHelpers.findAndHookMethod(android.graphics.Paint.class, "setColor", long.class, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam p) {
+                        if (!setColorLongTicked) {
+                            setColorLongTicked = true;
+                            JitGuard.tick(p.method);
+                        }
                         if (composeDrawDepth == 0) return;
                         JitGuard.tick(p.method);
                         long c = (Long) p.args[0];
