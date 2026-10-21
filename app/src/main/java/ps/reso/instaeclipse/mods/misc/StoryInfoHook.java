@@ -40,6 +40,7 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -547,7 +548,8 @@ public class StoryInfoHook {
             Object[] a = apps[i];
             String url = (String) a[1];
             android.widget.ImageView b = new android.widget.ImageView(ctx);
-            android.graphics.drawable.Drawable logo = moduleDrawable((Integer) a[2]);
+            // In its own colours (no tint); read from the loaded module APK.
+            android.graphics.drawable.Drawable logo = ModuleResources.drawable(ctx, (Integer) a[2]);
             if (logo != null) b.setImageDrawable(logo);
             b.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
             b.setContentDescription((String) a[0]);
@@ -559,15 +561,6 @@ public class StoryInfoHook {
             bar.addView(b, lp);
         }
         return bar;
-    }
-
-    /** A drawable from the module's own resources, in its own colours (no tint). */
-    private static android.graphics.drawable.Drawable moduleDrawable(int res) {
-        try {
-            return ps.reso.instaeclipse.xposedcompat.ModuleResources.get().getDrawable(res, null);
-        } catch (Throwable t) {
-            return null;
-        }
     }
 
     private static String join(List<String> parts, String sep) {
