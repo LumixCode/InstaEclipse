@@ -901,7 +901,7 @@ public class DialogUtils {
             layout.addView(createInfoSection(context, I18n.t(context, R.string.ig_dialog_unsent_title),
                     I18n.t(context, R.string.ig_dialog_unsent_empty)));
         } else {
-            // One bordered card per deleted message: sender (accent) and time on top, text below.
+            // One bordered card per deleted message: "Unsent" tag (accent) and time on top, text below.
             for (int i = 0; i < entries.size(); i++) {
                 ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry e = entries.get(i);
                 LinearLayout row = new LinearLayout(context);
@@ -916,9 +916,12 @@ public class DialogUtils {
 
                 LinearLayout meta = new LinearLayout(context);
                 meta.setGravity(Gravity.CENTER_VERTICAL);
+                // e.sender holds the chat name captured at unsend time, which the title already shows.
+                String tag = FeatureFlags.showUnsentIndicator && e.unsent
+                        ? I18n.t(context, R.string.ig_unsent_indicator_label) : "";
                 TextView sender = new TextView(context);
-                sender.setText(e.sender);
-                if (e.sender.isEmpty()) sender.setVisibility(View.GONE);
+                sender.setText(tag);
+                if (tag.isEmpty()) sender.setVisibility(View.GONE);
                 sender.setTextColor(accent());
                 sender.setTextSize(13);
                 sender.setTypeface(Typeface.DEFAULT_BOLD);
@@ -929,7 +932,7 @@ public class DialogUtils {
                 when.setText(fmt.format(new java.util.Date(e.time)));
                 when.setTextColor(C_TEXT2);
                 when.setTextSize(12);
-                when.setPadding(e.sender.isEmpty() ? 0 : dp(context, 8), 0, 0, 0);
+                when.setPadding(tag.isEmpty() ? 0 : dp(context, 8), 0, 0, 0);
                 meta.addView(when);
 
                 TextView body = new TextView(context);
