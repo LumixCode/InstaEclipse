@@ -578,7 +578,8 @@ public class Module {
                         ModuleLog.line("(InstaEclipse | LikeUndo): ❌ Failed to hook");
                     }
                     try {
-                        if (!skip("FollowConfirmHook")) new ps.reso.instaeclipse.mods.misc.FollowConfirmHook().install(dexKitBridge);
+                        // View.performClick hook: installed only while the feature is on (restart to enable).
+                        if (FeatureFlags.confirmFollows && !skip("FollowConfirmHook")) new ps.reso.instaeclipse.mods.misc.FollowConfirmHook().install(dexKitBridge);
                     } catch (Throwable ignored) {
                         ModuleLog.line("(InstaEclipse | FollowConfirm): ❌ Failed to hook");
                     }
@@ -794,7 +795,8 @@ public class Module {
 
                     // Ask before calling (#277)
                     try {
-                        if (!skip("CallConfirmHook")) ps.reso.instaeclipse.mods.ghost.CallConfirmHook.install();
+                        // View.performClick hook: installed only while the feature is on (restart to enable).
+                        if (FeatureFlags.confirmCalls && !skip("CallConfirmHook")) ps.reso.instaeclipse.mods.ghost.CallConfirmHook.install();
                     } catch (Throwable ignored) {
                         ModuleLog.line("(InstaEclipse | CallConfirm): ❌ Failed to hook");
                     }

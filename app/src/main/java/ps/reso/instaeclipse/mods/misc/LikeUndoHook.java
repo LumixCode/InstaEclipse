@@ -108,7 +108,11 @@ public class LikeUndoHook {
         });
         ModuleLog.line(TAG + "✅ Hooked " + sender.getDeclaringClass().getName() + "." + sender.getName());
         FeatureStatusTracker.setHooked("LikeUndo");
-        hookHeartButtons();
+        // View.performClick is a very hot framework method; hooking it app-wide triggers ART's JIT
+        // SIGSEGV on IG 451+ / Android 13, so the heart tap hook is only installed when Ask before
+        // liking is on (turning it on later holds heart taps after an Instagram restart; until
+        // then the like entry and the sender below still ask).
+        if (FeatureFlags.confirmLikes) hookHeartButtons();
         hookLikeEntry(sender);
         FeatureStatusTracker.setHooked("ConfirmLikes");
     }
@@ -127,7 +131,7 @@ public class LikeUndoHook {
     private static void hookHeartButtons() {
         XposedBridge.hookAllMethods(View.class, "performClick", new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 if (!FeatureFlags.confirmLikes || replayingTap) return;
                 View v = (View) param.thisObject;
                 if (heartIds.isEmpty()) {
@@ -143,7 +147,6 @@ public class LikeUndoHook {
                     for (int i = 0; i < g.getChildCount() && heart == null; i++)
                         if (heartIds.contains(g.getChildAt(i).getId())) heart = g.getChildAt(i);
                 if (heart == null || heart.isSelected()) return; // a filled heart: this is an unlike
-                ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 Activity act = activityOf(v.getContext());
                 if (act == null) return;
                 param.setResult(true);

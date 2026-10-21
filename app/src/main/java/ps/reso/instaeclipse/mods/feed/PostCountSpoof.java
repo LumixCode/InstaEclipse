@@ -104,8 +104,8 @@ public final class PostCountSpoof {
             for (Method m : found) {
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) {
-                        if (!FeatureFlags.postCountSpoof) return;
                         ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                        if (!FeatureFlags.postCountSpoof) return;
                         Object media = param.thisObject != null ? param.thisObject : mediaIn(param.args);
                         int[] c = countsFor(media);
                         if (c == null || c[which] < 0) return;
@@ -131,6 +131,7 @@ public final class PostCountSpoof {
                         if (Modifier.isStatic(m.getModifiers())) continue;
                         XposedBridge.hookMethod(m, new XC_MethodHook() {
                             @Override protected void afterHookedMethod(MethodHookParam param) {
+                                ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                                 if (!FeatureFlags.postCountSpoof || !Boolean.TRUE.equals(param.getResult())) return;
                                 if (countsFor(param.thisObject) != null) param.setResult(Boolean.FALSE);
                             }
@@ -139,7 +140,11 @@ public final class PostCountSpoof {
                     }
             } catch (Throwable ignored) { }
         }
-        hookCountViews();
+        // The row hooks sit on very hot framework methods (TextView.setText,
+        // View.setContentDescription); hooking those app-wide triggers ART's JIT SIGSEGV on IG
+        // 451+ / Android 13, so they are only installed when the feature is on (turning it on
+        // later updates the row after an Instagram restart; the getters above apply at once).
+        if (FeatureFlags.postCountSpoof) hookCountViews();
         if (hooked > 0) FeatureStatusTracker.setHooked("PostCountSpoof");
         ModuleLog.line(TAG + (hooked > 0 ? "✅" : "❌") + " getters=" + hooked + log);
     }
@@ -200,6 +205,7 @@ public final class PostCountSpoof {
         try {
             XC_MethodHook rebind = new XC_MethodHook() {
                 @Override protected void afterHookedMethod(MethodHookParam param) {
+                    ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                     if (!FeatureFlags.postCountSpoof || SETTING.get() == Boolean.TRUE) return;
                     ensureLoaded();
                     if (COUNTS.isEmpty()) return;
