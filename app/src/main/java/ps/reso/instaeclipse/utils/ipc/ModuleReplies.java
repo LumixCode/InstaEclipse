@@ -37,6 +37,8 @@ public final class ModuleReplies {
 
     /** The permission applies to the broadcaster, not to the hooked host's UID. */
     public static void registerControlReceiver(Context context, BroadcastReceiver receiver, IntentFilter filter) {
+        // Without the companion any app can declare the permission name; then nothing registers.
+        if (!ps.reso.instaeclipse.utils.core.IpcSecurity.isCompanionPermission(context)) return;
         if (Build.VERSION.SDK_INT >= 33) {
             context.registerReceiver(receiver, filter, CONTROL_PERMISSION, null, Context.RECEIVER_EXPORTED);
         } else {

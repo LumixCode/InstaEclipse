@@ -26,6 +26,8 @@ public final class RemotePrefsMirror {
 
     private static SharedPreferences local;
     private static volatile SharedPreferences remote;
+    // the service the mirror writes to; guarded by RemotePrefsMirror.class
+    private static XposedService bound;
 
     // held strongly: SharedPreferences keeps its listeners weakly
     private static final SharedPreferences.OnSharedPreferenceChangeListener ON_CHANGE = (prefs, key) -> {
@@ -48,20 +50,33 @@ public final class RemotePrefsMirror {
         XposedServiceHelper.registerListener(new XposedServiceHelper.OnServiceListener() {
             @Override
             public void onServiceBind(@NonNull XposedService service) {
-                try {
-                    SharedPreferences r = service.getRemotePreferences(GROUP);
-                    copyAll(local, r);
-                    remote = r;
-                    Log.i(TAG, "connected to " + service.getFrameworkName() + " " + service.getFrameworkVersion()
-                            + " (API " + service.getApiVersion() + "), mirrored " + local.getAll().size() + " values");
-                } catch (Throwable t) {
-                    Log.w(TAG, "remote preferences unavailable: " + t);
+                synchronized (RemotePrefsMirror.class) {
+                    // The exported provider takes a binder from any app: keep the first service
+                    // until its binder dies, so a later one can't take over every setting.
+                    if (bound != null) {
+                        Log.w(TAG, "ignored another service binder while connected");
+                        return;
+                    }
+                    try {
+                        SharedPreferences r = service.getRemotePreferences(GROUP);
+                        copyAll(local, r);
+                        bound = service;
+                        remote = r;
+                        Log.i(TAG, "connected to " + service.getFrameworkName() + " " + service.getFrameworkVersion()
+                                + " (API " + service.getApiVersion() + "), mirrored " + local.getAll().size() + " values");
+                    } catch (Throwable t) {
+                        Log.w(TAG, "remote preferences unavailable: " + t);
+                    }
                 }
             }
 
             @Override
             public void onServiceDied(@NonNull XposedService service) {
-                remote = null;
+                synchronized (RemotePrefsMirror.class) {
+                    if (service != bound) return;
+                    bound = null;
+                    remote = null;
+                }
             }
         });
     }

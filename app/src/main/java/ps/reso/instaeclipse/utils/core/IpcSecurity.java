@@ -4,6 +4,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PermissionInfo;
+import android.content.pm.Signature;
 
 import androidx.core.content.ContextCompat;
 
@@ -18,7 +22,8 @@ import java.security.SecureRandom;
  *   <li><b>Companion → Instagram</b>: receivers inside Instagram are registered with
  *   {@link #PERMISSION}, a signature-level permission only the companion APK holds. Other
  *   installed apps can no longer flip settings, overwrite mc_overrides.json or restore
- *   arbitrary backups by broadcasting to Instagram.</li>
+ *   arbitrary backups by broadcasting to Instagram. They are registered only when the
+ *   companion really declares it ({@link #isCompanionPermission}).</li>
  *   <li><b>Instagram → companion</b>: Instagram receives a private, expiring Binder reply capability.
  *   No exported reply receiver or public broadcast carries logs or preferences.</li>
  * </ul>
@@ -36,8 +41,51 @@ public final class IpcSecurity {
     /** Registers a receiver in the hooked app that only accepts broadcasts from the companion. */
     public static void registerCompanionOnlyReceiver(Context context, BroadcastReceiver receiver,
                                                      IntentFilter filter) {
+        if (!isCompanionPermission(context)) {
+            ps.reso.instaeclipse.utils.log.ModuleLog.line(
+                    "(IE|Ipc) companion receiver not registered: " + PERMISSION + " is not the companion's");
+            return;
+        }
         ContextCompat.registerReceiver(context, receiver, filter, PERMISSION, null,
                 ContextCompat.RECEIVER_EXPORTED);
+    }
+
+    /** The module APK's signers, read once: the file doesn't change while the process runs. */
+    private static volatile Signature[] moduleSigners;
+
+    /**
+     * Whether {@link #PERMISSION} is the companion's own: declared at signature level by the
+     * companion package, which is the APK the module was loaded from or carries its signer. The
+     * name alone proves nothing: without the companion (embedded LSPatch, uninstalled) any app
+     * can declare the permission itself and hold it.
+     */
+    public static boolean isCompanionPermission(Context context) {
+        try {
+            PackageManager pm = context.getPackageManager();
+            PermissionInfo permission = pm.getPermissionInfo(PERMISSION, 0);
+            if (!CommonUtils.MY_PACKAGE_NAME.equals(permission.packageName)
+                    || permission.getProtection() != PermissionInfo.PROTECTION_SIGNATURE) return false;
+            String module = ps.reso.instaeclipse.xposedcompat.ModuleResources.apkPath();
+            if (module == null) return false;
+            // LSPosed/Vector and local-mode LSPatch load the module from the installed companion.
+            if (module.equals(pm.getApplicationInfo(CommonUtils.MY_PACKAGE_NAME, 0).sourceDir)) return true;
+            // Embedded module: the installed companion must be signed like the module APK.
+            Signature[] signers = moduleSigners;
+            if (signers == null) {
+                PackageInfo archive = pm.getPackageArchiveInfo(module, PackageManager.GET_SIGNING_CERTIFICATES);
+                if (archive == null || archive.signingInfo == null) return false;
+                signers = archive.signingInfo.getApkContentsSigners();
+                moduleSigners = signers;
+            }
+            if (signers == null || signers.length == 0) return false;
+            for (Signature signer : signers) {
+                if (!pm.hasSigningCertificate(CommonUtils.MY_PACKAGE_NAME, signer.toByteArray(),
+                        PackageManager.CERT_INPUT_RAW_X509)) return false;
+            }
+            return true;
+        } catch (Exception unverified) {
+            return false;
+        }
     }
 
     /** Replies are private expiring Binder capabilities, never exported broadcast receivers. */
