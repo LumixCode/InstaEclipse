@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 💬 Telegram Support Group
-    url: https://t.me/instaEclipse_discussion
-    about: For quick help, questions, and general discussion, join the Telegram group.
-  - name: 📢 Telegram Channel
-    url: https://t.me/InstaEclipse
-    about: Follow for updates and announcements.
+  - name: 📖 README and FAQ
+    url: https://github.com/LumixCode/InstaEclipse#faq
+    about: Setup steps and answers to common problems with this fork.
+  - name: 🔀 Official InstaEclipse
+    url: https://github.com/ReSo7200/InstaEclipse/issues
+    about: Using the official InstaEclipse release, not this fork? Report it to the upstream project instead.

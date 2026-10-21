@@ -1,62 +1,64 @@
 name: Bug Report
-description: Report a bug or broken feature
+description: Report a bug or broken feature in this fork
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        ## Before you continue
-        > **Failure to complete all checkboxes may result in your issue being closed and you being temporarily blocked from opening new issues.**
+        This tracker is for the LumixCode fork of InstaEclipse. If the problem also happens with the official InstaEclipse release, please report it to [the upstream project](https://github.com/ReSo7200/InstaEclipse/issues) instead.
+
+        Please fill in every field. Issues without them may be closed.
 
   - type: checkboxes
     id: preflight
     attributes:
       label: Pre-submission checklist
-      description: You must check every box before submitting.
+      description: Check every box before submitting.
       options:
-        - label: I have searched [existing issues](https://github.com/ReSo7200/InstaEclipse/issues) and this is **not a duplicate**.
+        - label: I am using a build of **this fork**, not the official InstaEclipse release.
+          required: true
+        - label: I have searched [existing issues](https://github.com/LumixCode/InstaEclipse/issues) and this is **not a duplicate**.
           required: true
         - label: I am using Instagram from **APKMirror**, not the Google Play Store.
           required: true
-        - label: I have tried **disabling and re-enabling** the module in Vector/LSPatch and force-stopping Instagram.
+        - label: I have tried **disabling and re-enabling** the module in LSPatch or Vector and force-stopping Instagram.
           required: true
-        - label: I have read the [FAQ](https://github.com/ReSo7200/InstaEclipse#-faq) and my issue is not covered there.
-          required: true
-        - label: I understand that submitting duplicate issues or ignoring this checklist may result in being blocked from the repo.
+        - label: I have read the [FAQ](https://github.com/LumixCode/InstaEclipse#faq) and my issue is not covered there.
           required: true
 
   - type: input
     id: instaeclipse_version
     attributes:
-      label: InstaEclipse Version
-      placeholder: e.g. v0.6.0
+      label: InstaEclipse version and fork commit
+      description: The version shown in the companion app, and the commit you built from if you know it.
+      placeholder: e.g. 0.8.2-debug, built from commit 3ee2c80
     validations:
       required: true
 
   - type: input
     id: instagram_version
     attributes:
-      label: Instagram Version
-      placeholder: e.g. 360.0.0.0.85 (from APKMirror)
+      label: Instagram version
+      placeholder: e.g. 451.0.0.20.80 (from APKMirror)
     validations:
       required: true
 
   - type: dropdown
     id: root_method
     attributes:
-      label: Setup Method
+      label: Setup method
+      description: This fork is built for the new Xposed API (102) only.
       options:
-        - "Root: Vector (JingMatrix)"
-        - "Root: other Xposed framework"
-        - "No Root: LSPatch (JingMatrix fork)"
-        - "No Root: LSPatch (other)"
+        - "No root: LSPatch (JingMatrix) 1.0 or newer"
+        - "Root: Vector (JingMatrix) 2.2 or newer"
+        - "Other (say which in the description)"
     validations:
       required: true
 
   - type: input
     id: device
     attributes:
-      label: Device & Android Version
+      label: Device and Android version
       placeholder: e.g. Pixel 8, Android 15
     validations:
       required: true
@@ -76,7 +78,7 @@ body:
       label: Steps to reproduce
       placeholder: |
         1. Open Instagram
-        2. Long-press search icon
+        2. Long-press the Explore (search) tab
         3. Enable ...
         4. See ...
     validations:
@@ -86,5 +88,5 @@ body:
     id: logs
     attributes:
       label: Logs (if available)
-      description: Paste any relevant Vector or LSPatch logs here.
+      description: Paste the relevant lines from the companion app's Logs screen, or from LSPatch or Vector. Remove usernames, chat names and message text first, since issues are public.
       render: text

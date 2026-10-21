@@ -1,24 +1,23 @@
 name: Feature Request
-description: Suggest a new feature or improvement
+description: Suggest a new feature or improvement for this fork
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        ## Before you continue
-        > **Failure to complete all checkboxes may result in your issue being closed and you being temporarily blocked from opening new issues.**
+        This tracker is for the LumixCode fork of InstaEclipse. Ideas for the official release belong in [the upstream project](https://github.com/ReSo7200/InstaEclipse/issues).
 
   - type: checkboxes
     id: preflight
     attributes:
       label: Pre-submission checklist
-      description: You must check every box before submitting.
+      description: Check every box before submitting.
       options:
-        - label: I have searched [existing issues](https://github.com/ReSo7200/InstaEclipse/issues) and this feature has **not already been requested**.
+        - label: I have searched [existing issues](https://github.com/LumixCode/InstaEclipse/issues) and this feature has **not already been requested**.
+          required: true
+        - label: I have checked the [feature list](https://github.com/LumixCode/InstaEclipse#features) and this fork doesn't have it yet.
           required: true
         - label: This is a feature request for **InstaEclipse**, not a general Instagram feature.
-          required: true
-        - label: I understand that submitting duplicate requests or ignoring this checklist may result in being blocked from the repo.
           required: true
 
   - type: textarea
@@ -34,7 +33,7 @@ body:
     id: motivation
     attributes:
       label: Why is this useful?
-      description: Explain the use case: why would this benefit users?
+      description: Explain the use case. Why would this benefit users?
     validations:
       required: true
 
