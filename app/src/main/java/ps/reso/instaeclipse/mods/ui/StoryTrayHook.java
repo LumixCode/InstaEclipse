@@ -44,6 +44,8 @@ public final class StoryTrayHook {
     private static final Set<View> watched = Collections.newSetFromMap(new WeakHashMap<>());
     private static final android.os.Handler MAIN = new android.os.Handler(android.os.Looper.getMainLooper());
     private static final Set<View> pending = Collections.newSetFromMap(new WeakHashMap<>());
+    /** Tray lists scaled now (they carry ORIGINAL_HEIGHT_TAG); main thread only. */
+    private static final Set<View> scaled = Collections.newSetFromMap(new WeakHashMap<>());
 
     private StoryTrayHook() {}
 
@@ -135,26 +137,30 @@ public final class StoryTrayHook {
             if (trayId == 0) return;
             View decor = a.getWindow() != null ? a.getWindow().getDecorView() : null;
             if (decor == null) return;
-            apply(decor);
+            if (needsWalk()) apply(decor);
             if (!watched.add(decor)) return;
             decor.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
-                if (FeatureFlags.storyTrayScale >= 100 && !anyScaled(decor)) return;
-                if (!pending.add(decor)) return;
-                MAIN.postDelayed(() -> {
-                    pending.remove(decor);
-                    apply(decor);
-                }, 150);
+                try {
+                    if (!needsWalk() || !pending.add(decor)) return;
+                    MAIN.postDelayed(() -> {
+                        pending.remove(decor);
+                        try { apply(decor); } catch (Throwable t) { ModuleLog.line(TAG + "⚠️ " + t); }
+                    }, 150);
+                } catch (Throwable t) {
+                    ModuleLog.line(TAG + "⚠️ " + t);
+                }
             });
         } catch (Throwable t) {
             ModuleLog.line(TAG + "⚠️ " + t);
         }
     }
 
-    private static boolean anyScaled(View decor) {
-        List<View> trays = new ArrayList<>();
-        collect(decor, trays);
-        for (View t : trays) if (t.getTag(ORIGINAL_HEIGHT_TAG) != null) return true;
-        return false;
+    /**
+     * Layout fires many times per second on the feed, so the window is only walked while a size is
+     * set, or to put back a tray scaled before the size went back to 100 (no tree walk to find out).
+     */
+    private static boolean needsWalk() {
+        return FeatureFlags.storyTrayScale < 100 || !scaled.isEmpty();
     }
 
     private static void apply(View decor) {
@@ -185,6 +191,7 @@ public final class StoryTrayHook {
             clp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
             container.setLayoutParams(clp);
             list.setTag(ORIGINAL_HEIGHT_TAG, null);
+            scaled.remove(list);
             return;
         }
         int height = saved instanceof Integer h ? h : list.getHeight();
@@ -196,6 +203,7 @@ public final class StoryTrayHook {
         ViewGroup.LayoutParams clp = container.getLayoutParams();
         if (saved != null && list.getScaleX() == s && lp.width == wantWidth && clp.height == wantHeight) return;
         list.setTag(ORIGINAL_HEIGHT_TAG, height);
+        scaled.add(list);
         list.setPivotX(0f);
         list.setPivotY(0f);
         list.setScaleX(s);
