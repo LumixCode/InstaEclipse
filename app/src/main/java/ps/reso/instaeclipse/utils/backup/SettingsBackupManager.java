@@ -71,6 +71,10 @@ public class SettingsBackupManager {
         s.put("offerMediaInfo",             FeatureFlags.offerMediaInfo);
         s.put("offerPlaybackSpeed",         FeatureFlags.offerPlaybackSpeed);
         s.put("maxUploadQuality",           FeatureFlags.maxUploadQuality);
+        s.put("downloaderUseOriginal",      FeatureFlags.downloaderUseOriginal);
+        s.put("downloaderQualityMaxShortSide", FeatureFlags.downloaderQualityMaxShortSide);
+        s.put("downloaderCompatibility",    FeatureFlags.downloaderCompatibility);
+        s.put("downloaderAllowFallback",    FeatureFlags.downloaderAllowFallback);
         s.put("forceReelScrubber",          FeatureFlags.forceReelScrubber);
         s.put("holdLeftSlowMotion",         FeatureFlags.holdLeftSlowMotion);
         s.put("keepEditHistory",            FeatureFlags.keepEditHistory);
@@ -250,6 +254,10 @@ public class SettingsBackupManager {
         if (s.has("offerMediaInfo"))            FeatureFlags.offerMediaInfo            = s.getBoolean("offerMediaInfo");
         if (s.has("offerPlaybackSpeed"))        FeatureFlags.offerPlaybackSpeed        = s.getBoolean("offerPlaybackSpeed");
         if (s.has("maxUploadQuality"))          FeatureFlags.maxUploadQuality          = s.getBoolean("maxUploadQuality");
+        if (s.has("downloaderUseOriginal"))     FeatureFlags.downloaderUseOriginal     = s.getBoolean("downloaderUseOriginal");
+        if (s.has("downloaderQualityMaxShortSide")) FeatureFlags.downloaderQualityMaxShortSide = Math.max(0, s.getInt("downloaderQualityMaxShortSide"));
+        if (s.has("downloaderCompatibility"))   FeatureFlags.downloaderCompatibility   = s.getBoolean("downloaderCompatibility");
+        if (s.has("downloaderAllowFallback"))   FeatureFlags.downloaderAllowFallback   = s.getBoolean("downloaderAllowFallback");
         if (s.has("forceReelScrubber"))         FeatureFlags.forceReelScrubber         = s.getBoolean("forceReelScrubber");
         if (s.has("holdLeftSlowMotion"))        FeatureFlags.holdLeftSlowMotion        = s.getBoolean("holdLeftSlowMotion");
         if (s.has("keepEditHistory"))           FeatureFlags.keepEditHistory           = s.getBoolean("keepEditHistory");
