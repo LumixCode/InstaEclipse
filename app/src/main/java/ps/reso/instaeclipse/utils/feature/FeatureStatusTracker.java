@@ -5,8 +5,10 @@ import android.content.Context;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import ps.reso.instaeclipse.utils.i18n.I18n;
 
@@ -24,9 +26,25 @@ public class FeatureStatusTracker {
     // the load toast as a red mark instead of the feature silently reading "enabled".
     private static final Set<String> broken = Collections.synchronizedSet(new HashSet<>());
 
+    // Told about every change (on the changing thread), so an open menu can count hooks live.
+    private static final List<Runnable> listeners = new CopyOnWriteArrayList<>();
+
+    public static void addListener(Runnable listener) {
+        listeners.add(listener);
+    }
+
+    public static void removeListener(Runnable listener) {
+        listeners.remove(listener);
+    }
+
+    private static void changed() {
+        for (Runnable listener : listeners) listener.run();
+    }
+
     public static void setEnabled(String name, int labelResId) {
         features.put(name, hooked.contains(name));   // preserve hooked state across re-registration
         labels.put(name, labelResId);
+        changed();
     }
 
     /** Mark an enabled feature as broken (its hook could not be resolved/installed). Registers a
@@ -35,6 +53,7 @@ public class FeatureStatusTracker {
         broken.add(name);
         labels.put(name, labelResId);
         features.put(name, false);
+        changed();
     }
 
     /** Mark broken reusing whatever label was already registered (label comes from FeatureManager).
@@ -43,6 +62,7 @@ public class FeatureStatusTracker {
     public static void setBroken(String name) {
         broken.add(name);
         features.put(name, false);
+        changed();
     }
 
     public static boolean isBroken(String name) {
@@ -52,6 +72,7 @@ public class FeatureStatusTracker {
     public static void setDisabled(String name) {
         features.remove(name);
         labels.remove(name);
+        changed();
     }
 
     public static void setHooked(String name) {
@@ -60,6 +81,7 @@ public class FeatureStatusTracker {
         if (features.containsKey(name)) {
             features.put(name, true);
         }
+        changed();
     }
 
     public static String getLabel(Context ctx, String key) {

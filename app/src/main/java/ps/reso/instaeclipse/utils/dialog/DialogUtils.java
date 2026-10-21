@@ -404,37 +404,73 @@ public class DialogUtils {
         versions.addView(statusChip(context, I18n.t(context, R.string.menu_chip_instagram, hostVersion(context)), C_TEXT2, null));
         box.addView(versions);
 
+        TextView health = statusChip(context, "", C_TEXT2, v -> {
+            java.util.List<String> inactive = new java.util.ArrayList<>();
+            int[] count = featureCount(context, inactive);
+            StringBuilder msg = new StringBuilder();
+            if (inactive.isEmpty()) {
+                msg.append(I18n.t(context, R.string.menu_inactive_all_good));
+            } else {
+                msg.append(I18n.t(context, R.string.menu_inactive_hint)).append("\n");
+                java.util.Collections.sort(inactive);
+                for (String label : inactive) msg.append("\n•  ").append(label);
+            }
+            // Title is the count itself ("55/55 active"); the body says all-good or lists what failed.
+            showSimpleDialog(context, I18n.t(context, R.string.menu_chip_active, count[0], count[1]), msg.toString());
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(context, 6);
+        health.setLayoutParams(lp);
+        renderHealth(context, health);
+        // Hooks keep installing for a few seconds after Instagram starts: count them as they land.
+        boolean[] queued = {false};
+        Runnable onChange = () -> {
+            synchronized (queued) {
+                if (queued[0]) return;
+                queued[0] = true;
+            }
+            health.post(() -> {
+                synchronized (queued) {
+                    queued[0] = false;
+                }
+                renderHealth(context, health);
+            });
+        };
+        health.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+            @Override public void onViewAttachedToWindow(View v) {
+                FeatureStatusTracker.addListener(onChange);
+                renderHealth(context, health);
+            }
+
+            @Override public void onViewDetachedFromWindow(View v) {
+                FeatureStatusTracker.removeListener(onChange);
+            }
+        });
+        box.addView(health);
+        return box;
+    }
+
+    /** The health chip's count and colour now; hidden while no feature is switched on. */
+    private static void renderHealth(Context context, TextView health) {
+        int[] count = featureCount(context, null);
+        health.setVisibility(count[1] > 0 ? View.VISIBLE : View.GONE);
+        health.setText("●  " + I18n.t(context, R.string.menu_chip_active, count[0], count[1]));
+        health.setTextColor(count[0] == count[1] ? 0xFF30D158 : 0xFFFF9F0A);
+    }
+
+    /** {active, total} of the switched-on features; the labels of the inactive ones go to {@code inactive}. */
+    private static int[] featureCount(Context context, java.util.List<String> inactive) {
         java.util.Map<String, Boolean> status = FeatureStatusTracker.getStatus();
-        int total = status.size(), active = 0;
-        java.util.List<String> inactive = new java.util.ArrayList<>();
+        int active = 0, total;
         synchronized (status) {
+            total = status.size();
             for (java.util.Map.Entry<String, Boolean> e : status.entrySet()) {
                 if (Boolean.TRUE.equals(e.getValue())) active++;
-                else inactive.add(FeatureStatusTracker.getLabel(context, e.getKey()));
+                else if (inactive != null) inactive.add(FeatureStatusTracker.getLabel(context, e.getKey()));
             }
         }
-        final int finalActive = active;
-        if (total > 0) {
-            int color = active == total ? 0xFF30D158 : 0xFFFF9F0A;
-            View health = statusChip(context, "●  " + I18n.t(context, R.string.menu_chip_active, active, total), color, v -> {
-                StringBuilder msg = new StringBuilder();
-                if (inactive.isEmpty()) {
-                    msg.append(I18n.t(context, R.string.menu_inactive_all_good));
-                } else {
-                    msg.append(I18n.t(context, R.string.menu_inactive_hint)).append("\n");
-                    java.util.Collections.sort(inactive);
-                    for (String label : inactive) msg.append("\n•  ").append(label);
-                }
-                // Title is the count itself ("55/55 active"); the body says all-good or lists what failed.
-                showSimpleDialog(context, I18n.t(context, R.string.menu_chip_active, finalActive, total), msg.toString());
-            });
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            lp.topMargin = dp(context, 6);
-            health.setLayoutParams(lp);
-            box.addView(health);
-        }
-        return box;
+        return new int[]{active, total};
     }
 
     private static TextView statusChip(Context context, String text, int textColor, View.OnClickListener onClick) {
