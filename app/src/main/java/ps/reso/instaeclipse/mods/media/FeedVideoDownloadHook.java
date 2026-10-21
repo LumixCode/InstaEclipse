@@ -744,7 +744,7 @@ public class FeedVideoDownloadHook {
         if (!out.contains(url)) out.add(url);
     }
 
-    /** Returns the best video URL from the media object: prefers m86 (combined stream). */
+    /** Returns the best video URL from the media object: the tallest version, m86 (combined stream) on a tie. */
     static String bestVideoUrlFromMedia(Object media) {
         List<String> all = new ArrayList<>();
         collectVideoUrlsFromDictionary(media, all);
@@ -757,25 +757,34 @@ public class FeedVideoDownloadHook {
             Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
             collectAllVideoUrls(media, all, visited, 0);
         }
-        if (all.isEmpty()) return null;
-        // the tallest version (IG's list order and its m86 stream aren't always the best quality);
-        // m86 (combined stream) wins a tie, then the first found
-        String best = null;
-        int bestH = -1;
-        for (String u : all) {
-            Integer h = VIDEO_HEIGHT.get(u);
-            int hh = h != null ? h : -1;
-            boolean m86 = u.contains("/m86/") || u.contains("%2Fm86%2F");
-            if (best == null || hh > bestH || (hh == bestH && m86
-                    && !(best.contains("/m86/") || best.contains("%2Fm86%2F")))) {
-                best = u;
-                bestH = hh;
+        return pickVideoUrl(media, all);
+    }
+
+    /**
+     * A carousel slide's own video, read through the trusted video_versions getter on the slide
+     * itself. No graph walk: from a photo slide it reaches the post's music clip (or a sibling's
+     * video) through back-references, so "Download all" saved that one MP4 once per slide.
+     */
+    private static String ownVideoUrl(Object slide) {
+        List<String> found = new ArrayList<>();
+        for (Method getter : resolvedVideoVersionsGetters) {
+            if (getter.getDeclaringClass().isInstance(slide)) {
+                collectUrlsFromVideoVersionsMethod(slide, getter, found, true);
             }
         }
-        if (bestH <= 0) {
-            for (String u : all) { if (u.contains("/m86/") || u.contains("%2Fm86%2F")) return u; }
-            return all.get(0); // fallback: first found
-        }
+        return pickVideoUrl(slide, found);
+    }
+
+    /**
+     * The version of {@code media} to download out of its URLs {@code all}: the tallest, m86 on a
+     * tie (VideoUrlRanking). Records a taller DASH stream of the same media in DASH_UPGRADE.
+     */
+    private static String pickVideoUrl(Object media, List<String> all) {
+        VideoUrlRanking.Pick pick = VideoUrlRanking.pick(all, VIDEO_HEIGHT);
+        if (pick == null) return null;
+        if (pick.height <= 0) return pick.url;
+        String best = pick.url;
+        int bestH = pick.height;
         // The player streams DASH; its tallest stream is often above every progressive file
         // (e.g. 1080p DASH vs a 720p video_versions MP4). Remember it so the download fetches
         // that stream + the audio and merges them, keeping the progressive file as the fallback.
@@ -2643,7 +2652,10 @@ public class FeedVideoDownloadHook {
             List<String> urls = new ArrayList<>();
             for (Object child : items) {
                 if (child == null) continue;
-                String v = bestVideoUrlFromMedia(child);
+                String v = ownVideoUrl(child);
+                // Only when the slide's own getter can't be called on it (other model shapes) fall back to the
+                // general lookup; for a direct owner an empty result means "photo slide", never a graph walk.
+                if (v == null && !isDirectVideoVersionsOwner(child)) v = bestVideoUrlFromMedia(child);
                 if (v != null) { urls.add(v); continue; }
                 String img = imageUrlFromMedia(ctx, child);
                 if (img != null) { urls.add(img); continue; }
