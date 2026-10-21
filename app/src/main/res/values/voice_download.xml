@@ -1,0 +1,4 @@
+<!-- New optional features use English until localized resources are available. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="ig_voice_download_unavailable">Audio is unavailable. Play the message, then try again.</string>
+</resources>

@@ -2,6 +2,7 @@ package ps.reso.instaeclipse.mods.media;
 
 import android.app.Activity;
 import android.content.Context;
+import android.widget.Toast;
 
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
@@ -17,7 +18,9 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -26,19 +29,27 @@ import java.util.Set;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.toast.IeToast;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 
 /**
  * Download voice messages from the DM long-press menu (#223).
  *
  * - The menu is built by the static factory of the named class MessageActionsViewModel; its
- *   main action list is a List<LongPressActionData> argument. We append a row built like IG's own
+ *   main action list is a List<LongPressActionData> argument. We add a row built like IG's own
  *   helper (new LongPressActionData(null, style, action, null, null, icon, null, label, ...)),
- *   carried by the action enum value named SAVE_MEDIA (not used in the DM long-press list).
+ *   carried by the action enum value named COPY_TEXT (never offered on voice messages). The row
+ *   goes right after the status header: IG moves every row past its 3/7-row cutoff under "More".
+ * - The clip is read only from the selected message's own voice payload (the class parsed with
+ *   "waveform_data"), never from a quoted/replied-to message. Without that anchor the graph walk
+ *   below is the fallback.
+ * - Stickers and GIFs (enableStickerDownload) use the same row; their URL is read when the menu
+ *   is built (never on a text, link or voice message) and the tap downloads exactly that URL.
  * - The long-pressed message comes from the message lookup in the class using
  *   ": null_direct_message" (X.0BVY on 452); we keep the last one returned.
  * - Taps of every DM menu renderer end in the dispatcher using
@@ -76,9 +87,21 @@ public class VoiceMessageDownloadHook {
     private static Class<?> audioInfoClass;
     private static Method audioMapper;
     private static Object saveMediaAction;
+    private static final String VOICE_CACHE = "VoiceDL_VoiceMedia";
+    private static volatile Class<?> voiceType;      // the voice payload (X.03jC on 446)
+    private static volatile Field voiceMediaField;   // its Media field (X.03jC.A02 on 446)
+    // The message our Download row was added for in the menu being shown; reset on every menu
+    // build, so IG's own Copy on a later text message is never taken for a voice download.
+    private static volatile Object pendingVoice;
+    private static volatile Field primaryActionField; // LongPressActionData's own action (ctor param 3)
+    private static final Set<String> diagnostics = Collections.synchronizedSet(new HashSet<>());
     private static Class<?> animatedMediaClass, gifUrlClass, storeStickerClass, typedImageUrlClass, imageUrlClass;
     /** Instagram's user caches (one per signed-in account), kept from their constructor. */
     private static final List<java.lang.ref.WeakReference<Object>> userCaches = new java.util.concurrent.CopyOnWriteArrayList<>();
+    // The sticker / GIF our Download row was added for, and its message; reset with pendingVoice on
+    // every menu build, so a later tap never re-walks recentMessage() (it can be a text reply).
+    private static volatile String pendingSticker;
+    private static volatile Object pendingStickerMessage;
 
     public void install(DexKitBridge bridge, ClassLoader cl) {
         try {
@@ -106,6 +129,7 @@ public class VoiceMessageDownloadHook {
                 if (Modifier.isStatic(m.getModifiers()) && m.getParameterCount() == 1
                         && m.getParameterTypes()[0] == audioInfoClass) { audioMapper = m; break; }
             }
+            resolveVoiceModel(bridge, cl);
 
             // message lookup → remember the long-pressed message
             int lookups = 0;
@@ -148,21 +172,30 @@ public class VoiceMessageDownloadHook {
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                        clearPending(); // the pending targets belong to the menu being built
                         if ((!downloadEnabled() && !FeatureFlags.translateMessages && !FeatureFlags.bulkUnsend) || ctor == null) return;
                         Object msg = recentMessage();
-                        String url = msg != null ? downloadUrl(msg) : null;
+                        // The factory gets the message's content type (VOICE_MEDIA / TEXT / LINK);
+                        // unlike a field scan it can't mistake a text reply to a voice note for voice.
+                        String type = contentType(param.args);
+                        boolean voice = FeatureFlags.enableVoiceDownload && msg != null
+                                && (type == null || "VOICE_MEDIA".equals(type)) && hasOwnVoice(msg);
+                        // Stickers and GIFs: never on a text, link or voice message, whose reply
+                        // preview can hold the quoted sticker.
+                        String sticker = FeatureFlags.enableStickerDownload && !voice && msg != null
+                                && !"TEXT".equals(type) && !"LINK".equals(type) && !"VOICE_MEDIA".equals(type)
+                                ? stickerUrl(msg) : null;
                         // Translate (like comments): hand a text message to the user's translator app.
-                        String text = FeatureFlags.translateMessages && url == null && msg != null ? messageText(msg) : null;
-                        ModuleLog.line(TAG + "menu: message=" + (msg != null) + " voice=" + (url != null) + " text=" + (text != null));
+                        String text = FeatureFlags.translateMessages && !voice && sticker == null && msg != null
+                                && (type == null || "TEXT".equals(type) || "LINK".equals(type)) ? messageText(msg) : null;
+                        diagnose("menu-" + (voice ? "voice" : sticker != null ? "sticker" : text != null ? "text" : "none"),
+                                "message=" + (msg != null) + " type=" + type);
                         for (int i = 0; i < param.args.length; i++) {
                             if (!(param.args[i] instanceof List<?> list) || list.isEmpty() || !data.isInstance(list.get(0))) continue;
                             // Bulk unsend: only on messages IG itself lets you unsend (your own).
                             boolean bulk = FeatureFlags.bulkUnsend && ps.reso.instaeclipse.mods.ghost.BulkUnsend.ready()
                                     && hasRow(list, "UNSEND");
-                            if (url == null && text == null && !bulk) {
-                                if (msg != null && downloadEnabled()) dumpTypes(msg);
-                                return;
-                            }
+                            if (!voice && sticker == null && text == null && !bulk) return;
                             // style template: a regular action row (the first item is the
                             // non-clickable timestamp header)
                             Object template = list.get(0);
@@ -172,18 +205,28 @@ public class VoiceMessageDownloadHook {
                             }
                             Context c = param.args[0] instanceof Context cc ? cc : null;
                             List<Object> copy = new ArrayList<>(list);
-                            if (url != null || text != null) {
-                                Object row = url != null
-                                        ? buildRow(ctor, template, c, downloadLabel(), "instagram_download_outline_24", CARRIER)
-                                        : buildRow(ctor, template, c, translateLabel(), "instagram_translate_pano_outline_24", TRANSLATE_CARRIER);
+                            if (voice || sticker != null) {
+                                String label = downloadLabel();
+                                Object row = buildRow(ctor, template, c, label, "instagram_download_outline_24", CARRIER);
+                                if (row != null) {
+                                    copy = VoiceMessageMenuPolicy.withVisibleDownload(copy, row,
+                                            a -> isOurRow(a, label, CARRIER),
+                                            a -> "MESSAGE_STATUS_TEXT".equals(actionName(a)));
+                                    if (voice) {
+                                        pendingVoice = msg;
+                                        wireRowWhenShown(label, act -> { downloadVoice(act, msg); pendingVoice = null; });
+                                    } else {
+                                        pendingSticker = sticker;
+                                        pendingStickerMessage = msg;
+                                        wireRowWhenShown(label, act -> { downloadStickerOnce(act, sticker, msg); clearPending(); });
+                                    }
+                                }
+                            } else if (text != null) {
+                                Object row = buildRow(ctor, template, c, translateLabel(), "instagram_translate_pano_outline_24", TRANSLATE_CARRIER);
                                 if (row != null) {
                                     copy.add(row);
-                                    if (url != null) {
-                                        wireRowWhenShown(downloadLabel(), act -> startDownload(act, url));
-                                    } else {
-                                        pendingText = text;
-                                        wireRowWhenShown(translateLabel(), act -> translate(act));
-                                    }
+                                    pendingText = text;
+                                    wireRowWhenShown(translateLabel(), act -> translate(act));
                                 }
                             }
                             if (bulk) {
@@ -197,7 +240,7 @@ public class VoiceMessageDownloadHook {
                                     wireRowWhenShown(bulkLabel(), act -> bulkUnsend(act));
                                 }
                             }
-                            if (copy.size() > list.size()) param.args[i] = copy;
+                            if (!copy.equals(list)) param.args[i] = copy; // rows added, or ours moved up
                             return;
                         }
                     }
@@ -252,11 +295,18 @@ public class VoiceMessageDownloadHook {
                             else if (a instanceof Activity act) ctx = act;
                         }
                         if (action == null) return;
-                        if (msg == null) msg = recentMessage();
-                        String url = msg != null ? downloadUrl(msg) : null;
-                        if (url == null) return;
+                        // Only a tap on our row in this menu; IG's own Copy keeps working.
+                        if (isPendingSticker(msg)) {
+                            param.setResult(null);
+                            downloadPending(ctx);
+                            clearPending();
+                            return;
+                        }
+                        if (msg == null) msg = pendingVoice;
+                        if (pendingVoice == null || !hasOwnVoice(msg)) return;
                         param.setResult(null);
-                        startDownload(ctx, url);
+                        downloadVoice(ctx, msg);
+                        pendingVoice = null;
                     }
                 });
                 dispatchers++;
@@ -285,12 +335,10 @@ public class VoiceMessageDownloadHook {
                             translate(null);
                             return;
                         }
-                        if (!downloadEnabled() || !isSaveMedia(row)) return;
-                        Object msg = recentMessage();
-                        String url = msg != null ? downloadUrl(msg) : null;
-                        ModuleLog.line(TAG + "row tap: voice=" + (url != null));
-                        if (url == null) return;
-                        startDownload(null, url);
+                        if (!downloadEnabled() || !isOurRow(row, downloadLabel(), CARRIER)) return;
+                        ModuleLog.line(TAG + "row tap: " + (pendingSticker != null ? "sticker" : "voice"));
+                        // Not consumed: the action-selected listener that runs next consumes it.
+                        downloadPending(null);
                     }
                 });
                 dispatchers++;
@@ -319,12 +367,24 @@ public class VoiceMessageDownloadHook {
                             }
                             if (!downloadEnabled()) return;
                             if (!(param.args[0] instanceof Enum<?> e) || !CARRIER.equals(e.name())) return;
-                            Object msg = recentMessage();
-                            String url = msg != null ? downloadUrl(msg) : null;
-                            ModuleLog.line(TAG + "action selected via " + param.method.getDeclaringClass().getName() + ": voice=" + (url != null));
-                            if (url == null) return;
+                            // The listener holds the selected message itself (X.0OJy.A0h on 446); this
+                            // runs before the dispatcher for every DM action, IG's own Copy included.
+                            Object msg = messageClass != null
+                                    ? VoiceMessageTargetResolver.readTypedField(param.thisObject, messageClass) : null;
+                            if (isPendingSticker(msg)) {
+                                ModuleLog.line(TAG + "action selected via " + param.method.getDeclaringClass().getName() + ": sticker");
+                                param.setResult(null);
+                                downloadPending(null);
+                                clearPending();
+                                return;
+                            }
+                            if (msg == null) msg = pendingVoice;
+                            boolean voice = pendingVoice != null && hasOwnVoice(msg);
+                            ModuleLog.line(TAG + "action selected via " + param.method.getDeclaringClass().getName() + ": voice=" + voice);
+                            if (!voice) return;
                             param.setResult(null);
-                            startDownload(null, url);
+                            downloadVoice(null, msg);
+                            pendingVoice = null;
                         }
                     });
                     dispatchers++;
@@ -345,7 +405,11 @@ public class VoiceMessageDownloadHook {
                         ctor.setAccessible(true);
                         Object probe = ctor.newInstance(null, style, act, null, null, null, null, "ie", null, null, null);
                         f.setAccessible(true);
-                        if ("ie".equals(f.get(probe))) { labelField = f; break; }
+                        if ("ie".equals(f.get(probe))) {
+                            labelField = f;
+                            primaryActionField = findPrimaryActionField(data, cp[2], probe, act);
+                            break;
+                        }
                     }
                 }
                 if (labelField != null) {
@@ -384,14 +448,11 @@ public class VoiceMessageDownloadHook {
                                         }
                                         if (method.getName().equals("invoke") && margs != null && margs.length == 1
                                                 && data.isInstance(margs[0]) && isOurRow(margs[0], downloadLabel(), CARRIER)) {
-                                            Object msg = recentMessage();
-                                            String url = msg != null ? downloadUrl(msg) : null;
-                                            ModuleLog.line(TAG + "compose row tap: voice=" + (url != null));
-                                            if (url != null) {
-                                                startDownload(null, url);
-                                                dismissMenu();
-                                                return null;
-                                            }
+                                            ModuleLog.line(TAG + "compose row tap: " + (pendingSticker != null ? "sticker" : "voice"));
+                                            downloadPending(null);
+                                            clearPending();
+                                            dismissMenu();
+                                            return null;
                                         }
                                         if (method.getDeclaringClass() == Object.class) {
                                             if (method.getName().equals("equals")) return proxy == margs[0];
@@ -409,19 +470,119 @@ public class VoiceMessageDownloadHook {
             } catch (Throwable t) {
                 ModuleLog.line(TAG + "⚠️ compose rows: " + t + " / " + t.getCause());
             }
-            ModuleLog.line(TAG + "compose row hooks=" + composeRows + " (label field " + (composeRows >= 0 ? "ok" : "") + ")");
+            ModuleLog.line(TAG + "compose row hooks=" + composeRows + " (label field " + (labelFieldRef != null ? "ok" : "missing")
+                    + ", primary action " + (primaryActionField != null ? "ok" : "missing") + ")");
             ModuleLog.line(TAG + "✅ lookups=" + lookups + " factories=" + factories + " dispatchers=" + dispatchers
-                    + " mapper=" + (audioMapper != null) + " message=" + (messageClass != null ? messageClass.getName() : "?"));
+                    + " mapper=" + (audioMapper != null) + " message=" + (messageClass != null ? messageClass.getName() : "?")
+                    + " mode=" + (voiceType != null ? "precise" : "graph-walk fallback"));
             if (factories > 0 && dispatchers > 0) {
                 FeatureStatusTracker.setHooked("VoiceDownload");
                 if (animatedMediaClass != null && gifUrlClass != null) FeatureStatusTracker.setHooked("StickerDownload");
+                else if (FeatureFlags.enableStickerDownload) FeatureStatusTracker.setBroken("StickerDownload");
                 FeatureStatusTracker.setHooked("DmMediaDownload");
+            } else {
+                if (FeatureFlags.enableVoiceDownload) FeatureStatusTracker.setBroken("VoiceDownload");
+                if (FeatureFlags.enableStickerDownload) FeatureStatusTracker.setBroken("StickerDownload");
+                if (FeatureFlags.enableDmMediaDownload) FeatureStatusTracker.setBroken("DmMediaDownload");
             }
             if (factories > 0 && labelFieldRef != null) FeatureStatusTracker.setHooked("ChatTranslate");
             ps.reso.instaeclipse.mods.ghost.BulkUnsend.install(bridge, cl, messageClass);
         } catch (Throwable t) {
             ModuleLog.line(TAG + "❌ " + t);
+            if (FeatureFlags.enableVoiceDownload) FeatureStatusTracker.setBroken("VoiceDownload");
+            if (FeatureFlags.enableStickerDownload) FeatureStatusTracker.setBroken("StickerDownload");
+            if (FeatureFlags.enableDmMediaDownload) FeatureStatusTracker.setBroken("DmMediaDownload");
+            if (FeatureFlags.translateMessages) FeatureStatusTracker.setBroken("ChatTranslate");
         }
+    }
+
+    /**
+     * The voice payload class and its Media field, from the payload's JSON parser. Optional: when
+     * it can't be resolved uniquely, audioUrl() falls back to the graph walk.
+     */
+    private static void resolveVoiceModel(DexKitBridge bridge, ClassLoader cl) {
+        try {
+            String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(VOICE_CACHE) : null;
+            if ("missing".equals(cached)) return;
+            Field media = null;
+            if (cached != null) {
+                int hash = cached.indexOf('#');
+                media = cl.loadClass(cached.substring(0, hash)).getDeclaredField(cached.substring(hash + 1));
+            } else {
+                List<MethodData> parsers = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+                        .name("unsafeParseFromJson").usingStrings("url_expire_at_secs", "waveform_data",
+                                "current_playback_position_ms", "duration_ms")));
+                Set<Field> mediaFields = new LinkedHashSet<>();
+                if (parsers.size() == 1) {
+                    for (var used : parsers.get(0).getUsingFields()) {
+                        if (MEDIA.equals(used.getField().getTypeName())) {
+                            mediaFields.add(used.getField().getFieldInstance(cl));
+                        }
+                    }
+                }
+                if (mediaFields.size() == 1) media = mediaFields.iterator().next();
+                DexKitCache.saveString(VOICE_CACHE, media != null
+                        ? media.getDeclaringClass().getName() + "#" + media.getName() : "missing");
+            }
+            if (media == null) return;
+            media.setAccessible(true);
+            voiceMediaField = media;
+            voiceType = media.getDeclaringClass();
+        } catch (Throwable t) {
+            ModuleLog.line(TAG + "⚠️ voice payload: " + t);
+        }
+    }
+
+    /** The field of LongPressActionData set from its own action (ctor param 3), not a secondary one. */
+    private static Field findPrimaryActionField(Class<?> data, Class<?> actionType, Object probe, Object action) {
+        Field primary = null;
+        for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(data)) {
+            if (Modifier.isStatic(f.getModifiers()) || f.getType() != actionType) continue;
+            try {
+                f.setAccessible(true);
+                if (f.get(probe) != action) continue;
+            } catch (Throwable t) {
+                continue;
+            }
+            if (primary != null) return null; // ambiguous: keep the any-field fallback
+            primary = f;
+        }
+        return primary;
+    }
+
+    /** Name of the factory's message content-type argument (X.00xJ on 446), or null if absent. */
+    private static String contentType(Object[] args) {
+        for (Object a : args) {
+            if (!(a instanceof Enum<?> e)) continue;
+            for (Object c : e.getDeclaringClass().getEnumConstants()) {
+                if ("VOICE_MEDIA".equals(((Enum<?>) c).name())) return e.name();
+            }
+        }
+        return null;
+    }
+
+    /** The selected message's own voice Media (never a quoted message's), or null. */
+    static Object ownVoiceMedia(Object msg) {
+        Field media = voiceMediaField;
+        Class<?> type = voiceType, message = messageClass;
+        if (media == null || type == null || message == null || msg == null) return null;
+        Object payload = VoiceMessageTargetResolver.find(msg, message, type);
+        if (payload == null) return null;
+        try {
+            return media.get(payload);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** Whether the message is itself a voice message (its URL is resolved only at tap time). */
+    private static boolean hasOwnVoice(Object msg) {
+        if (msg == null) return false;
+        return voiceType != null ? ownVoiceMedia(msg) != null : audioUrl(msg) != null;
+    }
+
+    private static void diagnose(String reason, String detail) {
+        if (diagnostics.add(reason)) ModuleLog.line(TAG + reason + ": " + detail);
     }
 
     /**
@@ -713,20 +874,68 @@ public class VoiceMessageDownloadHook {
 
     private static volatile long lastDownloadAt;
 
-    private static void startDownload(Context ctx, String url) {
-        if (System.currentTimeMillis() - lastDownloadAt < 1500) return; // both tap paths fired
+    /** Downloads the voice clip of {@code msg} (fallback: the message our row was added for). */
+    private static void downloadVoice(Context ctx, Object msg) {
+        if (System.currentTimeMillis() - lastDownloadAt < 1500) return; // several tap paths fire
         lastDownloadAt = System.currentTimeMillis();
         if (ctx == null) ctx = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
         if (ctx == null) return;
-        if (url.equals(lastStickerUrl)) {
-            downloadSticker(ctx, url);
+        if (msg == null) msg = pendingVoice != null ? pendingVoice : recentMessage();
+        String url = msg != null ? audioUrl(msg) : null;
+        if (url == null) {
+            final Context c = ctx;
+            FeedVideoDownloadHook.mainHandler.post(() -> IeToast.makeText(c,
+                    I18n.t(c, R.string.ig_voice_download_unavailable), Toast.LENGTH_SHORT).show());
             return;
         }
-        voiceMediaId = null;
-        String user = voiceUsername(recentMessage());
-        String id = voiceMediaId != null ? voiceMediaId : String.valueOf(System.currentTimeMillis());
+        // Name the file after the clip's own Media (sender + media id), not a graph walk.
+        Object media = ownVoiceMedia(msg);
+        String user = media != null ? FeedVideoDownloadHook.extractUsernameFromMediaObject(media) : null;
+        String id = null;
+        try {
+            Object mid = media != null ? media.getClass().getMethod("getId").invoke(media) : null;
+            if (mid instanceof String sid && !sid.isEmpty()) id = sid.split("_")[0];
+        } catch (Throwable ignored) {}
+        if (user == null || user.isEmpty() || id == null) {
+            voiceMediaId = null;
+            String walked = voiceUsername(msg);
+            if (user == null || user.isEmpty()) user = walked;
+            if (id == null) id = voiceMediaId;
+        }
+        if (id == null) id = String.valueOf(System.currentTimeMillis());
         String name = FeedVideoDownloadHook.buildFilename(user, "voice", id, true).replace(".mp4", ".m4a");
         FeedVideoDownloadHook.downloadAudio(ctx, url, name, user);
+    }
+
+    /** Downloads the sticker / GIF {@code url} of {@code message} (several tap paths fire). */
+    private static void downloadStickerOnce(Context ctx, String url, Object message) {
+        if (url == null || System.currentTimeMillis() - lastDownloadAt < 1500) return;
+        lastDownloadAt = System.currentTimeMillis();
+        if (ctx == null) ctx = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
+        if (ctx == null) return;
+        downloadSticker(ctx, url, message);
+    }
+
+    /** A tap on our Download row: the sticker / GIF or the voice clip the row was added for. */
+    private static void downloadPending(Context ctx) {
+        String sticker = pendingSticker;
+        if (sticker != null) downloadStickerOnce(ctx, sticker, pendingStickerMessage);
+        else if (FeatureFlags.enableVoiceDownload) downloadVoice(ctx, pendingVoice);
+    }
+
+    /**
+     * Whether a tap is for the sticker / GIF our row was added for: the tap's own message (null on
+     * paths that carry none) must be that message, or hold that same sticker.
+     */
+    private static boolean isPendingSticker(Object msg) {
+        String url = pendingSticker;
+        return url != null && (msg == null || msg == pendingStickerMessage || url.equals(stickerUrl(msg)));
+    }
+
+    private static void clearPending() {
+        pendingVoice = null;
+        pendingSticker = null;
+        pendingStickerMessage = null;
     }
 
     private static final java.util.regex.Pattern URL_SIZE = java.util.regex.Pattern.compile("[-.]w(\\d{2,5})h(\\d{2,5})");
@@ -807,6 +1016,14 @@ public class VoiceMessageDownloadHook {
     }
 
     private static String actionName(Object row) {
+        Field primary = primaryActionField;
+        if (primary != null) {
+            try {
+                return primary.get(row) instanceof Enum<?> e ? e.name() : null;
+            } catch (Throwable ignored) {
+                return null;
+            }
+        }
         try {
             Field f = ps.reso.instaeclipse.utils.core.SafeReflect.fields(row.getClass())[0];
             for (Field g : ps.reso.instaeclipse.utils.core.SafeReflect.fields(row.getClass())) {
@@ -821,37 +1038,6 @@ public class VoiceMessageDownloadHook {
             }
         } catch (Throwable ignored) {}
         return null;
-    }
-
-    private static boolean isSaveMedia(Object row) {
-        for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(row.getClass())) {
-            if (Modifier.isStatic(f.getModifiers()) || !f.getType().isEnum()) continue;
-            try {
-                f.setAccessible(true);
-                Object v = f.get(row);
-                if (v instanceof Enum<?> e && CARRIER.equals(e.name())) return true;
-            } catch (Throwable ignored) {}
-        }
-        return false;
-    }
-
-    /** DEBUG: types reachable from a message, to find where the voice clip lives. */
-    private static void dumpTypes(Object msg) {
-        try {
-            StringBuilder sb = new StringBuilder();
-            for (Class<?> k = msg.getClass(); k != null && k != Object.class; k = k.getSuperclass()) {
-                for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
-                    if (Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive()) continue;
-                    f.setAccessible(true);
-                    Object v = f.get(msg);
-                    if (v == null || v instanceof String || v instanceof Number || v instanceof Boolean) continue;
-                    sb.append(f.getName()).append('=').append(v.getClass().getName()).append(' ');
-                }
-            }
-            ModuleLog.line(TAG + "message fields: " + sb);
-        } catch (Throwable t) {
-            ModuleLog.line(TAG + "dump: " + t);
-        }
     }
 
     private static boolean hasAction(Object[] args, String name) {
@@ -898,18 +1084,6 @@ public class VoiceMessageDownloadHook {
     private static boolean downloadEnabled() {
         return FeatureFlags.enableVoiceDownload || FeatureFlags.enableStickerDownload;
     }
-
-    /** What the Download row saves: the voice clip, or the sticker / GIF; null when neither. */
-    private static String downloadUrl(Object message) {
-        String url = FeatureFlags.enableVoiceDownload ? audioUrl(message) : null;
-        if (url == null && FeatureFlags.enableStickerDownload) {
-            url = stickerUrl(message);
-            if (url != null) lastStickerUrl = url;
-        }
-        return url;
-    }
-
-    private static volatile String lastStickerUrl;
 
     /**
      * The image of a sticker or GIF message, found by named classes:
@@ -997,8 +1171,8 @@ public class VoiceMessageDownloadHook {
     }
 
     /** Saves a sticker / GIF like DM media: username in the name and the username subfolder. */
-    private static void downloadSticker(Context ctx, String url) {
-        String user = voiceUsername(recentMessage());
+    private static void downloadSticker(Context ctx, String url, Object message) {
+        String user = voiceUsername(message);
         String id = String.valueOf(System.currentTimeMillis());
         // a .jpg name for a GIF is corrected to .gif once the file's signature is read
         String name = FeedVideoDownloadHook.buildFilename(user, "sticker", id, false);
@@ -1019,6 +1193,8 @@ public class VoiceMessageDownloadHook {
     /** audio_src of the message's voice clip, or null when it isn't a voice message. */
     static String audioUrl(Object message) {
         if (audioMapper == null || audioInfoClass == null) return null;
+        if (voiceType != null) return audioUrlOfMedia(ownVoiceMedia(message));
+        // Fallback (voice payload anchor missing): this walk can also reach a quoted message.
         try {
             Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
             ArrayDeque<Object[]> q = new ArrayDeque<>();
@@ -1051,6 +1227,25 @@ public class VoiceMessageDownloadHook {
                         try { f.setAccessible(true); q.add(new Object[]{f.get(o), d + 1}); } catch (Throwable ignored) {}
                     }
                 }
+            }
+        } catch (Throwable t) {
+            ModuleLog.line(TAG + "⚠️ audio url: " + t);
+        }
+        return null;
+    }
+
+    /** audio_src through the Media's AudioInfoIntf getter (Media.A0b on 446). */
+    private static String audioUrlOfMedia(Object media) {
+        if (media == null) return null;
+        try {
+            for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.publicMethods(media.getClass())) {
+                if (m.getParameterCount() != 0 || m.getReturnType() != audioInfoClass) continue;
+                Object info;
+                try { info = m.invoke(media); } catch (Throwable ignored) { continue; }
+                if (info == null) continue;
+                Object map = audioMapper.invoke(null, info);
+                Object src = map instanceof Map<?, ?> mp ? mp.get("audio_src") : null;
+                if (src instanceof String s && s.startsWith("http")) return s;
             }
         } catch (Throwable t) {
             ModuleLog.line(TAG + "⚠️ audio url: " + t);
