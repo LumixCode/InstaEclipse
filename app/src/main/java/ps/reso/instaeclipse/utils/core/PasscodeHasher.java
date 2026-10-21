@@ -29,7 +29,8 @@ public final class PasscodeHasher {
     }
 
     public static boolean verify(String passcode, String salt, String stored) {
-        if (passcode == null || stored == null || stored.isEmpty()) return false;
+        // Android's BouncyCastle PBKDF2 throws on an empty password; no stored hash is ever of "".
+        if (passcode == null || passcode.isEmpty() || stored == null || stored.isEmpty()) return false;
         String s = salt == null ? "" : salt;
         String candidate;
         if (stored.startsWith(PREFIX)) {

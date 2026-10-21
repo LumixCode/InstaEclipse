@@ -39,6 +39,8 @@ public class PasscodeHasherTest {
         assertFalse(PasscodeHasher.verify("1", "s", null));
         assertFalse(PasscodeHasher.verify("1", "s", ""));
         assertFalse(PasscodeHasher.verify(null, "s", PasscodeHasher.hash("1", "s")));
+        assertFalse(PasscodeHasher.verify("", "s", PasscodeHasher.hash("1234", "s")));
+        assertFalse(PasscodeHasher.verify("", "s", PasscodeHasher.sha256Hex("s")));
         assertFalse(PasscodeHasher.verify("1", "s", "pbkdf2$x$abc"));
         assertFalse(PasscodeHasher.verify("1", "s", "pbkdf2$0$abc"));
         assertFalse(PasscodeHasher.needsUpgrade(""));
