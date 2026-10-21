@@ -385,8 +385,6 @@
     <string name="ig_dialog_misc_viewer_search">Cari Penonton Story Anda</string>
     <string name="ig_viewer_search_hint">Cari penonton</string>
     <string name="ig_dialog_misc_like_undo">Jendela Urungkan untuk Suka (4 dtk)</string>
-    <string name="ig_like_undo_bar">❤ Disukai · URUNGKAN</string>
-    <string name="ig_like_undo_cancelled">Suka dibatalkan — muat ulang untuk memperbarui ikon hati</string>
     <string name="ig_dialog_misc_exact_timestamps">Tampilkan Tanggal Pasti, Bukan \"2 jam lalu\"</string>
     <string name="ig_timestamp_format">Format tanggal</string>
     <string name="ig_timestamp_format_default">Bawaan perangkat</string>

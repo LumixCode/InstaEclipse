@@ -386,8 +386,6 @@
     <string name="ig_dialog_misc_viewer_search">Αναζήτηση στους Θεατές του Story σας</string>
     <string name="ig_viewer_search_hint">Αναζήτηση θεατών</string>
     <string name="ig_dialog_misc_like_undo">Παράθυρο Αναίρεσης για Likes (4 δ)</string>
-    <string name="ig_like_undo_bar">❤ Σας αρέσει · ΑΝΑΙΡΕΣΗ</string>
-    <string name="ig_like_undo_cancelled">Το like ακυρώθηκε — ανανεώστε για να ενημερωθεί η καρδιά</string>
     <string name="ig_dialog_misc_exact_timestamps">Εμφάνιση Ακριβών Ημερομηνιών αντί για «πριν από 2 ώρες»</string>
     <string name="ig_timestamp_format">Μορφή ημερομηνίας</string>
     <string name="ig_timestamp_format_default">Προεπιλογή συσκευής</string>

@@ -349,8 +349,6 @@
     <string name="ig_dialog_misc_viewer_search">Hekayə Baxanlarınızda Axtar</string>
     <string name="ig_viewer_search_hint">Baxanlarda axtar</string>
     <string name="ig_dialog_misc_like_undo">Bəyənmələr üçün Geri Alma Pəncərəsi (4 san)</string>
-    <string name="ig_like_undo_bar">❤ Bəyənildi · GERİ AL</string>
-    <string name="ig_like_undo_cancelled">Bəyənmə ləğv edildi — ürəyi yeniləmək üçün səhifəni yeniləyin</string>
     <string name="ig_dialog_misc_exact_timestamps">\"2 saat əvvəl\" Əvəzinə Dəqiq Tarixləri Göstər</string>
     <string name="ig_timestamp_format">Tarix formatı</string>
     <string name="ig_timestamp_format_default">Cihaz standartı</string>

@@ -354,8 +354,6 @@
     <string name="ig_dialog_misc_viewer_search">Story-Zuschauer durchsuchen</string>
     <string name="ig_viewer_search_hint">Zuschauer suchen</string>
     <string name="ig_dialog_misc_like_undo">Rückgängig-Zeitfenster für Likes (4 s)</string>
-    <string name="ig_like_undo_bar">❤ Gefällt dir · RÜCKGÄNGIG</string>
-    <string name="ig_like_undo_cancelled">Like zurückgenommen — neu laden, um das Herz zu aktualisieren</string>
     <string name="ig_dialog_misc_exact_timestamps">Genaue Daten statt „vor 2 Std.“ anzeigen</string>
     <string name="ig_timestamp_format">Datumsformat</string>
     <string name="ig_timestamp_format_default">Gerätestandard</string>

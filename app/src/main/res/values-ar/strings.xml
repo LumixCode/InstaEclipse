@@ -347,8 +347,6 @@
     <string name="ig_dialog_misc_viewer_search">البحث في مشاهدي قصتك</string>
     <string name="ig_viewer_search_hint">البحث في المشاهدين</string>
     <string name="ig_dialog_misc_like_undo">مهلة التراجع عن الإعجاب (4 ث)</string>
-    <string name="ig_like_undo_bar">❤ أعجبك · تراجع</string>
-    <string name="ig_like_undo_cancelled">تم إلغاء الإعجاب — حدّث الصفحة لتحديث القلب</string>
     <string name="ig_dialog_misc_exact_timestamps">عرض التواريخ الدقيقة بدلاً من \"منذ ساعتين\"</string>
     <string name="ig_timestamp_format">تنسيق التاريخ</string>
     <string name="ig_timestamp_format_default">افتراضي الجهاز</string>

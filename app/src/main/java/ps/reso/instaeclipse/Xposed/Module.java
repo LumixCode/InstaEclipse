@@ -1116,6 +1116,7 @@ public class Module {
         }
         if ("storyCacheHours".equals(key)) ps.reso.instaeclipse.utils.media.StoryCache.refresh();
         if ("airplaneMode".equals(key)) ps.reso.instaeclipse.mods.extras.AirplaneModeHook.apply();
+        if ("likeUndo".equals(key)) ps.reso.instaeclipse.mods.misc.LikeUndoHook.onLikeUndoChanged();
         if (ThemeSettingsHelper.isThemeKey(key)) {
             IgThemeEngine.invalidate();
             IgThemeHook.refreshCurrentActivity();

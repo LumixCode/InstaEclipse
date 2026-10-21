@@ -651,8 +651,6 @@
 Stay on this screen until it finishes.</string>
     <string name="ig_follow_export_stop">Stop &amp; save</string>
     <string name="ig_dialog_misc_like_undo">Undo Window for Likes (4 s)</string>
-    <string name="ig_like_undo_bar">❤ Liked · UNDO</string>
-    <string name="ig_like_undo_cancelled">Like cancelled — refresh to update the heart</string>
     <string name="ig_dialog_misc_exact_timestamps">Show Exact Dates Instead of \"2h ago\"</string>
     <string name="ig_timestamp_format">Date format</string>
     <string name="ig_timestamp_format_default">Device default</string>

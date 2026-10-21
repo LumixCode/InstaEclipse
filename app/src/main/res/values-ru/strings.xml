@@ -349,8 +349,6 @@
     <string name="ig_dialog_misc_viewer_search">Поиск по зрителям вашей истории</string>
     <string name="ig_viewer_search_hint">Поиск зрителей</string>
     <string name="ig_dialog_misc_like_undo">Окно отмены лайков (4 с)</string>
-    <string name="ig_like_undo_bar">❤ Нравится · ОТМЕНИТЬ</string>
-    <string name="ig_like_undo_cancelled">Лайк отменён — обновите, чтобы обновить сердечко</string>
     <string name="ig_dialog_misc_exact_timestamps">Показывать точные даты вместо «2 ч назад»</string>
     <string name="ig_timestamp_format">Формат даты</string>
     <string name="ig_timestamp_format_default">Как на устройстве</string>

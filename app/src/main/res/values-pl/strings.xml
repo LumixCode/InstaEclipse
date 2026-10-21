@@ -487,8 +487,6 @@
     <string name="ig_dialog_misc_viewer_search">Wyszukuj wśród widzów swojej relacji</string>
     <string name="ig_viewer_search_hint">Szukaj widzów</string>
     <string name="ig_dialog_misc_like_undo">Okno cofania polubień (4 s)</string>
-    <string name="ig_like_undo_bar">❤ Polubiono · COFNIJ</string>
-    <string name="ig_like_undo_cancelled">Polubienie anulowane — odśwież, aby zaktualizować serce</string>
     <string name="ig_dialog_misc_exact_timestamps">Pokazuj dokładne daty zamiast „2 godz. temu”</string>
     <string name="ig_timestamp_format">Format daty</string>
     <string name="ig_timestamp_format_default">Domyślny urządzenia</string>

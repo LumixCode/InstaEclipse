@@ -351,8 +351,6 @@
     <string name="ig_dialog_misc_viewer_search">Buscar entre los espectadores de tu historia</string>
     <string name="ig_viewer_search_hint">Buscar espectadores</string>
     <string name="ig_dialog_misc_like_undo">Margen para deshacer Me gusta (4 s)</string>
-    <string name="ig_like_undo_bar">❤ Te gusta · DESHACER</string>
-    <string name="ig_like_undo_cancelled">Me gusta cancelado — actualiza para refrescar el corazón</string>
     <string name="ig_dialog_misc_exact_timestamps">Mostrar fechas exactas en lugar de «hace 2 h»</string>
     <string name="ig_timestamp_format">Formato de fecha</string>
     <string name="ig_timestamp_format_default">Predeterminado del dispositivo</string>

@@ -71,6 +71,7 @@ What you get here that upstream InstaEclipse 0.8.2 doesn't have, or does differe
 | Comment search | A grey "Search comments" pill | Instagram's own search icon in the comment sheet's sort row |
 | Follow status label | "Follows you" / "Doesn't follow you" after the name | A native label with a mutual state: they follow you, you follow each other, or they don't follow you back |
 | Disable repost | Blocks the repost action, buttons stay | Also removes the repost buttons and counts from posts and reels |
+| Undo a like | An UNDO bar at the bottom of the screen; after Undo the heart stays filled until the post is refreshed | No bar: the heart is blue for the 4 seconds before the like is sent and turns red when it goes out. Tapping it again takes the like back, and neither the like nor the unlike is sent |
 | Hide onboarding prompts | Skips the setup screens it knows by id | Also blocks every route to the contacts and location setup pages, and silently declines location prompts while Instagram has no location access |
 
 ### Fixes to upstream features
@@ -269,7 +270,7 @@ All chat tools live in one InstaEclipse button in the chat header, next to the b
 | Feature | What it does |
 |---|---|
 | Disable double tap to like | No accidental likes, in posts, comments and DMs |
-| Undo a like | A few seconds to take a like back |
+| ✨ Undo a like | A like waits 4 seconds before it is sent, its heart blue until then and red once it goes out; tap the heart again in that time to take it back |
 | Edit counts on your posts | Change the likes, comments, reposts and shares shown on your own posts from their ⋮ menu; shown only on your phone |
 | Ask before liking | A like is sent only after you confirm it, and the heart stays empty until you do |
 | Ask before following | A follow is sent only after you confirm it |

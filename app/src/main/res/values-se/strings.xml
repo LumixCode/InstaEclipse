@@ -348,8 +348,6 @@
     <string name="ig_dialog_misc_viewer_search">Sök bland dina Story-tittare</string>
     <string name="ig_viewer_search_hint">Sök tittare</string>
     <string name="ig_dialog_misc_like_undo">Ångra-fönster för gillningar (4 s)</string>
-    <string name="ig_like_undo_bar">❤ Gillat · ÅNGRA</string>
-    <string name="ig_like_undo_cancelled">Gillning avbruten — uppdatera för att uppdatera hjärtat</string>
     <string name="ig_dialog_misc_exact_timestamps">Visa exakta datum i stället för \"för 2 tim sedan\"</string>
     <string name="ig_timestamp_format">Datumformat</string>
     <string name="ig_timestamp_format_default">Enhetens standard</string>

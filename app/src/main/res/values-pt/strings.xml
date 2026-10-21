@@ -348,8 +348,6 @@
     <string name="ig_dialog_misc_viewer_search">Pesquisar Visualizadores da Sua Story</string>
     <string name="ig_viewer_search_hint">Pesquisar visualizadores</string>
     <string name="ig_dialog_misc_like_undo">Janela para Anular Gostos (4 s)</string>
-    <string name="ig_like_undo_bar">❤ Gostou · ANULAR</string>
-    <string name="ig_like_undo_cancelled">Gosto cancelado — atualize para atualizar o coração</string>
     <string name="ig_dialog_misc_exact_timestamps">Mostrar Datas Exatas em Vez de \"há 2 h\"</string>
     <string name="ig_timestamp_format">Formato da data</string>
     <string name="ig_timestamp_format_default">Predefinição do dispositivo</string>

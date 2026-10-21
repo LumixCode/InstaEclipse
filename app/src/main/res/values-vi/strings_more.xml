@@ -330,8 +330,6 @@
     <string name="ig_follow_export_loading">Đang tải tài khoản… đã có %1$d.\nHãy ở lại màn hình này cho đến khi xong.</string>
     <string name="ig_follow_export_stop">Dừng &amp; lưu</string>
     <string name="ig_dialog_misc_like_undo">Thời gian hoàn tác lượt thích (4 giây)</string>
-    <string name="ig_like_undo_bar">❤ Đã thích · HOÀN TÁC</string>
-    <string name="ig_like_undo_cancelled">Đã hủy lượt thích — làm mới để cập nhật trái tim</string>
     <string name="ig_dialog_misc_exact_timestamps">Hiện ngày chính xác thay vì \"2 giờ trước\"</string>
     <string name="ig_timestamp_format">Định dạng ngày</string>
     <string name="ig_timestamp_format_default">Mặc định của thiết bị</string>

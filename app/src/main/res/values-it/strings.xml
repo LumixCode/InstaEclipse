@@ -487,8 +487,6 @@
     <string name="ig_dialog_misc_viewer_search">Cerca tra gli spettatori della tua storia</string>
     <string name="ig_viewer_search_hint">Cerca spettatori</string>
     <string name="ig_dialog_misc_like_undo">Finestra per annullare i Mi piace (4 s)</string>
-    <string name="ig_like_undo_bar">❤ Ti piace · ANNULLA</string>
-    <string name="ig_like_undo_cancelled">Mi piace annullato — aggiorna per aggiornare il cuore</string>
     <string name="ig_dialog_misc_exact_timestamps">Mostra date esatte invece di \"2 ore fa\"</string>
     <string name="ig_timestamp_format">Formato data</string>
     <string name="ig_timestamp_format_default">Predefinito del dispositivo</string>

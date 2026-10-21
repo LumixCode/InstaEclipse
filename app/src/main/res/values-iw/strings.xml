@@ -385,8 +385,6 @@
     <string name="ig_dialog_misc_viewer_search">חפש בצופי הסטורי שלך</string>
     <string name="ig_viewer_search_hint">חפש צופים</string>
     <string name="ig_dialog_misc_like_undo">חלון ביטול ללייקים (4 שנ׳)</string>
-    <string name="ig_like_undo_bar">❤ אהבת · בטל</string>
-    <string name="ig_like_undo_cancelled">הלייק בוטל — רענן כדי לעדכן את הלב</string>
     <string name="ig_dialog_misc_exact_timestamps">הצג תאריכים מדויקים במקום \"לפני שעתיים\"</string>
     <string name="ig_timestamp_format">תבנית תאריך</string>
     <string name="ig_timestamp_format_default">ברירת המחדל של המכשיר</string>

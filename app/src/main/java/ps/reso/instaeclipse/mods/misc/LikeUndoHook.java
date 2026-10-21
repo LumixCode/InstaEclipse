@@ -1,16 +1,10 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import android.app.Activity;
-import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
@@ -35,15 +29,15 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 
 /**
- * Like undo window (#235): a like is held for {@link #DELAY_MS} behind a small "Liked · UNDO" bar
- * and only then sent; tapping UNDO drops it.
+ * Like undo window (#235): a like is held for {@link #DELAY_MS} and only then sent. Meanwhile its
+ * heart is blue ({@link LikeHeartTint}); when the like goes out it turns Instagram's red. Tapping
+ * the heart again in that time takes the like back: neither the like nor that unlike is sent.
  *
  * Every post/reel like and unlike request goes through one builder (X.0E0b.A05 on 452,
  * X.0A0e.A05 on 451) — the feed double-tap/heart, reels and the other surfaces call it. Instagram
  * flips the media's local has_liked state BEFORE calling it, so "media reads as liked" means this
- * call is a like (unlikes are sent immediately). Anchor: "source_of_like" + "fetchLikeCount".
- *
- * Undo only cancels the request; the heart may stay filled until the post is refreshed.
+ * call is a like, and an unlike of a media whose like is still held is the take-back. Anchor:
+ * "source_of_like" + "fetchLikeCount".
  *
  * <p>Ask before liking holds the heart button's tap before Instagram fills it (see
  * {@link #hookHeartButtons}); other likes (double tap) are held here at the sender.
@@ -53,8 +47,34 @@ public class LikeUndoHook {
     private static final String TAG = "(InstaEclipse | LikeUndo): ";
     private static final String CACHE_KEY = "LikeUndoSender";
     private static final long DELAY_MS = 4000;
-    private static final ThreadLocal<Boolean> REPLAYING = new ThreadLocal<>();
+    /** A heart re-rendered right after the like (a new view) is found again once, this much later. */
+    private static final long RETINT_MS = 300;
+    /** The hooked method being called through on purpose, which its own hook lets pass. */
+    private static final ThreadLocal<Member> REPLAYING = new ThreadLocal<>();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    private static final PendingLikes<HeldLike> pending = new PendingLikes<>();
+
+    /** A like waiting out its grace period, and its blue heart (main thread). */
+    private static final class HeldLike {
+        final Member method;
+        final Object self;
+        final Object[] args;
+        final Object media;
+        LikeHeartTint tint;
+        Runnable fire;
+
+        HeldLike(Member method, Object self, Object[] args, Object media) {
+            this.method = method;
+            this.self = self;
+            this.args = args;
+            this.media = media;
+        }
+
+        void clearTint() {
+            if (tint != null) tint.clear();
+            tint = null;
+        }
+    }
 
     public void install(DexKitBridge bridge) {
         Method target = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(CACHE_KEY, Module.hostClassLoader) : null;
@@ -84,30 +104,47 @@ public class LikeUndoHook {
         XposedBridge.hookMethod(sender, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (!(FeatureFlags.likeUndo || FeatureFlags.confirmLikes) || REPLAYING.get() == Boolean.TRUE) return;
-                Object media = null;
-                for (Object a : param.args) {
-                    if (a != null && a.getClass().getName().equals("com.instagram.feed.media.Media")) { media = a; break; }
+                if (param.method.equals(REPLAYING.get())) return;
+                if (!(FeatureFlags.likeUndo || FeatureFlags.confirmLikes) && pending.isEmpty()) return;
+                Object media = mediaOf(param.args);
+                if (media == null) return;
+                if (!HideSuggestedFeedItemsHook.isLiked(media)) {
+                    // An unlike. While its like is still held, neither of the two is sent.
+                    HeldLike held = pending.cancel(media);
+                    if (held == null) return; // the like went out: this unlike is real
+                    param.setResult(null);
+                    MAIN.post(() -> {
+                        MAIN.removeCallbacks(held.fire);
+                        held.clearTint();
+                    });
+                    ModuleLog.line(TAG + "like taken back (heart tapped again)");
+                    return;
                 }
-                if (media == null || !HideSuggestedFeedItemsHook.isLiked(media)) return; // unlike → send now
                 // A heart tap confirmed a moment ago: Instagram sends it now, unless Undo holds it.
                 boolean confirmed = !FeatureFlags.confirmLikes || System.currentTimeMillis() <= confirmedUntil;
                 if (confirmed && !FeatureFlags.likeUndo) return;
-                Activity act = UIHookManager.getCurrentActivity();
+                // A like confirmed in the dialog came from the touch made before the dialog.
+                LikeHeartTint.Origin confirmedFrom = confirmedOrigin;
+                confirmedOrigin = null;
+                LikeHeartTint.Origin origin = confirmed && FeatureFlags.confirmLikes && confirmedFrom != null
+                        ? confirmedFrom : LikeHeartTint.Origin.capture(null);
+                Activity act = origin.activityOr(UIHookManager.getCurrentActivity());
                 if (act == null) return;
                 param.setResult(null);
                 Member method = param.method;
                 Object self = param.thisObject;
                 Object[] args = param.args.clone();
                 if (!confirmed) MAIN.post(() -> confirm(act, () -> {
-                    if (FeatureFlags.likeUndo) hold(act, method, self, args);
+                    if (FeatureFlags.likeUndo) hold(act, method, self, args, media, origin);
                     else send(method, self, args);
                 }));
-                else hold(act, method, self, args);
+                else hold(act, method, self, args, media, origin);
             }
         });
         ModuleLog.line(TAG + "✅ Hooked " + sender.getDeclaringClass().getName() + "." + sender.getName());
         FeatureStatusTracker.setHooked("LikeUndo");
+        installed = true;
+        onLikeUndoChanged();
         // View.performClick is a very hot framework method; hooking it app-wide triggers ART's JIT
         // SIGSEGV on IG 451+ / Android 13, so the heart tap hook is only installed when Ask before
         // liking is on (turning it on later holds heart taps after an Instagram restart; until
@@ -117,10 +154,30 @@ public class LikeUndoHook {
         FeatureStatusTracker.setHooked("ConfirmLikes");
     }
 
+    private static volatile boolean installed;
+
+    /**
+     * The undo window was turned on or off (in Instagram or from the companion): touches are
+     * recorded from now on, so the very next like finds its heart and its activity. Ask before
+     * liking needs a restart, so it is only read at install. Never without the sender hook.
+     */
+    public static void onLikeUndoChanged() {
+        if (installed && (FeatureFlags.likeUndo || FeatureFlags.confirmLikes)) LikeHeartTint.trackTouches();
+    }
+
+    private static Object mediaOf(Object[] args) {
+        for (Object a : args) {
+            if (a != null && a.getClass().getName().equals("com.instagram.feed.media.Media")) return a;
+        }
+        return null;
+    }
+
     /** Post like buttons (feed, carousel slide, reels): their heart shows "selected" once liked. */
     private static final String[] HEARTS = {"row_feed_button_like", "row_feed_media_per_media_like_button", "clips_ufi_like_button"};
     private static final java.util.Set<Integer> heartIds = new java.util.HashSet<>();
     private static volatile long confirmedUntil;
+    /** Where the like confirmed last came from, for the blue heart once it reaches the sender. */
+    private static volatile LikeHeartTint.Origin confirmedOrigin;
     private static boolean replayingTap;
 
     /**
@@ -150,7 +207,9 @@ public class LikeUndoHook {
                 Activity act = activityOf(v.getContext());
                 if (act == null) return;
                 param.setResult(true);
+                LikeHeartTint.Origin origin = LikeHeartTint.Origin.capture(heart);
                 MAIN.post(() -> confirm(act, () -> {
+                    confirmedOrigin = origin;
                     confirmedUntil = System.currentTimeMillis() + 3000;
                     replayingTap = true;
                     try { v.performClick(); } finally { replayingTap = false; }
@@ -179,20 +238,22 @@ public class LikeUndoHook {
             XposedBridge.hookMethod(m, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (!FeatureFlags.confirmLikes || REPLAYING.get() == Boolean.TRUE
+                    if (!FeatureFlags.confirmLikes || param.method.equals(REPLAYING.get())
                             || System.currentTimeMillis() <= confirmedUntil) return;
-                    Object media = null;
-                    for (Object a : param.args) {
-                        if (a != null && a.getClass().getName().equals("com.instagram.feed.media.Media")) { media = a; break; }
-                    }
+                    Object media = mediaOf(param.args);
                     if (media == null || HideSuggestedFeedItemsHook.isLiked(media)) return; // already liked: not a new like
-                    Activity act = UIHookManager.getCurrentActivity();
+                    LikeHeartTint.Origin origin = LikeHeartTint.Origin.capture(null);
+                    // The entry is given the post's own activity (a post opened from a chat has its own).
+                    Activity given = null;
+                    for (Object arg : param.args) if (arg instanceof Activity x && !x.isFinishing()) given = x;
+                    Activity act = given != null ? given : origin.activityOr(UIHookManager.getCurrentActivity());
                     if (act == null) return;
                     param.setResult(null);
                     Member method = param.method;
                     Object self = param.thisObject;
                     Object[] args = param.args.clone();
                     MAIN.post(() -> confirm(act, () -> {
+                        confirmedOrigin = origin;
                         confirmedUntil = System.currentTimeMillis() + 3000;
                         send(method, self, args);
                     }));
@@ -211,21 +272,32 @@ public class LikeUndoHook {
         return UIHookManager.getCurrentActivity();
     }
 
-    private static void hold(Activity act, Member method, Object self, Object[] args) {
+    /** Holds the like for DELAY_MS with its heart blue, then sends it; the heart turns red. */
+    private static void hold(Activity act, Member method, Object self, Object[] args, Object media,
+                             LikeHeartTint.Origin origin) {
         ModuleLog.line(TAG + "like held for " + DELAY_MS + " ms");
-        MAIN.post(() -> {
-            final boolean[] undone = {false};
-            final View bar = showBar(act, () -> undone[0] = true);
+        HeldLike like = new HeldLike(method, self, args, media);
+        like.fire = () -> {
+            like.clearTint();
+            if (pending.release(media, like)) send(method, self, args); // else taken back or replaced
+        };
+        // Held at once, on the hook's thread: an unlike right after it must find it.
+        pending.hold(media, like);
+        LikeHeartTint.trackTouches();
+        Runnable start = () -> {
+            if (!pending.isHeld(media, like)) return;
+            like.tint = LikeHeartTint.show(act, origin);
+            MAIN.postDelayed(like.fire, DELAY_MS);
+            // Instagram may draw the liked heart in a new view: find it again once.
             MAIN.postDelayed(() -> {
-                removeBar(bar);
-                if (undone[0]) {
-                    ModuleLog.line(TAG + "like cancelled by UNDO");
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(act, I18n.t(act, R.string.ig_like_undo_cancelled), Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                send(method, self, args);
-            }, DELAY_MS);
-        });
+                if (!pending.isHeld(media, like) || (like.tint != null && like.tint.isShown())) return;
+                like.clearTint();
+                like.tint = LikeHeartTint.show(act, origin);
+            }, RETINT_MS);
+        };
+        // At once on the main thread: a double tap redraws the heart in this frame, red if posted.
+        if (Looper.myLooper() == Looper.getMainLooper()) start.run();
+        else MAIN.post(start);
     }
 
     /** Ask before liking: the like goes out only on Like; Cancel drops it. */
@@ -247,8 +319,9 @@ public class LikeUndoHook {
     private static void send(Member method, Object self, Object[] args) {
         try {
             // Called through the hook (which lets it pass while replaying): invoking the original
-            // directly isn't supported the same way on every framework (LSPatch).
-            REPLAYING.set(Boolean.TRUE);
+            // directly isn't supported the same way on every framework (LSPatch). Only this method
+            // passes: a like entry replayed here still reaches the sender's hold.
+            REPLAYING.set(method);
             Method m = (Method) method;
             m.setAccessible(true);
             m.invoke(self, args);
@@ -258,40 +331,5 @@ public class LikeUndoHook {
         } finally {
             REPLAYING.remove();
         }
-    }
-
-    private static View showBar(Activity act, Runnable onUndo) {
-        try {
-            ViewGroup decor = (ViewGroup) act.getWindow().getDecorView();
-            float d = act.getResources().getDisplayMetrics().density;
-            TextView tv = new TextView(act);
-            tv.setText(I18n.t(act, R.string.ig_like_undo_bar));
-            tv.setTextColor(Color.WHITE);
-            tv.setTextSize(15);
-            tv.setGravity(Gravity.CENTER);
-            int ph = (int) (16 * d), pv = (int) (12 * d);
-            tv.setPadding(ph, pv, ph, pv);
-            GradientDrawable bg = new GradientDrawable();
-            bg.setColor(0xEE262626);
-            bg.setCornerRadius(12 * d);
-            tv.setBackground(bg);
-            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                    Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-            lp.bottomMargin = (int) (110 * d);
-            tv.setOnClickListener(v -> {
-                onUndo.run();
-                removeBar(v);
-            });
-            decor.addView(tv, lp);
-            return tv;
-        } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ bar: " + t);
-            return null;
-        }
-    }
-
-    private static void removeBar(View bar) {
-        if (bar != null && bar.getParent() instanceof ViewGroup g) g.removeView(bar);
     }
 }

@@ -385,8 +385,6 @@
     <string name="ig_dialog_misc_viewer_search">Rechercher parmi les spectateurs de votre story</string>
     <string name="ig_viewer_search_hint">Rechercher des spectateurs</string>
     <string name="ig_dialog_misc_like_undo">Délai d\'annulation des J\'aime (4 s)</string>
-    <string name="ig_like_undo_bar">❤ J\'aime · ANNULER</string>
-    <string name="ig_like_undo_cancelled">J\'aime annulé — actualisez pour mettre à jour le cœur</string>
     <string name="ig_dialog_misc_exact_timestamps">Afficher les dates exactes au lieu de « il y a 2 h »</string>
     <string name="ig_timestamp_format">Format de date</string>
     <string name="ig_timestamp_format_default">Par défaut de l\'appareil</string>

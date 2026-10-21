@@ -674,8 +674,6 @@
     <string name="ig_dialog_misc_viewer_search">Hikaye İzleyicilerinde Ara</string>
     <string name="ig_viewer_search_hint">İzleyicilerde ara</string>
     <string name="ig_dialog_misc_like_undo">Beğeniler İçin Geri Alma Süresi (4 sn)</string>
-    <string name="ig_like_undo_bar">❤ Beğenildi · GERİ AL</string>
-    <string name="ig_like_undo_cancelled">Beğeni iptal edildi — kalbi güncellemek için yenileyin</string>
     <string name="ig_dialog_misc_exact_timestamps">\"2 sa önce\" Yerine Tam Tarihleri Göster</string>
     <string name="ig_timestamp_format">Tarih biçimi</string>
     <string name="ig_timestamp_format_default">Cihaz varsayılanı</string>

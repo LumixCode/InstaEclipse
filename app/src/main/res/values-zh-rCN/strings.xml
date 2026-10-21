@@ -386,8 +386,6 @@
     <string name="ig_dialog_misc_viewer_search">搜索你的限时动态观看者</string>
     <string name="ig_viewer_search_hint">搜索观看者</string>
     <string name="ig_dialog_misc_like_undo">赞的撤销时间窗口（4 秒）</string>
-    <string name="ig_like_undo_bar">❤ 已赞 · 撤销</string>
-    <string name="ig_like_undo_cancelled">已取消赞 — 刷新以更新爱心</string>
     <string name="ig_dialog_misc_exact_timestamps">显示确切日期，而非“2小时前”</string>
     <string name="ig_timestamp_format">日期格式</string>
     <string name="ig_timestamp_format_default">设备默认</string>

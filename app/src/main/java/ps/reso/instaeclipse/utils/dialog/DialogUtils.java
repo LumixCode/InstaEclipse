@@ -2084,7 +2084,8 @@ public class DialogUtils {
         LinearLayout layout = createSwitchLayout(context);
         layout.addView(cardOf(context,
                 flagSwitch(context, R.drawable.ic_heart, A_SOCIAL, R.string.ig_dialog_misc_disable_double_tap_like, "disableDoubleTapLike"),
-                flagSwitch(context, R.drawable.ic_heart, A_SOCIAL, R.string.ig_dialog_misc_like_undo, "likeUndo"),
+                flagSwitch(context, R.drawable.ic_heart, A_SOCIAL, R.string.ig_dialog_misc_like_undo, "likeUndo",
+                        ps.reso.instaeclipse.mods.misc.LikeUndoHook::onLikeUndoChanged),
                 restartFlagSwitch(context, R.drawable.ic_heart, A_SOCIAL, R.string.ig_confirm_likes, "confirmLikes"),
                 flagSwitch(context, R.drawable.ic_content_copy, A_SOCIAL, R.string.ig_dialog_misc_copy_comment, "enableCopyComment"),
                 flagSwitch(context, R.drawable.ic_search, A_SOCIAL, R.string.ig_dialog_misc_comment_search, "commentSearch"),

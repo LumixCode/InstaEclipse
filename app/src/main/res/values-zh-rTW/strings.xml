@@ -348,8 +348,6 @@
     <string name="ig_dialog_misc_viewer_search">搜尋你的限時動態觀看者</string>
     <string name="ig_viewer_search_hint">搜尋觀看者</string>
     <string name="ig_dialog_misc_like_undo">讚的復原時間（4 秒）</string>
-    <string name="ig_like_undo_bar">❤ 已按讚 · 復原</string>
-    <string name="ig_like_undo_cancelled">已取消讚 — 重新整理以更新愛心</string>
     <string name="ig_dialog_misc_exact_timestamps">顯示確切日期，而非「2小時前」</string>
     <string name="ig_timestamp_format">日期格式</string>
     <string name="ig_timestamp_format_default">裝置預設</string>
