@@ -39,6 +39,11 @@ public class SettingsBackupManager {
 
         s.put("permanentViewMode",       FeatureFlags.permanentViewMode);
         s.put("keepUnsentMessages",      FeatureFlags.keepUnsentMessages);
+        s.put("keepUnsentInChat",        FeatureFlags.keepUnsentInChat);
+        s.put("showUnsentIndicator",     FeatureFlags.showUnsentIndicator);
+        s.put("showUnsentButton",        FeatureFlags.showUnsentButton);
+        s.put("hideSpecificChats",       FeatureFlags.hideSpecificChats);
+        s.put("showHideChatButton",      FeatureFlags.showHideChatButton);
 
         // Quick Toggles
         s.put("quickToggleSeen",         FeatureFlags.quickToggleSeen);
@@ -134,6 +139,14 @@ public class SettingsBackupManager {
         s.put("hideShareCreateGroup",    FeatureFlags.hideShareCreateGroup);
         s.put("exactTimestamps",         FeatureFlags.exactTimestamps);
         s.put("likeUndo",                FeatureFlags.likeUndo);
+        s.put("showFollowStatusLabel",   FeatureFlags.showFollowStatusLabel);
+        s.put("showFollowingFollowStatus", FeatureFlags.showFollowingFollowStatus);
+        s.put("unlockPlusBenefits",      FeatureFlags.unlockPlusBenefits);
+        s.put("removeMetaAI",            FeatureFlags.removeMetaAI);
+        s.put("savedOnProfile",          FeatureFlags.savedOnProfile);
+        s.put("disableDoubleTapLike",    FeatureFlags.disableDoubleTapLike);
+        s.put("enableCopyComment",       FeatureFlags.enableCopyComment);
+        s.put("enableCaptionCopy",       FeatureFlags.enableCaptionCopy);
         s.put("confirmLikes",            FeatureFlags.confirmLikes);
         s.put("confirmFollows",          FeatureFlags.confirmFollows);
         s.put("profileMenuTools",        FeatureFlags.profileMenuTools);
@@ -221,6 +234,11 @@ public class SettingsBackupManager {
         if (s.has("keepEphemeralMessages"))    FeatureFlags.keepEphemeralMessages    = s.getBoolean("keepEphemeralMessages");
         if (s.has("permanentViewMode"))        FeatureFlags.permanentViewMode        = s.getBoolean("permanentViewMode");
         if (s.has("keepUnsentMessages"))       FeatureFlags.keepUnsentMessages       = s.getBoolean("keepUnsentMessages");
+        if (s.has("keepUnsentInChat"))         FeatureFlags.keepUnsentInChat         = s.getBoolean("keepUnsentInChat");
+        if (s.has("showUnsentIndicator"))      FeatureFlags.showUnsentIndicator      = s.getBoolean("showUnsentIndicator");
+        if (s.has("showUnsentButton"))         FeatureFlags.showUnsentButton         = s.getBoolean("showUnsentButton");
+        if (s.has("hideSpecificChats"))        FeatureFlags.hideSpecificChats        = s.getBoolean("hideSpecificChats");
+        if (s.has("showHideChatButton"))       FeatureFlags.showHideChatButton       = s.getBoolean("showHideChatButton");
 
         if (s.has("quickToggleSeen"))        FeatureFlags.quickToggleSeen        = s.getBoolean("quickToggleSeen");
         if (s.has("quickToggleTyping"))      FeatureFlags.quickToggleTyping      = s.getBoolean("quickToggleTyping");
@@ -324,6 +342,14 @@ public class SettingsBackupManager {
         if (s.has("hideShareCreateGroup"))   FeatureFlags.hideShareCreateGroup   = s.getBoolean("hideShareCreateGroup");
         if (s.has("exactTimestamps"))        FeatureFlags.exactTimestamps        = s.getBoolean("exactTimestamps");
         if (s.has("likeUndo"))               FeatureFlags.likeUndo               = s.getBoolean("likeUndo");
+        if (s.has("showFollowStatusLabel"))  FeatureFlags.showFollowStatusLabel  = s.getBoolean("showFollowStatusLabel");
+        if (s.has("showFollowingFollowStatus")) FeatureFlags.showFollowingFollowStatus = s.getBoolean("showFollowingFollowStatus");
+        if (s.has("unlockPlusBenefits"))     FeatureFlags.unlockPlusBenefits     = s.getBoolean("unlockPlusBenefits");
+        if (s.has("removeMetaAI"))           FeatureFlags.removeMetaAI           = s.getBoolean("removeMetaAI");
+        if (s.has("savedOnProfile"))         FeatureFlags.savedOnProfile         = s.getBoolean("savedOnProfile");
+        if (s.has("disableDoubleTapLike"))   FeatureFlags.disableDoubleTapLike   = s.getBoolean("disableDoubleTapLike");
+        if (s.has("enableCopyComment"))      FeatureFlags.enableCopyComment      = s.getBoolean("enableCopyComment");
+        if (s.has("enableCaptionCopy"))      FeatureFlags.enableCaptionCopy      = s.getBoolean("enableCaptionCopy");
         if (s.has("confirmLikes"))           FeatureFlags.confirmLikes           = s.getBoolean("confirmLikes");
         if (s.has("confirmFollows"))         FeatureFlags.confirmFollows         = s.getBoolean("confirmFollows");
         if (s.has("profileMenuTools"))       FeatureFlags.profileMenuTools       = s.getBoolean("profileMenuTools");
