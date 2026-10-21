@@ -99,7 +99,7 @@ public class FollowListExportHook {
                     if ((!FeatureFlags.followListExport && !FeatureFlags.followersHistory && !FeatureFlags.profileAnalyzer)
                             || !fragClass.isInstance(param.thisObject)) return;
                     if (param.args[0] instanceof View root) {
-                        live.put(param.thisObject, root);
+                        live.put(param.thisObject, new java.lang.ref.WeakReference<>(root));
                         Object frag = param.thisObject;
                         root.post(() -> {
                             if (FeatureFlags.followListExport) addPill(root);
@@ -126,8 +126,10 @@ public class FollowListExportHook {
         }
     }
 
-    /** Live list fragments → their root view (followers / following / mutual tabs each have one). */
-    private static final Map<Object, View> live = Collections.synchronizedMap(new java.util.WeakHashMap<>());
+    /** Live list fragments → their root view (followers / following / mutual tabs each have one).
+     *  The root is held weakly: it reaches its own fragment (view-tree lifecycle owner tag), so a
+     *  strong value would keep every fragment, its views and its Activity alive forever. */
+    private static final Map<Object, java.lang.ref.WeakReference<View>> live = Collections.synchronizedMap(new java.util.WeakHashMap<>());
 
     /** The tab whose list is on screen right now. The tab pager keeps neighbouring tabs attached
      *  (isShown() is true for them too), so take the one with the largest on-screen area. */
@@ -136,8 +138,8 @@ public class FollowListExportHook {
         long bestArea = 0;
         android.graphics.Rect rc = new android.graphics.Rect();
         synchronized (live) {
-            for (Map.Entry<Object, View> e : live.entrySet()) {
-                View r = e.getValue();
+            for (Map.Entry<Object, java.lang.ref.WeakReference<View>> e : live.entrySet()) {
+                View r = e.getValue() != null ? e.getValue().get() : null;
                 if (r == null || !r.isShown() || findList(r) == null || !r.getGlobalVisibleRect(rc)) continue;
                 long area = (long) rc.width() * rc.height();
                 if (area > bestArea) { bestArea = area; best = new Object[]{e.getKey(), r}; }
