@@ -411,9 +411,9 @@ public class Module {
 
                     // Exact timestamps instead of "3h ago" (#232)
                     try {
-                        if (!skip("ExactTimestampHook")) new ps.reso.instaeclipse.mods.misc.ExactTimestampHook().install(dexKitBridge);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | ExactTime): ❌ Failed to hook");
+                        if (!skip("ExactTimestampHook")) new ps.reso.instaeclipse.mods.misc.ExactTimestampHook().install(dexKitBridge, hostClassLoader);
+                    } catch (Throwable t) {
+                        ModuleLog.line("(InstaEclipse | ExactTime): ❌ Failed to hook: " + t);
                     }
 
                     // Auto-expand feed captions (#246)
