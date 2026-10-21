@@ -500,7 +500,13 @@ public class Module {
                         ModuleLog.line("(InstaEclipse | FollowingOnlyFeed): ❌ Failed to hook");
                     }
 
-                    // "Follows you" label on profiles (#239)
+                    // Follow-status label on profiles (#239): the header label first; the name-row
+                    // label (ProfileFollowsYouHook) skips profiles where the header label shows.
+                    try {
+                        if (!skip("ProfileFollowStatusHook")) new ps.reso.instaeclipse.mods.misc.ProfileFollowStatusHook().install(dexKitBridge, hostClassLoader);
+                    } catch (Throwable t) {
+                        ModuleLog.line("(InstaEclipse | FollowStatusLabel): ❌ Failed to hook: " + t);
+                    }
                     try {
                         if (!skip("ProfileFollowsYouHook")) new ps.reso.instaeclipse.mods.ui.ProfileFollowsYouHook().install(dexKitBridge, hostClassLoader);
                     } catch (Throwable ignored) {

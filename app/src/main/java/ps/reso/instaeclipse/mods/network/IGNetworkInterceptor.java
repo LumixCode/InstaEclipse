@@ -276,11 +276,13 @@ public class IGNetworkInterceptor {
                                         neutralizeUrlFields(requestObj, uri);
                                     }
 
-                                    // Follow status
-                                    if (FeatureFlags.showFollowerToast || FeatureFlags.profileFollowsYouLabel) {
-                                        FeatureStatusTracker.setHooked("FollowerToast");
-                                        FollowStatusHook.handleRequest(uri, param.args);
-                                    }
+                                    // Follower toast / follow label: only notes which profile's
+                                    // /friendships/show/ was requested; FollowStatusHook reads IG's parsed
+                                    // answer through hooks it installs at startup. Never hook a request's
+                                    // callback classes from here: on IG 451 they include the app-wide
+                                    // RequestCallbackDispatcher (X.03ta), and hooking it mid-flight
+                                    // corrupted the heap on LSPatch 1.2.
+                                    if (FollowStatusHook.wanted()) FollowStatusHook.handleRequest(uri);
                                 }
                               } catch (Throwable ignored) {
                                   // A malformed/opaque request must never crash IG's network dispatch.

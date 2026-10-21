@@ -177,6 +177,9 @@ public class SettingsManager {
         editor.putBoolean("hideShareCreateGroup", FeatureFlags.hideShareCreateGroup);
         editor.putBoolean("exactTimestamps", FeatureFlags.exactTimestamps);
         editor.putBoolean("likeUndo", FeatureFlags.likeUndo);
+        editor.putBoolean("showFollowStatusLabel", FeatureFlags.showFollowStatusLabel);
+        editor.putBoolean("showFollowingFollowStatus", FeatureFlags.showFollowingFollowStatus);
+        editor.putBoolean("unlockPlusBenefits", FeatureFlags.unlockPlusBenefits);
         editor.putBoolean("confirmLikes", FeatureFlags.confirmLikes);
         editor.putBoolean("confirmFollows", FeatureFlags.confirmFollows);
         editor.putBoolean("profileMenuTools", FeatureFlags.profileMenuTools);
@@ -191,7 +194,6 @@ public class SettingsManager {
         editor.putString("spoofBio", FeatureFlags.spoofBio);
         editor.putString("spoofAvatar", FeatureFlags.spoofAvatar);
         editor.putBoolean("profileAnalyzer", FeatureFlags.profileAnalyzer);
-        editor.putBoolean("profileFollowsYouLabel", FeatureFlags.profileFollowsYouLabel);
         editor.putBoolean("fancyBioFont", FeatureFlags.fancyBioFont);
         editor.putBoolean("savedOnProfile", FeatureFlags.savedOnProfile);
         editor.putBoolean("lockSavedCollections", FeatureFlags.lockSavedCollections);
@@ -405,6 +407,9 @@ public class SettingsManager {
         FeatureFlags.hideShareCreateGroup = prefs.getBoolean("hideShareCreateGroup", false);
         FeatureFlags.exactTimestamps = prefs.getBoolean("exactTimestamps", false);
         FeatureFlags.likeUndo = prefs.getBoolean("likeUndo", false);
+        FeatureFlags.showFollowStatusLabel = prefs.getBoolean("showFollowStatusLabel", false);
+        FeatureFlags.showFollowingFollowStatus = prefs.getBoolean("showFollowingFollowStatus", false);
+        FeatureFlags.unlockPlusBenefits = prefs.getBoolean("unlockPlusBenefits", false);
         FeatureFlags.confirmLikes = prefs.getBoolean("confirmLikes", false);
         FeatureFlags.confirmFollows = prefs.getBoolean("confirmFollows", false);
         FeatureFlags.profileMenuTools = prefs.getBoolean("profileMenuTools", false);
@@ -419,7 +424,6 @@ public class SettingsManager {
         FeatureFlags.spoofBio = prefs.getString("spoofBio", "");
         FeatureFlags.spoofAvatar = prefs.getString("spoofAvatar", "");
         FeatureFlags.profileAnalyzer = prefs.getBoolean("profileAnalyzer", false);
-        FeatureFlags.profileFollowsYouLabel = prefs.getBoolean("profileFollowsYouLabel", false);
         FeatureFlags.fancyBioFont = prefs.getBoolean("fancyBioFont", false);
         FeatureFlags.savedOnProfile = prefs.getBoolean("savedOnProfile", false);
         FeatureFlags.lockSavedCollections = prefs.getBoolean("lockSavedCollections", false);

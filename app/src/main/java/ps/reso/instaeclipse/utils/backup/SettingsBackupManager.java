@@ -148,7 +148,6 @@ public class SettingsBackupManager {
         s.put("spoofBio",                FeatureFlags.spoofBio);
         s.put("spoofAvatar",             FeatureFlags.spoofAvatar);
         s.put("profileAnalyzer",         FeatureFlags.profileAnalyzer);
-        s.put("profileFollowsYouLabel",  FeatureFlags.profileFollowsYouLabel);
         s.put("fancyBioFont",            FeatureFlags.fancyBioFont);
         s.put("storyViewerSearch",       FeatureFlags.storyViewerSearch);
         s.put("storyLinks",              FeatureFlags.storyLinks);
@@ -340,7 +339,6 @@ public class SettingsBackupManager {
         if (s.has("spoofAvatar") && ps.reso.instaeclipse.utils.profile.SpoofAvatar.isValid(s.getString("spoofAvatar")))
             FeatureFlags.spoofAvatar = s.getString("spoofAvatar");
         if (s.has("profileAnalyzer"))        FeatureFlags.profileAnalyzer        = s.getBoolean("profileAnalyzer");
-        if (s.has("profileFollowsYouLabel")) FeatureFlags.profileFollowsYouLabel = s.getBoolean("profileFollowsYouLabel");
         if (s.has("fancyBioFont"))           FeatureFlags.fancyBioFont           = s.getBoolean("fancyBioFont");
         if (s.has("storyViewerSearch"))      FeatureFlags.storyViewerSearch      = s.getBoolean("storyViewerSearch");
         if (s.has("storyLinks"))             FeatureFlags.storyLinks             = s.getBoolean("storyLinks");

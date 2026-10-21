@@ -147,10 +147,11 @@ public class FeatureManager {
             FeatureStatusTracker.setDisabled("DisableTrackingLinks");
         }
 
-        if (FeatureFlags.profileFollowsYouLabel) {
-            FeatureStatusTracker.setEnabled("ProfileFollowsYou", R.string.ig_dialog_misc_profile_follows_label);
+        // Both profile-label hooks (ProfileFollowStatusHook, ProfileFollowsYouHook) report this key.
+        if (FeatureFlags.showFollowStatusLabel) {
+            FeatureStatusTracker.setEnabled("FollowStatusLabel", R.string.ig_dialog_misc_profile_follows_label);
         } else {
-            FeatureStatusTracker.setDisabled("ProfileFollowsYou");
+            FeatureStatusTracker.setDisabled("FollowStatusLabel");
         }
 
         if (FeatureFlags.likeUndo) {

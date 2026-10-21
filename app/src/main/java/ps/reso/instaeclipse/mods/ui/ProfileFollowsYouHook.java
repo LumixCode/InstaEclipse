@@ -20,12 +20,14 @@ import java.util.List;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.mods.misc.ProfileFollowStatusHook;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
  * "Follows you" label on profiles (#239), instead of only the follower toast.
@@ -36,8 +38,14 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
  * A small coloured "· Follows you" / "· Doesn't follow you" span is appended to the profile name
  * (profile_header_full_name_above_vanity / profile_header_full_name) and re-applied when IG
  * rebinds the text.
+ *
+ * Runs next to the local ProfileFollowStatusHook under the same key (showFollowStatusLabel) and
+ * steps aside on a header where that hook already shows its label, so the two never stack.
  */
 public class ProfileFollowsYouHook {
+
+    /** True once installed; IGNetworkInterceptor feeds /friendships/show/ results only then. */
+    public static volatile boolean active;
 
     private static final String TAG = "(InstaEclipse | FollowsYou): ";
     private static final String FRAGMENT = "com.instagram.profile.fragment.UserDetailFragment";
@@ -70,7 +78,7 @@ public class ProfileFollowsYouHook {
             XposedBridge.hookMethod(updated, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (!FeatureFlags.profileFollowsYouLabel) return;
+                    if (!FeatureFlags.showFollowStatusLabel) return;
                     Object frag = param.thisObject;
                     if (frag == null) for (Object a : param.args) if (a != null && a.getClass().getName().equals(FRAGMENT)) frag = a;
                     if (frag == null) return;
@@ -83,7 +91,7 @@ public class ProfileFollowsYouHook {
             ps.reso.instaeclipse.xposedcompat.XposedHelpers.findAndHookMethod(base, "onResume", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (!FeatureFlags.profileFollowsYouLabel) return;
+                    if (!FeatureFlags.showFollowStatusLabel) return;
                     Object frag = param.thisObject;
                     for (Class<?> c = frag.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
                         if (c.getName().equals(FRAGMENT)) {
@@ -96,23 +104,25 @@ public class ProfileFollowsYouHook {
                     }
                 }
             });
+            active = true;
             ModuleLog.line(TAG + "✅ Hooked " + updated.getName() + " / followed_by " + followedByGetter.getName());
-            FeatureStatusTracker.setHooked("ProfileFollowsYou");
+            FeatureStatusTracker.setHooked("FollowStatusLabel");
         } catch (Throwable t) {
             ModuleLog.line(TAG + "❌ " + t);
         }
     }
 
     /**
-     * Result of IG's /friendships/show/ call (parsed by FollowStatusHook): used when the User
-     * model doesn't carry followed_by yet (common for accounts you don't follow).
+     * Result of IG's /friendships/show/ call (parsed by FollowStatusHook while this label or the
+     * follower toast is on): used when the User model doesn't carry followed_by yet (common for
+     * accounts you don't follow).
      */
     /** userId -> followed_by from /friendships/show/, kept so a result that arrives before the
      *  profile screen registers is still applied. */
     private static final java.util.Map<String, Boolean> RESULTS = new java.util.concurrent.ConcurrentHashMap<>();
 
     public static void onFollowResult(String userId, boolean followedBy) {
-        if (!FeatureFlags.profileFollowsYouLabel || userId == null) return;
+        if (!active || !FeatureFlags.showFollowStatusLabel || userId == null) return;
         RESULTS.put(userId, followedBy);
         java.lang.ref.WeakReference<Object> ref = lastFragment;
         Object frag = ref != null ? ref.get() : null;
@@ -131,20 +141,19 @@ public class ProfileFollowsYouHook {
     private static void apply(Object frag, Boolean known) {
         try {
             View root = (View) frag.getClass().getMethod("getView").invoke(frag);
-            if (root == null) return;
+            if (root == null || ProfileFollowStatusHook.isShowing(root)) return;
             Boolean followsMe = known != null ? known : followedBy(frag);
             if (followsMe == null) followsMe = cachedResult(frag);
             if (followsMe == null) {
-                // result may still be on its way: look again shortly
-                final Object f = frag;
-                root.postDelayed(() -> { Boolean c = cachedResult(f); if (c != null) apply(f, c); }, 1500);
+                // IG fills in the viewed User's friendship status when its own /friendships/show/
+                // request returns: read the model again shortly (no network hooks needed).
+                retry(frag, root, 0);
                 return;
             }
             final boolean fm = followsMe;
             Context ctx = root.getContext();
             for (String idName : new String[]{"profile_header_full_name_above_vanity", "profile_header_full_name"}) {
-                @SuppressWarnings("DiscouragedApi")
-                int id = ctx.getResources().getIdentifier(idName, "id", ctx.getPackageName());
+                int id = ResIds.id(ctx, idName); // cached: getIdentifier scans all of IG's resource keys
                 View v = id != 0 ? root.findViewById(id) : null;
                 if (v instanceof TextView tv && tv.getVisibility() == View.VISIBLE) {
                     if (tv.getText() == null || tv.getText().length() == 0) continue; // no display name
@@ -152,15 +161,16 @@ public class ProfileFollowsYouHook {
                     if (tv.getTag(R.id.ie_follows_you_tag) == null) {
                         tv.setTag(R.id.ie_follows_you_tag, Boolean.TRUE);
                         tv.addOnLayoutChangeListener((w, l, t, r, b, ol, ot, or, ob) ->
-                                w.post(() -> { if (FeatureFlags.profileFollowsYouLabel) label((TextView) w, fm); }));
+                                w.post(() -> {
+                                    if (FeatureFlags.showFollowStatusLabel && !ProfileFollowStatusHook.isShowing(root)) label((TextView) w, fm);
+                                }));
                     }
                     return;
                 }
             }
             // No visible display name: show the label on its own in the (hidden/empty) name view.
             for (String idName : new String[]{"profile_header_full_name_above_vanity", "profile_header_full_name"}) {
-                @SuppressWarnings("DiscouragedApi")
-                int id = ctx.getResources().getIdentifier(idName, "id", ctx.getPackageName());
+                int id = ResIds.id(ctx, idName);
                 View v = id != 0 ? root.findViewById(id) : null;
                 if (v instanceof TextView tv) {
                     standalone(tv, fm);
@@ -179,6 +189,26 @@ public class ProfileFollowsYouHook {
         sb.setSpan(new RelativeSizeSpan(0.8f), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         tv.setText(sb);
         tv.setVisibility(View.VISIBLE);
+    }
+
+    private static final long[] RETRY_DELAYS = {500, 1000, 1500, 3000};
+
+    /** Looks for the relationship again after each delay, until it is known or the screen is gone. */
+    private static void retry(Object frag, View root, int attempt) {
+        if (attempt >= RETRY_DELAYS.length) return;
+        root.postDelayed(() -> {
+            if (!FeatureFlags.showFollowStatusLabel || !root.isAttachedToWindow()) return;
+            Boolean known = cachedResult(frag);
+            if (known == null) {
+                try { known = followedBy(frag); } catch (Throwable ignored) {}
+            }
+            if (known != null) {
+                ModuleLog.line(TAG + "relationship read from the User model (retry " + (attempt + 1) + ")");
+                apply(frag, known);
+            } else {
+                retry(frag, root, attempt + 1);
+            }
+        }, RETRY_DELAYS[attempt]);
     }
 
     private static Boolean cachedResult(Object frag) {

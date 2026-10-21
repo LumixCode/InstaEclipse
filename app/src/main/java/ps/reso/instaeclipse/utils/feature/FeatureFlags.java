@@ -150,7 +150,9 @@ public class FeatureFlags {
     public static volatile boolean storyLinks = false; // copy link-sticker urls from the story menu
     public static volatile boolean storyViewerSearch = false; // search box over your story viewers list
     public static volatile boolean savedOnProfile = false;        // #237: Saved button on your own profile
-    public static volatile boolean profileFollowsYouLabel = false; // "Follows you" label on profiles (#239)
+    public static volatile boolean showFollowStatusLabel = false; // follow-status label on profiles (#239)
+    public static volatile boolean showFollowingFollowStatus = false; // follow status in your own following list
+    public static volatile boolean unlockPlusBenefits = false; // local override of Instagram's Plus eligibility checks
     public static volatile boolean fancyBioFont = false; // Edit profile: fancy (Unicode) fonts for the bio
     public static volatile boolean likeUndo = false; // hold likes for a few seconds with an Undo bar (#235)
     public static volatile boolean confirmLikes = false; // ask before a like is sent

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- New optional features use English until localized resources are available.
+     "Follows you" / "Doesn't follow you" are upstream's translated ig_profile_follows_you and
+     ig_profile_not_following_you in strings.xml. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <item type="id" name="ie_follow_status_state" />
+    <item type="id" name="ie_follow_status_inline_row" />
+    <item type="id" name="ie_follow_status_row_visibility" />
+    <item type="id" name="ie_follow_status_profile" />
+    <string name="ig_profile_follow_mutual">You follow each other</string>
+</resources>
