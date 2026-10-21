@@ -7,6 +7,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,6 +23,8 @@ import org.luckypray.dexkit.result.MethodData;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
+import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.HookTargetGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -169,6 +175,8 @@ public class RemoveMetaAIHook {
                 "cdd-should-show", null);
         // Also blank the Content Deep Dive UI-state builder (getUiState) — belt and braces if the
         // gate lives elsewhere: with an empty/blanked ui-state the pill/entry has nothing to show.
+        // On IG 446 and 451 R8 inlined it into the whole Clips MediaInfoUseCase.getUiState
+        // (X.047j.A0V on 451), so hookByMarker skips it there rather than blank all reel media info.
         XC_MethodHook blankUiState = new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                 if (!FeatureFlags.removeMetaAI) return;
@@ -212,21 +220,55 @@ public class RemoveMetaAIHook {
                 "reel-menu-genai-row", null);
     }
 
-    /** Hook every method carrying a trace-marker string; if returnTypeFilter is non-null, only hook
-     *  methods with that return type (guards the force-false against non-boolean overloads). */
+    /** Hook every method that owns a trace-marker string; if returnTypeFilter is non-null, only hook
+     *  methods with that return type (guards the force-false against non-boolean overloads).
+     *  Every hook here blanks, skips or replaces, so a method R8 built from more than the marked
+     *  method (see {@link #sharedReason}) is skipped and logged instead. */
     private void hookByMarker(DexKitBridge bridge, ClassLoader cl, XC_MethodHook hook,
                               String marker, String label, String returnTypeFilter) {
         int n = 0;
         try {
-            MethodMatcher mm = MethodMatcher.create().usingStrings(marker);
-            if (returnTypeFilter != null) mm = mm.returnType(returnTypeFilter);
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(mm))) {
-                try { XposedBridge.hookMethod(md.getMethodInstance(cl), hook); n++; } catch (Throwable ignored) {}
+            // The checked targets are cached (an empty list too, when every hit was shared): the
+            // full-dex string scan runs once per Instagram build, not on every start.
+            String key = "RemoveMetaAI_" + marker + (returnTypeFilter != null ? "|" + returnTypeFilter : "");
+            List<Method> targets = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(key, cl) : null;
+            if (targets == null) {
+                targets = new ArrayList<>();
+                MethodMatcher mm = MethodMatcher.create().usingStrings(marker);
+                if (returnTypeFilter != null) mm = mm.returnType(returnTypeFilter);
+                for (MethodData md : bridge.findMethod(FindMethod.create().matcher(mm))) {
+                    try {
+                        Method m = md.getMethodInstance(cl);
+                        String shared = sharedReason(md, m, marker);
+                        if (shared != null) {
+                            ModuleLog.line("(IE|RemoveMetaAI) " + label + ": skipped "
+                                    + md.getClassName() + "." + md.getName() + " (" + shared + ")");
+                            continue;
+                        }
+                        targets.add(m);
+                    } catch (Throwable ignored) {}
+                }
+                DexKitCache.saveMethods(key, targets);
+            }
+            for (Method m : targets) {
+                try {
+                    XposedBridge.hookMethod(m, hook);
+                    n++;
+                } catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
             ModuleLog.line("(IE|RemoveMetaAI) ⚠️ " + label + ": " + t.getMessage());
         }
         ModuleLog.line("(IE|RemoveMetaAI) " + label + ": " + n + " method(s)");
+    }
+
+    /** Why a marker hit is more than the marked method, or null when it is that method. */
+    private static String sharedReason(MethodData md, Method m, String marker) {
+        Class<?> owner = m.getDeclaringClass();
+        if (HookTargetGuard.isMergedLambda(owner, md.getOpCodes())) return "R8-merged lambda";
+        if (!HookTargetGuard.ownsMarker(md.getUsingStrings(), marker)) return "marker inlined into another method";
+        if (!HookTargetGuard.ownClass(owner)) return "abstract or non-final class";
+        return null;
     }
 
     /**
@@ -235,6 +277,8 @@ public class RemoveMetaAIHook {
      * produces no results, no card is shown. We anchor on the method's stable trace-marker string
      * (the class itself is obfuscated) and empty its result at runtime. Only collection/map results
      * are cleared; anything else is left untouched (and its type logged) so we never break the SERP.
+     * On IG 446 and 451 the method sits in an R8-merged lambda (X.0Q77 on 451, about 40 unrelated
+     * cases), which hookByMarker skips: clearing its result would hit the other cases.
      */
     private void installSearchSerpMetaAiHcm(DexKitBridge bridge, ClassLoader cl) {
         XC_MethodHook neuter = new XC_MethodHook() {
@@ -250,16 +294,9 @@ public class RemoveMetaAIHook {
                 } catch (Throwable ignored) {}
             }
         };
-        int n = 0;
-        try {
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                    .usingStrings("android_purge_26_q2_ClipsTopSerpDataSource_createDefaultMetaAIHcmFetchResults")))) {
-                try { XposedBridge.hookMethod(md.getMethodInstance(cl), neuter); n++; } catch (Throwable ignored) {}
-            }
-        } catch (Throwable t) {
-            ModuleLog.line("(IE|RemoveMetaAI) ⚠️ search-serp-hcm: " + t.getMessage());
-        }
-        ModuleLog.line("(IE|RemoveMetaAI) search-serp-hcm: " + n + " method(s)");
+        hookByMarker(bridge, cl, neuter,
+                "android_purge_26_q2_ClipsTopSerpDataSource_createDefaultMetaAIHcmFetchResults",
+                "search-serp-hcm", null);
     }
 
     /**
@@ -320,18 +357,9 @@ public class RemoveMetaAIHook {
                 } catch (Throwable ignored) {}
             }
         };
-        int n = 0;
-        try {
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                    .matcher(MethodMatcher.create()
-                            .usingStrings("android_purge_26_q3_MetaAIVideoAttributionSubtitleUseCase_getUiState")))) {
-                try { XposedBridge.hookMethod(md.getMethodInstance(cl), blank); n++; }
-                catch (Throwable ignored) {}
-            }
-        } catch (Throwable t) {
-            ModuleLog.line("(IE|RemoveMetaAI) ⚠️ video-attribution: " + t.getMessage());
-        }
-        ModuleLog.line("(IE|RemoveMetaAI) video-attribution: " + n + " method(s)");
+        hookByMarker(bridge, cl, blank,
+                "android_purge_26_q3_MetaAIVideoAttributionSubtitleUseCase_getUiState",
+                "video-attribution", null);
     }
 
     // Meta-AI-reels-entrypoint eligibility gate. The reel more-options "blue circle" Meta AI
