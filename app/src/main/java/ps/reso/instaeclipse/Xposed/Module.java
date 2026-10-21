@@ -938,17 +938,28 @@ public class Module {
             public void onReceive(Context ctx, Intent intent) {
                 if (intent == null) return;
                 String action = intent.getAction();
-                if (action != null && action.startsWith("ps.reso.instaeclipse.ACTION_UPDATE_PREF")
-                        && !ps.reso.instaeclipse.utils.ipc.ModuleReplies.isPreferenceUpdate(action,
-                            intent.getStringExtra("key"), intent.getExtras() == null ? null : intent.getExtras().get("value"))) return;
+                // Companion writes: mark the key applied first, so a refused write stops counting as
+                // pending and PrefsMerge keeps Instagram's value; then upstream's schema check, then
+                // the local type / Extreme Mode / private-key guard. A refused write pushes Instagram's
+                // values back so the companion's switch snaps back.
+                if (action != null && action.startsWith("ps.reso.instaeclipse.ACTION_UPDATE_PREF")) {
+                    ps.reso.instaeclipse.utils.core.CompanionSync.markApplied(ctx, intent.getStringExtra("key"), intent.getLongExtra("ts", 0));
+                    if (!ps.reso.instaeclipse.utils.ipc.ModuleReplies.isPreferenceUpdate(action,
+                            intent.getStringExtra("key"), intent.getExtras() == null ? null : intent.getExtras().get("value"))) {
+                        ps.reso.instaeclipse.utils.core.CompanionSync.pushAsync(ctx);
+                        return;
+                    }
+                }
                 if ("ps.reso.instaeclipse.ACTION_UPDATE_PREF".equals(action)) {
                     String key = intent.getStringExtra("key");
-                    ps.reso.instaeclipse.utils.core.CompanionSync.markApplied(ctx, key, intent.getLongExtra("ts", 0));
                     boolean value = intent.getBooleanExtra("value", false);
 
-                    ModuleLog.line("(InstaEclipse) Sync: Updating " + key + " to " + value);
-
                     android.content.SharedPreferences prefs = ctx.getSharedPreferences("instaeclipse_prefs", Context.MODE_PRIVATE);
+                    if (!SettingsManager.acceptsCompanionWrite(prefs, key, value)) {
+                        ps.reso.instaeclipse.utils.core.CompanionSync.pushAsync(ctx);
+                        return;
+                    }
+                    ModuleLog.line("(InstaEclipse) Sync: Updating " + key + " to " + value);
                     prefs.edit().putBoolean(key, value).apply();
 
                     SettingsManager.loadAllFlags(ctx);
@@ -957,12 +968,14 @@ public class Module {
 
                 } else if ("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING".equals(action)) {
                     String key = intent.getStringExtra("key");
-                    ps.reso.instaeclipse.utils.core.CompanionSync.markApplied(ctx, key, intent.getLongExtra("ts", 0));
                     String value = intent.getStringExtra("value");
 
-                    ModuleLog.line("(InstaEclipse) Sync: Updating string pref " + key);
-
                     android.content.SharedPreferences prefs = ctx.getSharedPreferences("instaeclipse_prefs", Context.MODE_PRIVATE);
+                    if (!SettingsManager.acceptsCompanionWrite(prefs, key, value)) {
+                        ps.reso.instaeclipse.utils.core.CompanionSync.pushAsync(ctx);
+                        return;
+                    }
+                    ModuleLog.line("(InstaEclipse) Sync: Updating string pref " + key);
                     prefs.edit().putString(key, value).apply();
 
                     SettingsManager.loadAllFlags(ctx);
@@ -970,12 +983,17 @@ public class Module {
 
                 } else if ("ps.reso.instaeclipse.ACTION_UPDATE_PREF_INT".equals(action)) {
                     String key = intent.getStringExtra("key");
-                    ps.reso.instaeclipse.utils.core.CompanionSync.markApplied(ctx, key, intent.getLongExtra("ts", 0));
                     int value = intent.getIntExtra("value", 0);
 
-                    ModuleLog.line("(InstaEclipse) Sync: Updating int pref " + key + " to " + value);
-
                     android.content.SharedPreferences prefs = ctx.getSharedPreferences("instaeclipse_prefs", Context.MODE_PRIVATE);
+                    if (!SettingsManager.acceptsCompanionWrite(prefs, key, value)) {
+                        ps.reso.instaeclipse.utils.core.CompanionSync.pushAsync(ctx);
+                        return;
+                    }
+                    if ("storyCacheHours".equals(key)) {
+                        value = ps.reso.instaeclipse.utils.media.StoryCacheRetention.normalize(value);
+                    }
+                    ModuleLog.line("(InstaEclipse) Sync: Updating int pref " + key + " to " + value);
                     prefs.edit().putInt(key, value).apply();
 
                     SettingsManager.loadAllFlags(ctx);

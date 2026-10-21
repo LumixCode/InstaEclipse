@@ -1383,6 +1383,8 @@ public class FeaturesFragment extends Fragment {
         extreme.textColor = 0xFFFF453A;
         extreme.isExtreme = true;
         extreme.requiresAnyOf = distractionKeys;
+        // Irreversible once on: Instagram refuses turning it off, so the row locks itself.
+        extreme.disabledWhenTrue = "isExtremeMode";
 
         defs.add(getString(R.string.feat_danger_zone));
         defs.add(Arrays.asList(extreme));
@@ -2851,7 +2853,10 @@ public class FeaturesFragment extends Fragment {
         if (stagedChanges.isEmpty()) return;
 
         SharedPreferences.Editor editor = localCache.edit();
-        for (Map.Entry<String, Boolean> entry : stagedChanges.entrySet()) {
+        List<Map.Entry<String, Boolean>> changes = new ArrayList<>(stagedChanges.entrySet());
+        // Apply the selected restrictions before Instagram locks them with Extreme Mode.
+        changes.sort(java.util.Comparator.comparing(entry -> "isExtremeMode".equals(entry.getKey())));
+        for (Map.Entry<String, Boolean> entry : changes) {
             String key = entry.getKey();
             boolean value = entry.getValue();
 
