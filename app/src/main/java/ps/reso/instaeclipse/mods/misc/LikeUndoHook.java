@@ -47,8 +47,6 @@ public class LikeUndoHook {
     private static final String TAG = "(InstaEclipse | LikeUndo): ";
     private static final String CACHE_KEY = "LikeUndoSender";
     private static final long DELAY_MS = 4000;
-    /** A heart re-rendered right after the like (a new view) is found again once, this much later. */
-    private static final long RETINT_MS = 300;
     /** The hooked method being called through on purpose, which its own hook lets pass. */
     private static final ThreadLocal<Member> REPLAYING = new ThreadLocal<>();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -60,7 +58,7 @@ public class LikeUndoHook {
         final Object self;
         final Object[] args;
         final Object media;
-        LikeHeartTint tint;
+        volatile LikeHeartTint tint;
         Runnable fire;
 
         HeldLike(Member method, Object self, Object[] args, Object media) {
@@ -127,7 +125,7 @@ public class LikeUndoHook {
                 LikeHeartTint.Origin confirmedFrom = confirmedOrigin;
                 confirmedOrigin = null;
                 LikeHeartTint.Origin origin = confirmed && FeatureFlags.confirmLikes && confirmedFrom != null
-                        ? confirmedFrom : LikeHeartTint.Origin.capture(null);
+                        ? confirmedFrom : LikeHeartTint.Origin.capture();
                 Activity act = origin.activityOr(UIHookManager.getCurrentActivity());
                 if (act == null) return;
                 param.setResult(null);
@@ -135,16 +133,17 @@ public class LikeUndoHook {
                 Object self = param.thisObject;
                 Object[] args = param.args.clone();
                 if (!confirmed) MAIN.post(() -> confirm(act, () -> {
-                    if (FeatureFlags.likeUndo) hold(act, method, self, args, media, origin);
+                    if (FeatureFlags.likeUndo) hold(method, self, args, media);
                     else send(method, self, args);
                 }));
-                else hold(act, method, self, args, media, origin);
+                else hold(method, self, args, media);
             }
         });
         ModuleLog.line(TAG + "✅ Hooked " + sender.getDeclaringClass().getName() + "." + sender.getName());
         FeatureStatusTracker.setHooked("LikeUndo");
         installed = true;
         onLikeUndoChanged();
+        LikeHeartTint.install(bridge);
         // View.performClick is a very hot framework method; hooking it app-wide triggers ART's JIT
         // SIGSEGV on IG 451+ / Android 13, so the heart tap hook is only installed when Ask before
         // liking is on (turning it on later holds heart taps after an Instagram restart; until
@@ -207,7 +206,7 @@ public class LikeUndoHook {
                 Activity act = activityOf(v.getContext());
                 if (act == null) return;
                 param.setResult(true);
-                LikeHeartTint.Origin origin = LikeHeartTint.Origin.capture(heart);
+                LikeHeartTint.Origin origin = LikeHeartTint.Origin.capture();
                 MAIN.post(() -> confirm(act, () -> {
                     confirmedOrigin = origin;
                     confirmedUntil = System.currentTimeMillis() + 3000;
@@ -242,7 +241,7 @@ public class LikeUndoHook {
                             || System.currentTimeMillis() <= confirmedUntil) return;
                     Object media = mediaOf(param.args);
                     if (media == null || HideSuggestedFeedItemsHook.isLiked(media)) return; // already liked: not a new like
-                    LikeHeartTint.Origin origin = LikeHeartTint.Origin.capture(null);
+                    LikeHeartTint.Origin origin = LikeHeartTint.Origin.capture();
                     // The entry is given the post's own activity (a post opened from a chat has its own).
                     Activity given = null;
                     for (Object arg : param.args) if (arg instanceof Activity x && !x.isFinishing()) given = x;
@@ -273,29 +272,21 @@ public class LikeUndoHook {
     }
 
     /** Holds the like for DELAY_MS with its heart blue, then sends it; the heart turns red. */
-    private static void hold(Activity act, Member method, Object self, Object[] args, Object media,
-                             LikeHeartTint.Origin origin) {
+    private static void hold(Member method, Object self, Object[] args, Object media) {
         ModuleLog.line(TAG + "like held for " + DELAY_MS + " ms");
         HeldLike like = new HeldLike(method, self, args, media);
         like.fire = () -> {
             like.clearTint();
             if (pending.release(media, like)) send(method, self, args); // else taken back or replaced
         };
-        // Held at once, on the hook's thread: an unlike right after it must find it.
+        // Held at once, on the hook's thread: an unlike right after it must find it, and the heart
+        // Instagram redraws for the like in the next frame must already be blue.
         pending.hold(media, like);
+        like.tint = LikeHeartTint.show(media);
         LikeHeartTint.trackTouches();
         Runnable start = () -> {
-            if (!pending.isHeld(media, like)) return;
-            like.tint = LikeHeartTint.show(act, origin);
-            MAIN.postDelayed(like.fire, DELAY_MS);
-            // Instagram may draw the liked heart in a new view: find it again once.
-            MAIN.postDelayed(() -> {
-                if (!pending.isHeld(media, like) || (like.tint != null && like.tint.isShown())) return;
-                like.clearTint();
-                like.tint = LikeHeartTint.show(act, origin);
-            }, RETINT_MS);
+            if (pending.isHeld(media, like)) MAIN.postDelayed(like.fire, DELAY_MS);
         };
-        // At once on the main thread: a double tap redraws the heart in this frame, red if posted.
         if (Looper.myLooper() == Looper.getMainLooper()) start.run();
         else MAIN.post(start);
     }
