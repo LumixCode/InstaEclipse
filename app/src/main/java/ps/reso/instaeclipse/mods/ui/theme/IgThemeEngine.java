@@ -6,6 +6,7 @@ import android.util.SparseIntArray;
 import android.util.TypedValue;
 
 import java.lang.reflect.Field;
+import java.util.Set;
 
 import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -292,6 +293,14 @@ public final class IgThemeEngine {
         return name.startsWith("igds_color_") ? 1 : -1;
     }
 
+    // IG's grey scale by exact name: a substring test ("grey_1") also caught the dark grey_12/16/21/
+    // 22/24 backgrounds. The dark greys are IG's elevated, secondary and tertiary backgrounds (the
+    // base page is black), so they take the surface slot; the light greys are secondary text.
+    private static final Set<String> SURFACE_GREYS = Set.of("bds_grey_7", "bds_grey_8", "bds_grey_9", "bds_grey_10",
+            "bds_grey_12", "bds_grey_16", "bds_grey_21", "bds_grey_22", "bds_grey_24", "igds_prism_gray_08", "igds_prism_gray_10");
+    private static final Set<String> SECONDARY_GREYS = Set.of("bds_grey_1", "bds_grey_2", "bds_grey_3", "bds_grey_4",
+            "bds_grey_6", "bds_grey_11", "bds_grey_13", "bds_grey_18");
+
     static int slotForColorName(String name) {
         if (name == null) return -1;
         if (name.contains("primary_text") || name.contains("text_on_color") || name.contains("text_on_white")) return 2;
@@ -301,20 +310,23 @@ public final class IgThemeEngine {
         if (name.contains(IgThemePalette.SLOT_DESTRUCTIVE) || (name.contains("badge") && name.contains(IgThemePalette.SLOT_ICON))) return 14;
         if (name.contains("error")) return 13;
         if (name.contains(IgThemePalette.SLOT_LINK)) return 12;
-        if (name.contains("primary_button") || name.contains("bds_blue") || name.equals("emphasized_action_color")) return 5;
+        // badge_color is #0095F6, IG's button blue.
+        if (name.contains("primary_button") || name.contains("bds_blue") || name.equals("emphasized_action_color")
+                || name.equals("badge_color")) return 5;
         if (name.contains("indigo") || name.contains("blue") || name.contains("emphasized") || name.contains("gradient")
                 || name.contains(IgThemePalette.SLOT_ACCENT) || name.contains("cta")) return 4;
         if (name.contains(IgThemePalette.SLOT_DIVIDER) || name.contains("separator")) return 8;
         if (name.contains(IgThemePalette.SLOT_BORDER) || name.contains("stroke")) return 9;
         if (name.contains("status_bar")) return 10;
         if (name.contains("nav")) return 11;
-        if (name.contains("black") || name.equals("igds_prism_black") || name.contains("grey_9") || name.contains("gray_10")
-                || name.contains("grey_10") || name.contains("media_background")) return 0;
-        if (name.contains("grey_8") || name.contains("gray_08") || name.contains("grey_7") || name.contains("elevated")
-                || name.contains("highlight") || name.contains(IgThemePalette.SLOT_SURFACE)) return 1;
-        if (name.contains("grey_0") || name.contains("gray_00") || name.contains("white")) return 2;
-        if (name.contains("grey_1") || name.contains("secondary") || name.contains("grey_2") || name.contains("grey_3")
-                || name.contains("grey_4") || name.contains("grey_6")) return 3;
+        // The base page color: igds_primary_background is @bds_white, or @bds_black at night.
+        if (name.contains("black") || name.contains("primary_background") || name.contains("media_background")) return 0;
+        if (SURFACE_GREYS.contains(name) || name.contains("elevated") || name.contains("highlight")
+                || name.contains(IgThemePalette.SLOT_SURFACE)) return 1;
+        // bottom_sheet_undo_redo_color is @bds_white.
+        if (name.equals("bds_grey_0") || name.equals("igds_prism_gray_00") || name.contains("white")
+                || name.equals("bottom_sheet_undo_redo_color")) return 2;
+        if (SECONDARY_GREYS.contains(name) || name.contains("secondary")) return 3;
         if (name.contains(IgThemePalette.SLOT_ICON)) return 6;
         if (name.contains("red") && (name.contains("5") || name.contains("6") || name.contains(IgThemePalette.SLOT_DESTRUCTIVE))) return 14;
         return (name.startsWith("bds_") || name.startsWith("igds_prism_") || name.startsWith("igds_")) ? 1 : -1;

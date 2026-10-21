@@ -39,7 +39,6 @@ public class IgThemeHook {
     private static boolean lazyTried;          // main thread only: one live install attempt at most
     private static volatile ClassLoader hostLoader; // lets a live "theme on" install the skipped hooks
     private static volatile boolean installed;
-    private static volatile Field typedArrayAttrsField;
     private static volatile Field typedArrayResourcesField;
 
     public void install(ClassLoader classLoader) {
@@ -191,17 +190,18 @@ public class IgThemeHook {
         XposedHelpers.findAndHookMethod(TypedArray.class, "getColor", int.class, int.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (IgColorRemapEngine.isBypassing() || !IgThemeEngine.themeEnabled()) return;
+                if (IgColorRemapEngine.isBypassing() || !IgThemeEngine.themeEnabled()
+                        || param.getThrowable() != null) return;
                 try {
                     TypedArray ta = (TypedArray) param.thisObject;
                     int index = (Integer) param.args[0];
-                    int[] attrs = typedArrayAttributes(ta);
-                    if (attrs == null || index < 0 || index >= attrs.length) return;
                     if (!IgThemeEngine.isInitialized()) {
                         Resources res = typedArrayResources(ta);
                         if (res != null) IgThemeEngine.ensureInitialized(res, cl);
                     }
-                    Integer override = IgThemeEngine.colorForAttr(attrs[index]);
+                    // A TypedArray keeps no attribute ids, only the color resource each value came
+                    // from: theme by that resource's name as Resources.getColor does, else by value.
+                    Integer override = IgThemeEngine.colorForResource(ta.getResourceId(index, 0));
                     if (override != null) {
                         param.setResult(override);
                         return;
@@ -351,20 +351,6 @@ public class IgThemeHook {
             flags = flags & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
         }
         window.getDecorView().setSystemUiVisibility(flags);
-    }
-
-    private static int[] typedArrayAttributes(TypedArray ta) {
-        try {
-            Field field = typedArrayAttrsField;
-            if (field == null) {
-                field = TypedArray.class.getDeclaredField("mAttributes");
-                field.setAccessible(true);
-                typedArrayAttrsField = field;
-            }
-            return (int[]) field.get(ta);
-        } catch (Throwable ignored) {
-            return null;
-        }
     }
 
     private static Resources typedArrayResources(TypedArray ta) {

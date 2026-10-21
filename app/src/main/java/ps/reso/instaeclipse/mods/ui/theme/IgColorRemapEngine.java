@@ -244,7 +244,8 @@ public final class IgColorRemapEngine {
         IgThemePalette palette = IgThemeEngine.getActivePalette();
         cacheFuzzyPalette(palette);
         Resources res = context.getResources();
-        String pkg = res.getResourcePackageName(android.R.color.black);
+        // Instagram's own color names: android.R.color.black's package is "android", where none exist.
+        String pkg = ps.reso.instaeclipse.utils.core.CommonUtils.IG_PACKAGE_NAME;
         mapCanonical(exact, rgb, palette);
         mapResourceNames(exact, rgb, res, pkg, palette);
         mapFromSlots(exact, rgb, res, pkg, palette);
@@ -257,11 +258,19 @@ public final class IgColorRemapEngine {
             keepLightPolarity(rgb, palette);
             resPolarityFix = buildResourcePolarityFix(res, palette);
         }
-        // The palette's own colors are already final: never remap them a second time (a view that
-        // gets our background and is then re-colored would otherwise go through the classifier).
+        // The palette's own colors are already final: never remap them a second time. A color is
+        // routinely remapped twice (ColorDrawable ctor then setColor, valueOf on a getColor result,
+        // the draw hook), so a palette color that equals a stock one (Pure OLED's black, Carbon
+        // Fiber's #E0E0E0) must not keep that stock color's entry. Every result of remap has a
+        // palette RGB, so making those RGBs map to themselves at any alpha makes remap idempotent.
+        SparseIntArray own = new SparseIntArray(IgThemePalette.SLOT_KEYS.length);
         for (String key : IgThemePalette.SLOT_KEYS) {
             int v = palette.get(key) & 0x00FFFFFF;
-            if (rgb.get(v, CACHE_MISS) == CACHE_MISS) rgb.put(v, v);
+            own.put(v, v);
+            rgb.put(v, v);
+        }
+        for (int i = exact.size() - 1; i >= 0; i--) {
+            if (own.indexOfKey(exact.keyAt(i) & 0x00FFFFFF) >= 0) exact.removeAt(i);
         }
         exactTable = exact;
         rgbTable = rgb;
