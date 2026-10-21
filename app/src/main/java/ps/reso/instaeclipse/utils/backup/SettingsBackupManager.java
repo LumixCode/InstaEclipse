@@ -6,6 +6,10 @@ import org.json.JSONObject;
 
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 
+/**
+ * Lock settings (passcode, salt, locked chats and every lock switch) are never part of a backup:
+ * restoring one must not turn a lock off without the passcode.
+ */
 public class SettingsBackupManager {
 
     private static final int VERSION = 1;

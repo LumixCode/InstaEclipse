@@ -26,15 +26,24 @@ public final class PrefsMerge {
     static final String IG_TS = "__igts_";
     static final String APPLIED = "__applied_";
 
-    /** Keys that are never copied to the companion (secrets and IPC/bookkeeping extras). */
+    /**
+     * Keys that are never copied to the companion (secrets, the locked chats' ids and titles, and
+     * IPC/bookkeeping extras). The companion's cache is world-readable under LSPosed.
+     */
     static final Set<String> EXCLUDED = new HashSet<>(Arrays.asList(
-            "lockDirectPasscode", "lockDirectSalt", IpcSecurity.EXTRA_NONCE, "pathJustSetLocally"));
+            "lockDirectPasscode", "lockDirectSalt", "lockedDirectThreads",
+            IpcSecurity.EXTRA_NONCE, "pathJustSetLocally"));
 
     private PrefsMerge() {}
 
+    /** True for a key that must stay inside Instagram's process. */
+    public static boolean isPrivate(String key) {
+        return key != null && EXCLUDED.contains(key);
+    }
+
     /** True for a setting Instagram may share with the companion. */
     public static boolean isSharedSetting(String key, Object value) {
-        if (key == null || key.startsWith("__") || EXCLUDED.contains(key)) return false;
+        if (key == null || key.startsWith("__") || isPrivate(key)) return false;
         return value instanceof Boolean || value instanceof Integer || value instanceof String;
     }
 

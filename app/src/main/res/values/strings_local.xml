@@ -63,4 +63,6 @@
 
 
 
+    <!-- Companion: a lock it can turn on but not off; restore that left settings out -->
+    <string name="ig_lock_turn_off_in_ig">Turn it off inside Instagram: InstaEclipse menu &gt; Lock</string>
 </resources>

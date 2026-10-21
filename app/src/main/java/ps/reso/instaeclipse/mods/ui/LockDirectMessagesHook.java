@@ -1,8 +1,5 @@
 package ps.reso.instaeclipse.mods.ui;
 
-import ps.reso.instaeclipse.utils.i18n.I18n;
-import ps.reso.instaeclipse.R;
-import ps.reso.instaeclipse.utils.core.PasscodeHasher;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.graphics.Color;
@@ -10,192 +7,379 @@ import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
+import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.utils.core.PasscodeHasher;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
+import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.toast.IeToast;
 
-/**
- * Lock DMs (GitHub #182): gate the Direct inbox behind the module passcode. When the inbox becomes
- * visible and the session isn't unlocked yet, a full-screen overlay covers the content until the
- * correct passcode is entered. Locks the WHOLE inbox (not individual chats). The passcode is stored
- * as a SHA-256 hash (FeatureFlags.lockDirectPasscode). Gated on FeatureFlags.lockDirectMessages.
- *
- * Inbox is detected by the stable view id `direct_search_bar_container` (fallback
- * `direct_inbox_null_state`); the thread screen is excluded via `direct_thread_header`.
- */
+/** Gates the app, a Direct visit, or selected conversations with one shared credential
+ *  (PBKDF2, see {@link PasscodeHasher}; five wrong tries lock entry for 30 s). */
 public class LockDirectMessagesHook {
-
     private static final String OVERLAY_TAG = "ie_dm_lock";
-    private static boolean unlockedThisSession = false;
-    private static boolean appUnlockedThisSession = false;
-    private static boolean appLockLifecycleRegistered = false;
-    private static int appStartedActivities = 0;
-    private static int searchBarId, nullStateId, threadHeaderId;
-    private static long lastGateLog = 0;
-
-    public void install(ClassLoader classLoader) {
-        // ModalActivity (a thread/inbox opened full-screen) fires onResume. The DM inbox TAB lives
-        // inside InstagramMainActivity, whose onCreate is obfuscated/inherited (a literal hook
-        // fails) — so main is covered from UIHookManager.setupHooks via watchActivity() instead.
-        XC_MethodHook start = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                watchActivity((Activity) param.thisObject);
-            }
-        };
-        try {
-            XposedHelpers.findAndHookMethod("com.instagram.modal.ModalActivity",
-                    classLoader, "onResume", start);
-        } catch (Throwable t) { ModuleLog.line("(IE|LockDMs) ⚠️ modal onResume: " + t.getMessage()); }
-        // Reflect status at startup (the gate only runs when the inbox opens, so mark it hooked
-        // now when armed — otherwise the load toast shows a ❌ even though it works).
-        if (FeatureFlags.lockDirectMessages) FeatureStatusTracker.setHooked("LockDirectMessages");
-        ModuleLog.line("(IE|LockDMs) ✅ installed");
-    }
-
-    /** Entry point usable from any activity hook (e.g. UIHookManager.setupHooks for the main tab). */
-    public static void watchActivity(final Activity a) {
-        if (a == null) return;
-        try { a.runOnUiThread(() -> watch(a)); } catch (Throwable ignored) {}
-    }
-
-    private static final java.util.Set<View> watchedDecors =
+    private static final DirectLockSession session = new DirectLockSession();
+    private static final java.util.Map<Activity, Gate> gates = new java.util.WeakHashMap<>();
+    private static final java.util.Set<Activity> started =
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    private static final java.util.Set<Activity> resumed =
+            java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    private static final java.util.Set<View> watched =
+            java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    private static boolean lifecycleRegistered;
+    private static boolean appUnlocked;
+    private static String previousSettings;
+    private static String previousAppSettings;
+    private static String currentAccount;
+    private static int inboxId, listId, threadId;
+    private static long outsideDirectSince;
+    private static final android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+    /**
+     * The hidden-inbox gate opens on the third of several quick taps, and the system biometric
+     * prompt closes itself on any tap outside its panel: a fourth tap closed it as it appeared.
+     * That gate starts the biometric prompt only after this long without a touch on it.
+     */
+    private static final long GESTURE_SETTLE_MS = 600L;
+
+    private static final class Gate {
+        final android.app.Dialog dialog;
+        final String scope;
+        final java.util.concurrent.atomic.AtomicBoolean completed =
+                new java.util.concurrent.atomic.AtomicBoolean();
+        final android.os.CancellationSignal biometric = new android.os.CancellationSignal();
+        /** The delayed biometric prompt of a gesture gate until it starts (main thread only). */
+        Runnable pendingBiometric;
+
+        Gate(android.app.Dialog dialog, String scope) {
+            this.dialog = dialog;
+            this.scope = scope;
+        }
+    }
+
+    /**
+     * Which of a window's frames run the gate check (main thread only). The check resolves the
+     * visible screen by reflection, so steady frames (scrolling, video) run it at most once per
+     * INTERVAL_MS, the last one as a posted check. Opening a screen always lays it out, and for
+     * SETTLE_MS after a layout pass every frame checks, as before this throttle, while the new
+     * screen's transition and lifecycle settle. watchActivity (activity resume and the Direct
+     * inbox/thread onResume) still checks at once.
+     */
+    static final class GateThrottle {
+        static final long INTERVAL_MS = 100L;
+        static final long SETTLE_MS = 500L;
+        private long lastCheck = -INTERVAL_MS;
+        private long settleUntil;
+        private boolean skipped;
+        private boolean posted;
+
+        void laidOut(long now) { settleUntil = now + SETTLE_MS; }
+
+        /** 0: check in this frame; above 0: post the trailing check that much later; below 0: it is posted. */
+        long preDraw(long now) {
+            if (now < settleUntil || now - lastCheck >= INTERVAL_MS) {
+                lastCheck = now;
+                skipped = false;
+                return 0L;
+            }
+            skipped = true;
+            if (posted) return -1L;
+            posted = true;
+            return lastCheck + INTERVAL_MS - now;
+        }
+
+        /** The posted check is due unless a frame checked after the last skipped one. */
+        boolean trailingDue(long now) {
+            posted = false;
+            if (!skipped) return false;
+            lastCheck = now;
+            skipped = false;
+            return true;
+        }
+    }
+
+    public void install(ClassLoader loader) {
+        try {
+            XposedHelpers.findAndHookMethod("com.instagram.modal.ModalActivity", loader,
+                    "onResume", new XC_MethodHook() {
+                        @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                            watchActivity((Activity) param.thisObject);
+                        }
+                    });
+        } catch (Throwable t) {
+            ModuleLog.line("(IE|LockDMs) lifecycle: " + t.getMessage());
+        }
+    }
+
+    public static void watchActivity(Activity activity) {
+        if (activity == null) return;
+        activity.runOnUiThread(() -> {
+            registerLifecycle(activity);
+            started.add(activity);
+            resumed.add(activity);
+            ensureIds(activity);
+            View decor = activity.getWindow().getDecorView();
+            if (watched.add(decor)) {
+                GateThrottle throttle = new GateThrottle();
+                Runnable trailing = () -> {
+                    try {
+                        if (throttle.trailingDue(android.os.SystemClock.uptimeMillis())
+                                && resumed.contains(activity)) checkGate(activity);
+                    } catch (Throwable t) {
+                        ModuleLog.line("(IE|LockDMs) gate: " + t.getMessage());
+                    }
+                };
+                android.view.ViewTreeObserver observer = decor.getViewTreeObserver();
+                // Runs before the same frame's pre-draw: a new screen is always laid out.
+                observer.addOnGlobalLayoutListener(() -> throttle.laidOut(android.os.SystemClock.uptimeMillis()));
+                observer.addOnPreDrawListener(() -> {
+                    try {
+                        if (resumed.contains(activity)) {
+                            long delay = throttle.preDraw(android.os.SystemClock.uptimeMillis());
+                            if (delay == 0L) checkGate(activity);
+                            else if (delay > 0L) main.postDelayed(trailing, delay);
+                        }
+                    } catch (Throwable t) {
+                        ModuleLog.line("(IE|LockDMs) gate: " + t.getMessage());
+                    }
+                    return true;
+                });
+            }
+            checkGate(activity);
+            // Both gates run from here: the whole-app one and the Direct one keep their own status.
+            if (FeatureFlags.lockWholeApp) FeatureStatusTracker.setHooked("LockWholeApp");
+            if (FeatureFlags.lockDirectMessages) FeatureStatusTracker.setHooked("LockDirectMessages");
+        });
+    }
+
+    private static void registerLifecycle(Activity seed) {
+        if (lifecycleRegistered) return;
+        lifecycleRegistered = true;
+        seed.getApplication().registerActivityLifecycleCallbacks(new android.app.Application.ActivityLifecycleCallbacks() {
+            @Override public void onActivityStarted(Activity a) { started.add(a); }
+            @Override public void onActivityResumed(Activity a) { watchActivity(a); }
+            @Override public void onActivityPaused(Activity a) { resumed.remove(a); }
+            @Override public void onActivityStopped(Activity a) {
+                started.remove(a);
+                dismissGate(a);
+                if (!started.isEmpty() || a.isChangingConfigurations()) return;
+                appUnlocked = false;
+                session.background(FeatureFlags.lockDirectAlways);
+                outsideDirectSince = 0L;
+            }
+            @Override public void onActivityDestroyed(Activity a) {
+                resumed.remove(a);
+                started.remove(a);
+                dismissGate(a);
+            }
+            @Override public void onActivityCreated(Activity a, android.os.Bundle state) {}
+            @Override public void onActivitySaveInstanceState(Activity a, android.os.Bundle state) {}
+        });
+    }
 
     @SuppressLint("DiscouragedApi")
     private static void ensureIds(Activity a) {
-        if (searchBarId != 0 || nullStateId != 0) return;
-        String pkg = a.getPackageName();
-        android.content.res.Resources r = a.getResources();
-        // The DM inbox (a tab in InstagramMainActivity) is identified by these ids (confirmed via
-        // live view dump); the old direct_search_bar_container/null_state don't exist here.
-        searchBarId    = r.getIdentifier("direct_inbox_action_bar", "id", pkg);
-        nullStateId    = r.getIdentifier("inbox_refreshable_thread_list_recyclerview", "id", pkg);
-        threadHeaderId = r.getIdentifier("direct_thread_header", "id", pkg);
-        ModuleLog.probe("(IE|LockDMs|PROBE) ids searchBar=" + searchBarId + " nullState=" + nullStateId
-                + " threadHeader=" + threadHeaderId);
+        if (inboxId != 0) return;
+        inboxId = a.getResources().getIdentifier("direct_inbox_action_bar", "id", a.getPackageName());
+        listId = a.getResources().getIdentifier("inbox_refreshable_thread_list_recyclerview", "id", a.getPackageName());
+        threadId = a.getResources().getIdentifier("direct_thread_header", "id", a.getPackageName());
     }
 
-    private static void watch(final Activity a) {
-        try {
-            registerAppLockLifecycle(a);
-            // Whole-app lock (#182 extension): gate the entire app the moment any screen shows while
-            // locked — takes priority over the DM-only gate. Same passcode as Lock DMs.
-            if (FeatureFlags.lockWholeApp && !appUnlockedThisSession
-                    && FeatureFlags.lockDirectPasscode != null && !FeatureFlags.lockDirectPasscode.isEmpty()) {
-                showOverlay(a, true);
+    private static boolean shown(View view, int id) {
+        if (view == null || id == 0 || !view.isShown()) return false;
+        if (view.getId() == id) return true;
+        if (view instanceof ViewGroup group) {
+            for (int i = 0; i < group.getChildCount(); i++) {
+                if (shown(group.getChildAt(i), id)) return true;
             }
-            ensureIds(a);
-            ModuleLog.probe("(IE|LockDMs|PROBE) armed flag=" + FeatureFlags.lockDirectMessages
-                    + " passLen=" + (FeatureFlags.lockDirectPasscode == null ? -1 : FeatureFlags.lockDirectPasscode.length())
-                    + " unlocked=" + unlockedThisSession);
-            final View decor = a.getWindow().getDecorView();
-            if (!watchedDecors.add(decor)) { gateIfInbox(a); return; } // already watching this window
-            // Persistent listener: the inbox tab appears/disappears without an activity resume, so
-            // we re-check on every layout while the feature is armed.
-            decor.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
-                if (!FeatureFlags.lockDirectMessages
-                        || FeatureFlags.lockDirectPasscode == null || FeatureFlags.lockDirectPasscode.isEmpty()) return;
-                // "Always ask": once unlocked, re-lock as soon as the inbox is no longer on screen,
-                // so returning to DMs prompts again (without needing to close Instagram).
-                if (unlockedThisSession) {
-                    if (FeatureFlags.lockDirectAlways && !isInbox(a)) unlockedThisSession = false;
+        }
+        return false;
+    }
+
+    private static DirectLockSession.Screen screen(Activity a) {
+        String module = ps.reso.instaeclipse.mods.ghost.HideChatsHook.visibleModule(a);
+        if ("direct_inbox".equals(module)) return DirectLockSession.Screen.INBOX;
+        if ("direct_thread".equals(module)) return DirectLockSession.Screen.THREAD;
+        if (module.startsWith("direct_")) return DirectLockSession.Screen.DIRECT;
+        if (!module.isEmpty()) return DirectLockSession.Screen.OTHER;
+        View decor = a.getWindow().getDecorView();
+        if (shown(decor, threadId)) return DirectLockSession.Screen.THREAD;
+        if (shown(decor, inboxId) || shown(decor, listId)) return DirectLockSession.Screen.INBOX;
+        return DirectLockSession.Screen.UNKNOWN;
+    }
+
+    private static void checkGate(Activity a) {
+        if (a.isFinishing() || a.isDestroyed()) return;
+        if (!FeatureFlags.lockWholeApp && !FeatureFlags.lockDirectMessages
+                && !FeatureFlags.lockSpecificMessages && !gates.containsKey(a)) {
+            session.reset();
+            appUnlocked = false;
+            return;
+        }
+        try {
+            // The salt, not the hash: the first unlock re-hashes a legacy passcode (PBKDF2), which
+            // must not reset the session and prompt again. A new passcode always gets a new salt.
+            String credential = FeatureFlags.lockDirectSalt + ":"
+                    + (FeatureFlags.lockDirectPasscode == null || FeatureFlags.lockDirectPasscode.isEmpty());
+            String settings = FeatureFlags.lockWholeApp + ":" + FeatureFlags.lockDirectMessages
+                    + ":" + FeatureFlags.lockSpecificMessages + ":" + FeatureFlags.lockDirectAlways
+                    + ":" + FeatureFlags.lockedDirectThreads + ":" + credential;
+            if (!settings.equals(previousSettings)) {
+                previousSettings = settings;
+                session.reset();
+            }
+            String appSettings = FeatureFlags.lockWholeApp + ":" + credential;
+            if (!appSettings.equals(previousAppSettings)) {
+                previousAppSettings = appSettings;
+                appUnlocked = false;
+            }
+            DirectLockSession.Screen screen = screen(a);
+            String id = screen == DirectLockSession.Screen.THREAD
+                    ? ps.reso.instaeclipse.mods.ghost.HideChatsHook.currentThreadId(a) : null;
+            String account = ps.reso.instaeclipse.mods.ghost.HideChatsHook.currentAccount(a);
+            if (account != null && !account.equals(currentAccount)) {
+                if (currentAccount != null) appUnlocked = false;
+                currentAccount = account;
+                // A hidden-chats or settings gate was opened from this account's own screen and covers
+                // it, so no switch can happen under it. With the DM locks off the account is first
+                // read only once such a gate is up: dismissing it here closed the triple-tap prompt
+                // on its first frame.
+                Gate open = gates.get(a);
+                if (open == null || !(open.scope.equals("hidden") || open.scope.equals("settings"))) dismissGate(a);
+            }
+            // A navigation animation can briefly expose the underlying feed between two Direct fragments.
+            if (screen == DirectLockSession.Screen.OTHER) {
+                long now = android.os.SystemClock.elapsedRealtime();
+                if (outsideDirectSince == 0L) {
+                    outsideDirectSince = now;
+                    main.postDelayed(() -> { if (resumed.contains(a)) checkGate(a); }, 250L);
+                }
+                if (now - outsideDirectSince < 250L) screen = DirectLockSession.Screen.UNKNOWN;
+            } else if (screen != DirectLockSession.Screen.UNKNOWN) outsideDirectSince = 0L;
+            session.visit(screen, id, account, FeatureFlags.lockDirectAlways);
+            if (FeatureFlags.lockDirectPasscode == null || FeatureFlags.lockDirectPasscode.isEmpty()) {
+                dismissGate(a);
+                return;
+            }
+            String scope = null;
+            String title = null;
+            if (FeatureFlags.lockWholeApp && !appUnlocked) {
+                scope = "app";
+                title = I18n.t(a, R.string.ig_lock_open_app_prompt);
+            } else if (session.needsInboxLock(screen, FeatureFlags.lockDirectMessages)) {
+                scope = "inbox";
+                title = I18n.t(a, R.string.ig_lock_open_dms_prompt);
+            } else if (!FeatureFlags.lockDirectMessages && FeatureFlags.lockSpecificMessages
+                    && session.needsThreadLock(screen, id,
+                    id == null ? !ps.reso.instaeclipse.utils.ghost.LockedThreads.all().isEmpty()
+                            : ps.reso.instaeclipse.utils.ghost.LockedThreads.contains(id))) {
+                scope = "thread:" + id;
+                title = I18n.t(a, R.string.ig_lock_open_chat_prompt);
+            }
+            Gate current = gates.get(a);
+            if (current != null && (current.scope.equals("hidden") || current.scope.equals("settings"))) return;
+            if (current != null && java.util.Objects.equals(current.scope, scope)) return;
+            if (screen == DirectLockSession.Screen.UNKNOWN && current != null && scope == null) return;
+            dismissGate(a);
+            if (scope == null) return;
+            final String requestedScope = scope;
+            final String requestedThread = id;
+            final String requestedAccount = account;
+            showAuthenticationOverlay(a, title, I18n.t(a, R.string.ig_lock_biometric_title), () -> {
+                if ("app".equals(requestedScope)) {
+                    appUnlocked = true;
+                    session.unlockInbox();
+                    session.unlockThread(requestedThread);
+                } else if ("inbox".equals(requestedScope)) session.unlockInbox();
+                else session.unlockThread(requestedThread);
+            }, requestedScope, () -> {
+                DirectLockSession.Screen live = screen(a);
+                String liveAccount = ps.reso.instaeclipse.mods.ghost.HideChatsHook.currentAccount(a);
+                if (!java.util.Objects.equals(requestedAccount, liveAccount)) return false;
+                if (requestedScope.equals("app")) return true;
+                if (requestedScope.equals("inbox")) return live == DirectLockSession.Screen.INBOX
+                        || live == DirectLockSession.Screen.THREAD || live == DirectLockSession.Screen.DIRECT;
+                return requestedThread != null && live == DirectLockSession.Screen.THREAD
+                        && requestedThread.equals(ps.reso.instaeclipse.mods.ghost.HideChatsHook.currentThreadId(a));
+            }, () -> {
+                if (requestedScope.equals("app")) a.moveTaskToBack(true);
+                else a.onBackPressed();
+            });
+        } catch (Throwable t) {
+            ModuleLog.line("(IE|LockDMs) gate: " + t.getMessage());
+        }
+    }
+
+    private static void dismissGate(Activity a) {
+        Gate gate = gates.remove(a);
+        if (gate == null) return;
+        gate.completed.set(true);
+        gate.biometric.cancel();
+        gate.dialog.dismiss();
+    }
+
+    public static boolean authenticateForHiddenChats(Activity a, Runnable onSuccess) {
+        return a != null && authenticate(a, I18n.t(a, R.string.ig_lock_hidden_chats_prompt), "hidden", onSuccess);
+    }
+
+    /** Full-screen passcode/biometric gate for a settings or hidden-inbox action; false when no
+     *  passcode is set (the user is told) or a gate is already showing. */
+    public static boolean authenticate(Activity a, String title, String scope, Runnable onSuccess) {
+        if (a == null || onSuccess == null) return false;
+        if (FeatureFlags.lockDirectPasscode == null || FeatureFlags.lockDirectPasscode.isEmpty()) {
+            IeToast.makeText(a, I18n.t(a, R.string.ig_lock_set_passcode_first), Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        return showAuthenticationOverlay(a, title, I18n.t(a, R.string.ig_lock_biometric_title), onSuccess, scope,
+                () -> resumed.contains(a) && !a.isFinishing(), () -> {});
+    }
+
+    private static boolean showAuthenticationOverlay(Activity a, String titleText,
+                                                     String biometricTitle,
+                                                     Runnable onSuccess, String scope,
+                                                     java.util.function.BooleanSupplier valid,
+                                                     Runnable onCancel) {
+        if (gates.containsKey(a) || a.isFinishing() || a.isDestroyed()) return false;
+        android.app.Dialog dialog = new android.app.Dialog(a, android.R.style.Theme_Material_NoActionBar) {
+            @Override public void cancel() {
+                if (scope.equals("hidden") || scope.equals("settings")) {
+                    super.cancel();
                     return;
                 }
-                gateIfInbox(a);
-            });
-            gateIfInbox(a);
-        } catch (Throwable t) {
-            ModuleLog.line("(IE|LockDMs) ⚠️ watch: " + t.getMessage());
-        }
-    }
+                Gate active = gates.get(a);
+                if (active == null || active.dialog != this
+                        || !active.completed.compareAndSet(false, true)) return;
+                active.biometric.cancel();
+                // Keep the opaque window until navigation has actually left the locked screen.
+                onCancel.run();
+            }
 
-    /**
-     * Whole-app lock lifecycle: re-lock whenever the app returns from the background, and gate any
-     * screen that resumes while locked. Registered once per process. Uses the same passcode as DMs.
-     */
-    private static void registerAppLockLifecycle(Activity a) {
-        if (appLockLifecycleRegistered) return;
-        try {
-            android.app.Application app = a.getApplication();
-            if (app == null) return;
-            app.registerActivityLifecycleCallbacks(new android.app.Application.ActivityLifecycleCallbacks() {
-                @Override public void onActivityResumed(Activity act) {
-                    if (!FeatureFlags.lockWholeApp || appUnlockedThisSession) return;
-                    if (FeatureFlags.lockDirectPasscode == null || FeatureFlags.lockDirectPasscode.isEmpty()) return;
-                    try { act.runOnUiThread(() -> showOverlay(act, true)); } catch (Throwable ignored) {}
+            @Override public boolean dispatchTouchEvent(android.view.MotionEvent event) {
+                // A stray tap from the gesture lands on this full-screen window, which no tap
+                // closes: it pushes the biometric prompt back instead of closing that.
+                Gate active = gates.get(a);
+                if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN && active != null
+                        && active.dialog == this && active.pendingBiometric != null) {
+                    main.removeCallbacks(active.pendingBiometric);
+                    main.postDelayed(active.pendingBiometric, GESTURE_SETTLE_MS);
                 }
-                @Override public void onActivityStarted(Activity act) { appStartedActivities++; }
-                @Override public void onActivityStopped(Activity act) {
-                    appStartedActivities--;
-                    if (appStartedActivities <= 0) { appStartedActivities = 0; appUnlockedThisSession = false; }
-                }
-                @Override public void onActivityCreated(Activity act, android.os.Bundle b) {}
-                @Override public void onActivityPaused(Activity act) {}
-                @Override public void onActivitySaveInstanceState(Activity act, android.os.Bundle b) {}
-                @Override public void onActivityDestroyed(Activity act) {}
-            });
-            appLockLifecycleRegistered = true;
-        } catch (Throwable ignored) {}
-    }
-
-    /** True when the DM inbox is on screen (and not a thread). */
-    private static boolean isInbox(Activity a) {
-        if (threadHeaderId != 0 && a.findViewById(threadHeaderId) != null) return false;
-        return (searchBarId != 0 && a.findViewById(searchBarId) != null)
-                || (nullStateId != 0 && a.findViewById(nullStateId) != null);
-    }
-
-    /** If the DM inbox is on screen (and not a thread), show the passcode overlay. Returns true if
-     *  the inbox was detected (so the layout listener can detach). */
-    private static boolean gateIfInbox(Activity a) {
-        if (!FeatureFlags.lockDirectMessages || unlockedThisSession
-                || FeatureFlags.lockDirectPasscode == null || FeatureFlags.lockDirectPasscode.isEmpty()) return false;
-        boolean onThread = threadHeaderId != 0 && a.findViewById(threadHeaderId) != null;
-        if (onThread) return false;
-        boolean sb = searchBarId != 0 && a.findViewById(searchBarId) != null;
-        boolean ns = nullStateId != 0 && a.findViewById(nullStateId) != null;
-        boolean onInbox = sb || ns;
-        long now = System.currentTimeMillis();
-        if (now - lastGateLog > 1500) {
-            lastGateLog = now;
-            ModuleLog.probe("(IE|LockDMs|PROBE) gate act=" + a.getClass().getSimpleName()
-                    + " onThread=" + onThread + " searchBar=" + sb + " nullState=" + ns);
-        }
-        if (!onInbox) return false;
-        showOverlay(a);
-        return true;
-    }
-
-    private static void showOverlay(Activity a) { showOverlay(a, false); }
-
-    /**
-     * @param wholeApp when true this gates the entire app (title + which session flag it clears);
-     *                 when false it gates just the DM inbox.
-     */
-    private static void showOverlay(Activity a, boolean wholeApp) {
-        final ViewGroup content = a.findViewById(android.R.id.content);
-        if (content == null || content.findViewWithTag(OVERLAY_TAG) != null) return;
-
-        // Let the window resize when the keyboard shows so the centered card floats ABOVE it
-        // (previously the Unlock button was hidden behind the keyboard).
-        try {
-            a.getWindow().setSoftInputMode(
-                    android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
-        } catch (Throwable ignored) {}
-
+                return super.dispatchTouchEvent(event);
+            }
+        };
+        Gate gate = new Gate(dialog, scope);
         FrameLayout overlay = new FrameLayout(a);
         overlay.setTag(OVERLAY_TAG);
         overlay.setClickable(true);
-        overlay.setBackgroundColor(Color.parseColor("#FA121214"));
+        overlay.setBackgroundColor(Color.parseColor("#121214"));
         overlay.setLayoutParams(new FrameLayout.LayoutParams(-1, -1));
 
         // Scrollable so the card is always reachable even on short screens with the keyboard up.
@@ -227,7 +411,7 @@ public class LockDirectMessagesHook {
         lock.setPadding(0, 0, 0, dp(a, 8));
 
         TextView title = new TextView(a);
-        title.setText(wholeApp ? "Enter passcode to open Instagram" : "Enter passcode to open DMs");
+        title.setText(titleText);
         title.setTextColor(Color.WHITE);
         title.setTextSize(17);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -238,7 +422,7 @@ public class LockDirectMessagesHook {
         code.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
         code.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_DONE);
         code.setSingleLine(true);
-        code.setHint("Passcode");
+        code.setHint(I18n.t(a, R.string.ig_locked_coll_hint));
         code.setTextColor(Color.WHITE);
         code.setHintTextColor(Color.parseColor("#8E8E93"));
         code.setGravity(Gravity.CENTER);
@@ -266,7 +450,7 @@ public class LockDirectMessagesHook {
         error.setVisibility(View.GONE);
 
         Button unlock = new Button(a);
-        unlock.setText("Unlock");
+        unlock.setText(I18n.t(a, R.string.ig_lock_unlock));
         unlock.setAllCaps(false);
         unlock.setTextColor(Color.WHITE);
         unlock.setTextSize(16);
@@ -278,11 +462,18 @@ public class LockDirectMessagesHook {
         btnLp.topMargin = dp(a, 16);
         unlock.setLayoutParams(btnLp);
 
+        final Runnable succeed = () -> {
+            if (gates.get(a) != gate || !valid.getAsBoolean()
+                    || !gate.completed.compareAndSet(false, true)) return;
+            onSuccess.run();
+            hideKeyboard(a, code);
+            gates.remove(a);
+            gate.biometric.cancel();
+            dialog.dismiss();
+        };
         final Runnable attempt = () -> {
             if (checkPass(code.getText().toString())) {
-                if (wholeApp) appUnlockedThisSession = true; else unlockedThisSession = true;
-                hideKeyboard(a, code);
-                content.removeView(overlay);
+                succeed.run();
             } else {
                 code.setText("");
                 error.setText(failureText(a));
@@ -290,6 +481,16 @@ public class LockDirectMessagesHook {
             }
         };
         unlock.setOnClickListener(v -> attempt.run());
+        // Typing the passcode answers a gesture gate: its biometric prompt no longer comes up.
+        code.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(android.text.Editable s) {
+                if (s.length() == 0 || gate.pendingBiometric == null) return;
+                main.removeCallbacks(gate.pendingBiometric);
+                gate.pendingBiometric = null;
+            }
+        });
         // Keyboard "Done" also submits — so the unlock never depends on a button the keyboard hides.
         code.setOnEditorActionListener((v, actionId, ev) -> {
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) { attempt.run(); return true; }
@@ -308,23 +509,50 @@ public class LockDirectMessagesHook {
         inner.addView(col);
         scroller.addView(inner);
         overlay.addView(scroller);
-        content.addView(overlay);
-        FeatureStatusTracker.setHooked(wholeApp ? "LockWholeApp" : "LockDirectMessages");
+        dialog.setContentView(overlay);
+        dialog.setCanceledOnTouchOutside(false);
+        dialog.setOnCancelListener(ignored -> {
+            if (!gate.completed.compareAndSet(false, true)) return;
+            gates.remove(a);
+            gate.biometric.cancel();
+            hideKeyboard(a, code);
+            onCancel.run();
+        });
+        android.view.Window window = dialog.getWindow();
+        if (window == null) return false;
+        window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.rgb(18, 18, 20)));
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        window.setDimAmount(1f);
+        gates.put(a, gate);
+        try {
+            dialog.show();
+            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        } catch (Throwable t) {
+            gates.remove(a);
+            throw t;
+        }
 
         // Biometric unlock: if the device has an enrolled fingerprint/face and the user hasn't
         // disabled it, prompt automatically. Success unlocks exactly like a correct passcode; the
         // passcode field stays as the fallback (the prompt's negative button just dismisses it).
         if (FeatureFlags.lockUseFingerprint && canAuthenticate(a)) {
-            promptBiometric(a, () -> {
-                if (wholeApp) appUnlockedThisSession = true; else unlockedThisSession = true;
-                hideKeyboard(a, code);
-                try { content.removeView(overlay); } catch (Throwable ignored) {}
-            });
+            if (!scope.equals("hidden")) {
+                promptBiometric(a, biometricTitle, gate.biometric, succeed);
+            } else {
+                gate.pendingBiometric = () -> {
+                    gate.pendingBiometric = null;
+                    if (gates.get(a) != gate || gate.completed.get() || gate.biometric.isCanceled()) return;
+                    promptBiometric(a, biometricTitle, gate.biometric, succeed);
+                };
+                main.postDelayed(gate.pendingBiometric, GESTURE_SETTLE_MS);
+            }
         }
+        return true;
     }
 
     /** True when the device has biometric hardware with something enrolled. */
-    @android.annotation.SuppressLint("MissingPermission") // runs in Instagram, which holds USE_BIOMETRIC
+    @SuppressLint("MissingPermission") // runs in Instagram, which holds USE_BIOMETRIC
     static boolean canAuthenticate(Activity a) {
         try {
             if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return false;
@@ -344,19 +572,26 @@ public class LockDirectMessagesHook {
         }
     }
 
-    /** Shows the system biometric prompt; runs onSuccess on the UI thread when auth succeeds. */
-    @android.annotation.SuppressLint("MissingPermission") // runs in Instagram, which holds USE_BIOMETRIC
+    /** Biometric prompt for callers without a gate of their own (LockedCollectionsHook). */
+    @SuppressLint("MissingPermission") // runs in Instagram, which holds USE_BIOMETRIC
     static void promptBiometric(Activity a, Runnable onSuccess) {
+        promptBiometric(a, I18n.t(a, R.string.ig_lock_biometric_title), new android.os.CancellationSignal(), onSuccess);
+    }
+
+    /** Shows the system biometric prompt; runs onSuccess on the UI thread when auth succeeds. */
+    @SuppressLint("MissingPermission") // runs in Instagram, which holds USE_BIOMETRIC
+    private static void promptBiometric(Activity a, String title,
+                                        android.os.CancellationSignal cancellation, Runnable onSuccess) {
         try {
-            // Use plain literals — our module's R.string ids aren't in Instagram's resource table,
-            // so a.getString(R.string...) throws Resources.NotFoundException in IG's process.
+            // I18n reads the module's own resources: a.getString(R.string...) would look in
+            // Instagram's table, where our ids mean nothing.
             android.hardware.biometrics.BiometricPrompt prompt =
                     new android.hardware.biometrics.BiometricPrompt.Builder(a)
-                            .setTitle("Unlock Instagram")
-                            .setDescription("Unlock with your fingerprint")
-                            .setNegativeButton("Use passcode", a.getMainExecutor(), (d, w) -> {})
+                            .setTitle(title)
+                            .setDescription(I18n.t(a, R.string.ig_lock_biometric_description))
+                            .setNegativeButton(I18n.t(a, R.string.ig_lock_biometric_use_passcode), a.getMainExecutor(), (d, w) -> {})
                             .build();
-            prompt.authenticate(new android.os.CancellationSignal(), a.getMainExecutor(),
+            prompt.authenticate(cancellation, a.getMainExecutor(),
                     new android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
                         @Override public void onAuthenticationSucceeded(
                                 android.hardware.biometrics.BiometricPrompt.AuthenticationResult result) {
@@ -433,7 +668,7 @@ public class LockDirectMessagesHook {
     /** Message for a failed attempt: the lockout countdown when one is running. */
     public static String failureText(android.content.Context ctx) {
         int s = lockoutSecondsLeft();
-        return s > 0 ? I18n.t(ctx, R.string.ig_lock_try_again_in, s) : "Wrong passcode";
+        return s > 0 ? I18n.t(ctx, R.string.ig_lock_try_again_in, s) : I18n.t(ctx, R.string.ig_lock_wrong_passcode);
     }
 
     /** Generate + store a fresh random salt (call right before hashing a NEW passcode). */

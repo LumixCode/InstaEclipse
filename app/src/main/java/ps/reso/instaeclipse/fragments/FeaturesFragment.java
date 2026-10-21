@@ -1842,21 +1842,36 @@ public class FeaturesFragment extends Fragment {
 
         defs.add(getString(R.string.feat_features));
         defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_shield, "#5E5CE6", getString(R.string.ig_dialog_misc_lock_dms), "lockDirectMessages"),
-                createSwitch(R.drawable.ic_shield, "#5E5CE6", getString(R.string.ig_dialog_misc_lock_dms_always), "lockDirectAlways"),
-                createSwitch(R.drawable.ic_shield, "#5E5CE6", getString(R.string.ig_dialog_misc_lock_whole_app), "lockWholeApp"),
-                createSwitch(R.drawable.ic_shield, "#5E5CE6", getString(R.string.ig_locked_coll_setting), "lockSavedCollections"),
+                createLockSwitch(R.drawable.ic_shield, getString(R.string.ig_dialog_misc_lock_dms), "lockDirectMessages"),
+                createLockSwitch(R.drawable.ic_chat, getString(R.string.ig_lock_selected_enable), "lockSpecificMessages"),
+                createLockSwitch(R.drawable.ic_shield, getString(R.string.ig_dialog_misc_lock_dms_always), "lockDirectAlways"),
+                createLockSwitch(R.drawable.ic_shield, getString(R.string.ig_dialog_misc_lock_whole_app), "lockWholeApp"),
+                createLockSwitch(R.drawable.ic_shield, getString(R.string.ig_locked_coll_setting), "lockSavedCollections"),
                 createSwitch(R.drawable.ic_shield, "#5E5CE6", getString(R.string.ig_dialog_misc_lock_fingerprint), "lockUseFingerprint")
         ));
 
-        // The passcode is set from inside Instagram (stored hashed in IG's own prefs), so the app
-        // only points there; tapping opens Instagram.
+        // The passcode and the locked chats are set from inside Instagram (stored in IG's own
+        // prefs), so the app only points there; tapping opens Instagram.
         defs.add(Arrays.asList(
                 createTool(R.drawable.ic_shield, "#5E5CE6", getString(R.string.ig_dialog_misc_lock_dms_set),
-                        getString(R.string.lock_code_set_in_ig), this::openInstagram)
+                        getString(R.string.lock_code_set_in_ig), this::openInstagram),
+                createTool(R.drawable.ic_chat, "#5E5CE6", getString(R.string.ig_lock_select_chats),
+                        getString(R.string.ig_lock_selected_companion_hint), this::openInstagram)
         ));
 
         return defs;
+    }
+
+    /**
+     * A lock this app can only turn on: Instagram refuses turning it off from here while a passcode
+     * is set (SettingsManager.isLockedByPasscode), so once on the row locks itself and points to
+     * Instagram's Lock menu, which asks for the passcode.
+     */
+    private FeatureItem createLockSwitch(int iconRes, String title, String prefKey) {
+        FeatureItem item = createSwitch(iconRes, "#5E5CE6", title, prefKey);
+        item.disabledWhenTrue = prefKey;
+        item.disabledTitle = title + "\n" + getString(R.string.ig_lock_turn_off_in_ig);
+        return item;
     }
 
     /** Hide Specific Chats (Privacy). The companion app toggles the feature; hiding/unhiding a

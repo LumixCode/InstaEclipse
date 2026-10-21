@@ -39,9 +39,11 @@ public class FeatureFlags {
 
     // Lock DMs (#182) — passcode stored as salted SHA-256 hash (never plaintext)
     public static volatile boolean lockDirectMessages = false;
+    public static volatile boolean lockSpecificMessages = false;
+    public static volatile String lockedDirectThreads = "{}"; // JSON {threadId: title}; never leaves Instagram
     public static volatile String lockDirectPasscode = "";
     public static volatile String lockDirectSalt = ""; // per-install random salt; "" = legacy unsalted
-    public static volatile boolean lockDirectAlways = false; // re-lock whenever leaving the inbox (not just on app close)
+    public static volatile boolean lockDirectAlways = false; // relock on leaving Direct, or a selected conversation
     public static volatile boolean lockWholeApp = false; // lock the ENTIRE app on launch/return (same passcode as Lock DMs)
     public static volatile boolean lockSavedCollections = false; // #219: 🔒 button on saved collections
     public static volatile String lockedCollections = "";         // #219: locked saved collection ids (comma-separated)

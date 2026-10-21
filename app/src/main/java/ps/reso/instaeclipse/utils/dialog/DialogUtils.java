@@ -179,7 +179,7 @@ public class DialogUtils {
         privacy.addView(createMenuRow(context, R.drawable.ic_eye, I18n.t(context, R.string.ig_dialog_menu_ghost_settings), A_PRIVACY, () -> showGhostOptions(context), onCount(context, "isGhostSeen", "isGhostTyping", "isGhostStory", "isGhostLive", "isGhostScreenshot", "isGhostViewOnce", "readReceiptChats", "spoofLastSeen", "airplaneMode")));
         privacy.addView(createMenuRow(context, R.drawable.ic_chat, I18n.t(context, R.string.menu_messages), A_PRIVACY, () -> showMessagesOptions(context), onCount(context, "keepEphemeralMessages", "keepUnsentMessages", "keepEditHistory", "jumpToFirstMessage", "confirmCalls", "allowScreenshots", "permanentViewMode", "translateMessages", "bulkUnsend", "chatExport", "hideNotesTray", "hideDmSuggestions", "hideDmBlend", "hideShareCreateGroup")));
         privacy.addView(createMenuRow(context, R.drawable.ic_eye_off, I18n.t(context, R.string.ig_hide_chats_title), A_PRIVACY, () -> showHideChatsOptions(context), onCount(context, "hideSpecificChats")));
-        privacy.addView(createMenuRow(context, R.drawable.ic_shield, I18n.t(context, R.string.ig_dialog_misc_lock_section), A_PRIVACY, () -> showLockOptions(context), onCount(context, "lockDirectMessages", "lockWholeApp", "lockSavedCollections", "lockUseFingerprint")));
+        privacy.addView(createMenuRow(context, R.drawable.ic_shield, I18n.t(context, R.string.ig_dialog_misc_lock_section), A_PRIVACY, () -> showLockOptions(context), onCount(context, "lockDirectMessages", "lockWholeApp", "lockSpecificMessages", "lockSavedCollections", "lockUseFingerprint")));
         privacy.addView(createMenuRow(context, R.drawable.ic_block, I18n.t(context, R.string.menu_ads_tracking), A_PRIVACY, () -> showAdOptions(context), onCount(context, "isAdBlockEnabled", "isAnalyticsBlocked", "disableTrackingLinks", "disableSearchHistory")));
         privacy.addView(createMenuRow(context, R.drawable.ic_pin, I18n.t(context, R.string.ig_dialog_menu_location), A_PRIVACY, () -> showLocationOptions(context), onCount(context, "spoofLocation")));
         privacy.addView(createMenuRow(context, R.drawable.ic_notification, I18n.t(context, R.string.ig_dialog_menu_distraction_free), A_PRIVACY, () -> showDistractionOptions(context), onCount(context, "isExtremeMode", "disableStories", "disableFeed", "disableReels", "disableReelsExceptDM", "disableExplore", "disableComments", "removeMetaAI", "hideOnboardingPrompts", "hidePlusUpsells", "hideInstants")));
@@ -1682,7 +1682,7 @@ public class DialogUtils {
                 suppressLockToggle = true;
                 lockApp.setChecked(true);
                 suppressLockToggle = false;
-                promptDisableLock(context, lockApp, true);
+                promptDisableLock(context, lockApp, () -> FeatureFlags.lockWholeApp = false);
             } else {
                 FeatureFlags.lockWholeApp = checked;
                 SettingsManager.saveAllFlags();
@@ -1699,13 +1699,43 @@ public class DialogUtils {
                 suppressLockToggle = true;
                 lockDms.setChecked(true);
                 suppressLockToggle = false;
-                promptDisableLock(context, lockDms, false);
+                promptDisableLock(context, lockDms, () -> FeatureFlags.lockDirectMessages = false);
             } else {
                 FeatureFlags.lockDirectMessages = checked;
                 SettingsManager.saveAllFlags();
             }
         });
         cardView.addView(lockDms);
+
+        // Lock specific chats — gate only the chats picked below. Changing it, or the picked
+        // chats, goes through the full passcode/fingerprint gate.
+        ToggleRow selected = createSwitch(context, R.drawable.ic_chat, "#BF5AF2",
+                I18n.t(context, R.string.ig_lock_selected_enable), FeatureFlags.lockSpecificMessages);
+        selected.setOnCheckedChangeListener((b, checked) -> {
+            if (suppressLockToggle) return;
+            if (!checked && FeatureFlags.lockDirectPasscode != null && !FeatureFlags.lockDirectPasscode.isEmpty()) {
+                suppressLockToggle = true;
+                selected.setChecked(true);
+                suppressLockToggle = false;
+                ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.authenticate(activityOf(context),
+                        I18n.t(context, R.string.ig_lock_change_locks_prompt), "settings", () -> {
+                            FeatureFlags.lockSpecificMessages = false;
+                            suppressLockToggle = true;
+                            selected.setChecked(false);
+                            suppressLockToggle = false;
+                            SettingsManager.saveAllFlags();
+                        });
+            } else {
+                FeatureFlags.lockSpecificMessages = checked;
+                SettingsManager.saveAllFlags();
+            }
+        });
+        cardView.addView(selected);
+        cardView.addView(createActionRow(context, R.drawable.ic_chat,
+                I18n.t(context, R.string.ig_lock_select_chats), "#BF5AF2", v ->
+                        ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.authenticate(activityOf(context),
+                                I18n.t(context, R.string.ig_lock_change_locks_prompt), "settings",
+                                () -> showChatPicker(context, true))));
 
         // 4. Re-lock every time — re-prompt whenever you leave the locked surface (not just on close).
         ToggleRow alwaysAsk = createSwitch(context, R.drawable.ic_shield, "#BF5AF2",
@@ -1729,8 +1759,16 @@ public class DialogUtils {
         ToggleRow lockColl = createSwitch(context, R.drawable.ic_shield, "#BF5AF2",
                 I18n.t(context, R.string.ig_locked_coll_setting_short), FeatureFlags.lockSavedCollections);
         lockColl.setOnCheckedChangeListener((b, checked) -> {
-            FeatureFlags.lockSavedCollections = checked;
-            SettingsManager.saveAllFlags();
+            if (suppressLockToggle) return;
+            if (!checked && FeatureFlags.lockDirectPasscode != null && !FeatureFlags.lockDirectPasscode.isEmpty()) {
+                suppressLockToggle = true;
+                lockColl.setChecked(true);
+                suppressLockToggle = false;
+                promptDisableLock(context, lockColl, () -> FeatureFlags.lockSavedCollections = false);
+            } else {
+                FeatureFlags.lockSavedCollections = checked;
+                SettingsManager.saveAllFlags();
+            }
         });
         cardView.addView(lockColl);
 
@@ -1849,6 +1887,7 @@ public class DialogUtils {
     private static void showLockOptions(Context context) {
         LinearLayout layout = createSwitchLayout(context);
         layout.addView(buildLockCard(context));
+        layout.addView(createInfoSection(context, "", I18n.t(context, R.string.ig_lock_relock_hint)));
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_misc_lock_section), layout, () -> {});
     }
 
@@ -1971,23 +2010,16 @@ public class DialogUtils {
                 : I18n.t(context, R.string.ig_dialog_misc_lock_dms_wrong), Toast.LENGTH_SHORT).show();
     }
 
-    /** Turning the Lock-DMs toggle OFF requires the current passcode. */
-    private static void promptDisableLock(Context context, ToggleRow lockSwitch) {
-        promptDisableLock(context, lockSwitch, false);
-    }
-
-    /** Turning a lock toggle OFF requires the current passcode; on success disable + save, otherwise
-     *  the toggle stays on. wholeApp=true disables the whole-app lock, else the DM lock.
-     *  Cancel / ✕ leave the toggle on. */
-    private static void promptDisableLock(Context context, ToggleRow lockSwitch, boolean wholeApp) {
+    /** Turning a lock toggle OFF requires the current passcode; on success run turnOff (clears that
+     *  lock's flag), uncheck + save, otherwise the toggle stays on. Cancel / ✕ leave the toggle on. */
+    private static void promptDisableLock(Context context, ToggleRow lockSwitch, Runnable turnOff) {
         try {
             IeDialog dlg = new IeDialog(context).title(I18n.t(context, R.string.ig_dialog_misc_lock_dms_disable));
             final android.widget.EditText cur = pinInput(dlg, I18n.t(context, R.string.ig_dialog_misc_lock_dms_current));
             dlg.secondary(context.getString(android.R.string.cancel), null);
             dlg.primary(context.getString(android.R.string.ok), () -> {
                 if (ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.checkPass(cur.getText().toString())) {
-                    if (wholeApp) FeatureFlags.lockWholeApp = false;
-                    else          FeatureFlags.lockDirectMessages = false;
+                    turnOff.run();
                     suppressLockToggle = true;
                     lockSwitch.setChecked(false);
                     suppressLockToggle = false;

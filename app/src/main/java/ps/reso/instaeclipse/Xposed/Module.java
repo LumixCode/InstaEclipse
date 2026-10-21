@@ -953,8 +953,8 @@ public class Module {
 
                     Bundle bundle = new Bundle();
                     for (Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
-                        // The lock passcode hash and its salt never leave Instagram's process.
-                        if ("lockDirectPasscode".equals(entry.getKey()) || "lockDirectSalt".equals(entry.getKey())) continue;
+                        // The lock passcode hash, its salt and the locked chats never leave Instagram's process.
+                        if (ps.reso.instaeclipse.utils.core.PrefsMerge.isPrivate(entry.getKey())) continue;
                         // Change stamps, so the companion keeps its own newer changes (PrefsMerge).
                         if (ps.reso.instaeclipse.utils.core.PrefsMerge.isSharedStamp(entry.getKey(), entry.getValue())) {
                             bundle.putLong(entry.getKey(), (Long) entry.getValue());

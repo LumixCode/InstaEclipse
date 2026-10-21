@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- New optional features use English until localized resources are available. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="ig_lock_selected_enable">Lock specific chats</string>
+    <string name="ig_lock_select_chats">Choose chats to lock</string>
+    <string name="ig_lock_selected_companion_hint">Choose conversations inside Instagram → InstaEclipse → Lock → Choose chats to lock. Turn off Lock DMs to keep the inbox unlocked and protect only your selected chats.</string>
+    <string name="ig_lock_relock_hint">Lock DMs stays unlocked while you browse messages and conversations. With Relock every time enabled, it locks again after you leave Direct. Selected chats lock again after you leave that conversation.</string>
+    <string name="ig_lock_selected_empty">Open your Direct inbox first to load available chats, then return here.</string>
+    <string name="ig_lock_change_locks_prompt">Enter passcode to change chat locks</string>
+    <string name="ig_lock_hidden_chats_prompt">Enter passcode to view hidden chats</string>
+    <string name="ig_lock_set_passcode_first">Set a passcode in InstaEclipse Lock settings first.</string>
+    <string name="ig_lock_open_app_prompt">Enter passcode to open Instagram</string>
+    <string name="ig_lock_open_dms_prompt">Enter passcode to open DMs</string>
+    <string name="ig_lock_open_chat_prompt">Enter passcode to open this chat</string>
+    <string name="ig_lock_unlock">Unlock</string>
+    <string name="ig_lock_wrong_passcode">Wrong passcode</string>
+    <string name="ig_lock_biometric_title">Unlock Instagram</string>
+    <string name="ig_lock_biometric_description">Unlock with your fingerprint</string>
+    <string name="ig_lock_biometric_use_passcode">Use passcode</string>
+    <string name="ig_hidden_inbox_show_all">Show all messages</string>
+    <string name="ig_hidden_inbox_unavailable">Hidden chats are unavailable for this inbox.</string>
+</resources>

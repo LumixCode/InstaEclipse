@@ -9,6 +9,19 @@ import ps.reso.instaeclipse.utils.feature.FeatureManager;
 
 public class SettingsManager {
     private static final String PREF_NAME = "instaeclipse_prefs";
+
+    /** Extreme Mode keeps these on: turning one off from outside the locked menus is refused. */
+    private static final Set<String> EXTREME_KEEP_ON = new HashSet<>(Arrays.asList(
+            "disableStories", "disableFeed", "disableReels", "disableExplore", "disableComments",
+            "dailyReelLimitEnabled", "nightReelBlockEnabled"));
+    /** Extreme Mode freezes these entirely (any new value could loosen the reel limits). */
+    private static final Set<String> EXTREME_FROZEN = new HashSet<>(Arrays.asList(
+            "isExtremeMode", "disableReelsExceptDM", "dailyReelLimitAllowDM", "nightReelBlockAllowDM",
+            "dailyReelLimit", "nightReelBlockStartMinutes", "nightReelBlockEndMinutes"));
+    /** While a passcode is set, only Instagram's Lock menu (it asks for the passcode) turns these off. */
+    private static final Set<String> PASSCODE_LOCKS = new HashSet<>(Arrays.asList(
+            "lockWholeApp", "lockDirectMessages", "lockSpecificMessages", "lockDirectAlways",
+            "lockSavedCollections"));
     private static SharedPreferences prefs;
     /** Application context, for pushing in-app changes to the companion (CompanionSync). */
     private static Context appContext;
@@ -48,6 +61,8 @@ public class SettingsManager {
         editor.putInt("autoClearCacheSizeMb", FeatureFlags.autoClearCacheSizeMb);
         editor.putBoolean("removeMetaAI", FeatureFlags.removeMetaAI);
         editor.putBoolean("lockDirectMessages", FeatureFlags.lockDirectMessages);
+        editor.putBoolean("lockSpecificMessages", FeatureFlags.lockSpecificMessages);
+        editor.putString("lockedDirectThreads", FeatureFlags.lockedDirectThreads);
         editor.putString("lockDirectPasscode", FeatureFlags.lockDirectPasscode);
         editor.putString("lockDirectSalt", FeatureFlags.lockDirectSalt);
         editor.putBoolean("lockDirectAlways", FeatureFlags.lockDirectAlways);
@@ -258,6 +273,8 @@ public class SettingsManager {
         FeatureFlags.autoClearCacheSizeMb = prefs.getInt("autoClearCacheSizeMb", 100);
         FeatureFlags.removeMetaAI = prefs.getBoolean("removeMetaAI", false);
         FeatureFlags.lockDirectMessages = prefs.getBoolean("lockDirectMessages", false);
+        FeatureFlags.lockSpecificMessages = prefs.getBoolean("lockSpecificMessages", false);
+        FeatureFlags.lockedDirectThreads = prefs.getString("lockedDirectThreads", "{}");
         FeatureFlags.lockDirectPasscode = prefs.getString("lockDirectPasscode", "");
         FeatureFlags.lockDirectSalt = prefs.getString("lockDirectSalt", "");
         FeatureFlags.lockDirectAlways = prefs.getBoolean("lockDirectAlways", false);
@@ -440,5 +457,91 @@ public class SettingsManager {
         } catch (Throwable ignored) {
             return fallback;
         }
+    }
+
+    public static int readReelQuality(SharedPreferences preferences) {
+        Object stored = preferences.getAll().get("forceReelQuality");
+        if (stored instanceof Integer) return (Integer) stored;
+        // Older settings stored a toggle; migrate before loading the remaining flags.
+        int quality = Boolean.TRUE.equals(stored) ? 1080 : 0;
+        if (stored != null) preferences.edit().putInt("forceReelQuality", quality).apply();
+        return quality;
+    }
+
+    /** The local build's "hideCreateGroupButton" became upstream's "hideShareCreateGroup" (same sheet row). */
+    private static void migrateCreateGroupKey(SharedPreferences p) {
+        if (!p.contains("hideCreateGroupButton")) return;
+        SharedPreferences.Editor e = p.edit();
+        if (!p.contains("hideShareCreateGroup")) {
+            e.putBoolean("hideShareCreateGroup", p.getBoolean("hideCreateGroupButton", false));
+        }
+        e.remove("hideCreateGroupButton").apply();
+    }
+
+    /**
+     * "Block location permission prompts" was folded into Extras "Hide onboarding prompts", which
+     * skips the same "Set up on new device" location page. Runs before the Extras flags load.
+     * getAll() + Boolean.TRUE.equals: a wrong-typed old value must not throw on every start.
+     */
+    private static void migrateLocationPromptKey(SharedPreferences p) {
+        Object old = p.getAll().get("blockLocationPrompts");
+        if (old == null) return;
+        SharedPreferences.Editor e = p.edit();
+        if (Boolean.TRUE.equals(old)) e.putBoolean("hideOnboardingPrompts", true);
+        e.remove("blockLocationPrompts").apply();
+    }
+
+    /**
+     * Gate for every write that does not come from this process's own menus (companion broadcast,
+     * {@link CompanionSync#pull}). A value of the wrong type would make every later getX() throw
+     * and disable the module; Extreme Mode must not be loosened from outside its locked menus, nor
+     * a passcode lock turned off without the passcode.
+     */
+    public static boolean acceptsCompanionWrite(SharedPreferences preferences, String key, Object value) {
+        if (key == null) return false;
+        // The PIN hash/salt and the locked-chat list are never the companion's to set.
+        if (PrefsMerge.isPrivate(key)) {
+            ModuleLog.line("(InstaEclipse) Sync: refused private key " + key);
+            return false;
+        }
+        java.util.Map<String, ?> all = preferences.getAll();
+        Object existing = all.get(key);
+        // A null String value removes the key, which can't leave a wrong type behind.
+        if (existing != null && value != null && !existing.getClass().isInstance(value)) {
+            ModuleLog.line("(InstaEclipse) Sync: refused " + value.getClass().getSimpleName() + " for " + key);
+            return false;
+        }
+        if (isLockedByExtreme(key, value)) {
+            ModuleLog.line("(InstaEclipse) Sync: refused " + key + " while Extreme Mode is on");
+            return false;
+        }
+        if (isLockedByPasscode(key, value, all.get("lockDirectPasscode"))) {
+            ModuleLog.line("(InstaEclipse) Sync: refused " + key + " while a lock passcode is set");
+            return false;
+        }
+        return true;
+    }
+
+    /** True for a lock switch the companion app may turn on but never off (see {@link #isLockedByPasscode}). */
+    public static boolean isPasscodeLock(String key) {
+        return key != null && PASSCODE_LOCKS.contains(key);
+    }
+
+    /**
+     * True when a passcode is set ({@code passcode}: the stored "lockDirectPasscode" value) and
+     * {@code value} would turn one of its locks off or change the locked collections, which
+     * Instagram's own menus do only after asking for the passcode.
+     */
+    public static boolean isLockedByPasscode(String key, Object value, Object passcode) {
+        if (key == null || !(passcode instanceof String) || ((String) passcode).isEmpty()) return false;
+        if ("lockedCollections".equals(key)) return true;
+        return PASSCODE_LOCKS.contains(key) && !Boolean.TRUE.equals(value);
+    }
+
+    /** True when Extreme Mode is on and {@code value} would loosen one of its locked settings. */
+    public static boolean isLockedByExtreme(String key, Object value) {
+        if (!FeatureFlags.isExtremeMode || key == null) return false;
+        if (EXTREME_FROZEN.contains(key)) return true;
+        return EXTREME_KEEP_ON.contains(key) && !Boolean.TRUE.equals(value);
     }
 }

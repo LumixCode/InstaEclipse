@@ -49,6 +49,7 @@ import java.util.concurrent.TimeUnit;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.core.Contributor;
+import ps.reso.instaeclipse.utils.core.SettingsManager;
 
 public class HomeFragment extends Fragment {
 
@@ -92,7 +93,7 @@ public class HomeFragment extends Fragment {
             "storyViewerSearch", "storyLinks", "storyInfo", "commentSearch", "followListExport", "followersHistory",
             // Lock / hide chats
             "lockDirectMessages", "lockWholeApp", "lockSavedCollections", "lockUseFingerprint",
-            "hideSpecificChats",
+            "lockSpecificMessages", "hideSpecificChats",
             // Location / theme
             "spoofLocation", "customThemeEnabled", "customFontEnabled", "customEmojiEnabled",
             // Downloader
@@ -484,15 +485,22 @@ public class HomeFragment extends Fragment {
         boolean extreme = localCache.getBoolean("isExtremeMode", false);
         for (String key : pinned) {
             Shortcut s = findShortcut(key);
-            if (s != null) shortcutsContainer.addView(buildShortcutRow(s, extreme && EXTREME_LOCKED.contains(s.key)));
+            if (s == null) continue;
+            // A lock that is on turns off only in Instagram's Lock menu, which asks for the passcode.
+            int lockedHint = extreme && EXTREME_LOCKED.contains(s.key) ? R.string.home_shortcuts_locked_extreme
+                    : SettingsManager.isPasscodeLock(s.key) && localCache.getBoolean(s.key, false)
+                    ? R.string.ig_lock_turn_off_in_ig : 0;
+            shortcutsContainer.addView(buildShortcutRow(s, lockedHint));
         }
         boolean empty = shortcutsContainer.getChildCount() == 0;
         shortcutsEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
         shortcutsHint.setVisibility(empty ? View.GONE : View.VISIBLE);
     }
 
-    private View buildShortcutRow(Shortcut s, boolean locked) {
+    /** {@code lockedHint}: the subtitle of a row that can't be toggled here, or 0. */
+    private View buildShortcutRow(Shortcut s, int lockedHint) {
         Context ctx = requireContext();
+        boolean locked = lockedHint != 0;
 
         LinearLayout row = new LinearLayout(ctx);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -521,7 +529,7 @@ public class HomeFragment extends Fragment {
         texts.addView(title);
         if (locked) {
             TextView sub = new TextView(ctx);
-            sub.setText(R.string.home_shortcuts_locked_extreme);
+            sub.setText(lockedHint);
             sub.setTextAppearance(resolveStyle(com.google.android.material.R.attr.textAppearanceBodySmall));
             sub.setTextColor(MaterialColors.getColor(row, com.google.android.material.R.attr.colorOnSurfaceVariant));
             texts.addView(sub);
