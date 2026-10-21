@@ -15,6 +15,7 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -22,10 +23,9 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 public class GhostDMMarkAsReadHook {
 
     private static final String GHOST_BTN_TAG = "ie_ghost_seen_btn";
-    private final String moduleSourceDir;
 
+    /** {@code moduleSourceDir} is unused now that icons come from ModuleResources; kept for Module's call. */
     public GhostDMMarkAsReadHook(String moduleSourceDir) {
-        this.moduleSourceDir = moduleSourceDir;
     }
 
     // Cached once on first use — resource IDs are constant for a given app install.
@@ -62,11 +62,11 @@ public class GhostDMMarkAsReadHook {
         ImageButton ghostBtn = new ImageButton(ctx);
         ghostBtn.setTag(GHOST_BTN_TAG);
 
-        try {
-            @SuppressLint("UseCompatLoadingForDrawables") Drawable icon = ps.reso.instaeclipse.xposedcompat.ModuleResources.get()
-                    .getDrawable(R.drawable.ic_eye, null);
+        // The cached loaded-APK table: XModuleResources gave blank icons under embedded LSPatch.
+        Drawable icon = ModuleResources.drawable(ctx, R.drawable.ic_eye);
+        if (icon != null) {
             ghostBtn.setImageDrawable(icon);
-        } catch (Exception e) {
+        } else {
             ghostBtn.setImageResource(android.R.drawable.ic_menu_view);
             ghostBtn.setColorFilter(Color.WHITE);
         }
