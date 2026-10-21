@@ -22,12 +22,18 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -45,9 +51,10 @@ import ps.reso.instaeclipse.utils.toast.IeToast;
  *
  * <p>Backup: one zip saved from Instagram's process to Download/InstaEclipse (no size limit).
  * Restore: the companion's picker (DataImportActivity) reads the zip and sends it here in Base64
- * pieces, since one broadcast can't carry more than about a megabyte. Deleted messages are merged
- * with what's on the phone; the other files are put back as they were. Instagram then restarts so
- * every store reloads from disk.
+ * pieces, since one broadcast can't carry more than about a megabyte. Deleted messages, hidden
+ * chats and chat names are merged with what's on the phone, so a restore never brings back a
+ * cleared message or unhides a chat; the other files are put back as they were. Instagram then
+ * restarts so every store reloads from disk.
  */
 public final class DataBackup {
 
@@ -55,14 +62,19 @@ public final class DataBackup {
     public static final String ACTION_RESTORE = "ps.reso.instaeclipse.ACTION_RESTORE_DATA";
     private static final String MANIFEST = "instaeclipse_data.json";
     private static final String UNSENT = "ie_unsent_log.json";
-    private static final int MAX_UNSENT = 1000;
+    private static final String HIDDEN = "ie_hidden_threads.json";
+    private static final String NAMES = "ie_thread_names.json";
+    private static final int MAX_UNSENT = 1000; // UnsentLog keeps the same number of entries
     private static final long MAX_BYTES = 64L << 20;
 
     private DataBackup() {}
 
-    /** Files that belong in a backup: our stores only (not caches or logs). */
+    /**
+     * Files that belong in a backup: our stores only (not caches or logs). Top-level files only, so
+     * the saved copies of unsent messages' media (ie_unsent_messages/) stay out.
+     */
     private static boolean included(String name) {
-        return name.equals(UNSENT) || name.equals("ie_hidden_threads.json") || name.equals("ie_thread_names.json") || name.equals("ie_post_counts.json")
+        return name.equals(UNSENT) || name.equals(HIDDEN) || name.equals(NAMES) || name.equals("ie_post_counts.json")
                 || name.startsWith("ie_watch") || name.startsWith("ie_followers_history_");
     }
 
@@ -164,8 +176,15 @@ public final class DataBackup {
             for (Map.Entry<String, byte[]> e : files.entrySet()) {
                 String name = e.getKey();
                 if (!included(name) || name.contains("/") || name.contains("\\")) continue;
-                byte[] data = name.equals(UNSENT) ? mergeUnsent(new File(dir, UNSENT), e.getValue()) : e.getValue();
-                write(new File(dir, name), data);
+                File target = new File(dir, name);
+                byte[] data = name.equals(UNSENT) ? mergeUnsent(target, e.getValue())
+                        : name.equals(HIDDEN) || name.equals(NAMES) ? mergeKeepCurrent(target, e.getValue())
+                        : e.getValue();
+                if (data == null) {
+                    ModuleLog.line(TAG + "kept the phone's " + name + ": it couldn't be read");
+                    continue;
+                }
+                write(target, data);
                 restored++;
             }
             ModuleLog.line(TAG + "restored " + restored + " files");
@@ -199,27 +218,198 @@ public final class DataBackup {
         return out;
     }
 
-    /** Deleted messages from the backup and the phone, each once, oldest first, newest kept. */
+    /**
+     * Deleted messages from the backup and the phone, each once, oldest first, newest kept (rule:
+     * {@link UnsentMerge}). Null when the phone's log exists but can't be read: it stays as is.
+     */
     static byte[] mergeUnsent(File current, byte[] backup) throws Exception {
-        Map<String, JSONObject> merged = new LinkedHashMap<>();
-        List<JSONArray> sources = new ArrayList<>();
-        sources.add(new JSONArray(new String(backup, StandardCharsets.UTF_8)));
+        List<UnsentMerge.Row> fromBackup = unsentRows(new JSONArray(new String(backup, StandardCharsets.UTF_8)));
+        List<UnsentMerge.Row> onPhone = new ArrayList<>();
         if (current.exists()) {
-            try { sources.add(new JSONArray(new String(new android.util.AtomicFile(current).readFully(), StandardCharsets.UTF_8))); }
-            catch (Throwable ignored) { }
+            byte[] bytes;
+            try { bytes = new android.util.AtomicFile(current).readFully(); }
+            catch (java.io.IOException unreadable) { return null; }
+            // A damaged log can't be loaded by UnsentLog either: the backup replaces it.
+            try { onPhone = unsentRows(new JSONArray(new String(bytes, StandardCharsets.UTF_8))); }
+            catch (org.json.JSONException damaged) { ModuleLog.line(TAG + "phone's unsent log unreadable: " + damaged.getMessage()); }
         }
-        for (JSONArray arr : sources)
-            for (int i = 0; i < arr.length(); i++) {
-                JSONObject o = arr.optJSONObject(i);
-                if (o == null) continue;
-                merged.put(o.optLong("t") + "|" + o.optString("th") + "|" + o.optString("m"), o);
-            }
-        List<JSONObject> list = new ArrayList<>(merged.values());
-        list.sort((x, y) -> Long.compare(x.optLong("t"), y.optLong("t")));
-        if (list.size() > MAX_UNSENT) list = list.subList(list.size() - MAX_UNSENT, list.size());
         JSONArray out = new JSONArray();
-        for (JSONObject o : list) out.put(o);
+        for (UnsentMerge.Row row : UnsentMerge.merge(onPhone, fromBackup, MAX_UNSENT)) {
+            JSONObject o = (JSONObject) row.source;
+            if (!row.ids.isEmpty()) o.put("ids", new JSONArray(new ArrayList<>(row.ids)));
+            if (row.logOnly) o.put("logOnly", true);
+            out.put(o);
+        }
         return out.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    /** UnsentLog's JSON entries (t, a, th, id, ids, m, body, cleared, logOnly) as merge rows. */
+    private static List<UnsentMerge.Row> unsentRows(JSONArray arr) {
+        List<UnsentMerge.Row> rows = new ArrayList<>();
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject o = arr.optJSONObject(i);
+            if (o == null) continue;
+            List<String> aliases = new ArrayList<>();
+            JSONArray ids = o.optJSONArray("ids");
+            if (ids != null) for (int j = 0; j < ids.length(); j++) aliases.add(ids.optString(j));
+            boolean cleared = o.optBoolean("cleared", false);
+            String text = o.optString("m", "");
+            // UnsentLog reads a missing "body" as true (entries from before the flag existed).
+            boolean hasBody = !cleared && o.optBoolean("body", true) && !text.isEmpty();
+            rows.add(new UnsentMerge.Row(o, o.optLong("t"), o.optString("a", ""), o.optString("th", ""),
+                    o.optString("id", ""), text, cleared, hasBody, o.optBoolean("logOnly", false), aliases));
+        }
+        return rows;
+    }
+
+    /**
+     * A {thread id: text} store (hidden chats, chat names) from the backup added to the phone's,
+     * whose entries win: a restore never unhides or renames a chat. Null when the phone's file
+     * exists but can't be read: it stays as is.
+     */
+    private static byte[] mergeKeepCurrent(File current, byte[] backup) throws Exception {
+        Map<String, Object> onPhone = new LinkedHashMap<>();
+        if (current.exists()) {
+            byte[] bytes;
+            try { bytes = java.nio.file.Files.readAllBytes(current.toPath()); }
+            catch (java.io.IOException unreadable) { return null; }
+            // A damaged file loads as empty in HiddenThreads/ThreadNames too: nothing to keep.
+            try { onPhone = toMap(new JSONObject(new String(bytes, StandardCharsets.UTF_8))); }
+            catch (org.json.JSONException damaged) { ModuleLog.line(TAG + "phone's " + current.getName() + " unreadable: " + damaged.getMessage()); }
+        }
+        Map<String, Object> merged = unionKeepCurrent(toMap(new JSONObject(new String(backup, StandardCharsets.UTF_8))), onPhone);
+        JSONObject out = new JSONObject();
+        for (Map.Entry<String, Object> e : merged.entrySet()) out.put(e.getKey(), e.getValue());
+        return out.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static Map<String, Object> toMap(JSONObject o) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        for (Iterator<String> it = o.keys(); it.hasNext(); ) {
+            String k = it.next();
+            map.put(k, o.opt(k));
+        }
+        return map;
+    }
+
+    /**
+     * The backup's ids the phone doesn't have (older, so listed first), then every phone entry with
+     * its own value.
+     */
+    static Map<String, Object> unionKeepCurrent(Map<String, ?> backup, Map<String, ?> current) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        for (Map.Entry<String, ?> e : backup.entrySet())
+            if (!current.containsKey(e.getKey())) out.put(e.getKey(), e.getValue());
+        out.putAll(current);
+        return out;
+    }
+
+    /**
+     * The unsent-log merge rule, free of org.json so plain unit tests can run it. One row per
+     * message: rows with a message id match on account + thread + any shared id (UnsentLog keeps a
+     * message's server and client ids as aliases); id-less rows from older builds match on time +
+     * thread + text. On a clash a cleared row wins (a restore never brings back what was cleared),
+     * then a row with the message text, then the phone's own row. The ids of all matched rows are
+     * kept together and a log-only flag on any of them stays.
+     */
+    static final class UnsentMerge {
+
+        static final class Row {
+            final Object source;
+            final long time;
+            final String account, thread, id, text;
+            final boolean cleared, hasBody, logOnly;
+            /** The message id first, then its aliases. */
+            final Set<String> ids = new LinkedHashSet<>();
+
+            Row(Object source, long time, String account, String thread, String id, String text,
+                boolean cleared, boolean hasBody, boolean logOnly, Collection<String> aliases) {
+                this.source = source;
+                this.time = time;
+                this.account = account == null ? "" : account;
+                this.thread = thread == null ? "" : thread;
+                this.id = id == null ? "" : id;
+                this.text = text == null ? "" : text;
+                this.cleared = cleared;
+                this.hasBody = !cleared && hasBody;
+                this.logOnly = !cleared && logOnly;
+                if (!this.id.isEmpty()) ids.add(this.id);
+                if (aliases != null) for (String a : aliases) if (a != null && !a.isEmpty()) ids.add(a);
+            }
+
+            int rank() { return cleared ? 2 : hasBody ? 1 : 0; }
+
+            /** The keys this row can be found under. */
+            List<String> keys() {
+                if (id.isEmpty()) return Arrays.asList("t|" + time + "|" + thread + "|" + text);
+                List<String> keys = new ArrayList<>();
+                for (String alias : ids) keys.add(idKey(alias));
+                return keys;
+            }
+
+            String idKey(String alias) { return "i|" + account + "|" + thread + "|" + alias; }
+        }
+
+        private static final class Group {
+            Row best;
+            final Set<String> ids = new LinkedHashSet<>();
+            boolean logOnly;
+
+            void add(Row row) {
+                // Strictly better only: on a tie the row seen first (the phone's) stays.
+                if (best == null || row.rank() > best.rank()) best = row;
+                ids.addAll(row.ids);
+                logOnly |= row.logOnly;
+            }
+
+            Row result() {
+                Set<String> all = new LinkedHashSet<>(best.ids);
+                all.addAll(ids);
+                return new Row(best.source, best.time, best.account, best.thread, best.id, best.text,
+                        best.cleared, best.hasBody, logOnly, all);
+            }
+        }
+
+        private UnsentMerge() {}
+
+        /** Phone rows first so they win ties; returns oldest first, at most {@code cap} (the newest). */
+        static List<Row> merge(List<Row> phone, List<Row> backup, int cap) {
+            Map<String, Group> byKey = new HashMap<>();
+            List<Group> groups = new ArrayList<>();
+            for (List<Row> source : Arrays.asList(phone, backup)) {
+                if (source == null) continue;
+                for (Row row : source) {
+                    Group group = find(byKey, row);
+                    if (group == null) {
+                        group = new Group();
+                        groups.add(group);
+                    }
+                    group.add(row);
+                    for (String key : row.keys()) byKey.putIfAbsent(key, group);
+                }
+            }
+            List<Row> out = new ArrayList<>();
+            for (Group group : groups) out.add(group.result());
+            out.sort(Comparator.comparingLong((Row r) -> r.time));
+            if (out.size() > cap) out = new ArrayList<>(out.subList(out.size() - cap, out.size()));
+            return out;
+        }
+
+        /** The row's own id decides; otherwise one alias match. Aliases that point at two
+         *  different messages join neither, as in UnsentMessageIndex. */
+        private static Group find(Map<String, Group> byKey, Row row) {
+            if (row.id.isEmpty()) return byKey.get(row.keys().get(0));
+            Group own = byKey.get(row.idKey(row.id));
+            if (own != null) return own;
+            Group match = null;
+            for (String alias : row.ids) {
+                Group g = byKey.get(row.idKey(alias));
+                if (g == null) continue;
+                if (match != null && match != g) return null;
+                match = g;
+            }
+            return match;
+        }
     }
 
     private static void write(File f, byte[] data) throws Exception {
