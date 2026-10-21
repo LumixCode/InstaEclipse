@@ -33,8 +33,11 @@ public class CustomFontHook {
 
     public static final int FONT_PICK_REQUEST = 0x1F09;
     public static final int EMOJI_PICK_REQUEST = 0x1F0A;
-    private static final String FONT_FILE = "ie_custom_font.ttf";
-    private static final String EMOJI_FILE = "ie_custom_emoji.ttf";
+    // Every pick is copied to a new file (prefix + time): the process maps the active font file
+    // (Typeface and Font load it via mmap), so rewriting it in place crashed text drawing (SIGBUS).
+    // Older copies are deleted at the next start, once nothing maps them.
+    private static final String FONT_PREFIX = "ie_custom_font";
+    private static final String EMOJI_PREFIX = "ie_custom_emoji";
 
     private static volatile Typeface userFont;
     private static volatile String loadedFrom;
@@ -44,6 +47,40 @@ public class CustomFontHook {
     public void install(ClassLoader cl) {
         installFontHooks(cl);
         installEmojiHook(cl);
+        deleteSupersededFonts();
+    }
+
+    /** Deletes the font copies a later pick replaced, off the main thread. */
+    private static void deleteSupersededFonts() {
+        final String font = FeatureFlags.customFontPath, emoji = FeatureFlags.customEmojiPath;
+        if ((font == null || font.isEmpty()) && (emoji == null || emoji.isEmpty())) return;
+        new Thread(() -> {
+            try {
+                int n = deleteSuperseded(FONT_PREFIX, font) + deleteSuperseded(EMOJI_PREFIX, emoji);
+                if (n > 0) ModuleLog.line("(IE|Font) deleted " + n + " replaced font file(s)");
+            } catch (Throwable t) { ModuleLog.line("(IE|Font) cleanup: " + t); }
+        }, "IE-FontCleanup").start();
+    }
+
+    /**
+     * Deletes the files next to current whose name starts with prefix and that were written before
+     * it, and returns how many. Deletes nothing when current is missing; a newer file is kept.
+     */
+    static int deleteSuperseded(String prefix, String current) {
+        if (current == null || current.isEmpty()) return 0;
+        File keep = new File(current);
+        File dir = keep.getParentFile();
+        long written = keep.lastModified();
+        if (dir == null || written == 0L) return 0;
+        File[] files = dir.listFiles();
+        if (files == null) return 0;
+        int n = 0;
+        for (File f : files) {
+            String name = f.getName();
+            if (name.startsWith(prefix) && !name.equals(keep.getName()) && f.isFile()
+                    && f.lastModified() < written && f.delete()) n++;
+        }
+        return n;
     }
 
     private void installFontHooks(ClassLoader cl) {
@@ -297,27 +334,64 @@ public class CustomFontHook {
         return "/system/fonts/Roboto-Regular.ttf";
     }
 
-    /** Copies the picked font Uri into the module's filesDir and records the path. */
+    /** Copies the picked font Uri into a new file in filesDir and records the path. */
     private static boolean saveFont(Activity act, android.net.Uri uri) {
         try {
-            File out = new File(act.getFilesDir(), FONT_FILE);
-            try (InputStream in = act.getContentResolver().openInputStream(uri);
-                 FileOutputStream fo = new FileOutputStream(out)) {
-                if (in == null) return false;
-                byte[] buf = new byte[8192]; int n;
-                while ((n = in.read(buf)) > 0) fo.write(buf, 0, n);
-            }
-            // Validate it's a usable font before committing.
+            File out = copyFont(act, uri, FONT_PREFIX);
+            if (out == null) return false;
             Typeface test;
             try { loading.set(Boolean.TRUE); test = Typeface.createFromFile(out); }
             finally { loading.set(Boolean.FALSE); }
-            if (test == null) return false;
+            if (test == null) { out.delete(); return false; }
             FeatureFlags.customFontPath = out.getAbsolutePath();
             userFont = test;
             loadedFrom = FeatureFlags.customFontPath;
             return true;
         } catch (Throwable t) {
             ModuleLog.line("(IE|Font) saveFont: " + t);
+            return false;
+        }
+    }
+
+    /**
+     * Copies the picked file to a temp file, checks that it is a font and renames it to a new name
+     * (prefix + time). Null when it can't be read or isn't a font; the active font file is never
+     * opened for writing, so a failed or partial copy leaves it working.
+     */
+    private static File copyFont(Activity act, android.net.Uri uri, String prefix) throws java.io.IOException {
+        File dir = act.getFilesDir();
+        File tmp = File.createTempFile(prefix, ".tmp", dir);
+        File out = null;
+        try {
+            try (InputStream in = act.getContentResolver().openInputStream(uri);
+                 FileOutputStream fo = new FileOutputStream(tmp)) {
+                if (in == null) return null;
+                byte[] buf = new byte[8192]; int n;
+                while ((n = in.read(buf)) > 0) fo.write(buf, 0, n);
+            }
+            if (!isFont(tmp)) return null;
+            File target = new File(dir, prefix + "_" + System.currentTimeMillis() + ".ttf");
+            if (tmp.renameTo(target)) out = target;
+            return out;
+        } finally {
+            if (out == null) tmp.delete();
+        }
+    }
+
+    /** True when the file loads as a font. Typeface.createFromFile can't tell: for bad data it
+     *  returns the default typeface (API 28) or the fallback family (29+); Font.Builder throws. */
+    private static boolean isFont(File file) {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                new android.graphics.fonts.Font.Builder(file).build();
+                return true;
+            }
+            Typeface tf;
+            try { loading.set(Boolean.TRUE); tf = Typeface.createFromFile(file); }
+            finally { loading.set(Boolean.FALSE); }
+            return tf != null && tf != Typeface.DEFAULT;
+        } catch (Throwable t) {
+            ModuleLog.line("(IE|Font) not a font: " + t);
             return false;
         }
     }
@@ -434,17 +508,8 @@ public class CustomFontHook {
     /** Saves the picked emoji font (any loadable .ttf/.otf; rendered via the fallback typeface). */
     private static boolean saveEmoji(Activity act, android.net.Uri uri) {
         try {
-            File out = new File(act.getFilesDir(), EMOJI_FILE);
-            try (InputStream in = act.getContentResolver().openInputStream(uri);
-                 FileOutputStream fo = new FileOutputStream(out)) {
-                if (in == null) return false;
-                byte[] buf = new byte[8192]; int n;
-                while ((n = in.read(buf)) > 0) fo.write(buf, 0, n);
-            }
-            Typeface test;
-            try { loading.set(Boolean.TRUE); test = Typeface.createFromFile(out); }
-            finally { loading.set(Boolean.FALSE); }
-            if (test == null) return false;
+            File out = copyFont(act, uri, EMOJI_PREFIX);
+            if (out == null) return false;
             FeatureFlags.customEmojiPath = out.getAbsolutePath();
             combo = null; // force rebuild with the new emoji font
             return true;
