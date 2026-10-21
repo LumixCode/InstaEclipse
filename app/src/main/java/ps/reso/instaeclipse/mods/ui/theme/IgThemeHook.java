@@ -7,6 +7,8 @@ import android.content.res.TypedArray;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.Window;
@@ -31,15 +33,23 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
  */
 public class IgThemeHook {
 
+    private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    private static Runnable pendingRecreate;   // main thread only
+    private static boolean themeShown;         // main thread only: was the current screen themed?
+    private static boolean lazyTried;          // main thread only: one live install attempt at most
+    private static volatile ClassLoader hostLoader; // lets a live "theme on" install the skipped hooks
     private static volatile boolean installed;
     private static volatile Field typedArrayAttrsField;
     private static volatile Field typedArrayResourcesField;
 
     public void install(ClassLoader classLoader) {
         if (installed) return;
+        hostLoader = classLoader;
+        // First: hooks installed before a later one throws still theme the screen.
+        themeShown = FeatureFlags.customThemeEnabled;
         // These hooks sit on very hot framework methods (getColor, resolveAttribute); on some
         // devices (Android 13 / SM-G780G) that makes ART's JIT crash IG, so they are only installed
-        // when the custom theme is on (turning it on later applies after an Instagram restart).
+        // when the custom theme is on (turning it on later installs them in refreshCurrentActivity).
         if (!FeatureFlags.customThemeEnabled) {
             ModuleLog.line("(InstaEclipse | Theme): off -> hooks not installed");
             return;
@@ -271,18 +281,36 @@ public class IgThemeHook {
     }
 
     /**
-     * Called after a settings sync so a theme change is visible immediately, rather than
+     * Called after a theme setting changes so it is visible immediately, rather than
      * waiting for the user to navigate away and back (which is the only other time the
-     * Activity onResume/onCreate hooks would naturally re-run).
+     * Activity onResume/onCreate hooks would naturally re-run). Main thread only.
      */
     public static void refreshCurrentActivity() {
+        boolean wasShown = themeShown;
+        themeShown = FeatureFlags.customThemeEnabled;
+        // Theme was off at startup, so install() skipped the hooks: add them now. Only once, since
+        // a partly failed install() would otherwise stack duplicate hooks on every retry.
+        if (themeShown && !installed && !lazyTried && hostLoader != null) {
+            lazyTried = true;
+            new IgThemeHook().install(hostLoader);
+        }
         Activity activity = UIHookManager.getCurrentActivity();
-        if (activity == null || activity.isFinishing()) return;
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+        // Off before and after (a restore or reset re-sending the keys): nothing on screen changes.
+        if (!wasShown && !themeShown) return;
         IgThemeEngine.ensureInitialized(activity);
-        if (!FeatureFlags.customThemeEnabled) return;
-        IgColorRemapEngine.ensureBuilt(activity);
-        applyWindowColors(activity);
-        activity.getWindow().getDecorView().post(activity::recreate);
+        if (themeShown) {
+            IgColorRemapEngine.ensureBuilt(activity);
+            applyWindowColors(activity);
+        }
+        // Recreate after disabling too: the bar and decor colors applied above outlive the switch.
+        // One theme save arrives as up to three broadcasts, so coalesce them into a single recreate.
+        if (pendingRecreate != null) MAIN.removeCallbacks(pendingRecreate);
+        pendingRecreate = () -> {
+            pendingRecreate = null;   // must not keep the old Activity alive after it is rebuilt
+            if (!activity.isFinishing() && !activity.isDestroyed()) activity.recreate();
+        };
+        MAIN.postDelayed(pendingRecreate, 300);
     }
 
     static void applyWindowColors(Activity activity) {

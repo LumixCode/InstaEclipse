@@ -12,6 +12,12 @@ public final class ThemeSettingsHelper {
 
     private ThemeSettingsHelper() {}
 
+    /** The prefs the palette is resolved from; no other synced setting can change the theme. */
+    public static boolean isThemeKey(String key) {
+        return "customThemeEnabled".equals(key) || "themePresetId".equals(key)
+                || "themePaletteJson".equals(key) || "themeLightPresetId".equals(key);
+    }
+
     public static boolean isCustomMode(int presetId) {
         return presetId == CUSTOM_PRESET_ID;
     }

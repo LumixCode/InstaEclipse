@@ -55,6 +55,7 @@ import ps.reso.instaeclipse.mods.network.IGNetworkInterceptor;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine;
 import ps.reso.instaeclipse.mods.ui.theme.IgThemeHook;
+import ps.reso.instaeclipse.mods.ui.theme.ThemeSettingsHelper;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
@@ -951,10 +952,8 @@ public class Module {
                     prefs.edit().putBoolean(key, value).apply();
 
                     SettingsManager.loadAllFlags(ctx);
-                    if ("airplaneMode".equals(key)) ps.reso.instaeclipse.mods.extras.AirplaneModeHook.apply();
+                    afterCompanionWrite(key);
                     FeatureManager.refreshFeatureStatus();
-                    IgThemeEngine.invalidate();
-                    IgThemeHook.refreshCurrentActivity();
 
                 } else if ("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING".equals(action)) {
                     String key = intent.getStringExtra("key");
@@ -967,8 +966,7 @@ public class Module {
                     prefs.edit().putString(key, value).apply();
 
                     SettingsManager.loadAllFlags(ctx);
-                    IgThemeEngine.invalidate();
-                    IgThemeHook.refreshCurrentActivity();
+                    afterCompanionWrite(key);
 
                 } else if ("ps.reso.instaeclipse.ACTION_UPDATE_PREF_INT".equals(action)) {
                     String key = intent.getStringExtra("key");
@@ -981,9 +979,8 @@ public class Module {
                     prefs.edit().putInt(key, value).apply();
 
                     SettingsManager.loadAllFlags(ctx);
+                    afterCompanionWrite(key);
                     FeatureManager.refreshFeatureStatus();
-                    IgThemeEngine.invalidate();
-                    IgThemeHook.refreshCurrentActivity();
 
                 } else if (CommonUtils.ACTION_REQUEST_LOGS.equals(action)) {
                     // Re-attach/rewrite the companion-side mirror file first (covers the companion
@@ -1102,5 +1099,23 @@ public class Module {
 
         // Only the companion (holding the signature permission) can reach this receiver.
         ps.reso.instaeclipse.utils.core.IpcSecurity.registerCompanionOnlyReceiver(context, receiver, filter);
+    }
+
+    /**
+     * Live side effects once a companion value landed (sync receiver and CompanionSync.pullAsync).
+     * Main thread only. Only theme keys repaint: recreating Instagram for any other setting loses
+     * drafts and playback.
+     */
+    public static void afterCompanionWrite(String key) {
+        if (key == null) return;
+        if ("hideSpecificChats".equals(key) || "showHideChatButton".equals(key)) {
+            ps.reso.instaeclipse.mods.ghost.HideChatsHook.refreshVisibleButtons();
+        }
+        if ("storyCacheHours".equals(key)) ps.reso.instaeclipse.utils.media.StoryCache.refresh();
+        if ("airplaneMode".equals(key)) ps.reso.instaeclipse.mods.extras.AirplaneModeHook.apply();
+        if (ThemeSettingsHelper.isThemeKey(key)) {
+            IgThemeEngine.invalidate();
+            IgThemeHook.refreshCurrentActivity();
+        }
     }
 }
