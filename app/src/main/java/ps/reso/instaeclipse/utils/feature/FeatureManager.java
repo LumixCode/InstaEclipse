@@ -250,7 +250,7 @@ public class FeatureManager {
         }
 
         if (FeatureFlags.cacheStories) {
-            FeatureStatusTracker.setEnabled("CacheStories", R.string.ig_story_cache_title);
+            FeatureStatusTracker.setEnabled("CacheStories", R.string.ig_story_cache_enable);
         } else {
             FeatureStatusTracker.setDisabled("CacheStories");
         }

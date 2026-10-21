@@ -2822,6 +2822,24 @@ public class DialogUtils {
                 flagSwitch(context, R.drawable.ic_download, "#FF9F0A", R.string.ig_dialog_downloader_reels, "enableReelDownload"),
                 flagSwitch(context, R.drawable.ic_download, "#FF9F0A", R.string.ig_dialog_downloader_profiles, "enableProfileDownload"));
 
+        // Cache Stories — keep viewed stories locally for the chosen duration, independent of the
+        // source story's lifetime on Instagram.
+        LinearLayout duration = (LinearLayout) createInfoSection(context, I18n.t(context, R.string.ig_story_cache_duration),
+                I18n.t(context, R.string.ig_story_cache_hours, FeatureFlags.storyCacheHours));
+        TextView hours = (TextView) duration.getChildAt(1);
+        hours.setTextColor(accent());
+        duration.setMinimumHeight(dp(context, 48));
+        duration.setFocusable(true);
+        duration.setOnClickListener(v -> showStoryCacheDurationPicker(context, FeatureFlags.storyCacheHours, value -> {
+            if (!FeatureFlags.cacheStories) return;
+            FeatureFlags.storyCacheHours = value;
+            SettingsManager.saveAllFlags();
+            ps.reso.instaeclipse.utils.media.StoryCache.refresh();
+            hours.setText(I18n.t(context, R.string.ig_story_cache_hours, value));
+        }));
+        duration.setEnabled(FeatureFlags.cacheStories);
+        duration.setAlpha(FeatureFlags.cacheStories ? 1f : .45f);
+
         layout.addView(createDivider(context));
         layout.addView(cardOf(context,
                 flagSwitch(context, R.drawable.ic_download, "#FF9F0A", R.string.ig_dialog_downloader_voice, "enableVoiceDownload"),
@@ -2830,8 +2848,11 @@ public class DialogUtils {
                 flagSwitch(context, R.drawable.ic_download, "#FF9F0A", R.string.ig_dialog_downloader_offer_audio, "offerAudioDownload"),
                 // Save Instants (#184) — long-press a received Instant to save its media.
                 flagSwitch(context, R.drawable.ic_download, "#FF9F0A", R.string.ig_dialog_misc_save_instants, "saveInstants"),
-                // Cache Stories (24h) — keep viewed stories locally so they survive expiry/deletion.
-                flagSwitch(context, R.drawable.ic_download, "#FF9F0A", R.string.ig_dialog_misc_cache_stories, "cacheStories"),
+                flagSwitch(context, R.drawable.ic_download, "#FF9F0A", R.string.ig_story_cache_enable, "cacheStories", () -> {
+                    duration.setEnabled(FeatureFlags.cacheStories);
+                    duration.setAlpha(FeatureFlags.cacheStories ? 1f : .45f);
+                }),
+                duration,
                 createActionRow(context, R.drawable.ic_eye, I18n.t(context, R.string.ig_story_cache_view), "#FF9F0A", v -> showCachedStories(context))));
 
         // Where and how files are saved.
@@ -2916,14 +2937,14 @@ public class DialogUtils {
         showSectionDialog(context, I18n.t(context, R.string.menu_post_menu), layout, () -> {});
     }
 
-    /** Viewer for the 24h story cache — a list per author; tap to view; plus a clear action. */
+    /** Viewer for the story cache — a list per author; tap to view; plus a clear action. */
     private static void showCachedStories(Context context) {
         LinearLayout layout = createSwitchLayout(context);
         java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry> entries =
                 ps.reso.instaeclipse.utils.media.StoryCache.entries();
         if (entries.isEmpty()) {
-            layout.addView(createInfoSection(context, I18n.t(context, R.string.ig_story_cache_title),
-                    I18n.t(context, R.string.ig_story_cache_empty)));
+            layout.addView(createInfoSection(context, I18n.t(context, R.string.ig_story_cache_enable),
+                    I18n.t(context, R.string.ig_story_cache_empty_current)));
             showSectionDialog(context, I18n.t(context, R.string.ig_story_cache_view), layout, () -> {});
             return;
         }

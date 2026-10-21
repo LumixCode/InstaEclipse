@@ -33,6 +33,17 @@ public class ModulePreferencePolicyTest {
         assertFalse(ModuleReplies.isPreferenceUpdate("unrecognized_action", "hideSpecificChats", true));
     }
 
+    @Test public void integerSettingsAcceptOnlyIntegers() {
+        for (String key : new String[]{"dailyReelLimit", "storyCacheHours", "nightReelBlockStartMinutes"}) {
+            assertTrue(key, ModuleReplies.isPreferenceValue(key, 24));
+            assertTrue(key, ModuleReplies.isPreferenceUpdate(INTEGER, key, 24));
+            assertFalse(key, ModuleReplies.isPreferenceUpdate(STRING, key, "24"));
+            assertFalse(key, ModuleReplies.isPreferenceValue(key, 24L));
+        }
+        assertFalse(ModuleReplies.isPreferenceUpdate(BOOLEAN, "dailyReelLimit", true));
+        assertFalse(ModuleReplies.isPreferenceValue("dailyReelLimit", true));
+    }
+
     @Test public void oversizedStringsNeverEnterPreferencesOrTheReplyBundle() {
         String atLimit = "x".repeat(ModuleReplies.MAX_PREFERENCE_STRING_CHARS);
         assertTrue(ModuleReplies.isPreferenceValue("themePaletteJson", atLimit));

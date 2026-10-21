@@ -213,7 +213,8 @@ public class FeatureFlags {
     public static volatile boolean copyMediaLink = false;      // #117 — inject "Copy Media Link" (direct CDN url) into the post ⋮ menu
     public static volatile boolean saveInstants = false;        // #184 — long-press a received Instant (quicksnap) to save it
     public static volatile boolean uploadInstants = false;      // #199 — send an Instant from gallery (bitmap-swap into quicksnap send)
-    public static volatile boolean cacheStories = false;        // cache viewed stories locally for 24h (survive expiry/deletion)
+    public static volatile boolean cacheStories = false;        // keep viewed stories locally after expiry/deletion
+    public static volatile int storyCacheHours = 24;            // how long cached stories are kept (1-720, see StoryCacheRetention)
     public static volatile boolean customFontEnabled = false;   // replace IG's UI text font with a user .ttf/.otf
     public static volatile String  customShareDomain = "";       // replaces instagram.com in copied/shared links ("" = off)
     public static volatile String  startupTab = "";              // tab enum name Instagram opens on ("" = its default)

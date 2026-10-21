@@ -2325,6 +2325,16 @@ public class FeaturesFragment extends Fragment {
 
     private List<Object> buildDownloaderDefs() {
         List<Object> defs = new ArrayList<>();
+        int cacheHours = ps.reso.instaeclipse.utils.media.StoryCacheRetention.fromStored(
+                localCache.getAll().get("storyCacheHours"));
+        FeatureItem cacheDuration = createClickable(R.drawable.ic_timer, "#FF9F0A",
+                getString(R.string.ig_story_cache_duration) + ": " + getString(R.string.ig_story_cache_hours, cacheHours),
+                () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showStoryCacheDurationPicker(requireContext(), cacheHours, value -> {
+                    if (!getCurrentState("cacheStories")) return;
+                    putIntPref("storyCacheHours", ps.reso.instaeclipse.utils.media.StoryCacheRetention.normalize(value));
+                    loadDownloaderMenu();
+                }));
+        cacheDuration.requiresAnyOf = Arrays.asList("cacheStories");
 
         defs.add(getString(R.string.feat_features));
         defs.add(Arrays.asList(
@@ -2346,7 +2356,8 @@ public class FeaturesFragment extends Fragment {
                 createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_dialog_downloader_dm_media), "enableDmMediaDownload"),
                 createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_dialog_downloader_offer_audio), "offerAudioDownload"),
                 createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_dialog_misc_save_instants), "saveInstants"),
-                createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_dialog_misc_cache_stories), "cacheStories")
+                createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_story_cache_enable), "cacheStories"),
+                cacheDuration
         ));
 
         defs.add(getString(R.string.menu_quality));
@@ -2507,6 +2518,8 @@ public class FeaturesFragment extends Fragment {
                     settings.put(entry.getKey(), entry.getValue());
                 }
             }
+            settings.put("storyCacheHours", ps.reso.instaeclipse.utils.media.StoryCacheRetention.fromStored(
+                    all.get("storyCacheHours")));
             JSONObject root = new JSONObject();
             root.put("version", 1);
             root.put("settings", settings);

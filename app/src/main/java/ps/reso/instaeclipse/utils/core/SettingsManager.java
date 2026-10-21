@@ -12,6 +12,8 @@ import ps.reso.instaeclipse.mods.reels.DailyReelLimit;
 import ps.reso.instaeclipse.mods.reels.NightReelSchedule;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureManager;
+import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 
 public class SettingsManager {
     private static final String PREF_NAME = "instaeclipse_prefs";
@@ -219,6 +221,8 @@ public class SettingsManager {
         editor.putBoolean("saveInstants", FeatureFlags.saveInstants);
         editor.putBoolean("uploadInstants", FeatureFlags.uploadInstants);
         editor.putBoolean("cacheStories", FeatureFlags.cacheStories);
+        FeatureFlags.storyCacheHours = StoryCacheRetention.normalize(FeatureFlags.storyCacheHours);
+        editor.putInt("storyCacheHours", FeatureFlags.storyCacheHours);
         editor.putBoolean("customFontEnabled", FeatureFlags.customFontEnabled);
         editor.putString("customFontPath", FeatureFlags.customFontPath);
         editor.putString("navTabOrder", FeatureFlags.navTabOrder);
@@ -445,6 +449,8 @@ public class SettingsManager {
         FeatureFlags.saveInstants             = prefs.getBoolean("saveInstants", false);
         FeatureFlags.uploadInstants           = prefs.getBoolean("uploadInstants", false);
         FeatureFlags.cacheStories             = prefs.getBoolean("cacheStories", false);
+        // Tolerates a wrong-typed value: a bad companion write must not break every later load.
+        FeatureFlags.storyCacheHours          = StoryCacheRetention.fromStored(prefs.getAll().get("storyCacheHours"));
         FeatureFlags.customFontEnabled        = prefs.getBoolean("customFontEnabled", false);
         FeatureFlags.customFontPath           = prefs.getString("customFontPath", "");
         FeatureFlags.navTabOrder              = prefs.getString("navTabOrder", "");

@@ -10,6 +10,7 @@ import java.util.concurrent.Executors;
 
 import ps.reso.instaeclipse.utils.feature.FeatureManager;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 
 /**
  * Instagram side of the settings sync. Instagram -> companion: {@link #pushAsync}. The rest of

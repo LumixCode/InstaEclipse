@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- New controls use English until localized resources are available. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="ig_story_cache_enable">Cache viewed stories</string>
+    <string name="ig_story_cache_duration">Cache duration</string>
+    <string name="ig_story_cache_hours">%1$d h</string>
+    <string name="ig_story_cache_picker_help">Keep stories for 1–720 hours (up to 30 days). The oldest stories may be removed sooner if the cache reaches 500 MB.</string>
+    <string name="ig_story_cache_picker_unit">hours after viewing</string>
+    <string name="ig_story_cache_invalid">Enter a number from 1 to 720.</string>
+    <string name="ig_story_cache_empty_current">No cached stories yet. Enable caching, then view some stories to keep them here for your chosen duration.</string>
+</resources>

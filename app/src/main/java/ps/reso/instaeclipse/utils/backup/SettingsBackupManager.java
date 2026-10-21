@@ -8,6 +8,7 @@ import ps.reso.instaeclipse.mods.reels.DailyReelLimit;
 import ps.reso.instaeclipse.mods.reels.NightReelSchedule;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
+import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 
 /**
  * Lock settings (passcode, salt, locked chats and every lock switch) are never part of a backup:
@@ -165,6 +166,8 @@ public class SettingsBackupManager {
         s.put("copyMediaLink",           FeatureFlags.copyMediaLink);
         s.put("saveInstants",            FeatureFlags.saveInstants);
         s.put("uploadInstants",          FeatureFlags.uploadInstants);
+        s.put("cacheStories",            FeatureFlags.cacheStories);
+        s.put("storyCacheHours",         StoryCacheRetention.normalize(FeatureFlags.storyCacheHours));
 
         JSONObject root = new JSONObject();
         root.put("version",  VERSION);
@@ -350,6 +353,56 @@ public class SettingsBackupManager {
         if (s.has("copyMediaLink"))          FeatureFlags.copyMediaLink          = s.getBoolean("copyMediaLink");
         if (s.has("saveInstants"))           FeatureFlags.saveInstants           = s.getBoolean("saveInstants");
         if (s.has("uploadInstants"))         FeatureFlags.uploadInstants         = s.getBoolean("uploadInstants");
+        if (s.has("cacheStories"))           FeatureFlags.cacheStories           = s.getBoolean("cacheStories");
+        if (s.has("storyCacheHours"))        FeatureFlags.storyCacheHours        = StoryCacheRetention.normalize(
+                s.optInt("storyCacheHours", StoryCacheRetention.DEFAULT_HOURS));
+
+        if (restorable(s, "isExtremeMode"))  FeatureFlags.isExtremeMode          = s.getBoolean("isExtremeMode");
+    }
+
+    /** True when the backup has {@code key} and Extreme Mode does not lock its value. */
+    private static boolean restorable(JSONObject s, String key) throws JSONException {
+        return s.has(key) && !SettingsManager.isLockedByExtreme(key, s.get(key));
+    }
+
+    /**
+     * A text setting from a backup, checked as {@link #fromJson} checks it: the value to store, or
+     * null when it isn't valid for {@code key}. Other keys keep their value (Instagram still checks
+     * them against its settings schema, ModuleReplies.isPreferenceValue). Used by the companion's
+     * restore.
+     */
+    public static String restorableString(String key, String value) {
+        if (key == null || value == null) return null;
+        switch (key) {
+            case "startupTab":
+                return java.util.Arrays.asList(ps.reso.instaeclipse.mods.ui.StartupTabHook.TABS).contains(value) ? value : null;
+            case "customShareDomain":
+                return ShareDomain.normalize(value);
+            case "exactTimestampFormat":
+                return ps.reso.instaeclipse.utils.text.TimestampFormat.isValid(value) ? value : null;
+            case "spoofDevice":
+                return java.util.Arrays.asList(ps.reso.instaeclipse.mods.misc.DeviceSpoofHook.DEVICES).contains(value) ? value : null;
+            case "storyRingColor":
+                return value.isEmpty() || ps.reso.instaeclipse.mods.ui.StoryTrayHook.parseColors(value) != null ? value : null;
+            case "spoofAvatar":
+                return ps.reso.instaeclipse.utils.profile.SpoofAvatar.isValid(value) ? value : null;
+            case "spoofLat":
+            case "spoofLng":
+                return Double.isNaN(parseDouble(value, Double.NaN)) ? null : value;
+            default:
+                return value;
+        }
+    }
+
+    /** Older backups stored Force Reel Quality as a toggle; a bad value must not abort the restore. */
+    private static int readReelQuality(Object raw) {
+        if (raw instanceof Boolean) return (Boolean) raw ? 1080 : 0;
+        if (raw instanceof Number) return ((Number) raw).intValue();
+        try {
+            return Integer.parseInt(String.valueOf(raw));
+        } catch (NumberFormatException ignored) {
+            return FeatureFlags.forceReelQuality;
+        }
     }
 
     private static double parseDouble(Object raw, double fallback) {
