@@ -18,9 +18,9 @@ public final class ModuleLog {
 
     private static final String TAG = "InstaEclipse";
 
-    /** Verbose/debug logging. Off by default so per-event PROBE/DEBUG chatter and the stack-walk
-     *  they trigger don't ship in release. Normal status lines (line()) always log. */
-    public static volatile boolean verbose = false;
+    /** Verbose/debug logging. On only in debug builds so per-event PROBE/DEBUG chatter and the
+     *  stack-walk they trigger don't ship in release. Normal status lines (line()) always log. */
+    public static volatile boolean verbose = ps.reso.instaeclipse.BuildConfig.DEBUG;
 
     private ModuleLog() {}
 

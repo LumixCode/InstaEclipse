@@ -20,6 +20,9 @@ public class VersionComparatorTest {
         assertEquals(0, VersionComparator.compare("v0.7.0", "0.7.0"));
         assertEquals(0, VersionComparator.compare("0.7.0-hotfix", "0.7.0"));
         assertTrue(VersionComparator.compare("1.0.0-beta", "0.9") > 0);
+        // Debug builds append versionNameSuffix '-debug' (app/build.gradle).
+        assertEquals(0, VersionComparator.compare("0.8.0", "0.8.0-debug"));
+        assertTrue(VersionComparator.compare("0.8.1", "0.8.0-debug") > 0);
     }
 
     @Test
