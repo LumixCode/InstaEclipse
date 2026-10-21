@@ -2552,7 +2552,7 @@ public class FeedVideoDownloadHook {
         String videoUrl = bestVideoUrlFromMedia(media);
         if (videoUrl != null) return new ArrayList<>(List.of(videoUrl));
 
-        ModuleLog.line("(IE|Post|DEBUG) carousel check: mutableMediaDictIntfClass=" +
+        ModuleLog.probe("(IE|Post|DEBUG) carousel check: mutableMediaDictIntfClass=" +
                 (mutableMediaDictIntfClass == null ? "null" : mutableMediaDictIntfClass.getName()) +
                 " carouselCandidates=" + carouselCandidates.size());
 
@@ -2560,14 +2560,14 @@ public class FeedVideoDownloadHook {
         if ((mutableMediaDictIntfClass != null || liveTreeMediaDictClass != null)
                 && !carouselCandidates.isEmpty()) {
             Object dictIntf = findMediaDictionary(media);
-            ModuleLog.line("(IE|Post|DEBUG) dictIntf=" +
+            ModuleLog.probe("(IE|Post|DEBUG) dictIntf=" +
                     (dictIntf == null ? "null" : dictIntf.getClass().getName()));
             if (dictIntf != null) {
                 for (Method candidate : carouselCandidates) {
                     try {
                         Object listObj = candidate.invoke(dictIntf);
                         int sz = (listObj instanceof List<?> l) ? l.size() : -1;
-                        ModuleLog.line("(IE|Post|DEBUG)   candidate=" + candidate.getName() +
+                        ModuleLog.probe("(IE|Post|DEBUG)   candidate=" + candidate.getName() +
                                 " resultType=" + (listObj == null ? "null" : listObj.getClass().getName()) +
                                 " size=" + sz);
                         if (!(listObj instanceof List<?> items) || items.size() < 2) continue;
