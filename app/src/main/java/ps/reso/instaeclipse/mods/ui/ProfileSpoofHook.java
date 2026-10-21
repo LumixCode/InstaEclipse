@@ -74,8 +74,14 @@ public final class ProfileSpoofHook {
         hooked += hook(bridge, cl, "media_count", "ProfileSpoofPosts", log, new String[]{"java.lang.Integer", "int", "java.lang.Long", "long"}, 2);
         hooked += hook(bridge, cl, "is_verified", "ProfileSpoofVerified", log, new String[]{"java.lang.Boolean", "boolean"}, 3);
         boolean session = trackAccount(cl);
-        hookHeaderViews();
-        hookAvatarView();
+        // The view hooks sit on very hot framework methods (TextView.setText,
+        // ImageView.setImageDrawable/setImageBitmap); hooking those app-wide triggers ART's JIT
+        // SIGSEGV on IG 451+ / Android 13, so they are only installed when the feature is on
+        // (turning it on later applies to the header views after an Instagram restart).
+        if (FeatureFlags.profileSpoofer) {
+            hookHeaderViews();
+            hookAvatarView();
+        }
         hookBioState(bridge, cl, log);
         if (hooked > 0 && session) FeatureStatusTracker.setHooked("ProfileSpoofer");
         ModuleLog.line(TAG + (hooked > 0 && session ? "✅" : "❌") + " getters hooked=" + hooked + log
@@ -275,7 +281,7 @@ public final class ProfileSpoofHook {
 
     private static void hookHeaderViews() {
         XposedBridge.hookAllMethods(android.widget.TextView.class, "setText", new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) {
+            @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 if (!FeatureFlags.profileSpoofer || SETTING.get() == Boolean.TRUE) return;
                 android.widget.TextView tv = (android.widget.TextView) param.thisObject;
                 int id = tv.getId();
@@ -283,7 +289,6 @@ public final class ProfileSpoofHook {
                 if (followersId == 0) resolveIds(tv);
                 if (id != followersId && id != followingId && id != titleId
                         && id != nameId && id != nameAltId && id != bioTextId) return;
-                ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 tv.post(() -> apply(tv));
             }
         });
@@ -292,7 +297,7 @@ public final class ProfileSpoofHook {
     /** The real picture arrives asynchronously (and again on every rebind): put ours back. */
     private static void hookAvatarView() {
         XC_MethodHook hook = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) {
+            @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 if (!FeatureFlags.profileSpoofer || SETTING.get() == Boolean.TRUE) return;
                 String value = FeatureFlags.spoofAvatar;
                 if (value == null || value.isEmpty()) return;
@@ -302,7 +307,6 @@ public final class ProfileSpoofHook {
                 if (followersId == 0) resolveIds(iv);
                 if (id == tabAvatarId && tabAvatarId != 0) { watchTabAvatar(iv); return; }
                 if (id != avatarId) return;
-                ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 // Not on screen yet during the first bind: try again once it is laid out.
                 if (!applyAvatar(iv)) iv.post(() -> applyAvatar(iv));
             }

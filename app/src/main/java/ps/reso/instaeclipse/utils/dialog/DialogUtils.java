@@ -2098,8 +2098,8 @@ public class DialogUtils {
         LinearLayout layout = createSwitchLayout(context);
         layout.addView(cardOf(context,
                 flagSwitch(context, R.drawable.ic_content_copy, A_SOCIAL, R.string.ig_profile_menu_tools, "profileMenuTools"),
-                flagSwitch(context, R.drawable.ic_heart, A_SOCIAL, R.string.ig_post_counts_feature, "postCountSpoof"),
-                flagSwitch(context, R.drawable.ic_eye, A_SOCIAL, R.string.ig_profile_spoofer, "profileSpoofer"),
+                restartFlagSwitch(context, R.drawable.ic_heart, A_SOCIAL, R.string.ig_post_counts_feature, "postCountSpoof"),
+                restartFlagSwitch(context, R.drawable.ic_eye, A_SOCIAL, R.string.ig_profile_spoofer, "profileSpoofer"),
                 createActionRow(context, R.drawable.ic_tune, I18n.t(context, R.string.ig_profile_spoofer_edit), A_SOCIAL,
                         v -> showProfileSpoofDialog(context)),
                 flagSwitch(context, R.drawable.ic_search, A_SOCIAL, R.string.ig_profile_analyzer, "profileAnalyzer"),
