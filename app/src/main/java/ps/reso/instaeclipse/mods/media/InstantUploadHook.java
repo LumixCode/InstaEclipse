@@ -55,7 +55,10 @@ public class InstantUploadHook {
 
     static volatile Bitmap pendingBitmap;
     private static volatile long pendingSetAt = 0;   // when pendingBitmap was armed (staleness guard)
+    // The camera screen that received the pick; weak, so an armed pick never pins a closed screen.
+    private static volatile java.lang.ref.WeakReference<Activity> pendingHost;
     private static final long PENDING_TTL_MS = 5 * 60 * 1000;
+    private static final Runnable EXPIRE_PICK = InstantUploadHook::dropPick;
     private static FrameLayout chip;           // the injected gallery button (main thread only)
     private static View preview;               // "tap shutter" hint shown once a photo is picked
     private static FrameLayout chipBtn;        // the round button inside chip
@@ -89,12 +92,18 @@ public class InstantUploadHook {
                 @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                     try {
                         if (!binding.accepts(p.args)) return; // suspend re-entry passes nulls
-                        // Drop a stale pick so it can't hijack a much-later real capture.
-                        if (pendingBitmap != null
-                                && System.currentTimeMillis() - pendingSetAt > PENDING_TTL_MS) {
-                            pendingBitmap = null;
-                        }
+                        // Read once: leaving the camera clears the pick on the main thread.
                         Bitmap selected = pendingBitmap;
+                        Activity host = pickHost();
+                        // Drop a stale pick so it can't hijack a much-later real capture: one that
+                        // timed out, or whose camera screen is gone even if no callback said so.
+                        // A merely finishing camera may still be committing this very shot.
+                        if (selected != null && (System.currentTimeMillis() - pendingSetAt > PENDING_TTL_MS
+                                || host == null || host.isDestroyed())) {
+                            clearPick();
+                            FeedVideoDownloadHook.mainHandler.post(InstantUploadHook::removeChip);
+                            selected = null;
+                        }
                         if (FeatureFlags.uploadInstants && selected != null) {
                             Bitmap secondary = null;
                             if (binding.needsSecondary(p.args)) {
@@ -103,7 +112,8 @@ public class InstantUploadHook {
                             }
                             // Validate both replacements before touching either argument.
                             if (!binding.replace(p.args, selected, secondary)) return;
-                            if (pendingBitmap == selected) pendingBitmap = null;
+                            // A pick armed again meanwhile is the next shot's, not this one's.
+                            if (pendingBitmap == selected) clearPick();
                             FeedVideoDownloadHook.mainHandler.post(InstantUploadHook::removeChip);
                             ModuleLog.line("(IE|InstantUpload) ✅ swapped in gallery bitmap");
                         }
@@ -241,33 +251,72 @@ public class InstantUploadHook {
                 else ModuleLog.line("(IE|InstantUpload) ⚠️ no Application; chip lifecycle not registered");
                 return;
             }
-            app.registerActivityLifecycleCallbacks(new android.app.Application.ActivityLifecycleCallbacks() {
-                @Override public void onActivityPaused(Activity a) {
-                    if (a == watchHost && !pickerOpen) stopWatch();
-                    if (a == chipHost && !pickerOpen) removeChip();
-                }
-                @Override public void onActivityStopped(Activity a) { if (a == chipHost && !pickerOpen) removeChip(); }
-                @Override public void onActivityDestroyed(Activity a) {
-                    if (a == watchHost) stopWatch();
-                    if (a == chipHost) { pickerOpen = false; removeChip(); }
-                }
-                // If focus moves to any other screen, the chip must not follow — kill it. It is
-                // re-injected only when the quicksnap camera signals open again (A15).
-                @Override public void onActivityResumed(Activity a) {
-                    if (chip != null && a != chipHost) removeChip();
-                    // The quicksnap screens live in a modal; watch it so the chip appears whenever
-                    // the camera page is on screen, however the user got there.
-                    if (FeatureFlags.uploadInstants && a.getClass().getName().contains("ModalActivity")) startWatch(a);
-                }
-                @Override public void onActivityCreated(Activity a, android.os.Bundle b) {}
-                @Override public void onActivityStarted(Activity a) {}
-                @Override public void onActivitySaveInstanceState(Activity a, android.os.Bundle b) {}
-            });
+            app.registerActivityLifecycleCallbacks(new Lifecycle());
             lifecycleRegistered = true;
             ModuleLog.line("(IE|InstantUpload) ✅ lifecycle registered");
         } catch (Throwable t) {
             ModuleLog.line("(IE|InstantUpload) ❌ lifecycle: " + t);
         }
+    }
+
+    static final class Lifecycle implements android.app.Application.ActivityLifecycleCallbacks {
+        // Leaving the camera Activity drops an armed pick along with its chip and thumbnail, so a
+        // later shot is always what the camera sees. Our own picker pausing the camera is not
+        // leaving (pickerOpen); paging away inside the same Activity sends no callback, and the
+        // expiry bounds that case.
+        @Override public void onActivityPaused(Activity a) {
+            if (a == watchHost && !pickerOpen) stopWatch();
+            if (a == chipHost && !pickerOpen) removeChip();
+            if (a == pickHost() && !pickerOpen) dropPick();
+        }
+        @Override public void onActivityStopped(Activity a) {
+            if (a == chipHost && !pickerOpen) removeChip();
+            if (a == pickHost() && !pickerOpen) dropPick();
+        }
+        @Override public void onActivityDestroyed(Activity a) {
+            if (a == watchHost) stopWatch();
+            if (a == chipHost) { pickerOpen = false; removeChip(); }
+            if (a == pickHost()) dropPick();
+        }
+        // If focus moves to any other screen, the chip must not follow — kill it. It is
+        // re-injected only when the quicksnap camera signals open again (A15).
+        @Override public void onActivityResumed(Activity a) {
+            if (chip != null && a != chipHost) removeChip();
+            if (pendingBitmap != null && a != pickHost()) dropPick();
+            // The quicksnap screens live in a modal; watch it so the chip appears whenever
+            // the camera page is on screen, however the user got there.
+            if (FeatureFlags.uploadInstants && a.getClass().getName().contains("ModalActivity")) startWatch(a);
+        }
+        @Override public void onActivityCreated(Activity a, android.os.Bundle b) {}
+        @Override public void onActivityStarted(Activity a) {}
+        @Override public void onActivitySaveInstanceState(Activity a, android.os.Bundle b) {}
+    }
+
+    static void armPick(Bitmap bmp, Activity host) {
+        pendingSetAt = System.currentTimeMillis();
+        pendingHost = new java.lang.ref.WeakReference<>(host);
+        pendingBitmap = bmp;   // last, so a reader that sees the bitmap also sees its host
+        // Expire the pick and its green chip together, even while the camera stays open.
+        FeedVideoDownloadHook.mainHandler.removeCallbacks(EXPIRE_PICK);
+        FeedVideoDownloadHook.mainHandler.postDelayed(EXPIRE_PICK, PENDING_TTL_MS);
+    }
+
+    private static Activity pickHost() {
+        java.lang.ref.WeakReference<Activity> host = pendingHost;
+        return host != null ? host.get() : null;
+    }
+
+    static void clearPick() {
+        pendingBitmap = null;
+        pendingHost = null;
+        pendingSetAt = 0;
+        FeedVideoDownloadHook.mainHandler.removeCallbacks(EXPIRE_PICK);
+    }
+
+    /** Main thread: the green chip and thumbnail must never outlive the pick they announce. */
+    private static void dropPick() {
+        clearPick();
+        removeChip();
     }
 
     /**
@@ -522,6 +571,10 @@ public class InstantUploadHook {
             chipHost = act;
             applyChipState(act, null);
             watchCamera();
+            // A chip re-injected by WATCH or the VM hook must show an armed pick as ready, never as
+            // idle: an idle-looking chip would let the next shutter press send the old photo.
+            Bitmap pick = pendingBitmap;
+            if (pick != null && pickHost() == act) markChipReady(act, pick);
             ModuleLog.line("(IE|InstantUpload) ✅ gallery chip injected");
         } catch (Throwable t) {
             ModuleLog.line("(IE|InstantUpload) ❌ chip: " + t);
@@ -558,8 +611,10 @@ public class InstantUploadHook {
     };
 
     private static void startWatch(Activity act) {
+        // Coming back from our own picker keeps watchHost (pause skips stopWatch while pickerOpen);
+        // restarting the window there would hide the chip of an armed pick until the VM fires again.
+        if (act != watchHost) watchStartedAt = android.os.SystemClock.uptimeMillis();
         watchHost = act;
-        watchStartedAt = android.os.SystemClock.uptimeMillis();
         FeedVideoDownloadHook.mainHandler.removeCallbacks(WATCH);
         FeedVideoDownloadHook.mainHandler.post(WATCH);
     }
@@ -638,7 +693,7 @@ public class InstantUploadHook {
      * in its default state on the camera screen.
      */
     private static void restoreChipAfterCancel(Activity act) {
-        pendingBitmap = null;
+        clearPick();
         removePreview();
         if (chip == null || chipHost != act || chip.getParent() == null) {
             removeChip();
@@ -674,8 +729,13 @@ public class InstantUploadHook {
                                             Toast.LENGTH_SHORT).show();
                                     return;
                                 }
-                                pendingBitmap = bmp;
-                                pendingSetAt = System.currentTimeMillis();
+                                armPick(bmp, act);
+                                // The lifecycle callbacks track the chip on this screen; rebuild it
+                                // if a stale one (or none) survived the picker.
+                                if (chip == null || chipHost != act || chip.getParent() == null) {
+                                    removeChip();
+                                    injectChip(act);
+                                }
                                 markChipReady(act, bmp);
                                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(act, I18n.t(act, R.string.ig_instant_upload_ready),
                                         Toast.LENGTH_LONG).show();
