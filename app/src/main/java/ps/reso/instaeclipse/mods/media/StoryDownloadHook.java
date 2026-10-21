@@ -872,6 +872,8 @@ public class StoryDownloadHook {
 
             Object target = reelItem != null ? reelItem : holder;
             Object mediaObject = findMediaObject(target);
+            // Every walk below stays inside the item's own Media when there is one: the
+            // ReelItem's other Media field (A08) is the feed post a story ring was opened from.
             Object modelTarget = mediaObject != null ? mediaObject : target;
             boolean modelSaysVideo = FeedVideoDownloadHook.isMediaVideo(modelTarget)
                     || (modelTarget != target && FeedVideoDownloadHook.isMediaVideo(target));
@@ -879,13 +881,10 @@ public class StoryDownloadHook {
             // Use the same source-aware extractor as feed/reels first. It understands
             // Pando video_versions getters whose URLs no longer expose a video-looking path.
             String videoUrl = FeedVideoDownloadHook.bestVideoUrlFromMedia(modelTarget);
-            if (videoUrl == null && modelTarget != target) {
-                videoUrl = FeedVideoDownloadHook.bestVideoUrlFromMedia(target);
-            }
 
             // Try video URL via VideoVersionIntf scan
             if (videoUrl == null && videoVersionIntfClass != null && videoVersionGetUrl != null) {
-                videoUrl = findVideoUrl(target,
+                videoUrl = findVideoUrl(modelTarget,
                         Collections.newSetFromMap(new IdentityHashMap<>()), 0);
                 if (videoUrl != null) {
                     FeedVideoDownloadHook.rememberVideoUrl(videoUrl);
@@ -907,7 +906,7 @@ public class StoryDownloadHook {
             // and value range. Pick the candidate with the largest width×height area.
             if (imageUrl == null) {
                 List<CandidateInfo> candidates = new ArrayList<>();
-                collectImageCandidates(target, candidates,
+                collectImageCandidates(modelTarget, candidates,
                         Collections.newSetFromMap(new IdentityHashMap<>()), 0);
                 ModuleLog.line("(IE|Story) imageCandidates=" + candidates.size());
                 if (!candidates.isEmpty()) {
@@ -920,7 +919,7 @@ public class StoryDownloadHook {
             // Last resort: split a raw CDN scan into image and video candidates. This
             // never silently labels an image cover as a video (the issue #204 failure).
             List<String> cdnUrls = new ArrayList<>();
-            scanCdnUrls(target, cdnUrls, 0, Collections.newSetFromMap(new IdentityHashMap<>()));
+            scanCdnUrls(modelTarget, cdnUrls, 0, Collections.newSetFromMap(new IdentityHashMap<>()));
             List<String> imageUrls = new ArrayList<>();
             for (String candidate : cdnUrls) {
                 if (FeedVideoDownloadHook.isVideoUrl(candidate)) {
@@ -943,14 +942,27 @@ public class StoryDownloadHook {
         return null;
     }
 
+    private static volatile boolean loggedMediaProbe;
+
     /** Resolves the Media nested in ReelItem without relying on obfuscated method names. */
     private static Object findMediaObject(Object obj) {
         if (obj == null) return null;
         if (obj.getClass().getName().equals("com.instagram.feed.media.Media")) return obj;
 
-        Object direct = readFieldByTypeName(obj, "com.instagram.feed.media.Media");
-        if (direct != null) return direct;
+        // The item's own Media field. Never the first Media-typed one: on IG 451 that is A08,
+        // the feed post a story ring was opened from, which X.010G copies over from Reel.A0F.
+        Field own = OwnMedia.field(obj.getClass(), "com.instagram.feed.media.Media");
+        if (own != null) {
+            // null = an item without media (IG's own A0G() throws "Required value was null.")
+            try { return own.get(obj); } catch (Throwable ignored) { return null; }
+        }
 
+        // Fallback for builds without a single own Media field: invoke the getters.
+        if (!loggedMediaProbe) {
+            loggedMediaProbe = true;
+            ModuleLog.line("(IE|Story) ⚠️ no own Media field on " + obj.getClass().getName()
+                    + ", probing its getters");
+        }
         Class<?> cls = obj.getClass();
         while (cls != null && cls != Object.class) {
             for (Method method : ps.reso.instaeclipse.utils.core.SafeReflect.methods(cls)) {
@@ -969,6 +981,34 @@ public class StoryDownloadHook {
             cls = cls.getSuperclass();
         }
         return null;
+    }
+
+    /**
+     * A ReelItem's own Media field, kept free of Android types for unit tests. IG 446/451 give
+     * ReelItem two Media fields: the final one its constructor sets (A12/A17, the field A0G() and
+     * Cgu() return) and the mutable A08 holding the feed post a story ring was opened from.
+     */
+    static final class OwnMedia {
+        private OwnMedia() { }
+
+        /** The only instance field of {@code typeName}, else the only final one; null when ambiguous. */
+        static Field field(Class<?> cls, String typeName) {
+            Field only = null, onlyFinal = null;
+            int all = 0, finals = 0;
+            for (Class<?> c = cls; c != null && c != Object.class; c = c.getSuperclass()) {
+                for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(c)) {
+                    int mod = f.getModifiers();
+                    if (java.lang.reflect.Modifier.isStatic(mod) || !f.getType().getName().equals(typeName)) continue;
+                    all++;
+                    only = f;
+                    if (java.lang.reflect.Modifier.isFinal(mod)) { finals++; onlyFinal = f; }
+                }
+            }
+            Field own = all == 1 ? only : finals == 1 ? onlyFinal : null;
+            if (own == null) return null;
+            try { own.setAccessible(true); } catch (Throwable ignored) { return null; }
+            return own;
+        }
     }
 
     /** Reads the first field whose declared type name equals {@code typeName}. */
