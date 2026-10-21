@@ -7,6 +7,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 public class MediaTypeDetectorTest {
     @Test public void verifiedFormatsKeepTheirOwnExtensionsWithoutChangingBytes() {
@@ -66,6 +67,49 @@ public class MediaTypeDetectorTest {
                 MediaTypeDetector.fromContentType("image/webp"));
         assertEquals(MediaTypeDetector.Kind.UNKNOWN,
                 MediaTypeDetector.sniff("unknown".getBytes(StandardCharsets.US_ASCII), 7));
+    }
+
+    @Test
+    public void preservesAudioForMp4VoiceContainerWithMisleadingCdnType() throws Exception {
+        assertAudio(new byte[] {0, 0, 0, 24, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm'},
+                "video/mp4", "audio/mp4", "voice.m4a");
+    }
+
+    @Test
+    public void identifiesM4aBrandEvenWithoutAudioResponseType() throws Exception {
+        assertAudio(new byte[] {0, 0, 0, 24, 'f', 't', 'y', 'p', 'M', '4', 'A', ' '},
+                "application/octet-stream", "audio/mp4", "voice.m4a");
+    }
+
+    @Test
+    public void mp4ContainerWinsOverMisleadingAudioResponseType() throws Exception {
+        assertAudio(new byte[] {0, 0, 0, 24, 'f', 't', 'y', 'p', 'M', '4', 'A', ' '},
+                "audio/mpeg", "audio/mp4", "voice.m4a");
+    }
+
+    @Test
+    public void keepsOggWaveAndMp3FilesInTheirOriginalAudioContainer() throws Exception {
+        assertAudio("OggSabcdefghijkl".getBytes(StandardCharsets.US_ASCII),
+                "application/octet-stream", "audio/ogg", "voice.ogg");
+        assertAudio("RIFF1234WAVEabcd".getBytes(StandardCharsets.US_ASCII),
+                "application/octet-stream", "audio/wav", "voice.wav");
+        assertAudio("ID3abcdefghijkl".getBytes(StandardCharsets.US_ASCII),
+                "application/octet-stream", "audio/mpeg", "voice.mp3");
+    }
+
+    private static void assertAudio(byte[] bytes, String responseType, String expectedMime,
+                                    String expectedFilename) throws Exception {
+        File file = File.createTempFile("ie-audio-test", ".bin");
+        try {
+            Files.write(file.toPath(), bytes);
+            MediaTypeDetector.Result result = MediaTypeDetector.resolve(
+                    file, responseType, "audio/mp4", "voice.jpg");
+            assertEquals(MediaTypeDetector.Kind.AUDIO, result.kind);
+            assertEquals(expectedMime, result.mimeType);
+            assertEquals(expectedFilename, result.filename);
+        } finally {
+            Files.deleteIfExists(file.toPath());
+        }
     }
 
     @Test

@@ -2104,18 +2104,6 @@ public class FeedVideoDownloadHook {
         return sb.append(ext).toString();
     }
 
-    /**
-     * Opens a writable OutputStream for the download destination, handling all storage strategies:
-     *   1. Raw file path (custom folder, avoids SAF authority issues when URI was granted to companion app)
-     *   2. SAF tree URI (works when folder was picked from inside Instagram's own dialog)
-     *   3. MediaStore Downloads (API 29+, default scoped-storage path)
-     *   4. Legacy direct file (API < 29)
-     */
-    static OutputStream openOutputStream(Context ctx, String filename, boolean isVideo, String username)
-            throws Exception {
-        return openOutputStream(ctx, filename, isVideo ? "video/mp4" : "image/jpeg", username);
-    }
-
     /** Output stream for an exported chat (HTML) in the downloads location, "chats" subfolder. */
     /** Output stream for an exported file (CSV etc.) in the downloads location, "exports" subfolder. */
     public static OutputStream openExport(Context ctx, String filename, String mime) throws Exception {
@@ -2143,6 +2131,13 @@ public class FeedVideoDownloadHook {
         return openOutputStream(ctx, filename, mime, user, true);
     }
 
+    /**
+     * Opens a writable OutputStream for the download destination, handling all storage strategies:
+     *   1. Raw file path (custom folder, avoids SAF authority issues when URI was granted to companion app)
+     *   2. SAF tree URI (works when folder was picked from inside Instagram's own dialog)
+     *   3. MediaStore Downloads (API 29+, default scoped-storage path)
+     *   4. Legacy direct file (API < 29)
+     */
     static OutputStream openOutputStream(Context ctx, String filename, String mimeType, String username)
             throws Exception {
         return openOutputStream(ctx, filename, mimeType, username, FeatureFlags.downloaderUsernameFolder);
@@ -2297,9 +2292,9 @@ public class FeedVideoDownloadHook {
 
     /** Copies tempFile to the download destination (only used when no custom SAF URI is set). */
     static void saveFileToDestination(Context ctx, File tempFile, String filename,
-                                      boolean isVideo, String username) throws Exception {
+                                      String mimeType, String username) throws Exception {
         try (FileInputStream in = new FileInputStream(tempFile);
-             OutputStream out = openOutputStream(ctx, filename, isVideo, username)) {
+             OutputStream out = openOutputStream(ctx, filename, mimeType, username)) {
             byte[] buf = new byte[32768]; int n;
             while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
         }
@@ -2316,7 +2311,7 @@ public class FeedVideoDownloadHook {
                 File src = new File(localPath);
                 if (!src.exists()) return;
                 String fn = buildFilename(author, "story", id, video);
-                saveFileToDestination(ctx, src, fn, video, author);
+                saveFileToDestination(ctx, src, fn, video ? "video/mp4" : "image/jpeg", author);
                 mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, okMsg, android.widget.Toast.LENGTH_SHORT).show());
             } catch (Throwable t) {
                 mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, failMsg, android.widget.Toast.LENGTH_SHORT).show());
@@ -2395,7 +2390,7 @@ public class FeedVideoDownloadHook {
                     out = merged;
                 }
                 saveFileToDestination(ctx, out, MediaTypeDetector.withCorrectExtension(
-                        filename, MediaTypeDetector.Kind.VIDEO), true, username);
+                        filename, MediaTypeDetector.Kind.VIDEO), "video/mp4", username);
                 return false;
             } catch (Throwable t) {
                 ModuleLog.line("(IE|DL) DASH download failed, saving the progressive file: " + t);
@@ -2420,7 +2415,8 @@ public class FeedVideoDownloadHook {
             ModuleLog.line("(IE|DL|Type) requested=" + (isVideo ? "video" : "image")
                     + " response=" + responseType + " detected=" + detected.kind
                     + " file=" + detected.filename);
-            saveFileToDestination(ctx, temp, detected.filename, detected.isVideo(), username);
+            // The detected MIME, so a sniffed audio or GIF file is not saved as image/jpeg.
+            saveFileToDestination(ctx, temp, detected.filename, detected.mimeType, username);
         } finally {
             //noinspection ResultOfMethodCallIgnored
             temp.delete();
@@ -3126,7 +3122,7 @@ public class FeedVideoDownloadHook {
                 downloadToFile(audioUrl, ta);
                 String fn = buildFilename(currentDownloadUsername, "post", currentDownloadMediaId, true);
                 mergeVideoAudio(tv.getAbsolutePath(), ta.getAbsolutePath(), merged.getAbsolutePath());
-                saveFileToDestination(ctx, merged, fn, true, currentDownloadUsername);
+                saveFileToDestination(ctx, merged, fn, "video/mp4", currentDownloadUsername);
                 mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_video_saved),
                         Toast.LENGTH_SHORT).show());
             } catch (Throwable e) {

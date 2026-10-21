@@ -9,7 +9,7 @@ import java.util.Locale;
 /** Detects downloaded media from its response header and file signature. */
 final class MediaTypeDetector {
 
-    enum Kind { VIDEO, IMAGE, UNKNOWN }
+    enum Kind { VIDEO, IMAGE, AUDIO, UNKNOWN }
 
     static final class Result {
         final Kind kind;
@@ -20,10 +20,6 @@ final class MediaTypeDetector {
             this.kind = kind;
             this.mimeType = mimeType;
             this.filename = filename;
-        }
-
-        boolean isVideo() {
-            return kind == Kind.VIDEO;
         }
     }
 
@@ -62,14 +58,22 @@ final class MediaTypeDetector {
             return new Result(Kind.IMAGE, "image/gif", fn);
         }
         Kind kind = sniff(file);
+        // Voice messages use the same MP4 container as videos. The caller knows
+        // this is an audio message even when the CDN labels it video/mp4.
+        if (kind == Kind.VIDEO && fromContentType(requestedMime) == Kind.AUDIO) {
+            kind = Kind.AUDIO;
+        }
         if (kind == Kind.UNKNOWN) kind = fromContentType(responseContentType);
         if (kind == Kind.UNKNOWN) kind = fromContentType(requestedMime);
 
         String mime = kind == Kind.VIDEO ? "video/mp4"
                 : kind == Kind.IMAGE ? "image/jpeg"
+                : kind == Kind.AUDIO ? audioMime(file, responseContentType, requestedMime)
                 : normalizeContentType(requestedMime);
         if (mime == null || mime.isEmpty()) mime = "application/octet-stream";
-        return new Result(kind, mime, withCorrectExtension(requestedFilename, kind));
+        return new Result(kind, mime, kind == Kind.AUDIO
+                ? withExtension(requestedFilename, audioExtension(mime))
+                : withCorrectExtension(requestedFilename, kind));
     }
 
     static Kind fromContentType(String contentType) {
@@ -77,12 +81,18 @@ final class MediaTypeDetector {
         if (normalized == null) return Kind.UNKNOWN;
         if (normalized.startsWith("video/")) return Kind.VIDEO;
         if (normalized.startsWith("image/")) return Kind.IMAGE;
+        if (normalized.startsWith("audio/")) return Kind.AUDIO;
         return Kind.UNKNOWN;
     }
 
     static String withCorrectExtension(String filename, Kind kind) {
         if (filename == null || filename.isEmpty() || kind == Kind.UNKNOWN) return filename;
-        String wanted = kind == Kind.VIDEO ? ".mp4" : ".jpg";
+        String wanted = kind == Kind.VIDEO ? ".mp4" : kind == Kind.AUDIO ? ".m4a" : ".jpg";
+        return withExtension(filename, wanted);
+    }
+
+    private static String withExtension(String filename, String wanted) {
+        if (filename == null || filename.isEmpty()) return filename;
         String lower = filename.toLowerCase(Locale.US);
         if (lower.endsWith(wanted)) return filename;
 
@@ -134,6 +144,7 @@ final class MediaTypeDetector {
                 && header[10] == 'B' && header[11] == 'P') {
             return Kind.IMAGE;
         }
+        if (audioSignature(header, length) != null) return Kind.AUDIO;
 
         // MP4 and HEIF/AVIF share ISO-BMFF's ftyp box. Inspect the major brand so
         // still images are not mislabeled as video.
@@ -146,9 +157,44 @@ final class MediaTypeDetector {
                     || brand.equals("avif") || brand.equals("avis")) {
                 return Kind.IMAGE;
             }
+            if (brand.equals("m4a ") || brand.equals("m4b ")) return Kind.AUDIO;
             return Kind.VIDEO;
         }
         return Kind.UNKNOWN;
+    }
+
+    private static String audioMime(File file, String responseType, String requestedType)
+            throws IOException {
+        byte[] header = new byte[16];
+        try (InputStream in = new FileInputStream(file)) {
+            int size = in.read(header);
+            if (size >= 12 && header[4] == 'f' && header[5] == 't'
+                    && header[6] == 'y' && header[7] == 'p') return "audio/mp4";
+            String signature = audioSignature(header, size);
+            if (signature != null) return signature;
+        }
+        String response = normalizeContentType(responseType);
+        if (response != null && response.startsWith("audio/")) return response;
+        String requested = normalizeContentType(requestedType);
+        return requested != null && requested.startsWith("audio/") ? requested : "audio/mp4";
+    }
+
+    private static String audioSignature(byte[] h, int n) {
+        if (n >= 12 && h[0] == 'R' && h[1] == 'I' && h[2] == 'F' && h[3] == 'F'
+                && h[8] == 'W' && h[9] == 'A' && h[10] == 'V' && h[11] == 'E') return "audio/wav";
+        if (n >= 4 && h[0] == 'O' && h[1] == 'g' && h[2] == 'g' && h[3] == 'S') return "audio/ogg";
+        if (n >= 3 && h[0] == 'I' && h[1] == 'D' && h[2] == '3') return "audio/mpeg";
+        if (n >= 2 && u(h[0]) == 0xff && (u(h[1]) & 0xf6) == 0xf0) return "audio/aac";
+        if (n >= 2 && u(h[0]) == 0xff && (u(h[1]) & 0xe0) == 0xe0) return "audio/mpeg";
+        return null;
+    }
+
+    private static String audioExtension(String mime) {
+        if (mime.equals("audio/mpeg") || mime.equals("audio/mp3")) return ".mp3";
+        if (mime.equals("audio/ogg") || mime.equals("audio/opus")) return ".ogg";
+        if (mime.equals("audio/wav") || mime.equals("audio/x-wav")) return ".wav";
+        if (mime.equals("audio/aac")) return ".aac";
+        return ".m4a";
     }
 
     private static String normalizeContentType(String contentType) {
