@@ -18,6 +18,7 @@ import java.util.Map;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
  * Proper icons for the rows we add to Instagram's post / reel "..." menus. Those rows ride on
@@ -34,6 +35,8 @@ public final class MenuIcons {
     private static final Map<View, Boolean> WATCHED = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
     private static final Map<ImageView, Integer> APPLIED = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
     private static volatile long lastStart;
+    // apply() results: no menu rows in the window / menu rows but none of ours / ours found.
+    private static final int NO_MENU = 0, MENU = 1, OURS = 2;
     private static Map<String, String> iconsByLabel;
 
     /** Label -> Instagram drawable name, in the current language. */
@@ -82,7 +85,7 @@ public final class MenuIcons {
 
     /** Applies once and keeps re-applying while this window is showing. */
     private static boolean watch(View root) {
-        if (!apply(root)) return false;
+        if (apply(root) != OURS) return false;
         try {
             listen(root);
         } catch (Throwable t) {
@@ -92,53 +95,66 @@ public final class MenuIcons {
     }
 
     private static void listen(View root) {
-        if (WATCHED.put(root, Boolean.TRUE) == null) {
-            // Pre-draw (throttled), not global layout: rows scrolled into view are bound without a
-            // layout pass on the window, so a layout listener misses them.
-            final long[] last = {0};
-            final Runnable catchUp = () -> apply(root); // the frame skipped by the throttle
-            ViewTreeObserver.OnPreDrawListener l = () -> {
+        if (WATCHED.put(root, Boolean.TRUE) != null) return;
+        // Pre-draw (throttled), not global layout: rows scrolled into view are bound without a
+        // layout pass on the window, so a layout listener misses them.
+        final long[] last = {0};
+        final Runnable catchUp = () -> apply(root); // the frame skipped by the throttle
+        final View.OnAttachStateChangeListener[] detach = new View.OnAttachStateChangeListener[1];
+        ViewTreeObserver.OnPreDrawListener l = new ViewTreeObserver.OnPreDrawListener() {
+            @Override public boolean onPreDraw() {
                 long t = SystemClock.uptimeMillis();
-                if (t - last[0] > 80) { last[0] = t; apply(root); }
-                else { root.removeCallbacks(catchUp); root.postDelayed(catchUp, 100); }
+                if (t - last[0] > 80) {
+                    last[0] = t;
+                    // On IG 446 sheets live in the activity window, so "removed on detach" would
+                    // keep walking the main tree every frame; stop once the menu has closed.
+                    if (apply(root) == NO_MENU) stop(root, this, detach[0], catchUp);
+                } else { root.removeCallbacks(catchUp); root.postDelayed(catchUp, 100); }
                 return true;
-            };
-            root.getViewTreeObserver().addOnPreDrawListener(l);
-            root.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
-                @Override public void onViewAttachedToWindow(View v) {}
-                @Override public void onViewDetachedFromWindow(View v) {
-                    v.getViewTreeObserver().removeOnPreDrawListener(l);
-                    WATCHED.remove(v);
-                    v.removeOnAttachStateChangeListener(this);
-                }
-            });
-        }
+            }
+        };
+        detach[0] = new View.OnAttachStateChangeListener() {
+            @Override public void onViewAttachedToWindow(View v) {}
+            @Override public void onViewDetachedFromWindow(View v) { stop(v, l, this, catchUp); }
+        };
+        root.getViewTreeObserver().addOnPreDrawListener(l);
+        root.addOnAttachStateChangeListener(detach[0]);
     }
 
-    /** True if at least one of our rows is in this window. Never throws: this also runs from a
-     *  pre-draw listener on Instagram's UI thread, where an exception would crash the app; on any
-     *  failure the row simply keeps Instagram's own icon. */
-    private static boolean apply(View root) {
+    private static void stop(View root, ViewTreeObserver.OnPreDrawListener l,
+                             View.OnAttachStateChangeListener detach, Runnable catchUp) {
+        root.getViewTreeObserver().removeOnPreDrawListener(l);
+        root.removeOnAttachStateChangeListener(detach);
+        root.removeCallbacks(catchUp);
+        WATCHED.remove(root);
+    }
+
+    /** OURS if at least one of our rows is in this window, MENU if only Instagram's menu rows are.
+     *  Never throws: this also runs from a pre-draw listener on Instagram's UI thread, where an
+     *  exception would crash the app; on any failure the row simply keeps Instagram's own icon. */
+    private static int apply(View root) {
         try {
             return applyUnsafe(root);
         } catch (Throwable t) {
             ModuleLog.line("(IE|MenuIcons) apply: " + t);
-            return false;
+            return NO_MENU;
         }
     }
 
-    private static boolean applyUnsafe(View root) {
+    private static int applyUnsafe(View root) {
         Context c = root.getContext();
-        int textId = c.getResources().getIdentifier("control_option_text", "id", c.getPackageName());
-        int iconId = c.getResources().getIdentifier("control_option_icon", "id", c.getPackageName());
-        if (textId == 0 || iconId == 0) return false;
+        int textId = ResIds.id(c, "control_option_text");
+        int iconId = ResIds.id(c, "control_option_icon");
+        if (textId == 0 || iconId == 0) return NO_MENU;
         Map<String, String> map = icons();
+        boolean menu = false;
         boolean any = false;
         java.util.ArrayDeque<View> st = new java.util.ArrayDeque<>();
         st.push(root);
         while (!st.isEmpty()) {
             View v = st.pop();
             if (v.getId() == textId && v instanceof TextView tv) {
+                menu = true;
                 String icon = tv.getText() == null ? null : map.get(tv.getText().toString());
                 if (icon == null) continue;
                 any = true;
@@ -154,7 +170,7 @@ public final class MenuIcons {
                 for (int i = 0; i < g.getChildCount(); i++) st.push(g.getChildAt(i));
             }
         }
-        return any;
+        return any ? OURS : menu ? MENU : NO_MENU;
     }
 
     /** Every window's root view (activity, dialogs, bottom sheets). */
