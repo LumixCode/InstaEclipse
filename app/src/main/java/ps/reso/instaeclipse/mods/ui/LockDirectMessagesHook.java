@@ -46,19 +46,35 @@ public class LockDirectMessagesHook {
     private static final android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
     /**
      * The hidden-inbox gate opens on the third of several quick taps, and the system biometric
-     * prompt closes itself on any tap outside its panel: a fourth tap closed it as it appeared.
-     * That gate starts the biometric prompt only after this long without a touch on it.
+     * prompt closes itself on any tap outside its panel: a fourth tap can close it as it appears.
+     * That gate's prompt still comes up at once, and comes back once if it closes this soon after
+     * being asked for. SystemUI plays its 250 ms show and 350 ms hide animations before it reports
+     * the tap, so the window is well past their sum.
      */
-    private static final long GESTURE_SETTLE_MS = 600L;
+    private static final long STRAY_TAP_MS = 1500L;
+    /**
+     * After the prompt's window is gone, how long to wait for its close to be reported. Android 11
+     * reports nothing for a tap during the show animation, so the gate's window getting focus back
+     * is the only sign there.
+     */
+    private static final long CLOSE_REPORT_MS = 300L;
+    /** How long a re-prompt waits for window focus to settle before checking that the gate has it. */
+    private static final long REPROMPT_SETTLE_MS = 200L;
 
     private static final class Gate {
         final android.app.Dialog dialog;
         final String scope;
         final java.util.concurrent.atomic.AtomicBoolean completed =
                 new java.util.concurrent.atomic.AtomicBoolean();
-        final android.os.CancellationSignal biometric = new android.os.CancellationSignal();
-        /** The delayed biometric prompt of a gesture gate until it starts (main thread only). */
-        Runnable pendingBiometric;
+        /** The current biometric prompt's; each prompt gets its own (main thread). */
+        android.os.CancellationSignal biometric = new android.os.CancellationSignal();
+        // The current prompt (main thread): its number, when it was asked for, whether it is still
+        // up as far as the gate knows, whether the gate's window lost focus to it, and how to show
+        // it once more after a stray tap (null: never).
+        int promptId;
+        long promptedAt;
+        boolean promptOpen, focusLost;
+        Runnable reprompt;
 
         Gate(android.app.Dialog dialog, String scope) {
             this.dialog = dialog;
@@ -363,16 +379,23 @@ public class LockDirectMessagesHook {
                 onCancel.run();
             }
 
-            @Override public boolean dispatchTouchEvent(android.view.MotionEvent event) {
-                // A stray tap from the gesture lands on this full-screen window, which no tap
-                // closes: it pushes the biometric prompt back instead of closing that.
+            @Override public void onWindowFocusChanged(boolean hasFocus) {
+                super.onWindowFocusChanged(hasFocus);
+                // The prompt takes focus while it is up; focus back while it should be up means its
+                // window is gone. Its close report, when there is one, comes within CLOSE_REPORT_MS.
                 Gate active = gates.get(a);
-                if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN && active != null
-                        && active.dialog == this && active.pendingBiometric != null) {
-                    main.removeCallbacks(active.pendingBiometric);
-                    main.postDelayed(active.pendingBiometric, GESTURE_SETTLE_MS);
+                if (active == null || active.dialog != this || !active.promptOpen) return;
+                if (!hasFocus) {
+                    active.focusLost = true;
+                    return;
                 }
-                return super.dispatchTouchEvent(event);
+                if (!active.focusLost) return;
+                int id = active.promptId;
+                main.postDelayed(() -> {
+                    if (gates.get(a) != active || active.promptId != id || !active.promptOpen) return;
+                    active.promptOpen = false;
+                    repromptAfterStrayTap(active);
+                }, CLOSE_REPORT_MS);
             }
         };
         Gate gate = new Gate(dialog, scope);
@@ -481,16 +504,6 @@ public class LockDirectMessagesHook {
             }
         };
         unlock.setOnClickListener(v -> attempt.run());
-        // Typing the passcode answers a gesture gate: its biometric prompt no longer comes up.
-        code.addTextChangedListener(new android.text.TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override public void afterTextChanged(android.text.Editable s) {
-                if (s.length() == 0 || gate.pendingBiometric == null) return;
-                main.removeCallbacks(gate.pendingBiometric);
-                gate.pendingBiometric = null;
-            }
-        });
         // Keyboard "Done" also submits — so the unlock never depends on a button the keyboard hides.
         code.setOnEditorActionListener((v, actionId, ev) -> {
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) { attempt.run(); return true; }
@@ -537,18 +550,46 @@ public class LockDirectMessagesHook {
         // disabled it, prompt automatically. Success unlocks exactly like a correct passcode; the
         // passcode field stays as the fallback (the prompt's negative button just dismisses it).
         if (FeatureFlags.lockUseFingerprint && canAuthenticate(a)) {
-            if (!scope.equals("hidden")) {
-                promptBiometric(a, biometricTitle, gate.biometric, succeed);
-            } else {
-                gate.pendingBiometric = () -> {
-                    gate.pendingBiometric = null;
-                    if (gates.get(a) != gate || gate.completed.get() || gate.biometric.isCanceled()) return;
-                    promptBiometric(a, biometricTitle, gate.biometric, succeed);
+            if (scope.equals("hidden")) {
+                gate.reprompt = () -> {
+                    // Home or Recents closes the prompt as a user cancel too: not over the launcher.
+                    android.view.Window w = dialog.getWindow();
+                    if (gates.get(a) == gate && !gate.completed.get() && resumed.contains(a) && !a.isFinishing()
+                            && w != null && w.getDecorView().hasWindowFocus()) {
+                        promptGate(a, gate, biometricTitle, succeed);
+                    }
                 };
-                main.postDelayed(gate.pendingBiometric, GESTURE_SETTLE_MS);
             }
+            promptGate(a, gate, biometricTitle, succeed);
         }
         return true;
+    }
+
+    /** Shows the gate's biometric prompt, a new one in place of any earlier one. */
+    private static void promptGate(Activity a, Gate gate, String title, Runnable succeed) {
+        gate.biometric.cancel(); // ends an earlier prompt Android 11 closed without a word
+        gate.biometric = new android.os.CancellationSignal();
+        int id = ++gate.promptId;
+        gate.promptedAt = android.os.SystemClock.uptimeMillis();
+        gate.promptOpen = true;
+        gate.focusLost = false;
+        promptBiometric(a, title, gate.biometric, succeed, byUser -> {
+            if (gate.promptId != id || !gate.promptOpen) return;
+            gate.promptOpen = false;
+            if (byUser) repromptAfterStrayTap(gate);
+        });
+    }
+
+    /** A gesture gate's prompt the user closed this soon was hit by a tap of the gesture: once more. */
+    private static void repromptAfterStrayTap(Gate gate) {
+        Runnable reprompt = gate.reprompt;
+        if (reprompt == null || gate.completed.get()
+                || android.os.SystemClock.uptimeMillis() - gate.promptedAt > STRAY_TAP_MS) return;
+        gate.reprompt = null;
+        ModuleLog.line("(IE|LockDMs) biometric prompt closed right away: shown again if the gate is still in front");
+        // A moment later, once focus has settled: back on the gate after a stray tap, elsewhere
+        // after Home or Recents.
+        main.postDelayed(reprompt, REPROMPT_SETTLE_MS);
     }
 
     /** True when the device has biometric hardware with something enrolled. */
@@ -575,13 +616,17 @@ public class LockDirectMessagesHook {
     /** Biometric prompt for callers without a gate of their own (LockedCollectionsHook). */
     @SuppressLint("MissingPermission") // runs in Instagram, which holds USE_BIOMETRIC
     static void promptBiometric(Activity a, Runnable onSuccess) {
-        promptBiometric(a, I18n.t(a, R.string.ig_lock_biometric_title), new android.os.CancellationSignal(), onSuccess);
+        promptBiometric(a, I18n.t(a, R.string.ig_lock_biometric_title), new android.os.CancellationSignal(), onSuccess, null);
     }
 
-    /** Shows the system biometric prompt; runs onSuccess on the UI thread when auth succeeds. */
+    /**
+     * Shows the system biometric prompt; runs onSuccess on the UI thread when auth succeeds, and
+     * onClosed when it ends without: true when the user closed it (a tap outside it, or back),
+     * false for "Use passcode" or an error such as too many tries.
+     */
     @SuppressLint("MissingPermission") // runs in Instagram, which holds USE_BIOMETRIC
-    private static void promptBiometric(Activity a, String title,
-                                        android.os.CancellationSignal cancellation, Runnable onSuccess) {
+    private static void promptBiometric(Activity a, String title, android.os.CancellationSignal cancellation,
+                                        Runnable onSuccess, java.util.function.Consumer<Boolean> onClosed) {
         try {
             // I18n reads the module's own resources: a.getString(R.string...) would look in
             // Instagram's table, where our ids mean nothing.
@@ -589,13 +634,20 @@ public class LockDirectMessagesHook {
                     new android.hardware.biometrics.BiometricPrompt.Builder(a)
                             .setTitle(title)
                             .setDescription(I18n.t(a, R.string.ig_lock_biometric_description))
-                            .setNegativeButton(I18n.t(a, R.string.ig_lock_biometric_use_passcode), a.getMainExecutor(), (d, w) -> {})
+                            .setNegativeButton(I18n.t(a, R.string.ig_lock_biometric_use_passcode), a.getMainExecutor(), (d, w) -> {
+                                if (onClosed != null) onClosed.accept(false);
+                            })
                             .build();
             prompt.authenticate(cancellation, a.getMainExecutor(),
                     new android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
                         @Override public void onAuthenticationSucceeded(
                                 android.hardware.biometrics.BiometricPrompt.AuthenticationResult result) {
                             a.runOnUiThread(onSuccess);
+                        }
+
+                        @Override public void onAuthenticationError(int errorCode, CharSequence errString) {
+                            if (onClosed != null) a.runOnUiThread(() -> onClosed.accept(errorCode
+                                    == android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED));
                         }
                     });
         } catch (Throwable t) {
