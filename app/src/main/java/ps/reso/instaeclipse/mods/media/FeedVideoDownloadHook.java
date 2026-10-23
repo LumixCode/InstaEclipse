@@ -6,9 +6,6 @@ import android.content.ClipboardManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.graphics.Color;
-import android.media.MediaExtractor;
-import android.media.MediaFormat;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -16,13 +13,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
-import android.view.Gravity;
-import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
@@ -52,12 +43,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.WeakHashMap;
 import java.util.concurrent.ExecutorService;
 
-import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
-import ps.reso.instaeclipse.xposedcompat.XposedBridge;
-import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -68,11 +55,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 
 public class FeedVideoDownloadHook {
-
-    private static final String DOWNLOAD_BTN_TAG = "ie_media_download_btn";
-
-    /** View tag key used by ReelDownloadHook to bind a Media object to the reel like_button. */
-    static final int TAG_REEL_MEDIA = "ie_reel_media".hashCode();
 
     // ── Class/method refs resolved once at hook install time ─────────────────
     private static Class<?> mediaExtKtClass;
@@ -112,9 +94,7 @@ public class FeedVideoDownloadHook {
         UrlEntry(String u) { url = u; time = System.currentTimeMillis(); }
     }
     private static final int MAX_URLS = 200;
-    private static final Deque<UrlEntry> urlBuffer      = new ArrayDeque<>();
     private static final Deque<UrlEntry> videoUrlBuffer = new ArrayDeque<>(); // DexKit-captured video URLs
-    private static final WeakHashMap<View, List<String>> buttonUrls = new WeakHashMap<>();
     // Bounded: at most 4 downloads/lookups at once, extra work queues instead of spawning a thread each.
     static final ExecutorService executor    = MediaHttp.newDownloadExecutor(4);
     static final Handler         mainHandler = new Handler(Looper.getMainLooper());
@@ -170,319 +150,8 @@ public class FeedVideoDownloadHook {
                 + (liveTreeMediaDictClass != null) + " listCandidates="
                 + carouselCandidates.size());
 
-        // The Uri.parse URL buffer only fed the old floating-button path (installViewHook, no longer
-        // installed). Hooking Uri.parse app-wide — one of the hottest framework methods — triggers
-        // ART's JIT SIGSEGV on IG 451+, so it is not installed any more.
         FeatureStatusTracker.setHooked("PostDownload");
         FeatureStatusTracker.setHooked("AudioDownload");
-    }
-
-    // ── Hook 1: Uri.parse (fallback buffer) ──────────────────────────────────
-
-    private void installUriCaptureHook() {
-        try {
-            XposedHelpers.findAndHookMethod(Uri.class, "parse", String.class,
-                    new XC_MethodHook() {
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                            try {
-                                if (!FeatureFlags.enablePostDownload) return;
-                                if (param.args.length == 0 || !(param.args[0] instanceof String s)) return;
-                                if (!isCdnMediaUrl(s)) return;
-                                synchronized (urlBuffer) {
-                                    if (!urlBuffer.isEmpty() && urlBuffer.peekFirst().url.equals(s))
-                                        return;
-                                    urlBuffer.addFirst(new UrlEntry(s));
-                                    while (urlBuffer.size() > MAX_URLS) urlBuffer.removeLast();
-                                }
-                            } catch (Throwable ignored) {
-                                // Uri.parse runs app-wide; never let our buffer logic crash a caller.
-                            }
-                        }
-                    });
-            FeatureStatusTracker.setHooked("PostDownload");
-            FeatureStatusTracker.setHooked("AudioDownload");
-        } catch (Throwable t) {
-            ModuleLog.detail("(InstaEclipse | MediaDownload): Uri.parse hook (unused fallback buffer): " + t);
-        }
-    }
-
-    // ── Hook 2: View.onAttachedToWindow ──────────────────────────────────────
-
-    private void installViewHook() {
-        try {
-            XposedHelpers.findAndHookMethod(View.class, "onAttachedToWindow",
-                    new XC_MethodHook() {
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                            if (!FeatureFlags.enablePostDownload) return;
-                            View view = (View) param.thisObject;
-                            Context ctx = view.getContext();
-
-                            // Cached ids: this runs for every view attached anywhere in the app.
-                            int feedLikeId = ps.reso.instaeclipse.utils.ui.ResIds.id(ctx, "row_feed_button_like");
-                            int reelLikeId = ps.reso.instaeclipse.utils.ui.ResIds.id(ctx, "like_button");
-                            int clipsUfiId = ps.reso.instaeclipse.utils.ui.ResIds.id(ctx, "clips_ufi_component");
-
-                            int viewId = view.getId();
-                            boolean isFeedLike = feedLikeId != 0 && viewId == feedLikeId;
-                            boolean isReelLike = reelLikeId != 0 && viewId == reelLikeId
-                                    && hasAncestorWithId(view, clipsUfiId);
-
-                            if (!isFeedLike && !isReelLike) return;
-                            if (!(view.getParent() instanceof ViewGroup parent)) return;
-
-                            long now = System.currentTimeMillis();
-                            List<String> snapshot = snapshotUrlsSince(now - 10_000);
-
-                            if (isFeedLike) {
-                                // Feed post: inject floating download button
-                                View existing = parent.findViewWithTag(DOWNLOAD_BTN_TAG);
-                                if (existing != null) {
-                                    synchronized (buttonUrls) { buttonUrls.put(existing, snapshot); }
-                                    return;
-                                }
-                                injectDownloadButton(view, parent, ctx, snapshot);
-                            } else {
-                                // Reel: long-press the like button to download.
-                                // ReelDownloadHook tags this view with the Media object via TAG_REEL_MEDIA.
-                                view.setOnLongClickListener(lv -> {
-                                    if (!FeatureFlags.enablePostDownload) return false;
-                                    Object media = lv.getTag(TAG_REEL_MEDIA);
-                                    if (media != null) {
-                                        String url = bestVideoUrlFromMedia(media);
-                                        if (url != null) {
-                                            ModuleLog.probe("(IE|Reel) media tag hit, url=" + url);
-                                            onDownloadClicked(ctx, List.of(url), lv);
-                                            return true;
-                                        }
-                                        ModuleLog.detail("(IE|Reel) media tag set but no video URL found in object");
-                                    }
-                                    // Fallback: filter buffer for m86 URLs only (combined stream, one per reel)
-                                    List<String> all = snapshotUrlsSince(System.currentTimeMillis() - 60_000);
-                                    List<String> m86 = new ArrayList<>();
-                                    for (String u : all) { if (u.contains("/m86/") || u.contains("%2Fm86%2F")) m86.add(u); }
-                                    List<String> pick = m86.isEmpty() ? all : m86;
-                                    if (pick.isEmpty()) {
-                                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_no_reel_url_scroll), Toast.LENGTH_SHORT).show();
-                                        return true;
-                                    }
-                                    ModuleLog.detail("(IE|Reel) buffer fallback, m86=" + m86.size() + " total=" + all.size());
-                                    // Take only the most recent URL (first in deque = newest)
-                                    onDownloadClicked(ctx, List.of(pick.get(0)), lv);
-                                    return true;
-                                });
-                                ModuleLog.probe("(IE|Reel) long-press hook set on like_button");
-                            }
-                        }
-                    });
-        } catch (Throwable t) {
-            ModuleLog.detail("(InstaEclipse | MediaDownload): View hook (unused legacy button): " + t);
-        }
-    }
-
-    // ── Button injection ──────────────────────────────────────────────────────
-
-    private void injectDownloadButton(View saveBtn, ViewGroup parent,
-                                       Context ctx, List<String> snapshot) {
-        ImageButton btn = new ImageButton(ctx);
-        btn.setTag(DOWNLOAD_BTN_TAG);
-        btn.setImageResource(android.R.drawable.stat_sys_download);
-        btn.setColorFilter(Color.WHITE);
-        btn.setBackground(null);
-        btn.setContentDescription("Download media");
-
-        int size = dp(ctx, 34);
-        ViewGroup.LayoutParams lp;
-        if (parent instanceof LinearLayout) {
-            LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams(size, size);
-            llp.gravity = Gravity.CENTER_VERTICAL;
-            llp.setMargins(dp(ctx, 4), 0, dp(ctx, 4), 0);
-            lp = llp;
-        } else {
-            FrameLayout.LayoutParams flp = new FrameLayout.LayoutParams(size, size);
-            flp.gravity = Gravity.CENTER_VERTICAL | Gravity.END;
-            flp.setMargins(0, 0, dp(ctx, 8), 0);
-            lp = flp;
-        }
-        btn.setLayoutParams(lp);
-        synchronized (buttonUrls) { buttonUrls.put(btn, snapshot); }
-
-        btn.setOnClickListener(v -> {
-            List<String> urls = resolveUrls(saveBtn, v);
-            if (urls.isEmpty()) {
-                ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_no_media_for_post), Toast.LENGTH_SHORT).show();
-                return;
-            }
-            onDownloadClicked(ctx, urls, saveBtn);
-        });
-
-        // Long-press the like button as fallback download trigger.
-        // This is the primary path when LithoViews prevents button injection.
-        saveBtn.setOnLongClickListener(lv -> {
-            if (!FeatureFlags.enablePostDownload) return false;
-            List<String> urls = resolveUrls(saveBtn, btn);
-            if (urls.isEmpty()) {
-                ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_no_media), Toast.LENGTH_SHORT).show();
-                return true;
-            }
-            onDownloadClicked(ctx, urls, saveBtn);
-            return true;
-        });
-
-        parent.post(() -> {
-            try {
-                parent.addView(btn);
-                btn.bringToFront();
-            } catch (Exception e) {
-                ModuleLog.detail("(IE|DL) Cannot inject download button: " + e.getMessage());
-            }
-        });
-    }
-
-    // ── URL resolution — three-tier ───────────────────────────────────────────
-    //
-    // Tier 1: Reflect on the save button's click listener to find the exact Media
-    //   object captured in its closure. Extract video URL via VideoVersionIntf.getUrl()
-    //   or image URL via MediaExtKt helper. This is per-post with no timing ambiguity.
-    //
-    // Tier 2: buttonUrls snapshot taken when row_feed_button_save attached.
-    //
-    // Tier 3: Last 30 s of the Uri.parse buffer (catches lazy-loaded carousels).
-
-    @SuppressLint("DiscouragedApi")
-    private List<String> resolveUrls(View likeBtn, View downloadBtn) {
-        // Tier-1a: like button's listener (works for standard feed posts)
-        List<String> urls = urlsFromSaveBtnListener(likeBtn);
-        ModuleLog.detail("(IE|DL) Tier-1a urls=" + urls.size());
-        if (!urls.isEmpty()) return urls;
-
-        // Tier-1b: bookmark/save button's listener.
-        // The save button always captures the Media object (it needs it for save-to-collection).
-        // IMPORTANT: row_feed_button_save is NOT a sibling of the like button — it sits in
-        // the action bar parent (one level above the left-buttons group). Walk up up to 4
-        // parent levels so we reach the action bar container and find it there.
-        Context ctx = likeBtn.getContext();
-        int saveResId = ctx.getResources().getIdentifier(
-                "row_feed_button_save", "id", ctx.getPackageName());
-        if (saveResId != 0) {
-            android.view.ViewParent p = likeBtn.getParent();
-            for (int i = 0; i < 4 && p instanceof ViewGroup vg; i++, p = vg.getParent()) {
-                View realSaveBtn = vg.findViewById(saveResId);
-                if (realSaveBtn != null) {
-                    ModuleLog.detail("(IE|DL) Tier-1b found save btn at parent level " + i);
-                    urls = urlsFromSaveBtnListener(realSaveBtn);
-                    ModuleLog.detail("(IE|DL) Tier-1b urls=" + urls.size());
-                    if (!urls.isEmpty()) return urls;
-                    break; // found the button but listener had no URLs — no point going wider
-                }
-            }
-        }
-
-        return new ArrayList<>();
-    }
-
-    // ── Tier 1: Save-button listener search ───────────────────────────────────
-    //
-    // Strategy:
-    //   1. Get the OnClickListener set by Instagram on the save button.
-    //   2. Find the captured Media object in its closure (depth-limited field scan).
-    //   3. From the MutableMediaDictIntf on the Media object:
-    //      a. Check if any () -> List candidate returns VideoVersionIntf items
-    //         → single video post: extract URL via getUrl(), return it.
-    //      b. Check if any () -> List candidate returns >= 2 non-video items
-    //         → carousel: try to extract per-item URLs.
-    //      c. Fall back to MediaExtKt image URL helper for single photo posts.
-
-    private static List<String> urlsFromSaveBtnListener(View saveBtn) {
-        try {
-            Object listener = getOnClickListener(saveBtn);
-            if (listener == null) return new ArrayList<>();
-
-            // Broad CDN URL scan of the listener's object graph (for plain String fields)
-            List<String> urls = new ArrayList<>();
-            Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
-            scanForCdnUrls(listener, urls, 0, visited);
-
-            if (mediaClass != null) {
-                Object media = findFieldOfType(listener, mediaClass, 4);
-
-                if (media != null) {
-                    // ── Step B: Carousel detection ─────────────────────────────
-                    // Try every () -> List method on MutableMediaDictIntf (and its direct
-                    // superinterfaces) to find the carousel item list.
-                    if ((mutableMediaDictIntfClass != null || liveTreeMediaDictClass != null)
-                            && !carouselCandidates.isEmpty()) {
-                        Object dictIntf = findMediaDictionary(media);
-                        ModuleLog.detail("(IE|DL) dictIntf=" + (dictIntf != null
-                                ? dictIntf.getClass().getName() : "null"));
-
-                        if (dictIntf != null) {
-                            for (Method candidate : carouselCandidates) {
-                                try {
-                                    Object listObj = candidate.invoke(dictIntf);
-                                    if (!(listObj instanceof List<?> items) || items.size() < 2) continue;
-
-                                    ModuleLog.probe("(IE|Car) candidate=" + candidate.getName()
-                                            + " items=" + items.size());
-                                    List<String> carouselUrls = new ArrayList<>();
-
-                                    for (int idx = 0; idx < items.size(); idx++) {
-                                        Object item = items.get(idx);
-                                        if (item == null) continue;
-
-                                        // 2. Try MediaExtKt helper — works when items are Media objects
-                                        //    (piko shows newer Instagram carousel items are Media objects)
-                                        if (methodImageUrl != null) {
-                                            try {
-                                                Object r = invokeImageUrl(saveBtn.getContext(), item);
-                                                if (r instanceof String s && isCdnMediaUrl(s)) {
-                                                    ModuleLog.probe("(IE|Car) item[" + idx + "] mediaExtKt=" + s.substring(0, Math.min(60, s.length())));
-                                                    carouselUrls.add(s);
-                                                    continue;
-                                                }
-                                            } catch (Throwable ignored) {}
-                                        }
-
-                                        // 3. Probe all no-param String methods (Pando JNI nodes: LX/VPC, LX/5q9)
-                                        String probed = probeCdnUrlViaStringMethods(item);
-                                        ModuleLog.probe("(IE|Car) item[" + idx + "] probed=" + probed);
-                                        if (probed != null) { carouselUrls.add(probed); continue; }
-
-                                        // 4. Generic CDN field scan as last resort
-                                        List<String> scanned = new ArrayList<>();
-                                        scanForCdnUrls(item, scanned, 0,
-                                                Collections.newSetFromMap(new IdentityHashMap<>()));
-                                        if (!scanned.isEmpty()) carouselUrls.add(pickBestImageUrl(scanned));
-                                    }
-
-                                    ModuleLog.detail("(IE|Car) carouselUrls=" + carouselUrls.size());
-                                    if (carouselUrls.size() >= 2) return carouselUrls;
-                                } catch (Throwable ignored) {}
-                            }
-                        }
-                    }
-
-                    // ── Step C: Single photo ───────────────────────────────────
-                    if (methodImageUrl != null) {
-                        try {
-                            Object img = invokeImageUrl(saveBtn.getContext(), media);
-                            if (img instanceof String s && isCdnMediaUrl(s))
-                                return List.of(s);
-                        } catch (Throwable ignored) {}
-                    }
-                }
-
-                // Fallback: prefer non-video URLs found by the object graph scan
-                List<String> images = new ArrayList<>();
-                for (String u : urls) { if (!isVideoUrl(u)) images.add(u); }
-                if (!images.isEmpty()) return List.of(pickBestImageUrl(images));
-            }
-
-            return urls;
-        } catch (Throwable t) {
-            return new ArrayList<>();
-        }
     }
 
     /**
@@ -819,21 +488,6 @@ public class FeedVideoDownloadHook {
         return images.get(0);
     }
 
-    /** Reads View.mListenerInfo.mOnClickListener via reflection. */
-    private static Object getOnClickListener(View view) {
-        try {
-            Field liField = View.class.getDeclaredField("mListenerInfo");
-            liField.setAccessible(true);
-            Object li = liField.get(view);
-            if (li == null) return null;
-            Field clField = li.getClass().getDeclaredField("mOnClickListener");
-            clField.setAccessible(true);
-            return clField.get(li);
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
     /**
      * Recursively scans an object's fields for Instagram CDN URL strings.
      * Only descends into X.* / com.instagram.* / com.facebook.* objects.
@@ -883,39 +537,6 @@ public class FeedVideoDownloadHook {
         }
     }
 
-    private static Object findFieldOfType(Object obj, Class<?> target, int depth) {
-        if (obj == null || target == null || depth < 0) return null;
-        Class<?> cls = obj.getClass();
-        while (cls != null && cls != Object.class) {
-            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(cls)) {
-                if (target.isAssignableFrom(f.getType())) {
-                    f.setAccessible(true);
-                    try { return f.get(obj); } catch (Throwable ignored) {}
-                }
-            }
-            cls = cls.getSuperclass();
-        }
-        if (depth > 0) {
-            cls = obj.getClass();
-            while (cls != null && cls != Object.class) {
-                for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(cls)) {
-                    f.setAccessible(true);
-                    try {
-                        Object v = f.get(obj);
-                        if (v == null) continue;
-                        String vcn = v.getClass().getName();
-                        if (!vcn.startsWith("X.") && !vcn.startsWith("com.instagram.") &&
-                                !vcn.startsWith("com.facebook.")) continue;
-                        Object r = findFieldOfType(v, target, depth - 1);
-                        if (r != null) return r;
-                    } catch (Throwable ignored) {}
-                }
-                cls = cls.getSuperclass();
-            }
-        }
-        return null;
-    }
-
     /**
      * Finds the first field on {@code obj} whose declared type is assignable to
      * {@code targetType}. Used to locate interface-typed fields.
@@ -948,28 +569,6 @@ public class FeedVideoDownloadHook {
     }
 
     // ── Buffer helpers ────────────────────────────────────────────────────────
-
-    private static List<String> snapshotUrlsSince(long from) {
-        List<String> r = new ArrayList<>();
-        synchronized (urlBuffer) {
-            for (UrlEntry e : urlBuffer) {
-                if (e.time >= from) r.add(e.url);
-                else break;
-            }
-        }
-        return r;
-    }
-
-    private static List<String> snapshotVideoUrlsSince(long from) {
-        List<String> r = new ArrayList<>();
-        synchronized (videoUrlBuffer) {
-            for (UrlEntry e : videoUrlBuffer) {
-                if (e.time >= from) r.add(e.url);
-                else break;
-            }
-        }
-        return r;
-    }
 
     static void rememberVideoUrl(String url) {
         if (url == null || !isCdnMediaUrl(url)) return;
@@ -1704,110 +1303,6 @@ public class FeedVideoDownloadHook {
     }
 
     // ── Download dispatch ─────────────────────────────────────────────────────
-
-    /**
-     * Resolves the post author's username by scanning the media object already captured
-     * in the save/like button's click listener closure.
-     * Strategy: like button listener → if no media, walk up to save button → then scan
-     * the media object graph (depth ≤ 2) for an object with getUsername().
-     */
-    @SuppressLint("DiscouragedApi")
-    private String getUsernameFromView(View likeBtn) {
-        if (likeBtn == null || mediaClass == null) return null;
-
-        Object media = getMediaFromListener(getOnClickListener(likeBtn));
-
-        // Fallback to save button if like button listener is empty
-        if (media == null) {
-            Context ctx = likeBtn.getContext();
-            int saveResId = ctx.getResources().getIdentifier("row_feed_button_save", "id", ctx.getPackageName());
-            if (saveResId != 0) {
-                android.view.ViewParent p = likeBtn.getParent();
-                for (int i = 0; i < 4 && p instanceof ViewGroup vg; i++, p = vg.getParent()) {
-                    View saveBtn = vg.findViewById(saveResId);
-                    if (saveBtn != null) {
-                        media = getMediaFromListener(getOnClickListener(saveBtn));
-                        if (media != null) break;
-                    }
-                }
-            }
-        }
-
-        if (media == null) return null;
-
-        // TIER 0: Media-direct author getter (IG 446+/447.0.0.39+). The author accessors moved onto
-        // com.instagram.feed.media.Media itself as lazy Pando getters; invoke the "user" one directly
-        // on the media object. These getters materialise the User on demand, so the field-scan tiers
-        // below cannot find it until it's been called once — this must run first.
-        if (mediaAuthorGetter != null && mediaClass != null && mediaClass.isInstance(media)) {
-            try {
-                Object userObj = mediaAuthorGetter.invoke(media);
-                if (userObj != null) {
-                    String name = UserUtils.callUsernameGetter(userObj);
-                    if (name != null) return name;
-                }
-            } catch (Throwable ignored) {}
-        }
-
-        // TIER 1: Use the resolved Dictionary Getter
-        if (dictUserGetter != null
-                && (mutableMediaDictIntfClass != null || liveTreeMediaDictClass != null)) {
-            try {
-                Object dictIntf = findMediaDictionary(media);
-                if (dictIntf != null) {
-                    Object userObj = dictUserGetter.invoke(dictIntf);
-                    if (userObj != null) {
-                        String name = UserUtils.callUsernameGetter(userObj);
-                        if (name != null) return name;
-                    }
-                }
-            } catch (Throwable ignored) {}
-        }
-
-        // TIER 2: Direct Class Bridge (Best for newer LiveTree versions)
-        // If we can't find the dictionary, search the Media object for ANY field
-        // that matches the User class directly.
-        Object userObj = findFieldOfType(media, userClass, 3);
-        if (userObj != null) {
-            String name = UserUtils.callUsernameGetter(userObj);
-            if (name != null) return name;
-        }
-
-        // TIER 3: Last resort recursive scan
-        return scanObjectForUsername(media, 0, Collections.newSetFromMap(new IdentityHashMap<>()));
-    }
-
-    private Object getMediaFromListener(Object listener) {
-        if (listener == null || mediaClass == null) return null;
-        return findFieldOfType(listener, mediaClass, 4);
-    }
-
-    /** Extracts the short media ID (first segment of the Instagram ID) from the view's media object. */
-    @SuppressLint("DiscouragedApi")
-    private String getMediaIdFromView(View likeBtn) {
-        if (likeBtn == null || mediaClass == null) return null;
-        try {
-            Object media = getMediaFromListener(getOnClickListener(likeBtn));
-            if (media == null) {
-                Context ctx = likeBtn.getContext();
-                int saveResId = ctx.getResources().getIdentifier("row_feed_button_save", "id", ctx.getPackageName());
-                if (saveResId != 0) {
-                    android.view.ViewParent p = likeBtn.getParent();
-                    for (int i = 0; i < 4 && p instanceof ViewGroup vg; i++, p = vg.getParent()) {
-                        View saveBtn = vg.findViewById(saveResId);
-                        if (saveBtn != null) {
-                            media = getMediaFromListener(getOnClickListener(saveBtn));
-                            if (media != null) break;
-                        }
-                    }
-                }
-            }
-            if (media == null) return null;
-            Object id = media.getClass().getMethod("getId").invoke(media);
-            if (id instanceof String s && !s.isEmpty()) return s.split("_")[0];
-        } catch (Throwable ignored) {}
-        return null;
-    }
 
     // ── Filename + directory helpers (package-accessible for StoryDownloadHook) ──
 
@@ -2668,115 +2163,6 @@ public class FeedVideoDownloadHook {
         return null;
     }
 
-    private void onDownloadClicked(Context ctx, List<String> urls, View saveBtn) {
-        currentDownloadUsername = getUsernameFromView(saveBtn);
-        currentDownloadMediaId  = getMediaIdFromView(saveBtn);
-        ModuleLog.detail("(IE|DL) onDownloadClicked username=" + currentDownloadUsername + " mediaId=" + currentDownloadMediaId);
-        List<String> videos = new ArrayList<>();
-        List<String> images = new ArrayList<>();
-        for (String url : urls) {
-            if (isVideoUrl(url)) videos.add(url);
-            else                 images.add(url);
-        }
-        ModuleLog.detail("(IE|DL) total=" + urls.size()
-                + " videos=" + videos.size() + " images=" + images.size());
-        for (int i = 0; i < videos.size(); i++)
-            ModuleLog.probe("(IE|DL) video[" + i + "]=" + videos.get(i));
-        for (int i = 0; i < images.size(); i++)
-            ModuleLog.probe("(IE|DL) image[" + i + "]=" + images.get(i));
-
-        if (!videos.isEmpty() && !images.isEmpty()) {
-            handleMixedContent(ctx, urls, videos, images, saveBtn);
-        } else if (!videos.isEmpty()) {
-            handleVideoDownload(ctx, videos, saveBtn);
-        } else if (images.size() > 1) {
-            showCarouselDialog(ctx, images, saveBtn);
-        } else if (!images.isEmpty()) {
-            startDirectDownload(ctx, images.get(0), false);
-        }
-    }
-
-    private void handleMixedContent(Context ctx, List<String> allUrls,
-                                     List<String> videos, List<String> images, View saveBtn) {
-        executor.submit(() -> {
-            String videoUrl = videos.get(0);
-            TrackInfo t = probeUrl(videoUrl);
-            ModuleLog.detail("(IE|DL) probeUrl=" + videoUrl
-                    + " hasVideo=" + t.hasVideo + " hasAudio=" + t.hasAudio);
-            mainHandler.post(() -> {
-                if (!t.hasVideo && t.hasAudio) {
-                    // Audio-only background track — download the image instead
-                    startDirectDownload(ctx, images.get(0), false);
-                } else {
-                    // Real video mixed with images — show carousel dialog for all items
-                    showCarouselDialog(ctx, allUrls, saveBtn);
-                }
-            });
-        });
-    }
-
-    private void handleVideoDownload(Context ctx, List<String> videos, View saveBtn) {
-        if (videos.size() == 1) {
-            startDirectDownload(ctx, videos.get(0), true);
-            return;
-        }
-        // Multiple video URLs → video carousel, show selection dialog immediately.
-        // (DASH streams only ever produce a single URL via our Step-A resolver;
-        //  multiple URLs always come from Step-B carousel item extraction.)
-        showCarouselDialog(ctx, videos, saveBtn);
-    }
-
-    private void showCarouselDialog(Context ctx, List<String> urls, View saveBtn) {
-        int idx = saveBtn != null ? findCarouselPosition(saveBtn) : 0;
-        if (idx >= urls.size()) idx = 0;
-        final int current = idx;
-        int n = urls.size();
-        new ps.reso.instaeclipse.utils.dialog.IeDialog(ctx)
-                .title(I18n.t(ctx, R.string.ig_dl_title))
-                .choices(new CharSequence[]{
-                        I18n.t(ctx, R.string.ig_dl_carousel_current, current + 1, n),
-                        I18n.t(ctx, R.string.ig_dl_carousel_all, n)
-                }, -1, w -> {
-                    if (w == 0) {
-                        String url = urls.get(current);
-                        startDirectDownload(ctx, url, isVideoUrl(url), current + 1, n);
-                    } else {
-                        for (int i = 0; i < urls.size(); i++)
-                            startDirectDownload(ctx, urls.get(i), isVideoUrl(urls.get(i)), i + 1, n);
-                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_downloading_n_items, n), Toast.LENGTH_SHORT).show();
-                    }
-                }).show();
-    }
-
-    private static int findCarouselPosition(View anchor) {
-        View container = anchor;
-        for (int i = 0; i < 8 && container.getParent() instanceof View; i++) {
-            container = (View) container.getParent();
-        }
-        if (!(container instanceof ViewGroup vg)) return 0;
-        int pos = searchForPager(vg, 0);
-        return pos >= 0 ? pos : 0;
-    }
-
-    private static int searchForPager(ViewGroup group, int depth) {
-        if (depth > 8) return -1;
-        for (int i = 0; i < group.getChildCount(); i++) {
-            View child = group.getChildAt(i);
-            for (String methodName : new String[]{"getCurrentItem", "getCurrentDataIndex"}) {
-                try {
-                    Method m = child.getClass().getMethod(methodName);
-                    Object r = m.invoke(child);
-                    if (r instanceof Integer val && val >= 0) return val;
-                } catch (Throwable ignored) {}
-            }
-            if (child instanceof ViewGroup vg) {
-                int r = searchForPager(vg, depth + 1);
-                if (r >= 0) return r;
-            }
-        }
-        return -1;
-    }
-
     private void startDirectDownload(Context ctx, String url, boolean isVideo) {
         startDirectDownload(ctx, url, isVideo, 0, 0);
     }
@@ -2877,26 +2263,6 @@ public class FeedVideoDownloadHook {
         } finally { conn.disconnect(); }
     }
 
-    private static TrackInfo probeUrl(String url) {
-        MediaExtractor ex = new MediaExtractor();
-        boolean hv = false, ha = false;
-        try {
-            ex.setDataSource(url);
-            for (int i = 0; i < ex.getTrackCount(); i++) {
-                String m = ex.getTrackFormat(i).getString(MediaFormat.KEY_MIME);
-                if (m == null) continue;
-                if (m.startsWith("video/")) hv = true;
-                if (m.startsWith("audio/")) ha = true;
-            }
-        } catch (Throwable ignored) { } finally { ex.release(); }
-        return new TrackInfo(hv, ha);
-    }
-
-    private static final class TrackInfo {
-        final boolean hasVideo, hasAudio;
-        TrackInfo(boolean v, boolean a) { hasVideo = v; hasAudio = a; }
-    }
-
     /**
      * Returns true if this CDN URL points to an Instagram feed media item
      * (photo or video) — not a profile picture, UI asset, or other non-media content.
@@ -2946,18 +2312,5 @@ public class FeedVideoDownloadHook {
         return lower.contains(".mp4")
                 || lower.contains("mime_type=video")
                 || lower.contains("mime%2ftype=video");
-    }
-
-    private static boolean hasAncestorWithId(View view, int targetId) {
-        if (targetId == 0) return false;
-        android.view.ViewParent p = view.getParent();
-        for (int i = 0; i < 6 && p instanceof View v; i++, p = v.getParent()) {
-            if (v.getId() == targetId) return true;
-        }
-        return false;
-    }
-
-    private static int dp(Context ctx, int v) {
-        return (int) (v * ctx.getResources().getDisplayMetrics().density);
     }
 }
