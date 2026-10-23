@@ -3,9 +3,13 @@ package ps.reso.instaeclipse.utils.core;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -39,7 +43,6 @@ public class DexKitCache {
 
     private static final String PREF_NAME  = "instaeclipse_dexkit_cache";
     private static final String KEY_VER    = "_v";
-    private static final char   SEP        = '\u0000';
 
     private static SharedPreferences prefs;
     private static boolean cacheValid = false;
@@ -110,13 +113,7 @@ public class DexKitCache {
     // ── Multiple methods ─────────────────────────────────────────────────────
 
     public static void saveMethods(String key, List<Method> methods) {
-        if (prefs == null || methods == null) return;
-        SharedPreferences.Editor ed = prefs.edit();
-        ed.putInt("mc_" + key, methods.size());
-        for (int i = 0; i < methods.size(); i++) {
-            ed.putString("m_" + key + "_" + i, encode(methods.get(i)));
-        }
-        ed.apply();
+        saveAll("mc_", "m_", key, methods, MemberDescriptors::encode);
     }
 
     /**
@@ -124,16 +121,74 @@ public class DexKitCache {
      * be decoded (so the whole DexKit search is re-run in that case).
      */
     public static List<Method> loadMethods(String key, ClassLoader loader) {
+        return loadAll("mc_", "m_", key, loader, MemberDescriptors::decodeMethod);
+    }
+
+    public static void saveField(String key, Field f) {
+        if (prefs == null || f == null) return;
+        prefs.edit().putString("f_" + key, MemberDescriptors.encode(f)).apply();
+    }
+
+    public static Field loadField(String key, ClassLoader loader) {
         if (prefs == null) return null;
-        int count = prefs.getInt("mc_" + key, -1);
+        String val = prefs.getString("f_" + key, null);
+        Field f = val != null ? MemberDescriptors.decodeField(val, loader) : null;
+        if (f != null) savedHit();
+        return f;
+    }
+
+    public static void saveFields(String key, List<Field> fields) {
+        saveAll("fc_", "f_", key, fields, MemberDescriptors::encode);
+    }
+
+    public static List<Field> loadFields(String key, ClassLoader loader) {
+        return loadAll("fc_", "f_", key, loader, MemberDescriptors::decodeField);
+    }
+
+    public static void saveConstructor(String key, Constructor<?> c) {
+        if (prefs == null || c == null) return;
+        prefs.edit().putString("c_" + key, MemberDescriptors.encode(c)).apply();
+    }
+
+    public static Constructor<?> loadConstructor(String key, ClassLoader loader) {
+        if (prefs == null) return null;
+        String val = prefs.getString("c_" + key, null);
+        Constructor<?> c = val != null ? MemberDescriptors.decodeConstructor(val, loader) : null;
+        if (c != null) savedHit();
+        return c;
+    }
+
+    public static void saveConstructors(String key, List<Constructor<?>> constructors) {
+        saveAll("cc_", "c_", key, constructors, MemberDescriptors::encode);
+    }
+
+    public static List<Constructor<?>> loadConstructors(String key, ClassLoader loader) {
+        return loadAll("cc_", "c_", key, loader, MemberDescriptors::decodeConstructor);
+    }
+
+    private static <T> void saveAll(String countPrefix, String prefix, String key, List<T> members,
+                                    Function<T, String> encoder) {
+        if (prefs == null || members == null) return;
+        SharedPreferences.Editor ed = prefs.edit();
+        ed.putInt(countPrefix + key, members.size());
+        for (int i = 0; i < members.size(); i++) {
+            ed.putString(prefix + key + "_" + i, encoder.apply(members.get(i)));
+        }
+        ed.apply();
+    }
+
+    private static <T> List<T> loadAll(String countPrefix, String prefix, String key, ClassLoader loader,
+                                       BiFunction<String, ClassLoader, T> decoder) {
+        if (prefs == null) return null;
+        int count = prefs.getInt(countPrefix + key, -1);
         if (count < 0) return null;
-        List<Method> result = new ArrayList<>(count);
+        List<T> result = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            String val = prefs.getString("m_" + key + "_" + i, null);
+            String val = prefs.getString(prefix + key + "_" + i, null);
             if (val == null) return null;
-            Method m = decode(val, loader);
-            if (m == null) return null;
-            result.add(m);
+            T member = decoder.apply(val, loader);
+            if (member == null) return null;
+            result.add(member);
         }
         savedHit();
         return result;
@@ -164,51 +219,10 @@ public class DexKitCache {
     // ── Encoding / Decoding ──────────────────────────────────────────────────
 
     private static String encode(Method m) {
-        return m.getDeclaringClass().getName() + SEP + m.getName() + SEP + descriptor(m);
+        return MemberDescriptors.encode(m);
     }
 
     private static Method decode(String encoded, ClassLoader loader) {
-        try {
-            int i1 = encoded.indexOf(SEP);
-            int i2 = encoded.indexOf(SEP, i1 + 1);
-            if (i1 < 0 || i2 < 0) return null;
-            String className  = encoded.substring(0, i1);
-            String methodName = encoded.substring(i1 + 1, i2);
-            String desc       = encoded.substring(i2 + 1);
-            Class<?> clazz = Class.forName(className, false, loader);
-            for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(clazz)) {
-                if (m.getName().equals(methodName) && descriptor(m).equals(desc)) {
-                    m.setAccessible(true);
-                    return m;
-                }
-            }
-        } catch (Throwable ignored) {}
-        return null;
-    }
-
-    /** Builds a JVM method descriptor string, e.g. {@code (Ljava/lang/String;I)V}. */
-    private static String descriptor(Method m) {
-        StringBuilder sb = new StringBuilder("(");
-        for (Class<?> p : m.getParameterTypes()) typeDesc(sb, p);
-        sb.append(")");
-        typeDesc(sb, m.getReturnType());
-        return sb.toString();
-    }
-
-    private static void typeDesc(StringBuilder sb, Class<?> t) {
-        while (t.isArray()) { sb.append('['); t = t.getComponentType(); }
-        if (t.isPrimitive()) {
-            if      (t == void.class)    sb.append('V');
-            else if (t == boolean.class) sb.append('Z');
-            else if (t == byte.class)    sb.append('B');
-            else if (t == char.class)    sb.append('C');
-            else if (t == short.class)   sb.append('S');
-            else if (t == int.class)     sb.append('I');
-            else if (t == long.class)    sb.append('J');
-            else if (t == float.class)   sb.append('F');
-            else if (t == double.class)  sb.append('D');
-        } else {
-            sb.append('L').append(t.getName().replace('.', '/')).append(';');
-        }
+        return MemberDescriptors.decodeMethod(encoded, loader);
     }
 }
