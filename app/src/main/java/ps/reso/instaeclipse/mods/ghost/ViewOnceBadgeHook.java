@@ -6,14 +6,10 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Member;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.List;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
-import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -34,24 +30,11 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
  * id-like String fields matches the stash, we put the original mode back so IG draws its own icon.
  *
  * Gated on permanentViewMode (the icon is only missing when that feature is active).
- * NOTE: this build carries PROBE logging to confirm field layout / id-matching on-device.
  */
 public class ViewOnceBadgeHook {
 
     public void install(DexKitBridge bridge, ClassLoader classLoader) {
         XC_MethodHook hook = buildHook();
-
-        if (DexKitCache.isCacheValid()) {
-            Method cached = DexKitCache.loadMethod("ViewOnceBadge", classLoader);
-            if (cached != null) {
-                XposedBridge.hookMethod(cached, hook);
-                ModuleLog.ok("(IE|VOBadge) ready");
-                ModuleLog.detail("(IE|VOBadge) hooked (cached): "
-                        + cached.getDeclaringClass().getName());
-                FeatureStatusTracker.setHooked("PermanentViewMode");
-                return;
-            }
-        }
 
         try {
             // The render-props ctor inlines BOTH "once" and "replayable" to compute its
@@ -65,18 +48,12 @@ public class ViewOnceBadgeHook {
                 ModuleLog.detail("(IE|VOBadge) view-once props ctor not found");
                 return;
             }
-            // PROBE build: hook EVERY match (ctor or method). The body is gated on
-            // permanentViewMode and only logs / restores, so hooking several is harmless and
-            // tells us which class actually carries the view_mode we must restore.
             int hooked = 0;
             for (MethodData md : methods) {
+                if (!md.isConstructor()) continue;
                 try {
-                    Member member = md.isConstructor()
-                            ? md.getConstructorInstance(classLoader)
-                            : md.getMethodInstance(classLoader);
-                    XposedBridge.hookMethod((java.lang.reflect.Member) member, hook);
-                    ModuleLog.detail("(IE|VOBadge) hooked " + md.getClassName()
-                            + (md.isConstructor() ? ".<init>" : "." + md.getName()));
+                    XposedBridge.hookMethod(md.getConstructorInstance(classLoader), hook);
+                    ModuleLog.detail("(IE|VOBadge) hooked " + md.getClassName() + ".<init>");
                     hooked++;
                 } catch (Throwable e) {
                     ModuleLog.detail("(IE|VOBadge) skip " + md.getClassName() + ": " + e);
@@ -122,8 +99,6 @@ public class ViewOnceBadgeHook {
                         if (hit != null) { original = hit; break; }
                     }
                     ViewOnceBadgeMode.rewrite(original, args, modeIdx);
-                    ModuleLog.probe("(IE|VOBadge|PROBE) resolved=" + args[modeIdx]
-                            + " match=" + (original != null) + " candLongs=" + candidates);
                 } catch (Throwable t) {
                     ModuleLog.detail("(IE|VOBadge) badge update failed: " + t);
                 }
