@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -17,7 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class XposedHelpers {
 
-    private static final Map<String, Field> FIELDS = new ConcurrentHashMap<>();
+    private static final Object MISSING = new Object();
+    private static final Map<Key, Object> FIELDS = new ConcurrentHashMap<>();
+    private static final Map<Key, Object> METHODS = new ConcurrentHashMap<>();
     private static final Map<Object, Map<String, Object>> EXTRA = new WeakHashMap<>();
 
     private XposedHelpers() {}
@@ -141,7 +144,48 @@ public final class XposedHelpers {
         }
     }
 
-    private static Method findCompatibleMethod(Class<?> clazz, String name, Object[] args, boolean isStatic) {
+    private static final class Key {
+        final Class<?> owner;
+        final String name;
+        final boolean isStatic;
+        final Class<?>[] args;
+        private final int hash;
+
+        Key(Class<?> owner, String name, boolean isStatic, Class<?>[] args) {
+            this.owner = owner;
+            this.name = name;
+            this.isStatic = isStatic;
+            this.args = args;
+            this.hash = (System.identityHashCode(owner) * 31 + name.hashCode()) * 31
+                    + Arrays.hashCode(args) + (isStatic ? 1 : 0);
+        }
+
+        @Override public boolean equals(Object o) {
+            if (!(o instanceof Key k)) return false;
+            return owner == k.owner && isStatic == k.isStatic && name.equals(k.name) && Arrays.equals(args, k.args);
+        }
+
+        @Override public int hashCode() {
+            return hash;
+        }
+    }
+
+    static Method findCompatibleMethod(Class<?> clazz, String name, Object[] args, boolean isStatic) {
+        Class<?>[] argTypes = new Class<?>[args.length];
+        for (int i = 0; i < args.length; i++) argTypes[i] = args[i] != null ? args[i].getClass() : null;
+        Key key = new Key(clazz, name, isStatic, argTypes);
+        Object cached = METHODS.get(key);
+        if (cached == null) {
+            Method found = searchCompatibleMethod(clazz, name, args, isStatic);
+            Object stored = found != null ? found : MISSING;
+            Object previous = METHODS.putIfAbsent(key, stored);
+            cached = previous != null ? previous : stored;
+        }
+        if (cached == MISSING) throw new NoSuchMethodError(clazz.getName() + "#" + name + " (" + args.length + " args)");
+        return (Method) cached;
+    }
+
+    private static Method searchCompatibleMethod(Class<?> clazz, String name, Object[] args, boolean isStatic) {
         Method best = null;
         for (Class<?> c = clazz; c != null; c = c.getSuperclass()) {
             for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(c)) {
@@ -151,8 +195,7 @@ public final class XposedHelpers {
             }
             if (best != null) break;
         }
-        if (best == null) throw new NoSuchMethodError(clazz.getName() + "#" + name + " (" + args.length + " args)");
-        best.setAccessible(true);
+        if (best != null) best.setAccessible(true);
         return best;
     }
 
@@ -189,18 +232,27 @@ public final class XposedHelpers {
     // ---- fields ----
 
     public static Field findField(Class<?> clazz, String fieldName) {
-        String key = clazz.getName() + '#' + fieldName;
-        Field cached = FIELDS.get(key);
-        if (cached != null) return cached;
+        Key key = new Key(clazz, fieldName, false, null);
+        Object cached = FIELDS.get(key);
+        if (cached == null) {
+            Field found = searchField(clazz, fieldName);
+            Object stored = found != null ? found : MISSING;
+            Object previous = FIELDS.putIfAbsent(key, stored);
+            cached = previous != null ? previous : stored;
+        }
+        if (cached == MISSING) throw new NoSuchFieldError(clazz.getName() + '#' + fieldName);
+        return (Field) cached;
+    }
+
+    private static Field searchField(Class<?> clazz, String fieldName) {
         for (Class<?> c = clazz; c != null; c = c.getSuperclass()) {
             try {
                 Field f = c.getDeclaredField(fieldName);
                 f.setAccessible(true);
-                FIELDS.put(key, f);
                 return f;
             } catch (NoSuchFieldException ignored) {}
         }
-        throw new NoSuchFieldError(key);
+        return null;
     }
 
     public static Object getObjectField(Object obj, String fieldName) {
