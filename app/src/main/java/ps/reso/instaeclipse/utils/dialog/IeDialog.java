@@ -32,7 +32,7 @@ public class IeDialog {
     public final Context ctx;
     public final float d;
     public final boolean dark;
-    public final int bg, field, text, sub, line, accent, border;
+    public final int bg, field, text, sub, accent, border;
 
     private final Dialog dialog;
     private final LinearLayout card, content, buttons;
@@ -53,7 +53,6 @@ public class IeDialog {
         field = dark ? 0xFF2C2C2E : 0xFFEFEFF2;
         text = dark ? 0xFFF5F5F5 : 0xFF111111;
         sub = dark ? 0xFF9A9AA0 : 0xFF6B6B70;
-        line = dark ? 0x22FFFFFF : 0x14000000;
         accent = ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine.accentOr(0xFF0095F6);
         border = dark ? 0x33FFFFFF : 0x1F000000;
 
@@ -128,12 +127,6 @@ public class IeDialog {
         return this;
     }
 
-    /** Message the user can select / copy (e.g. technical info). */
-    public IeDialog selectable() {
-        if (messageView != null) messageView.setTextIsSelectable(true);
-        return this;
-    }
-
     public IeDialog view(View v) {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.topMargin = content.getChildCount() > 0 ? dp(10) : 0;
@@ -187,25 +180,6 @@ public class IeDialog {
         q.setBackground(round(field, 14));
         view(q);
         return q;
-    }
-
-    /** A read-only, selectable text box (all text pre-selected) for "copy part of it" dialogs. */
-    public EditText selectableText(CharSequence t, int maxLines) {
-        EditText et = new EditText(ctx);
-        et.setText(t);
-        et.setTextColor(text);
-        et.setTextIsSelectable(true);
-        et.setFocusableInTouchMode(true);
-        et.setInputType(android.text.InputType.TYPE_NULL);
-        et.setKeyListener(null);
-        et.setHorizontallyScrolling(false);
-        et.setMaxLines(maxLines);
-        et.setTextSize(14);
-        et.setPadding(dp(14), dp(12), dp(14), dp(12));
-        et.setBackground(round(field, 14));
-        et.setSelection(0, et.getText().length());
-        view(et);
-        return et;
     }
 
     /** A rounded input in the dialog's style. */
@@ -291,8 +265,4 @@ public class IeDialog {
     public void dismiss() {
         try { if (dialog.isShowing()) dialog.dismiss(); } catch (Throwable ignored) {}
     }
-
-    public boolean isShowing() { return dialog.isShowing(); }
-
-    public Dialog dialog() { return dialog; }
 }
