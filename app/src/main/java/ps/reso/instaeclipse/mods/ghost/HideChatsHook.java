@@ -21,6 +21,7 @@ import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
+import org.luckypray.dexkit.result.MethodDataList;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
@@ -85,6 +86,7 @@ public class HideChatsHook {
     private static final LinkedHashMap<String, String> knownThreads = new LinkedHashMap<>();
     private static final Map<Object, NativeInbox> nativeInboxes = new WeakHashMap<>();
     private static final Map<Class<?>, List<Field>> threadKeyFields = new java.util.concurrent.ConcurrentHashMap<>();
+    private static volatile Method titleFormatter;
     /** invokeNoArg's lookups by class and name, misses included: the Lock gate resolves the open
      *  screen through them several times a second, and every miss threw NoSuchMethodException. */
     private static final Map<Class<?>, Map<String, java.util.Optional<Method>>> noArgMethods =
@@ -150,6 +152,7 @@ public class HideChatsHook {
 
     public void install(DexKitBridge bridge, ClassLoader classLoader) {
         activeHook = this;
+        resolveTitleFormatter(bridge, classLoader);
         installInboxPresentation(bridge, classLoader);
         installInboxFilter(bridge, classLoader);
         installForegroundTracker(bridge, classLoader);
@@ -522,67 +525,39 @@ public class HideChatsHook {
         return null;
     }
 
-    /** Uses Instagram's own local Direct title formatter, then equivalent participant fallbacks. */
-    private static String threadTitleOfRow(Object row, Object threadStore) {
-        if (row == null) return "";
-        String formatted = nativeThreadTitle(row, threadStore);
-        if (!formatted.isEmpty()) return formatted;
+    private static void resolveTitleFormatter(DexKitBridge bridge, ClassLoader loader) {
         try {
-            Method method = row.getClass().getDeclaredMethod("Dbb");
-            if (method.getParameterTypes().length == 0 && method.getReturnType() == String.class) {
-                method.setAccessible(true);
-                Object value = method.invoke(row);
-                String title = value instanceof String ? ((String) value).trim() : "";
-                if (!title.isEmpty()) return title;
-            }
-        } catch (Throwable ignored) {}
-        return participantTitle(row);
-    }
-
-    /** Instagram 446: X.01eU.A06(Context, UserSession, DirectThreadSummary). */
-    private static String nativeThreadTitle(Object row, Object threadStore) {
-        try {
-            Context context = AndroidAppHelper.currentApplication();
-            ClassLoader loader = row.getClass().getClassLoader();
-            Class<?> sessionType = Class.forName("com.instagram.common.session.UserSession", false, loader);
-            Object session = UnsentIdentity.directValue(threadStore, sessionType);
-            if (context == null || session == null) return "";
-            Class<?> formatter = Class.forName(TitleFormatterPick.LEGACY_FORMATTER, false, loader);
-            Method method = TitleFormatterPick.pick(List.of(), java.util.Arrays.asList(formatter.getDeclaredMethods()));
-            if (method == null) return "";
-            Class<?>[] parameters = method.getParameterTypes();
-            if (!parameters[1].isInstance(session) || !parameters[2].isInstance(row)) return "";
-            method.setAccessible(true);
-            Object value = method.invoke(null, context, session, row);
-            return value instanceof String ? ((String) value).trim() : "";
-        } catch (Throwable ignored) {}
-        return "";
-    }
-
-    /** Mirrors the native formatter's participant data path without any account lookup. */
-    private static String participantTitle(Object row) {
-        try {
-            Method participantsMethod = row.getClass().getDeclaredMethod("CdZ");
-            participantsMethod.setAccessible(true);
-            Object value = participantsMethod.invoke(row);
-            if (!(value instanceof List<?> participants)) return "";
-            List<String> names = new ArrayList<>();
-            for (Object participant : participants) {
-                String name = invokeString(participant, "CBo");
-                if (name.isEmpty()) name = invokeString(participant, "CBq");
-                if (!name.isEmpty()) names.add(name);
-            }
-            return android.text.TextUtils.join(", ", names);
-        } catch (Throwable ignored) {
-            return "";
+            List<Method> found = KeepUnsentMessagesHook.cachedMethods("HideChats_titleFormatter_v1", loader, () -> {
+                MethodDataList formatters = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                        .paramTypes("android.content.Context", UnsentIdentity.SESSION, "java.lang.String", "java.util.List", "boolean")
+                        .returnType("java.lang.String")));
+                List<Method> callers = new ArrayList<>();
+                if (formatters.size() == 1) {
+                    String owner = formatters.get(0).getClassName();
+                    for (MethodData caller : DexKitQueryCache.callersUncached(formatters.get(0))) {
+                        if (caller.isMethod() && caller.getClassName().equals(owner)) callers.add(caller.getMethodInstance(loader));
+                    }
+                }
+                Method pick = TitleFormatterPick.pick(KeepUnsentMessagesHook.methodsOf(formatters, loader), callers);
+                return pick == null ? List.of() : List.of(pick);
+            });
+            titleFormatter = found.size() == 1 ? found.get(0) : null;
+            if (titleFormatter != null) titleFormatter.setAccessible(true);
+            ModuleLog.detail("(IE|HideChats) title formatter " + (titleFormatter == null ? "missing"
+                    : titleFormatter.getDeclaringClass().getName() + "." + titleFormatter.getName()));
+        } catch (Throwable t) {
+            ModuleLog.detail("(IE|HideChats) title formatter lookup failed: " + t);
         }
     }
 
-    private static String invokeString(Object owner, String methodName) {
-        if (owner == null) return "";
+    private static String threadTitleOfRow(Object row, Object threadStore) {
+        Method formatter = titleFormatter;
+        if (row == null || formatter == null || !formatter.getParameterTypes()[2].isInstance(row)) return "";
         try {
-            Method method = owner.getClass().getMethod(methodName);
-            Object value = method.invoke(owner);
+            Context context = AndroidAppHelper.currentApplication();
+            Object session = UnsentIdentity.directValue(threadStore, formatter.getParameterTypes()[1]);
+            if (context == null || session == null) return "";
+            Object value = formatter.invoke(null, context, session, row);
             return value instanceof String ? ((String) value).trim() : "";
         } catch (Throwable ignored) {
             return "";
