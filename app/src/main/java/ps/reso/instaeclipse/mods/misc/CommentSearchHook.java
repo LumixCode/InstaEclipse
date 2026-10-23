@@ -1349,8 +1349,9 @@ public class CommentSearchHook {
             ad.notifyDataSetChanged();
             empty.setVisibility(shown.isEmpty() ? View.VISIBLE : View.GONE);
             clear.setVisibility(q.isEmpty() ? View.GONE : View.VISIBLE);
-            count.setText(q.isEmpty() ? I18n.t(ctx, R.string.ig_comment_search_count, all.size())
-                    : I18n.t(ctx, R.string.ig_comment_search_matches, all.size(), matches[0]));
+            int total = CommentSearchPolicy.count(all, null);
+            count.setText(q.isEmpty() ? I18n.t(ctx, R.string.ig_comment_search_count, total)
+                    : I18n.t(ctx, R.string.ig_comment_search_matches, total, matches[0]));
         };
         // take in whatever has loaded so far (live while loading, and when stopped or finished)
         Runnable pull = () -> {
@@ -1474,14 +1475,10 @@ public class CommentSearchHook {
     private static void exportComments(Context ctx, List<String[]> rows, boolean includePostMedia) {
         new Thread(() -> {
             try {
-                String author = "", caption = "", mediaId = "";
-                List<String[]> comments = new ArrayList<>();
-                for (String[] r : rows) {
-                    if (r[2].isEmpty() && author.isEmpty()) { author = r[0]; caption = r[1]; continue; }
-                    if (r[2].isEmpty()) continue;
-                    comments.add(r);
-                    if (mediaId.isEmpty() && r.length > 7) mediaId = r[7];
-                }
+                String[] head = CommentSearchPolicy.header(rows, null);
+                String author = head[0], caption = head[1];
+                List<String[]> comments = CommentSearchPolicy.comments(rows, head);
+                String mediaId = CommentSearchPolicy.mediaId(rows);
                 String code = shortcode(mediaId);
                 String link = code.isEmpty() ? "" : "https://www.instagram.com/p/" + code + "/";
 
@@ -1707,17 +1704,16 @@ public class CommentSearchHook {
      *  downloader's extractor. Empty when the Media object can't be found. */
     private static List<String> postMediaUrls(Context ctx, String mediaId) {
         if (mediaId == null || mediaId.isEmpty()) return new ArrayList<>();
-        String pk = mediaId.split("_")[0];
         for (Object root : new Object[]{lastFragment.get(), lastState}) {
             if (root == null) continue;
-            List<String> urls = walkForMedia(ctx, root, mediaId, pk);
+            List<String> urls = walkForMedia(ctx, root, mediaId);
             if (!urls.isEmpty()) return urls;
         }
         return new ArrayList<>();
     }
 
     /** BFS a graph for the Media whose getId() matches the post id, then extract its URLs. */
-    private static List<String> walkForMedia(Context ctx, Object root, String mediaId, String pk) {
+    private static List<String> walkForMedia(Context ctx, Object root, String mediaId) {
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         java.util.ArrayDeque<Object> q = new java.util.ArrayDeque<>();
         q.add(root);
@@ -1743,7 +1739,7 @@ public class CommentSearchHook {
                     Object id = g.invoke(o);
                     if (id instanceof String s && !s.isEmpty()) {
                         candidates++;
-                        if (s.equals(mediaId) || s.split("_")[0].equals(pk)) {
+                        if (CommentSearchPolicy.sameMedia(s, mediaId)) {
                             List<String> urls;
                             try { urls = ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook.extractAllUrlsFromMedia(ctx, o); }
                             catch (Throwable ex) { urls = null; }
@@ -1882,7 +1878,7 @@ public class CommentSearchHook {
                 // RecyclerView: at the end + nothing new for 3 s. Compose: nothing new for 4 s.
                 boolean rv = isRecyclerView(list.getClass());
                 long idle = System.currentTimeMillis() - lastChange[0];
-                if (rv ? idle > 3000 && !list.canScrollVertically(1) : idle > 4000) {
+                if (CommentSearchPolicy.loadState(rv, idle, !list.canScrollVertically(1), false) != CommentSearchPolicy.Load.GOING) {
                     loading = null; // at the end and nothing new for 3 s
                     ModuleLog.line(TAG + "Loaded all comments: " + count);
                     done.run();
@@ -1917,8 +1913,7 @@ public class CommentSearchHook {
         return false;
     }
 
-    private static final java.util.regex.Pattern VIEW_REPLIES =
-            java.util.regex.Pattern.compile("(?i)^\\s*view\\s+(all\\s+)?\\d[\\d,.]*\\s+(more\\s+)?repl(y|ies)\\s*$");
+    private static volatile List<java.util.regex.Pattern> replyLinks = CommentSearchPolicy.replyMatchers(Collections.emptyList());
     private static Method childIdMethod;
     private static boolean a11yLogged;
 
@@ -1940,7 +1935,7 @@ public class CommentSearchHook {
                 if (n == null) continue;
                 nodes++;
                 CharSequence t = n.getText() != null ? n.getText() : n.getContentDescription();
-                if (id != View.NO_ID && t != null && VIEW_REPLIES.matcher(t).matches()) {
+                if (id != View.NO_ID && CommentSearchPolicy.isReplyLink(replyLinks, t)) {
                     // the link text isn't clickable itself (a click on it is accepted but does nothing):
                     // click the nearest clickable node above it
                     int target = id;
