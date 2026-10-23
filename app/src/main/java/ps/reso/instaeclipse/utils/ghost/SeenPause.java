@@ -1,7 +1,5 @@
 package ps.reso.instaeclipse.utils.ghost;
 
-import ps.reso.instaeclipse.utils.feature.FeatureFlags;
-
 public final class SeenPause {
     private static volatile long until = Long.MIN_VALUE;
 
@@ -17,7 +15,6 @@ public final class SeenPause {
 
     public static void pause(long now, long ms) {
         until = Math.max(until, now + ms);
-        FeatureFlags.isGhostSeen = false;
     }
 
     public static boolean isPaused(long now) {
@@ -29,7 +26,7 @@ public final class SeenPause {
     }
 
     public static boolean blocks(boolean ghostSeen, long now) {
-        return ghostSeen;
+        return ghostSeen && !isPaused(now);
     }
 
     public static void resetForTest() {

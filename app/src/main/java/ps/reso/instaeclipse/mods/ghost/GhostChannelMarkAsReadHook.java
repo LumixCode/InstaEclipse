@@ -46,11 +46,10 @@ public class GhostChannelMarkAsReadHook {
 
                     sCachedHeaderButtonsId = ps.reso.instaeclipse.utils.ui.ResIds.id(context, "header_right_buttons");
 
-                    if (sCachedHeaderButtonsId != 0) {
-                        View container = view.getRootView().findViewById(sCachedHeaderButtonsId);
-                        if (container instanceof ViewGroup header && HeaderButtonKind.classify(
-                                HeaderButtonKind.kinds(header)) != HeaderButtonKind.Header.CHANNEL) return;
-                    }
+                    View container = sCachedHeaderButtonsId == 0 ? null
+                            : view.getRootView().findViewById(sCachedHeaderButtonsId);
+                    if (!(container instanceof ViewGroup header) || HeaderButtonKind.classify(
+                            HeaderButtonKind.kinds(header)) != HeaderButtonKind.Header.CHANNEL) return;
                     updateChannelSeen(seenTextView);
                 }
             });
@@ -95,12 +94,10 @@ public class GhostChannelMarkAsReadHook {
 
                 view.postDelayed(() -> {
                     group.scrollBy(0, 300);
-                    FeatureFlags.isGhostSeen = true;
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_channel_seen_sent), Toast.LENGTH_SHORT).show();
+                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_channel_marked_as_seen), Toast.LENGTH_SHORT).show();
                 }, 400);
             }
-        } catch (Exception e) {
-            FeatureFlags.isGhostSeen = true;
+        } catch (Exception ignored) {
         }
     }
 }

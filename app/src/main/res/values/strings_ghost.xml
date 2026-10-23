@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="ie_unsent_log_set_aside">Couldn\'t read the saved list; it was set aside.</string>
+    <string name="ig_toast_marked_as_seen">Marked as seen</string>
+    <string name="ig_toast_channel_marked_as_seen">Channel marked as seen</string>
 </resources>
