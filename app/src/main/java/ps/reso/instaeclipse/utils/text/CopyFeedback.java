@@ -6,6 +6,8 @@ import android.content.Context;
 import android.os.Build;
 import android.widget.Toast;
 
+import java.util.function.Consumer;
+
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.toast.IeToast;
 
@@ -24,8 +26,24 @@ public final class CopyFeedback {
         ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm == null) return;
         cm.setPrimaryClip(ClipData.newPlainText(label, text));
-        if (Build.VERSION.SDK_INT < 33) {
+        if (shouldToast(Build.VERSION.SDK_INT)) {
             IeToast.makeText(ctx, I18n.t(ctx, toastRes), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    public static void copy(Context ctx, ClipData clip, CharSequence toastText) {
+        ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
+        if (cm == null) return;
+        copy(cm::setPrimaryClip, clip,
+                () -> IeToast.makeText(ctx, toastText, Toast.LENGTH_SHORT).show(), Build.VERSION.SDK_INT);
+    }
+
+    static void copy(Consumer<ClipData> clipboard, ClipData clip, Runnable toast, int sdk) {
+        clipboard.accept(clip);
+        if (shouldToast(sdk)) toast.run();
+    }
+
+    public static boolean shouldToast(int sdk) {
+        return sdk < 33;
     }
 }
