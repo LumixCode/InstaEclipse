@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.TreeSet;
 import java.util.function.Consumer;
 
 import ps.reso.instaeclipse.R;
@@ -95,16 +95,6 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
  * and hidden_following_account_count (X.0lfb.CN8, the accounts its "And N others" footer counts;
  * the Followers pages return false / 0 for both). Each page getter is found by its key's hash.</li>
  * <li>the page's account count (X.0lfb.CqI);</li>
- * <li>where Pando got the page: Summary.source (network, fresh_cache, stale_cache, …) and cacheAge,
- * read from com.facebook.pando.Summary through the page's fields (X.0dqV → X.0WVo → X.00WX →
- * Summary; the path is found once per page class); "src=none" for a page without one (REST);</li>
- * <li>next_max_id from the response model behind the page (X.0fIh, NewFriendListResponseIntf; its
- * Pando model X.0W4w reads each field by its key's hash, which is how its getters are found): the
- * value when it is all digits (12 at most), else "opaque len=N";</li>
- * <li>follow_ranking_token (X.0lfb.CE5) as a hash of it, and whether it is the previous page's
- * (never the token itself);</li>
- * <li>has_more, big_list, page_size and truncate_users_at_index only when they have a value: the
- * query never fetches them (its skip_* variables), so they're left out.</li>
  * </ul>
  * Every getter call is guarded: a field the query didn't fetch shows as "?". A list with either
  * should_limit flag on any page is reported as limited (Result.limited), also when only a page
@@ -202,19 +192,9 @@ final class FollowListLoader {
     private static volatile Field userIdField;
     private static volatile Load current;
 
-    // the page handler's fields (the page, its order key, the list's response handler) and the
-    // page's own getters for should_limit_list_of_followers, its accounts, should_limit_list_of_followings,
-    // hidden_following_account_count and follow_ranking_token
     private static Field pageField, pageKeyField, pageOwnerField;
-    private static Method pageLimited, pageUsers, pageLimitedFollowing, pageHiddenFollowing, pageToken;
+    private static Method pageLimited, pageUsers, pageLimitedFollowing, pageHiddenFollowing;
     private static volatile Field ownerFragField;
-    // Pando's Summary of a GraphQL page (source, cacheAge) and, per page class, the fields leading to
-    // it (an empty array: the page has none)
-    private static Field summarySource, summaryCacheAge;
-    private static Class<?> summaryClass;
-    private static final Map<Class<?>, Field[]> summaryPaths = new ConcurrentHashMap<>();
-    // the built request's cache getters (PandoGraphQLRequest)
-    private static Method reqFreshAge, reqMaxAge, reqExtraKey;
     // the list's failure callback: its fragment field, and the result's server answer / exception getters
     private static Field failureFragField;
     private static Method failurePayload, failureError;
@@ -224,13 +204,7 @@ final class FollowListLoader {
     /** List fragments Instagram flagged as limited on a page applied outside a load (a list's first
      *  page usually arrives before the load starts). */
     private static final Map<Object, Boolean> limitedLists = Collections.synchronizedMap(new java.util.WeakHashMap<>());
-    /** Response fields logged per page, read through the response model's getters. */
-    private static final String[] RESPONSE_KEYS = {"should_limit_list_of_followers", "has_more", "big_list",
-            "page_size", "truncate_users_at_index", "next_max_id"};
-    private static final String[] RESPONSE_TYPES = {"java.lang.Boolean", "java.lang.Boolean", "java.lang.Boolean",
-            "java.lang.Integer", "java.lang.Integer", "java.lang.String"};
-    private static final int R_LIMIT = 0, R_HAS_MORE = 1, R_BIG_LIST = 2, R_PAGE_SIZE = 3, R_TRUNCATE = 4, R_NEXT = 5;
-    /** {response type (interface or model class), its getters by RESPONSE_KEYS (null: not found)} */
+    private static final String LIMIT_KEY = "should_limit_list_of_followers";
     private static final List<Object[]> responseTypes = new ArrayList<>();
     // the fragment's sort order field (X.0NIL enum) and Instagram's sort handler taking it
     private static Field orderField, orderValueField;
@@ -258,9 +232,6 @@ final class FollowListLoader {
         final FollowListPolicy.Block blocked;
         /** an extra pass ended early (stopped, left the list, a failed page): users are the passes so far */
         final boolean interrupted;
-        /** rows in Instagram's account list after the first pass (its adapter keeps each account
-         *  once, so repeats are rare here), repeated rows, rows without an id */
-        final int rows, duplicates, withoutId;
         /** Instagram's count for this list (the number on its tab), -1 when unknown */
         final int expected;
         /** Instagram flagged the list as limited (should_limit_list_of_followers / _followings on one
@@ -271,8 +242,6 @@ final class FollowListLoader {
         /** accounts Instagram sent in the first pass, repeats included, and how many of them an earlier
          *  page of that pass had already sent (page hook; -1 when no page of the pass was counted) */
         final int received, repeated;
-        /** different accounts listed by all passes (users.size()) */
-        final int distinct;
         /** passes run, the first one included */
         final int passes;
         /** accounts the last extra pass added; -1 when no extra pass ran */
@@ -281,38 +250,31 @@ final class FollowListLoader {
         final int f1, f2;
         /** Chao1's estimate of accounts no pass listed (FollowListPolicy.missingEstimate); -1 with one pass */
         final double estMissing;
-        /** the list is the viewer's own (its owner is the logged-in account) */
-        final boolean own;
 
         Result(Map<String, String[]> users, boolean complete, FollowListPolicy.Block blocked, boolean interrupted,
-               int rows, int duplicates, int withoutId, int expected, boolean limited, int hiddenFollowing,
-               int received, int repeated, int passes, int lastPassAdded, int f1, int f2, double estMissing, boolean own) {
+               int expected, boolean limited, int hiddenFollowing,
+               int received, int repeated, int passes, int lastPassAdded, int f1, int f2, double estMissing) {
             this.users = users;
             this.complete = complete;
             this.blocked = blocked;
             this.interrupted = interrupted;
-            this.rows = rows;
-            this.duplicates = duplicates;
-            this.withoutId = withoutId;
             this.expected = expected;
             this.limited = limited;
             this.hiddenFollowing = hiddenFollowing;
             this.received = received;
             this.repeated = repeated;
-            this.distinct = users.size();
             this.passes = passes;
             this.lastPassAdded = lastPassAdded;
             this.f1 = f1;
             this.f2 = f2;
             this.estMissing = estMissing;
-            this.own = own;
         }
     }
 
     // ---- install-time resolution ----
 
     /** Finds the pager members on the FollowListFragment class and the User getters. */
-    static void resolve(DexKitBridge bridge, ClassLoader cl, Class<?> fragClass) {
+    static boolean resolve(DexKitBridge bridge, ClassLoader cl, Class<?> fragClass) {
         try {
             for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass(USER).paramCount(0).returnType("java.lang.String").usingNumbers("full_name".hashCode())))) {
@@ -343,9 +305,11 @@ final class FollowListLoader {
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not load whole lists: the list loader was not found in this Instagram version", t);
         }
+        boolean pages = false;
         try {
             listFragClass = fragClass;
             hookPages(bridge, cl);
+            pages = true;
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "Lists still load, but a list Instagram limits may not be recognised: " + t);
         }
@@ -359,8 +323,10 @@ final class FollowListLoader {
         } catch (Throwable t) {
             ModuleLog.detail(TAG + "page caches: " + t);
         }
+        boolean builders = false;
         try {
             hookListBuilders(bridge, cl);
+            builders = listBuilders.size() == 2;
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "Lists still load, but may come partly from Instagram's cache: " + t);
         }
@@ -369,39 +335,22 @@ final class FollowListLoader {
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "Lists still load, but a block by Instagram while loading may not be recognised: " + t);
         }
-        try {
-            summaryClass = cl.loadClass("com.facebook.pando.Summary");
-            summarySource = summaryClass.getDeclaredField("source");
-            summaryCacheAge = summaryClass.getDeclaredField("cacheAge");
-            summarySource.setAccessible(true);
-            summaryCacheAge.setAccessible(true);
-        } catch (Throwable t) {
-            summaryClass = null;
-            ModuleLog.detail(TAG + "page summary: " + t);
-        }
-        StringBuilder builders = new StringBuilder();
+        StringBuilder hooked = new StringBuilder();
         for (Map.Entry<Method, Object[]> e : listBuilders.entrySet())
-            builders.append(builders.length() > 0 ? "," : "").append(e.getValue()[0]).append('=').append(e.getKey().getName())
+            hooked.append(hooked.length() > 0 ? "," : "").append(e.getValue()[0]).append('=').append(e.getKey().getName())
                     .append((int) e.getValue()[1] >= 0 ? "+refresh" : "");
-        ModuleLog.detail(TAG + "list request hooks: graphql=[" + builders + "] page caches=" + (pageCacheFields != null
+        ModuleLog.detail(TAG + "list request hooks: graphql=[" + hooked + "] page caches=" + (pageCacheFields != null
                 ? pageCacheFields.length + " (" + pageCacheFields[0].getType().getName() + ")" : "none, orders not repeated"));
-        StringBuilder response = new StringBuilder();
-        for (Object[] t : responseTypes) {
-            int n = 0;
-            for (Method m : (Method[]) t[1]) if (m != null) n++;
-            response.append(response.length() > 0 ? "," : "").append(((Class<?>) t[0]).getName()).append(' ').append(n).append('/').append(RESPONSE_KEYS.length);
-        }
         ModuleLog.detail(TAG + "pager=" + (pagerField != null ? pagerField.getType().getName() : null)
                 + " isLoading=" + (pagerIsLoading != null) + " loadMore=" + name(pagerLoadMore) + " fetch=" + name(pagerFetch)
                 + " username=" + name(usernameGetter) + " fullName=" + name(fullNameGetter)
                 + " counts=" + name(followerCountGetter) + "/" + name(followingCountGetter)
                 + " pages=" + (pageField != null ? pageField.getDeclaringClass().getName() : null)
                 + " limit=" + name(pageLimited) + "/" + name(pageLimitedFollowing) + " hidden=" + name(pageHiddenFollowing)
-                + " token=" + name(pageToken) + " users=" + name(pageUsers) + " response=[" + response + "]"
-                + " summary=" + (summaryClass != null) + " request getters=" + (reqFreshAge != null) + "/" + (reqMaxAge != null)
-                + "/" + (reqExtraKey != null)
+                + " users=" + name(pageUsers) + " response models=" + responseTypes.size()
                 + " failure=" + (failureFragField != null ? failureFragField.getDeclaringClass().getName() : null) + " " + errorGetters
                 + " sort=" + name(sortMethod) + "(" + (orderField != null ? orderField.getType().getName() : null) + ")");
+        return pagerField != null && pagerLoadMore != null && pages && builders;
     }
 
     // ---- page diagnostics (install-time) ----
@@ -424,19 +373,15 @@ final class FollowListLoader {
         ClassMatcher page = ClassMatcher.create().addInterface(pageField.getType().getName(), StringMatchType.Equals, false);
         // should_limit_list_of_followers: the page implementations' boolean getter loading its hash
         pageLimited = pageGetter(bridge, MethodMatcher.create().declaredClass(page).paramCount(0).returnType("boolean")
-                .usingNumbers(RESPONSE_KEYS[R_LIMIT].hashCode()));
+                .usingNumbers(LIMIT_KEY.hashCode()));
         // the page's accounts: the List getter whose REST implementation returns the response's getItems()
         pageUsers = pageGetter(bridge, MethodMatcher.create().declaredClass(page).paramCount(0).returnType("java.util.List")
                 .addInvoke(MethodMatcher.create().name("getItems")));
-        // should_limit_list_of_followings and hidden_following_account_count: read by the Following
-        // pages only (X.0dqX / X.0dqu; the Followers ones return false / 0), and follow_ranking_token
         pageLimitedFollowing = pageGetter(bridge, MethodMatcher.create().declaredClass(page).paramCount(0).returnType("boolean")
                 .usingNumbers("should_limit_list_of_followings".hashCode()));
         pageHiddenFollowing = pageGetter(bridge, MethodMatcher.create().declaredClass(page).paramCount(0).returnType("int")
                 .usingNumbers("hidden_following_account_count".hashCode()));
-        pageToken = pageGetter(bridge, MethodMatcher.create().declaredClass(page).paramCount(0).returnType("java.lang.String")
-                .usingNumbers("follow_ranking_token".hashCode()));
-        resolveResponse(bridge, cl);
+        if (pageLimited == null) resolveResponse(bridge, cl);
         XposedBridge.hookMethod(handler, PAGE_HOOK);
     }
 
@@ -458,48 +403,29 @@ final class FollowListLoader {
         }
     }
 
-    /** The response models behind a page: classes with no-arg getters loading the hashes of both
-     *  should_limit_list_of_followers and truncate_users_at_index (451: X.0W4w), each with its getters
-     *  for RESPONSE_KEYS, taken from the interface it implements for all of them when there is one
-     *  (X.0fIh, which the REST model X.070C implements too). */
     private static void resolveResponse(DexKitBridge bridge, ClassLoader cl) throws Throwable {
-        Set<String> classes = null;
-        for (int k : new int[]{R_LIMIT, R_TRUNCATE}) {
-            Set<String> c = new HashSet<>();
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                    .paramCount(0).returnType(RESPONSE_TYPES[k]).usingNumbers(RESPONSE_KEYS[k].hashCode()))))
-                c.add(md.getClassName());
-            if (classes == null) classes = c;
-            else classes.retainAll(c);
-        }
-        for (String cn : classes) {
-            String[] names = new String[RESPONSE_KEYS.length];
-            for (int k = 0; k < RESPONSE_KEYS.length; k++)
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                        .declaredClass(cn).paramCount(0).returnType(RESPONSE_TYPES[k]).usingNumbers(RESPONSE_KEYS[k].hashCode())))) {
-                    names[k] = md.getName();
-                    break;
-                }
-            Class<?> model = cl.loadClass(cn), type = model;
-            for (Class<?> i : model.getInterfaces()) if (declaresAll(i, names)) { type = i; break; }
-            Method[] getters = new Method[names.length];
-            for (int k = 0; k < names.length; k++) {
-                if (names[k] == null) continue;
-                try {
-                    getters[k] = type.getMethod(names[k]);
-                    getters[k].setAccessible(true);
-                } catch (NoSuchMethodException ignored) {}
-            }
-            responseTypes.add(new Object[]{type, getters});
+        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                .paramCount(0).returnType("java.lang.Boolean").usingNumbers(LIMIT_KEY.hashCode())))) {
+            Class<?> model = cl.loadClass(md.getClassName()), type = model;
+            for (Class<?> i : model.getInterfaces()) if (declares(i, md.getName())) { type = i; break; }
+            boolean known = false;
+            for (Object[] t : responseTypes) if (t[0] == type) known = true;
+            if (known) continue;
+            try {
+                Method getter = type.getMethod(md.getName());
+                getter.setAccessible(true);
+                responseTypes.add(new Object[]{type, getter});
+            } catch (NoSuchMethodException ignored) {}
         }
     }
 
-    private static boolean declaresAll(Class<?> type, String[] names) {
-        for (String n : names) {
-            if (n == null) continue;
-            try { type.getMethod(n); } catch (NoSuchMethodException e) { return false; }
+    private static boolean declares(Class<?> type, String name) {
+        try {
+            type.getMethod(name);
+            return true;
+        } catch (NoSuchMethodException e) {
+            return false;
         }
-        return true;
     }
 
     /** Before Instagram applies a page: one log line for the load in progress; outside a load only
@@ -508,6 +434,7 @@ final class FollowListLoader {
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {
             ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            if (!FeatureFlags.followListExport && !FeatureFlags.followersHistory && !FeatureFlags.profileAnalyzer) return;
             Load l = current;
             try {
                 if (l != null) l.page(param.thisObject);
@@ -562,6 +489,12 @@ final class FollowListLoader {
         return null;
     }
 
+    private static Object responseLimit(Object page) {
+        if (responseTypes.isEmpty()) return NOT_READ;
+        Object[] r = responseOf(page);
+        return r != null ? call((Method) r[1], r[0]) : NOT_READ;
+    }
+
     /** {@code getter} on {@code o}; NOT_READ when there is no getter or it threw (a field the
      *  query didn't fetch, on Pando). */
     private static Object call(Method getter, Object o) {
@@ -577,61 +510,12 @@ final class FollowListLoader {
         @Override public String toString() { return "?"; }
     };
 
-    /** Where Pando got {@code page}: "src=<Summary.source> age=<cacheAge>", "src=none" for a page
-     *  without a Summary (REST), "src=?" when it can't be read. */
-    private static String source(Object page) {
-        if (page == null || summaryClass == null) return "src=?";
-        try {
-            Field[] path = summaryPaths.computeIfAbsent(page.getClass(), FollowListLoader::summaryPath);
-            if (path.length == 0) return "src=none";
-            Object o = page;
-            for (Field f : path) {
-                o = f.get(o);
-                if (o == null) return "src=?";
-            }
-            return "src=" + summarySource.get(o) + " age=" + summaryCacheAge.getLong(o);
-        } catch (Throwable t) {
-            return "src=?";
-        }
-    }
-
-    /** The fields from a page of class {@code pageClass} to its Summary: a field whose class has a
-     *  field whose class has a Summary field (451: X.0dqV.A00 X.0WVo → .A00 X.00WX → .A00 Summary);
-     *  empty when there is none. */
-    private static Field[] summaryPath(Class<?> pageClass) {
-        for (Field a : instanceFields(pageClass)) {
-            if (a.getType().isPrimitive() || a.getType() == String.class) continue;
-            for (Field b : instanceFields(a.getType())) {
-                if (b.getType().isPrimitive() || b.getType() == String.class) continue;
-                for (Field c : instanceFields(b.getType())) {
-                    if (c.getType() != summaryClass) continue;
-                    try {
-                        a.setAccessible(true);
-                        b.setAccessible(true);
-                        c.setAccessible(true);
-                        return new Field[]{a, b, c};
-                    } catch (Throwable t) {
-                        return new Field[0];
-                    }
-                }
-            }
-        }
-        return new Field[0];
-    }
-
     /** {@code c}'s own and inherited instance fields. */
     private static List<Field> instanceFields(Class<?> c) {
         List<Field> out = new ArrayList<>();
         for (Class<?> k = c; k != null && k != Object.class; k = k.getSuperclass())
             for (Field f : SafeReflect.fields(k)) if (!Modifier.isStatic(f.getModifiers())) out.add(f);
         return out;
-    }
-
-    /** next_max_id as logged: its value when all digits (12 at most), else its length only. */
-    private static String cursorShape(Object next) {
-        if (next == NOT_READ) return "?";
-        if (!(next instanceof String s)) return next == null ? "none" : "?";
-        return s.matches("\\d{1,12}") ? s : "opaque len=" + s.length();
     }
 
     // ---- sort order (install-time) ----
@@ -767,21 +651,9 @@ final class FollowListLoader {
             // the last argument is the refresh flag (A00 p9, A01 p10): true skips the response cache
             listBuilders.put(m, new Object[]{k[0], p.length > 0 && p[p.length - 1] == boolean.class ? p.length - 1 : -1});
         }
-        // what the built request says about the response cache (diagnostics; native getters, each guarded)
-        try {
-            Class<?> req = cl.loadClass(PANDO_REQUEST);
-            reqFreshAge = req.getMethod("getFreshCacheAgeMs");
-            reqMaxAge = req.getMethod("getMaxToleratedCacheAgeMs");
-            reqExtraKey = req.getMethod("getAdditionalCacheKeyValue");
-        } catch (Throwable t) {
-            ModuleLog.detail(TAG + "request cache getters: " + t);
-        }
         for (Method m : listBuilders.keySet()) XposedBridge.hookMethod(m, BUILDER_HOOK);
     }
 
-    /** The GraphQL builders: while a load runs on this list, the refresh flag, so the page comes
-     *  from the server; afterwards the built request's cache settings are logged (the load's
-     *  requests when they change, others only with verbose logging). */
     private static final XC_MethodHook BUILDER_HOOK = new XC_MethodHook() {
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {
@@ -798,31 +670,7 @@ final class FollowListLoader {
                 ModuleLog.detail(TAG + "list requests: " + t);
             }
         }
-
-        @Override
-        protected void afterHookedMethod(MethodHookParam param) {
-            Load l = current;
-            try {
-                Object[] b = listBuilders.get(param.method);
-                if (b == null) return;
-                boolean owned = l != null && l.ownsRequest((String) b[0], param.args);
-                if (!owned && !ModuleLog.verbose) return;
-                int refresh = (int) b[1];
-                String s = "refresh=" + (refresh >= 0 ? param.args[refresh] : "?") + ", " + cacheSettings(param.getResult());
-                if (owned) l.requestSettings(s);
-                else ModuleLog.probe(TAG + "list request " + b[0] + " (not a load's): " + s);
-            } catch (Throwable t) {
-                ModuleLog.detail(TAG + "list request settings: " + t);
-            }
-        }
     };
-
-    /** The built request's response cache settings, each getter guarded ("?" when it threw). */
-    private static String cacheSettings(Object req) {
-        if (req == null) return "no request";
-        return "freshCacheAgeMs=" + call(reqFreshAge, req) + ", maxToleratedCacheAgeMs=" + call(reqMaxAge, req)
-                + ", extraCacheKey=" + call(reqExtraKey, req);
-    }
 
     // ---- failed pages (install-time) ----
 
@@ -849,30 +697,31 @@ final class FollowListLoader {
         frag.setAccessible(true);
         payload.setAccessible(true);
         error.setAccessible(true);
-        Set<String> models = new HashSet<>();
+        Set<String> models = new TreeSet<>();
         for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                 .paramCount(0).returnType("java.lang.String").usingEqStrings("checkpoint_url"))))
             models.add(md.getClassName());
-        // {key, return type or null for an object}
+        List<Class<?>> others = new ArrayList<>();
+        String first = null;
+        for (String model : models) {
+            if (first == null) first = model;
+            else try { others.add(cl.loadClass(model)); } catch (ClassNotFoundException ignored) {}
+        }
         String[][] keys = {{"message", "java.lang.String"}, {"error_type", "java.lang.String"}, {"checkpoint_url", "java.lang.String"},
                 {"feedback_message", "java.lang.String"}, {"checkpoint_required", "boolean"}, {"login_required", "boolean"}, {"challenge", null}};
         for (String[] k : keys) {
-            // the getter name every model class has for this key (they share the interface X.0CdQ)
-            Set<String> names = null;
-            for (String model : models) {
-                MethodMatcher mm = MethodMatcher.create().declaredClass(model).paramCount(0).usingEqStrings(k[0]);
-                if (k[1] != null) mm.returnType(k[1]);
-                Set<String> here = new HashSet<>();
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(mm))) {
-                    String rt = md.getReturnTypeName();
-                    if (md.getName().equals("toString")
-                            || (k[1] == null && (rt.equals("java.lang.String") || rt.equals("boolean") || rt.equals("void")))) continue;
-                    here.add(md.getName());
-                }
-                if (names == null) names = here;
-                else names.retainAll(here);
+            if (first == null) break;
+            MethodMatcher mm = MethodMatcher.create().declaredClass(first).paramCount(0).usingEqStrings(k[0]);
+            if (k[1] != null) mm.returnType(k[1]);
+            Set<String> names = new HashSet<>();
+            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(mm))) {
+                String rt = md.getReturnTypeName();
+                if (md.getName().equals("toString")
+                        || (k[1] == null && (rt.equals("java.lang.String") || rt.equals("boolean") || rt.equals("void")))) continue;
+                names.add(md.getName());
             }
-            if (names != null && names.size() == 1) errorGetters.put(k[0], names.iterator().next());
+            for (Class<?> other : others) names.removeIf(n -> !declares(other, n));
+            if (names.size() == 1) errorGetters.put(k[0], names.iterator().next());
         }
         failureFragField = frag;
         failurePayload = payload;
@@ -1168,18 +1017,15 @@ final class FollowListLoader {
         boolean walked;               // the adapter had no account list: fallback walk
         boolean walkCut;              // ... and the walk stopped at its object cap
         final Map<String, String[]> names = new HashMap<>();
-        FollowListPolicy.Counts counts = FollowListPolicy.count(Collections.emptyList());
+        final FollowListPolicy.IncrementalIds listed = new FollowListPolicy.IncrementalIds();
         final Set<String> cursors = new HashSet<>();
         String cursor;
         int lastUnique = -1, pages, retries, retriesTotal;
         long lastProgressAt, lastAskAt, lastFetchAt, retryAt, lastWalkAt;
         volatile boolean stopped;
         boolean finished;
-        // pages Instagram delivered to this list (page hook): pages, pages it flagged as limited,
-        // accounts, the largest hidden_following_account_count, the last follow_ranking_token
         int pagesSeen, pagesLimited, usersSeen, hiddenFollowing;
         boolean limited;
-        String lastToken;
         // passes: 0 is the first pass, then extra passes 1.., each in the first pass's order again
         // (relist) or in FollowListPolicy.passOrder's orders
         int pass, passPages;
@@ -1206,11 +1052,7 @@ final class FollowListLoader {
         final Map<String, String[]> merged = new LinkedHashMap<>(); // accounts of the passes so far, in order
         final Map<String, Integer> hits = new HashMap<>(); // account → passes that listed it
         final StringBuilder passLog = new StringBuilder();
-        // the pass whose page requests were last logged by the request builder hook, and the last
-        // request cache settings logged
         volatile int requestLogged = -1;
-        String lastSettings;
-        int settingsPass = -1;
         // page requests the builder hooks saw for this list in this pass; a first-pass page that came
         // before any (asked for before the first pass started over: Instagram's query manager drops a
         // first-page request while that order's page is in flight) lists the first pass again, once.
@@ -1332,16 +1174,6 @@ final class FollowListLoader {
                     + label() + " (pass " + (p + 1) + ")");
         }
 
-        /** The cache settings of a page request built for this list (request builder after-hook):
-         *  logged for the first request of each pass and whenever they change. */
-        synchronized void requestSettings(String s) {
-            int p = pass;
-            if (p == settingsPass && s.equals(lastSettings)) return;
-            lastSettings = s;
-            settingsPass = p;
-            ModuleLog.detail(TAG + label() + " page request (pass " + (p + 1) + "): " + s);
-        }
-
         /** This list type's page requests go through a hooked builder that can set the refresh flag. */
         private boolean refreshHooked() {
             for (Object[] b : listBuilders.values()) if (info != null && b[0].equals(info.type) && (int) b[1] >= 0) return true;
@@ -1424,7 +1256,7 @@ final class FollowListLoader {
                 return;
             }
             boolean newPage = !Objects.equals(next, cursor);
-            if (newPage || counts.unique != lastUnique) {
+            if (newPage || listed.unique() != lastUnique) {
                 if (newPage && lastUnique >= 0) { pages++; passPages++; }
                 if (newPage && next != null && !cursors.add(next)) {
                     // Instagram sent a page it had already sent: it would go round forever
@@ -1432,7 +1264,7 @@ final class FollowListLoader {
                     return;
                 }
                 cursor = next;
-                lastUnique = counts.unique;
+                lastUnique = listed.unique();
                 lastProgressAt = now;
                 retries = 0;
                 retryAt = 0;
@@ -1442,8 +1274,8 @@ final class FollowListLoader {
             if (next == null) {
                 // a pass from the first page: an empty first page (Instagram's count 0, or a page
                 // seen) ends it, else it waits PASS_FIRST_PAGE_MS for that page
-                FollowListPolicy.End end = !fromStart ? FollowListPolicy.atEnd(counts.unique, expected, now - started)
-                        : FollowListPolicy.passAtEnd(counts.unique, passPageSeen || expected == 0, now - passStarted);
+                FollowListPolicy.End end = !fromStart ? FollowListPolicy.atEnd(listed.unique(), expected, now - started)
+                        : FollowListPolicy.passAtEnd(listed.unique(), passPageSeen || expected == 0, now - passStarted);
                 if (end == FollowListPolicy.End.COMPLETE) { endPass(true, "end"); return; }
                 if (end == FollowListPolicy.End.INCOMPLETE) { endPass(false, "no first page"); return; }
             } else if (retryAt == 0 && !failed && (newPage || now - lastAskAt >= FollowListPolicy.REASK_MS)) {
@@ -1494,9 +1326,9 @@ final class FollowListLoader {
             if (pass == 0) {
                 if (!ok || walkCut) { finish(false, why); return; }
                 read(SystemClock.uptimeMillis(), true);
-                firstCounts = counts;
-                for (String id : counts.ids) merged.put(id, nameOf(id));
-                countHits(counts.ids);
+                firstCounts = listed.counts();
+                for (String id : firstCounts.ids) merged.put(id, nameOf(id));
+                countHits(firstCounts.ids);
                 passesDone = 1;
                 FollowListPolicy.PassTally t = tally;
                 if (t.pages > 0) {
@@ -1505,12 +1337,12 @@ final class FollowListLoader {
                     maxReceived = t.received;
                 }
                 ModuleLog.detail(TAG + label() + ": pass 1 (order " + keyName(passKey) + "): " + tallyText()
-                        + "; " + counts.unique + " listed, " + passRequests + " requests");
+                        + "; " + firstCounts.unique + " listed, " + passRequests + " requests");
                 // the pass's pages: those the page hook counted toward it, else the pager's
                 int passPagesSeen = pageField != null ? t.pages : pages + 1;
-                if (!limited && limitFlagMissing() && FollowListPolicy.limitedByShape(true, passPagesSeen, counts.unique, expected)) {
+                if (!limited && limitFlagMissing() && FollowListPolicy.limitedByShape(true, passPagesSeen, firstCounts.unique, expected)) {
                     limited = true;
-                    ModuleLog.detail(TAG + label() + ": no limit flag readable, but " + counts.unique + " of " + expected + " in "
+                    ModuleLog.detail(TAG + label() + ": no limit flag readable, but " + firstCounts.unique + " of " + expected + " in "
                             + passPagesSeen + " pages looks capped: limited");
                 }
                 Object first = currentOrder();
@@ -1538,7 +1370,7 @@ final class FollowListLoader {
             if (!ok) interrupted = true;
             boolean fellShort = false;
             if (ok && passRelist) {
-                double predicted = FollowListPolicy.predictedNew(target(), before, counts.unique);
+                double predicted = FollowListPolicy.predictedNew(target(), before, listed.unique());
                 if (FollowListPolicy.relistFellShort(predicted, added)) {
                     fellShort = true;
                     relist = false;
@@ -1564,7 +1396,7 @@ final class FollowListLoader {
 
         /** The rows Instagram sends for this list in one pass, for FollowListPolicy.ROW_BUDGET. */
         private int budgetRows() {
-            return Math.max(Math.max(maxReceived, expected), firstCounts != null ? firstCounts.rows : counts.rows);
+            return Math.max(Math.max(maxReceived, expected), firstCounts != null ? firstCounts.rows : listed.rows());
         }
 
         /** One more pass listed these accounts (FollowListPolicy.passHits). */
@@ -1576,9 +1408,7 @@ final class FollowListLoader {
          *  Followers lists, no response model getter either). */
         private boolean limitFlagMissing() {
             if (info != null && FollowListExportHook.FOLLOWING.equals(info.type)) return pageLimitedFollowing == null;
-            if (pageLimited != null) return false;
-            for (Object[] t : responseTypes) if (((Method[]) t[1])[R_LIMIT] != null) return false;
-            return true;
+            return pageLimited == null && responseTypes.isEmpty();
         }
 
         /** Lists the list again from its first page for extra pass {@code n}, in the first pass's
@@ -1621,13 +1451,14 @@ final class FollowListLoader {
             if (passMerged) return 0;
             passMerged = true;
             read(SystemClock.uptimeMillis(), true);
-            List<String> fresh = FollowListPolicy.newIds(merged.keySet(), counts.ids);
+            List<String> passIds = listed.ids();
+            List<String> fresh = FollowListPolicy.newIds(merged.keySet(), passIds);
             for (String id : fresh) merged.put(id, nameOf(id));
-            countHits(counts.ids);
+            countHits(passIds);
             passesDone++;
             maxReceived = Math.max(maxReceived, tally.received);
             ModuleLog.detail(TAG + label() + ": order " + keyName(passKey) + (passRelist ? " again" : "") + ": +" + fresh.size()
-                    + " new (" + counts.unique + " listed in this pass, " + passPages + " pages, " + passRequests + " requests, "
+                    + " new (" + listed.unique() + " listed in this pass, " + passPages + " pages, " + passRequests + " requests, "
                     + how + ") | pass " + (pass + 1) + ": " + tallyText());
             passLog.append(passLog.length() > 0 ? ", " : "").append(keyName(passKey)).append(passRelist ? " again" : "")
                     .append(" +").append(fresh.size()).append(how.equals("complete") ? "" : " (" + how + ")");
@@ -1678,16 +1509,11 @@ final class FollowListLoader {
             String key = pageKeyField != null ? (String) pageKeyField.get(step) : null;
             Object limit = call(pageLimited, page);
             Object users = call(pageUsers, page);
-            Object[] response = responseOf(page);
-            Object model = response != null ? response[0] : null;
-            Method[] g = response != null ? (Method[]) response[1] : new Method[RESPONSE_KEYS.length];
-            if (limit == NOT_READ) limit = call(g[R_LIMIT], model);
-            Object next = call(g[R_NEXT], model);
+            if (limit == NOT_READ) limit = responseLimit(page);
             // Following pages only: the Followers ones return false / 0
             boolean following = info != null && FollowListExportHook.FOLLOWING.equals(info.type);
             Object limitFollowing = following ? call(pageLimitedFollowing, page) : null;
             Object hidden = following ? call(pageHiddenFollowing, page) : null;
-            Object token = call(pageToken, page);
             int n = users instanceof List<?> l ? l.size() : -1;
             pagesSeen++;
             if (n > 0) usersSeen += n;
@@ -1703,33 +1529,26 @@ final class FollowListLoader {
             boolean ofPass = keyed && (!fromStart || passRequests > 0 || !hooked());
             if (fromStart && keyed && pass == 0 && !staleRetried && passRequests == 0 && hooked()) stalePage = true;
             if (fromStart && ofPass) passPageSeen = true;
-            String tallied = "";
+            FollowListPolicy.PassTally t = tally;
+            int[] c = null;
             if (users instanceof List<?> l && ofPass) {
                 List<String> ids = new ArrayList<>(l.size());
                 for (Object u : l) ids.add(u != null && u.getClass().getName().equals(USER) ? idOf(u) : null);
-                FollowListPolicy.PassTally t = tally;
-                int[] c = t.page(ids);
+                c = t.page(ids);
+            }
+            if (!ModuleLog.verbose) return;
+            String tallied = "";
+            if (c != null) {
                 tallied = " | pass " + (pass + 1) + ": " + c[FollowListPolicy.P_NEW] + " new, " + c[FollowListPolicy.P_REPEATED]
                         + " repeated" + (c[FollowListPolicy.P_REPEATED] > 0 ? " (" + repeatsBack(c) + ")" : "")
                         + " (received " + t.received + ", distinct " + t.distinct() + ")";
             } else if (users instanceof List<?>) {
                 tallied = " | not counted (" + (keyed ? "before this pass's first request" : "another order's page") + ")";
             }
-            String tokenText;
-            if (token instanceof String s) {
-                tokenText = Integer.toHexString(s.hashCode()) + (s.equals(lastToken) ? " (same)" : lastToken != null ? " (changed)" : "");
-                lastToken = s;
-            } else tokenText = token == null ? "none" : "?";
-            StringBuilder unfetched = new StringBuilder();
-            for (int k : new int[]{R_HAS_MORE, R_BIG_LIST, R_PAGE_SIZE, R_TRUNCATE}) {
-                Object v = call(g[k], model);
-                if (v != null && v != NOT_READ) unfetched.append(", ").append(RESPONSE_KEYS[k]).append('=').append(v);
-            }
             ModuleLog.probe(TAG + "page " + pagesSeen + " " + label() + " (order " + keyName(key)
                     + "): " + (n >= 0 ? String.valueOf(n) : "?") + " users, should_limit=" + limit
                     + (following ? ", should_limit_followings=" + limitFollowing + ", hidden_following=" + hidden : "")
-                    + ", " + source(page) + ", next_max_id=" + cursorShape(next) + ", ranking token " + tokenText
-                    + unfetched + (response == null ? ", no response model" : "") + tallied);
+                    + tallied);
         }
 
         /** A page's repeats by how many pages back the last page that sent them was. */
@@ -1781,15 +1600,7 @@ final class FollowListLoader {
          *  stand in for an account list that is merely still empty. */
         private void read(long now, boolean last) {
             if (lists != null && lists.length > 0) {
-                List<?> main = mainList();
-                List<String> ids = new ArrayList<>(main.size());
-                for (int i = 0; i < main.size(); i++) {
-                    Object u = main.get(i);
-                    String id = u != null && u.getClass().getName().equals(USER) ? idOf(u) : null;
-                    ids.add(id);
-                    if (id != null && !names.containsKey(id)) names.put(id, new String[]{username(u), fullName(u)});
-                }
-                counts = FollowListPolicy.count(ids);
+                listed.read(mainList(), this::rowId);
                 walked = false;
                 return;
             }
@@ -1798,9 +1609,15 @@ final class FollowListLoader {
             boolean[] cut = new boolean[1];
             Map<String, String[]> found = walk(adapter, cut);
             names.putAll(found);
-            counts = FollowListPolicy.count(new ArrayList<>(found.keySet()));
+            listed.read(new ArrayList<>(found.keySet()), id -> id);
             walked = true;
             walkCut = cut[0];
+        }
+
+        private String rowId(Object u) {
+            String id = u != null && u.getClass().getName().equals(USER) ? idOf(u) : null;
+            if (id != null && !names.containsKey(id)) names.put(id, new String[]{username(u), fullName(u)});
+            return id;
         }
 
         /** The adapter's account list: its List field holding Users that grew while pages came in,
@@ -1833,8 +1650,8 @@ final class FollowListLoader {
             try {
                 Context c = dlg.ctx;
                 // in an extra pass: the accounts of the passes so far plus this pass's new ones
-                int fresh = pass > 0 ? FollowListPolicy.newIds(merged.keySet(), counts.ids).size() : 0;
-                int n = pass > 0 ? merged.size() + fresh : counts.unique;
+                int fresh = pass > 0 ? listed.fresh(merged.keySet()) : 0;
+                int n = pass > 0 ? merged.size() + fresh : listed.unique();
                 String msg = expected > 0 ? I18n.t(c, R.string.ig_follow_export_loading_of, n, expected)
                         : I18n.t(c, R.string.ig_follow_export_loading, n);
                 if (pass > 0) msg += "\n\n" + I18n.t(c, R.string.ig_follow_export_pass, pass, maxPasses - 1,
@@ -1883,11 +1700,11 @@ final class FollowListLoader {
                 if (orderChanged) restoreOrder();
             } else {
                 try { read(SystemClock.uptimeMillis(), true); } catch (Throwable t) { ModuleLog.detail(TAG + "read: " + t); }
-                for (String id : counts.ids) users.put(id, nameOf(id));
-                c = counts;
+                c = listed.counts();
+                for (String id : c.ids) users.put(id, nameOf(id));
                 complete = ok && !stopped && !walkCut && blocked == null;
                 if (passesDone == 0) {
-                    countHits(counts.ids);
+                    countHits(c.ids);
                     passesDone = 1;
                 }
                 if (firstReceived < 0 && tally.pages > 0) {
@@ -1917,9 +1734,9 @@ final class FollowListLoader {
                     + (blocked != null ? " | blocked: " + blocked : ""));
             if (complete) clearPause(root.getContext(), info != null ? info.self : null);
             try {
-                done.accept(new Result(users, complete, blocked, interrupted, c.rows, c.duplicates, c.withoutId, expected, limited,
+                done.accept(new Result(users, complete, blocked, interrupted, expected, limited,
                         hiddenFollowing, firstReceived, firstRepeated, Math.max(1, passesDone), passesDone > 1 ? lastAdded : -1,
-                        f1, f2, estMissing, own));
+                        f1, f2, estMissing));
             } catch (Throwable t) {
                 ModuleLog.error(TAG + "Could not finish after loading the list", t);
             }

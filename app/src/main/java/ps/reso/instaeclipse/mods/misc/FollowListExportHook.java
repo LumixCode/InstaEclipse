@@ -72,7 +72,11 @@ public class FollowListExportHook {
                 frag = cl.loadClass(md.getClassName());
                 break;
             }
-            if (frag == null) { ModuleLog.error(TAG + "Could not turn on the follower list tools: the follower list screen was not found in this Instagram version"); return; }
+            if (frag == null) {
+                ModuleLog.error(TAG + "Could not turn on the follower list tools: the follower list screen was not found in this Instagram version");
+                broken();
+                return;
+            }
             Method ovc = null;
             for (Class<?> c = frag; c != null && ovc == null; c = c.getSuperclass()) {
                 try { ovc = c.getDeclaredMethod("onViewCreated", View.class, android.os.Bundle.class); } catch (NoSuchMethodException ignored) {}
@@ -80,6 +84,7 @@ public class FollowListExportHook {
             if (ovc == null) {
                 ModuleLog.error(TAG + "Could not turn on the follower list tools: the follower list screen is not supported in this Instagram version");
                 ModuleLog.detail(TAG + "onViewCreated not found on " + frag.getName());
+                broken();
                 return;
             }
             fragClass = frag;
@@ -102,15 +107,26 @@ public class FollowListExportHook {
                     }
                 }
             });
-            FollowListLoader.resolve(bridge, cl, frag);
-            ModuleLog.ok(TAG + "Ready");
+            boolean ready = FollowListLoader.resolve(bridge, cl, frag);
             ModuleLog.detail(TAG + "list fragment " + frag.getName());
+            if (!ready) {
+                broken();
+                return;
+            }
+            ModuleLog.ok(TAG + "Ready");
             FeatureStatusTracker.setHooked("FollowListExport");
             FeatureStatusTracker.setHooked("FollowersHistory");
             FeatureStatusTracker.setHooked("ProfileAnalyzer");
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not turn on the follower list tools", t);
+            broken();
         }
+    }
+
+    private static void broken() {
+        if (FeatureFlags.followListExport) FeatureStatusTracker.setBroken("FollowListExport");
+        if (FeatureFlags.followersHistory) FeatureStatusTracker.setBroken("FollowersHistory");
+        if (FeatureFlags.profileAnalyzer) FeatureStatusTracker.setBroken("ProfileAnalyzer");
     }
 
     private static Class<?> fragClass;
@@ -205,7 +221,6 @@ public class FollowListExportHook {
         String owner;     // the profile whose list this is (FollowListData's numeric String)
         String type;      // FOLLOWERS / FOLLOWING, or null for other tabs (mutual, suggested, …)
         String username;  // the profile's username when IG passes it
-        Object frag;
     }
 
     /** What {@code frag} lists, from its FollowListFragment.FollowListData argument (IG's list-type
@@ -218,7 +233,6 @@ public class FollowListExportHook {
             Object data = b.get("FollowListFragment.FollowListData");
             if (data == null) return null;
             ListInfo info = new ListInfo();
-            info.frag = frag;
             if (token instanceof String t) {
                 String s = t.substring(t.lastIndexOf(':') + 1);
                 if (s.matches("\\d+")) info.self = s;
@@ -239,16 +253,6 @@ public class FollowListExportHook {
         } catch (Throwable t) {
             return null;
         }
-    }
-
-    /** Live list fragments of {@code owner}'s {@code type} tab, the one on screen first. */
-    static Object[] listOf(String owner, String type) {
-        Object[] vis = visibleList();
-        if (vis != null) {
-            ListInfo i = listInfo(vis[0]);
-            if (i != null && owner.equals(i.owner) && type.equals(i.type)) return vis;
-        }
-        return null;
     }
 
     /**
@@ -315,8 +319,6 @@ public class FollowListExportHook {
         }
         return tab;
     }
-
-    static String idOf(Object user) { return FollowListLoader.idOf(user); }
 
     // ---- Followers history ----
 

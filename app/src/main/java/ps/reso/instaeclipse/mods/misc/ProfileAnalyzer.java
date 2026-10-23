@@ -96,7 +96,7 @@ public final class ProfileAnalyzer {
     /** "Analyze profile" in the ⋮ menu of {@code username}'s profile ({@code user}: its User model). */
     public static void start(Activity a, Object user, String username) {
         if (!FeatureFlags.profileAnalyzer || a == null) return;
-        String id = user != null ? FollowListExportHook.idOf(user) : null;
+        String id = user != null ? FollowListLoader.idOf(user) : null;
         if (id == null) {
             IeToast.makeText(a, I18n.t(a, R.string.ig_pa_no_id), Toast.LENGTH_SHORT).show();
             return;

@@ -2,11 +2,13 @@ package ps.reso.instaeclipse.mods.misc;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Pure decisions for loading a follow list to the end (FollowListLoader: retries, extra passes,
@@ -366,14 +368,62 @@ final class FollowListPolicy {
         }
     }
 
-    static Counts count(List<String> rowIds) {
-        Set<String> seen = new LinkedHashSet<>();
-        int dup = 0, noId = 0;
-        for (String id : rowIds) {
-            if (id == null || id.isEmpty()) noId++;
-            else if (!seen.add(id)) dup++;
+    static final class IncrementalIds {
+        private List<?> list;
+        private Object first, last;
+        private int read, rows, duplicates, withoutId;
+        private final Set<String> seen = new HashSet<>();
+        private final List<String> ids = new ArrayList<>();
+        private Set<String> known;
+        private int knownSize = -1, knownChecked, fresh;
+
+        <T> void read(List<T> rowList, Function<? super T, String> idOf) {
+            if (changed(rowList)) restart(rowList);
+            for (int n = rowList.size(); read < n; read++) {
+                T row = rowList.get(read);
+                String id = idOf.apply(row);
+                rows++;
+                if (id == null || id.isEmpty()) withoutId++;
+                else if (seen.add(id)) ids.add(id);
+                else duplicates++;
+                if (read == 0) first = row;
+                last = row;
+            }
         }
-        return new Counts(rowIds.size(), seen.size(), dup, noId, new ArrayList<>(seen));
+
+        private boolean changed(List<?> rowList) {
+            if (rowList != list || rowList.size() < read) return true;
+            return read > 0 && (rowList.get(0) != first || rowList.get(read - 1) != last);
+        }
+
+        private void restart(List<?> rowList) {
+            list = rowList;
+            first = last = null;
+            read = rows = duplicates = withoutId = 0;
+            seen.clear();
+            ids.clear();
+            knownChecked = fresh = 0;
+        }
+
+        int rows() { return rows; }
+
+        int unique() { return ids.size(); }
+
+        List<String> ids() { return Collections.unmodifiableList(ids); }
+
+        int fresh(Set<String> knownIds) {
+            if (knownIds != known || knownIds.size() != knownSize) {
+                known = knownIds;
+                knownSize = knownIds.size();
+                knownChecked = fresh = 0;
+            }
+            for (int n = ids.size(); knownChecked < n; knownChecked++) if (!knownIds.contains(ids.get(knownChecked))) fresh++;
+            return fresh;
+        }
+
+        Counts counts() {
+            return new Counts(rows, ids.size(), duplicates, withoutId, new ArrayList<>(ids));
+        }
     }
 
     /**
