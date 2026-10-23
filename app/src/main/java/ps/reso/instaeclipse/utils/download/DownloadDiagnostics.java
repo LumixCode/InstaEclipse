@@ -86,8 +86,6 @@ final class DownloadDiagnostics {
             case "Ambiguous source tracks": return "SOURCE_TRACK_AMBIGUOUS";
             case "Missing source track": return "SOURCE_TRACK_MISSING";
             case "Invalid sample": return "SAMPLE_INVALID";
-            case "Fragment and extractor sample counts differ": return "FRAGMENT_SAMPLE_COUNT";
-            case "Invalid fragment duration": return "FRAGMENT_DURATION";
             case "Indexed and extractor sample counts differ": return "INDEX_SAMPLE_COUNT";
             case "Invalid indexed sample duration":
             case "Invalid indexed decode time":

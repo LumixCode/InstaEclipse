@@ -66,9 +66,6 @@ class MediaUrlPolicy {
      */
     private static final String[] META_MEDIA_DOMAINS = { "fbcdn.net", "fbsbx.com", "cdninstagram.com", "giphy.com" };
 
-    /** The rules with a direct route, for a caller that knows no better and for tests. */
-    static final MediaUrlPolicy META = new MediaUrlPolicy(DNS);
-
     /** Why an address may not be fetched. */
     static final class Refusal {
         final String reason;

@@ -11,10 +11,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
-import android.media.MediaFormat;
 import android.media.MediaMuxer;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -30,11 +28,8 @@ import ps.reso.instaeclipse.utils.download.DownloadRequest;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.io.OutputStream;
 import androidx.documentfile.provider.DocumentFile;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.UUID;
@@ -68,9 +63,6 @@ public class DownloadSaveService extends Service {
     private static final String CHANNEL_ID  = "ie_dl_save";
     private static final int    NOTIF_ID    = 0x49455344; // "IESD" — ongoing progress
     private static final int    DONE_NOTIF_BASE = 0x49455345; // per-startId completion notifs
-    private static final String CACHE_PREFS = "instaeclipse_cache";
-    private static final String UA =
-            "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36";
 
     /** Throttle: minimum ms between notification updates. */
     private static final long NOTIF_INTERVAL_MS = 250;
@@ -296,7 +288,7 @@ public class DownloadSaveService extends Service {
 
             // Merge: 80–95 % (indeterminate — MediaMuxer gives no callbacks)
             pushProgress("Merging…", 80, 100, true);
-            mergeVideoAudio(tv.getAbsolutePath(), ta.getAbsolutePath(), out.getAbsolutePath());
+            StreamMerge.mergeVideoAudio(tv.getAbsolutePath(), ta.getAbsolutePath(), out.getAbsolutePath());
 
             pushProgress("Saving…", 97, 100, false);
             String corrected = MediaTypeDetector.withCorrectExtension(
@@ -342,11 +334,6 @@ public class DownloadSaveService extends Service {
         }
     }
 
-    /** Copies the audio track of {@code videoPath} into an audio-only MP4 (.m4a) at {@code outPath}. */
-    static void extractAudioTrack(String videoPath, String outPath) throws Exception {
-        extractAudioTrack(videoPath, outPath, 0, -1);
-    }
-
     /**
      * Same, keeping only {@code durationUs} of audio from {@code startUs} (re-timed to start at 0);
      * a duration of -1 keeps the rest of the track. Samples are copied, never re-encoded.
@@ -357,7 +344,7 @@ public class DownloadSaveService extends Service {
         MediaMuxer mux = null;
         try {
             ex.setDataSource(videoPath);
-            int ai = selectTrack(ex, "audio/");
+            int ai = StreamMerge.selectTrack(ex, "audio/");
             if (ai < 0) throw new Exception("This video has no audio track");
             mux = new MediaMuxer(outPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
             int ao = mux.addTrack(ex.getTrackFormat(ai));
@@ -584,47 +571,6 @@ public class DownloadSaveService extends Service {
         return DownloadEngine.fetch(this, url, dest, mime, cancellations.get(activeJobId),
                 (phase, done, total) -> { if (cb != null) cb.onProgress(done, total); });
     }
-    private static void mergeVideoAudio(String vp, String ap, String op) throws Exception {
-        MediaExtractor vEx = new MediaExtractor(), aEx = new MediaExtractor();
-        MediaMuxer mux = new MediaMuxer(op, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
-        try {
-            vEx.setDataSource(vp); aEx.setDataSource(ap);
-            int vi = selectTrack(vEx, "video/"), ai = selectTrack(aEx, "audio/");
-            if (vi < 0 || ai < 0) throw new Exception("Missing video or audio track");
-            int vo = mux.addTrack(vEx.getTrackFormat(vi));
-            int ao = mux.addTrack(aEx.getTrackFormat(ai));
-            mux.start();
-            ByteBuffer buf = ByteBuffer.allocate(1024 * 1024);
-            MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-            copyTrack(vEx, mux, vo, buf, info);
-            copyTrack(aEx, mux, ao, buf, info);
-            mux.stop();
-        } finally { vEx.release(); aEx.release(); mux.release(); }
-    }
-
-    private static int selectTrack(MediaExtractor ex, String mime) {
-        for (int i = 0; i < ex.getTrackCount(); i++) {
-            String m = ex.getTrackFormat(i).getString(MediaFormat.KEY_MIME);
-            if (m != null && m.startsWith(mime)) { ex.selectTrack(i); return i; }
-        }
-        return -1;
-    }
-
-    @SuppressLint("WrongConstant")
-    private static void copyTrack(MediaExtractor ex, MediaMuxer mux, int outTrack,
-                                   ByteBuffer buf, MediaCodec.BufferInfo info) {
-        ex.seekTo(0, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
-        while (true) {
-            int sz = ex.readSampleData(buf, 0);
-            if (sz < 0) break;
-            info.offset = 0; info.size = sz;
-            info.presentationTimeUs = ex.getSampleTime();
-            info.flags = ex.getSampleFlags();
-            mux.writeSampleData(outTrack, buf, info);
-            ex.advance();
-        }
-    }
-
     // ── Notification helpers ──────────────────────────────────────────────────
 
     /**
@@ -634,11 +580,6 @@ public class DownloadSaveService extends Service {
         lastNotifPct = progress;
         lastNotifMs  = System.currentTimeMillis();
         nm.notify(NOTIF_ID, buildProgressNotification(text, progress, max, indeterminate));
-    }
-
-    /** Convenience overload for determinate progress. */
-    private void pushProgress(String text, int progress, int max) {
-        pushProgress(text, progress, max, false);
     }
 
     /**
@@ -659,8 +600,7 @@ public class DownloadSaveService extends Service {
 
     private Notification buildProgressNotification(String text, int progress, int max,
                                                     boolean indeterminate) {
-        Notification.Builder builder = Build.VERSION.SDK_INT >= 26
-                ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
+        Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID);
         builder
                 .setContentTitle(getString(R.string.module_display_name))
                 .setContentText(text)
@@ -681,8 +621,7 @@ public class DownloadSaveService extends Service {
     }
 
     private void postFailureNotification(int startId, String reason, DownloadRequest retry) {
-        Notification.Builder builder = Build.VERSION.SDK_INT >= 26
-                ? new Notification.Builder(this, CHANNEL_ID) : new Notification.Builder(this);
+        Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID);
         builder.setContentTitle(getString(R.string.module_display_name)).setContentText(reason)
                 .setSmallIcon(android.R.drawable.stat_notify_error).setAutoCancel(true)
                 .setStyle(new Notification.BigTextStyle().bigText(reason + (retry == null ? ""
@@ -725,20 +664,12 @@ public class DownloadSaveService extends Service {
             viewIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
                     | Intent.FLAG_ACTIVITY_NEW_TASK
                     | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            int piFlags = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M
-                    ? android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_ONE_SHOT
-                    : android.app.PendingIntent.FLAG_ONE_SHOT;
+            int piFlags = android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_ONE_SHOT;
             contentIntent = android.app.PendingIntent.getActivity(
                     this, DONE_NOTIF_BASE + startId, viewIntent, piFlags);
         }
 
-        Notification.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            builder = new Notification.Builder(this, CHANNEL_ID);
-        } else {
-            //noinspection deprecation
-            builder = new Notification.Builder(this);
-        }
+        Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID);
         builder.setContentTitle(getString(R.string.module_display_name))
                .setContentText(text)
                .setStyle(new Notification.BigTextStyle().bigText(text))
@@ -756,12 +687,10 @@ public class DownloadSaveService extends Service {
     }
 
     private void ensureChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel ch = new NotificationChannel(
-                    CHANNEL_ID, getString(R.string.module_download_channel_name), NotificationManager.IMPORTANCE_LOW);
-            ch.setSound(null, null);
-            nm.createNotificationChannel(ch);
-        }
+        NotificationChannel ch = new NotificationChannel(
+                CHANNEL_ID, getString(R.string.module_download_channel_name), NotificationManager.IMPORTANCE_LOW);
+        ch.setSound(null, null);
+        nm.createNotificationChannel(ch);
     }
 
     @Override public void onDestroy() {

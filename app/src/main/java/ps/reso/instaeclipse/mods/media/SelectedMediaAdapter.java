@@ -69,10 +69,6 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
         }
     }
 
-    static SelectedMediaSnapshot capture(Object media) throws Exception {
-        return capture(null, media, "post");
-    }
-
     static SelectedMediaSnapshot capture(Context context, Object media, String type) throws Exception {
         SelectedMediaAdapter adapter = installed;
         if (adapter == null) throw new IllegalStateException("Media adapter unavailable for this Instagram build");
@@ -111,17 +107,6 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
                 + (result.manifest != null) + " direct=" + result.renditions.size()
                 + " carousel=" + result.children.size());
         return result;
-    }
-
-    /** Only a unique captured Media is accepted. No method probing, global last-item or URL buffer. */
-    static Object findSelectedMedia(Object holder) {
-        SelectedMediaAdapter adapter = installed;
-        return adapter == null ? null : uniqueObject(holder, adapter.mediaClass, 4);
-    }
-
-    static Object findSelectedMediaAcross(Object... holders) {
-        SelectedMediaAdapter adapter = installed;
-        return adapter == null ? null : uniqueAcross(holders, adapter.mediaClass, 4);
     }
 
     static Object findPostMenuMedia(Object handler, Class<?> creatorType) {
@@ -229,49 +214,6 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
         } catch (Throwable ignored) { }
     }
 
-    static Object uniqueObject(Object holder, Class<?> type, int depth) {
-        return uniqueAcross(new Object[]{holder}, type, depth);
-    }
-
-    private static final class Node {
-        final Object value;
-        final int depth;
-        Node(Object value, int depth) { this.value = value; this.depth = depth; }
-    }
-
-    static Object uniqueAcross(Object[] holders, Class<?> type, int depth) {
-        Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-        Set<Object> found = Collections.newSetFromMap(new IdentityHashMap<>());
-        java.util.ArrayDeque<Node> queue = new java.util.ArrayDeque<>();
-        for (Object holder : holders) if (holder != null) queue.add(new Node(holder, depth));
-        // Breadth first: an alias is always expanded with its greatest remaining depth.
-        // Reaching the work bound fails closed; it must not hide an unvisited second item.
-        while (!queue.isEmpty()) {
-            Node node = queue.removeFirst();
-            Object holder = node.value;
-            if (!seen.add(holder)) continue;
-            if (seen.size() >= 128) return null;
-            if (type.isInstance(holder)) {
-                found.add(holder);
-                if (found.size() > 1) return null;
-                continue;
-            }
-            if (node.depth == 0) continue;
-            String name = holder.getClass().getName();
-            if (name.startsWith("java.") || name.startsWith("android.") || name.startsWith("androidx.")) continue;
-            for (Class<?> c = holder.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
-                for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(c)) {
-                    if (Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive()) continue;
-                    try {
-                        f.setAccessible(true);
-                        Object value = f.get(holder);
-                        if (value != null) queue.addLast(new Node(value, node.depth - 1));
-                    } catch (Throwable ignored) { }
-                }
-            }
-        }
-        return found.size() == 1 ? found.iterator().next() : null;
-    }
     private void named(ClassLoader loader, String type, String key, String name) {
         try {
             Method method = loader.loadClass(type).getMethod(name);

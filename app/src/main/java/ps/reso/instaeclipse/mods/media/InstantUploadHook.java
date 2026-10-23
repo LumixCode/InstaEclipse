@@ -13,7 +13,6 @@ import android.graphics.drawable.RippleDrawable;
 import android.view.WindowInsets;
 import android.net.Uri;
 import android.os.Build;
-import android.provider.MediaStore;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -760,37 +759,21 @@ public class InstantUploadHook {
     /** Decodes a picked image Uri to a downscaled SOFTWARE bitmap (hardware bitmaps can't be copied). */
     private static Bitmap decode(Activity act, Uri uri) {
         try {
-            Bitmap bmp;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                ImageDecoder.Source src = ImageDecoder.createSource(act.getContentResolver(), uri);
-                bmp = ImageDecoder.decodeBitmap(src, (decoder, info, s) -> {
-                    decoder.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE);
-                    decoder.setMutableRequired(false);
-                    int w = info.getSize().getWidth(), h = info.getSize().getHeight();
-                    int longEdge = Math.max(w, h);
-                    if (longEdge > MAX_EDGE) {
-                        float scale = (float) MAX_EDGE / longEdge;
-                        decoder.setTargetSize(Math.round(w * scale), Math.round(h * scale));
-                    }
-                });
-            } else {
-                bmp = MediaStore.Images.Media.getBitmap(act.getContentResolver(), uri);
-                bmp = downscale(bmp);
-            }
-            return bmp;
+            ImageDecoder.Source src = ImageDecoder.createSource(act.getContentResolver(), uri);
+            return ImageDecoder.decodeBitmap(src, (decoder, info, s) -> {
+                decoder.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE);
+                decoder.setMutableRequired(false);
+                int w = info.getSize().getWidth(), h = info.getSize().getHeight();
+                int longEdge = Math.max(w, h);
+                if (longEdge > MAX_EDGE) {
+                    float scale = (float) MAX_EDGE / longEdge;
+                    decoder.setTargetSize(Math.round(w * scale), Math.round(h * scale));
+                }
+            });
         } catch (Throwable t) {
             ModuleLog.error("(IE|InstantUpload) Could not read the picked photo: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return null;
         }
-    }
-
-    private static Bitmap downscale(Bitmap in) {
-        if (in == null) return null;
-        int longEdge = Math.max(in.getWidth(), in.getHeight());
-        if (longEdge <= MAX_EDGE) return in;
-        float scale = (float) MAX_EDGE / longEdge;
-        return Bitmap.createScaledBitmap(in,
-                Math.round(in.getWidth() * scale), Math.round(in.getHeight() * scale), true);
     }
 
     private static int dp(Activity a, int v) {

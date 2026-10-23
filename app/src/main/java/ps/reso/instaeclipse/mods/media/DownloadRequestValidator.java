@@ -1,8 +1,5 @@
 package ps.reso.instaeclipse.mods.media;
 
-import java.net.URI;
-import java.util.Locale;
-
 /**
  * Input validation for {@link DownloadSaveService}. The service is exported (Instagram runs
  * under a different uid), so any app can start it and every extra is untrusted. Pure Java so it
@@ -10,36 +7,9 @@ import java.util.Locale;
  */
 public final class DownloadRequestValidator {
 
-    /** Hosts Instagram serves media from. Subdomains are allowed. */
-    private static final String[] ALLOWED_HOST_SUFFIXES = {
-            "cdninstagram.com",
-            "fbcdn.net",
-            "fbsbx.com",
-            "giphy.com", // GIF comments
-    };
-
     static final int MAX_NAME_LENGTH = 120;
 
     private DownloadRequestValidator() {}
-
-    /** True only for https URLs whose host is (a subdomain of) an Instagram/Facebook CDN. */
-    public static boolean isAllowedMediaUrl(String url) {
-        if (url == null || url.isEmpty()) return false;
-        try {
-            URI uri = new URI(url);
-            if (!"https".equalsIgnoreCase(uri.getScheme())) return false;
-            if (uri.getRawUserInfo() != null) return false;
-            String host = uri.getHost();
-            if (host == null) return false;
-            host = host.toLowerCase(Locale.ROOT);
-            for (String suffix : ALLOWED_HOST_SUFFIXES) {
-                if (host.equals(suffix) || host.endsWith("." + suffix)) return true;
-            }
-            return false;
-        } catch (Exception e) {
-            return false;
-        }
-    }
 
     /**
      * Strips path separators, control characters and leading dots so the value can only ever

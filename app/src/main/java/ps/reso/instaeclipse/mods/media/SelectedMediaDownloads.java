@@ -40,14 +40,9 @@ final class SelectedMediaDownloads {
         final DownloadRequest.Options options;
         final String photoUrl;
         final String photoFilename;
-        final String customPhotoFilename, originalPhotoFilename;
         final String audioFilename;
         final boolean audioAllowed;
         final List<Captured> children;
-
-        Captured(SelectedMediaSnapshot media, String type, DownloadRequest.Options options) {
-            this(media, type, options, false);
-        }
 
         Captured(SelectedMediaSnapshot media, String type, DownloadRequest.Options options, boolean original) {
             this(media, type, options, original, FeatureFlags.offerAudioDownload);
@@ -66,15 +61,13 @@ final class SelectedMediaDownloads {
             base = base.substring(0, base.lastIndexOf('.'));
             audioFilename = base + "_audio.m4a";
             // Keep the complete Custom request for the frame picker, regardless of the toggle.
-            video = media.video ? media.request(filename(base, true, false), options) : null;
+            video = media.video ? media.request(filename(base, true), options) : null;
             originalVideo = media.video && media.originalVideoUrl != null
-                    ? new DownloadRequest(media.id, media.owner, filename(base, true, true), null,
+                    ? new DownloadRequest(media.id, media.owner, filename(base, true), null,
                     List.of(new DownloadRequest.Rendition(media.originalVideoUrl, 0, 0, 0, "", 0)),
                     new DownloadRequest.Options(0, false, false, true), DownloadRequest.AudioExpectation.UNKNOWN) : null;
             photoUrl = original ? media.originalImageUrl : media.imageUrl;
-            customPhotoFilename = filename(base, false, false);
-            originalPhotoFilename = filename(base, false, true);
-            photoFilename = original ? originalPhotoFilename : customPhotoFilename;
+            photoFilename = filename(base, false);
             ArrayList<Captured> items = new ArrayList<>();
             for (SelectedMediaSnapshot child : media.children)
                 items.add(new Captured(child, type, options, original, audioAllowed));
@@ -88,12 +81,10 @@ final class SelectedMediaDownloads {
             this.original = original;
             video = previous.video;
             originalVideo = previous.originalVideo;
-            customPhotoFilename = previous.customPhotoFilename;
-            originalPhotoFilename = previous.originalPhotoFilename;
+            photoFilename = previous.photoFilename;
             audioFilename = previous.audioFilename;
             audioAllowed = previous.audioAllowed;
             photoUrl = original ? media.originalImageUrl : media.imageUrl;
-            photoFilename = original ? originalPhotoFilename : customPhotoFilename;
             ArrayList<Captured> items = new ArrayList<>();
             for (Captured child : previous.children) items.add(child.withOriginal(original));
             children = Collections.unmodifiableList(items);
@@ -308,14 +299,6 @@ final class SelectedMediaDownloads {
         });
     }
 
-    static void startVideo(Context ctx, DownloadRequest request) {
-        startVideo(ctx, request, false);
-    }
-
-    static void startVideo(Context ctx, DownloadRequest request, boolean batch) {
-        startVideo(ctx, request, batch, false);
-    }
-
     static void startVideo(Context ctx, DownloadRequest request, boolean batch, boolean local) {
         if (request == null) { unavailable(ctx, null); return; }
         try {
@@ -407,7 +390,7 @@ final class SelectedMediaDownloads {
     }
 
     /** No quality suffix in the name, like 0.8.0; the save picks a free name for a repeat download. */
-    private static String filename(String base, boolean video, boolean original) {
+    private static String filename(String base, boolean video) {
         return base + (video ? ".mp4" : ".jpg");
     }
 

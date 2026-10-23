@@ -122,24 +122,6 @@ final class Mp4Join {
         }
     }
 
-    /**
-     * A fragmented file can leave mdhd/mvhd duration at zero and omit sidx. Android then exposes
-     * no duration even though every fragment carries exact sample timing. Reuse the same bounded
-     * fragment/edit-list parser as the join, and require the extractor to have read every sample.
-     * A plain MP4 or incomplete/unsupported fragment is deliberately not guessed from last PTS.
-     */
-    static long fragmentDurationUs(File file, boolean video, int extractedSamples) throws IOException {
-        try (RandomAccessFile input = new RandomAccessFile(file, "r")) {
-            Track track = Track.read(input, video ? VIDE : SOUN, video ? "video" : "audio", video ? "picture" : "sound");
-            if (extractedSamples <= 0 || track.count() != extractedSamples)
-                throw new IOException("Fragment and extractor sample counts differ");
-            long durationMs = new Timing(track).duration;
-            if (durationMs <= 0 || durationMs > Long.MAX_VALUE / 1000)
-                throw new IOException("Invalid fragment duration");
-            return durationMs * 1000;
-        }
-    }
-
     /** Inspection only: prove every indexed sample is present, including its full final duration. */
     static long indexedDurationUs(File file, boolean video, int extractedSamples) throws IOException {
         try (RandomAccessFile input = new RandomAccessFile(file, "r")) {

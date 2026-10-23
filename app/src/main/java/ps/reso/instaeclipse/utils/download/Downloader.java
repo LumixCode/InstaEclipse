@@ -9,7 +9,6 @@
 package ps.reso.instaeclipse.utils.download;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -89,10 +88,6 @@ final class Downloader {
         /** The fetched tracks are being joined into one file. */
         default void joining() {
         }
-
-        /** The finished file is being copied into the gallery. */
-        default void saving() {
-        }
     }
 
     /** No one is watching and nothing can cancel. */
@@ -110,41 +105,6 @@ final class Downloader {
             return false;
         }
     };
-
-    /**
-     * [progress] told of a second fetch of the same save as the continuation of one that moved
-     * [before] bytes. A DASH save fetches its picture and then its sound, and told of each on its
-     * own, its notification started over at the sound track and gave that track's size as the
-     * whole save's.
-     */
-    static Progress after(long before, Progress progress) {
-        return new Progress() {
-            @Override
-            public void transferred(long done, long total) {
-                progress.transferred(before + done, total < 0 ? -1 : before + total);
-            }
-
-            @Override
-            public void reading(Runnable close) {
-                progress.reading(close);
-            }
-
-            @Override
-            public boolean cancelled() {
-                return progress.cancelled();
-            }
-
-            @Override
-            public void joining() {
-                progress.joining();
-            }
-
-            @Override
-            public void saving() {
-                progress.saving();
-            }
-        };
-    }
 
     /** A cancel seen between two reads of a body. */
     private static final class Cancelled extends IOException {
@@ -208,30 +168,19 @@ final class Downloader {
         final String reason;
         /** The type of what was fetched, once it is known to be one. */
         final String mime;
-        /**
-         * The saved picture is below the best one the manifest offered within the quality setting,
-         * the one Facebook's player can show, so the person saving is told.
-         */
-        final boolean lower;
 
-        private Result(Status status, String reason, String mime, boolean lower) {
+        private Result(Status status, String reason, String mime) {
             this.status = status;
             this.reason = reason;
             this.mime = mime;
-            this.lower = lower;
         }
 
         static Result ok(String mime) {
-            return new Result(Status.OK, null, mime, false);
+            return new Result(Status.OK, null, mime);
         }
 
         static Result fail(Status status, String reason) {
-            return new Result(status, reason, null, false);
-        }
-
-        /** This result, told that the saved picture is below the manifest's. */
-        Result lower() {
-            return new Result(status, reason, mime, true);
+            return new Result(status, reason, null);
         }
 
         boolean ok() {
@@ -242,21 +191,6 @@ final class Downloader {
         public String toString() {
             return reason == null ? status.name() : status + " (" + reason + ")";
         }
-    }
-
-    /**
-     * Where the finished bytes go.
-     *
-     * <p>{@link #open} is called once, on the worker thread, and only after the whole file has
-     * arrived and passed every check. Nothing is created before that, so a refused or broken fetch
-     * leaves nothing behind.
-     */
-    interface Sink {
-        OutputStream open(String mime) throws IOException;
-
-        void commit() throws IOException;
-
-        void abandon();
     }
 
     private static final int CONNECT_TIMEOUT_MS = 15_000;
@@ -385,48 +319,6 @@ final class Downloader {
                     connection.disconnect();
                 } catch (Throwable ignored) {
                     // Nothing useful to do.
-                }
-            }
-        }
-    }
-
-    /**
-     * Copy a finished, checked [file] into [sink] as [mime]. If anything fails once the sink is
-     * open, the entry is removed again, and a cancel before the commit leaves no row.
-     */
-    static Result publish(File file, String mime, Sink sink, Progress progress) {
-        boolean committed = false;
-
-        try (InputStream in = new FileInputStream(file)) {
-            if (progress.cancelled()) return cancelled();
-            progress.saving();
-            OutputStream out = sink.open(mime);
-
-            byte[] buffer = new byte[BUFFER];
-            int read;
-            while ((read = in.read(buffer)) > 0) {
-                out.write(buffer, 0, read);
-                if (progress.cancelled()) return cancelled();
-            }
-            out.flush();
-
-            if (progress.cancelled()) return cancelled();
-            sink.commit();
-            committed = true;
-            return Result.ok(mime);
-        } catch (Throwable t) {
-            return Result.fail(Status.WRITE_ERROR, "the gallery refused the file: " + t.getClass().getSimpleName());
-        } finally {
-            // Anything not committed is abandoned, even when open() itself threw: the gallery's
-            // open inserts its pending row before it asks for a stream, so a failure there has
-            // already left one. Removing it here, rather than at each failure, is what makes it
-            // impossible to leave one behind through a path nobody thought of. abandon() does
-            // nothing on a sink that created nothing.
-            if (!committed) {
-                try {
-                    sink.abandon();
-                } catch (Throwable ignored) {
-                    // Cleaning up must never replace the real failure.
                 }
             }
         }
