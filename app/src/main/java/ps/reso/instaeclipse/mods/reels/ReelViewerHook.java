@@ -326,9 +326,6 @@ public final class ReelViewerHook {
                     XposedBridge.hookAllConstructors(method.getDeclaringClass(), rememberPager);
                 }
             }
-            for (Method method : resolve(bridge, loader, "ReelPagerSetup_v1", "ClipsViewPagerImpl_setupView")) {
-                if (owners.contains(method.getDeclaringClass())) XposedBridge.hookMethod(method, rememberPager);
-            }
             if (owners.isEmpty()) throw new NoSuchMethodException("Clips pager owner");
             if (setter != null) {
                 XposedBridge.hookMethod(setter, new XC_MethodHook() {

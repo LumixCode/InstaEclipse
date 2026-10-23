@@ -19,8 +19,9 @@ final class PagerJumpFilter {
 
     static boolean isJump(Method method) {
         Class<?>[] p = method.getParameterTypes();
-        return !Modifier.isStatic(method.getModifiers()) && method.getName().equals("setCurrentItem")
-                && method.getReturnType() == void.class
-                && (p.length == 1 || (p.length == 2 && p[1] == boolean.class)) && p[0] == int.class;
+        if (Modifier.isStatic(method.getModifiers()) || method.getReturnType() != void.class
+                || p.length == 0 || p[0] != int.class) return false;
+        if (p.length == 1) return method.getName().equals("setCurrentItem");
+        return p.length == 2 && p[1] == boolean.class;
     }
 }
