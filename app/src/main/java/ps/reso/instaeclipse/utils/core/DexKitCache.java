@@ -218,11 +218,15 @@ public class DexKitCache {
 
     // ── Encoding / Decoding ──────────────────────────────────────────────────
 
-    private static String encode(Method m) {
+    static String encode(Method m) {
         return MemberDescriptors.encode(m);
     }
 
-    private static Method decode(String encoded, ClassLoader loader) {
+    static Method decode(String encoded, ClassLoader loader) {
         return MemberDescriptors.decodeMethod(encoded, loader);
+    }
+
+    static String descriptor(Method m) {
+        return MemberDescriptors.descriptor(m);
     }
 }
