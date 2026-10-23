@@ -19,32 +19,37 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 public final class UnlockPlusBenefitsHook {
     private static final String CACHE_KEY = "UnlockPlus_benefitCheck_v1";
+    private static final String ABSENT_KEY = "UnlockPlus_benefitCheck_absent";
 
     public void install(DexKitBridge bridge, ClassLoader loader) {
         try {
             Method method = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(CACHE_KEY, loader) : null;
             if (method == null) {
+                if (AbsentMarker.knownAbsent(DexKitCache.isCacheValid(), DexKitCache.loadString(ABSENT_KEY))) {
+                    ModuleLog.error("(IE|Plus) Could not turn on Plus benefits: the benefit check was not found in this Instagram version");
+                    if (FeatureFlags.unlockPlusBenefits) FeatureStatusTracker.setBroken("UnlockPlusBenefits");
+                    return;
+                }
                 Set<Method> candidates = new LinkedHashSet<>();
-                for (var data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                        .usingStrings("is_benefit_active").paramTypes(String.class).returnType(boolean.class)))) {
-                    candidates.add(data.getMethodInstance(loader));
+                for (var logger : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                        .usingStrings("is_benefit_active", "SUBSBenefitDataProvider")
+                        .paramTypes(String.class, String.class).returnType(void.class)))) {
+                    for (var caller : DexKitQueryCache.callersUncached(logger)) {
+                        if (!caller.getClassName().equals(logger.getClassName())) continue;
+                        Method candidate = caller.getMethodInstance(loader);
+                        if (isBenefitCheck(candidate)) candidates.add(candidate);
+                    }
                 }
                 if (candidates.isEmpty()) {
-                    // In 446 the marker moved into the provider's error logger. Only its same-class
-                    // public String -> boolean caller checks the active-benefits set.
-                    for (var logger : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                            .usingStrings("is_benefit_active", "SUBSBenefitDataProvider")
-                            .paramTypes(String.class, String.class).returnType(void.class)))) {
-                        for (var caller : DexKitQueryCache.callersUncached(logger)) {
-                            if (!caller.getClassName().equals(logger.getClassName())) continue;
-                            Method candidate = caller.getMethodInstance(loader);
-                            if (isBenefitCheck(candidate)) candidates.add(candidate);
-                        }
+                    for (var data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                            .usingStrings("is_benefit_active").paramTypes(String.class).returnType(boolean.class)))) {
+                        candidates.add(data.getMethodInstance(loader));
                     }
                 }
                 if (candidates.size() != 1) {
                     ModuleLog.error("(IE|Plus) Could not turn on Plus benefits: the benefit check was not found in this Instagram version");
                     ModuleLog.detail("(IE|Plus) Expected one benefit checker; found " + candidates.size());
+                    DexKitCache.saveString(ABSENT_KEY, AbsentMarker.ABSENT);
                     if (FeatureFlags.unlockPlusBenefits) FeatureStatusTracker.setBroken("UnlockPlusBenefits");
                     return;
                 }

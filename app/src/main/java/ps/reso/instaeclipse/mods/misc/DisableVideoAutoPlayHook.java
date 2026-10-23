@@ -1,11 +1,9 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import android.content.res.Resources;
-import android.graphics.drawable.Drawable;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
-import android.widget.ImageView;
 
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
@@ -13,39 +11,28 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.WeakHashMap;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
-import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
+import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 
 public class DisableVideoAutoPlayHook {
-    private static final String PLAY_DRAWABLE_FIELD = "InstaEclipseManualVideoPlayDrawable";
-    private static final Set<Drawable> sPlayDrawables =
-            Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
-    private static final Set<Drawable.ConstantState> sPlayDrawableStates =
-            Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
-
     private static volatile boolean sOverlayLifecycleHooked = false;
 
     public void handleAutoPlayDisable(DexKitBridge bridge) {
-        // The play-overlay hooks sit on very hot framework methods (Resources.getDrawable,
-        // ImageView.setImageDrawable, View.performClick). Hooking those app-wide triggers ART's JIT
-        // SIGSEGV ("Jit thread pool", DexCache::SetResolvedType) on IG 451+, so they are only
-        // installed when the feature is actually on (turning it on later applies after a restart).
         if (FeatureFlags.disableVideoAutoPlay) hookManualPlayOverlayLifecycle();
         if (DexKitCache.isCacheValid()) {
             Method cached = DexKitCache.loadMethod("AutoPlayDisable", Module.hostClassLoader);
             if (cached != null) {
                 hookMethod(cached);
+                FeatureStatusTracker.setHooked("DisableVideoAutoPlay");
+                ModuleLog.ok("(InstaEclipse | AutoPlayDisable): Ready");
                 return;
             }
         }
@@ -93,7 +80,7 @@ public class DisableVideoAutoPlayHook {
             Method targetMethod = method.getMethodInstance(Module.hostClassLoader);
             DexKitCache.saveMethod("AutoPlayDisable", targetMethod);
             hookMethod(targetMethod);
-            ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("DisableVideoAutoPlay");
+            FeatureStatusTracker.setHooked("DisableVideoAutoPlay");
             ModuleLog.ok("(InstaEclipse | AutoPlayDisable): Ready");
             ModuleLog.detail("(InstaEclipse | AutoPlayDisable): Hooked (dynamic check): " +
                     method.getClassName() + "." + method.getName());
@@ -119,65 +106,12 @@ public class DisableVideoAutoPlayHook {
         }
 
         try {
-            hookPlayDrawableLoads();
-            hookPlayImageBinding();
             hookPlayOverlayClicks();
             ModuleLog.detail("(InstaEclipse | AutoPlayDisable): Hooked manual play overlay lifecycle.");
         } catch (Throwable t) {
             ModuleLog.warn("(InstaEclipse | AutoPlayDisable): Videos still do not autoplay, but the play button on paused videos may not work: "
                     + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
-    }
-
-    private void hookPlayDrawableLoads() {
-        XC_MethodHook hook = new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (!FeatureFlags.disableVideoAutoPlay) return;
-                if (!(param.thisObject instanceof Resources) || !(param.getResult() instanceof Drawable)) return;
-                if (param.args == null || param.args.length == 0 || !(param.args[0] instanceof Integer)) return;
-
-                Resources resources = (Resources) param.thisObject;
-                int resId = (Integer) param.args[0];
-                if (isManualVideoPlayDrawableResource(resources, resId)) {
-                    rememberPlayDrawable((Drawable) param.getResult());
-                }
-            }
-        };
-
-        XposedBridge.hookAllMethods(Resources.class, "getDrawable", hook);
-        XposedBridge.hookAllMethods(Resources.class, "getDrawableForDensity", hook);
-    }
-
-    private void hookPlayImageBinding() {
-        XposedBridge.hookAllMethods(ImageView.class, "setImageResource", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (!FeatureFlags.disableVideoAutoPlay) return;
-                if (!(param.thisObject instanceof ImageView)) return;
-                if (param.args == null || param.args.length == 0 || !(param.args[0] instanceof Integer)) return;
-
-                ImageView imageView = (ImageView) param.thisObject;
-                int resId = (Integer) param.args[0];
-                if (isManualVideoPlayDrawableResource(imageView.getResources(), resId)) {
-                    markPlayDrawableView(imageView);
-                }
-            }
-        });
-
-        XposedBridge.hookAllMethods(ImageView.class, "setImageDrawable", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (!FeatureFlags.disableVideoAutoPlay) return;
-                if (!(param.thisObject instanceof ImageView)) return;
-                if (param.args == null || param.args.length == 0 || !(param.args[0] instanceof Drawable)) return;
-
-                Drawable drawable = (Drawable) param.args[0];
-                if (isRememberedPlayDrawable(drawable)) {
-                    markPlayDrawableView((ImageView) param.thisObject);
-                }
-            }
-        });
     }
 
     private void hookPlayOverlayClicks() {
@@ -218,6 +152,7 @@ public class DisableVideoAutoPlayHook {
             if (!(parent instanceof View)) break;
 
             View parentView = (View) parent;
+            if (HideOverlayWalk.stopsAt(parentView.getClass())) break;
             if (isPlayOverlayContainer(parentView)) {
                 hidePlayOverlayIfSafe(parentView);
             }
@@ -257,8 +192,6 @@ public class DisableVideoAutoPlayHook {
     }
 
     private static boolean isManualVideoPlayTarget(View view) {
-        if (isMarkedPlayDrawableView(view) && hasVideoContext(view)) return true;
-
         View current = view;
         for (int depth = 0; depth < 7 && current != null; depth++) {
             String name = resourceEntryName(current);
@@ -274,7 +207,6 @@ public class DisableVideoAutoPlayHook {
 
     private static boolean isHideablePlayOverlay(View view) {
         if (isMainVideoSurface(view)) return false;
-        if (isMarkedPlayDrawableView(view) && hasVideoContext(view)) return true;
 
         String name = resourceEntryName(view);
         if (isStrongPlayOverlayName(name)) return true;
@@ -339,19 +271,6 @@ public class DisableVideoAutoPlayHook {
                 || "mention_thumbnail_video_play_button".equals(name);
     }
 
-    private static boolean isManualVideoPlayDrawableResource(Resources resources, int resId) {
-        if (resources == null || resId == 0) return false;
-        try {
-            String type = resources.getResourceTypeName(resId);
-            if (!"drawable".equals(type)) return false;
-
-            String name = resources.getResourceEntryName(resId);
-            return "play_button".equals(name) || "play_button_large".equals(name);
-        } catch (Resources.NotFoundException ignored) {
-            return false;
-        }
-    }
-
     private static String resourceEntryName(View view) {
         // Generated ids (package byte 0) are no resources: skip the lookup and Android's log line.
         if (view == null || view.getId() == View.NO_ID || (view.getId() >>> 24) == 0) return null;
@@ -360,28 +279,5 @@ public class DisableVideoAutoPlayHook {
         } catch (Resources.NotFoundException ignored) {
             return null;
         }
-    }
-
-    private static void rememberPlayDrawable(Drawable drawable) {
-        sPlayDrawables.add(drawable);
-        Drawable.ConstantState state = drawable.getConstantState();
-        if (state != null) sPlayDrawableStates.add(state);
-    }
-
-    private static boolean isRememberedPlayDrawable(Drawable drawable) {
-        if (drawable == null) return false;
-        if (sPlayDrawables.contains(drawable)) return true;
-
-        Drawable.ConstantState state = drawable.getConstantState();
-        return state != null && sPlayDrawableStates.contains(state);
-    }
-
-    private static void markPlayDrawableView(ImageView imageView) {
-        XposedHelpers.setAdditionalInstanceField(imageView, PLAY_DRAWABLE_FIELD, Boolean.TRUE);
-    }
-
-    private static boolean isMarkedPlayDrawableView(View view) {
-        return view instanceof ImageView
-                && Boolean.TRUE.equals(XposedHelpers.getAdditionalInstanceField(view, PLAY_DRAWABLE_FIELD));
     }
 }
