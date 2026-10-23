@@ -4,7 +4,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-/** Text settings a companion restore applies, checked as SettingsBackupManager.fromJson checks them (M2). */
+/** Text settings a companion restore applies, checked as SettingsBackupManager.fromJson checks them. */
 public class RestorableStringTest {
 
     @Test public void defaultsOfEveryCheckedKeyAreRestorable() {

@@ -147,7 +147,7 @@ public class FeatureBatchSettingsInstrumentedTest {
         FeatureFlags.isExtremeMode = true;
         SettingsBackupManager.fromJson("{\"hideShareCreateGroup\":false}");
         assertFalse(FeatureFlags.hideShareCreateGroup);
-        // Backups from the local build still carry the old key.
+        // Backups from earlier builds still carry the old key.
         SettingsBackupManager.fromJson("{\"hideCreateGroupButton\":true}");
         assertTrue(FeatureFlags.hideShareCreateGroup);
         FeatureFlags.dailyReelLimitEnabled = true;

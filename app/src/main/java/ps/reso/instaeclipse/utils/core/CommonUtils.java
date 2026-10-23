@@ -79,7 +79,7 @@ public class CommonUtils {
     }
 
     /**
-     * Keys the pre-0.8 local build left in instaeclipse_cache: Instagram's lock passcode hash,
+     * Keys that builds before 0.8 left in instaeclipse_cache: Instagram's lock passcode hash,
      * salt and locked-chat list (PrefsMerge keeps them out now), the old names of the share-sheet
      * switch and of the location switch folded into "hideOnboardingPrompts", and extras that were
      * never settings. Kept, they ride along in backups.

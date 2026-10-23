@@ -508,7 +508,7 @@ public class SettingsManager {
         return quality;
     }
 
-    /** The local build's "hideCreateGroupButton" became upstream's "hideShareCreateGroup" (same sheet row). */
+    /** The older "hideCreateGroupButton" became upstream's "hideShareCreateGroup" (same sheet row). */
     private static void migrateCreateGroupKey(SharedPreferences p) {
         if (!p.contains("hideCreateGroupButton")) return;
         SharedPreferences.Editor e = p.edit();

@@ -343,7 +343,7 @@ public class SettingsBackupManager {
         if (s.has("forceReelQuality"))       FeatureFlags.forceReelQuality       = readReelQuality(s.get("forceReelQuality"));
         if (s.has("disableRepost"))          FeatureFlags.disableRepost          = s.getBoolean("disableRepost");
         if (s.has("hideShareCreateGroup"))   FeatureFlags.hideShareCreateGroup   = s.getBoolean("hideShareCreateGroup");
-        // Local builds before 0.8 saved the same share-sheet switch as "hideCreateGroupButton".
+        // Builds before 0.8 saved the same share-sheet switch as "hideCreateGroupButton".
         else if (s.has("hideCreateGroupButton")) FeatureFlags.hideShareCreateGroup = s.getBoolean("hideCreateGroupButton");
         if (s.has("exactTimestamps"))        FeatureFlags.exactTimestamps        = s.getBoolean("exactTimestamps");
         if (s.has("likeUndo"))               FeatureFlags.likeUndo               = s.getBoolean("likeUndo");

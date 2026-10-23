@@ -174,7 +174,7 @@ public class FeaturesFragment extends Fragment {
                 for (String key : keys) {
                     String target = key;
                     if ("hideCreateGroupButton".equals(key)) {
-                        // Local pre-0.8 backups: the same share-sheet switch under its old name.
+                        // Pre-0.8 backups: the same share-sheet switch under its old name.
                         if (s.has("hideShareCreateGroup")) continue;
                         target = "hideShareCreateGroup";
                     } else if (ps.reso.instaeclipse.utils.core.CommonUtils.STALE_CACHE_KEYS.contains(key)) {

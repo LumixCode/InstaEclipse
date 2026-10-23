@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Strings of the local custom build. Kept out of strings.xml so upstream's file and its
+<!-- Strings this fork adds. Kept out of strings.xml so upstream's file and its
      translations stay byte-identical; these fall back to English in every locale. -->
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <!-- Hide specific chats -->

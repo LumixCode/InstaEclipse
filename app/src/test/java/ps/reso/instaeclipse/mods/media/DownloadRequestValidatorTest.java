@@ -34,7 +34,7 @@ public class DownloadRequestValidatorTest {
         assertFalse(DownloadRequestValidator.isAllowedMediaUrl(null));
     }
 
-    // Cases from the former DownloadSaveServiceUrlTest (the local build's own allowlist).
+    // Cases from the former DownloadSaveServiceUrlTest.
     @Test
     public void metaCdnAllowlistEdgeCases() {
         for (String url : new String[]{

@@ -260,7 +260,7 @@ public final class FollowingFollowStatusHook {
             LinearLayout.LayoutParams layout = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             layout.topMargin = Math.round(2 * subtitle.getResources().getDisplayMetrics().density);
-            // No pre-draw listener: one per recycled row leaked into the window (code review M30),
+            // No pre-draw listener: one per recycled row leaked into the window,
             // and every rebind already clears and re-applies the label, including a toggle-off.
             parent.addView(label, parent.indexOfChild(subtitle) + 1, layout);
         }

@@ -334,7 +334,7 @@ public final class ProfileFollowStatusHook {
             parent.addView(label, parent == anchor ? parent.getChildCount() : parent.indexOfChild(anchor) + 1, layout);
             TextView added = label;
             // Registered only while attached: a window-wide listener per visited profile would
-            // outlive its header and run on every frame (code review M30).
+            // outlive its header and run on every frame.
             ViewTreeObserver.OnPreDrawListener sync = () -> {
                 syncLabel(root, added);
                 return true;

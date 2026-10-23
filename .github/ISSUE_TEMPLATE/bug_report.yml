@@ -31,7 +31,7 @@ body:
     attributes:
       label: InstaEclipse version and fork commit
       description: The version shown in the companion app, and the commit you built from if you know it.
-      placeholder: e.g. 0.8.2-debug, built from commit 3ee2c80
+      placeholder: e.g. 0.8.2-debug, built from commit abc1234
     validations:
       required: true
 

@@ -4,7 +4,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-/** Companion writes may turn a passcode lock on, never off while a passcode is set (M1). */
+/** Companion writes may turn a passcode lock on, never off while a passcode is set. */
 public class PasscodeLockPolicyTest {
     private static final String[] LOCKS = {
             "lockWholeApp", "lockDirectMessages", "lockSpecificMessages", "lockDirectAlways", "lockSavedCollections"};
