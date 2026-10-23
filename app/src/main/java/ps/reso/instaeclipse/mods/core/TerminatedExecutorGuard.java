@@ -1,5 +1,8 @@
 package ps.reso.instaeclipse.mods.core;
 
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -27,6 +30,19 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
  */
 public class TerminatedExecutorGuard {
 
+    enum Decision { DROP, THROW }
+
+    private static volatile Set<String> dispatcherClasses = Collections.emptySet();
+
+    static void setDispatcherClasses(Set<String> classes) {
+        dispatcherClasses = classes == null ? Collections.emptySet()
+                : Collections.unmodifiableSet(new LinkedHashSet<>(classes));
+    }
+
+    static Decision decide(boolean shutdown, StackTraceElement[] frames, Set<String> dispatchers) {
+        return shutdown ? Decision.DROP : Decision.THROW;
+    }
+
     public void install(ClassLoader classLoader) {
         try {
             XposedHelpers.findAndHookMethod(
@@ -38,14 +54,11 @@ public class TerminatedExecutorGuard {
                         protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                             try {
                                 ThreadPoolExecutor ex = (ThreadPoolExecutor) param.args[1];
-                                // isShutdown() is true for SHUTDOWN/STOP/TERMINATED — in every one of
-                                // those states no new task can ever run, so dropping it is correct.
-                                if (ex != null && ex.isShutdown()) {
-                                    param.setResult(null); // return void without throwing => task dropped
+                                if (ex != null && decide(ex.isShutdown(), null, dispatcherClasses) == Decision.DROP) {
+                                    param.setResult(null);
                                     ModuleLog.probe("(IE|ExecGuard) dropped task rejected by shut-down executor");
                                 }
                             } catch (Throwable ignored) {
-                                // Never let the guard itself interfere with rejection handling.
                             }
                         }
                     }
