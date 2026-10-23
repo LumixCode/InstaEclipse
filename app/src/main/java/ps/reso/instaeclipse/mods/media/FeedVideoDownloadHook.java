@@ -42,11 +42,9 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -1813,27 +1811,9 @@ public class FeedVideoDownloadHook {
 
     // ── Filename + directory helpers (package-accessible for StoryDownloadHook) ──
 
-    /**
-     * Carousel item name: inserts the slide number before the extension ("…_03of10.mp4") so every
-     * item of an album gets its own, ordered file instead of N copies of the same name.
-     */
-    static String withSlide(String filename, int slide, int total) {
-        if (total <= 1 || slide < 1) return filename;
-        int width = String.valueOf(total).length();
-        String tag = String.format(Locale.US, "_%0" + width + "dof%d", slide, total);
-        int dot = filename.lastIndexOf('.');
-        return dot > 0 ? filename.substring(0, dot) + tag + filename.substring(dot) : filename + tag;
-    }
-
     static String buildFilename(String username, String type, String mediaId, boolean isVideo) {
-        String u  = (username != null && !username.isEmpty()) ? username : "unknown";
-        String id = (mediaId  != null && !mediaId.isEmpty())  ? mediaId  : String.valueOf(System.currentTimeMillis());
-        String ext = isVideo ? ".mp4" : ".jpg";
-        StringBuilder sb = new StringBuilder(u).append('_').append(type).append('_').append(id);
-        if (FeatureFlags.downloaderAddTimestamp) {
-            sb.append('_').append(new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date()));
-        }
-        return sb.append(ext).toString();
+        return DownloadNames.buildFilename(username, type, mediaId, isVideo,
+                FeatureFlags.downloaderAddTimestamp, System.currentTimeMillis());
     }
 
     /** Output stream for an exported chat (HTML) in the downloads location, "chats" subfolder. */
@@ -2472,7 +2452,7 @@ public class FeedVideoDownloadHook {
             actions.add(() -> {
                 String url = urls.get(safeIdx);
                 boolean isVid = isVideoUrl(url);
-                String fn = withSlide(buildFilename(username, "post", mediaId, isVid), safeIdx + 1, n);
+                String fn = DownloadNames.withSlide(buildFilename(username, "post", mediaId, isVid), safeIdx + 1, n);
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_downloading), Toast.LENGTH_SHORT).show();
                 executor.submit(() -> {
                     try {
@@ -2497,7 +2477,7 @@ public class FeedVideoDownloadHook {
                     for (int i = 0; i < urls.size(); i++) {
                         String url = urls.get(i);
                         boolean isVid = isVideoUrl(url);
-                        String fn = withSlide(buildFilename(username, "post", mediaId, isVid), i + 1, n);
+                        String fn = DownloadNames.withSlide(buildFilename(username, "post", mediaId, isVid), i + 1, n);
                         try {
                             downloadAndSave(ctx, url, fn, isVid, username);
                         } catch (Throwable e) {
@@ -2528,7 +2508,7 @@ public class FeedVideoDownloadHook {
                         + (postWide ? "" : "  ·  " + (safeIdx + 1) + "/" + n);
                 String audioName = buildFilename(user, postWide ? "post_music" : "post_audio", mediaId, true)
                         .replaceAll("\\.mp4$", ".m4a");
-                if (!postWide) audioName = withSlide(audioName, safeIdx + 1, n);
+                if (!postWide) audioName = DownloadNames.withSlide(audioName, safeIdx + 1, n);
                 final String fAudioName = audioName;
                 labels.add(audioLabel);
                 actions.add(() -> downloadAudio(ctx, (String) audioSrc[0], fAudioName,
@@ -2802,7 +2782,7 @@ public class FeedVideoDownloadHook {
     }
 
     private void startDirectDownload(Context ctx, String url, boolean isVideo, int slide, int total) {
-        String fn = withSlide(buildFilename(currentDownloadUsername, "post", currentDownloadMediaId, isVideo),
+        String fn = DownloadNames.withSlide(buildFilename(currentDownloadUsername, "post", currentDownloadMediaId, isVideo),
                 slide, total);
         ModuleLog.detail("(IE|DL) startDirectDownload file=" + fn);
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, isVideo ? I18n.t(ctx, R.string.ig_toast_downloading_video) : I18n.t(ctx, R.string.ig_toast_downloading_photo), Toast.LENGTH_SHORT).show();

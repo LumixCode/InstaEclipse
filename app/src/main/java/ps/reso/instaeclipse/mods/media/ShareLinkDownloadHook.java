@@ -8,7 +8,6 @@ import android.os.Bundle;
 import android.widget.Toast;
 
 import java.lang.reflect.Field;
-import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -21,6 +20,7 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.text.MediaIds;
 
 /**
  * Download a post/reel from a link shared to InstaEclipse in another app (#236).
@@ -35,7 +35,6 @@ public class ShareLinkDownloadHook {
     public static final String EXTRA = "ps.reso.instaeclipse.SHARE_DOWNLOAD";
     private static final String TAG = "(IE|ShareDL) ";
     private static final Pattern SHORTCODE = Pattern.compile("/(?:p|reel|reels|tv)/([A-Za-z0-9_-]+)");
-    private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     private static final long TIMEOUT_MS = 25_000, STEP_MS = 500;
 
     /** every UserSession built in this process (several with multiple accounts) */
@@ -133,15 +132,7 @@ public class ShareLinkDownloadHook {
     static String pkFromLink(String link) {
         Matcher m = SHORTCODE.matcher(link);
         if (!m.find()) return null;
-        String code = m.group(1);
-        if (code.length() > 11) code = code.substring(0, 11); // longer codes = private-post suffix
-        BigInteger pk = BigInteger.ZERO;
-        for (char c : code.toCharArray()) {
-            int v = ALPHABET.indexOf(c);
-            if (v < 0) return null;
-            pk = pk.shiftLeft(6).add(BigInteger.valueOf(v));
-        }
-        return pk.toString();
+        return MediaIds.pkFromShortcode(m.group(1));
     }
 
     /** The post's Media from a session's MediaCache (its map, so the key format doesn't matter). */

@@ -20,6 +20,7 @@ import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.text.MediaIds;
 
 /**
  * Download a profile's posts, all of them or the newest N (profile ⋮ menu). The profile page is
@@ -135,13 +136,7 @@ public final class ProfileDownloadAll {
     }
 
     private static long idOf(SelectedMediaDownloads.Captured c) {
-        try {
-            String id = c.media.id;
-            int cut = id.indexOf('_');
-            return Long.parseLong(cut > 0 ? id.substring(0, cut) : id);
-        } catch (Throwable t) {
-            return 0;
-        }
+        return MediaIds.pkLong(c.media.id);
     }
 
     private static void confirm(Activity a, List<SelectedMediaDownloads.Captured> posts) {

@@ -44,6 +44,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.text.MediaIds;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
@@ -1507,27 +1508,6 @@ public class CommentSearchHook {
         return b.toString();
     }
 
-    private static final String ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-
-    /** Post shortcode from its media pk (base64url of the number; the reverse of a link's code). */
-    static String shortcode(String mediaId) {
-        try {
-            String pk = mediaId.contains("_") ? mediaId.substring(0, mediaId.indexOf('_')) : mediaId;
-            java.math.BigInteger n = new java.math.BigInteger(pk);
-            if (n.signum() <= 0) return "";
-            StringBuilder b = new StringBuilder();
-            java.math.BigInteger sixtyFour = java.math.BigInteger.valueOf(64);
-            while (n.signum() > 0) {
-                java.math.BigInteger[] qr = n.divideAndRemainder(sixtyFour);
-                b.append(ALPHABET.charAt(qr[1].intValue()));
-                n = qr[0];
-            }
-            return b.reverse().toString();
-        } catch (Throwable t) {
-            return "";
-        }
-    }
-
     private static String esc(String s) {
         return android.text.Html.escapeHtml(s == null ? "" : s).replace("\n", "<br>");
     }
@@ -1539,7 +1519,7 @@ public class CommentSearchHook {
                 String author = head[0], caption = head[1];
                 List<String[]> comments = CommentSearchPolicy.comments(rows, head);
                 String mediaId = CommentSearchPolicy.mediaId(rows);
-                String code = shortcode(mediaId);
+                String code = MediaIds.shortcode(mediaId);
                 String link = code.isEmpty() ? "" : "https://www.instagram.com/p/" + code + "/";
 
                 // Media the companion service will download + embed: {url, local name, mime}.
