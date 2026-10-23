@@ -6,7 +6,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -22,7 +21,6 @@ import android.view.Window;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -46,24 +44,25 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.GhostModeUtils;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.dialog.IeRows.RadioRow;
+import ps.reso.instaeclipse.utils.dialog.IeRows.ToggleRow;
+
+import static ps.reso.instaeclipse.utils.dialog.IeRows.C_CARD;
+import static ps.reso.instaeclipse.utils.dialog.IeRows.C_DANGER;
+import static ps.reso.instaeclipse.utils.dialog.IeRows.C_HAIRLINE;
+import static ps.reso.instaeclipse.utils.dialog.IeRows.C_HANDLE;
+import static ps.reso.instaeclipse.utils.dialog.IeRows.C_PRESSED;
+import static ps.reso.instaeclipse.utils.dialog.IeRows.C_SHEET;
+import static ps.reso.instaeclipse.utils.dialog.IeRows.C_TEXT;
+import static ps.reso.instaeclipse.utils.dialog.IeRows.C_TEXT2;
+import static ps.reso.instaeclipse.utils.dialog.IeRows.R_CARD;
+import static ps.reso.instaeclipse.utils.dialog.IeRows.accent;
+import static ps.reso.instaeclipse.utils.dialog.IeRows.dp;
+import static ps.reso.instaeclipse.utils.dialog.IeRows.hairline;
 
 public class DialogUtils {
 
     private static AlertDialog currentDialog;
-
-    // ==== 0.7 DESIGN TOKENS ====
-    // One palette drives every dialog surface so the in-IG UI reads as a single, coherent sheet.
-    // Colors are ARGB ints (used directly with setColor/setTextColor — no parseColor round-trip).
-    private static final int C_SHEET    = 0xFF17171B; // bottom-sheet background (deep near-black)
-    private static final int C_CARD     = 0xFF202027; // grouped card fill (one step lighter)
-    private static final int C_PRESSED  = 0xFF2E2E37; // row pressed / highlight
-    private static final int C_HAIRLINE = 0xFF2C2C34; // dividers, borders
-    private static final int C_TEXT     = 0xFFFFFFFF; // primary text
-    private static final int C_TEXT2    = 0xFF9A9AA3; // secondary/muted text
-    private static final int C_HANDLE   = 0xFF48484A; // drag handle
-    private static final int C_DANGER   = 0xFFFF453A; // destructive accent (close, delete)
-    // Primary/interactive accent (back, links, toggles): the custom theme's accent when one is on.
-    private static int accent() { return ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine.accentOr(0xFF0A84FF); }
 
     /** Section accent palette — assigned per thematic group so each menu section has its own hue. */
     private static final String A_APPEARANCE = "#FF375F"; // vivid pink/red
@@ -71,9 +70,6 @@ public class DialogUtils {
     private static final String A_MEDIA      = "#FF9F0A"; // amber
     private static final String A_SOCIAL     = "#BF5AF2"; // purple
     private static final String A_TOOLS      = "#8E8E93"; // neutral gray
-
-    /** Card corner radius (px) — the rounded "grouped list" idiom. */
-    private static final int R_CARD = 26;
 
     @SuppressLint("UseCompatLoadingForDrawables")
     public static void showEclipseOptionsDialog(Context context) {
@@ -85,7 +81,8 @@ public class DialogUtils {
 
         GradientDrawable background = new GradientDrawable();
         background.setColor(C_SHEET);
-        background.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+        float corner = dp(context, 16);
+        background.setCornerRadii(new float[]{corner, corner, corner, corner, 0, 0, 0, 0});
         outer.setBackground(background);
 
         // Pinned header: drag handle + title + subtitle (stays visible while the list scrolls)
@@ -97,7 +94,7 @@ public class DialogUtils {
         title.setTypeface(null, Typeface.BOLD);
         title.setLetterSpacing(0.01f);
         title.setGravity(Gravity.CENTER);
-        title.setPadding(40, 10, 40, 2);
+        title.setPadding(dp(context, 13), dp(context, 3), dp(context, 13), dp(context, 1));
         outer.addView(title);
 
         TextView subtitle = new TextView(context);
@@ -105,10 +102,10 @@ public class DialogUtils {
         subtitle.setTextColor(C_TEXT2);
         subtitle.setTextSize(13);
         subtitle.setGravity(Gravity.CENTER);
-        subtitle.setPadding(40, 0, 40, 12);
+        subtitle.setPadding(dp(context, 13), 0, dp(context, 13), dp(context, 4));
         outer.addView(subtitle);
         outer.addView(buildStatusChips(context));
-        outer.addView(createDivider(context));
+        outer.addView(IeRows.divider(context));
 
         // Scrollable middle: the feature category list + footer credit
         LinearLayout mainLayout = buildMainMenuLayout(context);
@@ -120,7 +117,7 @@ public class DialogUtils {
         closeButton.setText(I18n.t(context, R.string.ig_dialog_close));
         closeButton.setTextColor(C_DANGER);
         closeButton.setTextSize(16);
-        closeButton.setPadding(40, 20, 40, 40);
+        closeButton.setPadding(dp(context, 13), dp(context, 7), dp(context, 13), dp(context, 13));
         closeButton.setGravity(Gravity.CENTER);
         closeButton.setTypeface(null, Typeface.BOLD);
         StateListDrawable closeStates = new StateListDrawable();
@@ -162,14 +159,14 @@ public class DialogUtils {
     private static LinearLayout buildMainMenuLayout(Context context) {
         LinearLayout mainLayout = new LinearLayout(context);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
-        mainLayout.setPadding(24, 0, 24, 0);
+        mainLayout.setPadding(dp(context, 8), 0, dp(context, 8), 0);
         if (ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.shouldShow(SettingsManager.prefs())) {
             mainLayout.addView(spoofLastSeenNotice(context));
         }
 
         // ---- APPEARANCE ---- look & feel: theme, feed, navigation bar, reels & stories
-        mainLayout.addView(sectionHeader(context, I18n.t(context, R.string.feat_group_appearance)));
-        LinearLayout appearance = card(context, 0);
+        mainLayout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.feat_group_appearance)));
+        LinearLayout appearance = IeRows.card(context, 0);
         appearance.addView(createMenuRow(context, R.drawable.ic_palette, I18n.t(context, R.string.ig_dialog_menu_theme), A_APPEARANCE, () -> showThemeOptions(context), onCount(context, "customThemeEnabled", "customFontEnabled", "customEmojiEnabled")));
         appearance.addView(createMenuRow(context, R.drawable.ic_sparkle, I18n.t(context, R.string.menu_feed), A_APPEARANCE, () -> showFeedOptions(context), onCount(context, "hideSuggestionsInFeed", "hideThreadsSuggestions", "hideLikedPosts", "confirmFeedRefresh", "hideCommunityNotes", "followingOnlyFeed", "disableDiscoverPeople", "expandCaptions", "exactTimestamps", "enablePhotoZoom", "disableVideoAutoPlay")));
         appearance.addView(createMenuRow(context, R.drawable.ic_tune, I18n.t(context, R.string.menu_navigation), A_APPEARANCE, () -> showNavigationOptions(context), navCount(context)));
@@ -178,8 +175,8 @@ public class DialogUtils {
         mainLayout.addView(appearance);
 
         // ---- PRIVACY ---- ghost, messages, hidden chats, lock, ads/tracking, location, distraction-free
-        mainLayout.addView(sectionHeader(context, I18n.t(context, R.string.feat_group_privacy)));
-        LinearLayout privacy = card(context, 0);
+        mainLayout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.feat_group_privacy)));
+        LinearLayout privacy = IeRows.card(context, 0);
         privacy.addView(createMenuRow(context, R.drawable.ic_eye, I18n.t(context, R.string.ig_dialog_menu_ghost_settings), A_PRIVACY, () -> showGhostOptions(context), onCount(context, "isGhostSeen", "isGhostTyping", "isGhostStory", "isGhostLive", "isGhostScreenshot", "isGhostViewOnce", "readReceiptChats", "airplaneMode", "manualStorySeen")));
         privacy.addView(createMenuRow(context, R.drawable.ic_chat, I18n.t(context, R.string.menu_messages), A_PRIVACY, () -> showMessagesOptions(context), onCount(context, "keepEphemeralMessages", "keepUnsentMessages", "showUnsentIndicator", "keepEditHistory", "jumpToFirstMessage", "hideChatMenuButton", "confirmCalls", "allowScreenshots", "permanentViewMode", "translateMessages", "bulkUnsend", "chatExport", "hideNotesTray", "hideDmSuggestions", "hideDmBlend", "hideShareCreateGroup")));
         privacy.addView(createMenuRow(context, R.drawable.ic_eye_off, I18n.t(context, R.string.ig_hide_chats_title), A_PRIVACY, () -> showHideChatsOptions(context), onCount(context, "hideSpecificChats")));
@@ -190,23 +187,23 @@ public class DialogUtils {
         mainLayout.addView(privacy);
 
         // ---- MEDIA ---- downloading, post-menu extras and uploads
-        mainLayout.addView(sectionHeader(context, I18n.t(context, R.string.feat_group_media)));
-        LinearLayout media = card(context, 0);
+        mainLayout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.feat_group_media)));
+        LinearLayout media = IeRows.card(context, 0);
         media.addView(createMenuRow(context, R.drawable.ic_download, I18n.t(context, R.string.ig_dialog_menu_downloader), A_MEDIA, () -> showDownloaderOptions(context), onCount(context, "enablePostDownload", "enableStoryDownload", "enableReelDownload", "enableProfileDownload", "enableVoiceDownload", "enableStickerDownload", "enableDmMediaDownload", "offerAudioDownload", "saveInstants", "cacheStories", "downloaderUsernameFolder", "downloaderAddTimestamp")));
         media.addView(createMenuRow(context, R.drawable.ic_save, I18n.t(context, R.string.menu_post_menu), A_MEDIA, () -> showPostMenuOptions(context), onCount(context, "copyMediaLink", "offerCopyImage", "offerMediaInfo", "uploadInstants")));
         media.addView(createMenuRow(context, R.drawable.ic_sparkle, I18n.t(context, R.string.menu_quality), A_MEDIA, () -> showQualityOptions(context), onCount(context, "highResolutionImages", "maxUploadQuality")));
         mainLayout.addView(media);
 
         // ---- SOCIAL ---- likes, comments, profiles
-        mainLayout.addView(sectionHeader(context, I18n.t(context, R.string.feat_group_social)));
-        LinearLayout social = card(context, 0);
+        mainLayout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.feat_group_social)));
+        LinearLayout social = IeRows.card(context, 0);
         social.addView(createMenuRow(context, R.drawable.ic_heart, I18n.t(context, R.string.menu_likes_comments), A_SOCIAL, () -> showLikesCommentsOptions(context), onCount(context, "disableDoubleTapLike", "likeUndo", "confirmLikes", "enableCopyComment", "commentSearch", "enableCaptionCopy", "disableRepost")));
         social.addView(createMenuRow(context, R.drawable.ic_eye, I18n.t(context, R.string.menu_profiles), A_SOCIAL, () -> showProfilesOptions(context), onCount(context, "profileMenuTools", "postCountSpoof", "profileSpoofer", "profileAnalyzer", "confirmFollows", "showFollowStatusLabel", "showFollowingFollowStatus", "fancyBioFont", "showFollowerToast", "followListExport", "followersHistory", "savedOnProfile", "hideThreadsButton")));
         mainLayout.addView(social);
 
         // ---- TOOLS ---- app & account, developer, backup, restart, cache, about
-        mainLayout.addView(sectionHeader(context, I18n.t(context, R.string.feat_group_tools)));
-        LinearLayout tools = card(context, 0);
+        mainLayout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.feat_group_tools)));
+        LinearLayout tools = IeRows.card(context, 0);
         tools.addView(createMenuRow(context, R.drawable.ic_settings_gear, I18n.t(context, R.string.menu_app), A_TOOLS, () -> showAppOptions(context), onCount(context, "unlimitedAccounts", "fixNotificationRegistration", "showFeatureToasts", "unlockPlusBenefits", "openLinksExternally")));
         tools.addView(createMenuRow(context, R.drawable.ic_tune, I18n.t(context, R.string.ig_dialog_menu_dev_options), A_TOOLS, () -> showDevOptions(context), onCount(context, "isDevEnabled", "removeBuildExpiredPopup")));
         tools.addView(createMenuRow(context, R.drawable.ic_save, I18n.t(context, R.string.ig_dialog_menu_backup_restore), A_TOOLS, () -> showBackupRestoreOptions(context)));
@@ -221,7 +218,7 @@ public class DialogUtils {
         footer.setText("@reso7200  ·  " + moduleVersion(context));
         footer.setTextColor(C_TEXT2);
         footer.setTextSize(13);
-        footer.setPadding(16, 26, 16, 8);
+        footer.setPadding(dp(context, 5), dp(context, 9), dp(context, 5), dp(context, 3));
         footer.setGravity(Gravity.CENTER_HORIZONTAL);
         mainLayout.addView(footer);
 
@@ -229,7 +226,7 @@ public class DialogUtils {
     }
 
     private static View spoofLastSeenNotice(Context context) {
-        LinearLayout box = card(context, 16);
+        LinearLayout box = IeRows.card(context, 5);
         TextView message = new TextView(context);
         message.setText(I18n.t(context, R.string.ie_spoof_last_seen_removed));
         message.setTextColor(C_TEXT);
@@ -248,18 +245,6 @@ public class DialogUtils {
             if (box.getParent() instanceof ViewGroup) ((ViewGroup) box.getParent()).removeView(box);
         });
         return box;
-    }
-
-    /** Settings-app style group header: uppercase, letter-spaced, muted. */
-    private static TextView sectionHeader(Context context, String text) {
-        TextView header = new TextView(context);
-        header.setText(text == null ? "" : text.toUpperCase(java.util.Locale.getDefault()));
-        header.setTextColor(C_TEXT2);
-        header.setTextSize(12);
-        header.setTypeface(null, Typeface.BOLD);
-        header.setLetterSpacing(0.08f);
-        header.setPadding(20, 22, 16, 10);
-        return header;
     }
 
     private static View createMenuRow(Context context, int iconRes, String label, String accentHex, Runnable onClick) {
@@ -312,7 +297,7 @@ public class DialogUtils {
     /** A switch whose hook is installed only when it is on at Instagram's start (Module): says so. */
     private static ToggleRow restartFlagSwitch(Context context, int iconRes, String accentHex, int labelRes, String flag) {
         ToggleRow row = flagSwitch(context, iconRes, accentHex, labelRes, flag);
-        row.labelView.setText(I18n.t(context, labelRes) + "\n" + I18n.t(context, R.string.ig_restart_to_apply_hint));
+        row.setSubtitle(I18n.t(context, R.string.ig_restart_to_apply_hint));
         return row;
     }
 
@@ -345,9 +330,9 @@ public class DialogUtils {
             });
         }
 
-        layout.addView(createDivider(context));
-        layout.addView(createEnableAllSwitch(context, master));
-        layout.addView(createDivider(context));
+        layout.addView(IeRows.divider(context));
+        layout.addView(IeRows.enableAllContainer(context, master));
+        layout.addView(IeRows.divider(context));
         LinearLayout group = cardOf(context, rows);
         layout.addView(group);
         return group;
@@ -355,7 +340,7 @@ public class DialogUtils {
 
     /** A grouped card holding the given rows. */
     private static LinearLayout cardOf(Context context, View... rows) {
-        LinearLayout group = card(context, 16);
+        LinearLayout group = IeRows.card(context, 5);
         for (View r : rows) group.addView(r);
         return group;
     }
@@ -477,7 +462,7 @@ public class DialogUtils {
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(C_CARD);
         bg.setCornerRadius(dp(context, 14));
-        bg.setStroke(1, C_HAIRLINE);
+        bg.setStroke(hairline(context), C_HAIRLINE);
         chip.setBackground(bg);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -497,9 +482,10 @@ public class DialogUtils {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(context, 8), dp(context, 9), dp(context, 10), dp(context, 9));
+        row.setMinimumHeight(dp(context, 48));
         row.setClickable(true);
         row.setFocusable(true);
-        row.setBackground(rowRipple(context, 16));
+        row.setBackground(IeRows.ripple(context, 5));
 
         TextView labelView = new TextView(context);
         labelView.setText(label);
@@ -521,13 +507,13 @@ public class DialogUtils {
         labelBlock.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
         android.widget.ImageView chevron = new android.widget.ImageView(context);
-        Drawable chev = loadModuleIcon(context, R.drawable.ic_chevron_right, C_TEXT2);
+        Drawable chev = IeRows.icon(context, R.drawable.ic_chevron_right, C_TEXT2);
         if (chev != null) chevron.setImageDrawable(chev);
         LinearLayout.LayoutParams chevLp = new LinearLayout.LayoutParams(dp(context, 20), dp(context, 20));
         chevLp.rightMargin = dp(context, 4);
         chevron.setLayoutParams(chevLp);
 
-        row.addView(buildIconChip(context, iconRes, accentHex));
+        row.addView(IeRows.iconChip(context, iconRes, accentHex));
         row.addView(labelBlock);
         row.addView(chevron);
         row.setOnClickListener(v -> onClick.run());
@@ -544,132 +530,19 @@ public class DialogUtils {
 
     private static void showGhostQuickToggleOptions(Context context) {
         LinearLayout layout = createSwitchLayout(context);
-
-        // Create switches for customizing what gets toggled
-        ToggleRow[] toggleSwitches = new ToggleRow[]{
-                createSwitch(context, R.drawable.ic_eye_off, "#5E5CE6", I18n.t(context, R.string.ig_dialog_quick_hide_seen),           FeatureFlags.quickToggleSeen),
-                createSwitch(context, R.drawable.ic_chat, "#5E5CE6", I18n.t(context, R.string.ig_dialog_quick_hide_typing),         FeatureFlags.quickToggleTyping),
-                createSwitch(context, R.drawable.ic_camera, "#5E5CE6", I18n.t(context, R.string.ig_dialog_quick_disable_screenshot),  FeatureFlags.quickToggleScreenshot),
-                createSwitch(context, R.drawable.ic_eye_off, "#5E5CE6", I18n.t(context, R.string.ig_dialog_quick_hide_view_once),      FeatureFlags.quickToggleViewOnce),
-                createSwitch(context, R.drawable.ic_story_ring, "#5E5CE6", I18n.t(context, R.string.ig_dialog_quick_hide_story_seen),     FeatureFlags.quickToggleStory),
-                createSwitch(context, R.drawable.ic_live, "#5E5CE6", I18n.t(context, R.string.ig_dialog_quick_hide_live_seen),      FeatureFlags.quickToggleLive),
-                createSwitch(context, R.drawable.ic_timer, "#5E5CE6", I18n.t(context, R.string.ig_dialog_quick_keep_ephemeral),      FeatureFlags.quickToggleEphemeral),
-                createSwitch(context, R.drawable.ic_eye, "#5E5CE6", I18n.t(context, R.string.ig_dialog_quick_permanent_view),      FeatureFlags.quickTogglePermanentView),
-                createSwitch(context, R.drawable.ic_camera, "#5E5CE6", I18n.t(context, R.string.ig_dialog_quick_allow_screenshots),   FeatureFlags.quickToggleAllowScreenshots)};
-
-        // Create Enable/Disable All switch
-        ToggleRow enableAllSwitch = createSwitch(context, I18n.t(context, R.string.ig_dialog_enable_disable_all), areAllEnabled(toggleSwitches));
-
-        // Master listener
-        enableAllSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            for (ToggleRow s :toggleSwitches) {
-                s.setChecked(isChecked);
-            }
-        });
-
-        // Individual switch listeners (update master switch automatically)
-        for (int i = 0; i < toggleSwitches.length; i++) {
-            final int index = i;
-            toggleSwitches[i].setOnCheckedChangeListener((buttonView, isChecked) -> {
-                enableAllSwitch.setOnCheckedChangeListener(null);
-                enableAllSwitch.setChecked(areAllEnabled(toggleSwitches));
-                enableAllSwitch.setOnCheckedChangeListener((buttonView2, isChecked2) -> {
-                    for (ToggleRow s2 :toggleSwitches) {
-                        s2.setChecked(isChecked2);
-                    }
-                });
-
-                // Update corresponding FeatureFlag instantly
-                switch (index) {
-                    case 0:
-                        FeatureFlags.quickToggleSeen = isChecked;
-                        break;
-                    case 1:
-                        FeatureFlags.quickToggleTyping = isChecked;
-                        break;
-                    case 2:
-                        FeatureFlags.quickToggleScreenshot = isChecked;
-                        break;
-                    case 3:
-                        FeatureFlags.quickToggleViewOnce = isChecked;
-                        break;
-                    case 4:
-                        FeatureFlags.quickToggleStory = isChecked;
-                        break;
-                    case 5:
-                        FeatureFlags.quickToggleLive = isChecked;
-                        break;
-                    case 6:
-                        FeatureFlags.quickToggleEphemeral = isChecked;
-                        break;
-                    case 7:
-                        FeatureFlags.quickTogglePermanentView = isChecked;
-                        break;
-                    case 8:
-                        FeatureFlags.quickToggleAllowScreenshots = isChecked;
-                        break;
-                }
-
-                // Save immediately
-                SettingsManager.saveAllFlags();
-
-                // Update ghost emoji immediately
-                Activity activity = UIHookManager.getCurrentActivity();
-                if (activity != null) {
-                    GhostEmojiManager.addGhostEmojiNextToInbox(activity, GhostModeUtils.isGhostModeActive());
-                }
-            });
-        }
-
-
-        // Add views to layout
-        layout.addView(createDivider(context)); // Divider above
-        layout.addView(createEnableAllSwitch(context, enableAllSwitch)); // Styled enable all switch
-        layout.addView(createDivider(context)); // Divider below
-
-        for (ToggleRow s :toggleSwitches) {
-            layout.addView(s);
-        }
-
-        // Show dialog
-        showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_quick_toggle), layout, () -> {
-        });
-
-    }
-
-
-    private static View createDivider(Context context) {
-        // Low-key spacer rather than a hard hairline — the grouped cards already delimit content,
-        // so loose full-width rules between them looked dated. Kept as a small transparent gap.
-        View divider = new View(context);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(context, 8));
-        divider.setLayoutParams(params);
-        divider.setBackgroundColor(Color.TRANSPARENT);
-        return divider;
-    }
-
-    private static Drawable rowRipple(Context ctx, int cornerPx) {
-        GradientDrawable mask = new GradientDrawable();
-        mask.setColor(Color.WHITE);
-        mask.setCornerRadius(cornerPx);
-        return new android.graphics.drawable.RippleDrawable(
-                android.content.res.ColorStateList.valueOf(C_PRESSED), null, mask);
-    }
-
-    /** One rounded "card" container idiom (matches the main menu) for grouping section rows. */
-    private static LinearLayout card(Context ctx, int topMargin) {
-        LinearLayout group = new LinearLayout(ctx);
-        group.setOrientation(LinearLayout.VERTICAL);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(C_CARD);
-        bg.setCornerRadius(R_CARD);
-        group.setBackground(bg);
-        group.setPadding(6, 6, 6, 6);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.topMargin = topMargin;
-        group.setLayoutParams(lp);
-        return group;
+        Runnable refresh = DialogUtils::refreshGhostIndicator;
+        addMasterGroup(context, layout,
+                flagSwitch(context, R.drawable.ic_eye_off, "#5E5CE6", R.string.ig_dialog_quick_hide_seen, "quickToggleSeen", refresh),
+                flagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ig_dialog_quick_hide_typing, "quickToggleTyping", refresh),
+                flagSwitch(context, R.drawable.ic_camera, "#5E5CE6", R.string.ig_dialog_quick_disable_screenshot, "quickToggleScreenshot", refresh),
+                flagSwitch(context, R.drawable.ic_eye_off, "#5E5CE6", R.string.ig_dialog_quick_hide_view_once, "quickToggleViewOnce", refresh),
+                flagSwitch(context, R.drawable.ic_story_ring, "#5E5CE6", R.string.ig_dialog_quick_hide_story_seen, "quickToggleStory", refresh),
+                flagSwitch(context, R.drawable.ic_live, "#5E5CE6", R.string.ig_dialog_quick_hide_live_seen, "quickToggleLive", refresh),
+                flagSwitch(context, R.drawable.ic_timer, "#5E5CE6", R.string.ig_dialog_quick_keep_ephemeral, "quickToggleEphemeral", refresh),
+                flagSwitch(context, R.drawable.ic_eye, "#5E5CE6", R.string.ig_dialog_quick_permanent_view, "quickTogglePermanentView", refresh),
+                flagSwitch(context, R.drawable.ic_camera, "#5E5CE6", R.string.ig_dialog_quick_allow_screenshots, "quickToggleAllowScreenshots", refresh));
+        layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_quick_toggle_hint)));
+        showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_quick_toggle), layout, () -> {});
     }
 
     /**
@@ -750,15 +623,15 @@ public class DialogUtils {
         });
 
         layout.addView(devModeSwitch);
-        layout.addView(createDivider(context));
+        layout.addView(IeRows.divider(context));
 
-        layout.addView(createActionRow(context, R.drawable.ic_download, I18n.t(context, R.string.ig_dialog_dev_import), "#30D158", v -> {
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_download, I18n.t(context, R.string.ig_dialog_dev_import), "#30D158", v -> {
             Bundle extras = new Bundle();
             extras.putString("target_package", context.getPackageName());
             openModuleScreen(context, ps.reso.instaeclipse.utils.ipc.BrokerPayload.IMPORT, extras);
         }));
 
-        layout.addView(createActionRow(context, R.drawable.ic_upload, I18n.t(context, R.string.ig_dialog_dev_export), "#0A84FF", v -> {
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_upload, I18n.t(context, R.string.ig_dialog_dev_export), "#0A84FF", v -> {
             Activity instagramActivity = UIHookManager.getCurrentActivity();
             if (instagramActivity != null && !instagramActivity.isFinishing()) {
                 try {
@@ -782,7 +655,7 @@ public class DialogUtils {
             }
         }));
 
-        layout.addView(createActionRow(context, R.drawable.ic_restart, I18n.t(context, R.string.ig_dialog_dev_restore_default_config), "#FF9F0A", v -> {
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_restart, I18n.t(context, R.string.ig_dialog_dev_restore_default_config), "#FF9F0A", v -> {
             IeDialog dlg = new IeDialog(context)
                     .title(I18n.t(context, R.string.ig_dialog_dev_restore_default_config))
                     .message(I18n.t(context, R.string.ig_dialog_dev_restore_default_config_confirm));
@@ -792,7 +665,7 @@ public class DialogUtils {
             dlg.show();
         }));
 
-        layout.addView(createDivider(context));
+        layout.addView(IeRows.divider(context));
 
         ToggleRow buildExpiredSwitch = createSwitch(context, R.drawable.ic_block, "#FF453A", I18n.t(context, R.string.ig_dialog_dev_remove_build_expired), FeatureFlags.removeBuildExpiredPopup);
         buildExpiredSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -867,13 +740,13 @@ public class DialogUtils {
                 : (threadId != null ? threadId : "unknown");
 
         if (!entries.isEmpty()) {
-            layout.addView(createActionRow(context, R.drawable.ic_upload, I18n.t(context, R.string.ig_dialog_unsent_export), "#0A84FF", v -> {
+            layout.addView(IeRows.actionRow(context, R.drawable.ic_upload, I18n.t(context, R.string.ig_dialog_unsent_export), "#0A84FF", v -> {
                 String path = exportUnsentJson(context, who, entries);
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, path != null
                         ? I18n.t(context, R.string.ig_dialog_unsent_exported, path)
                         : I18n.t(context, R.string.ig_toast_download_failed, "export"), Toast.LENGTH_LONG).show();
             }));
-            layout.addView(createActionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_unsent_clear_saved), "#FF453A", v -> {
+            layout.addView(IeRows.actionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_unsent_clear_saved), "#FF453A", v -> {
                 try {
                     IeDialog dlg = new IeDialog(context)
                             .title(I18n.t(context, R.string.ig_unsent_clear_saved))
@@ -891,12 +764,11 @@ public class DialogUtils {
                     dlg.show();
                 } catch (Throwable ignored) {}
             }));
-            layout.addView(createDivider(context));
+            layout.addView(IeRows.divider(context));
         }
 
         if (entries.isEmpty()) {
-            layout.addView(createInfoSection(context, I18n.t(context, R.string.ig_dialog_unsent_title),
-                    I18n.t(context, R.string.ig_dialog_unsent_empty)));
+            layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_dialog_unsent_empty)));
         } else {
             // One bordered card per deleted message: "Unsent" tag (accent) and time on top, text below.
             for (int i = 0; i < entries.size(); i++) {
@@ -907,7 +779,7 @@ public class DialogUtils {
                 row.setPadding(pad, dp(context, 11), pad, dp(context, 12));
                 android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
                 bg.setColor(C_CARD);
-                bg.setCornerRadius(R_CARD);
+                bg.setCornerRadius(dp(context, R_CARD));
                 bg.setStroke(Math.max(1, dp(context, 1)), 0x33FFFFFF);
                 row.setBackground(bg);
 
@@ -1036,8 +908,7 @@ public class DialogUtils {
                 ps.reso.instaeclipse.utils.ghost.UnsentLog.getAll(context);
 
         if (entries.isEmpty()) {
-            layout.addView(createInfoSection(context, I18n.t(context, R.string.ig_dialog_ghost_keep_unsent_chat),
-                    I18n.t(context, R.string.ig_dialog_unsent_empty)));
+            layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_dialog_unsent_empty)));
             showSectionDialog(context, I18n.t(context, R.string.ig_dialog_unsent_title), layout, () -> {});
             return;
         }
@@ -1055,7 +926,7 @@ public class DialogUtils {
             }
         }
 
-        LinearLayout foldersCard = card(context, 16);
+        LinearLayout foldersCard = IeRows.card(context, 5);
         for (java.util.Map.Entry<String, java.util.List<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry>> t : byThread.entrySet()) {
             final String threadId = t.getKey();
             final int count = t.getValue().size();
@@ -1071,13 +942,13 @@ public class DialogUtils {
                 name = threadId.isEmpty() ? I18n.t(context, R.string.ig_dialog_unsent_unknown_chat) : threadId;
             }
             final String display = name;
-            foldersCard.addView(createActionRow(context, R.drawable.ic_folder,
+            foldersCard.addView(IeRows.actionRow(context, R.drawable.ic_folder,
                     display + "   (" + count + ")", "#5E5CE6",
                     v -> showThreadUnsent(context, threadId.isEmpty() ? null : threadId, display)));
         }
         layout.addView(foldersCard);
 
-        layout.addView(createActionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_unsent_clear_saved), "#FF453A", v -> {
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_unsent_clear_saved), "#FF453A", v -> {
             try {
                 IeDialog dlg = new IeDialog(context)
                         .title(I18n.t(context, R.string.ig_unsent_clear_saved))
@@ -1102,19 +973,14 @@ public class DialogUtils {
     private static void showGhostOptions(Context context) {
         LinearLayout layout = createSwitchLayout(context);
 
-        layout.addView(createActionRow(context, R.drawable.ic_tune, I18n.t(context, R.string.ig_dialog_customize_quick_toggle), "#5E5CE6", v -> showGhostQuickToggleOptions(context)));
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_tune, I18n.t(context, R.string.ig_dialog_customize_quick_toggle), "#5E5CE6", v -> showGhostQuickToggleOptions(context)));
 
         // Each ghost toggle applies at once and refreshes the ghost emoji next to the inbox.
-        Runnable refreshGhostEmoji = () -> {
-            Activity activity = UIHookManager.getCurrentActivity();
-            if (activity != null) {
-                GhostEmojiManager.addGhostEmojiNextToInbox(activity, GhostModeUtils.isGhostModeActive());
-            }
-        };
+        Runnable refreshGhostEmoji = DialogUtils::refreshGhostIndicator;
         // Marking a story seen by hand only makes sense while story views are hidden.
         ToggleRow manualSeen = flagSwitch(context, R.drawable.ic_eye, "#5E5CE6", R.string.ig_feature_manual_story_seen, "manualStorySeen");
         Runnable refreshManualSeen = () -> setDependentToggle(context, manualSeen, FeatureFlags.isGhostStory,
-                R.string.ig_feature_manual_story_seen, R.string.ig_feature_manual_story_seen_requires);
+                R.string.ig_feature_manual_story_seen_requires);
         addMasterGroup(context, layout,
                 flagSwitch(context, R.drawable.ic_eye_off, "#5E5CE6", R.string.ig_dialog_ghost_hide_dm_seen, "isGhostSeen", refreshGhostEmoji),
                 flagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ig_dialog_ghost_hide_typing, "isGhostTyping", refreshGhostEmoji),
@@ -1126,7 +992,7 @@ public class DialogUtils {
                 flagSwitch(context, R.drawable.ic_camera, "#5E5CE6", R.string.ig_dialog_ghost_bypass_screenshot, "isGhostScreenshot", refreshGhostEmoji),
                 flagSwitch(context, R.drawable.ic_eye_off, "#5E5CE6", R.string.ig_dialog_ghost_hide_view_once, "isGhostViewOnce", refreshGhostEmoji));
 
-        layout.addView(createDivider(context));
+        layout.addView(IeRows.divider(context));
         layout.addView(cardOf(context,
                 manualSeen,
                 flagSwitch(context, R.drawable.ic_eye, "#5E5CE6", R.string.ig_dialog_ghost_read_receipt_chats, "readReceiptChats"),
@@ -1136,18 +1002,23 @@ public class DialogUtils {
         activityHint.setText(I18n.t(context, R.string.ie_ghost_activity_status_hint));
         activityHint.setTextSize(13);
         activityHint.setTextColor(C_TEXT2);
-        activityHint.setPadding(40, 16, 32, 8);
+        activityHint.setPadding(dp(context, 13), dp(context, 5), dp(context, 11), dp(context, 3));
         layout.addView(activityHint);
         refreshManualSeen.run();
 
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_ghost_mode), layout, () -> {});
     }
 
-    /** Disables a row whose parent feature is off and says which feature it needs. */
-    private static void setDependentToggle(Context context, ToggleRow row, boolean enabled,
-                                           int label, int requirement) {
+    private static void refreshGhostIndicator() {
+        Activity activity = UIHookManager.getCurrentActivity();
+        if (activity != null) {
+            GhostEmojiManager.addGhostEmojiNextToInbox(activity, GhostModeUtils.isGhostModeActive());
+        }
+    }
+
+    private static void setDependentToggle(Context context, ToggleRow row, boolean enabled, int requirement) {
         row.setEnabled(enabled);
-        row.labelView.setText(I18n.t(context, label) + (enabled ? "" : "\n" + I18n.t(context, requirement)));
+        row.setSubtitle(enabled ? null : I18n.t(context, requirement));
     }
 
     /** DM extras: keep disappearing/unsent messages, edit history, chat tools, inbox cleanup. */
@@ -1160,21 +1031,20 @@ public class DialogUtils {
         ToggleRow unsentIndicator = flagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ig_feature_unsent_indicator, "showUnsentIndicator");
         Runnable refreshUnsentRows = () -> {
             boolean keep = FeatureFlags.keepUnsentMessages;
-            setDependentToggle(context, keepInChat, keep, R.string.ig_feature_keep_unsent_in_chat, R.string.ig_feature_unsent_indicator_requires);
-            setDependentToggle(context, unsentButton, keep, R.string.ig_feature_show_unsent_button, R.string.ig_feature_unsent_indicator_requires);
-            setDependentToggle(context, unsentIndicator, keep, R.string.ig_feature_unsent_indicator, R.string.ig_feature_unsent_indicator_requires);
+            setDependentToggle(context, keepInChat, keep, R.string.ig_feature_unsent_indicator_requires);
+            setDependentToggle(context, unsentButton, keep, R.string.ig_feature_unsent_indicator_requires);
+            setDependentToggle(context, unsentIndicator, keep, R.string.ig_feature_unsent_indicator_requires);
         };
         // The header applies this on the next chat open; the gesture reads the flag on every touch.
         ToggleRow hideMenuButton = flagSwitch(context, R.drawable.ic_tune, "#5E5CE6", R.string.ig_hide_chat_menu_button, "hideChatMenuButton");
-        hideMenuButton.labelView.setText(I18n.t(context, R.string.ig_hide_chat_menu_button)
-                + "\n" + I18n.t(context, R.string.ig_hide_chat_menu_button_hint));
+        hideMenuButton.setSubtitle(I18n.t(context, R.string.ig_hide_chat_menu_button_hint));
         layout.addView(cardOf(context,
                 flagSwitch(context, R.drawable.ic_timer, "#5E5CE6", R.string.ig_dialog_ghost_keep_disappearing, "keepEphemeralMessages"),
                 flagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ig_dialog_ghost_keep_unsent_chat, "keepUnsentMessages", refreshUnsentRows),
                 keepInChat,
                 unsentButton,
                 unsentIndicator,
-                createActionRow(context, R.drawable.ic_chat, I18n.t(context, R.string.ig_dialog_unsent_title), "#5E5CE6", v -> showUnsentMessages(context)),
+                IeRows.actionRow(context, R.drawable.ic_chat, I18n.t(context, R.string.ig_dialog_unsent_title), "#5E5CE6", v -> showUnsentMessages(context)),
                 flagSwitch(context, R.drawable.ic_chat, "#5E5CE6", R.string.ig_dialog_ghost_edit_history, "keepEditHistory"),
                 flagSwitch(context, R.drawable.ic_jump_first, "#5E5CE6", R.string.ig_dialog_ghost_jump_first, "jumpToFirstMessage"),
                 hideMenuButton,
@@ -1202,7 +1072,7 @@ public class DialogUtils {
                 flagSwitch(context, R.drawable.ic_link, "#FF453A", R.string.ig_dialog_ad_disable_tracking, "disableTrackingLinks"));
 
         // Outside the master switch: what Instagram keeps about your searches (#280).
-        layout.addView(createDivider(context));
+        layout.addView(IeRows.divider(context));
         layout.addView(cardOf(context,
                 flagSwitch(context, R.drawable.ic_search, "#FF453A", R.string.ig_disable_search_history, "disableSearchHistory")));
 
@@ -1227,7 +1097,7 @@ public class DialogUtils {
         // Keep the DM allowance preference when switching the daily feature off and back on.
         ToggleRow[] switches = {stories, feed, reels, exceptDM, daily, night, explore, comments};
         ToggleRow master = createSwitch(context, I18n.t(context, R.string.ig_dialog_enable_disable_all), areAllEnabled(switches));
-        LinearLayout amount = (LinearLayout) createInfoSection(context,
+        LinearLayout amount = (LinearLayout) IeRows.valueRow(context,
                 I18n.t(context, R.string.ig_reel_limit_allowance), String.valueOf(FeatureFlags.dailyReelLimit));
         TextView value = (TextView) amount.getChildAt(1);
         value.setTextColor(accent());
@@ -1241,10 +1111,10 @@ public class DialogUtils {
             refreshUsage.run();
         }));
 
-        LinearLayout nightStart = (LinearLayout) createInfoSection(context,
+        LinearLayout nightStart = (LinearLayout) IeRows.valueRow(context,
                 I18n.t(context, R.string.ig_night_reels_start_label),
                 formatNightReelTime(context, FeatureFlags.nightReelBlockStartMinutes));
-        LinearLayout nightEnd = (LinearLayout) createInfoSection(context,
+        LinearLayout nightEnd = (LinearLayout) IeRows.valueRow(context,
                 I18n.t(context, R.string.ig_night_reels_end_label),
                 formatNightReelTime(context, FeatureFlags.nightReelBlockEndMinutes));
         TextView nightStartValue = (TextView) nightStart.getChildAt(1);
@@ -1257,13 +1127,13 @@ public class DialogUtils {
         nightEnd.setMinimumHeight(dp(context, 48));
         nightStart.setFocusable(true);
         nightEnd.setFocusable(true);
-        nightStart.setBackground(rowRipple(context, 16));
-        nightEnd.setBackground(rowRipple(context, 16));
+        nightStart.setBackground(IeRows.ripple(context, 5));
+        nightEnd.setBackground(IeRows.ripple(context, 5));
         TextView nightStatus = new TextView(context);
         nightStatus.setTextColor(C_TEXT2);
         nightStatus.setTextSize(13);
         nightStatus.setFontFeatureSettings("tnum");
-        nightStatus.setPadding(40, 0, 32, 20);
+        nightStatus.setPadding(dp(context, 13), 0, dp(context, 11), dp(context, 7));
 
         Runnable refreshNight = () -> {
             boolean visible = night.isChecked();
@@ -1321,7 +1191,8 @@ public class DialogUtils {
                 row.setEnabled(!locked || !row.isChecked());
             }
             master.setEnabled(!locked);
-            extreme.setEnabled(!locked && any);
+            if (locked) extreme.setLocked(I18n.t(context, R.string.ig_extreme_active));
+            else extreme.setEnabled(any);
             exceptDM.setVisibility(reels.isChecked() ? View.VISIBLE : View.GONE);
             exceptDM.setEnabled(reels.isChecked() && (!locked || exceptDM.isChecked()));
             daily.setEnabled(!locked && !reels.isChecked());
@@ -1383,10 +1254,10 @@ public class DialogUtils {
         });
         refresh.run();
         layout.addView(extreme);
-        layout.addView(createDivider(context));
-        layout.addView(createEnableAllSwitch(context, master));
-        layout.addView(createDivider(context));
-        LinearLayout group = card(context, 16);
+        layout.addView(IeRows.divider(context));
+        layout.addView(IeRows.enableAllContainer(context, master));
+        layout.addView(IeRows.divider(context));
+        LinearLayout group = IeRows.card(context, 5);
         for (ToggleRow row : switches) {
             group.addView(row);
             if (row == daily) {
@@ -1402,7 +1273,7 @@ public class DialogUtils {
         }
         layout.addView(group);
         // Outside the extreme-mode group: parts of the app removed (Meta AI, prompts, upsells).
-        layout.addView(createDivider(context));
+        layout.addView(IeRows.divider(context));
         layout.addView(cardOf(context,
                 flagSwitch(context, R.drawable.ic_sparkle, "#30D158", R.string.ig_dialog_misc_remove_meta_ai, "removeMetaAI"),
                 extraSwitch(context, "#30D158", "hideOnboardingPrompts"),
@@ -1412,17 +1283,17 @@ public class DialogUtils {
     }
 
     private static Runnable addDailyReelStatus(Context context, LinearLayout layout) {
-        layout.addView(sectionHeader(context, I18n.t(context, R.string.ig_reel_limit_title)));
-        LinearLayout group = card(context, 16);
+        layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.ig_reel_limit_title)));
+        LinearLayout group = IeRows.card(context, 5);
         TextView usage = new TextView(context);
         usage.setTextColor(C_TEXT);
         usage.setTextSize(18);
         usage.setTypeface(null, Typeface.BOLD);
         usage.setFontFeatureSettings("tnum");
-        usage.setPadding(40, 24, 32, 24);
+        usage.setPadding(dp(context, 13), dp(context, 8), dp(context, 11), dp(context, 8));
         usage.setMinimumHeight(dp(context, 48));
         usage.setFocusable(true);
-        usage.setBackground(rowRipple(context, 16));
+        usage.setBackground(IeRows.ripple(context, 5));
         Runnable refreshUsage = () -> {
             int watched = DailyReelLimit.watchedToday();
             usage.setText(FeatureFlags.dailyReelLimitEnabled
@@ -1677,7 +1548,7 @@ public class DialogUtils {
     private static void showNavigationOptions(Context context) {
         LinearLayout layout = createSwitchLayout(context);
 
-        layout.addView(sectionHeader(context, I18n.t(context, R.string.menu_nav_tabs)));
+        layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.menu_nav_tabs)));
         layout.addView(cardOf(context,
                 flagSwitch(context, R.drawable.ic_block, "#30D158", R.string.ig_nav_tab_home, "hideTabHome"),
                 flagSwitch(context, R.drawable.ic_block, "#30D158", R.string.ig_nav_tab_reels, "hideTabReels"),
@@ -1686,14 +1557,14 @@ public class DialogUtils {
                 flagSwitch(context, R.drawable.ic_block, "#30D158", R.string.ig_nav_tab_activity, "hideTabActivity"),
                 flagSwitch(context, R.drawable.ic_block, "#30D158", R.string.ig_nav_tab_profile, "hideTabProfile")));
 
-        layout.addView(sectionHeader(context, I18n.t(context, R.string.menu_nav_order)));
+        layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.menu_nav_order)));
         layout.addView(cardOf(context,
-                createActionRow(context, R.drawable.ic_tune, I18n.t(context, R.string.ig_nav_tab_order), "#30D158",
+                IeRows.actionRow(context, R.drawable.ic_tune, I18n.t(context, R.string.ig_nav_tab_order), "#30D158",
                         v -> showTabOrderDialog(context)),
-                createActionRow(context, R.drawable.ic_tune, startupTabLabel(context), "#30D158",
+                IeRows.actionRow(context, R.drawable.ic_tune, startupTabLabel(context), "#30D158",
                         v -> showStartupTabDialog(context, (TextView) findFirstText(v)))));
 
-        layout.addView(sectionHeader(context, I18n.t(context, R.string.menu_nav_gestures)));
+        layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.menu_nav_gestures)));
         layout.addView(cardOf(context, extraSwitch(context, "#30D158", "disableSwipeToCamera"),
                 flagSwitch(context, R.drawable.ic_home, "#30D158", R.string.ig_back_leaves_home, "backLeavesHome")));
 
@@ -1797,7 +1668,7 @@ public class DialogUtils {
     private static void showFeedOptions(Context context) {
         LinearLayout layout = createSwitchLayout(context);
 
-        layout.addView(sectionHeader(context, I18n.t(context, R.string.ig_dialog_menu_clean_feed)));
+        layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.ig_dialog_menu_clean_feed)));
         layout.addView(cardOf(context,
                 flagSwitch(context, R.drawable.ic_sparkle, "#64D2FF", R.string.ig_dialog_clean_feed_hide_suggested, "hideSuggestionsInFeed"),
                 flagSwitch(context, R.drawable.ic_sparkle, "#64D2FF", R.string.ig_dialog_clean_feed_hide_threads, "hideThreadsSuggestions"),
@@ -1807,9 +1678,9 @@ public class DialogUtils {
                 flagSwitch(context, R.drawable.ic_block, "#64D2FF", R.string.ig_dialog_misc_disable_discover_people, "disableDiscoverPeople")));
 
         // feat_options reads "Options:" (written for the companion app), so drop the colon for a header.
-        layout.addView(sectionHeader(context, I18n.t(context, R.string.feat_options).replaceAll("[:：]\\s*$", "")));
+        layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.feat_options).replaceAll("[:：]\\s*$", "")));
         // Date format: only used (and tappable) while "Show exact dates" is on (#265).
-        View tsFormat = createActionRow(context, R.drawable.ic_timer, timestampFormatLabel(context), "#64D2FF",
+        View tsFormat = IeRows.actionRow(context, R.drawable.ic_timer, timestampFormatLabel(context), "#64D2FF",
                 v -> showTimestampFormatDialog(context, (TextView) findFirstText(v)));
         setRowEnabled(tsFormat, FeatureFlags.exactTimestamps);
         layout.addView(cardOf(context,
@@ -1820,7 +1691,7 @@ public class DialogUtils {
                 flagSwitch(context, R.drawable.ic_search, "#64D2FF", R.string.ig_dialog_misc_photo_zoom, "enablePhotoZoom"),
                 flagSwitch(context, R.drawable.ic_movie, "#64D2FF", R.string.ig_dialog_misc_disable_video_autoplay, "disableVideoAutoPlay"),
                 flagSwitch(context, R.drawable.ic_restart, "#64D2FF", R.string.ig_confirm_refresh, "confirmFeedRefresh"),
-                createActionRow(context, R.drawable.ic_sparkle, feedCornerLabel(context), "#64D2FF",
+                IeRows.actionRow(context, R.drawable.ic_sparkle, feedCornerLabel(context), "#64D2FF",
                         v -> showFeedCornerDialog(context, (TextView) findFirstText(v)))));
 
         showSectionDialog(context, I18n.t(context, R.string.menu_feed), layout, () -> {});
@@ -1877,12 +1748,12 @@ public class DialogUtils {
                 flagSwitch(context, R.drawable.ic_info, "#FF375F", R.string.ig_dialog_misc_story_info, "storyInfo"),
                 flagSwitch(context, R.drawable.ic_search, "#FF375F", R.string.ig_dialog_misc_viewer_search, "storyViewerSearch"),
                 extraSwitch(context, "#FF375F", "hideStoriesTray")));
-        View ringRow = createActionRow(context, R.drawable.ic_palette, storyRingColorLabel(context).toString(), "#FF375F",
+        View ringRow = IeRows.actionRow(context, R.drawable.ic_palette, storyRingColorLabel(context).toString(), "#FF375F",
                 v -> showStoryRingColorDialog(context, (TextView) findFirstText(v)));
         View ringText = findFirstText(ringRow);
         if (ringText instanceof TextView tv) tv.setText(storyRingColorLabel(context)); // with the color swatch
         layout.addView(cardOf(context,
-                createActionRow(context, R.drawable.ic_story_ring, storyTraySizeLabel(context), "#FF375F",
+                IeRows.actionRow(context, R.drawable.ic_story_ring, storyTraySizeLabel(context), "#FF375F",
                         v -> showStoryTraySizeDialog(context, (TextView) findFirstText(v))),
                 ringRow));
 
@@ -1963,10 +1834,10 @@ public class DialogUtils {
      * either lock requires the current passcode.
      */
     private static LinearLayout buildLockCard(Context context) {
-        LinearLayout cardView = card(context, 16);
+        LinearLayout cardView = IeRows.card(context, 5);
 
         // 1. Set / change the passcode (shared by both locks; stored as a salted SHA-256 hash).
-        cardView.addView(createActionRow(context, R.drawable.ic_shield,
+        cardView.addView(IeRows.actionRow(context, R.drawable.ic_shield,
                 I18n.t(context, R.string.ig_dialog_misc_lock_dms_set), "#BF5AF2",
                 v -> promptChangeDmPasscode(context)));
 
@@ -2028,7 +1899,7 @@ public class DialogUtils {
             }
         });
         cardView.addView(selected);
-        cardView.addView(createActionRow(context, R.drawable.ic_chat,
+        cardView.addView(IeRows.actionRow(context, R.drawable.ic_chat,
                 I18n.t(context, R.string.ig_lock_select_chats), "#BF5AF2", v ->
                         ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.authenticate(activityOf(context),
                                 I18n.t(context, R.string.ig_lock_change_locks_prompt), "settings",
@@ -2094,10 +1965,10 @@ public class DialogUtils {
                 flagSwitch(context, R.drawable.ic_content_copy, A_SOCIAL, R.string.ig_profile_menu_tools, "profileMenuTools"),
                 restartFlagSwitch(context, R.drawable.ic_heart, A_SOCIAL, R.string.ig_post_counts_feature, "postCountSpoof"),
                 restartFlagSwitch(context, R.drawable.ic_eye, A_SOCIAL, R.string.ig_profile_spoofer, "profileSpoofer"),
-                createActionRow(context, R.drawable.ic_tune, I18n.t(context, R.string.ig_profile_spoofer_edit), A_SOCIAL,
+                IeRows.actionRow(context, R.drawable.ic_tune, I18n.t(context, R.string.ig_profile_spoofer_edit), A_SOCIAL,
                         v -> showProfileSpoofDialog(context)),
                 flagSwitch(context, R.drawable.ic_search, A_SOCIAL, R.string.ig_profile_analyzer, "profileAnalyzer"),
-                createActionRow(context, R.drawable.ic_eye, I18n.t(context, R.string.ig_pa_watchlist), A_SOCIAL,
+                IeRows.actionRow(context, R.drawable.ic_eye, I18n.t(context, R.string.ig_pa_watchlist), A_SOCIAL,
                         v -> ps.reso.instaeclipse.mods.misc.ProfileAnalyzer.showWatchlist(context)),
                 restartFlagSwitch(context, R.drawable.ic_notification, A_SOCIAL, R.string.ig_confirm_follows, "confirmFollows"),
                 flagSwitch(context, R.drawable.ic_notification, A_SOCIAL, R.string.ig_dialog_misc_profile_follows_label, "showFollowStatusLabel"),
@@ -2180,7 +2051,7 @@ public class DialogUtils {
                 flagSwitch(context, R.drawable.ic_notification, "#0A84FF", R.string.ig_dialog_misc_show_feature_toasts, "showFeatureToasts"),
                 flagSwitch(context, R.drawable.ic_sparkle, "#0A84FF", R.string.ig_feature_unlock_plus, "unlockPlusBenefits"),
                 flagSwitch(context, R.drawable.ic_link, "#0A84FF", R.string.ig_dialog_open_links_externally, "openLinksExternally"),
-                createActionRow(context, R.drawable.ic_link, shareDomainLabel(context), "#0A84FF",
+                IeRows.actionRow(context, R.drawable.ic_link, shareDomainLabel(context), "#0A84FF",
                         v -> showShareDomainDialog(context, (TextView) findFirstText(v)))));
         showSectionDialog(context, I18n.t(context, R.string.menu_app), layout, () -> {});
     }
@@ -2189,7 +2060,7 @@ public class DialogUtils {
     private static void showLockOptions(Context context) {
         LinearLayout layout = createSwitchLayout(context);
         layout.addView(buildLockCard(context));
-        layout.addView(createInfoSection(context, "", I18n.t(context, R.string.ig_lock_relock_hint)));
+        layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_lock_relock_hint)));
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_misc_lock_section), layout, () -> {});
     }
 
@@ -2198,21 +2069,21 @@ public class DialogUtils {
     private static void showHideChatsOptions(Context context) {
         LinearLayout layout = createSwitchLayout(context);
 
-        LinearLayout hideCard = card(context, 16);
+        LinearLayout hideCard = IeRows.card(context, 5);
         ToggleRow hideChats = createSwitch(context, R.drawable.ic_eye_off, A_PRIVACY,
                 I18n.t(context, R.string.ig_dialog_misc_hide_chats), FeatureFlags.hideSpecificChats);
         ToggleRow showButton = createSwitch(context, R.drawable.ic_eye, A_PRIVACY,
                 I18n.t(context, R.string.ig_hide_chats_show_button), FeatureFlags.showHideChatButton);
-        View selectChats = createActionRow(context, R.drawable.ic_eye,
+        View selectChats = IeRows.actionRow(context, R.drawable.ic_eye,
                 I18n.t(context, R.string.ig_hide_chats_select), A_PRIVACY, v -> showChatPicker(context));
         setDependentToggle(context, showButton, FeatureFlags.hideSpecificChats,
-                R.string.ig_hide_chats_show_button, R.string.ig_hide_chats_show_button_requires);
+                R.string.ig_hide_chats_show_button_requires);
         selectChats.setEnabled(FeatureFlags.hideSpecificChats);
         selectChats.setAlpha(FeatureFlags.hideSpecificChats ? 1f : 0.38f);
         hideChats.setOnCheckedChangeListener((b, checked) -> {
             FeatureFlags.hideSpecificChats = checked;
             setDependentToggle(context, showButton, checked,
-                    R.string.ig_hide_chats_show_button, R.string.ig_hide_chats_show_button_requires);
+                    R.string.ig_hide_chats_show_button_requires);
             selectChats.setEnabled(checked);
             selectChats.setAlpha(checked ? 1f : 0.38f);
             SettingsManager.saveAllFlags();
@@ -2228,8 +2099,7 @@ public class DialogUtils {
         hideCard.addView(selectChats);
         layout.addView(hideCard);
 
-        layout.addView(createInfoSection(context, "",
-                I18n.t(context, R.string.ig_hide_chats_picker_hint)));
+        layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_hide_chats_picker_hint)));
 
         showSectionDialog(context, I18n.t(context, R.string.ig_hide_chats_title), layout, () -> {});
     }
@@ -2262,12 +2132,12 @@ public class DialogUtils {
             if (knownTitle == null || knownTitle.isEmpty()) chats.put(entry.getKey(), entry.getValue());
         }
         if (chats.isEmpty()) {
-            layout.addView(createInfoSection(context, I18n.t(context, pickerTitle),
+            layout.addView(IeRows.helpText(context,
                     I18n.t(context, locking ? R.string.ig_lock_selected_empty : R.string.ig_hide_chats_picker_empty)));
             showSectionDialog(context, I18n.t(context, pickerTitle), layout, () -> {});
             return;
         }
-        LinearLayout cardView = card(context, 16);
+        LinearLayout cardView = IeRows.card(context, 5);
         for (java.util.Map.Entry<String, String> entry : chats.entrySet()) {
             final String id = entry.getKey();
             final String storedTitle = entry.getValue() == null ? "" : entry.getValue().trim();
@@ -2522,7 +2392,7 @@ public class DialogUtils {
             SettingsManager.saveAllFlags();
         });
 
-        LinearLayout toggleCard = card(context, 16);
+        LinearLayout toggleCard = IeRows.card(context, 5);
         toggleCard.addView(spoofSwitch);
         layout.addView(toggleCard);
 
@@ -2531,9 +2401,9 @@ public class DialogUtils {
                 : !FeatureFlags.spoofLabel.isEmpty() ? FeatureFlags.spoofLabel
                 : ps.reso.instaeclipse.mods.location.LocationPresets.coords(FeatureFlags.spoofLat, FeatureFlags.spoofLng);
 
-        LinearLayout current = card(context, 16);
-        current.addView(createInfoSection(context, I18n.t(context, R.string.ig_dialog_location_current_title), place));
-        current.addView(createActionRow(context, R.drawable.ic_search, I18n.t(context, R.string.ig_dialog_location_pick), "#FFD60A", v -> {
+        LinearLayout current = IeRows.card(context, 5);
+        current.addView(IeRows.valueRow(context, I18n.t(context, R.string.ig_dialog_location_current_title), place));
+        current.addView(IeRows.actionRow(context, R.drawable.ic_search, I18n.t(context, R.string.ig_dialog_location_pick), "#FFD60A", v -> {
             Bundle extras = new Bundle();
             extras.putDouble(LocationPickerActivity.EXTRA_LAT, FeatureFlags.spoofLat);
             extras.putDouble(LocationPickerActivity.EXTRA_LNG, FeatureFlags.spoofLng);
@@ -2550,8 +2420,8 @@ public class DialogUtils {
         java.util.List<ps.reso.instaeclipse.mods.location.LocationPresets.Preset> recent =
                 ps.reso.instaeclipse.mods.location.LocationPresets.parse(FeatureFlags.spoofRecent);
         if (!recent.isEmpty()) {
-            layout.addView(sectionHeader(context, I18n.t(context, R.string.ig_dialog_location_recent)));
-            LinearLayout recentCard = card(context, 16);
+            layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.ig_dialog_location_recent)));
+            LinearLayout recentCard = IeRows.card(context, 5);
             for (ps.reso.instaeclipse.mods.location.LocationPresets.Preset p : recent) {
                 boolean active = set && ps.reso.instaeclipse.mods.location.LocationPresets.distanceMeters(
                         p.lat, p.lng, FeatureFlags.spoofLat, FeatureFlags.spoofLng) < 5;
@@ -2593,9 +2463,9 @@ public class DialogUtils {
             ps.reso.instaeclipse.mods.ui.theme.IgThemeHook.refreshCurrentActivity();
         });
 
-        LinearLayout colorsCard = card(context, 16);
+        LinearLayout colorsCard = IeRows.card(context, 5);
         colorsCard.addView(themeSwitch);
-        colorsCard.addView(createActionRow(context, R.drawable.ic_palette,
+        colorsCard.addView(IeRows.actionRow(context, R.drawable.ic_palette,
                 I18n.t(context, R.string.theme_customize), "#FF2D55", v -> {
                     if (ModuleActivityLauncher.launch(context,
                             ps.reso.instaeclipse.utils.ipc.BrokerPayload.THEME, null)) {
@@ -2608,22 +2478,22 @@ public class DialogUtils {
         // Follow the phone's mode, like the customizer: in dark mode pick the dark theme, in light
         // mode the light-mode behaviour.
         if (ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine.isNightNow()) {
-            colorsCard.addView(createActionRow(context, R.drawable.ic_palette,
+            colorsCard.addView(IeRows.actionRow(context, R.drawable.ic_palette,
                     I18n.t(context, R.string.theme_dark_mode) + ": " + darkModeLabel(context, FeatureFlags.themePresetId),
                     "#FF2D55", v -> pickDarkModeTheme(context)));
         } else {
-            colorsCard.addView(createActionRow(context, R.drawable.ic_palette,
+            colorsCard.addView(IeRows.actionRow(context, R.drawable.ic_palette,
                     I18n.t(context, R.string.theme_light_mode) + ": " + lightModeLabel(context, FeatureFlags.themeLightPresetId),
                     "#FF2D55", v -> pickLightModeTheme(context)));
         }
-        layout.addView(sectionHeader(context, I18n.t(context, R.string.theme_section_colors)));
+        layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.theme_section_colors)));
         layout.addView(colorsCard);
 
         // ---- Fonts & Emoji ----
         // Custom Font + Custom Emoji now live under Custom Theme (moved out of Misc). Both apply on
         // the next Instagram start (Typeface cache). Emoji uses the font-fallback method, so any
         // color emoji .ttf/.otf works.
-        layout.addView(sectionHeader(context, I18n.t(context, R.string.theme_section_fonts)));
+        layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.theme_section_fonts)));
         layout.addView(buildFontsCard(context));
 
         showSectionDialog(context, I18n.t(context, R.string.theme_title), layout, () -> {
@@ -2699,7 +2569,7 @@ public class DialogUtils {
     /** Grouped card: Custom Font (toggle + picker) and Custom Emoji (toggle + picker). Shared by the
      *  Custom Theme section. Applies on next Instagram start. */
     private static LinearLayout buildFontsCard(Context context) {
-        LinearLayout fontCard = card(context, 16);
+        LinearLayout fontCard = IeRows.card(context, 5);
 
         ToggleRow fontSwitch = createSwitch(context, R.drawable.ic_palette, "#FF2D55",
                 I18n.t(context, R.string.ig_dialog_misc_custom_font), FeatureFlags.customFontEnabled);
@@ -2708,7 +2578,7 @@ public class DialogUtils {
             SettingsManager.saveAllFlags();
         });
         fontCard.addView(fontSwitch);
-        fontCard.addView(createActionRow(context, R.drawable.ic_palette,
+        fontCard.addView(IeRows.actionRow(context, R.drawable.ic_palette,
                 I18n.t(context, R.string.ig_custom_font_pick), "#FF2D55", v -> {
                     Activity act = activityOf(context);
                     if (act != null) ps.reso.instaeclipse.mods.ui.CustomFontHook.launchPicker(act);
@@ -2723,7 +2593,7 @@ public class DialogUtils {
             SettingsManager.saveAllFlags();
         });
         fontCard.addView(emojiSwitch);
-        fontCard.addView(createActionRow(context, R.drawable.ic_palette,
+        fontCard.addView(IeRows.actionRow(context, R.drawable.ic_palette,
                 I18n.t(context, R.string.ig_custom_emoji_pick), "#FF2D55", v -> {
                     Activity act = activityOf(context);
                     if (act != null) ps.reso.instaeclipse.mods.ui.CustomFontHook.launchEmojiPicker(act);
@@ -2731,46 +2601,6 @@ public class DialogUtils {
                             Toast.LENGTH_SHORT).show();
                 }));
         return fontCard;
-    }
-
-    private static class RadioRow extends LinearLayout {
-        private final TextView checkmark;
-
-        RadioRow(Context context, String label, boolean checked) {
-            super(context);
-            setOrientation(HORIZONTAL);
-            setPadding(8, 4, 8, 4);
-            setGravity(Gravity.CENTER_VERTICAL);
-            setClickable(true);
-            setFocusable(true);
-
-            StateListDrawable bg = new StateListDrawable();
-            bg.addState(new int[]{android.R.attr.state_pressed}, new ColorDrawable(C_PRESSED));
-            bg.addState(new int[]{}, new ColorDrawable(Color.TRANSPARENT));
-            setBackground(bg);
-
-            TextView labelView = new TextView(context);
-            labelView.setText(label);
-            labelView.setTextColor(Color.WHITE);
-            labelView.setTextSize(16);
-            labelView.setPadding(0, 20, 16, 20);
-            LayoutParams lp = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f);
-            labelView.setLayoutParams(lp);
-
-            checkmark = new TextView(context);
-            checkmark.setText("✓");
-            checkmark.setTextColor(accent());
-            checkmark.setTextSize(18);
-            checkmark.setTypeface(null, Typeface.BOLD);
-            checkmark.setVisibility(checked ? VISIBLE : INVISIBLE);
-
-            addView(labelView);
-            addView(checkmark);
-        }
-
-        void setChecked(boolean checked) {
-            checkmark.setVisibility(checked ? VISIBLE : INVISIBLE);
-        }
     }
 
     private static String downloadQualityLabel(Context context, int ceiling) {
@@ -2828,7 +2658,7 @@ public class DialogUtils {
             compatibility.setVisibility(visibility);
             lowerFallback.setVisibility(visibility);
         };
-        View quality = createActionRow(context, R.drawable.ic_download,
+        View quality = IeRows.actionRow(context, R.drawable.ic_download,
                 I18n.t(context, R.string.ie_download_quality) + " · " + downloadModeLabel(context),
                 "#FF9F0A", v -> showDownloadQuality(context, (TextView) findFirstText(v), updateBestControls));
         layout.addView(cardOf(context, quality, compatibility, lowerFallback));
@@ -2842,7 +2672,7 @@ public class DialogUtils {
 
         // Cache Stories — keep viewed stories locally for the chosen duration, independent of the
         // source story's lifetime on Instagram.
-        LinearLayout duration = (LinearLayout) createInfoSection(context, I18n.t(context, R.string.ig_story_cache_duration),
+        LinearLayout duration = (LinearLayout) IeRows.valueRow(context, I18n.t(context, R.string.ig_story_cache_duration),
                 I18n.t(context, R.string.ig_story_cache_hours, FeatureFlags.storyCacheHours));
         TextView hours = (TextView) duration.getChildAt(1);
         hours.setTextColor(accent());
@@ -2858,7 +2688,7 @@ public class DialogUtils {
         duration.setEnabled(FeatureFlags.cacheStories);
         duration.setAlpha(FeatureFlags.cacheStories ? 1f : .45f);
 
-        layout.addView(createDivider(context));
+        layout.addView(IeRows.divider(context));
         layout.addView(cardOf(context,
                 flagSwitch(context, R.drawable.ic_download, "#FF9F0A", R.string.ig_dialog_downloader_voice, "enableVoiceDownload"),
                 flagSwitch(context, R.drawable.ic_download, "#FF9F0A", R.string.ig_dialog_downloader_stickers, "enableStickerDownload"),
@@ -2871,7 +2701,7 @@ public class DialogUtils {
                     duration.setAlpha(FeatureFlags.cacheStories ? 1f : .45f);
                 }),
                 duration,
-                createActionRow(context, R.drawable.ic_eye, I18n.t(context, R.string.ig_story_cache_view), "#FF9F0A", v -> showCachedStories(context))));
+                IeRows.actionRow(context, R.drawable.ic_eye, I18n.t(context, R.string.ig_story_cache_view), "#FF9F0A", v -> showCachedStories(context))));
 
         // Where and how files are saved.
         String folderRaw = FeatureFlags.downloaderCustomPath.isEmpty()
@@ -2881,16 +2711,16 @@ public class DialogUtils {
         // Strip everything up to and including the primary storage root ("…/0/")
         // so "/storage/emulated/0/Download/InstaEclipse" → "Download/InstaEclipse"
         String folderDisplay = folderRaw.replaceFirst("^.*/0/", "");
-        layout.addView(sectionHeader(context, I18n.t(context, R.string.ig_dialog_section_downloader_settings)));
+        layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.ig_dialog_section_downloader_settings)));
         // The folder is picked with the system folder picker, which only the companion app can run.
         TextView folderHint = new TextView(context);
         folderHint.setText(I18n.t(context, R.string.ig_downloader_folder_hint));
         folderHint.setTextSize(13);
         folderHint.setTextColor(C_TEXT2);
-        folderHint.setPadding(40, 0, 32, 20);
+        folderHint.setPadding(dp(context, 13), 0, dp(context, 11), dp(context, 7));
         LinearLayout folderBlock = new LinearLayout(context);
         folderBlock.setOrientation(LinearLayout.VERTICAL);
-        folderBlock.addView(createInfoSection(context, I18n.t(context, R.string.ig_dialog_downloader_folder), folderDisplay));
+        folderBlock.addView(IeRows.valueRow(context, I18n.t(context, R.string.ig_dialog_downloader_folder), folderDisplay));
         folderBlock.addView(folderHint);
         layout.addView(cardOf(context,
                 folderBlock,
@@ -2906,7 +2736,7 @@ public class DialogUtils {
         LinearLayout layout = createSwitchLayout(context);
 
         // Force Reels Quality — inline single choice (FeatureFlags.forceReelQuality, 0 = auto).
-        layout.addView(sectionHeader(context, I18n.t(context, R.string.ig_dialog_quality_force_reels)));
+        layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.ig_dialog_quality_force_reels)));
         String[] labels = {
                 I18n.t(context, R.string.ig_dialog_quality_auto),
                 I18n.t(context, R.string.ig_dialog_quality_360),
@@ -2917,7 +2747,7 @@ public class DialogUtils {
         };
         int[] values = {0, 360, 480, 720, 1080, Integer.MAX_VALUE};
         int current = FeatureFlags.forceReelQuality;
-        LinearLayout qualityCard = card(context, 16);
+        LinearLayout qualityCard = IeRows.card(context, 5);
         RadioRow[] rows = new RadioRow[labels.length];
         for (int i = 0; i < labels.length; i++) {
             int idx = i;
@@ -2932,11 +2762,11 @@ public class DialogUtils {
         }
         layout.addView(qualityCard);
 
-        layout.addView(createDivider(context));
+        layout.addView(IeRows.divider(context));
         layout.addView(cardOf(context,
                 extraSwitch(context, "#FF9F0A", "highResolutionImages"),
-                flagSwitch(context, R.drawable.ic_download, "#FF9F0A", R.string.ig_dialog_max_upload_quality, "maxUploadQuality"),
-                createActionRow(context, R.drawable.ic_movie, spoofDeviceLabel(context), "#FF9F0A",
+                flagSwitch(context, R.drawable.ic_upload, "#FF9F0A", R.string.ig_dialog_max_upload_quality, "maxUploadQuality"),
+                IeRows.actionRow(context, R.drawable.ic_movie, spoofDeviceLabel(context), "#FF9F0A",
                         v -> showSpoofDeviceDialog(context, (TextView) findFirstText(v)))));
 
         showSectionDialog(context, I18n.t(context, R.string.menu_quality), layout, () -> {});
@@ -2949,9 +2779,9 @@ public class DialogUtils {
                 flagSwitch(context, R.drawable.ic_link, "#FF9F0A", R.string.ig_dialog_downloader_copy_link, "copyMediaLink"),
                 flagSwitch(context, R.drawable.ic_content_copy, "#FF9F0A", R.string.ig_dialog_downloader_offer_copy_image, "offerCopyImage"),
                 flagSwitch(context, R.drawable.ic_search, "#FF9F0A", R.string.ig_dialog_downloader_offer_media_info, "offerMediaInfo")));
-        layout.addView(createDivider(context));
+        layout.addView(IeRows.divider(context));
         layout.addView(cardOf(context,
-                flagSwitch(context, R.drawable.ic_download, "#FF9F0A", R.string.ig_dialog_misc_upload_instants, "uploadInstants")));
+                flagSwitch(context, R.drawable.ic_upload, "#FF9F0A", R.string.ig_dialog_misc_upload_instants, "uploadInstants")));
         showSectionDialog(context, I18n.t(context, R.string.menu_post_menu), layout, () -> {});
     }
 
@@ -2961,8 +2791,7 @@ public class DialogUtils {
         java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry> entries =
                 ps.reso.instaeclipse.utils.media.StoryCache.entries();
         if (entries.isEmpty()) {
-            layout.addView(createInfoSection(context, I18n.t(context, R.string.ig_story_cache_enable),
-                    I18n.t(context, R.string.ig_story_cache_empty_current)));
+            layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_story_cache_empty_current)));
             showSectionDialog(context, I18n.t(context, R.string.ig_story_cache_view), layout, () -> {});
             return;
         }
@@ -2973,15 +2802,15 @@ public class DialogUtils {
             String author = (e.author == null || e.author.isEmpty()) ? "unknown" : e.author;
             byUser.computeIfAbsent(author, k -> new java.util.ArrayList<>()).add(e);
         }
-        LinearLayout foldersCard = card(context, 16);
+        LinearLayout foldersCard = IeRows.card(context, 5);
         for (java.util.Map.Entry<String, java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry>> u : byUser.entrySet()) {
             final String author = u.getKey();
             final java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry> list = u.getValue();
-            foldersCard.addView(createActionRow(context, R.drawable.ic_folder,
+            foldersCard.addView(IeRows.actionRow(context, R.drawable.ic_folder,
                     author + "   (" + list.size() + ")", "#FF9F0A", v -> showUserStories(context, author, list)));
         }
         layout.addView(foldersCard);
-        layout.addView(createActionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_story_cache_clear),
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_story_cache_clear),
                 "#FF453A", v -> {
                     // Confirm before permanently deleting every cached story, then refresh the view.
                     try {
@@ -3004,12 +2833,12 @@ public class DialogUtils {
     private static void showUserStories(Context context, String author,
                                         java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry> list) {
         LinearLayout layout = createSwitchLayout(context);
-        LinearLayout cardView = card(context, 16);
+        LinearLayout cardView = IeRows.card(context, 5);
         java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat("MMM d, HH:mm", java.util.Locale.getDefault());
         for (ps.reso.instaeclipse.utils.media.StoryCache.Entry e : list) {
             String label = (e.video ? "🎬  " : "🖼  ") + fmt.format(new java.util.Date(e.at))
                     + (e.isExpired() ? "   ·  Expired" : "");
-            cardView.addView(createActionRow(context, e.video ? R.drawable.ic_movie : R.drawable.ic_eye,
+            cardView.addView(IeRows.actionRow(context, e.video ? R.drawable.ic_movie : R.drawable.ic_eye,
                     label, "#FF9F0A", v -> openCachedStory(context, e)));
         }
         layout.addView(cardView);
@@ -3120,7 +2949,7 @@ public class DialogUtils {
     private static void showBackupRestoreOptions(Context context) {
         LinearLayout layout = createSwitchLayout(context);
 
-        layout.addView(createActionRow(context, R.drawable.ic_save, I18n.t(context, R.string.ig_dialog_backup_settings), "#30D158", v -> {
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_save, I18n.t(context, R.string.ig_dialog_backup_settings), "#30D158", v -> {
             try {
                 String json = ps.reso.instaeclipse.utils.backup.SettingsBackupManager.toJson();
                 Bundle extras = new Bundle();
@@ -3132,19 +2961,19 @@ public class DialogUtils {
             }
         }));
 
-        layout.addView(createActionRow(context, R.drawable.ic_folder, I18n.t(context, R.string.ig_dialog_restore_settings), "#0A84FF", v -> {
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_folder, I18n.t(context, R.string.ig_dialog_restore_settings), "#0A84FF", v -> {
             Bundle extras = new Bundle();
             extras.putString("target_package", context.getPackageName());
             extras.putString("broadcast_action", "ps.reso.instaeclipse.ACTION_RESTORE_SETTINGS");
             openModuleScreen(context, ps.reso.instaeclipse.utils.ipc.BrokerPayload.IMPORT, extras);
         }));
 
-        layout.addView(createActionRow(context, R.drawable.ic_download, I18n.t(context, R.string.ig_data_backup), "#30D158", v -> {
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_download, I18n.t(context, R.string.ig_data_backup), "#30D158", v -> {
             Activity a = UIHookManager.getCurrentActivity();
             if (a != null && !a.isFinishing()) ps.reso.instaeclipse.mods.media.DataBackup.export(a);
             else showSimpleDialog(context, I18n.t(context, R.string.ig_dialog_error), I18n.t(context, R.string.ig_dialog_instagram_not_ready));
         }));
-        layout.addView(createActionRow(context, R.drawable.ic_folder, I18n.t(context, R.string.ig_data_restore), "#0A84FF", v -> {
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_folder, I18n.t(context, R.string.ig_data_restore), "#0A84FF", v -> {
             Activity a = UIHookManager.getCurrentActivity();
             if (a != null && !a.isFinishing()) ps.reso.instaeclipse.mods.media.DataBackup.pickAndRestore(a);
             else showSimpleDialog(context, I18n.t(context, R.string.ig_dialog_error), I18n.t(context, R.string.ig_dialog_instagram_not_ready));
@@ -3196,12 +3025,12 @@ public class DialogUtils {
         View chips = buildStatusChips(context);
         layout.addView(chips);
 
-        LinearLayout links = card(context, 16);
-        links.addView(createActionRow(context, R.drawable.ic_github_logo, I18n.t(context, R.string.about_source), "#8E8E93",
+        LinearLayout links = IeRows.card(context, 5);
+        links.addView(IeRows.actionRow(context, R.drawable.ic_github_logo, I18n.t(context, R.string.about_source), "#8E8E93",
                 v -> openLink(context, ps.reso.instaeclipse.utils.core.ExportBrand.GITHUB)));
-        links.addView(createActionRow(context, R.drawable.ic_telegram_logo, I18n.t(context, R.string.about_channel), "#29B6F6",
+        links.addView(IeRows.actionRow(context, R.drawable.ic_telegram_logo, I18n.t(context, R.string.about_channel), "#29B6F6",
                 v -> openLink(context, ps.reso.instaeclipse.utils.core.ExportBrand.TELEGRAM)));
-        links.addView(createActionRow(context, R.drawable.ic_github_logo, I18n.t(context, R.string.about_contributors), "#BF5AF2",
+        links.addView(IeRows.actionRow(context, R.drawable.ic_github_logo, I18n.t(context, R.string.about_contributors), "#BF5AF2",
                 v -> openLink(context, ps.reso.instaeclipse.utils.core.ExportBrand.GITHUB + "/graphs/contributors")));
         layout.addView(links);
 
@@ -3248,7 +3077,7 @@ public class DialogUtils {
     private static void showRestartSection(Context context) {
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(60, 40, 60, 40);
+        layout.setPadding(dp(context, 20), dp(context, 13), dp(context, 20), dp(context, 13));
         layout.setGravity(Gravity.CENTER_HORIZONTAL);
 
         TextView message = new TextView(context);
@@ -3256,10 +3085,10 @@ public class DialogUtils {
         message.setTextColor(Color.WHITE);
         message.setTextSize(18f);
         message.setGravity(Gravity.CENTER);
-        message.setPadding(0, 0, 0, 30);
+        message.setPadding(0, 0, 0, dp(context, 10));
 
         layout.addView(message);
-        layout.addView(createActionRow(context, R.drawable.ic_restart, I18n.t(context, R.string.ig_dialog_restart_now), "#FF453A", v -> restartApp(context)));
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_restart, I18n.t(context, R.string.ig_dialog_restart_now), "#FF453A", v -> restartApp(context)));
 
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_restart), layout, () -> {
         });
@@ -3269,7 +3098,7 @@ public class DialogUtils {
     private static void showClearCacheSection(Context context) {
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(60, 40, 60, 40);
+        layout.setPadding(dp(context, 20), dp(context, 13), dp(context, 20), dp(context, 13));
         layout.setGravity(Gravity.CENTER_HORIZONTAL);
 
         TextView message = new TextView(context);
@@ -3277,10 +3106,10 @@ public class DialogUtils {
         message.setTextColor(Color.WHITE);
         message.setTextSize(16f);
         message.setGravity(Gravity.CENTER);
-        message.setPadding(0, 0, 0, 30);
+        message.setPadding(0, 0, 0, dp(context, 10));
 
         layout.addView(message);
-        layout.addView(createActionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_dialog_clear_cache_now), "#FF9F0A", v -> {
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_dialog_clear_cache_now), "#FF9F0A", v -> {
             ps.reso.instaeclipse.utils.core.DexKitCache.clearCache();
             restartApp(context);
         }));
@@ -3296,9 +3125,7 @@ public class DialogUtils {
     private static void showAutoClearCacheSection(Context context) {
         LinearLayout layout = createSwitchLayout(context);
 
-        layout.addView(createInfoSection(context,
-                I18n.t(context, R.string.ig_dialog_auto_clear_cache),
-                I18n.t(context, R.string.ig_dialog_auto_clear_cache_desc)));
+        layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_dialog_auto_clear_cache_desc)));
 
         ToggleRow autoClear = createSwitch(context, R.drawable.ic_timer, "#FF9F0A",
                 I18n.t(context, R.string.ig_dialog_auto_clear_cache), FeatureFlags.autoClearCache);
@@ -3310,7 +3137,7 @@ public class DialogUtils {
         // IG's real cache is small (self-trimmed, typically <150MB) — high thresholds never
         // fire, so the reachable options are low. The bulk of IG storage is *data*, not cache.
         final int[] presets = {50, 100, 200, 500};
-        final View sizeRow = createActionRow(context, R.drawable.ic_folder,
+        final View sizeRow = IeRows.actionRow(context, R.drawable.ic_folder,
                 I18n.t(context, R.string.ig_dialog_auto_clear_cache_size, FeatureFlags.autoClearCacheSizeMb), "#FF9F0A", v -> {});
         sizeRow.setOnClickListener(v -> {
             int cur = FeatureFlags.autoClearCacheSizeMb, idx = 0;
@@ -3329,8 +3156,8 @@ public class DialogUtils {
             }
         });
 
-        layout.addView(createDivider(context));
-        LinearLayout card = card(context, 16);
+        layout.addView(IeRows.divider(context));
+        LinearLayout card = IeRows.card(context, 5);
         card.addView(autoClear);
         card.addView(sizeRow);
         layout.addView(card);
@@ -3376,7 +3203,8 @@ public class DialogUtils {
 
         GradientDrawable background = new GradientDrawable();
         background.setColor(C_SHEET);
-        background.setCornerRadii(new float[]{48, 48, 48, 48, 0, 0, 0, 0});
+        float corner = dp(context, 16);
+        background.setCornerRadii(new float[]{corner, corner, corner, corner, 0, 0, 0, 0});
         container.setBackground(background);
 
         container.addView(createDragHandle(context));
@@ -3384,7 +3212,7 @@ public class DialogUtils {
         // Header row: back arrow + title
         LinearLayout header = new LinearLayout(context);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setPadding(20, 2, 24, 14);
+        header.setPaddingRelative(0, dp(context, 1), dp(context, 8), dp(context, 5));
         header.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView backBtn = new TextView(context);
@@ -3392,11 +3220,12 @@ public class DialogUtils {
         backBtn.setTextColor(accent());
         backBtn.setTextSize(34);
         backBtn.setIncludeFontPadding(false);
-        backBtn.setGravity(Gravity.CENTER);
-        backBtn.setMinWidth(0);
-        backBtn.setMinimumWidth(0);
+        backBtn.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        backBtn.setContentDescription(I18n.t(context, R.string.back));
+        backBtn.setMinWidth(dp(context, 48));
+        backBtn.setMinHeight(dp(context, 48));
         int bp = dp(context, 6);
-        backBtn.setPadding(bp, bp, dp(context, 16), bp);
+        backBtn.setPaddingRelative(dp(context, 13), bp, bp, bp);
         StateListDrawable backBtnBg = new StateListDrawable();
         backBtnBg.addState(new int[]{android.R.attr.state_pressed}, roundedColor(C_PRESSED, dp(context, 10)));
         backBtnBg.addState(new int[]{}, new ColorDrawable(Color.TRANSPARENT));
@@ -3432,20 +3261,20 @@ public class DialogUtils {
         header.addView(backBtn);
         header.addView(titleView);
         container.addView(header);
-        container.addView(createDivider(context));
+        container.addView(IeRows.divider(context));
 
         // Content with horizontal padding
         LinearLayout contentWrapper = new LinearLayout(context);
         contentWrapper.setOrientation(LinearLayout.VERTICAL);
-        contentWrapper.setPadding(24, 0, 24, 0);
+        contentWrapper.setPadding(dp(context, 8), 0, dp(context, 8), 0);
         contentWrapper.addView(contentLayout);
         container.addView(contentWrapper);
 
-        container.addView(createDivider(context));
+        container.addView(IeRows.divider(context));
 
         // Bottom padding for nav bar
         View bottomPad = new View(context);
-        bottomPad.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 48));
+        bottomPad.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(context, 16)));
         container.addView(bottomPad);
 
         ScrollView scrollView = createScrollableContainer(context, container);
@@ -3465,88 +3294,6 @@ public class DialogUtils {
     }
 
 
-    @SuppressLint("UseSwitchCompatOrMaterialCode")
-    private static class ToggleRow extends LinearLayout {
-        private final Switch toggle;
-        private final TextView labelView;
-        // The row's own listener (replaceable / clearable) plus extra observers that always run
-        // after it, e.g. a master switch keeping itself in sync (see addMasterGroup).
-        private CompoundButton.OnCheckedChangeListener primary;
-        private final java.util.List<CompoundButton.OnCheckedChangeListener> observers = new java.util.ArrayList<>();
-
-        ToggleRow(Context context, String label, boolean checked) {
-            this(context, 0, null, label, checked);
-        }
-
-        ToggleRow(Context context, int iconRes, String accentHex, String label, boolean checked) {
-            super(context);
-            setOrientation(HORIZONTAL);
-            setPadding(8, 4, 8, 4);
-            setGravity(Gravity.CENTER_VERTICAL);
-            setClickable(true);
-            setFocusable(true);
-
-            StateListDrawable bg = new StateListDrawable();
-            bg.addState(new int[]{android.R.attr.state_pressed}, new ColorDrawable(C_PRESSED));
-            bg.addState(new int[]{}, new ColorDrawable(Color.TRANSPARENT));
-            setBackground(bg);
-
-            if (iconRes != 0) {
-                addView(buildIconChip(context, iconRes, accentHex));
-            }
-
-            labelView = new TextView(context);
-            labelView.setText(label);
-            labelView.setTextColor(Color.WHITE);
-            labelView.setTextSize(16);
-            labelView.setPadding(0, 20, 16, 20);
-            LayoutParams lp = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f);
-            labelView.setLayoutParams(lp);
-
-            toggle = new Switch(context);
-            toggle.setChecked(checked);
-            toggle.setThumbTintList(new ColorStateList(
-                    new int[][]{new int[]{-android.R.attr.state_enabled}, new int[]{android.R.attr.state_checked}, new int[]{}},
-                    new int[]{Color.parseColor("#555555"), accent(), Color.parseColor("#FFFFFF")}));
-            toggle.setTrackTintList(new ColorStateList(
-                    new int[][]{new int[]{-android.R.attr.state_enabled}, new int[]{android.R.attr.state_checked}, new int[]{}},
-                    new int[]{Color.parseColor("#777777"), (accent() & 0x00FFFFFF) | 0x66000000, Color.parseColor("#CFD8DC")}));
-            toggle.setClickable(false);
-            toggle.setFocusable(false);
-            toggle.setOnCheckedChangeListener((b, c) -> {
-                if (primary != null) primary.onCheckedChanged(b, c);
-                for (CompoundButton.OnCheckedChangeListener o : observers) o.onCheckedChanged(b, c);
-            });
-
-            addView(labelView);
-            addView(toggle);
-            setOnClickListener(v -> { if (isEnabled()) toggle.setChecked(!toggle.isChecked()); });
-        }
-
-        boolean isChecked() { return toggle.isChecked(); }
-        void setChecked(boolean checked) { toggle.setChecked(checked); }
-
-        @Override
-        public void setEnabled(boolean enabled) {
-            super.setEnabled(enabled);
-            toggle.setEnabled(enabled);
-            setAlpha(enabled ? 1f : 0.38f);
-        }
-
-        void setOnCheckedChangeListener(CompoundButton.OnCheckedChangeListener l) {
-            primary = l;
-        }
-
-        void addOnCheckedChangeListener(CompoundButton.OnCheckedChangeListener l) {
-            observers.add(l);
-        }
-
-        void makeBold() {
-            labelView.setTypeface(null, Typeface.BOLD);
-            labelView.setTextSize(17);
-        }
-    }
-
     private static ToggleRow createSwitch(Context context, String label, boolean defaultState) {
         return new ToggleRow(context, label, defaultState);
     }
@@ -3555,148 +3302,36 @@ public class DialogUtils {
         return new ToggleRow(context, iconRes, accentHex, label, defaultState);
     }
 
-    /** The same 36dp rounded, tinted icon chip used by the main menu's nav rows. */
-    private static View buildIconChip(Context context, int iconRes, String accentHex) {
-        android.widget.ImageView iconView = new android.widget.ImageView(context);
-        int accent = Color.parseColor(accentHex);
-        Drawable icon = loadModuleIcon(context, iconRes, accent);
-        if (icon != null) iconView.setImageDrawable(icon);
-        iconView.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
-        int iconPad = dp(context, 8);
-        iconView.setPadding(iconPad, iconPad, iconPad, iconPad);
-        GradientDrawable chipBg = new GradientDrawable();
-        chipBg.setColor((accent & 0x00FFFFFF) | 0x33000000);
-        chipBg.setCornerRadius(12);
-        iconView.setBackground(chipBg);
-        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(dp(context, 36), dp(context, 36));
-        iconLp.rightMargin = dp(context, 14);
-        iconView.setLayoutParams(iconLp);
-        return iconView;
-    }
-
-    private static int dp(Context context, int value) {
-        return Math.round(value * context.getResources().getDisplayMetrics().density);
-    }
-
     private static LinearLayout createSwitchLayout(Context context) {
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(16, 8, 16, 8);
+        layout.setPadding(dp(context, 5), dp(context, 3), dp(context, 5), dp(context, 3));
         return layout;
-    }
-
-    private static View createInfoSection(Context context, String label, String value) {
-        LinearLayout row = new LinearLayout(context);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(40, 24, 32, 24);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView labelView = new TextView(context);
-        labelView.setText(label);
-        labelView.setTextSize(17);
-        labelView.setTextColor(Color.WHITE);
-        labelView.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-
-        TextView valueView = new TextView(context);
-        valueView.setText(value);
-        valueView.setTextSize(13);
-        valueView.setTextColor(C_TEXT2);
-        valueView.setMaxLines(1);
-        valueView.setEllipsize(android.text.TextUtils.TruncateAt.START);
-        valueView.setPadding(16, 0, 0, 0);
-        // weight=1 / width=0: value fills remaining space and truncates at start if too long
-        valueView.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-
-        row.addView(labelView);
-        row.addView(valueView);
-        return row;
-    }
-
-    private static View createActionRow(Context context, int iconRes, String label, String accentHex, View.OnClickListener onClick) {
-        android.widget.ImageView iconView = new android.widget.ImageView(context);
-        Drawable icon = loadModuleIcon(context, iconRes, Color.parseColor(accentHex));
-        if (icon != null) iconView.setImageDrawable(icon);
-        return createActionRow(context, iconView, label, accentHex, onClick);
     }
 
     /** Public wrapper so hooks (e.g. the DM thread button) can load a tinted module vector. */
     public static Drawable moduleIcon(Context context, int iconRes, int tintColor) {
-        return loadModuleIcon(context, iconRes, tintColor);
+        return IeRows.icon(context, iconRes, tintColor);
     }
 
     /** Same, for callers without a Context at hand (resolved against Instagram's Application). */
     public static Drawable moduleIcon(int iconRes, int tintColor) {
-        return loadModuleIcon(ps.reso.instaeclipse.xposedcompat.AndroidAppHelper.currentApplication(), iconRes, tintColor);
-    }
-
-    /** This dialog runs inside Instagram's own process, so a drawable resource ID must be resolved
-     *  against the loaded module APK's resource table (ModuleResources), not Instagram's — IDs aren't
-     *  portable across APKs, and under embedded LSPatch the installed companion may be another build. */
-    @SuppressLint("UseCompatLoadingForDrawables")
-    private static Drawable loadModuleIcon(Context context, int iconRes, int tintColor) {
-        try {
-            Drawable icon = ModuleResources.get(context).getDrawable(iconRes, null);
-            icon = icon.mutate();
-            icon.setColorFilter(new android.graphics.PorterDuffColorFilter(tintColor, android.graphics.PorterDuff.Mode.SRC_IN));
-            return icon;
-        } catch (Exception e) {
-            ModuleLog.warn("(IE|Resources) An icon could not be loaded (0x" + Integer.toHexString(iconRes) + ")", e);
-            return null;
-        }
-    }
-
-    private static View createActionRow(Context context, View iconView, String label, String accentHex, View.OnClickListener onClick) {
-        LinearLayout row = new LinearLayout(context);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        // Aligned with the menu-row metrics so action rows sit flush inside the same grouped cards.
-        row.setPadding(dp(context, 8), dp(context, 11), dp(context, 10), dp(context, 11));
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setClickable(true);
-        row.setFocusable(true);
-        row.setBackground(rowRipple(context, 16));
-
-        GradientDrawable iconBg = new GradientDrawable();
-        // Color.parseColor's 8-digit form is #AARRGGBB (alpha FIRST) — appending alpha as a
-        // suffix would misparse it as an opaque color instead of a translucent tint.
-        int accentColor = Color.parseColor(accentHex);
-        iconBg.setColor((accentColor & 0x00FFFFFF) | 0x33000000); // 20% opacity tint
-        iconBg.setCornerRadius(12);
-        iconView.setBackground(iconBg);
-        int ip = dp(context, 8);
-        iconView.setPadding(ip, ip, ip, ip);
-        LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(dp(context, 36), dp(context, 36));
-        iconLp.rightMargin = dp(context, 14);
-        iconView.setLayoutParams(iconLp);
-        if (iconView instanceof android.widget.ImageView) {
-            ((android.widget.ImageView) iconView).setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
-        }
-
-        TextView labelView = new TextView(context);
-        labelView.setText(label);
-        labelView.setTextSize(16);
-        labelView.setTextColor(Color.parseColor(accentHex));
-        labelView.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-
-        row.addView(iconView);
-        row.addView(labelView);
-        row.setOnClickListener(onClick);
-        return row;
+        return IeRows.icon(ps.reso.instaeclipse.xposedcompat.AndroidAppHelper.currentApplication(), iconRes, tintColor);
     }
 
     private static View createDragHandle(Context context) {
         LinearLayout wrapper = new LinearLayout(context);
         wrapper.setOrientation(LinearLayout.VERTICAL);
         wrapper.setGravity(Gravity.CENTER_HORIZONTAL);
-        wrapper.setPadding(0, 14, 0, 8);
+        wrapper.setPadding(0, dp(context, 5), 0, dp(context, 3));
 
         View handle = new View(context);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(120, 6);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(context, 40), dp(context, 2));
         lp.gravity = Gravity.CENTER_HORIZONTAL;
         handle.setLayoutParams(lp);
         GradientDrawable handleBg = new GradientDrawable();
         handleBg.setColor(C_HANDLE);
-        handleBg.setCornerRadius(3);
+        handleBg.setCornerRadius(dp(context, 1));
         handle.setBackground(handleBg);
 
         wrapper.addView(handle);
@@ -3753,24 +3388,6 @@ public class DialogUtils {
         return dialog;
     }
 
-
-    private static LinearLayout createEnableAllSwitch(Context context, ToggleRow enableAllRow) {
-        enableAllRow.makeBold();
-
-        LinearLayout container = new LinearLayout(context);
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(6, 2, 6, 2);
-
-        // Faint accent tint so the master control reads as distinct from the toggle card below it.
-        GradientDrawable background = new GradientDrawable();
-        background.setColor((accent() & 0x00FFFFFF) | 0x24000000);
-        background.setCornerRadius(R_CARD);
-        background.setStroke(1, (accent() & 0x00FFFFFF) | 0x40000000);
-        container.setBackground(background);
-
-        container.addView(enableAllRow);
-        return container;
-    }
 
     private static boolean areAllEnabled(ToggleRow[] rows) {
         for (ToggleRow r : rows) {

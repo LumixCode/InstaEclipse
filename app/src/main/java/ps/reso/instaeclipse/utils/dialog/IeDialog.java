@@ -13,10 +13,16 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
+import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.utils.i18n.I18n;
 
 /**
  * The module's in-Instagram dialog look (same as Search comments): rounded card that follows
@@ -61,11 +67,13 @@ public class IeDialog {
         card = new LinearLayout(ctx);
         card.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(18);
-        card.setPadding(pad, pad, pad, dp(14));
+        card.setPadding(pad, dp(9), pad, dp(14));
         card.setBackground(round(bg, 22));
 
         LinearLayout header = new LinearLayout(ctx);
         header.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        hlp.setMarginEnd(-dp(13));
         titleView = new TextView(ctx);
         titleView.setTextColor(text);
         titleView.setTextSize(19);
@@ -75,17 +83,18 @@ public class IeDialog {
         close.setText("✕");
         close.setTextSize(18);
         close.setTextColor(sub);
-        close.setPadding(dp(10), dp(4), dp(4), dp(4));
+        close.setGravity(Gravity.CENTER);
+        close.setContentDescription(I18n.t(ctx, R.string.ig_dialog_close));
         close.setOnClickListener(v -> { dismiss(); if (onClose != null) onClose.run(); });
-        header.addView(close);
-        card.addView(header);
+        header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        card.addView(header, hlp);
 
         content = new LinearLayout(ctx);
         content.setOrientation(LinearLayout.VERTICAL);
         ScrollView scroll = new ScrollView(ctx);
         scroll.addView(content);
         LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1);
-        slp.topMargin = dp(12);
+        slp.topMargin = dp(2);
         card.addView(scroll, slp);
 
         buttons = new LinearLayout(ctx);
@@ -158,9 +167,29 @@ public class IeDialog {
                 tick.setTextColor(accent);
                 tick.setTextSize(16);
                 tick.setTypeface(Typeface.DEFAULT_BOLD);
+                tick.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
                 row.addView(tick);
             }
             row.setOnClickListener(v -> { dismiss(); onPick.accept(idx); });
+            t.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            CharSequence spoken = labels[i];
+            row.setAccessibilityDelegate(new View.AccessibilityDelegate() {
+                @Override
+                public void onInitializeAccessibilityNodeInfo(View host, AccessibilityNodeInfo info) {
+                    super.onInitializeAccessibilityNodeInfo(host, info);
+                    info.setClassName(RadioButton.class.getName());
+                    info.setCheckable(true);
+                    info.setChecked(on);
+                    info.setText(spoken);
+                }
+
+                @Override
+                public void onInitializeAccessibilityEvent(View host, AccessibilityEvent event) {
+                    super.onInitializeAccessibilityEvent(host, event);
+                    event.setClassName(RadioButton.class.getName());
+                    event.setChecked(on);
+                }
+            });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.topMargin = content.getChildCount() > 0 ? dp(8) : 0;
             content.addView(row, lp);
