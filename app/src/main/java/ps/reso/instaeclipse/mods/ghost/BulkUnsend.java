@@ -105,6 +105,7 @@ public final class BulkUnsend {
         messageClass = message;
         if (message == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: not supported by this Instagram version (no message class)"); return; }
         try {
+            UnsentIdentity.senderField(message);
             Class<?> dtk = cl.loadClass(DTK);
             for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("DirectUnsendMessageInteractor")))) {
@@ -358,7 +359,8 @@ public final class BulkUnsend {
         boolean isMine(Object msg) {
             Boolean b = mineCache.get(msg);
             if (b == null) {
-                b = selected.contains(msg) || UnsentIdentity.isFromAccount(msg, me);
+                b = selected.contains(msg) || (UnsentIdentity.senderField(messageClass) != null
+                        ? UnsentIdentity.isFromAccount(msg, me) : UnsentIdentity.anyStringFieldIs(msg, me));
                 mineCache.put(msg, b);
             }
             return b;

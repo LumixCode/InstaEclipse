@@ -1,15 +1,28 @@
 package ps.reso.instaeclipse.utils.ghost;
 
+import org.luckypray.dexkit.DexKitBridge;
+import org.luckypray.dexkit.query.FindMethod;
+import org.luckypray.dexkit.query.matchers.MethodMatcher;
+import org.luckypray.dexkit.result.FieldData;
+import org.luckypray.dexkit.result.MethodData;
+import org.luckypray.dexkit.result.UsingFieldData;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import ps.reso.instaeclipse.Xposed.Module;
+import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 
 /** Bounded lookup on the bound row, never across adapter collections or adjacent messages. */
@@ -17,6 +30,11 @@ public final class UnsentIdentity {
     public static final String SESSION = "com.instagram.common.session.UserSession";
     public static final String THREAD = "com.instagram.model.direct.DirectThreadKey";
     public static final String IDENTIFIER = "com.instagram.model.direct.messageid.DirectMessageIdentifier";
+    public static final String USER = "com.instagram.user.model.User";
+    private static final String SENDER_KEY = "KeepUnsent_senderField_v1";
+    private static final String STRING_TYPE = ":Ljava/lang/String;";
+    private static volatile Field sender;
+    private static volatile boolean senderLooked;
     // Cached lookups: the Lock gate reads the open screen's account several times a second, and
     // each call used to load the class, throw NoSuchMethodException and list every field again.
     /** Classes found by name, per loader. Only hits: a class missing now may be loaded later. */
@@ -189,11 +207,17 @@ public final class UnsentIdentity {
     }
 
     public static boolean isFromAccount(Object message, String accountId) {
-        return isFromAccount(message, accountId, null);
+        return isFromAccount(message, accountId, sender);
     }
 
-    static boolean isFromAccount(Object message, String accountId, Field sender) {
-        return anyStringFieldIs(message, accountId);
+    static boolean isFromAccount(Object message, String accountId, Field field) {
+        if (message == null || accountId == null || field == null
+                || !field.getDeclaringClass().isInstance(message)) return false;
+        try {
+            return accountId.equals(field.get(message));
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     public static boolean anyStringFieldIs(Object message, String value) {
@@ -204,8 +228,64 @@ public final class UnsentIdentity {
         return false;
     }
 
+    public static Field senderField(Class<?> messageClass) {
+        if (senderLooked || messageClass == null) return sender;
+        synchronized (UnsentIdentity.class) {
+            if (senderLooked) return sender;
+            Field found = DexKitCache.isCacheValid() ? DexKitCache.loadField(SENDER_KEY, messageClass.getClassLoader()) : null;
+            if (!isSenderOf(found, messageClass)) {
+                found = findSenderField(messageClass);
+                if (found != null) DexKitCache.saveField(SENDER_KEY, found);
+            }
+            sender = found;
+            senderLooked = true;
+            return found;
+        }
+    }
+
+    private static boolean isSenderOf(Field field, Class<?> messageClass) {
+        return field != null && field.getType() == String.class && !Modifier.isStatic(field.getModifiers())
+                && field.getDeclaringClass().isAssignableFrom(messageClass);
+    }
+
+    private static Field findSenderField(Class<?> messageClass) {
+        DexKitBridge bridge = Module.dexKitBridge;
+        if (bridge == null) return null;
+        try {
+            List<List<String>> reads = new ArrayList<>();
+            Map<String, FieldData> fields = new HashMap<>();
+            for (MethodData method : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                    .declaredClass(messageClass.getName()).paramTypes(USER).returnType("boolean")))) {
+                List<String> read = new ArrayList<>();
+                for (UsingFieldData use : DexKitQueryCache.usingFields(method)) {
+                    if (!use.getUsingType().isRead()) continue;
+                    String descriptor = use.getField().getDescriptor();
+                    read.add(descriptor);
+                    fields.put(descriptor, use.getField());
+                }
+                reads.add(read);
+            }
+            String picked = pickSenderField(reads);
+            if (picked == null) return null;
+            Field field = fields.get(picked).getFieldInstance(messageClass.getClassLoader());
+            field.setAccessible(true);
+            return isSenderOf(field, messageClass) ? field : null;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
     static String pickSenderField(List<List<String>> readsPerMethod) {
-        return null;
+        String picked = null;
+        for (List<String> reads : readsPerMethod) {
+            Set<String> distinct = new LinkedHashSet<>(reads);
+            if (distinct.size() != 1) continue;
+            String field = distinct.iterator().next();
+            if (!field.endsWith(STRING_TYPE)) continue;
+            if (picked != null && !picked.equals(field)) return null;
+            picked = field;
+        }
+        return picked;
     }
 
     public static String messageText(Object message, Field field) {

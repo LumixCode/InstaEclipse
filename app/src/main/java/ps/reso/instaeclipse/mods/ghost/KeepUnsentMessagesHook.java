@@ -318,6 +318,11 @@ public class KeepUnsentMessagesHook {
                 Method serverLookup = parts.size() > 1 ? parts.get(1) : null;
                 Method localRemoval = parts.size() > 2 ? parts.get(2) : null;
                 Class<?> messageClass = serverLookup != null ? serverLookup.getReturnType() : null;
+                if (messageClass != null) {
+                    Field sender = UnsentIdentity.senderField(messageClass);
+                    ModuleLog.detail("(IE|KeepUnsent) sender field=" + (sender != null
+                            ? sender.getDeclaringClass().getName() + "." + sender.getName() : "missing"));
+                }
                 List<Method> lookups = new ArrayList<>();
                 if (entryGetter != null && messageClass != null) {
                     entryGetter.setAccessible(true);
@@ -383,6 +388,10 @@ public class KeepUnsentMessagesHook {
                                 return;
                             }
                             Object message = cachedMessage(entry, lookups, ids, thread);
+                            if (UnsentIdentity.isFromAccount(message, account)) {
+                                ModuleLog.detail("(IE|KeepUnsent) own removal passed through");
+                                return;
+                            }
                             if (message != null) ids.addAll(UnsentIdentity.messageIds(message));
                             if (UnsentLog.findCleared(account, thread, ids) != null) return;
                             boolean keepInChat = FeatureFlags.keepUnsentInChat;
