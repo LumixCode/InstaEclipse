@@ -19,6 +19,7 @@ import android.os.Process;
 import android.view.View;
 import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
@@ -42,8 +43,10 @@ public final class CompanionBridge {
     public static final String SERVICE = "ps.reso.instaeclipse.mods.media.DownloadBrokerService";
     // Official Instagram signing identity; never enroll a host by package name alone.
     // hasSigningCertificate also validates its signing-history descendants (APK v3 rotation).
-    private static final String HOST_SIGNER_SHA256 = "5f3e50f435583c9ae626302a71f7340044087a7e2c60adacfc254205a993e305";
-    static final byte[][] HOST_SIGNERS = { hex(HOST_SIGNER_SHA256) };
+    static final byte[][] HOST_SIGNERS = {
+            hex("5f3e50f435583c9ae626302a71f7340044087a7e2c60adacfc254205a993e305"),
+            hex("3a10c50c18ba937506c2875e9047be74f8fd8b86fae2ff9feaa50a81fcb4c014")
+    };
     private static final int CONFIG_MAX_BYTES = 64 * 1024;
     private static final ThreadPoolExecutor IPC = new ThreadPoolExecutor(2, 2, 30, TimeUnit.SECONDS,
             new ArrayBlockingQueue<>(16), new ThreadPoolExecutor.AbortPolicy());
@@ -61,7 +64,7 @@ public final class CompanionBridge {
             for (byte[] pin : HOST_SIGNERS)
                 if (pm.hasSigningCertificate(packageName, pin, PackageManager.CERT_INPUT_SHA256)) return true;
             return lspatchOriginalSigner(context, packageName);
-        } catch (RuntimeException ignored) { return false; }
+        } catch (Throwable ignored) { return false; }
     }
 
     /** Patched Instagram (sourceDir + install time) -> whether its recorded signer matched. */
@@ -93,13 +96,17 @@ public final class CompanionBridge {
             lspatchTrusted = trusted;
             lspatchCheckedFor = key;
             return trusted;
-        } catch (Exception ignored) { return false; }
+        } catch (Throwable ignored) { return false; }
     }
 
     static byte[] readBounded(InputStream in, int max) throws IOException {
-        byte[] raw = in.readAllBytes();
-        if (raw.length > max) throw new IOException();
-        return raw;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        for (int read; (read = in.read(buffer)) != -1; ) {
+            if (out.size() + read > max) throw new IOException();
+            out.write(buffer, 0, read);
+        }
+        return out.toByteArray();
     }
 
     static boolean matchesPin(byte[] der, byte[][] pins) {
@@ -127,7 +134,7 @@ public final class CompanionBridge {
             return packages != null && packages.length == 1 && BrokerPayload.HOST.equals(packages[0])
                     && pm.getApplicationInfo(BrokerPayload.HOST, 0).uid == uid
                     && isTrustedHost(context, BrokerPayload.HOST);
-        } catch (Exception ignored) { return false; }
+        } catch (Throwable ignored) { return false; }
     }
 
     public static void download(Context context, DownloadRequest request, Callback callback) {
