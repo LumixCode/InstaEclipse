@@ -107,7 +107,7 @@ public final class CrashForensics {
             try {
                 collect(app);
             } catch (Throwable e) {
-                ModuleLog.line(TAG + "collect failed: " + e);
+                ModuleLog.detail(TAG + "collect failed", e);
             }
         }, "IE-CrashForensics");
         t.setPriority(Thread.MIN_PRIORITY);
@@ -140,7 +140,7 @@ public final class CrashForensics {
         pruneHookFiles(hooks);
         hooksDir = hooks;
         scheduleHookWrite();
-        if (artMethodError != null) ModuleLog.line(TAG + "ArtMethod addresses unavailable: " + artMethodError);
+        if (artMethodError != null) ModuleLog.detail(TAG + "ArtMethod addresses unavailable: " + artMethodError);
     }
 
     private static void copyDumps(Context ctx, File dir, String rel, int depth, long now,
@@ -159,16 +159,16 @@ public final class CrashForensics {
             if (seen.contains(key)) continue;
             if (len > MAX_COPY_BYTES) {
                 remember(key, seen, seenOrder);
-                ModuleLog.line(TAG + "skipped " + path + " (" + mb(len) + ", over the copy limit)");
+                ModuleLog.detail(TAG + "skipped " + path + " (" + mb(len) + ", over the copy limit)");
                 continue;
             }
             String name = stamp(f.lastModified()) + "_" + path.replace('/', '~');
             try (InputStream in = new FileInputStream(f)) {
                 long n = save(ctx, name, in, null);
                 remember(key, seen, seenOrder); // a failed copy is retried on the next start
-                ModuleLog.line(TAG + "saved " + path + " from " + stamp(f.lastModified()) + " → ig_crash/" + name + " (" + mb(n) + ")");
+                ModuleLog.detail(TAG + "saved " + path + " from " + stamp(f.lastModified()) + " → ig_crash/" + name + " (" + mb(n) + ")");
             } catch (Throwable e) {
-                ModuleLog.line(TAG + "could not save " + path + ": " + e);
+                ModuleLog.detail(TAG + "could not save " + path + ": " + e);
                 continue;
             }
             if (f.getName().endsWith(".dmp") && len <= MAX_PARSE_BYTES) describeMinidump(f);
@@ -190,9 +190,9 @@ public final class CrashForensics {
             }
             if (thread == null && abort == null) return;
             String first = abort == null ? "(none)" : abort.split("\n", 2)[0];
-            ModuleLog.line(TAG + "minidump " + f.getName() + ": thread " + thread + ", abort '" + first + "'");
+            ModuleLog.detail(TAG + "minidump " + f.getName() + ": thread " + thread + ", abort '" + first + "'");
         } catch (Throwable e) {
-            ModuleLog.line(TAG + "could not read minidump " + f.getName() + ": " + e);
+            ModuleLog.detail(TAG + "could not read minidump " + f.getName() + ": " + e);
         }
     }
 
@@ -218,25 +218,37 @@ public final class CrashForensics {
 
             String desc = e.getDescription() == null ? "" : e.getDescription().replace('\n', ' ');
             if (desc.length() > 300) desc = desc.substring(0, 300) + "…";
-            ModuleLog.line(TAG + "previous exit " + stamp(e.getTimestamp()) + " pid " + e.getPid()
+            ModuleLog.detail(TAG + "previous exit " + stamp(e.getTimestamp()) + " pid " + e.getPid()
                     + " (" + e.getProcessName() + "): " + reason(e.getReason()) + " status=" + e.getStatus()
                     + " importance=" + e.getImportance() + " pss=" + (e.getPss() / 1024) + "MB"
                     + (desc.isEmpty() ? "" : " '" + desc + "'"));
 
             int r = e.getReason();
+            // Only a crash or freeze of Instagram itself is news to the user; force stops, memory
+            // kills and Instagram's helper processes stay in the technical details above.
+            if ((r == ApplicationExitInfo.REASON_CRASH || r == ApplicationExitInfo.REASON_CRASH_NATIVE
+                    || r == ApplicationExitInfo.REASON_ANR) && ctx.getPackageName().equals(e.getProcessName())) {
+                String when = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT)
+                        .format(new Date(e.getTimestamp()));
+                if (r == ApplicationExitInfo.REASON_ANR) {
+                    ModuleLog.warn(TAG + "Instagram stopped responding on " + when + "; the technical details are in the full log");
+                } else {
+                    ModuleLog.error(TAG + "Instagram crashed on " + when + "; the technical details are in the full log");
+                }
+            }
             if (r != ApplicationExitInfo.REASON_CRASH_NATIVE && r != ApplicationExitInfo.REASON_ANR) continue;
             String base = stamp(e.getTimestamp()) + "_exit_" + e.getPid();
             String name = base + (r == ApplicationExitInfo.REASON_ANR ? "_anr.txt" : "_tombstone.pb");
             ByteArrayOutputStream copy = r == ApplicationExitInfo.REASON_CRASH_NATIVE ? new ByteArrayOutputStream() : null;
             try (InputStream in = e.getTraceInputStream()) {
                 if (in == null) {
-                    ModuleLog.line(TAG + "no trace kept for pid " + e.getPid());
+                    ModuleLog.detail(TAG + "no trace kept for pid " + e.getPid());
                 } else {
                     long n = save(ctx, name, in, copy);
-                    ModuleLog.line(TAG + "saved " + reason(r) + " trace of pid " + e.getPid() + " → ig_crash/" + name + " (" + mb(n) + ")");
+                    ModuleLog.detail(TAG + "saved " + reason(r) + " trace of pid " + e.getPid() + " → ig_crash/" + name + " (" + mb(n) + ")");
                 }
             } catch (Throwable ex) {
-                ModuleLog.line(TAG + "could not save the trace of pid " + e.getPid() + ": " + ex);
+                ModuleLog.detail(TAG + "could not save the trace of pid " + e.getPid() + ": " + ex);
             }
             if (r == ApplicationExitInfo.REASON_CRASH_NATIVE) diagnose(ctx, hooks, e.getPid(), base, copy);
         }
@@ -250,7 +262,7 @@ public final class CrashForensics {
             try (InputStream in = new FileInputStream(list)) {
                 save(ctx, base + "_hooks.txt", in, null);
             } catch (Throwable e) {
-                ModuleLog.line(TAG + "could not save the hook list of pid " + pid + ": " + e);
+                ModuleLog.detail(TAG + "could not save the hook list of pid " + pid + ": " + e);
             }
             lines = readSeen(list);
         }
@@ -289,7 +301,7 @@ public final class CrashForensics {
             else verdict = "no hooked ArtMethod ends in it (" + counted + " hooked; nearest " + near
                     + ", " + nearDist + " bytes away)";
         }
-        ModuleLog.line(TAG + "pid " + pid + ": GC found invalid reference 0x" + Long.toHexString(bad)
+        ModuleLog.detail(TAG + "pid " + pid + ": GC found invalid reference 0x" + Long.toHexString(bad)
                 + " in a runtime root; " + verdict);
     }
 
@@ -324,11 +336,11 @@ public final class CrashForensics {
             if (!tmp.renameTo(f)) throw new IOException("rename failed");
             if (!hookListLogged) {
                 hookListLogged = true;
-                ModuleLog.line(TAG + "keeping this process's hook list: " + (out.size() - 1) + " methods, ArtMethod addresses "
+                ModuleLog.detail(TAG + "keeping this process's hook list: " + (out.size() - 1) + " methods, ArtMethod addresses "
                         + (artMethodError == null ? "ok" : "unavailable"));
             }
         } catch (Throwable e) {
-            ModuleLog.line(TAG + "could not write the hook list: " + e);
+            ModuleLog.detail(TAG + "could not write the hook list: " + e);
         }
     }
 
@@ -362,7 +374,7 @@ public final class CrashForensics {
                 }
                 out.getFD().sync();
                 if (total >= MAX_COPY_BYTES && in.read() >= 0) {
-                    ModuleLog.line(TAG + "ig_crash/" + name + " is cut at " + mb(total) + ": the source is larger");
+                    ModuleLog.detail(TAG + "ig_crash/" + name + " is cut at " + mb(total) + ": the source is larger");
                 }
             }
         }
@@ -387,7 +399,7 @@ public final class CrashForensics {
         try {
             Files.write(f.toPath(), keep, StandardCharsets.UTF_8);
         } catch (Throwable e) {
-            ModuleLog.line(TAG + "could not write " + f.getName() + ": " + e);
+            ModuleLog.detail(TAG + "could not write " + f.getName() + ": " + e);
         }
     }
 

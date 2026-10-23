@@ -42,7 +42,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -51,6 +50,7 @@ import java.util.regex.Pattern;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
+import ps.reso.instaeclipse.utils.log.LogLine;
 import ps.reso.instaeclipse.utils.log.LogMirrorProvider;
 import ps.reso.instaeclipse.utils.log.Logging;
 
@@ -72,22 +72,30 @@ public class LoggingFragment extends Fragment {
     private static final int KIND_OK = 1;
     private static final int KIND_WARN = 2;
     private static final int KIND_ERROR = 3;
+    private static final int KIND_DETAIL = 4;
 
     private static final int FILTER_ALL = 0;
 
     private static final Pattern TS_PREFIX = Pattern.compile("^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3} .*", Pattern.DOTALL);
     private static final int TS_LEN = 23; // "yyyy-MM-dd HH:mm:ss.SSS"
 
+    private static final String PREFS = "instaeclipse_logs_ui";
+    private static final String PREF_DETAILS = "show_technical_details";
+
     private static final class Entry {
         final String ts;
         final String full;
+        /** Technical view: time with milliseconds, caller, tag and the whole entry. */
         final String display;
+        /** Simple view: time, feature name and the first line of the message. */
+        final String friendly;
         final int kind;
 
-        Entry(String ts, String full, String display, int kind) {
+        Entry(String ts, String full, String display, String friendly, int kind) {
             this.ts = ts;
             this.full = full;
             this.display = display;
+            this.friendly = friendly;
             this.kind = kind;
         }
     }
@@ -105,6 +113,7 @@ public class LoggingFragment extends Fragment {
     private final LogAdapter adapter = new LogAdapter();
     private List<Entry> allEntries = new ArrayList<>();
     private int filterKind = FILTER_ALL;
+    private boolean showDetails;
     private boolean loadedOnce;
 
     private final Map<String, String> liveReplies = new HashMap<>();
@@ -161,6 +170,18 @@ public class LoggingFragment extends Fragment {
         adapter.colorError = MaterialColors.getColor(view, androidx.appcompat.R.attr.colorError);
         adapter.colorWarn = ContextCompat.getColor(requireContext(), R.color.warning_yellow);
         adapter.colorOk = Color.parseColor("#81C784");
+        adapter.colorDetail = (adapter.colorInfo & 0x00FFFFFF) | 0x99000000;
+
+        showDetails = requireContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getBoolean(PREF_DETAILS, false);
+        Chip details = view.findViewById(R.id.logs_chip_details);
+        details.setChecked(showDetails);
+        details.setOnCheckedChangeListener((chip, checked) -> {
+            showDetails = checked;
+            requireContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                    .putBoolean(PREF_DETAILS, checked).apply();
+            applyFilter();
+        });
 
         LinearLayoutManager lm = new LinearLayoutManager(requireContext());
         listView.setLayoutManager(lm);
@@ -376,14 +397,25 @@ public class LoggingFragment extends Fragment {
     }
 
     private static Entry makeEntry(String ts, String full, String prefix) {
-        String display;
-        if (full.length() > TS_LEN && full.startsWith(ts) && !ts.isEmpty()) {
-            // Drop the date for display; keep HH:mm:ss.SSS.
-            display = full.substring(11, TS_LEN) + "  " + prefix + full.substring(TS_LEN + 1);
+        boolean timed = ts != null && !ts.isEmpty() && full.length() > TS_LEN && full.startsWith(ts);
+        String body = timed ? full.substring(TS_LEN + 1) : full;
+        String display, friendly;
+        String message = LogLine.friendly(firstLine(body));
+        if (timed) {
+            // Drop the date for display; keep HH:mm:ss.SSS (simple view: HH:mm:ss).
+            display = full.substring(11, TS_LEN) + "  " + prefix + LogLine.stripMarker(body);
+            friendly = full.substring(11, 19) + "  " + prefix + message;
         } else {
-            display = prefix + full;
+            display = prefix + LogLine.stripMarker(body);
+            friendly = prefix + message;
         }
-        return new Entry(ts == null ? "" : ts, prefix.isEmpty() ? full : insertPrefix(full, ts, prefix), display, classify(full));
+        return new Entry(ts == null ? "" : ts, prefix.isEmpty() ? full : insertPrefix(full, ts, prefix),
+                display, friendly, classify(body));
+    }
+
+    private static String firstLine(String text) {
+        int end = text.indexOf('\n');
+        return end < 0 ? text : text.substring(0, end);
     }
 
     private static String insertPrefix(String full, String ts, String prefix) {
@@ -393,47 +425,56 @@ public class LoggingFragment extends Fragment {
         return prefix + full;
     }
 
-    static int classify(String s) {
-        String l = s.toLowerCase(Locale.ROOT);
-        if (s.contains("❌") || l.contains("exception") || l.contains("error") || l.contains("failed")
-                || l.contains("fatal") || l.contains("crash")) return KIND_ERROR;
-        if (s.contains("⚠") || l.contains("warn") || l.contains("not found") || l.contains("timeout")
-                || l.contains("timed out") || l.contains("skipp") || l.contains("fallback")) return KIND_WARN;
-        if (s.contains("✅") || s.contains("✔") || l.contains("hooked") || l.contains("success")
-                || l.contains("installed") || l.contains(" ok ") || l.endsWith(" ok")) return KIND_OK;
-        return KIND_INFO;
+    /** Level written by ModuleLog; lines from older builds fall back to LogLine's guess. */
+    static int classify(String body) {
+        switch (LogLine.levelOf(body)) {
+            case ERROR: return KIND_ERROR;
+            case WARN: return KIND_WARN;
+            case OK: return KIND_OK;
+            case DETAIL: return KIND_DETAIL;
+            default: return KIND_INFO;
+        }
     }
 
     // ---------------------------------------------------------------- rendering
 
     private void applyFilter() {
         if (listView == null) return;
+        // Technical details are hidden unless asked for; counts follow what can be shown.
+        List<Entry> visible;
+        if (showDetails) {
+            visible = allEntries;
+        } else {
+            visible = new ArrayList<>();
+            for (Entry e : allEntries) if (e.kind != KIND_DETAIL) visible.add(e);
+        }
         List<Entry> shown;
         int ok = 0, warn = 0, err = 0;
-        for (Entry e : allEntries) {
+        for (Entry e : visible) {
             if (e.kind == KIND_OK) ok++;
             else if (e.kind == KIND_WARN) warn++;
             else if (e.kind == KIND_ERROR) err++;
         }
         if (filterKind == FILTER_ALL) {
-            shown = allEntries;
+            shown = visible;
         } else {
             shown = new ArrayList<>();
-            for (Entry e : allEntries) if (e.kind == filterKind) shown.add(e);
+            for (Entry e : visible) if (e.kind == filterKind) shown.add(e);
         }
-        chipAll.setText(getString(R.string.logs_filter_count, getString(R.string.logs_filter_all), allEntries.size()));
+        chipAll.setText(getString(R.string.logs_filter_count, getString(R.string.logs_filter_all), visible.size()));
         chipHooked.setText(getString(R.string.logs_filter_count, getString(R.string.logs_filter_hooked), ok));
         chipErrors.setText(getString(R.string.logs_filter_count, getString(R.string.logs_filter_errors), err));
         chipWarnings.setText(getString(R.string.logs_filter_count, getString(R.string.logs_filter_warnings), warn));
 
+        adapter.technical = showDetails;
         adapter.setItems(shown);
-        countView.setText(getString(R.string.logs_count_format, shown.size(), allEntries.size()));
+        countView.setText(getString(R.string.logs_count_format, shown.size(), visible.size()));
 
         boolean empty = shown.isEmpty();
         emptyView.setVisibility(empty && loadedOnce ? View.VISIBLE : View.GONE);
         listView.setVisibility(empty ? View.INVISIBLE : View.VISIBLE);
         if (empty) {
-            boolean filtered = !allEntries.isEmpty();
+            boolean filtered = !visible.isEmpty();
             emptyTitle.setText(filtered ? R.string.logs_empty_filter_title : R.string.logs_empty_title);
             emptyBody.setText(filtered ? R.string.logs_empty_filter_body : R.string.logs_empty_body);
             emptyRefresh.setVisibility(filtered ? View.GONE : View.VISIBLE);
@@ -481,9 +522,14 @@ public class LoggingFragment extends Fragment {
 
     // ---------------------------------------------------------------- actions
 
-    /** Text of the currently filtered entries (full timestamps), capped to the newest part. */
+    /**
+     * Text of the currently filtered entries (full timestamps, callers and levels), capped to the
+     * newest part. "All" also exports the technical details, so a shared log is useful for a bug
+     * report even when they are hidden on screen.
+     */
     private String exportText() {
-        List<Entry> items = adapter.items;
+        List<Entry> items = new ArrayList<>();
+        for (Entry e : allEntries) if (filterKind == FILTER_ALL || e.kind == filterKind) items.add(e);
         StringBuilder sb = new StringBuilder();
         for (int i = items.size() - 1; i >= 0; i--) {
             String s = items.get(i).full;
@@ -558,7 +604,8 @@ public class LoggingFragment extends Fragment {
 
     private final class LogAdapter extends RecyclerView.Adapter<LogAdapter.VH> {
         List<Entry> items = new ArrayList<>();
-        int colorInfo, colorOk, colorWarn, colorError;
+        int colorInfo, colorOk, colorWarn, colorError, colorDetail;
+        boolean technical;
 
         @SuppressWarnings("NotifyDataSetChanged")
         void setItems(List<Entry> list) {
@@ -571,8 +618,6 @@ public class LoggingFragment extends Fragment {
         public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             TextView tv = new TextView(parent.getContext());
             tv.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            tv.setTypeface(Typeface.MONOSPACE);
-            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             int pad = Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 3, parent.getResources().getDisplayMetrics()));
             tv.setPadding(0, pad, 0, pad);
             tv.setLineSpacing(0, 1.1f);
@@ -582,12 +627,16 @@ public class LoggingFragment extends Fragment {
         @Override
         public void onBindViewHolder(@NonNull VH holder, int position) {
             Entry e = items.get(position);
-            holder.text.setText(e.display);
+            // Technical: the raw entry in monospace. Simple: readable text, one line per entry.
+            holder.text.setTypeface(technical ? Typeface.MONOSPACE : Typeface.DEFAULT);
+            holder.text.setTextSize(TypedValue.COMPLEX_UNIT_SP, technical ? 11 : 13);
+            holder.text.setText(technical ? e.display : e.friendly);
             int c;
             switch (e.kind) {
                 case KIND_ERROR: c = colorError; break;
                 case KIND_WARN: c = colorWarn; break;
                 case KIND_OK: c = colorOk; break;
+                case KIND_DETAIL: c = colorDetail; break;
                 default: c = colorInfo;
             }
             holder.text.setTextColor(c);

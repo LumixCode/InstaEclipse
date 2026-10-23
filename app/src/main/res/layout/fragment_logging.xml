@@ -33,6 +33,12 @@
                 android:paddingEnd="12dp"
                 android:scrollbars="none">
 
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/logs_filter_group"
                     android:layout_width="wrap_content"
@@ -71,6 +77,17 @@
                         android:layout_height="wrap_content"
                         android:text="@string/logs_filter_warnings" />
                 </com.google.android.material.chip.ChipGroup>
+
+                <!-- Not part of the single-choice filters: shows the technical lines (caller,
+                     resolved names, timings) that the simple view hides. -->
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/logs_chip_details"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="@string/logs_technical_details" />
+                </LinearLayout>
             </HorizontalScrollView>
 
             <!-- Count + status get the full width; the actions sit on their own row below, so
