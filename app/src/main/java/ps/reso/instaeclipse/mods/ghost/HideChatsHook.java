@@ -547,16 +547,14 @@ public class HideChatsHook {
             Class<?> sessionType = Class.forName("com.instagram.common.session.UserSession", false, loader);
             Object session = UnsentIdentity.directValue(threadStore, sessionType);
             if (context == null || session == null) return "";
-            Class<?> formatter = Class.forName("X.01eU", false, loader);
-            for (Method method : formatter.getDeclaredMethods()) {
-                Class<?>[] parameters = method.getParameterTypes();
-                if (!Modifier.isStatic(method.getModifiers()) || method.getReturnType() != String.class
-                        || parameters.length != 3 || !Context.class.isAssignableFrom(parameters[0])
-                        || !parameters[1].isInstance(session) || !parameters[2].isInstance(row)) continue;
-                method.setAccessible(true);
-                Object value = method.invoke(null, context, session, row);
-                return value instanceof String ? ((String) value).trim() : "";
-            }
+            Class<?> formatter = Class.forName(TitleFormatterPick.LEGACY_FORMATTER, false, loader);
+            Method method = TitleFormatterPick.pick(List.of(), java.util.Arrays.asList(formatter.getDeclaredMethods()));
+            if (method == null) return "";
+            Class<?>[] parameters = method.getParameterTypes();
+            if (!parameters[1].isInstance(session) || !parameters[2].isInstance(row)) return "";
+            method.setAccessible(true);
+            Object value = method.invoke(null, context, session, row);
+            return value instanceof String ? ((String) value).trim() : "";
         } catch (Throwable ignored) {}
         return "";
     }
