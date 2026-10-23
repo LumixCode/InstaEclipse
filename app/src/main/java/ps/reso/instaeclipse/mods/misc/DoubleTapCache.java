@@ -9,12 +9,12 @@ final class DoubleTapCache {
     private DoubleTapCache() {}
 
     static boolean shouldStoreMissing(boolean returnedNormally, int found) {
-        return found == 0;
+        return returnedNormally && found == 0;
     }
 
     static <T> List<T> senders(List<T> callers, Predicate<T> returnsVoid, Predicate<T> mergedLambda) {
         List<T> out = new ArrayList<>();
-        for (T caller : callers) if (returnsVoid.test(caller)) out.add(caller);
+        for (T caller : callers) if (returnsVoid.test(caller) && !mergedLambda.test(caller)) out.add(caller);
         return out;
     }
 }

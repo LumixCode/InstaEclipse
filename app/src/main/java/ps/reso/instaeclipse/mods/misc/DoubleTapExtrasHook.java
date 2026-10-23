@@ -7,7 +7,9 @@ import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -65,17 +67,21 @@ public class DoubleTapExtrasHook {
     };
 
     public void install(DexKitBridge bridge, ClassLoader cl) {
-        List<Method> comments = cached("Extras_DoubleTapComments", cl, () -> {
-            List<Method> out = new ArrayList<>();
+        List<Method> comments = cached("Extras_DoubleTapComments_v2", cl, () -> {
+            Set<Method> out = new LinkedHashSet<>();
             for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .name("onDoubleTap").returnType("boolean").usingStrings("fb_comment_double_tap")))) {
                 out.add(md.getMethodInstance(cl));
             }
-            return out;
+            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                    .name("onDoubleTap").returnType("boolean").usingEqStrings("like_comment")))) {
+                out.add(md.getMethodInstance(cl));
+            }
+            return new ArrayList<>(out);
         });
         for (Method m : comments) XposedBridge.hookMethod(m, CONSUME);
 
-        List<Method> direct = cached("Extras_DoubleTapDirect", cl, () -> {
+        List<Method> direct = cached("Extras_DoubleTapDirect_v2", cl, () -> {
             List<Method> out = new ArrayList<>();
             for (MethodData getter : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .returnType("java.lang.String").paramTypes("com.instagram.common.session.UserSession", "int")
