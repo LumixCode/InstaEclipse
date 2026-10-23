@@ -84,8 +84,10 @@ public final class OpenLinksExternallyHook {
         List<Method> cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(CACHE_KEY, loader) : null;
         if (cached != null) return cached;
         List<Method> methods = new ArrayList<>();
+        // IG 451 moved "TrackingInfo.ARG_MODULE_NAME" into a shared string-pool class; the launcher
+        // (446 X.0Pi6.A0G, 451 X.0kfN.A0G) still uses both of these itself.
         for (var data : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
-                .usingStrings("Tracking.ARG_CLICK_SOURCE", "TrackingInfo.ARG_MODULE_NAME")
+                .usingStrings("Tracking.ARG_CLICK_SOURCE", "in_app_browser_v2")
                 .returnType("boolean")))) {
             methods.add(data.getMethodInstance(loader));
         }
