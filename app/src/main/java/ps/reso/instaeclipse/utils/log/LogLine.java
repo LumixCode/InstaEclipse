@@ -166,6 +166,10 @@ public final class LogLine {
         NAMES.put("StoryTray", "Story tray");
         NAMES.put("FollowsYou", "Follow status label");
         NAMES.put("ReelLabels", "Reel menu labels");
+        NAMES.put("MarkAsRead", "Mark as read button");
+        NAMES.put("ChannelMarkAsRead", "Channel mark as read button");
+        NAMES.put("StoryLinks", "Story links");
+        NAMES.put("StoryInfo", "Story info");
     }
 
     private LogLine() {}

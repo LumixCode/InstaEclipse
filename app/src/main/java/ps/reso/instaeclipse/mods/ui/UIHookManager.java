@@ -206,20 +206,25 @@ public class UIHookManager {
         // performLongClick() fires BEFORE any listener/interceptor chain and lets us
         // fully own the event by returning true via setResult.
         // This only fires when the user actually long-presses something — not a hot path.
-        XposedHelpers.findAndHookMethod(View.class, "performLongClick", new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (sInboxButtonId == 0 && sDirectTabId == 0) return;
-                View view = (View) param.thisObject;
-                int id = view.getId();
-                if (id != sInboxButtonId && id != sDirectTabId) return;
-                Activity activity = currentActivity;
-                if (activity == null) return;
-                GhostModeUtils.toggleSelectedGhostOptions(activity);
-                VibrationUtil.vibrate(activity);
-                param.setResult(true); // consume — skip Instagram's handler entirely
-            }
-        });
+        try {
+            XposedHelpers.findAndHookMethod(View.class, "performLongClick", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    if (sInboxButtonId == 0 && sDirectTabId == 0) return;
+                    View view = (View) param.thisObject;
+                    int id = view.getId();
+                    if (id != sInboxButtonId && id != sDirectTabId) return;
+                    Activity activity = currentActivity;
+                    if (activity == null) return;
+                    GhostModeUtils.toggleSelectedGhostOptions(activity);
+                    VibrationUtil.vibrate(activity);
+                    param.setResult(true); // consume — skip Instagram's handler entirely
+                }
+            });
+        } catch (Throwable t) {
+            ModuleLog.warn("(InstaEclipse) Holding the inbox icon may not toggle ghost mode: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
+        }
 
         // Hook onResume - Modal
         try {
