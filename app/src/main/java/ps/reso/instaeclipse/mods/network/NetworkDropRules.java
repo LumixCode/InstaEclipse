@@ -43,7 +43,6 @@ public final class NetworkDropRules {
         if (FeatureFlags.disableStories) {
             shouldDrop |= path.contains("/feed/reels_tray/")
                     || path.contains("feed/get_latest_reel_media/")
-                    || path.contains("direct_v2/pending_inbox/?visual_message")
                     || path.contains("stories/hallpass/")
                     || path.contains("/api/v1/feed/reels_media_stream/");
         }
@@ -60,18 +59,10 @@ public final class NetworkDropRules {
             shouldDrop |= path.contains("/api/v1/media/") && path.contains("comments/");
         }
         if (FeatureFlags.isAdBlockEnabled) {
-            shouldDrop |= path.contains("profile_ads/get_profile_ads/")
-                    || path.contains("/async_ads/")
-                    || path.contains("/feed/injected_reels_media/")
-                    || path.equals("/api/v1/ads/graphql/");
+            shouldDrop |= isAdRequest(path);
         }
         if (FeatureFlags.isAnalyticsBlocked) {
-            shouldDrop |= (host != null && (host.contains("graph.instagram.com")
-                    || host.contains("graph.facebook.com")))
-                    || path.contains("/logging_client_events");
-        }
-        if (FeatureFlags.spoofLastSeen) {
-            shouldDrop |= isLastSeenRequest(path);
+            shouldDrop |= isAnalyticsRequest(path);
         }
         if (FeatureFlags.disableDiscoverPeople) {
             shouldDrop |= path.contains("/discover/ayml/");
@@ -86,15 +77,18 @@ public final class NetworkDropRules {
                 || (host != null && host.contains("i.instagram.com") && path.contains("/fbsearch/top_serp"));
     }
 
-    static boolean isLastSeenRequest(String path) {
-        return path.contains("/push/setForegroundState/")
-                || path.contains("/accounts/update_active_status")
-                || path.contains("/notes/create_note")
-                || path.contains("/accounts/set_presence_disabled")
-                || path.contains("/update_active_status")
-                || path.contains("/banyan/banyan/")
-                || path.endsWith("/last_active/")
-                || path.contains("/presence/");
+    static boolean isAdRequest(String path) {
+        return path.contains("profile_ads/get_profile_ads/")
+                || path.contains("/async_ads/")
+                || path.contains("/feed/injected_reels_media")
+                || path.equals("/api/v1/ads/graphql/")
+                || path.contains("/ads/comment_sheet_ads/");
+    }
+
+    static boolean isAnalyticsRequest(String path) {
+        return path.contains("/logging_client_events")
+                || path.contains("/pigeon_nest")
+                || path.contains("/sonar_prober");
     }
 
     public static void neutralize(Object requestObj, URI original, URI fake, String fakeUrl) {
