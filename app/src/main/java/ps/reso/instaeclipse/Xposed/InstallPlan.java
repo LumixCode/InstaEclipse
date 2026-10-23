@@ -92,7 +92,6 @@ import ps.reso.instaeclipse.mods.ui.DisableRepostHook;
 import ps.reso.instaeclipse.mods.ui.HideHeaderButtonsHook;
 import ps.reso.instaeclipse.mods.ui.HideNotesTrayHook;
 import ps.reso.instaeclipse.mods.ui.InboxDiscoverPeopleHook;
-import ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook;
 import ps.reso.instaeclipse.mods.ui.LockedCollectionsHook;
 import ps.reso.instaeclipse.mods.ui.ProfileFollowsYouHook;
 import ps.reso.instaeclipse.mods.ui.ProfileMenuHook;
@@ -136,7 +135,6 @@ public class InstallPlan {
     static final int META_AI = 17;
     static final int META_AI_REELS = 18;
     static final int DISABLE_REPOST_HOOK = 19;
-    static final int LOCK_DIRECT_MESSAGES_HOOK = 20;
     static final int HIDE_SUGGESTED_FEED_ITEMS_HOOK = 21;
     static final int AD_BLOCKER = 22;
     static final int TRACKING_LINK_DISABLE = 23;
@@ -242,7 +240,6 @@ public class InstallPlan {
         s.add(new InstallStep(META_AI, "metaAi", null, "(InstaEclipse | RemoveMetaAI): ", COULD_NOT_START, false, null));
         s.add(new InstallStep(META_AI_REELS, "metaAiReels", new String[]{"metaAi"}, "(InstaEclipse | RemoveMetaAI): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(DISABLE_REPOST_HOOK, "DisableRepostHook", null, "(InstaEclipse | DisableRepost): ", COULD_NOT_START, true, null));
-        s.add(new InstallStep(LOCK_DIRECT_MESSAGES_HOOK, "LockDirectMessagesHook", null, "(InstaEclipse | LockDMs): ", COULD_NOT_START, false, null));
         s.add(new InstallStep(HIDE_SUGGESTED_FEED_ITEMS_HOOK, "HideSuggestedFeedItemsHook", null, "(InstaEclipse | HideSuggested): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(AD_BLOCKER, "AdBlocker", null, "(InstaEclipse | AdBlocker): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(TRACKING_LINK_DISABLE, "TrackingLinkDisable", null, "(InstaEclipse | TrackingLinkDisable): ", COULD_NOT_START, false, null));
@@ -400,9 +397,6 @@ public class InstallPlan {
                 return;
             case DISABLE_REPOST_HOOK:
                 new DisableRepostHook().install(ctx.context, ctx.bridge, ctx.lpparam.classLoader);
-                return;
-            case LOCK_DIRECT_MESSAGES_HOOK:
-                new LockDirectMessagesHook().install(ctx.lpparam.classLoader);
                 return;
             case HIDE_SUGGESTED_FEED_ITEMS_HOOK:
                 new HideSuggestedFeedItemsHook().install(ctx.bridge, ctx.loader);

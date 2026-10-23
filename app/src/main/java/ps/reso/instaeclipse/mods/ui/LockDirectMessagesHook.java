@@ -14,8 +14,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
-import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.PasscodeHasher;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -120,20 +118,6 @@ public class LockDirectMessagesHook {
             lastCheck = now;
             skipped = false;
             return true;
-        }
-    }
-
-    public void install(ClassLoader loader) {
-        try {
-            XposedHelpers.findAndHookMethod("com.instagram.modal.ModalActivity", loader,
-                    "onResume", new XC_MethodHook() {
-                        @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                            watchActivity((Activity) param.thisObject);
-                        }
-                    });
-        } catch (Throwable t) {
-            ModuleLog.warn("(IE|LockDMs) The lock may not cover chats opened in pop-up screens: "
-                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
