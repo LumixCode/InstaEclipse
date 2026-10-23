@@ -46,7 +46,8 @@ public class LikeUndoHook {
 
     private static final String TAG = "(InstaEclipse | LikeUndo): ";
     private static final String CACHE_KEY = "LikeUndoSender";
-    private static final long DELAY_MS = 4000;
+    /** How long a like is held; story likes ({@link StoryLikeUndoHook}) wait the same. */
+    static final long DELAY_MS = 4000;
     /** The hooked method being called through on purpose, which its own hook lets pass. */
     private static final ThreadLocal<Member> REPLAYING = new ThreadLocal<>();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -291,6 +292,12 @@ public class LikeUndoHook {
         };
         if (Looper.myLooper() == Looper.getMainLooper()) start.run();
         else MAIN.post(start);
+        // Safety net: a like still held well after its window (its timer never ran) goes out now.
+        MAIN.postDelayed(() -> {
+            if (!pending.isHeld(media, like)) return;
+            ModuleLog.warn(TAG + "A held like was still waiting after " + DELAY_MS + " ms, so it was sent now");
+            like.fire.run();
+        }, DELAY_MS + LikeHeartTint.EXPIRE_GRACE_MS);
     }
 
     /** Ask before liking: the like goes out only on Like; Cancel drops it. */

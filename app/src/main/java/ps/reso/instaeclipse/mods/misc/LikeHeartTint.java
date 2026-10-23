@@ -1,6 +1,7 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import android.app.Activity;
+import android.content.res.ColorStateList;
 import android.graphics.ColorFilter;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
@@ -81,6 +82,8 @@ final class LikeHeartTint {
     static final int LIKE_BLUE = 0xFF0095F6;
     /** Instagram paints its heart with SRC_ATOP; the blue does the same. */
     private static final ColorFilter BLUE = new PorterDuffColorFilter(LIKE_BLUE, PorterDuff.Mode.SRC_ATOP);
+    /** A story like button's image tint while its like is held ({@link #storyHeart}). */
+    private static final ColorStateList BLUE_TINT = ColorStateList.valueOf(LIKE_BLUE);
     /** A touch older than this when the like comes did not cause it. */
     private static final long TOUCH_MAX_AGE_MS = 1500;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -98,6 +101,11 @@ final class LikeHeartTint {
     private static final Map<String, LikeHeartTint> blue = new HashMap<>();
     /** Instagram's own filter of each red layer while it is blue (main thread). */
     private static final Map<Drawable, ColorFilter> original = new WeakHashMap<>();
+    /** Instagram's own filter last seen per kind of heart (the class of the drawable it mounts), for a
+     *  red layer that came blue (main thread). */
+    private static final Map<Class<?>, ColorFilter> ownFilters = new HashMap<>();
+    /** How long after its like's window a heart may still be blue before the safety net resets it. */
+    static final long EXPIRE_GRACE_MS = 2000;
     /** Hearts built per way of drawing them, for the log. */
     private static final AtomicIntegerArray seen = new AtomicIntegerArray(KINDS.length);
     private static Field filled;
@@ -132,6 +140,8 @@ final class LikeHeartTint {
     private final String id;
     /** The hearts this tint turned blue: the drawable Instagram mounts, and its red layer. */
     private final Map<Drawable, Drawable> painted = new IdentityHashMap<>();
+    /** The story like buttons this tint turned blue, and the image tint each had (main thread). */
+    private final Map<ImageView, ColorStateList> buttons = new IdentityHashMap<>();
     private boolean done;
 
     private LikeHeartTint(String id) {
@@ -643,18 +653,56 @@ final class LikeHeartTint {
         }
         LikeHeartTint previous = old;
         Runnable paint = () -> {
-            if (previous != null) {
-                tint.painted.putAll(previous.painted);
-                previous.painted.clear();
-                previous.done = true;
-            }
+            if (previous != null) previous.handOver(tint);
             for (Map.Entry<Drawable, Drawable> e : found.entrySet()) tint.paint(e.getKey(), e.getValue());
         };
         if (Looper.myLooper() == Looper.getMainLooper()) paint.run();
         else MAIN.post(paint);
-        ModuleLog.line(TAG + "heart blue (" + found.size() + " drawn; seen animated " + seen.get(ANIMATED)
+        MAIN.postDelayed(tint::expire, LikeUndoHook.DELAY_MS + EXPIRE_GRACE_MS);
+        ModuleLog.probe(TAG + "heart blue (" + found.size() + " drawn; seen animated " + seen.get(ANIMATED)
                 + ", state list " + seen.get(STATE_LIST) + ", icon " + seen.get(ICON) + ", compose " + seen.get(COMPOSE) + ")");
         return tint;
+    }
+
+    /**
+     * A story's like button was bound to story {@code id} (main thread). Its heart is the image of
+     * an ImageView (ufi_heart_icon, red through the button's image tint while it is selected), so
+     * it is blue while that story's like is held and the button shows it liked, and never blue for
+     * another story the button now shows.
+     *
+     * <p>The blue is the button's image tint, not a color filter: the heart is a selector, and a
+     * selector that was given a color filter once stops passing its tint to the state it shows next,
+     * so after the like went out the liked heart drew untinted (black).
+     */
+    static void storyHeart(String id, ImageView button) {
+        LikeHeartTint tint;
+        List<LikeHeartTint> tints;
+        synchronized (hearts) {
+            if (blue.isEmpty()) return; // nothing is blue, so nothing to paint or put back
+            tint = id == null ? null : blue.get(id);
+            tints = new ArrayList<>(blue.values());
+        }
+        boolean liked = button.isSelected();
+        for (LikeHeartTint other : tints) {
+            if (other != tint || !liked) other.unpaintButton(button);
+        }
+        if (tint == null || !liked || tint.done || button.getImageTintList() == BLUE_TINT) return;
+        // A bind that set Instagram's tint again replaces the one to put back.
+        tint.buttons.put(button, button.getImageTintList());
+        button.setImageTintList(BLUE_TINT);
+        ModuleLog.probe(TAG + "heart blue (story)");
+    }
+
+    /** Instagram's tint back on a story like button this tint turned blue (main thread). */
+    private void unpaintButton(ImageView button) {
+        if (!buttons.containsKey(button)) return;
+        ColorStateList own = buttons.remove(button);
+        try {
+            // Unless a bind already set Instagram's own again.
+            if (button.getImageTintList() == BLUE_TINT) button.setImageTintList(own);
+        } catch (Throwable t) {
+            ModuleLog.warn(TAG + "Could not put the story heart's colour back: " + t);
+        }
     }
 
     /** Instagram's own heart again (main thread; once); a Compose row recomposes with it. */
@@ -666,13 +714,88 @@ final class LikeHeartTint {
             if (blue.get(id) == this) blue.remove(id);
             recompose = blue.containsKey(id) ? null : composeStates.remove(id);
         }
-        for (Drawable heart : new ArrayList<>(painted.keySet())) unpaint(heart);
-        if (recompose == null) return;
-        try {
-            stateSet.invoke(recompose, 1);
-        } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ Compose state: " + t);
+        unpaintAll();
+        if (recompose != null) {
+            try {
+                stateSet.invoke(recompose, 1);
+            } catch (Throwable t) {
+                ModuleLog.warn(TAG + "Could not put the heart's colour back: " + t);
+            }
         }
+        sweep(id);
+    }
+
+    private void unpaintAll() {
+        for (Drawable heart : new ArrayList<>(painted.keySet())) unpaint(heart);
+        for (ImageView button : new ArrayList<>(buttons.keySet())) unpaintButton(button);
+    }
+
+    /**
+     * A newer like of the same post takes over this tint's blue hearts (main thread). If that one is
+     * already over (taken back before its own paint ran here), they get Instagram's colour back
+     * instead: a finished tint never puts anything back.
+     */
+    private void handOver(LikeHeartTint next) {
+        if (done) return;
+        done = true;
+        if (next.done) {
+            unpaintAll();
+            return;
+        }
+        next.painted.putAll(painted);
+        next.buttons.putAll(buttons);
+        painted.clear();
+        buttons.clear();
+    }
+
+    /** Safety net (main thread): a heart still blue this long after its like goes back to red. */
+    private void expire() {
+        if (done) return;
+        boolean compose;
+        synchronized (hearts) {
+            compose = composeStates.containsKey(id);
+        }
+        ModuleLog.warn(TAG + "A heart was still blue " + (LikeUndoHook.DELAY_MS + EXPIRE_GRACE_MS)
+                + " ms after its like, so it was reset (" + painted.size() + " drawn, "
+                + buttons.size() + " story, compose " + (compose ? "yes" : "no") + ")");
+        clear();
+    }
+
+    /**
+     * Instagram's colour back on every heart of post {@code id} that is still drawn blue although no
+     * like of it is held (main thread). Catches what the tints don't know: a red layer Instagram or
+     * Android rebuilt from a blue one's state comes blue too.
+     */
+    private static void sweep(String id) {
+        Map<Drawable, Drawable> mine = new IdentityHashMap<>();
+        synchronized (hearts) {
+            if (blue.containsKey(id)) return;
+            for (Map.Entry<Drawable, Heart> e : hearts.entrySet()) {
+                if (id.equals(e.getValue().id)) mine.put(e.getKey(), e.getValue().red);
+            }
+        }
+        int fixed = 0;
+        for (Map.Entry<Drawable, Drawable> e : mine.entrySet()) {
+            Drawable heart = e.getKey();
+            for (Drawable layer : new Drawable[]{heart, e.getValue(), currentRed(heart)}) {
+                try {
+                    if (layer == null || layer.getColorFilter() != BLUE) continue;
+                    layer.setColorFilter(original.containsKey(layer) ? original.remove(layer) : ownFilters.get(heart.getClass()));
+                    heart.invalidateSelf();
+                    fixed++;
+                } catch (Throwable t) {
+                    ModuleLog.warn(TAG + "Could not put the heart's colour back: " + t);
+                }
+            }
+        }
+        if (fixed > 0) ModuleLog.warn(TAG + "Put Instagram's colour back on " + fixed + " heart layer(s) left blue");
+    }
+
+    /** The layer Instagram paints red in {@code heart} now (it may have rebuilt it since it was painted). */
+    private static Drawable currentRed(Drawable heart) {
+        Drawable red = redLayer(heart);
+        if (red == null) red = drawableIn(heart);
+        return red;
     }
 
     private void paint(Drawable heart, Drawable red) {
@@ -681,7 +804,14 @@ final class LikeHeartTint {
         try {
             // Its own state first: a drawable from a resource shares its filter with every copy.
             red.mutate();
-            if (!original.containsKey(red)) original.put(red, red.getColorFilter());
+            if (!original.containsKey(red)) {
+                ColorFilter own = red.getColorFilter();
+                // A layer made from a blue one's state comes blue: never keep our blue as Instagram's
+                // colour, or putting it back would leave the heart blue for good.
+                if (own == BLUE) own = ownFilters.get(heart.getClass());
+                else ownFilters.put(heart.getClass(), own);
+                original.put(red, own);
+            }
             red.setColorFilter(BLUE);
             heart.invalidateSelf();
         } catch (Throwable t) {
