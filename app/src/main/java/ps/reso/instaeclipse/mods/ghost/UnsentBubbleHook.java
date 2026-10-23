@@ -24,6 +24,7 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.HookFrames;
+import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
@@ -67,6 +68,7 @@ final class UnsentBubbleHook {
             installBackground(text.get(1), text.get(2));
             XposedBridge.hookMethod(item, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    if (!UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) return;
                     try {
                         View view = (View) itemView.get(param.thisObject);
                         if (view != null) stateFor(view).textBubble = true;
@@ -198,6 +200,7 @@ final class UnsentBubbleHook {
         Field nativeShape = shape;
         XposedBridge.hookMethod(background, new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                if (!UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) return;
                 if (param.hasThrowable() || views.isEmpty()) return;
                 try {
                     // Nested Compose restarts bypass the holder's Item call. Resolve the
@@ -281,6 +284,7 @@ final class UnsentBubbleHook {
             hookScope(content, voiceScope, param -> UnsentMediaIdentity.ids(payload.get(param.thisObject), identity));
             XposedBridge.hookMethod(factory, new XC_MethodHook() {
                 @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    if (!UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) return;
                     if (param.hasThrowable()) return;
                     try {
                         MediaScope scope = voiceScope.get();
@@ -315,12 +319,14 @@ final class UnsentBubbleHook {
             }
             for (Method shape : shapes) XposedBridge.hookMethod(shape, new XC_MethodHook() {
                 @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    if (!UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) return;
                     MediaScope scope = previewScope.get();
                     if (scope != null && scope.shape == null && !param.hasThrowable()) scope.shape = param.getResult();
                 }
             });
             for (Method clip : clips) XposedBridge.hookMethod(clip, new XC_MethodHook() {
                 @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    if (!UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) return;
                     MediaScope scope = previewScope.get();
                     if (param.hasThrowable() || scope == null || scope.shape != param.args[1]) return;
                     try {
@@ -401,6 +407,7 @@ final class UnsentBubbleHook {
             private final HookFrames.Slot frames = new HookFrames.Slot();
 
             @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                if (!UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) return;
                 HookFrames.Frame frame = frames.enter();
                 frame.put("ie_unsent_previous_scope", target.get());
                 target.remove();
@@ -424,6 +431,7 @@ final class UnsentBubbleHook {
                 } catch (Throwable error) { report(error); }
             }
             @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                if (!UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) return;
                 HookFrames.Frame frame = frames.exit();
                 MediaScope previous = (MediaScope) frame.get("ie_unsent_previous_scope");
                 if (previous == null) target.remove(); else target.set(previous);

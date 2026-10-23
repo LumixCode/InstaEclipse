@@ -59,6 +59,7 @@ final class UnsentIndicatorHook {
                     private final HookFrames.Slot frames = new HookFrames.Slot();
 
                     @Override protected void beforeHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                        if (!UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) return;
                         HookFrames.Frame frame = frames.enter();
                         View view = (View) viewField.get(param.args[0]);
                         Row old = rows.remove(view);
@@ -70,9 +71,10 @@ final class UnsentIndicatorHook {
                     }
 
                     @Override protected void afterHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                        if (!UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) return;
                         HookFrames.Frame frame = frames.exit();
                         try {
-                            if (param.hasThrowable() || !FeatureFlags.keepUnsentMessages) return;
+                            if (param.hasThrowable()) return;
                             Object holder = param.args[0];
                             Object data = UnsentIdentity.boundData(holder, model);
                             Object message = UnsentIdentity.directValue(data, model);
@@ -173,7 +175,13 @@ final class UnsentIndicatorHook {
         ViewTreeObserver.OnPreDrawListener listener = () -> {
             View current = reference.get();
             Row row = current == null ? null : rows.get(current);
-            if (row != null) row.update(current);
+            if (row == null) return true;
+            if (UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) {
+                row.update(current);
+            } else {
+                rows.remove(current);
+                row.detach(current);
+            }
             return true;
         };
         observed.put(view, listener);
@@ -212,7 +220,7 @@ final class UnsentIndicatorHook {
         }
 
         void update(View view) {
-            boolean enabled = FeatureFlags.keepUnsentMessages && FeatureFlags.showUnsentIndicator;
+            boolean enabled = UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator);
             long removals = KeepUnsentMessagesHook.protectedIds.revision();
             long logged = UnsentLog.revision();
             boolean changed = removals != observedRemovals || logged != observedLog || enabled != wasEnabled;
