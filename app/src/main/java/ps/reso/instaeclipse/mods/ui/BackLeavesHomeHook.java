@@ -33,6 +33,11 @@ public final class BackLeavesHomeHook {
     private static Class<?> mainActivity;
 
     public void install(ClassLoader cl) {
+        hookActivityBack(cl);
+        BackLeavesHomeDispatcher.install(cl);
+    }
+
+    private static void hookActivityBack(ClassLoader cl) {
         try {
             Method back = null;
             mainActivity = cl.loadClass(MAIN_CLASS);
@@ -46,13 +51,7 @@ public final class BackLeavesHomeHook {
             XposedBridge.hookMethod(back, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (!FeatureFlags.backLeavesHome || !(param.thisObject instanceof Activity a)
-                            || !mainActivity.isInstance(a)) return;
-                    try {
-                        if (!homeFeedInFront(a)) return;
-                        a.moveTaskToBack(true);
-                        param.setResult(null);
-                    } catch (Throwable ignored) { }
+                    if (param.thisObject instanceof Activity a && leaveIfHomeFeed(a)) param.setResult(null);
                 }
             });
             FeatureStatusTracker.setHooked("BackLeavesHome");
@@ -60,6 +59,17 @@ public final class BackLeavesHomeHook {
             ModuleLog.detail(TAG + "hooked " + back.getDeclaringClass().getName() + ".onBackPressed");
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Will not work: setup failed", t);
+        }
+    }
+
+    static boolean leaveIfHomeFeed(Activity a) {
+        if (!FeatureFlags.backLeavesHome || mainActivity == null || !mainActivity.isInstance(a)) return false;
+        try {
+            if (!homeFeedInFront(a)) return false;
+            a.moveTaskToBack(true);
+            return true;
+        } catch (Throwable ignored) {
+            return false;
         }
     }
 
