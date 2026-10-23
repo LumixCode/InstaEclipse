@@ -37,7 +37,21 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 /** Marks retained messages without changing their text, copy actions or send payloads. */
 final class UnsentIndicatorHook {
     private static final Map<View, Row> rows = new WeakHashMap<>();
-    private static final Map<View, ViewTreeObserver.OnPreDrawListener> observed = new WeakHashMap<>();
+    private static final RowListeners<View, ViewTreeObserver.OnPreDrawListener> preDraw = new RowListeners<>(
+            new RowListeners.Registrar<>() {
+                @Override public void register(View row, ViewTreeObserver.OnPreDrawListener listener) {
+                    row.getViewTreeObserver().addOnPreDrawListener(listener);
+                }
+
+                @Override public void unregister(View row, ViewTreeObserver.OnPreDrawListener listener) {
+                    row.getViewTreeObserver().removeOnPreDrawListener(listener);
+                }
+            });
+    private static final View.OnAttachStateChangeListener attachState = new View.OnAttachStateChangeListener() {
+        @Override public void onViewAttachedToWindow(View row) { preDraw.attached(row); }
+
+        @Override public void onViewDetachedFromWindow(View row) { preDraw.detached(row); }
+    };
     private static final UnsentBubbleHook bubbles = new UnsentBubbleHook();
 
     void install(DexKitBridge bridge, ClassLoader loader) {
@@ -170,7 +184,7 @@ final class UnsentIndicatorHook {
      * message kept re-marking whichever message the view showed next.
      */
     private static void observe(View view) {
-        if (observed.containsKey(view)) return;
+        if (preDraw.tracks(view)) return;
         java.lang.ref.WeakReference<View> reference = new java.lang.ref.WeakReference<>(view);
         ViewTreeObserver.OnPreDrawListener listener = () -> {
             View current = reference.get();
@@ -184,8 +198,8 @@ final class UnsentIndicatorHook {
             }
             return true;
         };
-        observed.put(view, listener);
-        view.getViewTreeObserver().addOnPreDrawListener(listener);
+        preDraw.track(view, listener, view.isAttachedToWindow());
+        view.addOnAttachStateChangeListener(attachState);
     }
 
     static void refreshVisibleRows() {
@@ -202,6 +216,7 @@ final class UnsentIndicatorHook {
         final java.lang.ref.WeakReference<Object> message;
         final UnsentMediaMark mediaMark;
         long observedRemovals = -1, observedLog = -1;
+        Object observedIdentifier;
         boolean wasEnabled, deleted;
         CharSequence originalDescription;
         String markedDescription;
@@ -228,8 +243,12 @@ final class UnsentIndicatorHook {
             // Keep the old client alias too, so the persisted deletion still matches after restart.
             boolean identityChanged = false;
             if (deleted || changed) {
-                for (String id : UnsentIdentity.messageIds(message.get())) {
-                    if (!ids.contains(id)) { ids.add(id); identityChanged = true; }
+                Object identifier = UnsentIdentity.identifier(message.get());
+                if (changed || identifier != observedIdentifier) {
+                    observedIdentifier = identifier;
+                    for (String id : UnsentIdentity.strings(identifier)) {
+                        if (!ids.contains(id)) { ids.add(id); identityChanged = true; }
+                    }
                 }
             }
             if (identityChanged || changed) {

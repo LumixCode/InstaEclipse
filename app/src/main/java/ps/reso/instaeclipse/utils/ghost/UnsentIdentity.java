@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import ps.reso.instaeclipse.utils.core.SafeReflect;
+
 /** Bounded lookup on the bound row, never across adapter collections or adjacent messages. */
 public final class UnsentIdentity {
     public static final String SESSION = "com.instagram.common.session.UserSession";
@@ -23,6 +25,9 @@ public final class UnsentIdentity {
     private static final Map<Class<?>, Map<String, Optional<Method>>> methods = new ConcurrentHashMap<>();
     /** Each class's own non-static, non-primitive fields, already accessible. */
     private static final Map<Class<?>, Field[]> objectFields = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Method[]> identifierGetters = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Field[]> stringFields = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Field[]> boundFields = new ConcurrentHashMap<>();
     private UnsentIdentity() {}
 
     public static String account(Object owner) {
@@ -72,7 +77,7 @@ public final class UnsentIdentity {
         Field[] fields = objectFields.get(cls);
         if (fields != null) return fields;
         List<Field> found = new ArrayList<>();
-        for (Field field : cls.getDeclaredFields()) {
+        for (Field field : SafeReflect.fields(cls)) {
             if (Modifier.isStatic(field.getModifiers()) || field.getType().isPrimitive()) continue;
             field.setAccessible(true);
             found.add(field);
@@ -108,18 +113,31 @@ public final class UnsentIdentity {
 
     /** Current row data is stored through RecyclerView's typed item interface (getType()). */
     public static Object boundData(Object holder, Class<?> messageClass) {
-        for (Class<?> cls = holder.getClass(); cls != null && cls != Object.class; cls = cls.getSuperclass()) {
-            for (Field field : cls.getDeclaredFields()) {
-                if (Modifier.isStatic(field.getModifiers()) || !field.getType().isInterface()) continue;
-                try {
-                    if (field.getType().getMethod("getType").getReturnType() != int.class) continue;
-                    field.setAccessible(true);
-                    Object data = field.get(holder);
-                    if (directValue(data, messageClass) != null) return data;
-                } catch (ReflectiveOperationException ignored) {}
-            }
+        for (Field field : boundFields(holder.getClass())) {
+            try {
+                Object data = field.get(holder);
+                if (directValue(data, messageClass) != null) return data;
+            } catch (ReflectiveOperationException ignored) {}
         }
         return null;
+    }
+
+    static Field[] boundFields(Class<?> holder) {
+        Field[] fields = boundFields.get(holder);
+        if (fields != null) return fields;
+        List<Field> found = new ArrayList<>();
+        for (Class<?> cls = holder; cls != null && cls != Object.class; cls = cls.getSuperclass()) {
+            for (Field field : SafeReflect.fields(cls)) {
+                if (Modifier.isStatic(field.getModifiers()) || !field.getType().isInterface()) continue;
+                Method getType = publicMethod(field.getType(), "getType");
+                if (getType == null || getType.getReturnType() != int.class) continue;
+                field.setAccessible(true);
+                found.add(field);
+            }
+        }
+        fields = found.toArray(new Field[0]);
+        boundFields.put(holder, fields);
+        return fields;
     }
 
     public static Object directValue(Object owner, Class<?> type) {
@@ -141,14 +159,33 @@ public final class UnsentIdentity {
 
     public static List<String> messageIds(Object message) {
         if (message != null) {
-            for (Method method : message.getClass().getMethods()) {
-                if (!Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == 0
-                        && method.getReturnType().getName().equals(IDENTIFIER)) {
-                    try { return strings(method.invoke(message)); } catch (ReflectiveOperationException ignored) {}
-                }
+            for (Method method : identifierGetters(message.getClass())) {
+                try { return strings(method.invoke(message)); } catch (ReflectiveOperationException ignored) {}
             }
         }
         return Collections.emptyList();
+    }
+
+    public static Object identifier(Object message) {
+        if (message != null) {
+            for (Method method : identifierGetters(message.getClass())) {
+                try { return method.invoke(message); } catch (ReflectiveOperationException ignored) {}
+            }
+        }
+        return null;
+    }
+
+    static Method[] identifierGetters(Class<?> type) {
+        Method[] getters = identifierGetters.get(type);
+        if (getters != null) return getters;
+        List<Method> found = new ArrayList<>();
+        for (Method method : SafeReflect.publicMethods(type)) {
+            if (!Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == 0
+                    && method.getReturnType().getName().equals(IDENTIFIER)) found.add(method);
+        }
+        getters = found.toArray(new Method[0]);
+        identifierGetters.put(type, getters);
+        return getters;
     }
 
     public static String messageText(Object message, Field field) {
@@ -161,14 +198,26 @@ public final class UnsentIdentity {
     public static List<String> strings(Object message) {
         List<String> out = new ArrayList<>();
         if (message == null) return out;
-        for (Class<?> cls = message.getClass(); cls != null && cls != Object.class; cls = cls.getSuperclass()) {
-            for (Field field : cls.getDeclaredFields()) {
-                if (Modifier.isStatic(field.getModifiers()) || field.getType() != String.class) continue;
-                try { field.setAccessible(true); String value = (String) field.get(message);
-                    if (value != null && !value.isEmpty()) out.add(value);
-                } catch (Throwable ignored) {}
-            }
+        for (Field field : stringFields(message.getClass())) {
+            try { String value = (String) field.get(message);
+                if (value != null && !value.isEmpty()) out.add(value);
+            } catch (Throwable ignored) {}
         }
         return out;
+    }
+
+    static Field[] stringFields(Class<?> type) {
+        Field[] fields = stringFields.get(type);
+        if (fields != null) return fields;
+        List<Field> found = new ArrayList<>();
+        for (Class<?> cls = type; cls != null && cls != Object.class; cls = cls.getSuperclass()) {
+            for (Field field : SafeReflect.fields(cls)) {
+                if (Modifier.isStatic(field.getModifiers()) || field.getType() != String.class) continue;
+                try { field.setAccessible(true); found.add(field); } catch (Throwable ignored) {}
+            }
+        }
+        fields = found.toArray(new Field[0]);
+        stringFields.put(type, fields);
+        return fields;
     }
 }

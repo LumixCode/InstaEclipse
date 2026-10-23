@@ -26,6 +26,9 @@ import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
+
+import ps.reso.instaeclipse.utils.core.SafeReflect;
 
 /**
  * Renderer-independent mark for a retained non-text message, in the same red as an unsent text
@@ -41,11 +44,16 @@ final class UnsentMediaMark {
     static final int COLOR = 0xFFCF4545;
     private static final int UNRESOLVED = -1;
     private static int contentId = UNRESOLVED, voiceId = UNRESOLVED;
+    private static final Map<Class<?>, Field[]> drawableFields = new WeakHashMap<>();
     private final WeakReference<View> rowRef;
     private Ring ring;
     private WeakReference<View> paintedView = new WeakReference<>(null);
     private Drawable paintedBackground;
     private final Map<Paint, Paint> savedPaints = new IdentityHashMap<>();
+    private final List<Paint> paintedFills = new ArrayList<>();
+    private final View.OnLayoutChangeListener relayout = (view, left, top, right, bottom,
+                                                         oldLeft, oldTop, oldRight, oldBottom) -> stale = true;
+    private boolean listening, stale = true;
 
     UnsentMediaMark(View row) {
         rowRef = new WeakReference<>(row);
@@ -55,6 +63,13 @@ final class UnsentMediaMark {
         if (!shown) { clear(); return; }
         View row = rowRef.get();
         if (row == null) return;
+        if (!listening) {
+            row.addOnLayoutChangeListener(relayout);
+            listening = true;
+            stale = true;
+        }
+        if (!stale && fillsStillRed()) return;
+        stale = false;
         View voice = voiceBubble(row);
         if (voice != null && paintRed(voice)) {
             removeRing(row);
@@ -78,6 +93,19 @@ final class UnsentMediaMark {
         restorePaints();
         if (row != null) removeRing(row);
         ring = null;
+        if (listening && row != null) row.removeOnLayoutChangeListener(relayout);
+        listening = false;
+        stale = true;
+    }
+
+    private boolean fillsStillRed() {
+        if (paintedFills.isEmpty()) return true;
+        View voice = paintedView.get();
+        if (voice == null || voice.getBackground() != paintedBackground) return false;
+        for (Paint paint : paintedFills) {
+            if (paint.getColor() != COLOR || paint.getShader() != null) return false;
+        }
+        return true;
     }
 
     private void removeRing(View row) {
@@ -123,6 +151,8 @@ final class UnsentMediaMark {
             paintedView = new WeakReference<>(voice);
         }
         paintedBackground = background;
+        paintedFills.clear();
+        paintedFills.addAll(fills);
         boolean changed = false;
         for (Paint paint : fills) {
             if (paint.getColor() == COLOR && paint.getShader() == null) continue;
@@ -140,6 +170,7 @@ final class UnsentMediaMark {
     }
 
     private void restorePaints() {
+        paintedFills.clear();
         if (savedPaints.isEmpty()) return;
         for (Map.Entry<Paint, Paint> saved : savedPaints.entrySet()) saved.getKey().set(saved.getValue());
         savedPaints.clear();
@@ -161,15 +192,31 @@ final class UnsentMediaMark {
             collectFills(wrapper.getDrawable(), out, depth + 1);
         } else {
             // Instagram's own wrappers keep the shape in a plain Drawable field.
-            for (Class<?> c = drawable.getClass(); c != null && c != Drawable.class; c = c.getSuperclass()) {
-                for (Field field : c.getDeclaredFields()) {
+            for (Field field : drawableFields(drawable.getClass())) {
+                try {
+                    collectFills((Drawable) field.get(drawable), out, depth + 1);
+                } catch (Throwable ignored) {}
+            }
+        }
+    }
+
+    private static Field[] drawableFields(Class<?> type) {
+        synchronized (drawableFields) {
+            Field[] fields = drawableFields.get(type);
+            if (fields != null) return fields;
+            List<Field> found = new ArrayList<>();
+            for (Class<?> c = type; c != null && c != Drawable.class; c = c.getSuperclass()) {
+                for (Field field : SafeReflect.fields(c)) {
                     if (Modifier.isStatic(field.getModifiers()) || !Drawable.class.isAssignableFrom(field.getType())) continue;
                     try {
                         field.setAccessible(true);
-                        collectFills((Drawable) field.get(drawable), out, depth + 1);
+                        found.add(field);
                     } catch (Throwable ignored) {}
                 }
             }
+            fields = found.toArray(new Field[0]);
+            drawableFields.put(type, fields);
+            return fields;
         }
     }
 
