@@ -163,6 +163,9 @@ public class DialogUtils {
         LinearLayout mainLayout = new LinearLayout(context);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         mainLayout.setPadding(24, 0, 24, 0);
+        if (ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.shouldShow(SettingsManager.prefs())) {
+            mainLayout.addView(spoofLastSeenNotice(context));
+        }
 
         // ---- APPEARANCE ---- look & feel: theme, feed, navigation bar, reels & stories
         mainLayout.addView(sectionHeader(context, I18n.t(context, R.string.feat_group_appearance)));
@@ -177,7 +180,7 @@ public class DialogUtils {
         // ---- PRIVACY ---- ghost, messages, hidden chats, lock, ads/tracking, location, distraction-free
         mainLayout.addView(sectionHeader(context, I18n.t(context, R.string.feat_group_privacy)));
         LinearLayout privacy = card(context, 0);
-        privacy.addView(createMenuRow(context, R.drawable.ic_eye, I18n.t(context, R.string.ig_dialog_menu_ghost_settings), A_PRIVACY, () -> showGhostOptions(context), onCount(context, "isGhostSeen", "isGhostTyping", "isGhostStory", "isGhostLive", "isGhostScreenshot", "isGhostViewOnce", "readReceiptChats", "spoofLastSeen", "airplaneMode", "manualStorySeen")));
+        privacy.addView(createMenuRow(context, R.drawable.ic_eye, I18n.t(context, R.string.ig_dialog_menu_ghost_settings), A_PRIVACY, () -> showGhostOptions(context), onCount(context, "isGhostSeen", "isGhostTyping", "isGhostStory", "isGhostLive", "isGhostScreenshot", "isGhostViewOnce", "readReceiptChats", "airplaneMode", "manualStorySeen")));
         privacy.addView(createMenuRow(context, R.drawable.ic_chat, I18n.t(context, R.string.menu_messages), A_PRIVACY, () -> showMessagesOptions(context), onCount(context, "keepEphemeralMessages", "keepUnsentMessages", "showUnsentIndicator", "keepEditHistory", "jumpToFirstMessage", "hideChatMenuButton", "confirmCalls", "allowScreenshots", "permanentViewMode", "translateMessages", "bulkUnsend", "chatExport", "hideNotesTray", "hideDmSuggestions", "hideDmBlend", "hideShareCreateGroup")));
         privacy.addView(createMenuRow(context, R.drawable.ic_eye_off, I18n.t(context, R.string.ig_hide_chats_title), A_PRIVACY, () -> showHideChatsOptions(context), onCount(context, "hideSpecificChats")));
         privacy.addView(createMenuRow(context, R.drawable.ic_shield, I18n.t(context, R.string.ig_dialog_misc_lock_section), A_PRIVACY, () -> showLockOptions(context), onCount(context, "lockDirectMessages", "lockWholeApp", "lockSpecificMessages", "lockSavedCollections", "lockUseFingerprint")));
@@ -223,6 +226,28 @@ public class DialogUtils {
         mainLayout.addView(footer);
 
         return mainLayout;
+    }
+
+    private static View spoofLastSeenNotice(Context context) {
+        LinearLayout box = card(context, 16);
+        TextView message = new TextView(context);
+        message.setText(I18n.t(context, R.string.ie_spoof_last_seen_removed));
+        message.setTextColor(C_TEXT);
+        message.setTextSize(14);
+        message.setPadding(dp(context, 14), dp(context, 12), dp(context, 14), dp(context, 4));
+        box.addView(message);
+        TextView ok = reelLimitAction(context, I18n.t(context, R.string.ig_dialog_ok), true);
+        LinearLayout.LayoutParams okLp = (LinearLayout.LayoutParams) ok.getLayoutParams();
+        okLp.gravity = Gravity.END;
+        okLp.setMargins(0, dp(context, 4), dp(context, 8), dp(context, 8));
+        box.addView(ok);
+        ok.setOnClickListener(v -> {
+            FeatureFlags.spoofLastSeen = false;
+            ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.dismiss(SettingsManager.prefs());
+            SettingsManager.saveAllFlags();
+            if (box.getParent() instanceof ViewGroup) ((ViewGroup) box.getParent()).removeView(box);
+        });
+        return box;
     }
 
     /** Settings-app style group header: uppercase, letter-spaced, muted. */
@@ -1101,14 +1126,18 @@ public class DialogUtils {
                 flagSwitch(context, R.drawable.ic_camera, "#5E5CE6", R.string.ig_dialog_ghost_bypass_screenshot, "isGhostScreenshot", refreshGhostEmoji),
                 flagSwitch(context, R.drawable.ic_eye_off, "#5E5CE6", R.string.ig_dialog_ghost_hide_view_once, "isGhostViewOnce", refreshGhostEmoji));
 
-        // Outside the master switch: manual story seen, last-seen spoofing and airplane mode.
         layout.addView(createDivider(context));
         layout.addView(cardOf(context,
                 manualSeen,
                 flagSwitch(context, R.drawable.ic_eye, "#5E5CE6", R.string.ig_dialog_ghost_read_receipt_chats, "readReceiptChats"),
-                flagSwitch(context, R.drawable.ic_timer, "#5E5CE6", R.string.ig_dialog_misc_spoof_last_seen, "spoofLastSeen"),
                 // Airplane mode takes effect at once: stop / restart the live MQTT connection.
                 extraSwitch(context, "#5E5CE6", "airplaneMode", ps.reso.instaeclipse.mods.extras.AirplaneModeHook::apply)));
+        TextView activityHint = new TextView(context);
+        activityHint.setText(I18n.t(context, R.string.ie_ghost_activity_status_hint));
+        activityHint.setTextSize(13);
+        activityHint.setTextColor(C_TEXT2);
+        activityHint.setPadding(40, 16, 32, 8);
+        layout.addView(activityHint);
         refreshManualSeen.run();
 
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_ghost_mode), layout, () -> {});

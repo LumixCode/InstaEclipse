@@ -455,6 +455,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         public static final int TYPE_CLICKABLE = 2;
         public static final int TYPE_MASTER_SWITCH = 3;
         public static final int TYPE_SPACER = 4;
+        public static final int TYPE_NOTICE = 5;
+        public static final int TYPE_HINT = 6;
 
         public int type;
         public String title;
@@ -519,6 +521,44 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         }
     }
 
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private class NoticeViewHolder extends RecyclerView.ViewHolder {
+        final TextView text;
+        final com.google.android.material.button.MaterialButton ok;
+
+        NoticeViewHolder(ViewGroup parent) {
+            super(new MaterialCardView(parent.getContext()));
+            Context c = parent.getContext();
+            MaterialCardView card = (MaterialCardView) itemView;
+            RecyclerView.LayoutParams lp = new RecyclerView.LayoutParams(
+                    RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT);
+            lp.bottomMargin = dp(6);
+            card.setLayoutParams(lp);
+            card.setCardElevation(0f);
+            card.setStrokeWidth(0);
+            card.setRadius(dp(24));
+            card.setCardBackgroundColor(MaterialColors.getColor(parent, com.google.android.material.R.attr.colorSecondaryContainer));
+            android.widget.LinearLayout box = new android.widget.LinearLayout(c);
+            box.setOrientation(android.widget.LinearLayout.VERTICAL);
+            box.setPadding(dp(16), dp(16), dp(16), dp(8));
+            text = new TextView(c);
+            text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            text.setTextColor(MaterialColors.getColor(parent, com.google.android.material.R.attr.colorOnSecondaryContainer));
+            box.addView(text);
+            ok = new com.google.android.material.button.MaterialButton(c);
+            ok.setText(R.string.ig_dialog_ok);
+            android.widget.LinearLayout.LayoutParams okLp = new android.widget.LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            okLp.gravity = android.view.Gravity.END;
+            okLp.topMargin = dp(8);
+            box.addView(ok, okLp);
+            card.addView(box);
+        }
+    }
+
     private class FeatureAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         List<FeatureItem> items = new ArrayList<>();
 
@@ -532,6 +572,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
             int type = items.get(position).type;
             if (type == FeatureItem.TYPE_HEADER) return 0;
             if (type == FeatureItem.TYPE_SPACER)  return 2;
+            if (type == FeatureItem.TYPE_NOTICE) return 3;
+            if (type == FeatureItem.TYPE_HINT) return 4;
             return 1;
         }
 
@@ -549,6 +591,17 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                         (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 12f, parent.getResources().getDisplayMetrics())
                 ));
                 return new RecyclerView.ViewHolder(v) {};
+            } else if (viewType == 3) {
+                return new NoticeViewHolder(parent);
+            } else if (viewType == 4) {
+                TextView hint = new TextView(parent.getContext());
+                int side = dp(16);
+                hint.setLayoutParams(new RecyclerView.LayoutParams(
+                        RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
+                hint.setPadding(side, dp(4), side, dp(8));
+                hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+                hint.setTextColor(MaterialColors.getColor(parent, com.google.android.material.R.attr.colorOnSurfaceVariant));
+                return new RecyclerView.ViewHolder(hint) {};
             } else {
                 View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_feature, parent, false);
                 return new ItemViewHolder(v);
@@ -561,7 +614,15 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
             if (item.type == FeatureItem.TYPE_SPACER) return;
 
-            if (holder instanceof HeaderViewHolder) {
+            if (holder instanceof NoticeViewHolder) {
+                NoticeViewHolder notice = (NoticeViewHolder) holder;
+                notice.text.setText(item.title);
+                notice.ok.setOnClickListener(v -> {
+                    if (item.onClick != null) item.onClick.run();
+                });
+            } else if (item.type == FeatureItem.TYPE_HINT) {
+                ((TextView) holder.itemView).setText(item.title);
+            } else if (holder instanceof HeaderViewHolder) {
                 ((HeaderViewHolder) holder).tvHeader.setText(item.title);
             } else if (holder instanceof ItemViewHolder) {
                 ItemViewHolder itemHolder = (ItemViewHolder) holder;
@@ -1019,6 +1080,15 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         showMenu("main", getString(R.string.features), buildMainDefs());
     }
 
+    private void dismissSpoofLastSeenNotice() {
+        ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.dismiss(localCache);
+        Intent off = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF");
+        off.putExtra("key", ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.KEY);
+        off.putExtra("value", false);
+        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), off);
+        if ("main".equals(currentMenu) && !isSearching()) showMenu("main", getString(R.string.features), buildMainDefs(), false);
+    }
+
     private void loadParentMenu() {
         if ("qt".equals(currentMenu)) loadGhostMenu();
         else loadMainMenu();
@@ -1052,6 +1122,13 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
     private List<Object> buildMainDefs() {
         List<Object> defs = new ArrayList<>();
+        if (ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.shouldShow(localCache)) {
+            FeatureItem notice = new FeatureItem();
+            notice.type = FeatureItem.TYPE_NOTICE;
+            notice.title = getString(R.string.ie_spoof_last_seen_removed);
+            notice.onClick = this::dismissSpoofLastSeenNotice;
+            defs.add(Arrays.asList(notice));
+        }
         int[] groupTitles = {
                 R.string.feat_group_appearance, R.string.feat_group_privacy,
                 R.string.feat_group_media, R.string.feat_group_social, R.string.feat_group_tools
@@ -1255,9 +1332,13 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 createDependentSwitch(R.drawable.ic_eye, "#5E5CE6", R.string.ig_feature_manual_story_seen,
                         "manualStorySeen", "isGhostStory", R.string.ig_feature_manual_story_seen_requires),
                 createSwitch(R.drawable.ic_eye, "#5E5CE6", getString(R.string.ig_dialog_ghost_read_receipt_chats), "readReceiptChats"),
-                createSwitch(R.drawable.ic_timer, "#5E5CE6", getString(R.string.ig_dialog_misc_spoof_last_seen), "spoofLastSeen"),
                 createExtrasSwitch("#5E5CE6", "airplaneMode")
         ));
+
+        FeatureItem activityHint = new FeatureItem();
+        activityHint.type = FeatureItem.TYPE_HINT;
+        activityHint.title = getString(R.string.ie_ghost_activity_status_hint);
+        defs.add(Arrays.asList(activityHint));
 
         return defs;
     }

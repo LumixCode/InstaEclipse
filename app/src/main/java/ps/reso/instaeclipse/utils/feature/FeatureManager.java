@@ -208,12 +208,6 @@ public class FeatureManager {
             FeatureStatusTracker.setDisabled("SpoofLocation");
         }
 
-        if (FeatureFlags.spoofLastSeen) {
-            FeatureStatusTracker.setEnabled("SpoofLastSeen", R.string.ig_dialog_misc_spoof_last_seen);
-        } else {
-            FeatureStatusTracker.setDisabled("SpoofLastSeen");
-        }
-
         if (FeatureFlags.customThemeEnabled) {
             FeatureStatusTracker.setEnabled("CustomTheme", R.string.theme_title);
         } else {

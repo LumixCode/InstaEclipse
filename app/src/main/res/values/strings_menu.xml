@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- In-Instagram menu: version and health chips -->
     <string name="menu_chip_instagram">Instagram %1$s</string>
     <string name="menu_chip_active">%1$d/%2$d active</string>
     <string name="menu_inactive_all_good">Every enabled feature is active on this Instagram version.</string>
     <string name="menu_inactive_hint">These are switched on, but they could not attach to this Instagram version:</string>
+    <string name="ie_ghost_activity_status_hint" tools:ignore="MissingTranslation">To hide when you\'re active, turn off Activity status in Instagram\'s settings.</string>
+    <string name="ie_spoof_last_seen_removed" tools:ignore="MissingTranslation">Spoof last seen was removed: it didn\'t work on Instagram 451. To hide when you\'re active, turn off Activity status in Instagram\'s settings.</string>
 </resources>
