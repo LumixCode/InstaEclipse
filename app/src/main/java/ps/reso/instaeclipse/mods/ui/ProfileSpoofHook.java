@@ -132,12 +132,11 @@ public final class ProfileSpoofHook {
             final int entitiesArg = entities;
             final int[] stringArgs = java.util.Arrays.copyOf(strings, n);
             XposedBridge.hookMethod(ctor, new XC_MethodHook() {
-                @Override protected void beforeHookedMethod(MethodHookParam param) {
+                @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                     if (!FeatureFlags.profileSpoofer) return;
                     String bio = FeatureFlags.spoofBio;
                     String self = selfId;
                     if (bio == null || bio.isEmpty() || self == null) return;
-                    ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                     boolean own = false;
                     for (int i : stringArgs) if (self.equals(param.args[i])) { own = true; break; }
                     // Fallback when the header model's id is not the account id: your username,

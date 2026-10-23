@@ -156,7 +156,7 @@ public class FollowConfirmHook {
     private static void hookProfileButton() {
         XposedBridge.hookAllMethods(android.view.View.class, "performClick", new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 if (!FeatureFlags.confirmFollows || replayingClick) return;
                 android.view.View v = (android.view.View) param.thisObject;
                 if (profileButtonId == 0) {
@@ -165,7 +165,6 @@ public class FollowConfirmHook {
                     if (profileButtonId == 0) profileButtonId = -1;
                 }
                 if (v.getId() != profileButtonId) return;
-                ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 Activity act = activityOf(v.getContext());
                 String username = ps.reso.instaeclipse.mods.ui.ProfileMenuHook.profileUsername(act);
                 if (act == null || alreadyFollowing(act, username)) return;
