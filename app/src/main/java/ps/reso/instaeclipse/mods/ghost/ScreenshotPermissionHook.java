@@ -29,8 +29,9 @@ public class ScreenshotPermissionHook {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                             if (!FeatureFlags.allowScreenshots) return;
-                            param.args[0] = (int) param.args[0] & ~WindowManager.LayoutParams.FLAG_SECURE;
-                            param.args[1] = (int) param.args[1] & ~WindowManager.LayoutParams.FLAG_SECURE;
+                            int[] stripped = SecureFlags.strip((int) param.args[0], (int) param.args[1]);
+                            param.args[0] = stripped[0];
+                            param.args[1] = stripped[1];
                         }
                     });
 
