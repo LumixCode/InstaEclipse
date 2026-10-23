@@ -6,7 +6,9 @@ import android.os.Build;
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -81,6 +83,7 @@ public final class DeviceSpoofHook {
 
     private static final Pattern PRODUCT_PROP = Pattern.compile("ro\\.product\\.(?:[a-z_]+\\.)?(model|brand|manufacturer|device|name)");
     private static final Pattern FINGERPRINT_PROP = Pattern.compile("ro\\.(?:[a-z_]+\\.)?build\\.fingerprint");
+    private static final String REAL = "\u0000";
 
     private DeviceSpoofHook() {}
 
@@ -114,10 +117,11 @@ public final class DeviceSpoofHook {
             set(Build.class, "SOC_MANUFACTURER", p.socManufacturer);
             set(Build.class, "SOC_MODEL", p.socModel);
 
+            Map<String, String> known = new ConcurrentHashMap<>();
             XC_MethodHook props = new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    String v = prop(p, (String) param.args[0]);
+                    String v = prop(p, (String) param.args[0], known);
                     if (v != null) param.setResult(v);
                 }
             };
@@ -150,9 +154,18 @@ public final class DeviceSpoofHook {
         } catch (Throwable ignored) {} // SOC_* only exist on Android 12+
     }
 
-    /** The spoofed value of a system property, or null to keep the real one. */
-    private static String prop(Profile p, String key) {
-        if (key == null) return null;
+    private static String prop(Profile p, String key, Map<String, String> known) {
+        if (key == null || !key.startsWith("ro.")) return null;
+        String v = known.get(key);
+        if (v == null) {
+            v = lookup(p, key);
+            if (v == null) v = REAL;
+            known.put(key, v);
+        }
+        return REAL.equals(v) ? null : v;
+    }
+
+    private static String lookup(Profile p, String key) {
         java.util.regex.Matcher m = PRODUCT_PROP.matcher(key);
         if (m.matches()) {
             switch (m.group(1)) {

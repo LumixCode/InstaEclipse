@@ -27,17 +27,26 @@ final class McOverridesJson {
         return object(configs).toString();
     }
 
+    static String marker(Map<String, List<String>> replaced) throws JSONException {
+        return new JSONObject().put("v", 1).put("replaced", object(replaced)).toString();
+    }
+
+    static Map<String, List<String>> replaced(String marker) throws JSONException {
+        JSONObject replaced = new JSONObject(marker).optJSONObject("replaced");
+        return replaced != null ? configs(replaced) : new LinkedHashMap<>();
+    }
+
     static boolean sync(File file, File marker, boolean on, String add) throws Exception {
-        if (on == marker.exists()) return false;
-        Map<String, List<String>> replaced = McOverrides.replacedIn(marker.exists() ? read(marker) : null, McOverridesJson::parse);
+        if (!on && !marker.exists()) return false;
+        Map<String, List<String>> replaced = McOverrides.replacedIn(marker.exists() ? read(marker) : null, McOverridesJson::replaced);
         Map<String, List<String>> json = parse(file.exists() ? read(file) : "{}");
         McOverrides.Sync change = McOverrides.sync(on, json, parse(add), replaced);
         if (change == null) return false;
         File parent = file.getParentFile();
         if (parent != null && !parent.exists()) parent.mkdirs();
+        if (change.replaced != null) AtomicFiles.write(marker, marker(change.replaced));
         AtomicFiles.write(file, toJson(change.json));
-        if (change.replaced != null) AtomicFiles.write(marker, "1");
-        else //noinspection ResultOfMethodCallIgnored
+        if (change.replaced == null) //noinspection ResultOfMethodCallIgnored
             marker.delete();
         return true;
     }
