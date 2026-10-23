@@ -52,7 +52,7 @@ public class InboxDiscoverPeopleHook {
             InboxSectionPath sections = path;
             XposedBridge.hookMethod(sections.emit, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (!FeatureFlags.disableDiscoverPeople) return;
+                    if (!FeatureFlags.disableDiscoverPeople && !FeatureFlags.hideDmSuggestions) return;
                     try {
                         String type = sections.typeOf(param.args);
                         if (!InboxSectionPath.drops(type, FeatureFlags.hideDmSuggestions, FeatureFlags.disableDiscoverPeople)) return;
