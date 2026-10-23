@@ -37,7 +37,7 @@ public class ReadReceiptChatHook {
                 "com.instagram.mainactivity.InstagramMainActivity"}) {
             try {
                 LifecycleHookUtil.hookAfter(classLoader, act, "onResume", (a, param) -> {
-                    if (FeatureFlags.readReceiptChats) a.runOnUiThread(() -> register(a));
+                    if (ReadReceiptGate.active(FeatureFlags.isGhostSeen, FeatureFlags.readReceiptChats)) a.runOnUiThread(() -> register(a));
                 });
             } catch (Throwable t) {
                 ModuleLog.detail("(IE|ReadReceiptChat) hook " + act + " failed (chat tracker still used): " + t);
@@ -45,7 +45,7 @@ public class ReadReceiptChatHook {
         }
         CurrentThreadTracker.install(classLoader);
         CurrentThreadTracker.addListener((a, threadId) -> {
-            if (FeatureFlags.readReceiptChats) register(a);
+            if (ReadReceiptGate.active(FeatureFlags.isGhostSeen, FeatureFlags.readReceiptChats)) register(a);
         });
         FeatureStatusTracker.setHooked("ReadReceiptChats");
         ModuleLog.ok("(IE|ReadReceiptChat) ready");
