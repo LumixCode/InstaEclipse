@@ -35,10 +35,6 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 
 public class StoryDownloadHook {
 
-    // VideoVersionIntf resolved once at install time — same interface used by feed downloader
-    private static Class<?> videoVersionIntfClass;
-    private static Method   videoVersionGetUrl;
-
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private static final class StoryMedia {
@@ -188,11 +184,6 @@ public class StoryDownloadHook {
         } catch (Throwable t) {
             ModuleLog.warn("(IE|Highlight) Downloading a whole highlight (Download all) is not available; single stories still download: " + t);
         }
-        try {
-            videoVersionIntfClass = classLoader.loadClass("com.instagram.model.mediasize.VideoVersionIntf");
-            videoVersionGetUrl    = videoVersionIntfClass.getMethod("getUrl");
-        } catch (Throwable ignored) {}
-
         installButtonInjectorHook(bridge, classLoader);
         installHighlightButtonInjectorHook(bridge, classLoader);
         installClickHandlerHook(bridge, classLoader);
@@ -805,8 +796,6 @@ public class StoryDownloadHook {
     /** The original Story selectors, restricted to the already resolved selected Media. */
     static String originalVideoFromSelected(Object media) {
         String video = FeedVideoDownloadHook.bestVideoUrlFromMedia(media);
-        if (video == null) video = findVideoUrl(media,
-                Collections.newSetFromMap(new IdentityHashMap<>()), 0);
         if (video != null) return video;
         List<String> urls = new ArrayList<>();
         scanCdnUrls(media, urls, 0, Collections.newSetFromMap(new IdentityHashMap<>()));
@@ -893,15 +882,6 @@ public class StoryDownloadHook {
             // Use the same source-aware extractor as feed/reels first. It understands
             // Pando video_versions getters whose URLs no longer expose a video-looking path.
             String videoUrl = FeedVideoDownloadHook.bestVideoUrlFromMedia(modelTarget);
-
-            // Try video URL via VideoVersionIntf scan
-            if (videoUrl == null && videoVersionIntfClass != null && videoVersionGetUrl != null) {
-                videoUrl = findVideoUrl(modelTarget,
-                        Collections.newSetFromMap(new IdentityHashMap<>()), 0);
-                if (videoUrl != null) {
-                    FeedVideoDownloadHook.rememberVideoUrl(videoUrl);
-                }
-            }
 
             // MediaExtKt knows the canonical image_versions2 URL and avoids choosing a
             // smaller music-sticker/album-art image when a Media object is available.
@@ -1032,60 +1012,6 @@ public class StoryDownloadHook {
                     f.setAccessible(true);
                     try { return f.get(obj); } catch (Throwable ignored) {}
                 }
-            }
-            cls = cls.getSuperclass();
-        }
-        return null;
-    }
-
-    /** Depth-limited field-graph walk looking for a VideoVersionIntf and calling getUrl(). */
-    private static String findVideoUrl(Object obj, Set<Object> visited, int depth) {
-        if (obj == null || depth > 5 || !visited.add(obj)) return null;
-        if (videoVersionIntfClass == null || videoVersionGetUrl == null) return null;
-
-        if (videoVersionIntfClass.isInstance(obj)) {
-            try {
-                String url = (String) videoVersionGetUrl.invoke(obj);
-                if (url != null && isCdnUrl(url)) {
-                    FeedVideoDownloadHook.rememberVideoUrl(url);
-                    return url;
-                }
-            } catch (Throwable ignored) {}
-        }
-
-        String cn = obj.getClass().getName();
-        if (!cn.startsWith("X.") && !cn.startsWith("com.instagram.") && !cn.startsWith("com.facebook."))
-            return null;
-
-        Class<?> cls = obj.getClass();
-        while (cls != null && cls != Object.class) {
-            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(cls)) {
-                try {
-                    if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
-                    f.setAccessible(true);
-                    Object val = f.get(obj);
-                    if (val == null) continue;
-                    if (val instanceof List<?> list) {
-                        for (Object elem : list) {
-                            if (videoVersionIntfClass.isInstance(elem)) {
-                                try {
-                                    String url = (String) videoVersionGetUrl.invoke(elem);
-                                    if (url != null && isCdnUrl(url)) {
-                                        FeedVideoDownloadHook.rememberVideoUrl(url);
-                                        return url;
-                                    }
-                                } catch (Throwable ignored) {}
-                            }
-                        }
-                    } else {
-                        String vcn = val.getClass().getName();
-                        if (vcn.startsWith("X.") || vcn.startsWith("com.instagram.")
-                                || vcn.startsWith("com.facebook.")) {
-                            String found = findVideoUrl(val, visited, depth + 1);
-                            if (found != null) return found;
-                        }
-                    }
-                } catch (Throwable ignored) {}
             }
             cls = cls.getSuperclass();
         }

@@ -77,7 +77,7 @@ final class MediaTypeDetector {
     }
 
     static boolean isVideoType(Object value) {
-        return value instanceof Boolean && (Boolean) value;
+        return value instanceof Integer && (Integer) value == 2;
     }
 
     static Kind fromContentType(String contentType) {

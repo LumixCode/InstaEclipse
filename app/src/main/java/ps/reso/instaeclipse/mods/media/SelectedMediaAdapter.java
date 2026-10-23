@@ -45,19 +45,15 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
                     "carousel_media", "user", "has_audio", "media_type", "original_media_type",
                     "is_story_image_with_music"}) adapter.resolve(bridge, loader, MEDIA, key);
             adapter.resolve(bridge, loader, "com.instagram.user.model.User", "username");
-            for (String key : new String[]{"url", "width", "height", "frame_rate", "codecs", "bitrate"}) {
+            for (String key : new String[]{"url", "width", "height", "frame_rate", "codecs", "bitrate"})
                 adapter.resolve(bridge, loader, "com.instagram.api.schemas.ImmutablePandoVideoVersion", key);
-                adapter.resolve(bridge, loader, "com.instagram.model.mediasize.VideoVersion", key);
-            }
             adapter.resolve(bridge, loader, "com.instagram.model.mediasize.ImmutablePandoImageInfo", "candidates");
             adapter.named(loader, MEDIA, "id", "getId");
             adapter.resolveStoryItem(bridge, loader);
-            for (String type : new String[]{"com.instagram.common.typedurl.ImageUrl",
-                    "com.instagram.model.mediasize.VideoVersionIntf"}) {
-                adapter.named(loader, type, "url", "getUrl");
-                adapter.named(loader, type, "width", "getWidth");
-                adapter.named(loader, type, "height", "getHeight");
-            }
+            String imageUrl = "com.instagram.common.typedurl.ImageUrl";
+            adapter.named(loader, imageUrl, "url", "getUrl");
+            adapter.named(loader, imageUrl, "width", "getWidth");
+            adapter.named(loader, imageUrl, "height", "getHeight");
             installed = adapter;
             ModuleLog.detail("(IE|MediaAdapter) resolved properties=" + adapter.bindings.size()
                     + " manifest=" + adapter.bindings.containsKey("video_dash_manifest")
