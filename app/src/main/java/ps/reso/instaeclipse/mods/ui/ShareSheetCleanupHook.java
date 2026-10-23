@@ -4,6 +4,10 @@ import android.animation.Animator;
 import android.animation.LayoutTransition;
 import android.annotation.SuppressLint;
 import android.content.res.Resources;
+import android.graphics.ColorFilter;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.os.Bundle;
 import android.view.Choreographer;
 import android.view.LayoutInflater;
@@ -15,16 +19,20 @@ import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
+import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -46,6 +54,12 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
  *    ended the button's delayed fade-in and drew it fading out for 300 ms.
  *    A listener on that LayoutTransition sees IG's VISIBLE and hides the button in the next frame's
  *    animation phase, before its layout, without the parent's fade or moves.
+ *  - With Create group hidden, nothing but the label told "Send separately" from "Send", so the
+ *    main button ({@code direct_send_button_multi_select}, an IgdsButton) gets its own fill while
+ *    two or more chats are selected. Both sheets that show it (DirectShareSheetFragment and the
+ *    private story recipient picker) drive it through DirectShareSheetFragmentMessageComposerViewBinder:
+ *    its (List, boolean, UserSession) method shows the group buttons, i.e. several chats; its
+ *    no-argument reset and one-argument single-chat methods hide them. See {@link SendTint}.
  *  - Always on: the external share actions ({@code direct_external_reshare_row}) get equal slots and
  *    are vertically centred; on IG 446 "Copy link" sat 42 px lower than its neighbours.
  */
@@ -65,12 +79,36 @@ public class ShareSheetCleanupHook {
     };
     private static final String CACHE_REMOVER = "ShareRowDecorationRemover_v1";
     private static final String CACHE_DECORATIONS = "ShareRowDecorationList_v1";
+    private static final String COMPOSER_BINDER =
+            "com.instagram.direct.fragment.sharesheet.view.DirectShareSheetFragmentMessageComposerViewBinder";
+    private static final String IGDS_BUTTON = "com.instagram.igds.components.button.IgdsButton";
+    private static final String USER_SESSION = "com.instagram.common.session.UserSession";
+
+    /**
+     * "Send separately" fill while Create group is hidden: green 700. White label 5.0:1 (IG's own
+     * #0095F6 send button is 3.2:1); 5.0:1 against the light sheet and 3.0:1 against the dark one
+     * (#262626). Hue 142 degrees is far from both IG primaries (#0095F6, 204; Prism #4A5DF9, 233), and
+     * green vs blue stays distinct with red-green colour blindness.
+     */
+    static final int SEPARATE_SEND_FILL = 0xFF15803D;
+    /** SRC_IN keeps the Paint's alpha, so IG's pressed (70 %) and disabled (30 %) fills still show. */
+    private static final ColorFilter SEPARATE_SEND_FILTER =
+            new PorterDuffColorFilter(SEPARATE_SEND_FILL, PorterDuff.Mode.SRC_IN);
 
     private static volatile boolean idsResolved;
     private static final int[] createGroupIds = new int[CREATE_GROUP_IDS.length];
     private static int externalShareRowId;
     private static int shareButtonContainerId;
+    private static int sendButtonId;
     private static final Set<Integer> layoutIds = new HashSet<>();
+
+    // Send button colour; all of it runs on the main thread (binder calls and pre-draw).
+    private static Class<?> igdsButtonClass;
+    private static Field[] binderViewFields;
+    private static Field buttonStyleField;
+    private static boolean buttonStyleLookedUp;
+    private static final java.util.Map<Class<?>, Field> fillPaintFields = new java.util.HashMap<>();
+    private static final java.util.Map<View, SendTint> sendTints = new java.util.WeakHashMap<>();
 
     private static final Set<View> watchedShareRows =
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
@@ -135,6 +173,8 @@ public class ShareSheetCleanupHook {
             ModuleLog.warn("(IE|ShareSheet) \"Create group\" may still show in the share sheet: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             ModuleLog.detail("(IE|ShareSheet) inflate hook failed");
         }
+
+        hookSendButtonColour(classLoader); // extra: not counted, the status is about hiding Create group
 
         if (hooked > 0) FeatureStatusTracker.setHooked("HideShareCreateGroup");
         if (hooked > 0) ModuleLog.ok("(IE|ShareSheet) ready");
@@ -265,6 +305,7 @@ public class ShareSheetCleanupHook {
             createGroupIds[i] = res.getIdentifier(CREATE_GROUP_IDS[i], "id", pkg);
         externalShareRowId = res.getIdentifier("direct_external_reshare_row", "id", pkg);
         shareButtonContainerId = res.getIdentifier("button_container", "id", pkg);
+        sendButtonId = res.getIdentifier("direct_send_button_multi_select", "id", pkg);
         for (String name : LAYOUTS) {
             int id = res.getIdentifier(name, "layout", pkg);
             if (id != 0) layoutIds.add(id);
@@ -279,6 +320,237 @@ public class ShareSheetCleanupHook {
             lp.width = 0;
             lp.height = 0;
             v.setLayoutParams(lp);
+        }
+    }
+
+    /**
+     * Hooks the composer binder by signature only (its class name is stable, its method names are
+     * not): the (List, boolean, UserSession) method runs when two or more chats are selected; the
+     * no-argument reset and the one-argument methods other than click listeners and the visibility
+     * switch (one chat, single-thread mode) end that state. The (UserSession, String) text setter is
+     * left alone: it is small enough for ART to inline into its callers. All the clearing methods are
+     * hooked first, and the colour only when every one of them is, so nothing can leave it on.
+     */
+    private static void hookSendButtonColour(ClassLoader classLoader) {
+        try {
+            Class<?> binder = XposedHelpers.findClassIfExists(COMPOSER_BINDER, classLoader);
+            igdsButtonClass = XposedHelpers.findClassIfExists(IGDS_BUTTON, classLoader);
+            if (binder == null || igdsButtonClass == null) {
+                ModuleLog.warn("(IE|ShareSheet) \"Send separately\" keeps Instagram's colour: its button code was not found");
+                ModuleLog.detail("(IE|ShareSheet) binder=" + (binder != null) + " IgdsButton=" + (igdsButtonClass != null));
+                return;
+            }
+            Method several = null;
+            int severalMatches = 0;
+            List<Method> single = new java.util.ArrayList<>();
+            for (Method m : SafeReflect.methods(binder)) {
+                int mod = m.getModifiers();
+                if (Modifier.isStatic(mod) || Modifier.isAbstract(mod) || m.isSynthetic()
+                        || m.getReturnType() != void.class) continue;
+                Class<?>[] p = m.getParameterTypes();
+                if (p.length == 3 && p[0] == List.class && p[1] == boolean.class
+                        && USER_SESSION.equals(p[2].getName())) {
+                    several = m;
+                    severalMatches++;
+                } else if (p.length == 0 || (p.length == 1 && p[0] != boolean.class
+                        && p[0] != View.OnClickListener.class)) {
+                    single.add(m);
+                }
+            }
+            if (severalMatches != 1 || single.isEmpty()) {
+                ModuleLog.warn("(IE|ShareSheet) \"Send separately\" keeps Instagram's colour: its button code has changed");
+                ModuleLog.detail("(IE|ShareSheet) several=" + severalMatches + " single=" + single.size());
+                return;
+            }
+            XC_MethodHook clear = sendModeHook(false);
+            for (Method m : single) {
+                try {
+                    XposedBridge.hookMethod(m, clear);
+                } catch (Throwable t) {
+                    ModuleLog.warn("(IE|ShareSheet) \"Send separately\" keeps Instagram's colour: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+                    ModuleLog.detail("(IE|ShareSheet) send colour reset hook failed: " + m.getName());
+                    return;
+                }
+            }
+            XposedBridge.hookMethod(several, sendModeHook(true));
+            ModuleLog.detail("(IE|ShareSheet) send colour on " + several.getName()
+                    + ", cleared by " + single.size() + " methods");
+        } catch (Throwable t) {
+            ModuleLog.warn("(IE|ShareSheet) \"Send separately\" keeps Instagram's colour: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            ModuleLog.detail("(IE|ShareSheet) send colour hook failed");
+        }
+    }
+
+    private static XC_MethodHook sendModeHook(boolean several) {
+        return new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                try {
+                    setSeveralChats(param.thisObject, several);
+                } catch (Throwable t) {
+                    ModuleLog.probe("(IE|ShareSheet) send colour: " + t);
+                }
+            }
+        };
+    }
+
+    /** Records whether the binder's sheet has several chats selected and recolours its send button. */
+    private static void setSeveralChats(Object binder, boolean several) throws IllegalAccessException {
+        View button = sendButton(binder);
+        if (button == null) return;
+        SendTint tint = sendTints.get(button);
+        if (tint == null) {
+            if (!several) return; // never recoloured: nothing to put back
+            tint = new SendTint(button);
+            sendTints.put(button, tint);
+        }
+        tint.several = several;
+        tint.update(button);
+    }
+
+    /** The binder keeps the sheet's root in a View field; the button is found there by its id. */
+    private static View sendButton(Object binder) throws IllegalAccessException {
+        Field[] fields = binderViewFields;
+        if (fields == null) {
+            List<Field> views = new java.util.ArrayList<>();
+            for (Field f : SafeReflect.fields(binder.getClass())) {
+                if (Modifier.isStatic(f.getModifiers()) || !View.class.isAssignableFrom(f.getType())) continue;
+                f.setAccessible(true);
+                views.add(f);
+            }
+            binderViewFields = fields = views.toArray(new Field[0]);
+        }
+        for (Field f : fields) {
+            if (!(f.get(binder) instanceof View root)) continue;
+            ensureIds(root.getResources(), root.getContext().getPackageName());
+            if (sendButtonId == 0) return null;
+            View button = root.findViewById(sendButtonId);
+            if (igdsButtonClass.isInstance(button)) return button;
+        }
+        return null;
+    }
+
+    /**
+     * IgdsButton paints its own fill (no background drawable): a per-style renderer, replaced when
+     * the style changes, draws a round rect with one Paint whose colour and alpha follow IG's state
+     * list (pressed, disabled). A colour filter on that Paint outlives those updates. Renderer and
+     * Paint are obfuscated, so both are found by type: the IgdsButton field whose value holds
+     * exactly one Paint.
+     */
+    static Paint fillPaint(View button) {
+        try {
+            Field style = buttonStyleField(button);
+            Object renderer = style != null ? style.get(button) : null;
+            Field paint = renderer != null ? paintField(renderer.getClass()) : null;
+            return paint != null ? (Paint) paint.get(renderer) : null;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static Field buttonStyleField(View button) throws IllegalAccessException {
+        if (buttonStyleLookedUp) return buttonStyleField;
+        buttonStyleLookedUp = true;
+        Field found = null;
+        int matches = 0;
+        for (Field f : SafeReflect.fields(igdsButtonClass)) {
+            Class<?> type = f.getType();
+            if (Modifier.isStatic(f.getModifiers()) || type.isPrimitive() || type.isArray() || type.isEnum()
+                    || View.class.isAssignableFrom(type) || CharSequence.class.isAssignableFrom(type)) continue;
+            f.setAccessible(true);
+            Object value = f.get(button);
+            if (value == null || paintField(value.getClass()) == null) continue;
+            found = f;
+            matches++;
+        }
+        if (matches != 1) {
+            ModuleLog.warn("(IE|ShareSheet) \"Send separately\" keeps Instagram's colour: the button's fill was not found");
+            ModuleLog.detail("(IE|ShareSheet) IgdsButton fields holding one Paint: " + matches);
+            return null;
+        }
+        ModuleLog.detail("(IE|ShareSheet) send button fill = IgdsButton." + found.getName()
+                + " (" + found.get(button).getClass().getName() + ")");
+        return buttonStyleField = found;
+    }
+
+    /** The renderer's only instance Paint, or null when it has none or several (another style). */
+    private static Field paintField(Class<?> renderer) {
+        if (fillPaintFields.containsKey(renderer)) return fillPaintFields.get(renderer);
+        Field found = null;
+        int count = 0;
+        for (Class<?> c = renderer; c != null && c != Object.class; c = c.getSuperclass()) {
+            for (Field f : SafeReflect.fields(c)) {
+                if (Modifier.isStatic(f.getModifiers()) || f.getType() != Paint.class) continue;
+                found = f;
+                count++;
+            }
+        }
+        if (count == 1) found.setAccessible(true);
+        else found = null;
+        fillPaintFields.put(renderer, found);
+        return found;
+    }
+
+    /**
+     * One send button's colour: on while IG shows its several-chats state and Create group is
+     * hidden, otherwise the Paint gets back the filter it had (normally none). While the button is
+     * attached, a pre-draw check follows the setting being switched with the sheet open and IG
+     * rebuilding the button's renderer. Like the sheet observer in watch(), it never cancels a draw.
+     */
+    private static final class SendTint implements ViewTreeObserver.OnPreDrawListener,
+            View.OnAttachStateChangeListener {
+        private final WeakReference<View> button;
+        boolean several;
+        private Paint tinted;
+        private ColorFilter original;
+        private ViewTreeObserver observer;
+
+        SendTint(View button) {
+            this.button = new WeakReference<>(button);
+            button.addOnAttachStateChangeListener(this);
+            if (button.isAttachedToWindow()) onViewAttachedToWindow(button);
+        }
+
+        @Override public void onViewAttachedToWindow(View v) {
+            if (observer != null && observer.isAlive()) observer.removeOnPreDrawListener(this);
+            observer = v.getViewTreeObserver();
+            observer.addOnPreDrawListener(this);
+        }
+
+        @Override public void onViewDetachedFromWindow(View v) {
+            if (observer != null && observer.isAlive()) observer.removeOnPreDrawListener(this);
+            observer = null;
+        }
+
+        @Override public boolean onPreDraw() {
+            View b = button.get();
+            if (b != null && (several || tinted != null)) {
+                try {
+                    update(b);
+                } catch (Throwable ignored) {
+                }
+            }
+            return true;
+        }
+
+        void update(View b) {
+            boolean wanted = several && FeatureFlags.hideShareCreateGroup;
+            Paint paint = wanted ? fillPaint(b) : null;
+            if (paint == tinted && (paint == null || paint.getColorFilter() == SEPARATE_SEND_FILTER)) return;
+            restore();
+            if (paint != null) {
+                original = paint.getColorFilter();
+                paint.setColorFilter(SEPARATE_SEND_FILTER);
+                tinted = paint;
+            }
+            b.invalidate();
+        }
+
+        /** Puts back the Paint's own filter, unless something replaced ours in the meantime. */
+        private void restore() {
+            if (tinted != null && tinted.getColorFilter() == SEPARATE_SEND_FILTER) tinted.setColorFilter(original);
+            tinted = null;
+            original = null;
         }
     }
 
