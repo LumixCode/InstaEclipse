@@ -66,21 +66,12 @@ public class GhostTypingIndicatorHook {
                 if (!returnType.contains("void")) continue;
                 int modifiers = reflectMethod.getModifiers();
 
-                // Old shape (<= 429): static final void method(ClassType, boolean)
-                // New shape (437+): instance final void method(boolean) — the string is now
-                // just a QuickPerformanceLogger marker label, not a functional flag key, and
-                // the leading ClassType param was dropped entirely.
-                boolean matchesOldShape = Modifier.isStatic(modifiers) &&
-                        Modifier.isFinal(modifiers) &&
-                        paramTypes.size() == 2 &&
-                        String.valueOf(paramTypes.get(1)).contains("boolean");
-
-                boolean matchesNewShape = !Modifier.isStatic(modifiers) &&
+                boolean matchesShape = !Modifier.isStatic(modifiers) &&
                         Modifier.isFinal(modifiers) &&
                         paramTypes.size() == 1 &&
                         String.valueOf(paramTypes.get(0)).contains("boolean");
 
-                if (matchesOldShape || matchesNewShape) {
+                if (matchesShape) {
                     try {
                         DexKitCache.saveMethod("GhostTyping", reflectMethod);
                         XposedBridge.hookMethod(reflectMethod, hook);

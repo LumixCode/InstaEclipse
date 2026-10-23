@@ -6,7 +6,6 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
 
@@ -30,15 +29,10 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
  *      directly (bypasses the pending map — this is the path a normal story view takes).
  * Fix: no-op BOTH the inserts and the immediate sender, scoped to the store, when the feature
  * is on. All are void / result-unused → NPE-safe (unlike nulling the builder A04).
- *
- * LEGACY (IG <=441, e.g. 436): a single {@code final void ()} method that references
- * "media/seen/" directly is the sender; nulling it suppresses the report. Kept as a fallback
- * so older Instagram versions/clones keep working.
  */
 public class GhostStorySeenHook {
 
     private static final String CACHE_KEY        = "GhostStorySeen_v2";     // modern: store class name
-    private static final String CACHE_KEY_LEGACY = "GhostStorySeen_legacy"; // legacy: sender method
 
     public void handleStorySeenBlock(DexKitBridge bridge) {
         // Fast path: whichever path was resolved+cached last (per IG version).
@@ -57,20 +51,9 @@ public class GhostStorySeenHook {
                     ModuleLog.detail("(InstaEclipse | StoryBlock): cached modern resolve failed: " + t.getMessage());
                 }
             }
-            Method legacy = DexKitCache.loadMethod(CACHE_KEY_LEGACY, Module.hostClassLoader);
-            if (legacy != null) {
-                XposedBridge.hookMethod(legacy, legacyHook());
-                ModuleLog.ok("(InstaEclipse | StoryBlock): ready");
-                ModuleLog.detail("(InstaEclipse | StoryBlock): hooked (cached legacy): "
-                        + legacy.getDeclaringClass().getName() + "." + legacy.getName());
-                FeatureStatusTracker.setHooked("GhostStories");
-                return;
-            }
         }
 
-        // Modern first (447), then legacy (436) — keep the old path for older versions.
         if (tryModernBatchBlock(bridge)) return;
-        if (tryLegacyBlock(bridge)) return;
         ModuleLog.error("(InstaEclipse | StoryBlock): Could not turn on hiding story views: not supported by this Instagram version");
     }
 
@@ -89,7 +72,7 @@ public class GhostStorySeenHook {
                     break;
                 }
             }
-            if (builder == null) return false; // older shape (no builder) → let legacy handle it
+            if (builder == null) return false;
 
             String itemClassName = builder.getClassName();
             String storeClassName = null;
@@ -110,44 +93,9 @@ public class GhostStorySeenHook {
             FeatureStatusTracker.setHooked("GhostStories");
             return true;
         } catch (Throwable t) {
-            ModuleLog.detail("(InstaEclipse | StoryBlock): modern path failed, trying the older one: " + t.getMessage());
+            ModuleLog.detail("(InstaEclipse | StoryBlock): lookup failed: " + t.getMessage());
             return false;
         }
-    }
-
-    /** IG <=441 (436): the sender is a single {@code final void ()} method referencing "media/seen/". */
-    private boolean tryLegacyBlock(DexKitBridge bridge) {
-        try {
-            List<MethodData> methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                    .matcher(MethodMatcher.create().usingStrings("media/seen/")));
-            for (MethodData method : methods) {
-                Method m;
-                try { m = method.getMethodInstance(Module.hostClassLoader); }
-                catch (Throwable e) { continue; }
-                int mod = m.getModifiers();
-                if (Modifier.isFinal(mod) && m.getReturnType() == void.class && m.getParameterCount() == 0) {
-                    DexKitCache.saveMethod(CACHE_KEY_LEGACY, m);
-                    XposedBridge.hookMethod(m, legacyHook());
-                    ModuleLog.ok("(InstaEclipse | StoryBlock): ready");
-                    ModuleLog.detail("(InstaEclipse | StoryBlock): hooked (legacy): "
-                            + method.getClassName() + "." + method.getName());
-                    FeatureStatusTracker.setHooked("GhostStories");
-                    return true;
-                }
-            }
-        } catch (Throwable t) {
-            ModuleLog.detail("(InstaEclipse | StoryBlock): legacy path failed: " + t.getMessage());
-        }
-        return false;
-    }
-
-    private static XC_MethodHook legacyHook() {
-        return new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (FeatureFlags.isGhostStory) param.setResult(null);
-            }
-        };
     }
 
     /**

@@ -403,7 +403,7 @@ Disable Reels overrides the daily limit and the nighttime block.
 
 | | |
 |---|---|
-| **Tested on** | Instagram `451.0.0.20.80` with JingMatrix LSPatch in local patch mode |
+| **Supported version** | Instagram `451.0.0.20.80` only; older versions are not supported. Tested with JingMatrix LSPatch in local patch mode |
 | **Get this version** | [Instagram 451.0.0.20.80 on APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-451-0-0-20-80-release/) |
 | **Android** | 9 and newer |
 | **Frameworks** | The new Xposed API (102): [JingMatrix LSPatch](https://github.com/JingMatrix/LSPatch) 1.0 or newer (no root), or [Vector](https://github.com/JingMatrix/Vector) 2.2 or newer (root; supported upstream, not tested with this fork) |
