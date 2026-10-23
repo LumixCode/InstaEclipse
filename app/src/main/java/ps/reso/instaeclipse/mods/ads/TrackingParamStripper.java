@@ -10,9 +10,10 @@ public final class TrackingParamStripper {
 
     // Instagram links inside arbitrary share text ("Check this out https://www.instagram.com/p/…").
     // Not inside another domain (notinstagram.com), and closing punctuation after it stays text.
+    private static final String URL_CHARS = "A-Za-z0-9\\-._~:/?#\\[\\]@!$&'()*+,;=%";
     private static final java.util.regex.Pattern IG_URL = java.util.regex.Pattern.compile(
-            "(?i)(?<![a-z0-9.@-])(?:https?://)?(?:[a-z0-9-]+\\.)*instagram\\.com/[^\\s]*?"
-                    + "(?=[).,;:!?'\"\\]]*(?:\\s|$))");
+            "(?i)(?<![a-z0-9.@-])(?:https?://)?(?:[a-z0-9-]+\\.)*instagram\\.com/[" + URL_CHARS + "]*?"
+                    + "(?=[).,;:!?'\"\\]]*(?:[^" + URL_CHARS + "]|$))");
 
     /** Hosts whose links are the ones Instagram shares (posts, reels, stories, profiles). */
     private static final Set<String> SHARE_HOSTS = Set.of("instagram.com", "www.instagram.com", "m.instagram.com");

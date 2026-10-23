@@ -2475,7 +2475,7 @@ public class DialogUtils {
     private static String shareDomainLabel(Context context) {
         String d = FeatureFlags.customShareDomain;
         return I18n.t(context, R.string.ig_dialog_extras_share_domain) + "  ·  "
-                + (d.isEmpty() ? I18n.t(context, R.string.ig_dialog_extras_share_domain_off) : d);
+                + (d == null || d.isEmpty() ? I18n.t(context, R.string.ig_dialog_extras_share_domain_off) : d);
     }
 
     private static View findFirstText(View v) {

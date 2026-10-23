@@ -212,7 +212,10 @@ public class SettingsBackupManager {
                 .contains(s.getString("startupTab"))) FeatureFlags.startupTab = s.getString("startupTab");
         if (s.has("spoofLabel")) FeatureFlags.spoofLabel = s.getString("spoofLabel");
         if (s.has("spoofRecent")) FeatureFlags.spoofRecent = s.getString("spoofRecent");
-        if (s.has("customShareDomain")) FeatureFlags.customShareDomain = ShareDomain.normalize(s.getString("customShareDomain"));
+        if (s.has("customShareDomain")) {
+            String domain = ShareDomain.normalize(s.getString("customShareDomain"));
+            if (domain != null) FeatureFlags.customShareDomain = domain;
+        }
         if (s.has("exactTimestampFormat") && ps.reso.instaeclipse.utils.text.TimestampFormat.isValid(s.getString("exactTimestampFormat")))
             FeatureFlags.exactTimestampFormat = s.getString("exactTimestampFormat");
         if (s.has("spoofDevice") && java.util.Arrays.asList(ps.reso.instaeclipse.mods.misc.DeviceSpoofHook.DEVICES)

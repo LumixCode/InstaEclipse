@@ -12,8 +12,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 // only the tracking keys; other params such as img_index are kept (#252, TrackingParamStripper).
 // Covers three framework paths (all obfuscation-proof, no IG class names):
 //   1. android.content.ClipboardManager.setPrimaryClip - modern clipboard copies.
-//   2. android.text.ClipboardManager.setText - IG's in-app "Copy link" action sheet (legacy API
-//      that bypasses path 1 entirely).
 //   3. android.content.Intent.putExtra(EXTRA_TEXT) - the external "Share to app" sheet, which
 //      never touches the clipboard.
 // Gated on FeatureFlags.disableTrackingLinks; also swaps the host for FeatureFlags.customShareDomain.
@@ -38,21 +36,6 @@ public class TrackingLinkDisable {
                         if (cleaned != null) param.args[0] = ClipData.newPlainText("URL", cleaned);
                     }
                 });
-
-        // 2. Legacy clipboard (setText) -- IG's in-app "Copy link" button 
-        try {
-            Class<?> legacyClipboard = XposedHelpers.findClass("android.text.ClipboardManager", classLoader);
-            XposedHelpers.findAndHookMethod(legacyClipboard, "setText", CharSequence.class, new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (!active()) return;
-                    if (param.args[0] == null) return;
-                    ps.reso.instaeclipse.utils.log.ModuleLog.probe("(IE|Track) setText intercepted");
-                    String cleaned = rewrite(param.args[0].toString());
-                    if (cleaned != null) param.args[0] = cleaned;
-                }
-            });
-        } catch (Throwable ignored) {}
 
         // 3. External share sheet -- Intent.putExtra(EXTRA_TEXT, ...) 
         XC_MethodHook putExtraHook = new XC_MethodHook() {
@@ -115,7 +98,8 @@ public class TrackingLinkDisable {
 
     /** Tracking-param stripping and/or the custom share domain are on. */
     static boolean active() {
-        return FeatureFlags.disableTrackingLinks || !FeatureFlags.customShareDomain.isEmpty();
+        String domain = FeatureFlags.customShareDomain;
+        return FeatureFlags.disableTrackingLinks || (domain != null && !domain.isEmpty());
     }
 
     /** Applies both link rewrites; null when nothing changed. */
