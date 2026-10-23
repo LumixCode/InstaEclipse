@@ -2,6 +2,10 @@ package ps.reso.instaeclipse.utils.log;
 
 import android.util.Log;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
+
 import ps.reso.instaeclipse.utils.log.LogLine.Level;
 
 /**
@@ -34,6 +38,8 @@ public final class ModuleLog {
     /** Verbose/debug logging. On only in debug builds so per-event PROBE/DEBUG chatter and the
      *  stack-walk they trigger don't ship in release. Normal status lines (line()) always log. */
     public static volatile boolean verbose = ps.reso.instaeclipse.BuildConfig.DEBUG;
+
+    static volatile Sink sink = Boolean.getBoolean("instaeclipse.jvmTest") ? new MemorySink() : new AndroidSink();
 
     private ModuleLog() {}
 
@@ -95,15 +101,53 @@ public final class ModuleLog {
     }
 
     private static void log(Level level, String msg, Throwable t) {
-        String stackTraceStr = t != null ? Log.getStackTraceString(t) : "";
-        String fullMsg = msg + (stackTraceStr.isEmpty() ? "" : "\n" + stackTraceStr);
-        String formatted = getCallerInfo() + fullMsg;
-        Logging.append(LogLine.marker(level) + formatted);
-        switch (level) {
-            case ERROR: Log.e(TAG, formatted); break;
-            case WARN: Log.w(TAG, formatted); break;
-            case DETAIL: Log.d(TAG, formatted); break;
-            default: Log.i(TAG, formatted);
+        sink.write(level, getCallerInfo() + msg, t);
+    }
+
+    interface Sink {
+        void write(Level level, String formatted, Throwable t);
+    }
+
+    static final class AndroidSink implements Sink {
+        @Override
+        public void write(Level level, String formatted, Throwable t) {
+            String stackTraceStr = t != null ? Log.getStackTraceString(t) : "";
+            String line = formatted + (stackTraceStr.isEmpty() ? "" : "\n" + stackTraceStr);
+            Logging.append(LogLine.marker(level) + line);
+            switch (level) {
+                case ERROR: Log.e(TAG, line); break;
+                case WARN: Log.w(TAG, line); break;
+                case DETAIL: Log.d(TAG, line); break;
+                default: Log.i(TAG, line);
+            }
+        }
+    }
+
+    static final class MemorySink implements Sink {
+        static final int CAPACITY = 1000;
+
+        static final class Record {
+            final Level level;
+            final String formatted;
+            final Throwable throwable;
+
+            Record(Level level, String formatted, Throwable throwable) {
+                this.level = level;
+                this.formatted = formatted;
+                this.throwable = throwable;
+            }
+        }
+
+        private final ArrayDeque<Record> records = new ArrayDeque<>();
+
+        @Override
+        public synchronized void write(Level level, String formatted, Throwable t) {
+            if (records.size() == CAPACITY) records.removeFirst();
+            records.addLast(new Record(level, formatted, t));
+        }
+
+        synchronized List<Record> records() {
+            return new ArrayList<>(records);
         }
     }
 }

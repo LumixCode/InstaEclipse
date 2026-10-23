@@ -43,6 +43,10 @@ public class SettingsManager {
         }
     }
 
+    public static void init(SharedPreferences preferences) {
+        prefs = preferences;
+    }
+
     public static void saveAllFlags() {
         // Snapshot to stamp the keys this save changes (see CompanionSync).
         java.util.Map<String, ?> before = new java.util.HashMap<>(prefs.getAll());
