@@ -27,6 +27,7 @@ public class AirplaneModeHook {
     private static final String TAG = "(InstaEclipse | Airplane): ";
     private static final String MANAGER = "com.instagram.realtimeclient.RealtimeClientManager";
     private static final List<WeakReference<Object>> MANAGERS = new ArrayList<>();
+    private static final MqttRestartGate GATE = new MqttRestartGate();
 
     private static Method start;
     private static Method stop;
@@ -88,7 +89,15 @@ public class AirplaneModeHook {
 
     /** Applies the current {@link FeatureFlags#airplaneMode} to every live realtime manager. */
     public static void apply() {
-        Method m = FeatureFlags.airplaneMode ? stop : start;
+        if (FeatureFlags.airplaneMode) {
+            GATE.switchedOn();
+            invokeAll(stop);
+        } else if (GATE.switchedOff()) {
+            invokeAll(start);
+        }
+    }
+
+    private static void invokeAll(Method m) {
         if (m == null) return;
         List<Object> live = new ArrayList<>();
         synchronized (MANAGERS) {
