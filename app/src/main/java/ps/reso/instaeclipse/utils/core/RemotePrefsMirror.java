@@ -2,15 +2,19 @@ package ps.reso.instaeclipse.utils.core;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.IBinder;
+import android.os.IInterface;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Set;
 
 import io.github.libxposed.service.XposedService;
 import io.github.libxposed.service.XposedServiceHelper;
+import ps.reso.instaeclipse.utils.ipc.FrameworkServiceProvider;
 
 /**
  * Modern flavor (libxposed API 102): mirrors the companion's "instaeclipse_cache" prefs into the
@@ -28,6 +32,7 @@ public final class RemotePrefsMirror {
     private static volatile SharedPreferences remote;
     // the service the mirror writes to; guarded by RemotePrefsMirror.class
     private static XposedService bound;
+    private static int boundUid = FrameworkServiceProvider.UNKNOWN_UID;
 
     // held strongly: SharedPreferences keeps its listeners weakly
     private static final SharedPreferences.OnSharedPreferenceChangeListener ON_CHANGE = (prefs, key) -> {
@@ -51,16 +56,17 @@ public final class RemotePrefsMirror {
             @Override
             public void onServiceBind(@NonNull XposedService service) {
                 synchronized (RemotePrefsMirror.class) {
-                    // The exported provider takes a binder from any app: keep the first service
-                    // until its binder dies, so a later one can't take over every setting.
-                    if (bound != null) {
+                    int uid = FrameworkServiceProvider.senderUid(binderOf(service));
+                    if (!accepts(bound == null ? null : boundUid, uid)) {
                         Log.i(TAG, "ignored another service binder while connected");
                         return;
                     }
                     try {
                         SharedPreferences r = service.getRemotePreferences(GROUP);
                         copyAll(local, r);
+                        if (bound != null) Log.i(TAG, "service binder from uid " + boundUid + " replaced by one from uid " + uid);
                         bound = service;
+                        boundUid = uid;
                         remote = r;
                         Log.i(TAG, "connected to " + service.getFrameworkName() + " " + service.getFrameworkVersion()
                                 + " (API " + service.getApiVersion() + "), mirrored " + local.getAll().size() + " values");
@@ -79,6 +85,25 @@ public final class RemotePrefsMirror {
                 }
             }
         });
+    }
+
+    static boolean accepts(Integer boundSenderUid, int senderUid) {
+        return boundSenderUid == null || (privileged(senderUid) && !privileged(boundSenderUid));
+    }
+
+    private static boolean privileged(int uid) {
+        return uid == 0 || uid == 1000;
+    }
+
+    private static IBinder binderOf(XposedService service) {
+        try {
+            Method asInterface = XposedService.class.getDeclaredMethod("asInterface");
+            asInterface.setAccessible(true);
+            Object binderInterface = asInterface.invoke(service);
+            return binderInterface instanceof IInterface i ? i.asBinder() : null;
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     private static void copyAll(SharedPreferences from, SharedPreferences to) {
