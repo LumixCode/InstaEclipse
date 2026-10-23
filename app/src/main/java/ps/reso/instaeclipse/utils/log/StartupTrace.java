@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import ps.reso.instaeclipse.utils.core.DexKitStats;
+import ps.reso.instaeclipse.utils.core.LegacyPaths;
 import ps.reso.instaeclipse.utils.core.StartupIdle;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
@@ -130,7 +131,7 @@ public final class StartupTrace {
     public static void logInstallSummary(Span install, boolean warm) {
         if (install == null || !install.ended()) return;
         List<Span> all = spans();
-        String line = summary(warm, processStartNanos(), all, install);
+        String line = summary(warm, processStartNanos(), all, install) + LegacyPaths.summarySuffix();
         String detail = detail(all, install, DexKitStats.bySegmentAndThread());
         lastSummary = line;
         lastDetail = detail;
