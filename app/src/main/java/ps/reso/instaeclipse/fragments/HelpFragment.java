@@ -22,6 +22,7 @@ import android.widget.TextView;
 import androidx.annotation.AttrRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
 import androidx.transition.AutoTransition;
 import androidx.transition.TransitionManager;
@@ -31,7 +32,7 @@ import com.google.android.material.color.MaterialColors;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.ExportBrand;
 
-public class HelpFragment extends Fragment {
+public class HelpFragment extends Fragment implements TabFragment {
 
     private static final String VECTOR_URL = "https://github.com/JingMatrix/Vector/releases/latest";
     private static final String LSPATCH_URL = "https://github.com/JingMatrix/LSPatch/releases/latest";
@@ -74,6 +75,11 @@ public class HelpFragment extends Fragment {
         version.setText(getString(R.string.help_version, readVersionName(requireContext())));
 
         return view;
+    }
+
+    @Override
+    public void onTabReselected() {
+        if (getView() instanceof NestedScrollView) ((NestedScrollView) getView()).smoothScrollTo(0, 0);
     }
 
     // ---- FAQ ------------------------------------------------------------------------------

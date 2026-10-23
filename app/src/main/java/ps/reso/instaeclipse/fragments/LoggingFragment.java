@@ -61,7 +61,7 @@ import ps.reso.instaeclipse.utils.log.Logging;
  * broadcast) to re-sync that file; its inline reply is only used as a fallback when the file is
  * missing (e.g. an Instagram process started before this companion version was installed).
  */
-public class LoggingFragment extends Fragment {
+public class LoggingFragment extends Fragment implements TabFragment {
 
     private static final long INSTAGRAM_REPLY_TIMEOUT_MS = 3000;
     private static final int MAX_ENTRIES = 6000;
@@ -203,6 +203,11 @@ public class LoggingFragment extends Fragment {
         view.findViewById(R.id.logs_copy).setOnClickListener(v -> copyLogs());
         view.findViewById(R.id.logs_share).setOnClickListener(v -> shareLogs());
         view.findViewById(R.id.logs_clear).setOnClickListener(v -> clearLogs());
+    }
+
+    @Override
+    public void onTabReselected() {
+        if (listView != null && adapter.getItemCount() > 0) listView.scrollToPosition(adapter.getItemCount() - 1);
     }
 
     @Override

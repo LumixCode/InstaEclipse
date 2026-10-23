@@ -33,6 +33,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
+import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.button.MaterialButton;
@@ -51,7 +52,7 @@ import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.core.Contributor;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 
-public class HomeFragment extends Fragment {
+public class HomeFragment extends Fragment implements TabFragment {
 
     // px/s scroll speed — feels like a gentle conveyor belt
     private static final float SCROLL_SPEED_DP_PER_SEC = 48f;
@@ -276,6 +277,11 @@ public class HomeFragment extends Fragment {
         if (contributorsScroller != null) contributorsScroller.stop();
         if (specialThanksScroller != null) specialThanksScroller.stop();
         mainHandler.removeCallbacksAndMessages(null);
+    }
+
+    @Override
+    public void onTabReselected() {
+        if (getView() instanceof NestedScrollView) ((NestedScrollView) getView()).smoothScrollTo(0, 0);
     }
 
     // =========================================================

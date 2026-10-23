@@ -1,13 +1,20 @@
 package ps.reso.instaeclipse;
 
-import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.widget.FrameLayout;
 
+import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
+import androidx.lifecycle.Lifecycle;
 
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -16,12 +23,25 @@ import ps.reso.instaeclipse.fragments.FeaturesFragment;
 import ps.reso.instaeclipse.fragments.HelpFragment;
 import ps.reso.instaeclipse.fragments.HomeFragment;
 import ps.reso.instaeclipse.fragments.LoggingFragment;
+import ps.reso.instaeclipse.fragments.TabFragment;
 import ps.reso.instaeclipse.utils.log.Logging;
 import ps.reso.instaeclipse.utils.version.VersionCheckUtility;
 
 public class MainActivity extends AppCompatActivity {
 
-    @SuppressLint("NonConstantResourceId")
+    private static final String STATE_TAB = "selectedTab";
+    private static final int[] TAB_IDS = {R.id.nav_home, R.id.nav_features, R.id.nav_logs, R.id.nav_help};
+
+    private BottomNavigationView bottomNavigation;
+    private int selectedTab = R.id.nav_home;
+
+    private final OnBackPressedCallback backToHome = new OnBackPressedCallback(false) {
+        @Override
+        public void handleOnBackPressed() {
+            bottomNavigation.setSelectedItemId(R.id.nav_home);
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // NOTE: intentionally NOT applying DynamicColors — 0.7 ships a fixed branded dark palette
@@ -48,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
             appBarLayout.setLiftOnScroll(false);
         }
 
-        BottomNavigationView bottomNavigation = findViewById(R.id.bottom_navigation);
+        bottomNavigation = findViewById(R.id.bottom_navigation);
         FrameLayout fragmentContainer = findViewById(R.id.fragment_container);
 
         // On targetSdk 35+, edge-to-edge is enforced. The BottomNavigationView absorbs the
@@ -62,47 +82,65 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Load the HomeFragment by default
-        if (savedInstanceState == null) {
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.fragment_container, new HomeFragment())
-                    .commit();
-        }
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+            Insets sides = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            v.setPadding(sides.left, v.getPaddingTop(), sides.right, v.getPaddingBottom());
+            return insets.inset(sides.left, 0, sides.right, 0);
+        });
 
-        // Select Home by default in the navbar
-        bottomNavigation.setSelectedItemId(R.id.nav_home);
-
-        // Handle bottom navigation item clicks
         bottomNavigation.setOnItemSelectedListener(item -> {
-            Fragment selectedFragment = null;
-
-            if (item.getItemId() == R.id.nav_home) {
-                selectedFragment = new HomeFragment();
-            } else if (item.getItemId() == R.id.nav_features) {
-                selectedFragment = new FeaturesFragment();
-            } else if (item.getItemId() == R.id.nav_logs) {
-                selectedFragment = new LoggingFragment();
-            } else if (item.getItemId() == R.id.nav_help) {
-                selectedFragment = new HelpFragment();
-            }
-
-            if (selectedFragment != null) {
-                getSupportFragmentManager()
-                        .beginTransaction()
-                        .replace(R.id.fragment_container, selectedFragment)
-                        .commit();
-            }
+            showTab(item.getItemId());
             return true;
         });
+        bottomNavigation.setOnItemReselectedListener(item -> {
+            Fragment tab = getSupportFragmentManager().findFragmentByTag(tagOf(item.getItemId()));
+            if (tab instanceof TabFragment && tab.isVisible()) ((TabFragment) tab).onTabReselected();
+        });
+        getOnBackPressedDispatcher().addCallback(backToHome);
+
+        showTab(savedInstanceState == null ? R.id.nav_home : savedInstanceState.getInt(STATE_TAB, R.id.nav_home));
     }
 
     @Override
-    public void onBackPressed() {
-        if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
-            getSupportFragmentManager().popBackStack();
-        } else {
-            super.onBackPressed();
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(STATE_TAB, selectedTab);
+    }
+
+    private void showTab(int id) {
+        String tag = tagOf(id);
+        if (tag == null) return;
+        selectedTab = id;
+        FragmentManager fragments = getSupportFragmentManager();
+        FragmentTransaction transaction = fragments.beginTransaction().setReorderingAllowed(true);
+        for (int other : TAB_IDS) {
+            if (other == id) continue;
+            Fragment hidden = fragments.findFragmentByTag(tagOf(other));
+            if (hidden != null) transaction.hide(hidden).setMaxLifecycle(hidden, Lifecycle.State.STARTED);
         }
+        Fragment shown = fragments.findFragmentByTag(tag);
+        if (shown == null) {
+            shown = newTab(id);
+            transaction.add(R.id.fragment_container, shown, tag);
+        } else {
+            transaction.show(shown);
+        }
+        transaction.setMaxLifecycle(shown, Lifecycle.State.RESUMED).commitNow();
+        backToHome.setEnabled(id != R.id.nav_home);
+    }
+
+    private static String tagOf(int id) {
+        if (id == R.id.nav_home) return "home";
+        if (id == R.id.nav_features) return "features";
+        if (id == R.id.nav_logs) return "logs";
+        if (id == R.id.nav_help) return "help";
+        return null;
+    }
+
+    private static Fragment newTab(int id) {
+        if (id == R.id.nav_features) return new FeaturesFragment();
+        if (id == R.id.nav_logs) return new LoggingFragment();
+        if (id == R.id.nav_help) return new HelpFragment();
+        return new HomeFragment();
     }
 }

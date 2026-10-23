@@ -66,7 +66,9 @@ import ps.reso.instaeclipse.utils.core.ExportBrand;
 import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
 import ps.reso.instaeclipse.ui.theme.ThemeCustomizerActivity;
 
-public class FeaturesFragment extends Fragment {
+public class FeaturesFragment extends Fragment implements TabFragment {
+
+    private static final String STATE_MENU = "currentMenu";
 
     private SharedPreferences localCache;
     private View fragmentView;
@@ -87,6 +89,8 @@ public class FeaturesFragment extends Fragment {
     private ActivityResultLauncher<String> profilePhotoLauncher;
 
     private String currentMenu = "main";
+    private boolean restoringMenu;
+    private OnBackPressedCallback backCallback;
     /** True once Instagram answered the current request with today's reel count. */
     private boolean reelUsageSynced;
 
@@ -362,8 +366,8 @@ public class FeaturesFragment extends Fragment {
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override
             public void afterTextChanged(Editable s) {
-                if (suppressSearchWatcher) return;
-                runSearch(s.toString());
+                if (!suppressSearchWatcher) runSearch(s.toString());
+                updateBackEnabled();
             }
         });
         etSearch.setOnEditorActionListener((v, actionId, event) -> {
@@ -385,30 +389,60 @@ public class FeaturesFragment extends Fragment {
             }
         });
 
-        btnBack.setOnClickListener(v -> loadMainMenu());
+        btnBack.setOnClickListener(v -> loadParentMenu());
 
-        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), new OnBackPressedCallback(true) {
+        backCallback = new OnBackPressedCallback(false) {
             @Override
             public void handleOnBackPressed() {
                 if (!"main".equals(currentMenu)) {
-                    loadMainMenu();
+                    loadParentMenu();
                 } else if (isSearching()) {
-                    // Back while searching clears the query (the watcher restores the main menu)
                     etSearch.setText("");
                     etSearch.clearFocus();
                     hideKeyboard();
-                } else {
-                    setEnabled(false);
-                    requireActivity().getOnBackPressedDispatcher().onBackPressed();
                 }
             }
-        });
+        };
+        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), backCallback);
 
         fabSave.setOnClickListener(v -> commitStagedChanges());
 
-        loadMainMenu();
+        if (savedInstanceState == null) {
+            loadMainMenu();
+        } else {
+            restoreMenu(savedInstanceState.getString(STATE_MENU, "main"));
+            suppressSearchWatcher = true;
+        }
 
         return fragmentView;
+    }
+
+    @Override
+    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
+        super.onViewStateRestored(savedInstanceState);
+        if (!suppressSearchWatcher) return;
+        suppressSearchWatcher = false;
+        if ("main".equals(currentMenu) && isSearching()) {
+            restoringMenu = true;
+            try {
+                runSearch(etSearch.getText().toString());
+            } finally {
+                restoringMenu = false;
+            }
+        }
+        updateBackEnabled();
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(STATE_MENU, currentMenu);
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        updateBackEnabled();
     }
 
     // =========================================================
@@ -739,13 +773,15 @@ public class FeaturesFragment extends Fragment {
     // MENU BUILDING HELPERS
     // =========================================================
 
-    private void showMenu(String title, List<Object> definitions) {
-        showMenu(title, definitions, true);
+    private void showMenu(String key, String title, List<Object> definitions) {
+        showMenu(key, title, definitions, true);
     }
 
     /** @param animate false for live search updates (no header transition / list slide-in per keystroke). */
-    private void showMenu(String title, List<Object> definitions, boolean animate) {
-        boolean isMain = title.equals(getString(R.string.features));
+    private void showMenu(String key, String title, List<Object> definitions, boolean animate) {
+        currentMenu = key;
+        boolean isMain = "main".equals(key);
+        animate = animate && !restoringMenu;
         if (animate) {
             ViewGroup topBar = fragmentView.findViewById(R.id.top_bar);
             TransitionManager.beginDelayedTransition(topBar, new AutoTransition().setDuration(200));
@@ -783,12 +819,13 @@ public class FeaturesFragment extends Fragment {
             }
         }
 
+        updateBackEnabled();
         if (!animate) {
             recyclerFeatures.animate().cancel();
             recyclerFeatures.setAlpha(1f);
             recyclerFeatures.setTranslationY(0f);
             adapter.setItems(displayList);
-            recyclerFeatures.scrollToPosition(0);
+            if (!restoringMenu) recyclerFeatures.scrollToPosition(0);
             return;
         }
 
@@ -980,8 +1017,38 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadMainMenu() {
-        showMenu(getString(R.string.features), buildMainDefs());
-        currentMenu = "main";
+        showMenu("main", getString(R.string.features), buildMainDefs());
+    }
+
+    private void loadParentMenu() {
+        if ("qt".equals(currentMenu)) loadGhostMenu();
+        else loadMainMenu();
+    }
+
+    private void restoreMenu(String key) {
+        restoringMenu = true;
+        try {
+            for (Category category : getCategories()) {
+                if (category.key.equals(key)) {
+                    category.loader.run();
+                    return;
+                }
+            }
+            loadMainMenu();
+        } finally {
+            restoringMenu = false;
+        }
+    }
+
+    private void updateBackEnabled() {
+        if (backCallback != null) backCallback.setEnabled(isResumed() && !isHidden() && (!"main".equals(currentMenu) || isSearching()));
+    }
+
+    @Override
+    public void onTabReselected() {
+        if (recyclerFeatures == null) return;
+        if ("main".equals(currentMenu)) recyclerFeatures.smoothScrollToPosition(0);
+        else loadMainMenu();
     }
 
     private List<Object> buildMainDefs() {
@@ -1132,13 +1199,11 @@ public class FeaturesFragment extends Fragment {
             }
         }
         if (defs.isEmpty()) defs.add(getString(R.string.feat_search_no_results));
-        showMenu(getString(R.string.features), defs, false);
-        currentMenu = "main";
+        showMenu("main", getString(R.string.features), defs, false);
     }
 
     private void loadDevMenu() {
-        showMenu(getString(R.string.ig_dialog_section_dev_options), buildDevDefs());
-        currentMenu = "dev";
+        showMenu("dev", getString(R.string.ig_dialog_section_dev_options), buildDevDefs());
     }
 
     private List<Object> buildDevDefs() {
@@ -1162,8 +1227,7 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadGhostMenu() {
-        showMenu(getString(R.string.ig_dialog_section_ghost_mode), buildGhostDefs());
-        currentMenu = "ghost";
+        showMenu("ghost", getString(R.string.ig_dialog_section_ghost_mode), buildGhostDefs());
     }
 
     private List<Object> buildGhostDefs() {
@@ -1207,8 +1271,7 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadMessagesMenu() {
-        showMenu(getString(R.string.menu_messages), buildMessagesDefs());
-        currentMenu = "messages";
+        showMenu("messages", getString(R.string.menu_messages), buildMessagesDefs());
     }
 
     private List<Object> buildMessagesDefs() {
@@ -1245,8 +1308,7 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadQuickTogglesMenu() {
-        showMenu(getString(R.string.ig_dialog_section_quick_toggle), buildQuickTogglesDefs());
-        currentMenu = "qt";
+        showMenu("qt", getString(R.string.ig_dialog_section_quick_toggle), buildQuickTogglesDefs());
     }
 
     private List<Object> buildQuickTogglesDefs() {
@@ -1275,8 +1337,7 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadAdsMenu() {
-        showMenu(getString(R.string.menu_ads_tracking), buildAdsDefs());
-        currentMenu = "ads";
+        showMenu("ads", getString(R.string.menu_ads_tracking), buildAdsDefs());
     }
 
     private List<Object> buildAdsDefs() {
@@ -1299,8 +1360,7 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadFeedMenu() {
-        showMenu(getString(R.string.menu_feed), buildFeedDefs());
-        currentMenu = "feed";
+        showMenu("feed", getString(R.string.menu_feed), buildFeedDefs());
     }
 
     private List<Object> buildFeedDefs() {
@@ -1363,9 +1423,8 @@ public class FeaturesFragment extends Fragment {
         boolean reload = "distract".equals(currentMenu);
         RecyclerView.LayoutManager manager = recyclerFeatures.getLayoutManager();
         android.os.Parcelable scroll = reload && manager != null ? manager.onSaveInstanceState() : null;
-        showMenu(getString(R.string.ig_dialog_section_distraction_free), buildDistractionDefs(), !reload);
+        showMenu("distract", getString(R.string.ig_dialog_section_distraction_free), buildDistractionDefs(), !reload);
         if (scroll != null) manager.onRestoreInstanceState(scroll);
-        currentMenu = "distract";
     }
 
     private List<Object> buildDistractionDefs() {
@@ -1514,8 +1573,7 @@ public class FeaturesFragment extends Fragment {
 
     /** Navigation (#238): hide and reorder the bottom-nav tabs, startup tab and gestures. */
     private void loadNavigationMenu() {
-        showMenu(getString(R.string.menu_navigation), buildNavigationDefs());
-        currentMenu = "navigation";
+        showMenu("navigation", getString(R.string.menu_navigation), buildNavigationDefs());
     }
 
     private List<Object> buildNavigationDefs() {
@@ -1834,8 +1892,7 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadInteractionsMenu() {
-        showMenu(getString(R.string.menu_likes_comments), buildInteractionsDefs());
-        currentMenu = "interactions";
+        showMenu("interactions", getString(R.string.menu_likes_comments), buildInteractionsDefs());
     }
 
     private List<Object> buildInteractionsDefs() {
@@ -1856,8 +1913,7 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadProfilesMenu() {
-        showMenu(getString(R.string.menu_profiles), buildProfilesDefs());
-        currentMenu = "profiles";
+        showMenu("profiles", getString(R.string.menu_profiles), buildProfilesDefs());
     }
 
     private List<Object> buildProfilesDefs() {
@@ -1959,8 +2015,7 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadAppMenu() {
-        showMenu(getString(R.string.menu_app), buildAppDefs());
-        currentMenu = "app";
+        showMenu("app", getString(R.string.menu_app), buildAppDefs());
     }
 
     private List<Object> buildAppDefs() {
@@ -2029,8 +2084,7 @@ public class FeaturesFragment extends Fragment {
     /** Lock (Privacy). Companion app only toggles the persisted flags — the passcode itself is set
      *  from inside Instagram (the module has no passcode field here). */
     private void loadLockMenu() {
-        showMenu(getString(R.string.ig_dialog_misc_lock_section), buildLockDefs());
-        currentMenu = "lock";
+        showMenu("lock", getString(R.string.ig_dialog_misc_lock_section), buildLockDefs());
     }
 
     private List<Object> buildLockDefs() {
@@ -2073,8 +2127,7 @@ public class FeaturesFragment extends Fragment {
     /** Hide Specific Chats (Privacy). The companion app toggles the feature; hiding/unhiding a
      *  specific chat is done from inside Instagram. */
     private void loadHideChatsMenu() {
-        showMenu(getString(R.string.ig_hide_chats_title), buildHideChatsDefs());
-        currentMenu = "hidechats";
+        showMenu("hidechats", getString(R.string.ig_hide_chats_title), buildHideChatsDefs());
     }
 
     private List<Object> buildHideChatsDefs() {
@@ -2093,8 +2146,7 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadLocationMenu() {
-        showMenu(getString(R.string.ig_dialog_section_location), buildLocationDefs());
-        currentMenu = "location";
+        showMenu("location", getString(R.string.ig_dialog_section_location), buildLocationDefs());
     }
 
     private List<Object> buildLocationDefs() {
@@ -2139,8 +2191,7 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadThemeMenu() {
-        showMenu(getString(R.string.theme_title), buildThemeDefs());
-        currentMenu = "theme";
+        showMenu("theme", getString(R.string.theme_title), buildThemeDefs());
     }
 
     private List<Object> buildThemeDefs() {
@@ -2258,13 +2309,11 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadReelsMenu() {
-        showMenu(getString(R.string.menu_reels), buildReelsDefs());
-        currentMenu = "reels";
+        showMenu("reels", getString(R.string.menu_reels), buildReelsDefs());
     }
 
     private void loadStoriesMenu() {
-        showMenu(getString(R.string.menu_stories), buildStoriesDefs());
-        currentMenu = "stories";
+        showMenu("stories", getString(R.string.menu_stories), buildStoriesDefs());
     }
 
     private List<Object> buildReelsDefs() {
@@ -2388,8 +2437,7 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadDownloaderMenu() {
-        showMenu(getString(R.string.ig_dialog_section_downloader), buildDownloaderDefs());
-        currentMenu = "downloader";
+        showMenu("downloader", getString(R.string.ig_dialog_section_downloader), buildDownloaderDefs());
     }
 
     private List<Object> buildDownloaderDefs() {
@@ -2491,8 +2539,7 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadQualityMenu() {
-        showMenu(getString(R.string.menu_quality), buildQualityDefs());
-        currentMenu = "quality";
+        showMenu("quality", getString(R.string.menu_quality), buildQualityDefs());
     }
 
     /** Quality: image, reel, upload and HDR video quality in one place. */
@@ -2511,8 +2558,7 @@ public class FeaturesFragment extends Fragment {
     }
 
     private void loadPostMenuMenu() {
-        showMenu(getString(R.string.menu_post_menu), buildPostMenuDefs());
-        currentMenu = "postmenu";
+        showMenu("postmenu", getString(R.string.menu_post_menu), buildPostMenuDefs());
     }
 
     private List<Object> buildPostMenuDefs() {
@@ -2924,11 +2970,13 @@ public class FeaturesFragment extends Fragment {
         } else {
             refreshVisibleMenu();
         }
+        updateBackEnabled();
     }
 
     @Override
     public void onPause() {
         super.onPause();
+        updateBackEnabled();
         if (localCache != null) localCache.unregisterOnSharedPreferenceChangeListener(prefsListener);
         if (prefsReply != null) { prefsReply.cancel(); prefsReply = null; }
         if (configReply != null) { configReply.cancel(); configReply = null; }
