@@ -13,6 +13,5 @@ public final class XC_LoadPackage {
         public String processName;
         public ClassLoader classLoader;
         public ApplicationInfo appInfo;
-        public boolean isFirstApplication;
     }
 }

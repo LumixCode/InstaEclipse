@@ -22,10 +22,6 @@ public final class SafeReflect {
         try { return c.getDeclaredFields(); } catch (Throwable t) { return NO_FIELDS; }
     }
 
-    public static Field[] publicFields(Class<?> c) {
-        try { return c.getFields(); } catch (Throwable t) { return NO_FIELDS; }
-    }
-
     public static Method[] methods(Class<?> c) {
         try { return c.getDeclaredMethods(); } catch (Throwable t) { return NO_METHODS; }
     }

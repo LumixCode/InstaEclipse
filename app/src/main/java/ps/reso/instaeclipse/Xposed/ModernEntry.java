@@ -37,7 +37,6 @@ public class ModernEntry extends XposedModule {
         p.processName = processName;
         p.classLoader = param.getClassLoader();
         p.appInfo = param.getApplicationInfo();
-        p.isFirstApplication = param.isFirstPackage();
         module.handleLoadPackage(p);
     }
 }

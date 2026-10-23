@@ -81,11 +81,6 @@ public final class RemotePrefsMirror {
         });
     }
 
-    /** True once the framework service connected and the settings are mirrored. */
-    public static boolean isConnected() {
-        return remote != null;
-    }
-
     private static void copyAll(SharedPreferences from, SharedPreferences to) {
         SharedPreferences.Editor e = to.edit();
         e.clear();

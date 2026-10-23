@@ -263,25 +263,9 @@ public final class XposedHelpers {
         }
     }
 
-    public static void setObjectField(Object obj, String fieldName, Object value) {
-        try {
-            findField(obj.getClass(), fieldName).set(obj, value);
-        } catch (IllegalAccessException e) {
-            throw new IllegalAccessError(e.getMessage());
-        }
-    }
-
     public static boolean getBooleanField(Object obj, String fieldName) {
         try {
             return findField(obj.getClass(), fieldName).getBoolean(obj);
-        } catch (IllegalAccessException e) {
-            throw new IllegalAccessError(e.getMessage());
-        }
-    }
-
-    public static int getIntField(Object obj, String fieldName) {
-        try {
-            return findField(obj.getClass(), fieldName).getInt(obj);
         } catch (IllegalAccessException e) {
             throw new IllegalAccessError(e.getMessage());
         }

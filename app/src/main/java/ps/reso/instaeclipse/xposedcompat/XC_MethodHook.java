@@ -10,8 +10,6 @@ import java.lang.reflect.Member;
 public abstract class XC_MethodHook {
 
     public static final int PRIORITY_DEFAULT = 50;
-    public static final int PRIORITY_LOWEST = -10000;
-    public static final int PRIORITY_HIGHEST = 10000;
 
     public final int priority;
 
@@ -70,11 +68,6 @@ public abstract class XC_MethodHook {
             this.throwable = throwable;
             this.result = null;
             this.returnEarly = true;
-        }
-
-        public Object getResultOrThrowable() throws Throwable {
-            if (throwable != null) throw throwable;
-            return result;
         }
 
         /** Backend use: the original's outcome, without marking the call as decided. */
