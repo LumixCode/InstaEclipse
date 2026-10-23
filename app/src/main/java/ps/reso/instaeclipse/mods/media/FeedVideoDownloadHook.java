@@ -816,8 +816,7 @@ public class FeedVideoDownloadHook {
                     : MediaModelResolver.findObjectOfType(
                             media, resolvedIsVideoMethod.getDeclaringClass(), 5);
             if (target == null) return false;
-            Object result = resolvedIsVideoMethod.invoke(target);
-            return result instanceof Boolean && (Boolean) result;
+            return MediaTypeDetector.isVideoType(resolvedIsVideoMethod.invoke(target));
         } catch (Throwable ignored) {
             return false;
         }

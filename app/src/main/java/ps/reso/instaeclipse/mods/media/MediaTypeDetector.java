@@ -76,6 +76,10 @@ final class MediaTypeDetector {
                 : withCorrectExtension(requestedFilename, kind));
     }
 
+    static boolean isVideoType(Object value) {
+        return value instanceof Boolean && (Boolean) value;
+    }
+
     static Kind fromContentType(String contentType) {
         String normalized = normalizeContentType(contentType);
         if (normalized == null) return Kind.UNKNOWN;
