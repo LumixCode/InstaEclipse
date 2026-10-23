@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="ig_comment_search_maybe_more">%1$d comments loaded · there may be more</string>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="ig_comment_search_maybe_more" tools:ignore="MissingTranslation">%1$d comments loaded · there may be more</string>
 </resources>
