@@ -349,10 +349,7 @@ public final class ReelViewerHook {
             // Input disabling stops swipes/accessibility paging. Also guard explicit page jumps once
             // the opened reel is laid out; initial DM positioning must still be allowed. "Lock Reels
             // scrolling" is not checked here, so IG's own auto-scroll keeps advancing.
-            for (Method method : pagerClass.getDeclaredMethods()) {
-                Class<?>[] p = method.getParameterTypes();
-                if (Modifier.isStatic(method.getModifiers()) || !method.getName().equals("setCurrentItem") || method.getReturnType() != void.class
-                        || !(p.length == 1 || (p.length == 2 && p[1] == boolean.class)) || p[0] != int.class) continue;
+            for (Method method : PagerJumpFilter.jumps(pagerClass)) {
                 XposedBridge.hookMethod(method, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
                         JitGuard.tick(param.method);
