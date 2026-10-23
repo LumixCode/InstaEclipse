@@ -53,7 +53,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
             android:layout_marginBottom="8dp"
-            android:text="@string/module_not_working_title"
+            android:text="@string/help_troubleshooting"
             android:textAppearance="@style/IeSectionLabel" />
 
         <com.google.android.material.card.MaterialCardView
@@ -277,6 +277,7 @@
 
         <!-- ===== About ===== -->
         <TextView
+            android:id="@+id/about_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
@@ -330,6 +331,13 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:textAppearance="?attr/textAppearanceBodyMedium"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+
+                        <TextView
+                            android:id="@+id/about_tested_with"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="?attr/textAppearanceBodySmall"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
                         <TextView

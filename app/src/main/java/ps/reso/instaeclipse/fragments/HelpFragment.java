@@ -1,15 +1,15 @@
 package ps.reso.instaeclipse.fragments;
 
-import android.content.ActivityNotFoundException;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
-import android.net.Uri;
 import android.os.Bundle;
 import android.text.Html;
+import android.text.Spannable;
 import android.text.method.LinkMovementMethod;
+import android.text.style.URLSpan;
+import android.text.util.Linkify;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -22,6 +22,9 @@ import android.widget.TextView;
 import androidx.annotation.AttrRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.OneShotPreDrawListener;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
 import androidx.transition.AutoTransition;
@@ -31,6 +34,7 @@ import com.google.android.material.color.MaterialColors;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.ExportBrand;
+import ps.reso.instaeclipse.utils.ui.Links;
 
 public class HelpFragment extends Fragment implements TabFragment {
 
@@ -39,8 +43,8 @@ public class HelpFragment extends Fragment implements TabFragment {
     private static final String LSPATCH_GUIDE_URL = "https://t.me/instaEclipse_discussion/158/5149";
 
     private static final int[] FAQ_STRINGS = {
-            R.string.faq_1, R.string.faq_2, R.string.faq_3,
-            R.string.faq_4, R.string.faq_5, R.string.faq_6,
+            R.string.faq_1, R.string.help_faq_2, R.string.faq_3,
+            R.string.help_faq_4, R.string.help_faq_5, R.string.faq_6,
             R.string.faq_7, R.string.faq_8, R.string.faq_9
     };
 
@@ -76,6 +80,8 @@ public class HelpFragment extends Fragment implements TabFragment {
 
         TextView version = view.findViewById(R.id.about_version);
         version.setText(getString(R.string.help_version, readVersionName(requireContext())));
+        TextView tested = view.findViewById(R.id.about_tested_with);
+        tested.setText(getString(R.string.help_tested_with, ExportBrand.TESTED_INSTAGRAM));
 
         return view;
     }
@@ -85,13 +91,22 @@ public class HelpFragment extends Fragment implements TabFragment {
         if (getView() instanceof NestedScrollView) ((NestedScrollView) getView()).smoothScrollTo(0, 0);
     }
 
+    public void scrollToAbout() {
+        if (!(getView() instanceof NestedScrollView)) return;
+        NestedScrollView scroll = (NestedScrollView) getView();
+        View about = scroll.findViewById(R.id.about_title);
+        OneShotPreDrawListener.add(scroll, () -> scroll.smoothScrollTo(0, about.getTop()));
+    }
+
     // ---- FAQ ------------------------------------------------------------------------------
 
     private void buildFaq(LinearLayout container) {
         Context ctx = container.getContext();
         for (int i = 0; i < FAQ_STRINGS.length; i++) {
             if (i > 0) container.addView(hairline(ctx));
-            CharSequence[] qa = splitFaq(getText(FAQ_STRINGS[i]));
+            CharSequence raw = FAQ_STRINGS[i] == R.string.help_faq_5
+                    ? getString(R.string.help_faq_5, ExportBrand.TESTED_INSTAGRAM) : getText(FAQ_STRINGS[i]);
+            CharSequence[] qa = splitFaq(raw);
             container.addView(faqRow(container, qa[0], qa[1]));
         }
     }
@@ -133,6 +148,18 @@ public class HelpFragment extends Fragment implements TabFragment {
         a.setTextColor(MaterialColors.getColor(parentCard, com.google.android.material.R.attr.colorOnSurfaceVariant));
         a.setLineSpacing(0f, 1.15f);
         a.setText(answer);
+        Linkify.addLinks(a, Linkify.WEB_URLS);
+        if (a.getText() instanceof Spannable) {
+            Spannable spannable = (Spannable) a.getText();
+            for (URLSpan span : spannable.getSpans(0, spannable.length(), URLSpan.class)) {
+                int start = spannable.getSpanStart(span);
+                int end = spannable.getSpanEnd(span);
+                int flags = spannable.getSpanFlags(span);
+                spannable.removeSpan(span);
+                spannable.setSpan(new LinkSpan(span.getURL()), start, end, flags);
+            }
+        }
+        a.setMovementMethod(LinkMovementMethod.getInstance());
         a.setPadding(gutter, 0, gutter, pad);
         a.setVisibility(View.GONE);
 
@@ -143,10 +170,9 @@ public class HelpFragment extends Fragment implements TabFragment {
 
         boolean hasAnswer = answer.length() > 0;
         if (!hasAnswer) chevron.setVisibility(View.INVISIBLE);
-        header.setContentDescription(question + ". " + getString(R.string.help_faq_expand));
+        header.setContentDescription(question.toString());
 
-        header.setOnClickListener(v -> {
-            if (!hasAnswer) return;
+        Runnable toggle = () -> {
             boolean expand = a.getVisibility() != View.VISIBLE;
             // Animate the whole card so rows below slide smoothly.
             ViewGroup root = (ViewGroup) parentCard.getParent().getParent();
@@ -154,10 +180,30 @@ public class HelpFragment extends Fragment implements TabFragment {
                     new AutoTransition().setDuration(220));
             a.setVisibility(expand ? View.VISIBLE : View.GONE);
             chevron.animate().rotation(expand ? 180f : 0f).setDuration(220).start();
-            header.setContentDescription(question + ". " + getString(
-                    expand ? R.string.help_faq_collapse : R.string.help_faq_expand));
+            bindFaqState(header, expand);
+        };
+        header.setOnClickListener(v -> {
+            if (hasAnswer) toggle.run();
         });
+        if (hasAnswer) {
+            header.setTag(toggle);
+            bindFaqState(header, false);
+        }
         return row;
+    }
+
+    private void bindFaqState(View header, boolean expanded) {
+        Runnable toggle = (Runnable) header.getTag();
+        ViewCompat.setStateDescription(header, getString(expanded ? R.string.help_faq_expanded : R.string.help_faq_collapsed));
+        ViewCompat.removeAccessibilityAction(header, AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_EXPAND.getId());
+        ViewCompat.removeAccessibilityAction(header, AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_COLLAPSE.getId());
+        ViewCompat.replaceAccessibilityAction(header, expanded
+                        ? AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_COLLAPSE
+                        : AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_EXPAND,
+                null, (v, arguments) -> {
+                    toggle.run();
+                    return true;
+                });
     }
 
     /**
@@ -183,11 +229,21 @@ public class HelpFragment extends Fragment implements TabFragment {
                 }
             }
         }
-        if (cut <= 0 || cut >= text.length()) return new CharSequence[]{text, ""};
-        String q = text.substring(0, cut).trim();
+        if (cut <= 0 || cut >= text.length()) return new CharSequence[]{stripNumber(text), ""};
+        String q = stripNumber(text.substring(0, cut).trim());
         String a = text.substring(answerStart).trim();
         if (a.startsWith("-")) a = a.substring(1).trim();
         return new CharSequence[]{q, a};
+    }
+
+    private static String stripNumber(String question) {
+        int i = 0;
+        while (i < question.length() && Character.isDigit(question.charAt(i))) i++;
+        if (i == 0 || i >= question.length()) return question;
+        char mark = question.charAt(i);
+        if (mark != '.' && mark != ')') return question;
+        if (i + 1 < question.length() && Character.isDigit(question.charAt(i + 1))) return question;
+        return question.substring(i + 1).trim();
     }
 
     private View hairline(Context ctx) {
@@ -205,9 +261,17 @@ public class HelpFragment extends Fragment implements TabFragment {
     // ---- helpers --------------------------------------------------------------------------
 
     private void openUrl(String url) {
-        try {
-            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-        } catch (ActivityNotFoundException ignored) {
+        Links.open(requireContext(), url);
+    }
+
+    private static final class LinkSpan extends URLSpan {
+        LinkSpan(String url) {
+            super(url);
+        }
+
+        @Override
+        public void onClick(@NonNull View widget) {
+            Links.open(widget.getContext(), getURL());
         }
     }
 

@@ -19,4 +19,12 @@
     <string name="update_whats_new" tools:ignore="MissingTranslation">What\'s new</string>
     <string name="update_skip_version" tools:ignore="MissingTranslation">Skip this version</string>
     <string name="links_no_app" tools:ignore="MissingTranslation">No app can open this link</string>
+    <string name="help_faq_2" tools:ignore="MissingTranslation"><b>2. Module not enabled?</b>\n- In LSPatch or Vector, check that InstaEclipse is enabled for Instagram, then force stop and reopen Instagram.</string>
+    <string name="help_faq_4" tools:ignore="MissingTranslation"><b>4. Developer options cause crashes?</b>\n- Turn developer options off and use Developer Options → Restore Default Config.</string>
+    <string name="help_faq_5" tools:ignore="MissingTranslation"><b>5. Developer options have weird labels or numbers?</b>\n- Stable Instagram hides the option names. InstaEclipse is tested with Instagram %1$s.</string>
+    <string name="help_logs_empty_body" tools:ignore="MissingTranslation">Open Instagram once with InstaEclipse enabled in LSPatch or Vector, then come back here and tap Refresh. Instagram\'s log is saved here automatically, even after Instagram is closed.</string>
+    <string name="help_troubleshooting" tools:ignore="MissingTranslation">Troubleshooting</string>
+    <string name="help_faq_expanded" tools:ignore="MissingTranslation">Expanded</string>
+    <string name="help_faq_collapsed" tools:ignore="MissingTranslation">Collapsed</string>
+    <string name="help_tested_with" tools:ignore="MissingTranslation">Tested with Instagram %1$s</string>
 </resources>
