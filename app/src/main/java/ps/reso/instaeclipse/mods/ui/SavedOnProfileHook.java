@@ -16,6 +16,8 @@ import org.luckypray.dexkit.result.MethodData;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.List;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
@@ -53,6 +55,7 @@ public class SavedOnProfileHook {
     public void install(DexKitBridge bridge, ClassLoader cl) {
         if (!FeatureFlags.savedOnProfile) return; // applies after an Instagram restart
         try {
+            List<Method> invoked = new ArrayList<>();
             for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass(HANDLER).paramCount(3)))) {
                 for (MethodData inv : md.getInvokes()) {
@@ -65,8 +68,7 @@ public class SavedOnProfileHook {
                     // push(Bundle, Fragment) -> commit()) instead of calling one static helper.
                     if (!Modifier.isStatic(m.getModifiers())) {
                         if (p.length == 2 && p[0] == android.os.Bundle.class && p[1] == fragment) navPush = m;
-                        else if (p.length == 0 && m.getReturnType() == void.class && navPush != null
-                                && m.getDeclaringClass() == navPush.getDeclaringClass()) navCommit = m;
+                        invoked.add(m);
                         continue;
                     }
                     if (p.length == 2 && Activity.class.isAssignableFrom(p[0]) && m.getReturnType() != void.class
@@ -92,6 +94,7 @@ public class SavedOnProfileHook {
                     }
                 }
             }
+            if (navMake != null && navPush != null) navCommit = navCommit(invoked, navPush.getDeclaringClass());
             boolean built = navMake != null && navPush != null && navCommit != null
                     && navMake.getReturnType() == navPush.getDeclaringClass();
             if (!built) navMake = null;
@@ -113,22 +116,7 @@ public class SavedOnProfileHook {
                     if (root == null) return;
                     root.postDelayed(() -> inject(frag, root), 500);
                     // IG rebuilds the action bar buttons after resume (dropping ours): re-add when missing
-                    if (watched.add(root)) {
-                        ViewTreeObserver.OnGlobalLayoutListener relayout = () -> {
-                            if (FeatureFlags.savedOnProfile && root.findViewWithTag(BTN_TAG) == null) inject(frag, root);
-                        };
-                        root.getViewTreeObserver().addOnGlobalLayoutListener(relayout);
-                        // The listener lands on the activity window's observer and holds frag + root,
-                        // so without this every visited profile would stay alive and keep listening.
-                        root.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
-                            @Override public void onViewAttachedToWindow(View v) {}
-                            @Override public void onViewDetachedFromWindow(View v) {
-                                v.getViewTreeObserver().removeOnGlobalLayoutListener(relayout);
-                                v.removeOnAttachStateChangeListener(this);
-                                watched.remove(v);
-                            }
-                        });
-                    }
+                    if (watched.add(root)) watch(frag, root);
                 }
             });
             FeatureStatusTracker.setHooked("SavedOnProfile");
@@ -138,6 +126,65 @@ public class SavedOnProfileHook {
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Will not work: setup failed", t);
         }
+    }
+
+    private static void watch(Object frag, View root) {
+        final boolean[] pending = {false};
+        final boolean[] own = {false};
+        final ViewTreeObserver.OnGlobalLayoutListener[] relayout = new ViewTreeObserver.OnGlobalLayoutListener[1];
+        View.OnAttachStateChangeListener detach = new View.OnAttachStateChangeListener() {
+            @Override public void onViewAttachedToWindow(View v) {}
+            @Override public void onViewDetachedFromWindow(View v) {
+                unwatch(v, relayout[0], this);
+            }
+        };
+        relayout[0] = () -> {
+            if (!FeatureFlags.savedOnProfile || pending[0]) return;
+            pending[0] = true;
+            root.post(() -> {
+                pending[0] = false;
+                if (!FeatureFlags.savedOnProfile) return;
+                if (!own[0]) {
+                    Boolean mine = ownProfile(root);
+                    if (mine == null) return;
+                    if (!mine) {
+                        unwatch(root, relayout[0], detach);
+                        return;
+                    }
+                    own[0] = true;
+                }
+                if (root.findViewWithTag(BTN_TAG) == null) inject(frag, root);
+            });
+        };
+        root.getViewTreeObserver().addOnGlobalLayoutListener(relayout[0]);
+        root.addOnAttachStateChangeListener(detach);
+    }
+
+    private static void unwatch(View root, ViewTreeObserver.OnGlobalLayoutListener relayout,
+                                View.OnAttachStateChangeListener detach) {
+        root.getViewTreeObserver().removeOnGlobalLayoutListener(relayout);
+        root.removeOnAttachStateChangeListener(detach);
+        watched.remove(root);
+    }
+
+    private static Boolean ownProfile(View root) {
+        int createId = ResIds.id(root.getContext(), "profile_header_create_button");
+        int rightId = ResIds.id(root.getContext(), "right_action_bar_buttons");
+        if (createId == 0 || rightId == 0) return false;
+        if (root.findViewById(createId) != null) return true;
+        return root.findViewById(rightId) instanceof ViewGroup bar && bar.getChildCount() > 0 ? Boolean.FALSE : null;
+    }
+
+    static Method navCommit(List<Method> invoked, Class<?> navigatorClass) {
+        Method found = null;
+        for (Method m : invoked) {
+            int mod = m.getModifiers();
+            if (m.getDeclaringClass() != navigatorClass || m.getParameterCount() != 0 || m.getReturnType() != void.class
+                    || Modifier.isStatic(mod) || !Modifier.isPublic(mod)) continue;
+            if (found != null && !found.equals(m)) return null;
+            found = m;
+        }
+        return found;
     }
 
     private static boolean isProfileFragment(Object f) {
