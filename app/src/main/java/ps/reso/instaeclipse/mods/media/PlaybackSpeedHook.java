@@ -412,7 +412,12 @@ public class PlaybackSpeedHook {
     record WrapperShape(boolean isStatic, boolean isSetter, Set<String> interfaces, Set<String> setterInterfaces) {}
 
     static boolean isVideoWrapper(WrapperShape shape) {
-        return !shape.isStatic() && !shape.isSetter();
+        if (shape.isStatic() || shape.isSetter()) return false;
+        for (String name : shape.interfaces()) {
+            if (name.startsWith("java.") || name.startsWith("android.")) continue;
+            if (shape.setterInterfaces().contains(name)) return true;
+        }
+        return false;
     }
 
     static Set<String> interfaceNames(Class<?> type) {
