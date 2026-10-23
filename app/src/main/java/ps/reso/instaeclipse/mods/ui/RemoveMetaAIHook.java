@@ -44,30 +44,6 @@ public class RemoveMetaAIHook {
 
     private static final String ADD_BUTTON_CACHE = "RemoveMetaAI_addButton";
 
-    private static final String[] TARGET_LAYOUTS = {
-            // DM composer Meta AI buttons
-            "direct_composer_meta_ai_invocation_button",
-            "direct_composer_meta_ai_discovery_button",
-            "direct_composer_bar_meta_ai_v2",
-            "direct_composer_overflow_button_meta_ai_v2",
-            "direct_composer_meta_ai_voice_button_v2",
-            "direct_composer_meta_ai_voice_button",
-            "direct_composer_meta_ai_composer_upsell",
-            "direct_composer_meta_ai_nux_disclaimer",
-            // In-thread AI summary pill + prompt pills / NUX banners
-            "direct_in_thread_ai_summary_pill",
-            "layout_meta_ai_large_ask_pill",
-            "layout_meta_ai_prompt_pill",
-            "layout_meta_ai_suggested_prompts",
-            "layout_meta_ai_scrollable_prompts",
-            "layout_meta_ai_scrollable_prompts_h_scroll",
-            "layout_meta_ai_chat_history_nux_banner",
-            "layout_meta_ai_in_thread_blocking_nux",
-            // Search SERP "Ask Meta AI" HCM card (447 real names; the *_search_plugin_* names are stale)
-            "layout_meta_ai_hcm",
-            "layout_meta_ai_hcm_shimmer",
-    };
-
     private static volatile boolean idsResolved = false;
     private static final Set<Integer> targetLayoutIds = new HashSet<>();
     private static long lastMenuLog = 0;
@@ -78,7 +54,7 @@ public class RemoveMetaAIHook {
         try {
             Resources res = anyView.getResources();
             String pkg = anyView.getContext().getPackageName();
-            for (String name : TARGET_LAYOUTS) {
+            for (String name : MetaAiLayouts.TARGET_LAYOUTS) {
                 int id = res.getIdentifier(name, "layout", pkg);
                 if (id != 0) targetLayoutIds.add(id);
             }
@@ -597,7 +573,7 @@ public class RemoveMetaAIHook {
         try {
             int composerId = ps.reso.instaeclipse.utils.ui.ResIds.id(root.getContext(), "row_thread_composer_container");
             int sheetId = ps.reso.instaeclipse.utils.ui.ResIds.id(root.getContext(), "action_sheet_container");
-            if (composerId == 0) return;
+            if (!ComposerSweepGuard.sweeps(composerId, sheetId)) return;
             java.util.List<View> composers = new java.util.ArrayList<>();
             findViewsById(root, composerId, composers);
             for (View composer : composers) {
