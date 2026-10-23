@@ -180,7 +180,7 @@ final class MediaInfo {
             String wid = attr(a, "width"), hei = attr(a, "height");
             if (wid == null || hei == null || (mime != null && !mime.startsWith("video"))) continue;
             String bw = attr(a, "bandwidth"), codecs = attr(a, "codecs");
-            long bps = bw != null ? Long.parseLong(bw) : 0;
+            long bps = bandwidth(bw);
             String line = wid + "×" + hei + (bps > 0 ? String.format(Locale.US, " · %.2f Mbps", bps / 1e6) : "")
                     + (codecs != null ? " · " + codecs : "");
             order.add(new long[]{bps, out.size()});
@@ -190,6 +190,15 @@ final class MediaInfo {
         List<String> sorted = new ArrayList<>();
         for (long[] o : order) sorted.add(out.get((int) o[1]));
         return sorted;
+    }
+
+    private static long bandwidth(String value) {
+        if (value == null) return 0;
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private static String attr(String attrs, String name) {
