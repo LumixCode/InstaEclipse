@@ -10,6 +10,7 @@ import java.util.List;
 
 import ps.reso.instaeclipse.mods.ads.AdBlocker;
 import ps.reso.instaeclipse.mods.ads.TrackingLinkDisable;
+import ps.reso.instaeclipse.mods.core.ExecGuardDispatchers;
 import ps.reso.instaeclipse.mods.core.TerminatedExecutorGuard;
 import ps.reso.instaeclipse.mods.devops.BuildExpiredPopupHook;
 import ps.reso.instaeclipse.mods.devops.DevOptionsUnlockHook;
@@ -216,6 +217,7 @@ public class InstallPlan {
     static final int PROFILE_PIC_DOWNLOAD_HOOK = 99;
     static final int INTERCEPTOR = 100;
     static final int TERMINATED_EXECUTOR_GUARD = 101;
+    static final int EXEC_GUARD_DISPATCHERS = 102;
 
     private static final List<InstallStep> STEPS;
 
@@ -321,6 +323,7 @@ public class InstallPlan {
         s.add(new InstallStep(PROFILE_PIC_DOWNLOAD_HOOK, "ProfilePicDownloadHook", null, "(InstaEclipse | ProfileDownload): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(INTERCEPTOR, "interceptor", null, "(InstaEclipse | Interceptor): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(TERMINATED_EXECUTOR_GUARD, "TerminatedExecutorGuard", null, "(InstaEclipse | ExecGuard): ", COULD_NOT_START, false, null));
+        s.add(new InstallStep(EXEC_GUARD_DISPATCHERS, "ExecGuardDispatchers", null, "(InstaEclipse | ExecGuard): ", COULD_NOT_START, true, null));
         STEPS = Collections.unmodifiableList(s);
     }
 
@@ -648,6 +651,9 @@ public class InstallPlan {
                 return;
             case TERMINATED_EXECUTOR_GUARD:
                 new TerminatedExecutorGuard().install(ctx.lpparam.classLoader);
+                return;
+            case EXEC_GUARD_DISPATCHERS:
+                ExecGuardDispatchers.install(ctx.bridge);
                 return;
             default:
                 throw new IllegalArgumentException("Unknown install step: " + step.name);

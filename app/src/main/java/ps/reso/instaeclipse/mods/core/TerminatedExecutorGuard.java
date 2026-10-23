@@ -40,7 +40,13 @@ public class TerminatedExecutorGuard {
     }
 
     static Decision decide(boolean shutdown, StackTraceElement[] frames, Set<String> dispatchers) {
-        return shutdown ? Decision.DROP : Decision.THROW;
+        if (!shutdown) return Decision.THROW;
+        if (frames != null && dispatchers != null && !dispatchers.isEmpty()) {
+            for (StackTraceElement frame : frames) {
+                if (dispatchers.contains(frame.getClassName())) return Decision.THROW;
+            }
+        }
+        return Decision.DROP;
     }
 
     public void install(ClassLoader classLoader) {
@@ -54,7 +60,10 @@ public class TerminatedExecutorGuard {
                         protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                             try {
                                 ThreadPoolExecutor ex = (ThreadPoolExecutor) param.args[1];
-                                if (ex != null && decide(ex.isShutdown(), null, dispatcherClasses) == Decision.DROP) {
+                                if (ex == null || !ex.isShutdown()) return;
+                                Set<String> dispatchers = dispatcherClasses;
+                                StackTraceElement[] frames = dispatchers.isEmpty() ? null : Thread.currentThread().getStackTrace();
+                                if (decide(true, frames, dispatchers) == Decision.DROP) {
                                     param.setResult(null);
                                     ModuleLog.probe("(IE|ExecGuard) dropped task rejected by shut-down executor");
                                 }
