@@ -71,12 +71,17 @@ public class CommentSearchHook {
     private static volatile List<String[]> latest = new ArrayList<>();
     /** The latest comment UI-state object and the comments-sheet fragment — walked at export time to
      *  find the post's Media object (so the post's own photos/videos can be saved with the comments). */
-    private static volatile Object lastState;
+    private static volatile java.lang.ref.WeakReference<Object> lastState = new java.lang.ref.WeakReference<>(null);
     private static java.lang.ref.WeakReference<Object> lastFragment = new java.lang.ref.WeakReference<>(null);
+    private static volatile String[] postRow;
     // IG's own comment JSON serializer (static void (generator, Comment) using "parent_comment_id")
     // and the JSON factory's (Writer) -> generator method: field names stay readable across versions
     private static Method commentSerializer, jsonWriterMethod;
-    private static Class<?> jsonFactory;
+    private static Class<?> jsonFactory, commentType;
+    private static Object jsonFactoryInstance;
+    private static final Map<Class<?>, Field[]> FIELDS = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.regex.Pattern NUMERIC = java.util.regex.Pattern.compile("[0-9_:.-]+");
+    private static volatile Method mediaIdGetter;
     private static final Map<Object, String[]> ROW_CACHE = Collections.synchronizedMap(new java.util.WeakHashMap<>());
     /** the open comments sheet (its list is scrolled by "Load all") */
     private static java.lang.ref.WeakReference<View> sheet = new java.lang.ref.WeakReference<>(null);
@@ -106,20 +111,15 @@ public class CommentSearchHook {
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                        if ((!FeatureFlags.commentSearch && !FeatureFlags.enableCaptionCopy) || param.getResult() == null) return;
-                        if (!FeatureFlags.commentSearch) {
-                            // Caption copy only needs the sheet's post: no comment rows.
-                            Object post = postOf(findSortRow(param.getResult()));
-                            if (post != null) sheetPost = new java.lang.ref.WeakReference<>(post);
-                            return;
-                        }
-                        Object[] sortRow = new Object[1];
-                        List<String[]> rows = collect(param.getResult(), sortRow);
-                        stateHasSortRow = sortRow[0] != null;
-                        Object post = postOf(sortRow[0]);
+                        Object state = param.getResult();
+                        if ((!FeatureFlags.commentSearch && !FeatureFlags.enableCaptionCopy) || state == null) return;
+                        Object sortRow = findSortRow(state);
+                        Object post = postOf(sortRow);
                         if (post != null) sheetPost = new java.lang.ref.WeakReference<>(post);
+                        if (!FeatureFlags.commentSearch) return;
+                        stateHasSortRow = sortRow != null;
                         stateAt = android.os.SystemClock.uptimeMillis();
-                        if (!rows.isEmpty()) { latest = rows; lastState = param.getResult(); stateUpdates++; }
+                        if (lastState.get() != state) { lastState = new java.lang.ref.WeakReference<>(state); stateUpdates++; }
                         SortRowOverlay.poke();
                     }
                 });
@@ -141,6 +141,7 @@ public class CommentSearchHook {
                         catch (NoSuchMethodException ignored) {}
                     }
                     commentSerializer.setAccessible(true);
+                    commentType = commentSerializer.getParameterTypes()[1];
                 }
                 ModuleLog.detail(TAG + "comment json: serializer=" + (commentSerializer != null) + " factory=" + (jsonFactory != null));
             } catch (Throwable t) {
@@ -187,6 +188,15 @@ public class CommentSearchHook {
                     Method ovc = frag.getDeclaredMethod("onViewCreated", View.class, android.os.Bundle.class);
                     XposedBridge.hookMethod(ovc, new XC_MethodHook() {
                         @Override
+                        protected void beforeHookedMethod(MethodHookParam param) {
+                            latest = new ArrayList<>();
+                            lastState = new java.lang.ref.WeakReference<>(null);
+                            stateUpdates = 0;
+                            sheetPost = new java.lang.ref.WeakReference<>(null);
+                            postRow = null;
+                        }
+
+                        @Override
                         protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                             if (param.thisObject != null) lastFragment = new java.lang.ref.WeakReference<>(param.thisObject);
                             Object frag = param.thisObject;
@@ -206,12 +216,12 @@ public class CommentSearchHook {
         }
     }
 
-    /** Every (author, text) row reachable from the UI state, in order, de-duplicated.
-     *  sortRow[0] is set to the "For you" sort row's model when the state holds one. */
-    private static List<String[]> collect(Object state, Object[] sortRow) {
+    private static List<String[]> collect(Object state) {
         Map<String, String[]> out = new LinkedHashMap<>();
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         java.util.ArrayDeque<Object[]> q = new java.util.ArrayDeque<>();
+        Object media = sheetPost.get();
+        String[] post = null;
         q.add(new Object[]{state, 0});
         while (!q.isEmpty() && seen.size() < 6000) {
             Object[] e = q.poll();
@@ -224,38 +234,39 @@ public class CommentSearchHook {
             }
             String n = o.getClass().getName();
             if (!n.startsWith("X.") && !n.startsWith("com.instagram.")) continue;
-            if (sortRowModel != null && sortRowModel.isInstance(o)) sortRow[0] = o;
             Object user = null;
             String text = null;
-            for (Class<?> k = o.getClass(); k != null && k != Object.class; k = k.getSuperclass())
-                for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
-                    if (Modifier.isStatic(f.getModifiers())) continue;
-                    try {
-                        f.setAccessible(true);
-                        Object v = f.get(o);
-                        if (v == null) continue;
-                        if (f.getType().getName().equals(USER)) user = v;
-                        else if (v instanceof String s) {
-                            if (!s.startsWith("http") && !TOKEN.matcher(s).matches()
-                                    && (text == null || s.length() > text.length())) text = s;
-                        } else if (d < 4 && !f.getType().isPrimitive() && !(v instanceof Number) && !(v instanceof Boolean)) {
-                            q.add(new Object[]{v, d + 1});
-                        }
-                    } catch (Throwable ignored) {}
-                }
+            boolean ofPost = false;
+            for (Field f : fields(o.getClass())) {
+                try {
+                    Object v = f.get(o);
+                    if (v == null) continue;
+                    if (v == media) ofPost = true;
+                    if (f.getType().getName().equals(USER)) user = v;
+                    else if (v instanceof String s) {
+                        if (!s.startsWith("http") && !TOKEN.matcher(s).matches()
+                                && (text == null || s.length() > text.length())) text = s;
+                    } else if (d < 4 && !f.getType().isPrimitive() && !(v instanceof Number) && !(v instanceof Boolean)) {
+                        q.add(new Object[]{v, d + 1});
+                    }
+                } catch (Throwable ignored) {}
+            }
             if (user == null) continue;
             // a real Comment model counts even without text (GIF / image comments)
-            if (commentSerializer != null && commentSerializer.getParameterTypes()[1].isInstance(o)) {
+            boolean comment = commentType != null && commentType.isInstance(o);
+            if (comment) {
                 String u = UserUtils.callUsernameGetter(user);
                 String[] row = u != null ? commentRow(o, u) : null;
                 if (row != null) { out.put(row[2], row); continue; } // by comment id (newer state wins)
             }
-            if (text != null && !text.isEmpty() && !text.matches("[0-9_:.-]+")) {
+            if (text != null && !text.isEmpty() && !NUMERIC.matcher(text).matches()) {
                 String u = UserUtils.callUsernameGetter(user);
                 if (u == null || text.equals(u)) continue;
                 out.putIfAbsent(u + "\u0000" + text, new String[]{u, text, "", "", "", "", "", "", "", ""});
+                if (ofPost && !comment && post == null) post = new String[]{u, text};
             }
         }
+        postRow = post;
         // the row view-models wrap the Comment model: keep the model's row (it has ids), drop the wrapper's
         Set<String> withId = new java.util.HashSet<>();
         for (String[] r : out.values()) if (!r[2].isEmpty()) withId.add(r[0] + "\u0000" + r[1]);
@@ -285,32 +296,68 @@ public class CommentSearchHook {
             if (sortRowModel.isInstance(o)) return o;
             String n = o.getClass().getName();
             if (d >= 4 || (!n.startsWith("X.") && !n.startsWith("com.instagram."))) continue;
-            for (Class<?> k = o.getClass(); k != null && k != Object.class; k = k.getSuperclass())
-                for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
-                    if (Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive()) continue;
-                    try {
-                        f.setAccessible(true);
-                        Object v = f.get(o);
-                        if (v != null && !(v instanceof String) && !(v instanceof Number) && !(v instanceof Boolean))
-                            q.add(new Object[]{v, d + 1});
-                    } catch (Throwable ignored) {}
-                }
+            for (Field f : fields(o.getClass())) {
+                if (f.getType().isPrimitive()) continue;
+                try {
+                    Object v = f.get(o);
+                    if (v != null && !(v instanceof String) && !(v instanceof Number) && !(v instanceof Boolean))
+                        q.add(new Object[]{v, d + 1});
+                } catch (Throwable ignored) {}
+            }
         }
         return null;
+    }
+
+    private static Field[] fields(Class<?> type) {
+        Field[] cached = FIELDS.get(type);
+        if (cached != null) return cached;
+        List<Field> out = new ArrayList<>();
+        for (Class<?> k = type; k != null && k != Object.class; k = k.getSuperclass())
+            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
+                if (Modifier.isStatic(f.getModifiers())) continue;
+                try {
+                    f.setAccessible(true);
+                    out.add(f);
+                } catch (Throwable ignored) {}
+            }
+        Field[] found = out.toArray(new Field[0]);
+        FIELDS.put(type, found);
+        return found;
+    }
+
+    private static String mediaIdOf(Object media) {
+        if (media == null) return "";
+        try {
+            Method getter = mediaIdGetter;
+            if (getter == null || getter.getDeclaringClass() != media.getClass()) {
+                getter = media.getClass().getMethod("getId");
+                mediaIdGetter = getter;
+            }
+            return getter.invoke(media) instanceof String id ? id : "";
+        } catch (Throwable t) {
+            return "";
+        }
+    }
+
+    private static String[] header(List<String[]> rows, Object media, String[] post) {
+        boolean ours = post != null && CommentSearchPolicy.sameMedia(mediaIdOf(media), CommentSearchPolicy.mediaId(rows));
+        return CommentSearchPolicy.header(rows, ours ? post : null);
     }
 
     /** A Comment model as a row, via IG's own serializer (cached: the models are immutable). */
     private static String[] commentRow(Object c, String user) {
         if (commentSerializer == null || jsonFactory == null) return null;
-        if (!commentSerializer.getParameterTypes()[1].isInstance(c)) {
-            if (!rowLogged) { rowLogged = true; ModuleLog.detail(TAG + "row class " + c.getClass().getName() + " is not " + commentSerializer.getParameterTypes()[1].getName()); }
+        if (!commentType.isInstance(c)) {
+            if (!rowLogged) { rowLogged = true; ModuleLog.detail(TAG + "row class " + c.getClass().getName() + " is not " + commentType.getName()); }
             return null;
         }
         String[] cached = ROW_CACHE.get(c);
         if (cached != null) return cached;
         try {
             java.io.StringWriter sw = new java.io.StringWriter();
-            Object gen = jsonWriterMethod.invoke(jsonFactory.getConstructor().newInstance(), sw);
+            Object factory = jsonFactoryInstance;
+            if (factory == null) jsonFactoryInstance = factory = jsonFactory.getConstructor().newInstance();
+            Object gen = jsonWriterMethod.invoke(factory, sw);
             commentSerializer.invoke(null, gen, c);
             if (gen instanceof java.io.Flushable f) f.flush();
             org.json.JSONObject j = new org.json.JSONObject(sw.toString());
@@ -622,7 +669,6 @@ public class CommentSearchHook {
     private static Class<?> sortRowModel;
     private static Set<String> sortLabelSet = Collections.emptySet();
     private static String sortLabelsLocale;
-    /** Bumped whenever the comment UI state carries comments (the sort row is built with them). */
     private static volatile int stateUpdates;
     /** Whether the latest comment UI state holds the sort row, and when it was built (uptime ms). */
     private static volatile boolean stateHasSortRow;
@@ -1093,7 +1139,11 @@ public class CommentSearchHook {
         final int cAccent = ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine.accentOr(0xFF0095F6);
         final int cHighlight = dark ? 0x660095F6 : 0x400095F6;
 
+        Object state = lastState.get();
+        if (state != null) latest = collect(state);
         final List<String[]> all = new ArrayList<>(latest);
+        final String[][] head = {header(all, sheetPost.get(), postRow)};
+        final boolean[] more = {false};
         final List<Object[]> shown = new ArrayList<>();
         final Set<String> expanded = new java.util.HashSet<>();
         final int[] matches = {0};
@@ -1182,6 +1232,8 @@ public class CommentSearchHook {
         exportBtn.setOnClickListener(v -> {
             if (all.isEmpty()) return;
             List<String[]> rows = new ArrayList<>(all);
+            String[] rowsHead = head[0];
+            Object post = sheetPost.get();
             ps.reso.instaeclipse.utils.dialog.IeDialog exDlg = new ps.reso.instaeclipse.utils.dialog.IeDialog(ctx)
                     .title(I18n.t(ctx, R.string.ig_comment_export));
             android.widget.CheckBox postBox = exDlg.checkBox(I18n.t(ctx, R.string.ig_comment_export_post_media), exportPostMedia);
@@ -1189,7 +1241,7 @@ public class CommentSearchHook {
             exDlg.primary(I18n.t(ctx, R.string.ig_comment_export), () -> {
                 exportPostMedia = postBox.isChecked();
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_comment_export_working), Toast.LENGTH_SHORT).show();
-                exportComments(ctx, rows, exportPostMedia);
+                exportComments(ctx, rows, exportPostMedia, rowsHead, post);
             });
             exDlg.show();
         });
@@ -1323,6 +1375,9 @@ public class CommentSearchHook {
                 else tops.add(r);
             }
             for (List<String[]> l : kids.values()) l.sort((x, y) -> Long.compare(num(x[6]), num(y[6])));
+            List<String[]> counted = CommentSearchPolicy.comments(all, head[0]);
+            Set<String[]> countedRows = Collections.newSetFromMap(new IdentityHashMap<>());
+            countedRows.addAll(counted);
             shown.clear();
             matches[0] = 0;
             for (String[] t : tops) {
@@ -1342,21 +1397,23 @@ public class CommentSearchHook {
                 List<String[]> hits = new ArrayList<>();
                 for (String[] kid : ch) if (hit(kid, q)) hits.add(kid);
                 if (!topHit && hits.isEmpty()) continue;
-                matches[0] += (topHit ? 1 : 0) + hits.size();
+                if (topHit && countedRows.contains(t)) matches[0]++;
+                for (String[] kid : hits) if (countedRows.contains(kid)) matches[0]++;
                 shown.add(new Object[]{0, t, false, null}); // parent shown for context
                 for (String[] kid : hits) shown.add(new Object[]{0, kid, true, null});
             }
             ad.notifyDataSetChanged();
             empty.setVisibility(shown.isEmpty() ? View.VISIBLE : View.GONE);
             clear.setVisibility(q.isEmpty() ? View.GONE : View.VISIBLE);
-            int total = CommentSearchPolicy.count(all, null);
-            count.setText(q.isEmpty() ? I18n.t(ctx, R.string.ig_comment_search_count, total)
+            int total = counted.size();
+            count.setText(q.isEmpty() ? I18n.t(ctx, more[0] ? R.string.ig_comment_search_maybe_more : R.string.ig_comment_search_count, total)
                     : I18n.t(ctx, R.string.ig_comment_search_matches, total, matches[0]));
         };
         // take in whatever has loaded so far (live while loading, and when stopped or finished)
         Runnable pull = () -> {
             all.clear();
             all.addAll(latest);
+            head[0] = header(all, sheetPost.get(), postRow);
             refresh.run();
         };
         Runnable idle = () -> {
@@ -1372,13 +1429,17 @@ public class CommentSearchHook {
         });
         loadBtn.setOnClickListener(v -> {
             if (loading != null) { stopLoading(); idle.run(); return; }
+            more[0] = false;
             bar.setVisibility(View.VISIBLE);
+            loadBtn.setText(I18n.t(ctx, R.string.ig_comment_search_stop));
             // IG only fetches the next page while its own window has focus
             focusable(dlg, false);
             loadAll(n -> {
-                loadBtn.setText(I18n.t(ctx, R.string.ig_comment_search_stop));
                 if (n != all.size()) pull.run();
-            }, idle);
+            }, maybeMore -> {
+                more[0] = maybeMore;
+                idle.run();
+            });
         });
         lv.setOnItemClickListener((p, v, i, id) -> {
             Object[] e = shown.get(i);
@@ -1472,10 +1533,9 @@ public class CommentSearchHook {
     }
 
     /** Saves the loaded comments as a self-contained HTML page (tree of replies, search box). */
-    private static void exportComments(Context ctx, List<String[]> rows, boolean includePostMedia) {
+    private static void exportComments(Context ctx, List<String[]> rows, boolean includePostMedia, String[] head, Object post) {
         new Thread(() -> {
             try {
-                String[] head = CommentSearchPolicy.header(rows, null);
                 String author = head[0], caption = head[1];
                 List<String[]> comments = CommentSearchPolicy.comments(rows, head);
                 String mediaId = CommentSearchPolicy.mediaId(rows);
@@ -1490,7 +1550,7 @@ public class CommentSearchHook {
                 StringBuilder postGallery = new StringBuilder();
                 if (includePostMedia && !mediaId.isEmpty()) {
                     try {
-                        List<String> purls = postMediaUrls(ctx, mediaId);
+                        List<String> purls = postMediaUrls(ctx, mediaId, post);
                         int pi = 0;
                         for (String u : purls) {
                             if (u == null || !u.startsWith("http")) continue;
@@ -1702,9 +1762,17 @@ public class CommentSearchHook {
     /** The post's own media URLs (photos/videos, carousel-aware): finds the post Media object in the
      *  retained comment UI state by matching its getId() to the post's media id, then reuses the
      *  downloader's extractor. Empty when the Media object can't be found. */
-    private static List<String> postMediaUrls(Context ctx, String mediaId) {
+    private static List<String> postMediaUrls(Context ctx, String mediaId, Object post) {
         if (mediaId == null || mediaId.isEmpty()) return new ArrayList<>();
-        for (Object root : new Object[]{lastFragment.get(), lastState}) {
+        if (post != null && CommentSearchPolicy.sameMedia(mediaIdOf(post), mediaId)) {
+            try {
+                List<String> urls = ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook.extractAllUrlsFromMedia(ctx, post);
+                if (urls != null && !urls.isEmpty()) return urls;
+            } catch (Throwable t) {
+                ModuleLog.detail(TAG + "post media from the sheet's post: " + t);
+            }
+        }
+        for (Object root : new Object[]{lastFragment.get(), lastState.get()}) {
             if (root == null) continue;
             List<String> urls = walkForMedia(ctx, root, mediaId);
             if (!urls.isEmpty()) return urls;
@@ -1791,15 +1859,46 @@ public class CommentSearchHook {
 
     /** Scrolls the sheet's comment list to its end until nothing new loads for 3 s (IG fetches
      *  the next page itself near the end). Progress = comments collected so far. */
-    private static void loadAll(java.util.function.IntConsumer progress, Runnable done) {
+    private static void loadAll(java.util.function.IntConsumer progress, java.util.function.Consumer<Boolean> done) {
         View root = sheet.get();
+        if (!replyLinksBuilt && root != null) {
+            replyLinks = buildReplyLinks(root.getContext());
+            replyLinksBuilt = true;
+        }
         // Reels open comments in a half-height sheet; at that size the list can't scroll far
         // enough for Instagram to fetch more pages. Drag the sheet open to full height first.
         if (root != null && expandSheet(root)) {
-            MAIN.postDelayed(() -> startLoadAll(progress, done), 700);
+            Runnable start = new Runnable() {
+                @Override
+                public void run() {
+                    if (loading != this) return;
+                    loading = null;
+                    startLoadAll(progress, done);
+                }
+            };
+            loading = start;
+            MAIN.postDelayed(start, 700);
             return;
         }
         startLoadAll(progress, done);
+    }
+
+    @android.annotation.SuppressLint("DiscouragedApi")
+    private static List<java.util.regex.Pattern> buildReplyLinks(Context ctx) {
+        List<String> texts = new ArrayList<>();
+        try {
+            android.content.res.Resources res = ctx.getResources();
+            for (String name : new String[]{"view_x_more_replies", "view_x_previous_replies"}) {
+                int id = res.getIdentifier(name, "plurals", ctx.getPackageName());
+                if (id == 0) continue;
+                for (int n : new int[]{1, 2, 5, 21, 101, 1234}) texts.add(res.getQuantityString(id, n, n));
+            }
+        } catch (Throwable t) {
+            ModuleLog.detail(TAG + "reply link texts: " + t);
+        }
+        List<java.util.regex.Pattern> links = CommentSearchPolicy.replyMatchers(texts);
+        ModuleLog.detail(TAG + "reply links: " + texts.size() + " texts, " + links.size() + " patterns");
+        return links;
     }
 
     /**
@@ -1844,44 +1943,51 @@ public class CommentSearchHook {
         }
     }
 
-    private static void startLoadAll(java.util.function.IntConsumer progress, Runnable done) {
+    private static void startLoadAll(java.util.function.IntConsumer progress, java.util.function.Consumer<Boolean> done) {
         View root = sheet.get();
         View list = root != null ? scrollable(root) : null; // inside the sheet, not the feed behind it
         ModuleLog.detail(TAG + "load all: list=" + (list != null ? list.getClass().getName() + " h=" + list.getHeight() : null));
         if (list == null) {
             ModuleLog.warn(TAG + "Could not load all comments: the comment list was not found, only the comments shown so far are searched");
-            done.run();
+            done.accept(false);
             return;
         }
         final long started = System.currentTimeMillis();
         final long[] lastChange = {started};
         final int[] lastCount = {latest.size()};
+        final boolean[] grew = {false};
         loading = new Runnable() {
             @Override
             public void run() {
                 if (loading != this) return;
                 if (!list.isAttachedToWindow() || System.currentTimeMillis() - started > 5 * 60_000) {
                     loading = null;
-                    done.run();
+                    done.accept(false);
                     return;
                 }
                 // open every visible "View N replies" link first; scroll on once none are left
                 int opened = expandReplies(list);
                 if (opened > 0) lastChange[0] = System.currentTimeMillis();
                 else scrollDown(list);
+                Object state = lastState.get();
+                if (state != null) latest = collect(state);
                 int count = latest.size();
                 progress.accept(count);
                 if (count != lastCount[0] || list.canScrollVertically(1)) {
-                    if (count != lastCount[0]) lastChange[0] = System.currentTimeMillis();
+                    if (count != lastCount[0]) {
+                        lastChange[0] = System.currentTimeMillis();
+                        grew[0] = count > lastCount[0];
+                    }
                     lastCount[0] = count;
                 }
-                // RecyclerView: at the end + nothing new for 3 s. Compose: nothing new for 4 s.
                 boolean rv = isRecyclerView(list.getClass());
                 long idle = System.currentTimeMillis() - lastChange[0];
-                if (CommentSearchPolicy.loadState(rv, idle, !list.canScrollVertically(1), false) != CommentSearchPolicy.Load.GOING) {
-                    loading = null; // at the end and nothing new for 3 s
-                    ModuleLog.line(TAG + "Loaded all comments: " + count);
-                    done.run();
+                CommentSearchPolicy.Load end = CommentSearchPolicy.loadState(rv, idle, !list.canScrollVertically(1), grew[0]);
+                if (end != CommentSearchPolicy.Load.GOING) {
+                    loading = null;
+                    boolean maybeMore = end == CommentSearchPolicy.Load.MAYBE_MORE;
+                    ModuleLog.line(TAG + (maybeMore ? "Loaded comments until no new ones came for a while, there may be more: " : "Loaded all comments: ") + count);
+                    done.accept(maybeMore);
                     return;
                 }
                 MAIN.postDelayed(this, rv ? 300 : 450);
@@ -1914,6 +2020,7 @@ public class CommentSearchHook {
     }
 
     private static volatile List<java.util.regex.Pattern> replyLinks = CommentSearchPolicy.replyMatchers(Collections.emptyList());
+    private static volatile boolean replyLinksBuilt;
     private static Method childIdMethod;
     private static boolean a11yLogged;
 
