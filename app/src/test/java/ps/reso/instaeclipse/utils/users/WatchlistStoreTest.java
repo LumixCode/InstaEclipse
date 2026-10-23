@@ -19,11 +19,20 @@ public class WatchlistStoreTest {
         return m;
     }
 
+    /** A load Instagram sent in one pass without repeating an account (count unknown): complete,
+     *  and one complete check that misses an account confirms it gone. */
+    static WatchlistStore.ListCheck exact() {
+        WatchlistStore.ListCheck q = new WatchlistStore.ListCheck();
+        q.passes = 1;
+        q.repeated = 0;
+        return q;
+    }
+
     @Test
     public void firstAnalysisOnlySavesSnapshot() {
         WatchlistStore.Profile p = new WatchlistStore.Profile();
         p.id = "9";
-        WatchlistStore.Result r = WatchlistStore.apply(p, users("1", "2"), users("3"), 1000);
+        WatchlistStore.Result r = WatchlistStore.apply(p, users("1", "2"), users("3"), exact(), exact(), 1000);
         assertTrue(r.first);
         assertTrue(r.added.isEmpty());
         assertEquals(2, r.followers);
@@ -36,9 +45,9 @@ public class WatchlistStoreTest {
     public void secondAnalysisFindsAllFourKinds() {
         WatchlistStore.Profile p = new WatchlistStore.Profile();
         p.id = "9";
-        WatchlistStore.apply(p, users("1", "2"), users("3", "4"), 1000);
+        WatchlistStore.apply(p, users("1", "2"), users("3", "4"), exact(), exact(), 1000);
         // follower 1 left, 5 arrived; B unfollowed 3, followed 6
-        WatchlistStore.Result r = WatchlistStore.apply(p, users("2", "5"), users("4", "6"), 2000);
+        WatchlistStore.Result r = WatchlistStore.apply(p, users("2", "5"), users("4", "6"), exact(), exact(), 2000);
         assertFalse(r.first);
         assertEquals(1000, r.previousCheck);
         assertEquals(4, r.added.size());
@@ -58,11 +67,11 @@ public class WatchlistStoreTest {
     public void unchangedListsAddNothingAndLogStaysNewestFirst() {
         WatchlistStore.Profile p = new WatchlistStore.Profile();
         p.id = "9";
-        WatchlistStore.apply(p, users("1"), users("2"), 1000);
-        WatchlistStore.apply(p, users("1", "3"), users("2"), 2000);
-        WatchlistStore.Result r = WatchlistStore.apply(p, users("1", "3"), users("2"), 3000);
+        WatchlistStore.apply(p, users("1"), users("2"), exact(), exact(), 1000);
+        WatchlistStore.apply(p, users("1", "3"), users("2"), exact(), exact(), 2000);
+        WatchlistStore.Result r = WatchlistStore.apply(p, users("1", "3"), users("2"), exact(), exact(), 3000);
         assertTrue(r.added.isEmpty());
-        WatchlistStore.apply(p, users("1"), users("2"), 4000);
+        WatchlistStore.apply(p, users("1"), users("2"), exact(), exact(), 4000);
         assertEquals(4000, p.events.get(0).ts);
         assertEquals(WatchlistStore.LOST_FOLLOWER, p.events.get(0).type);
         assertEquals(2000, p.events.get(1).ts);
@@ -72,10 +81,10 @@ public class WatchlistStoreTest {
     public void eventLogIsCapped() {
         WatchlistStore.Profile p = new WatchlistStore.Profile();
         p.id = "9";
-        WatchlistStore.apply(p, users(), users(), 1);
+        WatchlistStore.apply(p, users(), users(), exact(), exact(), 1);
         String[] many = new String[WatchlistStore.MAX_EVENTS + 50];
         for (int i = 0; i < many.length; i++) many[i] = String.valueOf(100 + i);
-        WatchlistStore.apply(p, users(many), users(), 2);
+        WatchlistStore.apply(p, users(many), users(), exact(), exact(), 2);
         assertEquals(WatchlistStore.MAX_EVENTS, p.events.size());
     }
 
@@ -91,7 +100,7 @@ public class WatchlistStoreTest {
         WatchlistStore.touch(index, b, 20);
         assertEquals("2", index.get(0).id);
         assertEquals(-1, index.get(0).followers); // never analyzed
-        WatchlistStore.apply(a, users("7", "8"), users("9"), 30);
+        WatchlistStore.apply(a, users("7", "8"), users("9"), exact(), exact(), 30);
         WatchlistStore.touch(index, a, 30);
         assertEquals(2, index.size());
         assertEquals("1", index.get(0).id);
@@ -99,5 +108,41 @@ public class WatchlistStoreTest {
         assertEquals(2, index.get(0).followers);
         assertEquals(1, index.get(0).following);
         assertEquals("alpha", index.get(0).username);
+    }
+
+    @Test
+    public void analysisKeepsInstagramsCountsAsBaseline() {
+        WatchlistStore.setCountSource((id, now) -> "9".equals(id) ? new int[]{600, 2000} : null);
+        try {
+            WatchlistStore.Profile p = new WatchlistStore.Profile();
+            p.id = "9";
+            WatchlistStore.apply(p, users("1", "2"), users("3"), exact(), exact(), 1000);
+            assertEquals(600, p.baseFollowers); // the header's count, not the 2 loaded
+            assertEquals(2000, p.baseFollowing);
+            assertEquals(1000, p.baseAt);
+            List<WatchlistStore.Entry> index = new ArrayList<>();
+            WatchlistStore.touch(index, p, 1000);
+            assertEquals(600, index.get(0).baseFollowers);
+            assertEquals(2000, index.get(0).baseFollowing);
+            assertEquals(1000, index.get(0).baseAt);
+        } finally {
+            WatchlistStore.setCountSource(null);
+        }
+    }
+
+    @Test
+    public void analysisWithoutCountsClearsTheOlderBaseline() {
+        WatchlistStore.Profile p = new WatchlistStore.Profile();
+        p.id = "9";
+        WatchlistStore.setCountSource((id, now) -> new int[]{600, 2000});
+        try {
+            WatchlistStore.apply(p, users("1"), users("2"), exact(), exact(), 1000);
+        } finally {
+            WatchlistStore.setCountSource(null);
+        }
+        WatchlistStore.apply(p, users("1"), users("2"), exact(), exact(), 2000); // header not seen around this one
+        assertEquals(-1, p.baseFollowers);
+        assertEquals(-1, p.baseFollowing);
+        assertEquals(0, p.baseAt);
     }
 }

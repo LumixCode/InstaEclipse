@@ -22,6 +22,13 @@ import java.util.Map;
  * file per account; each check is compared with it and every difference is added to the event log.
  * A change is only seen when you check, so an event's date is when it was noticed, and the
  * previous check's date bounds when it happened.
+ *
+ * <p>Unlike the profile analyzer's watchlist (WatchlistStore), an account a check doesn't list
+ * counts as unfollowed at once: the missed accounts there come from Instagram paging someone else's
+ * Followers through a ranking made for the viewer that shifts between requests, while your own
+ * lists come in a stable order Instagram honours (other tools' measurements, e.g. instagrapi #2857;
+ * not measured here yet), and a load that does repeat accounts gets extra passes (FollowListLoader).
+ * Should your own Followers load ever log repeats, this needs the watchlist's not-listed handling.
  */
 public final class FollowersHistory {
 

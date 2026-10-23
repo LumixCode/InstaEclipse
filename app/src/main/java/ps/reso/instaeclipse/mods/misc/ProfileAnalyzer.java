@@ -6,9 +6,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
@@ -17,10 +15,8 @@ import android.text.SpannableStringBuilder;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -43,20 +39,29 @@ import ps.reso.instaeclipse.utils.users.WatchlistStore;
 /**
  * Profile analyzer: watch another profile's Followers and Following lists for changes.
  *
- * <p>"Analyze profile" in a profile's ⋮ menu (or the "Analyze" pill on a profile's Followers /
- * Following tab) starts an analysis of that profile. From the menu, the profile header's followers
- * count is tapped to open the follow list screen. A driver then waits for the profile's Followers tab
- * to be on screen and loads it to the end with IG's own pager (FollowListExportHook.loadAll, the same
- * as Export CSV), switches to the Following tab (the UnifiedFollowFragment's ViewPager2) and loads it
- * too. Only when both lists loaded to the end are they compared with the last snapshot
- * (WatchlistStore) and the result shown. A private account you don't follow has no list to open, so
- * the analysis says so instead.
+ * <p>"Analyze profile" in a profile's ⋮ menu (or in the tools button of a profile's follow list
+ * screen, FollowListToolsIcon) starts an analysis of that profile. From the menu, the profile
+ * header's followers count is tapped to open the follow list screen. A driver then waits for the
+ * profile's Followers tab to be on screen and loads it to the end with IG's own pager
+ * (FollowListLoader, the same as Export CSV), switches to the Following tab (the
+ * UnifiedFollowFragment's ViewPager2) and loads it too. Only when both lists loaded to the end
+ * (every extra pass included) are they compared with the last snapshot (WatchlistStore, with how
+ * each load went: passes, repeats, Instagram's count, limits) and the result shown, with
+ * Instagram's own counts next to what it listed when it listed fewer (it leaves out e.g.
+ * deactivated or hidden accounts), how a list was compared when it wasn't compared as usual, and
+ * how many accounts weren't listed this time (not counted as gone yet). A private account you
+ * don't follow has no list to open, so the analysis says so instead. When Instagram refuses a load
+ * (rate limit, challenge, action block) the analysis ends at once, the other list isn't loaded and
+ * nothing is saved; while loading lists pauses after such a block, the ⋮ menu's "Analyze profile"
+ * warns first (FollowListLoader.pause). Saved checks are shown by the changelog (ProfileChangelog),
+ * also from the result and the Watchlist.
  */
 public final class ProfileAnalyzer {
 
     private static final String TAG = "(IE|ProfileAnalyzer) ";
-    private static final String PILL_TAG = "ie_profile_analyze";
     private static final int GREEN = 0xFF34C759, RED = 0xFFFF453A;
+    /** how often the driver looks for the profile's list while it isn't loading one */
+    private static final long POLL_MS = 300;
     private static final Handler H = new Handler(Looper.getMainLooper());
 
     /** One analysis in progress. */
@@ -69,6 +74,8 @@ public final class ProfileAnalyzer {
         boolean seen, busy, hinted;
         int tabTries;
         Map<String, String[]> followers, following;
+        /** how each list's load went (passes, repeats, Instagram's count, limited, hidden accounts) */
+        WatchlistStore.ListCheck followersLoad, followingLoad;
         Context ctx;
 
         Session(String id, String username, boolean fromMenu) {
@@ -96,6 +103,17 @@ public final class ProfileAnalyzer {
         }
         Context app = a.getApplicationContext();
         String self = WatchlistStore.self(app);
+        // loading lists pauses after Instagram blocked a load: warn, run only on "Load anyway"
+        FollowListPolicy.Block paused = FollowListLoader.pause(a, self);
+        if (paused != null) {
+            ModuleLog.detail(TAG + "analyze from menu during the pause after " + paused.kind + ": warned first");
+            FollowListLoader.warnPaused(a, paused, () -> startNow(a, app, self, id, username));
+            return;
+        }
+        startNow(a, app, self, id, username);
+    }
+
+    private static void startNow(Activity a, Context app, String self, String id, String username) {
         if (self != null) new Thread(() -> WatchlistStore.add(app, self, id, username)).start();
         Session s = begin(a, id, username, true);
         if (!openFollowers(a)) {
@@ -118,48 +136,21 @@ public final class ProfileAnalyzer {
         if (session == s) session = null;
     }
 
-    /** The "Analyze" pill on a profile's Followers / Following tab. */
-    static void addPill(View root, boolean historyShown) {
-        View host = root;
-        while (host != null && !(host instanceof FrameLayout)) host = host.getParent() instanceof View p ? p : null;
-        if (!(host instanceof FrameLayout g) || g.findViewWithTag(PILL_TAG) != null) return;
-        float d = root.getResources().getDisplayMetrics().density;
-        TextView pill = new TextView(root.getContext());
-        pill.setTag(PILL_TAG);
-        pill.setText("🔍 " + I18n.t(root.getContext(), R.string.ig_pa_analyze));
-        pill.setTextColor(Color.WHITE);
-        pill.setTextSize(13);
-        int ph = (int) (14 * d), pv = (int) (8 * d);
-        pill.setPadding(ph, pv, ph, pv);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xEEFF9F0A);
-        bg.setCornerRadius(18 * d);
-        pill.setBackground(bg);
-        pill.setElevation(20 * d);
-        pill.setOnClickListener(v -> {
-            if (FollowListExportHook.isLoading()) { FollowListExportHook.stopLoading(); return; }
-            Object[] vis = FollowListExportHook.visibleList();
-            FollowListExportHook.ListInfo info = vis != null ? FollowListExportHook.listInfo(vis[0]) : null;
-            if (info == null || info.type == null) {
-                IeToast.makeText(v.getContext(), I18n.t(v.getContext(), R.string.ig_pa_wrong_tab), Toast.LENGTH_SHORT).show();
-                return;
-            }
-            Session cur = session;
-            if (cur != null && cur.id.equals(info.owner)) return; // already analyzing this profile
-            String name = info.username != null ? info.username : titleOf(v);
-            if (name == null && info.self != null) {
-                WatchlistStore.Entry e = WatchlistStore.find(WatchlistStore.loadIndex(v.getContext().getApplicationContext(), info.self), info.owner);
-                if (e != null) name = e.username;
-            }
-            begin(v.getContext(), info.owner, name, false);
-        });
-        // above the other pills (Export CSV at the bottom, Followers history above it)
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.END);
-        lp.bottomMargin = (int) ((24 + (FeatureFlags.followListExport ? 48 : 0) + (historyShown ? 48 : 0)) * d);
-        lp.rightMargin = (int) (16 * d);
-        g.addView(pill, lp);
-        pill.bringToFront();
+    /** "Analyze profile" in the follow list screen's tools button ({@code info}: the tab on screen). */
+    static void startFromList(View v, FollowListExportHook.ListInfo info) {
+        if (!FeatureFlags.profileAnalyzer) return;
+        if (info == null) {
+            IeToast.makeText(v.getContext(), I18n.t(v.getContext(), R.string.ig_pa_wrong_tab), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Session cur = session;
+        if (cur != null && cur.id.equals(info.owner)) return; // already analyzing this profile
+        String name = info.username != null ? info.username : titleOf(v);
+        if (name == null && info.self != null) {
+            WatchlistStore.Entry e = WatchlistStore.find(WatchlistStore.loadIndex(v.getContext().getApplicationContext(), info.self), info.owner);
+            if (e != null) name = e.username;
+        }
+        begin(v.getContext(), info.owner, name, false);
     }
 
     // ---- the driver: wait for the profile's lists, load each to the end ----
@@ -182,7 +173,7 @@ public final class ProfileAnalyzer {
                 toast(s.ctx, I18n.t(s.ctx, R.string.ig_pa_left));
                 return;
             }
-            H.postDelayed(() -> drive(s), 600);
+            H.postDelayed(() -> drive(s), POLL_MS);
             return;
         }
         View root = (View) vis[1];
@@ -205,41 +196,63 @@ public final class ProfileAnalyzer {
                     toast(s.ctx, I18n.t(s.ctx, R.string.ig_pa_switch_tab, label(s.ctx, want)));
                 }
             }
-            H.postDelayed(() -> drive(s), 600);
+            H.postDelayed(() -> drive(s), POLL_MS);
             return;
         }
 
-        // the tab may still be fetching its first page: wait until rows are in (or a short while)
+        // the tab may still be fetching its first page: wait until accounts are in (or a short while;
+        // the loader itself also waits for a first page and retries a failed one)
         Object frag = vis[0];
-        if (FollowListExportHook.listUsers(root).isEmpty()) {
+        if (FollowListLoader.accountsShown(root) == 0) {
             if (s.warmSince == 0) s.warmSince = now;
-            if (now - s.warmSince < 12000) { H.postDelayed(() -> drive(s), 600); return; }
+            if (now - s.warmSince < 12000) { H.postDelayed(() -> drive(s), POLL_MS); return; }
         }
         s.warmSince = 0;
         s.busy = true;
         String title = I18n.t(s.ctx, R.string.ig_pa_loading_title, s.name(), label(s.ctx, type));
-        H.postDelayed(() -> FollowListExportHook.loadAll(root, frag, title, complete -> loaded(s, root, type, complete)), 300);
+        if (!FollowListLoader.loadAll(root, frag, title, r -> loaded(s, type, r))) {
+            s.busy = false; // another list is loading (an export): try again shortly
+            H.postDelayed(() -> drive(s), 1000);
+        }
     }
 
     private static boolean missing(Session s, String type) {
         return FollowListExportHook.FOLLOWERS.equals(type) ? s.followers == null : s.following == null;
     }
 
-    private static void loaded(Session s, View root, String type, boolean complete) {
+    private static void loaded(Session s, String type, FollowListLoader.Result r) {
         s.busy = false;
         if (session != s) return;
-        Map<String, String[]> users = new LinkedHashMap<>();
-        if (complete) {
-            for (String[] u : FollowListExportHook.listUsers(root).values())
-                if (u[2] != null && !u[2].equals(s.id)) users.put(u[2], new String[]{u[0], u[1]});
+        // Instagram refused the load (rate limit, challenge, action block): the analysis ends here,
+        // the other list isn't loaded and nothing is saved
+        if (r.blocked != null) {
+            end(s);
+            ModuleLog.warn(TAG + "Analysis stopped: Instagram blocked loading the " + type + " list (" + r.blocked + "), nothing was saved");
+            FollowListLoader.showBlocked(s.ctx, r.blocked);
+            return;
         }
-        ModuleLog.line(TAG + type + ": " + users.size() + (complete ? "" : " (incomplete)"));
-        if (!complete || users.isEmpty()) {
+        Map<String, String[]> users = new LinkedHashMap<>();
+        if (r.complete) {
+            for (Map.Entry<String, String[]> e : r.users.entrySet())
+                if (!e.getKey().equals(s.id)) users.put(e.getKey(), e.getValue());
+        }
+        ModuleLog.line(TAG + type + " loaded: " + users.size() + (r.expected >= 0 ? " of " + r.expected : "")
+                + (r.complete ? "" : " (incomplete)") + (r.interrupted ? " (an extra pass ended early)" : ""));
+        // an empty list only counts when Instagram's own count says 0 (the loader checked it); an
+        // extra pass that ended early (stopped, left the list, a failed page) leaves a list as
+        // incomplete as a first pass that did, so nothing is saved either
+        if (!r.complete || r.interrupted || (users.isEmpty() && r.expected != 0)) {
             end(s);
             new IeDialog(s.ctx).title("@" + s.name()).message(I18n.t(s.ctx, R.string.ig_pa_partial)).show();
             return;
         }
-        if (FollowListExportHook.FOLLOWERS.equals(type)) s.followers = users; else s.following = users;
+        if (FollowListExportHook.FOLLOWERS.equals(type)) {
+            s.followers = users;
+            s.followersLoad = load(r);
+        } else {
+            s.following = users;
+            s.followingLoad = load(r);
+        }
         s.tabTries = 0;
         s.hinted = false;
         s.nextTabAt = 0;
@@ -251,7 +264,23 @@ public final class ProfileAnalyzer {
         String next = s.followers == null ? FollowListExportHook.FOLLOWERS : FollowListExportHook.FOLLOWING;
         toast(s.ctx, I18n.t(s.ctx, R.string.ig_pa_next, users.size(), label(s.ctx, type), label(s.ctx, next)));
         s.lastSeen = SystemClock.uptimeMillis();
-        H.postDelayed(() -> drive(s), 600);
+        H.post(() -> drive(s));
+    }
+
+    /** How a list's load went, as the watchlist keeps it with the check. */
+    private static WatchlistStore.ListCheck load(FollowListLoader.Result r) {
+        WatchlistStore.ListCheck q = new WatchlistStore.ListCheck();
+        q.received = r.received;
+        q.repeated = r.repeated;
+        q.passes = r.passes;
+        q.lastPassAdded = r.lastPassAdded;
+        q.f1 = r.f1;
+        q.f2 = r.f2;
+        q.estMissing = r.estMissing;
+        q.expected = r.expected;
+        q.hidden = Math.max(0, r.hiddenFollowing);
+        q.limited = r.limited;
+        return q;
     }
 
     private static void finish(Session s) {
@@ -262,8 +291,14 @@ public final class ProfileAnalyzer {
             if (self == null) self = "0";
             WatchlistStore.Profile p = WatchlistStore.loadProfile(app, self, s.id);
             if (s.username != null) p.username = s.username;
+            // what this analysis is compared with (apply replaces it)
+            String before = p.lastCheck > 0
+                    ? " since " + logTime(p.lastCheck) + " (then " + p.followers.size() + "/" + p.following.size()
+                    + " listed, " + p.missingFollowers.size() + "/" + p.missingFollowing.size() + " not listed, Instagram "
+                    + countThen(p, p.followersState, p.baseFollowers) + "/" + countThen(p, p.followingState, p.baseFollowing) + ")"
+                    : "";
             long now = System.currentTimeMillis();
-            WatchlistStore.Result r = WatchlistStore.apply(p, s.followers, s.following, now);
+            WatchlistStore.Result r = WatchlistStore.apply(p, s.followers, s.following, s.followersLoad, s.followingLoad, now);
             String error = null;
             try {
                 WatchlistStore.saveProfile(app, self, p);
@@ -275,10 +310,50 @@ public final class ProfileAnalyzer {
                 ModuleLog.error(TAG + "Could not save the analysis", t);
             }
             ModuleLog.line(TAG + "@" + s.name() + ": " + r.followers + " followers, " + r.following + " following, "
-                    + r.added.size() + " changes" + (r.first ? " (first)" : ""));
+                    + r.added.size() + " changes" + (r.first ? " (first)" : "")
+                    + " (gained " + r.followersList.gained + uncertain(r.followersList) + ", lost " + r.followersList.gone
+                    + ", B followed " + r.followingList.gained + uncertain(r.followingList) + ", B unfollowed " + r.followingList.gone
+                    + "; not listed " + r.followersList.notListed + "/" + r.followingList.notListed + ")"
+                    + before + ", Instagram now " + r.followersList.expected + "/" + r.followingList.expected);
+            ModuleLog.detail(TAG + listLine(FollowListExportHook.FOLLOWERS, r.followersList));
+            ModuleLog.detail(TAG + listLine(FollowListExportHook.FOLLOWING, r.followingList));
             final String err = error, me = self;
             H.post(() -> showResult(ctx, me, p, r, err));
         }).start();
+    }
+
+    /** Instagram's count for a saved list when it was listed: its own, else the header's at the
+     *  last analysis; "?" when neither is known. */
+    private static String countThen(WatchlistStore.Profile p, WatchlistStore.ListState st, int header) {
+        if (st.expected >= 0) return String.valueOf(st.expected);
+        return p.baseAt > 0 && p.baseAt == p.lastCheck && header >= 0 ? String.valueOf(header) : "?";
+    }
+
+    private static String uncertain(WatchlistStore.ListCheck q) {
+        return q.uncertain > 0 ? " (" + q.uncertain + " uncertain)" : "";
+    }
+
+    /** One list's load and comparison, for the log. */
+    static String listLine(String type, WatchlistStore.ListCheck q) {
+        StringBuilder sb = new StringBuilder(type).append(": received ").append(q.received).append(", repeated ").append(q.repeated)
+                .append(", distinct ").append(q.distinct).append(", passes ").append(q.passes);
+        if (q.lastPassAdded >= 0) sb.append(", last pass +").append(q.lastPassAdded);
+        if (q.passes > 1) sb.append(", f1 ").append(q.f1).append(", f2 ").append(q.f2)
+                .append(String.format(java.util.Locale.ROOT, ", est. missing %.1f", q.estMissing));
+        sb.append(", Instagram ").append(q.expected);
+        if (q.hidden > 0) sb.append(" (hides ").append(q.hidden).append(')');
+        if (q.limited) sb.append(", limited");
+        sb.append(": ").append(q.complete ? "complete" : "incomplete").append(" | ").append(q.outcome);
+        if (q.prevListed >= 0) sb.append(" (saved ").append(q.prevListed).append(" of ").append(q.prevCount).append(')');
+        sb.append(": gained ").append(q.gained).append(" (uncertain ").append(q.uncertain).append("), gone ").append(q.gone)
+                .append(", not listed ").append(q.notListed).append(" (new ").append(q.newlyMissing).append("), relisted ")
+                .append(q.relisted);
+        if (q.filled > 0) sb.append(", filled in ").append(q.filled);
+        return sb.toString();
+    }
+
+    private static String logTime(long ts) {
+        return new java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.ROOT).format(new Date(ts));
     }
 
     // ---- opening the profile's followers list from its header ----
@@ -337,7 +412,14 @@ public final class ProfileAnalyzer {
         }
     }
 
-    // ---- result, change log, watchlist ----
+    // ---- result, watchlist ----
+
+    /** The result's sections of changes, in the order shown (not-listed accounts are a count in
+     *  its text; the changelog lists them). */
+    private static final ProfileChangelogPolicy.Section[] RESULT_SECTIONS = {
+            ProfileChangelogPolicy.Section.B_FOLLOWED, ProfileChangelogPolicy.Section.B_FOLLOWED_MAYBE,
+            ProfileChangelogPolicy.Section.B_UNFOLLOWED, ProfileChangelogPolicy.Section.GAINED,
+            ProfileChangelogPolicy.Section.GAINED_MAYBE, ProfileChangelogPolicy.Section.LOST};
 
     private static void showResult(Context ctx, String self, WatchlistStore.Profile p, WatchlistStore.Result r, String error) {
         try {
@@ -351,20 +433,40 @@ public final class ProfileAnalyzer {
                         + "\n" + I18n.t(ctx, R.string.ig_pa_counts, r.followers, r.following);
                 if (r.added.isEmpty()) head += "\n\n" + I18n.t(ctx, R.string.ig_pa_no_changes);
             }
+            // what Instagram listed short of its counts, how a list was compared when not as usual,
+            // and how many accounts weren't listed this time
+            String notes = resultNotes(ctx, r);
+            if (!notes.isEmpty()) head += "\n" + notes;
             if (error != null) head += "\n⚠️ " + error;
             dlg.message(head);
             if (!r.first && !r.added.isEmpty()) {
-                section(dlg, ctx, I18n.t(ctx, R.string.ig_pa_sec_b_followed, name, r.of(WatchlistStore.B_FOLLOWED).size()), r.of(WatchlistStore.B_FOLLOWED), GREEN);
-                section(dlg, ctx, I18n.t(ctx, R.string.ig_pa_sec_b_unfollowed, name, r.of(WatchlistStore.B_UNFOLLOWED).size()), r.of(WatchlistStore.B_UNFOLLOWED), RED);
-                section(dlg, ctx, I18n.t(ctx, R.string.ig_pa_sec_gained, name, r.of(WatchlistStore.GAINED_FOLLOWER).size()), r.of(WatchlistStore.GAINED_FOLLOWER), GREEN);
-                section(dlg, ctx, I18n.t(ctx, R.string.ig_pa_sec_lost, name, r.of(WatchlistStore.LOST_FOLLOWER).size()), r.of(WatchlistStore.LOST_FOLLOWER), RED);
+                for (ProfileChangelogPolicy.Section s : RESULT_SECTIONS) {
+                    List<WatchlistStore.Event> events = new java.util.ArrayList<>();
+                    for (WatchlistStore.Event e : r.added) if (ProfileChangelogPolicy.section(e) == s) events.add(e);
+                    section(dlg, ctx, I18n.t(ctx, sectionTitle(s), name, events.size()), events,
+                            s.gain() ? GREEN : s.loss() ? RED : dlg.sub);
+                }
                 hint(dlg, ctx);
             }
-            if (!p.events.isEmpty()) dlg.secondary(I18n.t(ctx, R.string.ig_pa_log), () -> showLog(ctx, self, p.id));
+            dlg.secondary(I18n.t(ctx, R.string.ig_pa_changelog), () -> ProfileChangelog.show(ctx, self, p.id, name));
             dlg.show();
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not show the analysis result", t);
         }
+    }
+
+    /** A section's heading text (args: the profile's username, the count). */
+    static int sectionTitle(ProfileChangelogPolicy.Section s) {
+        return switch (s) {
+            case GAINED -> R.string.ig_pa_sec_gained;
+            case GAINED_MAYBE -> R.string.ig_pa_sec_gained_maybe;
+            case LOST -> R.string.ig_pa_sec_lost;
+            case NOT_LISTED -> R.string.ig_pa_sec_not_listed;
+            case B_FOLLOWED -> R.string.ig_pa_sec_b_followed;
+            case B_FOLLOWED_MAYBE -> R.string.ig_pa_sec_b_followed_maybe;
+            case B_UNFOLLOWED -> R.string.ig_pa_sec_b_unfollowed;
+            case B_NOT_LISTED -> R.string.ig_pa_sec_b_not_listed;
+        };
     }
 
     private static void section(IeDialog dlg, Context ctx, String title, List<WatchlistStore.Event> events, int color) {
@@ -415,79 +517,7 @@ public final class ProfileAnalyzer {
         dlg.view(note);
     }
 
-    /** A watched profile's change log, newest analysis first. */
-    public static void showLog(Context ctx, String self, String id) {
-        Context app = ctx.getApplicationContext();
-        new Thread(() -> {
-            WatchlistStore.Profile p = WatchlistStore.loadProfile(app, self, id);
-            H.post(() -> showLog(ctx, self, p));
-        }).start();
-    }
-
-    private static void showLog(Context ctx, String self, WatchlistStore.Profile p) {
-        try {
-            DateFormat df = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT);
-            String name = p.username != null ? p.username : p.id;
-            IeDialog dlg = new IeDialog(ctx).title("@" + name + " · " + I18n.t(ctx, R.string.ig_pa_log));
-            dlg.message(p.lastCheck > 0
-                    ? I18n.t(ctx, R.string.ig_pa_counts, p.followers.size(), p.following.size()) + " · " + df.format(new Date(p.lastCheck))
-                    : I18n.t(ctx, R.string.ig_pa_never));
-            if (p.events.isEmpty()) {
-                TextView empty = new TextView(dlg.ctx);
-                empty.setText(I18n.t(ctx, R.string.ig_pa_log_empty));
-                empty.setTextColor(dlg.sub);
-                empty.setTextSize(14);
-                dlg.view(empty);
-            } else {
-                LinearLayout rows = new LinearLayout(dlg.ctx);
-                rows.setOrientation(LinearLayout.VERTICAL);
-                long group = -1;
-                int shown = 0;
-                for (WatchlistStore.Event e : p.events) {
-                    if (shown++ >= 400) break;
-                    if (e.ts != group) {
-                        group = e.ts;
-                        TextView h = new TextView(dlg.ctx);
-                        h.setText(I18n.t(ctx, R.string.ig_pa_analysis_of, df.format(new Date(e.ts))));
-                        h.setTextColor(dlg.sub);
-                        h.setTextSize(13);
-                        h.setTypeface(Typeface.DEFAULT_BOLD);
-                        h.setPadding(0, dlg.dp(10), 0, dlg.dp(2));
-                        rows.addView(h);
-                    }
-                    boolean plus = WatchlistStore.B_FOLLOWED.equals(e.type) || WatchlistStore.GAINED_FOLLOWER.equals(e.type);
-                    int labelRes = switch (e.type) {
-                        case WatchlistStore.B_FOLLOWED -> R.string.ig_pa_ev_b_followed;
-                        case WatchlistStore.B_UNFOLLOWED -> R.string.ig_pa_ev_b_unfollowed;
-                        case WatchlistStore.GAINED_FOLLOWER -> R.string.ig_pa_ev_gained;
-                        default -> R.string.ig_pa_ev_lost;
-                    };
-                    SpannableStringBuilder sb = new SpannableStringBuilder(plus ? "+ " : "− ");
-                    sb.append("@").append(e.username != null ? e.username : e.id);
-                    sb.setSpan(new StyleSpan(Typeface.BOLD), 0, sb.length(), 0);
-                    if (e.fullName != null && !e.fullName.isEmpty()) sb.append("  ").append(e.fullName);
-                    int st = sb.length();
-                    sb.append("\n").append(I18n.t(ctx, labelRes, name));
-                    sb.setSpan(new ForegroundColorSpan(plus ? GREEN : RED), st, sb.length(), 0);
-                    sb.setSpan(new RelativeSizeSpan(0.85f), st, sb.length(), 0);
-                    rows.addView(userRow(dlg, ctx, sb, e.username));
-                }
-                dlg.view(rows);
-                hint(dlg, ctx);
-            }
-            Context app = ctx.getApplicationContext();
-            dlg.secondary(I18n.t(ctx, R.string.ig_pa_remove), () -> new Thread(() -> {
-                WatchlistStore.remove(app, self, p.id);
-                H.post(() -> toast(ctx, I18n.t(ctx, R.string.ig_pa_removed, name)));
-            }).start());
-            if (p.username != null) dlg.primary(I18n.t(ctx, R.string.ig_pa_open_profile), () -> openProfile(ctx, p.username));
-            dlg.show();
-        } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ log dialog: " + t);
-        }
-    }
-
-    /** The in-app menu's Watchlist: watched profiles with their last analysis; tap opens the log. */
+    /** The in-app menu's Watchlist: watched profiles with their last analysis; tap opens the changelog. */
     public static void showWatchlist(Context ctx) {
         Context app = ctx.getApplicationContext();
         new Thread(() -> {
@@ -524,7 +554,7 @@ public final class ProfileAnalyzer {
                 row.setTextSize(15);
                 row.setPadding(dlg.dp(14), dlg.dp(10), dlg.dp(14), dlg.dp(10));
                 row.setBackground(dlg.cardBg());
-                row.setOnClickListener(v -> showLog(ctx, self, e.id));
+                row.setOnClickListener(v -> ProfileChangelog.show(ctx, self, e.id, e.username));
                 dlg.view(row);
             }
             dlg.show();
@@ -535,13 +565,92 @@ public final class ProfileAnalyzer {
 
     // ---- helpers ----
 
-    private static String label(Context ctx, String type) {
+    static String label(Context ctx, String type) {
         return I18n.t(ctx, FollowListExportHook.FOLLOWERS.equals(type) ? R.string.ig_pa_followers : R.string.ig_pa_following);
+    }
+
+    /**
+     * The lines about what Instagram listed, each starting with a line break ("" when there is
+     * nothing to say): "Instagram listed X of N" for each list it listed short, then a note per list
+     * it flagged as limited, and the deactivated / hidden accounts note when a short list wasn't.
+     */
+    static String listedNotes(Context ctx, String[] types, int[] listed, int[] expected, boolean[] limited) {
+        StringBuilder lines = new StringBuilder(), notes = new StringBuilder();
+        boolean shortNote = false;
+        for (int i = 0; i < types.length; i++) {
+            if (FollowListPolicy.shortOfExpected(listed[i], expected[i]))
+                lines.append('\n').append(I18n.t(ctx, R.string.ig_pa_listed, label(ctx, types[i]), listed[i], expected[i]));
+            switch (FollowListPolicy.note(listed[i], expected[i], limited[i])) {
+                case LIMITED -> notes.append('\n').append(I18n.t(ctx, R.string.ig_pa_limited_note, label(ctx, types[i])));
+                case SHORT -> shortNote = true;
+                default -> {}
+            }
+        }
+        if (shortNote) notes.append('\n').append(I18n.t(ctx, R.string.ig_pa_listed_note));
+        return lines.toString() + notes;
+    }
+
+    /**
+     * The analyzer result's lines, each starting with a line break ("" when there is nothing to
+     * say): "Instagram listed X of N" for each list it listed short, how a list was compared when
+     * not as usual and the accounts Instagram hides ({@link #compareNotes}), the deactivated /
+     * hidden accounts note when a list is short by more than the accounts Instagram says it hides
+     * (and isn't limited), then per list how many accounts weren't listed this time (not counted
+     * as gone yet).
+     */
+    static String resultNotes(Context ctx, WatchlistStore.Result r) {
+        String[] types = {FollowListExportHook.FOLLOWERS, FollowListExportHook.FOLLOWING};
+        int[] listed = {r.followers, r.following};
+        WatchlistStore.ListCheck[] q = {r.followersList, r.followingList};
+        StringBuilder sb = new StringBuilder();
+        boolean shortNote = false;
+        for (int i = 0; i < types.length; i++) {
+            int expected = q[i] != null ? q[i].expected : -1, hidden = q[i] != null ? q[i].hidden : 0;
+            if (FollowListPolicy.shortOfExpected(listed[i], expected))
+                sb.append('\n').append(I18n.t(ctx, R.string.ig_pa_listed, label(ctx, types[i]), listed[i], expected));
+            if (FollowListPolicy.note(listed[i] + hidden, expected, q[i] != null && q[i].limited) == FollowListPolicy.Note.SHORT)
+                shortNote = true;
+        }
+        sb.append(compareNotes(ctx, r.followersList, r.followingList));
+        if (shortNote) sb.append('\n').append(I18n.t(ctx, R.string.ig_pa_listed_note));
+        for (int i = 0; i < types.length; i++)
+            if (q[i] != null && q[i].notListed > 0)
+                sb.append('\n').append(I18n.t(ctx, R.string.ig_pa_not_listed, label(ctx, types[i]), q[i].notListed));
+        return sb.toString();
+    }
+
+    /**
+     * Per list (null: not recorded), each starting with a line break: how it was compared when not
+     * as usual (a new baseline because the saved list was clearly less complete, the saved list
+     * kept because this load was, a list Instagram limits: additions only or nothing compared, a
+     * baseline after a limited list) and how many accounts Instagram says it hides from it.
+     */
+    static String compareNotes(Context ctx, WatchlistStore.ListCheck followers, WatchlistStore.ListCheck following) {
+        StringBuilder sb = new StringBuilder();
+        String[] types = {FollowListExportHook.FOLLOWERS, FollowListExportHook.FOLLOWING};
+        WatchlistStore.ListCheck[] q = {followers, following};
+        for (int i = 0; i < types.length; i++) {
+            if (q[i] == null) continue;
+            String label = label(ctx, types[i]);
+            if (q[i].outcome != null) {
+                String note = switch (q[i].outcome) {
+                    case REBASELINED -> I18n.t(ctx, R.string.ig_pa_rebaselined, label, q[i].prevListed, q[i].prevCount);
+                    case KEPT_SAVED -> I18n.t(ctx, R.string.ig_pa_kept_saved, label);
+                    case ADDITIONS -> I18n.t(ctx, R.string.ig_pa_limited_adds, label);
+                    case NOT_COMPARED -> I18n.t(ctx, R.string.ig_pa_limited_none, label);
+                    case BASELINE -> I18n.t(ctx, R.string.ig_pa_new_baseline, label);
+                    default -> null;
+                };
+                if (note != null) sb.append('\n').append(note);
+            }
+            if (q[i].hidden > 0) sb.append('\n').append(I18n.t(ctx, R.string.ig_pa_hidden_note, label, q[i].hidden));
+        }
+        return sb.toString();
     }
 
     /** The follow list screen's title (the profile's username). */
     @SuppressLint("DiscouragedApi")
-    private static String titleOf(View v) {
+    static String titleOf(View v) {
         try {
             int id = v.getResources().getIdentifier("action_bar_title", "id", v.getContext().getPackageName());
             View t = id != 0 ? v.getRootView().findViewById(id) : null;
