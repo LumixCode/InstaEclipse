@@ -49,7 +49,7 @@ public final class ReelViewerHook {
     private static final String SOURCE = "com.instagram.clips.intf.ClipsViewerSource";
     private static final String VIEWPAGER2 = "androidx.viewpager2.widget.ViewPager2";
     private static final String CACHE_PAGER_INPUT = "ReelPagerInput_v1";
-    private static final String CACHE_REGISTRARS = "ReelImpressionRegistrars_v1";
+    private static final String CACHE_REGISTRARS = "ReelImpressionRegistrars_v2";
     private static final String MISSING = "missing";
     private static final Set<View> blockedRoots = Collections.newSetFromMap(new WeakHashMap<>());
     private static volatile boolean trackingAvailable;
@@ -552,13 +552,20 @@ public final class ReelViewerHook {
             return result;
         }
         Set<String> classes = new LinkedHashSet<>();
+        // Any registrar marker, then the owning class's config-taking constructor: on IG 451 the
+        // "_init" marker sits in a class without the config (X.056c), while the registrar that
+        // takes it (X.054k) only carries "_addAction".
         for (var data : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
-                .addUsingString("_ClipsViewerSponsoredViewpointRegistrar_init", StringMatchType.Contains)))) {
-            if (!data.isConstructor()) continue;
-            Constructor<?> constructor = data.getConstructorInstance(loader);
-            if (!takesConfig(constructor)) continue;
-            result.add(constructor);
-            classes.add(constructor.getDeclaringClass().getName());
+                .addUsingString("ClipsViewerSponsoredViewpointRegistrar_", StringMatchType.Contains)))) {
+            String owner = data.getClassName();
+            if (classes.contains(owner)) continue;
+            boolean found = false;
+            for (Constructor<?> constructor : loader.loadClass(owner).getDeclaredConstructors()) {
+                if (!takesConfig(constructor)) continue;
+                result.add(constructor);
+                found = true;
+            }
+            if (found) classes.add(owner);
         }
         DexKitCache.saveString(CACHE_REGISTRARS, String.join(",", classes));
         return result;
