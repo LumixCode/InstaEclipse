@@ -49,8 +49,12 @@ import java.util.concurrent.TimeUnit;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
+import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
 import ps.reso.instaeclipse.utils.core.Contributor;
+import ps.reso.instaeclipse.utils.core.ExportBrand;
+import ps.reso.instaeclipse.utils.core.InstagramCompat;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
+import ps.reso.instaeclipse.utils.log.LogMirrorProvider;
 
 public class HomeFragment extends Fragment implements TabFragment {
 
@@ -63,6 +67,7 @@ public class HomeFragment extends Fragment implements TabFragment {
     private static final int MAX_PINNED = 8;
 
     private static final int COLOR_OK = 0xFF30D158;
+    private static final int COLOR_WARN = 0xFFFF9F0A;
     private static final int COLOR_ERROR = 0xFFFF453A;
     private static final int COLOR_INSTAGRAM = 0xFFFF375F;
 
@@ -149,6 +154,7 @@ public class HomeFragment extends Fragment implements TabFragment {
     );
 
     private SharedPreferences localCache;
+    private SharedPreferences uiPrefs;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private MaterialButton launchInstagramButton;
@@ -164,12 +170,17 @@ public class HomeFragment extends Fragment implements TabFragment {
     private View statusPill;
     private ImageView statusDot;
     private TextView statusPillText;
+    private TextView statusHint;
+    private View setupSteps;
+    private View setupTip;
+    private MaterialButton setupOpenButton;
     private TextView featuresCountText;
     private LinearLayout shortcutsContainer;
     private TextView shortcutsEmpty;
     private TextView shortcutsHint;
 
     private String activePackage;
+    private String activeVersionName;
     private List<String> installedPackages;
     private boolean moduleConfirmed;
     private boolean pingReceiverRegistered;
@@ -203,6 +214,7 @@ public class HomeFragment extends Fragment implements TabFragment {
                              @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
         localCache = ps.reso.instaeclipse.utils.core.CommonUtils.companionCache(requireContext());
+        uiPrefs = CompanionUiPrefs.get(requireContext());
 
         launchInstagramButton = view.findViewById(R.id.launch_instagram_button);
         restartInstagramButton = view.findViewById(R.id.restart_instagram_button);
@@ -219,6 +231,10 @@ public class HomeFragment extends Fragment implements TabFragment {
         statusPill = view.findViewById(R.id.home_status_pill);
         statusDot = view.findViewById(R.id.home_status_dot);
         statusPillText = view.findViewById(R.id.home_status_pill_text);
+        statusHint = view.findViewById(R.id.home_status_hint);
+        setupSteps = view.findViewById(R.id.home_setup_steps);
+        setupTip = view.findViewById(R.id.home_setup_tip);
+        setupOpenButton = view.findViewById(R.id.home_setup_open_instagram);
         featuresCountText = view.findViewById(R.id.home_features_count);
         shortcutsContainer = view.findViewById(R.id.home_shortcuts_container);
         shortcutsEmpty = view.findViewById(R.id.home_shortcuts_empty);
@@ -235,7 +251,24 @@ public class HomeFragment extends Fragment implements TabFragment {
         variantBg.setColor(MaterialColors.getColor(view, com.google.android.material.R.attr.colorSurfaceContainerHighest));
         instagramVariantText.setBackground(variantBg);
 
-        checkInstagramStatus();
+        int[] stepNumbers = {R.id.home_setup_step_1_number, R.id.home_setup_step_2_number, R.id.home_setup_step_3_number};
+        java.text.NumberFormat numberFormat = java.text.NumberFormat.getInstance();
+        for (int i = 0; i < stepNumbers.length; i++) {
+            TextView number = view.findViewById(stepNumbers[i]);
+            number.setText(numberFormat.format(i + 1));
+            GradientDrawable circle = new GradientDrawable();
+            circle.setShape(GradientDrawable.OVAL);
+            circle.setColor((primary & 0x00FFFFFF) | 0x33000000);
+            number.setBackground(circle);
+        }
+        view.findViewById(R.id.home_setup_got_it).setOnClickListener(v -> {
+            uiPrefs.edit().putBoolean(CompanionUiPrefs.MODULE_CONFIRMED_ONCE, true).apply();
+            updateSetupCard();
+        });
+        setupOpenButton.setOnClickListener(v -> {
+            if (activePackage != null) launchPackage(activePackage);
+        });
+        updateSetupCard();
 
         restartInstagramButton.setOnClickListener(v -> restartInstagram());
         downloadButton.setOnClickListener(v -> {
@@ -252,6 +285,7 @@ public class HomeFragment extends Fragment implements TabFragment {
     @Override
     public void onResume() {
         super.onResume();
+        checkInstagramStatus();
         if (contributorsScroller != null) contributorsScroller.start();
         if (specialThanksScroller != null) specialThanksScroller.start();
         // Prefs may have changed in the Features tab or from inside Instagram.
@@ -302,8 +336,11 @@ public class HomeFragment extends Fragment implements TabFragment {
 
         if (installedPackages.isEmpty()) {
             activePackage = null;
+            activeVersionName = null;
             instagramStatusText.setText(getString(R.string.not_installed_instagram));
             versionText.setText(getString(R.string.home_status_no_version));
+            versionText.setTextColor(MaterialColors.getColor(versionText, com.google.android.material.R.attr.colorOnSurfaceVariant));
+            versionText.setCompoundDrawablesRelative(null, null, null, null);
             instagramLogo.setImageResource(R.drawable.ic_cancel);
             applyTonalSquare(logoContainer, instagramLogo, COLOR_ERROR);
             instagramVariantText.setVisibility(View.GONE);
@@ -311,20 +348,27 @@ public class HomeFragment extends Fragment implements TabFragment {
             instagramInfoIcon.setVisibility(View.GONE);
             launchInstagramButton.setEnabled(false);
             restartInstagramButton.setEnabled(false);
+            setupOpenButton.setEnabled(false);
             updateStatusPill();
             return;
         }
 
-        // Prefer the official package; fall back to first found mod
-        activePackage = installedPackages.contains(CommonUtils.IG_PACKAGE_NAME)
-                ? CommonUtils.IG_PACKAGE_NAME
-                : installedPackages.get(0);
+        String remembered = uiPrefs.getString(CompanionUiPrefs.INSTAGRAM_PACKAGE, null);
+        if (remembered != null && installedPackages.contains(remembered)) {
+            activePackage = remembered;
+        } else {
+            activePackage = installedPackages.contains(CommonUtils.IG_PACKAGE_NAME)
+                    ? CommonUtils.IG_PACKAGE_NAME
+                    : installedPackages.get(0);
+        }
 
-        instagramStatusText.setText(getString(R.string.installed_instagram_version));
         instagramLogo.setImageResource(R.drawable.ic_instagram_logo);
         applyTonalSquare(logoContainer, instagramLogo, COLOR_INSTAGRAM);
         instagramVariantText.setVisibility(View.VISIBLE);
         instagramInfoIcon.setVisibility(View.VISIBLE);
+        launchInstagramButton.setEnabled(true);
+        restartInstagramButton.setEnabled(true);
+        setupOpenButton.setEnabled(true);
 
         if (installedPackages.size() > 1) {
             instagramMultiButton.setVisibility(View.VISIBLE);
@@ -340,14 +384,33 @@ public class HomeFragment extends Fragment implements TabFragment {
     private void bindPackageActions(PackageManager pm, String pkg) {
         activePackage = pkg;
 
+        String versionName = null;
         try {
-            String versionName = pm.getPackageInfo(pkg, 0).versionName;
-            versionText.setText(getString(R.string.home_status_version, versionName));
-        } catch (PackageManager.NameNotFoundException e) {
-            versionText.setText("");
+            versionName = pm.getPackageInfo(pkg, 0).versionName;
+        } catch (PackageManager.NameNotFoundException ignored) {
+        }
+        activeVersionName = versionName;
+        instagramStatusText.setText(versionName != null
+                ? getString(R.string.home_instagram_version, versionName)
+                : getString(R.string.installed_instagram_version));
+        if (InstagramCompat.isTested(versionName)) {
+            android.graphics.drawable.Drawable check = ContextCompat.getDrawable(requireContext(), R.drawable.ic_check_circle);
+            if (check != null) {
+                check = check.mutate();
+                check.setTint(COLOR_OK);
+                check.setBounds(0, 0, dp(16), dp(16));
+            }
+            versionText.setText(R.string.home_tested_version);
+            versionText.setTextColor(MaterialColors.getColor(versionText, com.google.android.material.R.attr.colorOnSurfaceVariant));
+            versionText.setCompoundDrawablesRelative(check, null, null, null);
+            versionText.setCompoundDrawablePadding(dp(6));
+        } else {
+            versionText.setText(getString(R.string.home_untested_version, ExportBrand.TESTED_INSTAGRAM));
+            versionText.setTextColor(COLOR_WARN);
+            versionText.setCompoundDrawablesRelative(null, null, null, null);
         }
 
-        instagramVariantText.setText(CommonUtils.getVariantLabel(pkg));
+        instagramVariantText.setText(variantLabel(pkg));
 
         instagramInfoIcon.setOnClickListener(v -> {
             Intent intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
@@ -369,18 +432,39 @@ public class HomeFragment extends Fragment implements TabFragment {
         }
     }
 
+    private String variantLabel(String pkg) {
+        return CommonUtils.IG_PACKAGE_NAME.equals(pkg) ? getString(R.string.home_variant_official) : CommonUtils.getVariantLabel(pkg);
+    }
+
     private void updateStatusPill() {
+        boolean installed = installedPackages != null && !installedPackages.isEmpty();
+        HomeStatus status = HomeStatus.of(installed, activeVersionName, moduleConfirmed, mirrorLogMtime(activePackage), activePackage);
         int color;
         String label;
-        if (installedPackages == null || installedPackages.isEmpty()) {
-            color = COLOR_ERROR;
-            label = getString(R.string.home_status_not_installed);
-        } else if (moduleConfirmed) {
-            color = COLOR_OK;
-            label = getString(R.string.home_status_module_active);
-        } else {
-            color = COLOR_OK;
-            label = getString(R.string.home_status_installed);
+        String hint = null;
+        switch (status.pill) {
+            case NOT_INSTALLED:
+                color = COLOR_ERROR;
+                label = getString(R.string.home_status_not_installed);
+                break;
+            case MODULE_ACTIVE:
+                color = COLOR_OK;
+                label = getString(R.string.home_status_module_active);
+                break;
+            case WORKED:
+                color = COLOR_OK;
+                label = getString(R.string.home_status_worked, android.text.format.DateUtils.formatSameDayTime(
+                        status.workedAt, System.currentTimeMillis(), java.text.DateFormat.SHORT, java.text.DateFormat.SHORT));
+                break;
+            case CLONE:
+                color = COLOR_WARN;
+                label = getString(R.string.home_status_clone);
+                break;
+            default:
+                color = COLOR_WARN;
+                label = getString(R.string.home_status_not_confirmed);
+                hint = getString(R.string.home_status_open_to_check);
+                break;
         }
         GradientDrawable bg = new GradientDrawable();
         bg.setCornerRadius(dp(14));
@@ -389,6 +473,24 @@ public class HomeFragment extends Fragment implements TabFragment {
         statusDot.setImageTintList(ColorStateList.valueOf(color));
         statusPillText.setTextColor(color);
         statusPillText.setText(label);
+        statusHint.setText(hint);
+        statusHint.setVisibility(hint == null ? View.GONE : View.VISIBLE);
+        if (status.proof && !uiPrefs.getBoolean(CompanionUiPrefs.MODULE_CONFIRMED_ONCE, false)) {
+            uiPrefs.edit().putBoolean(CompanionUiPrefs.MODULE_CONFIRMED_ONCE, true).apply();
+            updateSetupCard();
+        }
+    }
+
+    private long mirrorLogMtime(String pkg) {
+        if (pkg == null) return 0;
+        java.io.File log = new java.io.File(LogMirrorProvider.mirrorDir(requireContext()), pkg + ".log");
+        return log.length() > 0 ? log.lastModified() : 0;
+    }
+
+    private void updateSetupCard() {
+        boolean confirmedOnce = uiPrefs.getBoolean(CompanionUiPrefs.MODULE_CONFIRMED_ONCE, false);
+        setupSteps.setVisibility(confirmedOnce ? View.GONE : View.VISIBLE);
+        setupTip.setVisibility(confirmedOnce ? View.VISIBLE : View.GONE);
     }
 
     private void updateFeatureCount() {
@@ -904,19 +1006,25 @@ public class HomeFragment extends Fragment implements TabFragment {
             String version = "?";
             try { version = pm.getPackageInfo(pkg, 0).versionName; }
             catch (PackageManager.NameNotFoundException ignored) { }
-            labels[i] = CommonUtils.getVariantLabel(pkg) + "  —  v" + version;
+            labels[i] = getString(R.string.home_detected_version_row, variantLabel(pkg), version);
         }
 
         int currentIndex = installedPackages.indexOf(activePackage);
         final int[] selectedIndex = {currentIndex};
 
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Detected versions")
+                .setTitle(R.string.home_detected_versions)
                 .setSingleChoiceItems(labels, currentIndex, (dialog, which) -> selectedIndex[0] = which)
-                .setPositiveButton("Use this", (dialog, which) -> {
+                .setPositiveButton(R.string.home_use_this, (dialog, which) -> {
                     String chosen = installedPackages.get(selectedIndex[0]);
+                    uiPrefs.edit().putString(CompanionUiPrefs.INSTAGRAM_PACKAGE, chosen).apply();
                     if (!chosen.equals(activePackage)) {
+                        moduleConfirmed = false;
                         bindPackageActions(pm, chosen);
+                        updateStatusPill();
+                        if (pingReply != null) { pingReply.cancel(); pingReply = null; }
+                        pingReceiverRegistered = false;
+                        pingModule();
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)

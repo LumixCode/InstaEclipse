@@ -11,7 +11,7 @@
     <!-- home -->
     <string name="back">Back</string>
     <string name="apply_changes">Apply Changes</string>
-    <string name="multiple_versions_detected">⚠️ Multiple versions detected</string>
+    <string name="multiple_versions_detected">Multiple versions detected</string>
     <string name="module_disabled">Module is not enabled. Please enable it.</string>
 
     <string name="module_status">Module Status:</string>
