@@ -77,7 +77,7 @@ public class ExpandCaptionsHook {
                     .usingStrings(" [...]").paramCount(7)))) {
                 Method b = md.getMethodInstance(Module.hostClassLoader);
                 if (!Modifier.isStatic(b.getModifiers()) || b.getReturnType() == void.class) continue;
-                for (MethodData inv : md.getInvokes()) {
+                for (MethodData inv : DexKitQueryCache.invokes(md)) {
                     try {
                         if (!inv.isMethod()) continue;
                         Method h = inv.getMethodInstance(Module.hostClassLoader);

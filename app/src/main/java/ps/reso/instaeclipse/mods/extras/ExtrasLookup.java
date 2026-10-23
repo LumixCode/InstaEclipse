@@ -62,7 +62,7 @@ final class ExtrasLookup {
 
     /** First method invoked by {@code owner} that is static and satisfies {@code test}. */
     static Method firstStaticInvoke(MethodData owner, ClassLoader cl, Predicate<Method> test) {
-        for (MethodData inv : owner.getInvokes()) {
+        for (MethodData inv : DexKitQueryCache.invokes(owner)) {
             if (!inv.isMethod()) continue;
             try {
                 Method m = inv.getMethodInstance(cl);

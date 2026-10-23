@@ -48,7 +48,7 @@ public class DevOptionsUnlockHook {
     private Method findEmployeeGate(DexKitBridge bridge) throws NoSuchMethodException {
         Map<String, MethodData> invoked = new LinkedHashMap<>();
         for (MethodData anchor : usingString(bridge, GATE_ANCHOR)) {
-            for (MethodData call : anchor.getInvokes()) invoked.put(call.getDescriptor(), call);
+            for (MethodData call : DexKitQueryCache.invokes(anchor)) invoked.put(call.getDescriptor(), call);
         }
         String gate = DevGatePick.choose(new ArrayList<>(invoked.keySet()), descriptor -> isStatic(invoked.get(descriptor)));
         if (gate == null) {
@@ -62,7 +62,7 @@ public class DevOptionsUnlockHook {
     private void crossCheck(DexKitBridge bridge, String gate) {
         try {
             for (MethodData other : usingString(bridge, CROSS_CHECK_ANCHOR)) {
-                for (MethodData call : other.getInvokes()) {
+                for (MethodData call : DexKitQueryCache.invokes(other)) {
                     if (gate.equals(call.getDescriptor())) {
                         ModuleLog.detail("(InstaEclipse | DevOptionsEnable): " + gate + " is also checked by " + other.getClassName() + "." + other.getName());
                         return;

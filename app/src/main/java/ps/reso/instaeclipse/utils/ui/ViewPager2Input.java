@@ -61,7 +61,7 @@ public final class ViewPager2Input {
             for (org.luckypray.dexkit.result.MethodData md : DexKitQueryCache.findMethod(bridge, org.luckypray.dexkit.query.FindMethod.create()
                     .matcher(org.luckypray.dexkit.query.matchers.MethodMatcher.create()
                             .declaredClass(inner.getName()).name("onInterceptTouchEvent")))) {
-                for (org.luckypray.dexkit.result.UsingFieldData uf : md.getUsingFields()) {
+                for (org.luckypray.dexkit.result.UsingFieldData uf : DexKitQueryCache.usingFields(md)) {
                     org.luckypray.dexkit.result.FieldData fd = uf.getField();
                     if (fd.getDeclaredClassName().equals(vp.getName()) && fd.getTypeName().equals("boolean")) {
                         Field f = vp.getDeclaredField(fd.getFieldName());
