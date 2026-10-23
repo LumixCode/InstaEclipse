@@ -32,6 +32,7 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -668,7 +669,7 @@ public class ShareSheetCleanupHook {
             }
             if (decorations == null) {
                 if (bridge == null) throw new IllegalStateException("DexKit unavailable");
-                var matches = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+                var matches = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass("androidx.recyclerview.widget.RecyclerView")
                         .usingStrings("Cannot remove item decoration during a scroll  or layout")
                         .paramCount(1).returnType(void.class)));

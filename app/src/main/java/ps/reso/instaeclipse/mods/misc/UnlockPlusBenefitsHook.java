@@ -11,6 +11,7 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -24,17 +25,17 @@ public final class UnlockPlusBenefitsHook {
             Method method = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(CACHE_KEY, loader) : null;
             if (method == null) {
                 Set<Method> candidates = new LinkedHashSet<>();
-                for (var data : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+                for (var data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("is_benefit_active").paramTypes(String.class).returnType(boolean.class)))) {
                     candidates.add(data.getMethodInstance(loader));
                 }
                 if (candidates.isEmpty()) {
                     // In 446 the marker moved into the provider's error logger. Only its same-class
                     // public String -> boolean caller checks the active-benefits set.
-                    for (var logger : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+                    for (var logger : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                             .usingStrings("is_benefit_active", "SUBSBenefitDataProvider")
                             .paramTypes(String.class, String.class).returnType(void.class)))) {
-                        for (var caller : logger.getCallers()) {
+                        for (var caller : DexKitQueryCache.callersUncached(logger)) {
                             if (!caller.getClassName().equals(logger.getClassName())) continue;
                             Method candidate = caller.getMethodInstance(loader);
                             if (isBenefitCheck(candidate)) candidates.add(candidate);

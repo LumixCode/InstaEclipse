@@ -22,6 +22,7 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -106,7 +107,7 @@ public final class OnboardingPromptHook {
 
     private static List<Method> findTargets(DexKitBridge bridge, ClassLoader cl) {
         List<Method> targets = new ArrayList<>();
-        for (MethodData md : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("BKDataFetcher.fetch")
                 .paramTypes("android.content.Context", BLOKS_CONFIG)
                 .returnType("void")))) {
@@ -116,7 +117,7 @@ public final class OnboardingPromptHook {
                 }
             } catch (Throwable ignored) {}
         }
-        for (MethodData md : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("FragmentActivity is required to open CDS bottom sheet", "cds_bloks")
                 .returnType("void")))) {
             try {

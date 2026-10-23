@@ -37,6 +37,7 @@ import java.util.function.Predicate;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker;
@@ -146,7 +147,7 @@ public class KeepUnsentMessagesHook {
         try {
             messageText = cachedField("KeepUnsent_body", loader, () -> {
                 Set<Field> fields = new LinkedHashSet<>();
-                for (MethodData data : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+                for (MethodData data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("DirectMessage.updateIsMessageEmoji").paramCount(0).returnType("void")))) {
                     Class<?> model = data.getMethodInstance(loader).getDeclaringClass();
                     for (var use : data.getUsingFields()) {
@@ -173,7 +174,7 @@ public class KeepUnsentMessagesHook {
      */
     private void resolveMessageCodec(DexKitBridge bridge, ClassLoader loader) {
         try {
-            for (Method decode : cachedMethods("KeepUnsent_decode", loader, () -> methodsOf(bridge.findMethod(
+            for (Method decode : cachedMethods("KeepUnsent_decode", loader, () -> methodsOf(DexKitQueryCache.findMethod(bridge,
                     FindMethod.create().matcher(MethodMatcher.create()
                             .usingStrings("DirectMessageSQLiteTable.parseMessage").paramTypes("byte[]"))), loader))) {
                 Class<?> table = decode.getDeclaringClass();
@@ -235,7 +236,7 @@ public class KeepUnsentMessagesHook {
     }
 
     private static List<MethodData> rowWriters(DexKitBridge bridge, Class<?> table) {
-        return bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+        return DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                 .declaredClass(table.getName()).returnType("android.content.ContentValues")));
     }
 
@@ -307,7 +308,7 @@ public class KeepUnsentMessagesHook {
             int hooked = 0;
             // Never reuse KeepUnsent_remove: its broad four-argument selector also matched
             // a visual-message playback update, which is not a deletion event.
-            for (Method removal : cachedMethods("KeepUnsent_removal", classLoader, () -> methodsOf(bridge.findMethod(
+            for (Method removal : cachedMethods("KeepUnsent_removal", classLoader, () -> methodsOf(DexKitQueryCache.findMethod(bridge,
                     FindMethod.create().matcher(MethodMatcher.create().usingStrings(REMOVE_ANCHOR).returnType("void")
                             .paramTypes(DTK, "java.lang.Integer", "java.lang.String", "java.lang.String", "boolean"))),
                     classLoader))) {
@@ -859,7 +860,7 @@ public class KeepUnsentMessagesHook {
         try {
             List<Method> reconcile = cachedMethods("KeepUnsent_reconcile", classLoader, () -> {
                 LinkedHashSet<Class<?>> classes = new LinkedHashSet<>();
-                for (MethodData md : bridge.findMethod(FindMethod.create()
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
                         .matcher(MethodMatcher.create().usingStrings(RECONCILE_ANCHOR)))) {
                     try { classes.add(md.getMethodInstance(classLoader).getDeclaringClass()); } catch (Throwable ignored) {}
                 }

@@ -24,6 +24,7 @@ import java.util.WeakHashMap;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.HookFrames;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -116,10 +117,10 @@ final class UnsentIndicatorHook {
      */
     private static List<Method> findBinders(DexKitBridge bridge, ClassLoader loader) throws NoSuchMethodException {
         Set<Method> binders = new LinkedHashSet<>();
-        for (MethodData anchor : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+        for (MethodData anchor : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("direct_thread_unseen_message_impression", "open_thread_id").returnType("void")))) {
             if (isBind(anchor)) binders.add(anchor.getMethodInstance(loader));
-            else for (MethodData caller : anchor.getCallers()) {
+            else for (MethodData caller : DexKitQueryCache.callersUncached(anchor)) {
                 if (isBind(caller)) binders.add(caller.getMethodInstance(loader));
             }
         }
@@ -147,7 +148,7 @@ final class UnsentIndicatorHook {
 
     private static Class<?> findMessageClass(DexKitBridge bridge, ClassLoader loader) throws Throwable {
         for (Method method : KeepUnsentMessagesHook.cachedMethods("UnsentIndicator_messageModel", loader,
-                () -> KeepUnsentMessagesHook.methodsOf(bridge.findMethod(FindMethod.create().matcher(
+                () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(
                         MethodMatcher.create().usingStrings("item_id", "hide_in_thread"))), loader))) {
             for (Class<?> parameter : method.getParameterTypes()) {
                 for (Class<?> cls = parameter; cls != null && cls != Object.class; cls = cls.getSuperclass()) {

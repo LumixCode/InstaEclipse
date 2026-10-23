@@ -30,6 +30,7 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -203,7 +204,7 @@ public final class ProfileFollowStatusHook {
         Set<Method> common = null;
         // Required child accessors differ across native callers. Their shared accessor is the
         // nullable friendship_status child, so absent relationship data never becomes false.
-        for (var caller : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+        for (var caller : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                 .usingNumbers("friendship_status".hashCode(), "followed_by".hashCode())))) {
             Set<Method> children = new HashSet<>();
             for (var invocation : caller.getInvokes()) {
@@ -242,7 +243,7 @@ public final class ProfileFollowStatusHook {
                                   MethodMatcher matcher) throws Exception {
         Method cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(key, loader) : null;
         if (cached != null) return cached;
-        var matches = bridge.findMethod(FindMethod.create().matcher(matcher));
+        var matches = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(matcher));
         if (matches.size() != 1) throw new IllegalStateException(key + " matched " + matches.size() + " methods");
         Method method = matches.get(0).getMethodInstance(loader);
         method.setAccessible(true);
@@ -254,7 +255,7 @@ public final class ProfileFollowStatusHook {
         List<Method> cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethods("ProfileFollowBind_v2", loader) : null;
         if (cached != null && !cached.isEmpty()) return cached;
         List<Method> methods = new ArrayList<>();
-        for (var match : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+        for (var match : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("ProfileHeaderBinderGroup.bindView").returnType(void.class)))) {
             methods.add(match.getMethodInstance(loader));
         }

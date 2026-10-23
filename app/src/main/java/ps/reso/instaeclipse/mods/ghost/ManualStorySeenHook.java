@@ -31,6 +31,7 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.media.StoryDownloadHook;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.HookFrames;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -175,7 +176,7 @@ public final class ManualStorySeenHook {
 
     private void discoverReceiptPipeline(DexKitBridge bridge, ClassLoader loader) throws Exception {
         resolutionStage = "builder";
-        List<MethodData> builders = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+        List<MethodData> builders = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("media/seen/", "reels", "force_seen_story_ids")));
         List<MethodData> eligible = new ArrayList<>();
         for (MethodData data : builders) {
@@ -211,7 +212,7 @@ public final class ManualStorySeenHook {
         if (populateItem == null) throw new NoSuchMethodException("Single story population");
 
         resolutionStage = "immediate sender";
-        for (MethodData data : builderData.getCallers()) {
+        for (MethodData data : DexKitQueryCache.callersUncached(builderData)) {
             if (!data.getReturnTypeName().equals("void")
                     || !data.getParamTypeNames().equals(List.of(itemClass.getName()))) continue;
             Method method = data.getMethodInstance(loader);
@@ -255,7 +256,7 @@ public final class ManualStorySeenHook {
         List<Method> found = new ArrayList<>();
         MethodData populationData = bridge.getMethodData(populateItem);
         if (populationData == null) throw new NoSuchMethodException("Population method metadata");
-        for (MethodData data : populationData.getCallers()) {
+        for (MethodData data : DexKitQueryCache.callersUncached(populationData)) {
             if (!data.getParamTypeNames().contains(REEL_ITEM)) continue;
             Method method = data.getMethodInstance(loader);
             if (reelItemIndex(method) != -1) found.add(method);
@@ -336,7 +337,7 @@ public final class ManualStorySeenHook {
         // the others'-story builder. Static builders must stay hooked: every 446 builder is static.
         List<Method> optionBuilders = DexKitCache.isCacheValid() ? DexKitCache.loadMethods("MentionButtons", loader) : null;
         if (optionBuilders == null || optionBuilders.isEmpty()) {
-            optionBuilders = new ArrayList<>(StoryDownloadHook.storyOptionBuilders(bridge.findMethod(FindMethod.create()
+            optionBuilders = new ArrayList<>(StoryDownloadHook.storyOptionBuilders(DexKitQueryCache.findMethod(bridge, FindMethod.create()
                     .matcher(MethodMatcher.create().usingStrings(OPTIONS))), loader));
         }
         XC_MethodHook builderHook = new XC_MethodHook() {

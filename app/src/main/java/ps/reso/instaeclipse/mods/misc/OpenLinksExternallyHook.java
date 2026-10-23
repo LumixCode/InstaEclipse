@@ -18,6 +18,7 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -86,7 +87,7 @@ public final class OpenLinksExternallyHook {
         List<Method> methods = new ArrayList<>();
         // IG 451 moved "TrackingInfo.ARG_MODULE_NAME" into a shared string-pool class; the launcher
         // (446 X.0Pi6.A0G, 451 X.0kfN.A0G) still uses both of these itself.
-        for (var data : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+        for (var data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("Tracking.ARG_CLICK_SOURCE", "in_app_browser_v2")
                 .returnType("boolean")))) {
             methods.add(data.getMethodInstance(loader));

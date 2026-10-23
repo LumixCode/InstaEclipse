@@ -465,7 +465,7 @@ final class LikeHeartTint {
             if (!reels.isMethod()) continue;
             for (MethodData call : reels.getInvokes()) {
                 if (!call.isConstructor() || !animatedHeart(call.getConstructorInstance(loader))) continue;
-                for (MethodData caller : call.getCallers()) {
+                for (MethodData caller : DexKitQueryCache.callersUncached(call)) {
                     if (caller.isMethod()) renders.add(caller.getMethodInstance(loader));
                 }
                 return renders;

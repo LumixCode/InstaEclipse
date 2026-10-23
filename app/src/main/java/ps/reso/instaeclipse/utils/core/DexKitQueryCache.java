@@ -8,6 +8,7 @@ import org.luckypray.dexkit.result.ClassData;
 import org.luckypray.dexkit.result.ClassDataList;
 import org.luckypray.dexkit.result.MethodData;
 import org.luckypray.dexkit.result.MethodDataList;
+import org.luckypray.dexkit.result.UsingFieldData;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -114,16 +115,36 @@ public final class DexKitQueryCache {
         return result;
     }
 
+    public static MethodDataList callersUncached(MethodData method) {
+        DexKitStats.nativeCalls(1);
+        return method.getCallers();
+    }
+
+    public static MethodDataList invokes(MethodData method) {
+        DexKitStats.nativeCalls(1);
+        return method.getInvokes();
+    }
+
+    public static List<UsingFieldData> usingFields(MethodData method) {
+        DexKitStats.nativeCalls(1);
+        return method.getUsingFields();
+    }
+
+    public static MethodData methodData(DexKitBridge bridge, String descriptor) {
+        DexKitStats.nativeCalls(1);
+        return bridge.getMethodData(descriptor);
+    }
+
     private static String load(String key) {
         DexKitStats.keyRead(key);
-        if (key == null || !DexKitCache.isCacheValid()) return null;
+        if (key == null) return null;
         return DexKitCache.loadSaved(key);
     }
 
     private static void searched(String key, long startNanos) {
         long nanos = System.nanoTime() - startNanos;
         DexKitStats.miss(nanos);
-        if (DexKitCache.isCacheValid()) {
+        if (DexKitCache.isRestored()) {
             ModuleLog.detail("(DexKitCache) Searched Instagram's code again although the saved lookups are valid: "
                     + key + " in " + DexKitStats.currentStep() + " (" + nanos / 1_000_000L + " ms)");
         }

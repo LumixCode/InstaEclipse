@@ -41,6 +41,7 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook;
 import ps.reso.instaeclipse.mods.ui.utils.LifecycleHookUtil;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker;
@@ -319,7 +320,7 @@ public class HideChatsHook {
         try {
             int count = 0;
             for (Method method : KeepUnsentMessagesHook.cachedMethods("HideChats_inbox", classLoader,
-                    () -> KeepUnsentMessagesHook.methodsOf(bridge.findMethod(FindMethod.create()
+                    () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.findMethod(bridge, FindMethod.create()
                             .matcher(MethodMatcher.create().usingStrings(INBOX_ANCHOR))), classLoader))) {
                 try {
                     XposedBridge.hookMethod(method, filter);
@@ -344,7 +345,7 @@ public class HideChatsHook {
         try {
             Class<?> generator = null;
             for (Method method : KeepUnsentMessagesHook.cachedMethods("HideChats_inboxGenerator", loader,
-                    () -> KeepUnsentMessagesHook.methodsOf(bridge.findMethod(FindMethod.create()
+                    () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.findMethod(bridge, FindMethod.create()
                             .matcher(MethodMatcher.create().usingStrings(GENERATOR_ANCHOR))), loader))) {
                 if (generator != null && generator != method.getDeclaringClass()) {
                     throw new IllegalStateException("inbox generator ambiguous");
@@ -440,7 +441,7 @@ public class HideChatsHook {
         int count = 0;
         try {
             for (Method method : KeepUnsentMessagesHook.cachedMethods("HideChats_" + anchor, classLoader,
-                    () -> KeepUnsentMessagesHook.methodsOf(bridge.findMethod(FindMethod.create().matcher(
+                    () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(
                             MethodMatcher.create().usingStrings(anchor).paramCount(0).returnType("void"))), classLoader))) {
                 try {
                     XposedBridge.hookMethod(method, hook);

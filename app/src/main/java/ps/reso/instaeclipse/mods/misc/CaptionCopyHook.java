@@ -35,6 +35,7 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.HookFrames;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -153,7 +154,7 @@ public class CaptionCopyHook {
         try {
             Method builder = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("CaptionCopy_builder", loader) : null;
             if (builder == null) {
-                for (MethodData md : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings(" [...]").paramCount(7)))) {
                     Method m = md.getMethodInstance(loader);
                     if (Modifier.isStatic(m.getModifiers()) && m.getReturnType() != void.class) { builder = m; break; }
@@ -266,7 +267,7 @@ public class CaptionCopyHook {
             for (String declClass : declClassCandidates) {
                 List<MethodData> results;
                 try {
-                    results = bridge.findMethod(FindMethod.create()
+                    results = DexKitQueryCache.findMethod(bridge, FindMethod.create()
                             .matcher(MethodMatcher.create()
                                     .declaredClass(declClass)
                                     .paramCount(0)
@@ -301,7 +302,7 @@ public class CaptionCopyHook {
         try {
             Method impl = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("CaptionText", classLoader) : null;
             if (impl == null) {
-                List<MethodData> found = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+                List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(ClassMatcher.create()
                                 .addInterface(captionType.getName(), StringMatchType.Equals, false))
                         .usingNumbers("text".hashCode()).paramCount(0).returnType(String.class)));

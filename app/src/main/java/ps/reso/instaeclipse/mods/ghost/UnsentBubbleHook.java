@@ -22,6 +22,7 @@ import java.util.WeakHashMap;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.HookFrames;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -113,7 +114,7 @@ final class UnsentBubbleHook {
 
     private static boolean builtBy(DexKitBridge bridge, Class<?> lambda, Set<String> factories) {
         for (Constructor<?> constructor : lambda.getDeclaredConstructors()) {
-            for (MethodData caller : bridge.getMethodData(constructor).getCallers()) {
+            for (MethodData caller : DexKitQueryCache.callersUncached(bridge.getMethodData(constructor))) {
                 if (factories.contains(caller.getDescriptor())) return true;
             }
         }
@@ -157,7 +158,7 @@ final class UnsentBubbleHook {
         }
         if (stateConstructor == null) throw new NoSuchMethodException("Native mutable state");
         List<Method> policies = KeepUnsentMessagesHook.cachedMethods("UnsentBubble_policy", loader,
-                () -> KeepUnsentMessagesHook.methodsOf(bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+                () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("StructuralEqualityPolicy").name("toString").paramCount(0)
                         .returnType(String.class))), loader));
         if (policies.size() != 1) throw new IllegalStateException("State equality policy ambiguous");
@@ -446,7 +447,7 @@ final class UnsentBubbleHook {
         Class<?> element = elements.get(0).getMethodInstance(loader).getDeclaringClass();
         Set<Class<?>> factories = new LinkedHashSet<>();
         for (Constructor<?> constructor : element.getDeclaredConstructors()) {
-            for (MethodData caller : bridge.getMethodData(constructor).getCallers()) {
+            for (MethodData caller : DexKitQueryCache.callersUncached(bridge.getMethodData(constructor))) {
                 if (caller.getReturnTypeName().equals(nativeFill.getReturnType().getName())) {
                     factories.add(caller.getMethodInstance(loader).getDeclaringClass());
                 }
@@ -465,11 +466,11 @@ final class UnsentBubbleHook {
      *  between builds, so with no exact hit {@code byPrefix} retries on the text before ".kt:". */
     private static List<MethodData> anchored(DexKitBridge bridge, String anchor, boolean byPrefix,
                                              java.util.function.UnaryOperator<MethodMatcher> shape) {
-        List<MethodData> exact = bridge.findMethod(FindMethod.create().matcher(
+        List<MethodData> exact = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(
                 shape.apply(MethodMatcher.create().usingStrings(anchor))));
         int line = anchor.lastIndexOf(".kt:");
         if (!exact.isEmpty() || !byPrefix || line < 0) return exact;
-        return bridge.findMethod(FindMethod.create().matcher(shape.apply(MethodMatcher.create()
+        return DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(shape.apply(MethodMatcher.create()
                 .addUsingString(anchor.substring(0, line + 4), StringMatchType.StartsWith))));
     }
 

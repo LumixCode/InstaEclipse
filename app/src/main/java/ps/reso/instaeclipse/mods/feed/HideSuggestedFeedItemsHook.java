@@ -125,7 +125,7 @@ public class HideSuggestedFeedItemsHook {
      */
     private static String findFeedItemParser(DexKitBridge bridge, ClassLoader classLoader) {
         Set<String> classes = new LinkedHashSet<>();
-        for (MethodData md : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                 .name("unsafeParseFromJson")
                 .usingStrings("clips_netego")
                 .addUsingField(FieldMatcher.create().type(MEDIA_CLASS), UsingType.Write)))) {

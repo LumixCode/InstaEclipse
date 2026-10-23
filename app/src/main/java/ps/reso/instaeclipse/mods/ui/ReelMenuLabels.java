@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -81,7 +82,7 @@ public final class ReelMenuLabels {
             Method resolver = DexKitCache.isCacheValid()
                     ? DexKitCache.loadMethod("ReelLabelResolver", classLoader) : null;
             if (resolver != null) return resolver;
-            List<MethodData> found = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+            List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .usingEqStrings(List.of(RESOLVER_ANCHOR))));
             if (found.isEmpty()) return null;
             resolver = found.get(0).getMethodInstance(classLoader);
@@ -131,7 +132,7 @@ public final class ReelMenuLabels {
         }
 
         // Row-adder methods: invoke the resolver AND take a MediaOption$Option.
-        List<MethodData> adderResults = bridge.findMethod(FindMethod.create()
+        List<MethodData> adderResults = DexKitQueryCache.findMethod(bridge, FindMethod.create()
                 .matcher(MethodMatcher.create()
                         .returnType("void")
                         .addInvoke(MethodMatcher.create(labelResolver))));
@@ -151,7 +152,7 @@ public final class ReelMenuLabels {
             // Row builders: the void methods this adder CALLS.
             List<MethodData> builderResults;
             try {
-                builderResults = bridge.findMethod(FindMethod.create()
+                builderResults = DexKitQueryCache.findMethod(bridge, FindMethod.create()
                         .matcher(MethodMatcher.create()
                                 .returnType("void")
                                 .addCaller(MethodMatcher.create(rowAdder))));

@@ -514,7 +514,7 @@ public class VoiceMessageDownloadHook {
                 int hash = cached.indexOf('#');
                 media = cl.loadClass(cached.substring(0, hash)).getDeclaredField(cached.substring(hash + 1));
             } else {
-                List<MethodData> parsers = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+                List<MethodData> parsers = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                         .name("unsafeParseFromJson").usingStrings("url_expire_at_secs", "waveform_data",
                                 "current_playback_position_ms", "duration_ms")));
                 Set<Field> mediaFields = new LinkedHashSet<>();

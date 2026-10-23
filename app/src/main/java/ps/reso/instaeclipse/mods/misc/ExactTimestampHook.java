@@ -31,6 +31,7 @@ import java.util.TimeZone;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.HookFrames;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -94,7 +95,7 @@ public final class ExactTimestampHook {
         if (entries == null || entries.isEmpty()) {
             Map<String, Method> found = new LinkedHashMap<>();
             for (Method formatter : formatters) {
-                for (MethodData caller : bridge.getMethodData(formatter).getCallers()) {
+                for (MethodData caller : DexKitQueryCache.callersUncached(bridge.getMethodData(formatter))) {
                     if (ExactTimestampScope.isContentCaller(caller.getClassName(),
                             caller.getParamTypeNames(), caller.getUsingStrings())) {
                         found.put(caller.getDescriptor(), caller.getMethodInstance(loader));
@@ -136,7 +137,7 @@ public final class ExactTimestampHook {
         List<Method> scopes = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(DM_SCOPE_CACHE, loader) : null;
         if (formatter == null || scopes == null || scopes.isEmpty()) {
             Map<String, MethodData> candidates = new LinkedHashMap<>();
-            for (MethodData builder : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+            for (MethodData builder : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings(DM_METADATA_ANCHOR)))) {
                 for (MethodData call : builder.getInvokes()) {
                     if (signature(call, "android.content.Context", "com.instagram.common.session.UserSession", "long")) {
@@ -148,7 +149,7 @@ public final class ExactTimestampHook {
             MethodData target = candidates.values().iterator().next();
             formatter = target.getMethodInstance(loader);
             scopes = new ArrayList<>();
-            for (MethodData caller : target.getCallers()) {
+            for (MethodData caller : DexKitQueryCache.callersUncached(target)) {
                 // The message metadata builder and the native call-message timestamp helper
                 // are the two reference callers. Inbox digests use different helpers.
                 if (caller.getUsingStrings().contains(DM_METADATA_ANCHOR)
@@ -192,7 +193,7 @@ public final class ExactTimestampHook {
                 && "1".equals(DexKitCache.loadString(STORY_BINDER_ABSENT));
         if (!knownAbsent && (binders == null || binders.isEmpty())) {
             binders = new ArrayList<>();
-            for (MethodData binder : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+            for (MethodData binder : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .returnType("void").usingStrings("ReelViewerItemBinder.bindTimestamp")))) {
                 binders.add(binder.getMethodInstance(classLoader));
             }
@@ -251,7 +252,7 @@ public final class ExactTimestampHook {
         if (methods == null || methods.size() != 2) {
             // Compose source markers carry a line number that moves between versions (446
             // Timestamp.kt:12, 451 :13), so match the file prefix; the shape check stays exact.
-            List<MethodData> entries = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+            List<MethodData> entries = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .returnType("void").addUsingString(
                             "instagram.features.stories.mvvm.feature.header.compose.Timestamp (Timestamp.kt:",
                             StringMatchType.StartsWith)));
@@ -317,7 +318,7 @@ public final class ExactTimestampHook {
         // obfuscated name. The utility also contains elapsed-time and future-countdown helpers;
         // those have different signatures and must retain their original behavior.
         Map<String, Method> methods = new LinkedHashMap<>();
-        List<MethodData> candidates = bridge.findMethod(FindMethod.create()
+        List<MethodData> candidates = DexKitQueryCache.findMethod(bridge, FindMethod.create()
                 .matcher(MethodMatcher.create().declaredClass(owner).returnType("java.lang.String")));
         for (MethodData candidate : candidates) {
             List<String> types = candidate.getParamTypeNames();
@@ -344,7 +345,7 @@ public final class ExactTimestampHook {
     }
 
     private static MethodData storyDateFormatter(DexKitBridge bridge) {
-        List<MethodData> storyMethods = bridge.findMethod(FindMethod.create()
+        List<MethodData> storyMethods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
                 .matcher(MethodMatcher.create().declaredClass(STORY_ITEM)
                         .returnType("java.lang.String").paramTypes("android.content.Context")));
         if (storyMethods.size() != 1) throw new IllegalStateException("Ambiguous story timestamp entry");
@@ -368,7 +369,7 @@ public final class ExactTimestampHook {
      */
     private static MethodData[] anchoredCores(DexKitBridge bridge, ClassLoader loader) throws Exception {
         Method core = null;
-        for (ClassData utility : bridge.findClass(FindClass.create().matcher(ClassMatcher.create()
+        for (ClassData utility : DexKitQueryCache.findClass(bridge, FindClass.create().matcher(ClassMatcher.create()
                 .usingStrings("%d:%02d:%02d", "MMMM d", "MMM d")))) {
             Method found = findFormatter(utility.getInstance(loader));
             if (found == null) continue;
@@ -379,7 +380,7 @@ public final class ExactTimestampHook {
         MethodData dateCore = bridge.getMethodData(core);
         String owner = dateCore.getClassName();
         MethodData relativeCore = null;
-        for (MethodData candidate : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+        for (MethodData candidate : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                 .declaredClass(owner).returnType("java.lang.String")))) {
             List<String> types = candidate.getParamTypeNames();
             if (types.size() != 6 || !types.get(0).equals("android.content.res.Resources")

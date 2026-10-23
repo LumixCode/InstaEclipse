@@ -246,7 +246,7 @@ public class RemoveMetaAIHook {
                 targets = new ArrayList<>();
                 MethodMatcher mm = MethodMatcher.create().usingStrings(marker);
                 if (returnTypeFilter != null) mm = mm.returnType(returnTypeFilter);
-                for (MethodData md : bridge.findMethod(FindMethod.create().matcher(mm))) {
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(mm))) {
                     try {
                         Method m = md.getMethodInstance(cl);
                         String shared = sharedReason(md, m, marker);
@@ -513,10 +513,10 @@ public class RemoveMetaAIHook {
     }
 
     private static Method findAddButton(DexKitBridge bridge, ClassLoader cl, Class<?> option) {
-        List<ClassData> creators = bridge.findClass(FindClass.create().matcher(
+        List<ClassData> creators = DexKitQueryCache.findClass(bridge, FindClass.create().matcher(
                 ClassMatcher.create().usingStrings("MediaOptionsOverflowMenuCreator")));
         if (creators.isEmpty()) return null;
-        for (MethodData md : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                 .declaredClass(creators.get(0).getName()).returnType("void")))) {
             try {
                 Method m = md.getMethodInstance(cl);

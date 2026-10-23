@@ -27,6 +27,7 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -204,7 +205,7 @@ public final class FollowingFollowStatusHook {
                                   MethodMatcher matcher) throws Exception {
         Method cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(key, loader) : null;
         if (cached != null) return cached;
-        var matches = bridge.findMethod(FindMethod.create().matcher(matcher));
+        var matches = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(matcher));
         if (matches.size() != 1) throw new IllegalStateException(key + " matched " + matches.size() + " methods");
         Method method = matches.get(0).getMethodInstance(loader);
         method.setAccessible(true);

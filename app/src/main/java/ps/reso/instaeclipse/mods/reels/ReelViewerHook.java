@@ -33,6 +33,7 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -555,7 +556,7 @@ public final class ReelViewerHook {
         // Any registrar marker, then the owning class's config-taking constructor: on IG 451 the
         // "_init" marker sits in a class without the config (X.056c), while the registrar that
         // takes it (X.054k) only carries "_addAction".
-        for (var data : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+        for (var data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                 .addUsingString("ClipsViewerSponsoredViewpointRegistrar_", StringMatchType.Contains)))) {
             String owner = data.getClassName();
             if (classes.contains(owner)) continue;
@@ -625,7 +626,7 @@ public final class ReelViewerHook {
             if (MISSING.equals(DexKitCache.loadString(key))) return new ArrayList<>();
         }
         List<Method> result = new ArrayList<>();
-        for (var data : bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
+        for (var data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                 .addUsingString(anchor, StringMatchType.Contains)))) {
             try {
                 Method method = data.getMethodInstance(loader);

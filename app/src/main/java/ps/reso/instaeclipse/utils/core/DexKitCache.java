@@ -43,6 +43,7 @@ public class DexKitCache {
 
     private static SharedPreferences prefs;
     private static boolean cacheValid = false;
+    private static boolean restored = false;
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
@@ -52,22 +53,30 @@ public class DexKitCache {
      * with the stored version; clears the cache when they differ.
      */
     public static void init(Context context, String igVersion) {
-        prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        init(context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE), igVersion);
+    }
+
+    static void init(SharedPreferences preferences, String igVersion) {
+        prefs = preferences;
         String stored = prefs.getString(KEY_VER, "");
-        if (stored.equals(igVersion)) {
-            cacheValid = true;
+        restored = stored.equals(igVersion);
+        if (restored) {
             ModuleLog.detail("(DexKitCache) Cache valid for IG " + igVersion);
         } else {
-            cacheValid = false;
             prefs.edit().clear().putString(KEY_VER, igVersion).apply();
             ModuleLog.line("(DexKitCache) Instagram or InstaEclipse changed since the last start, so Instagram's code is searched again (this start takes longer)");
             ModuleLog.detail("(DexKitCache) Version " + stored + " → " + igVersion + ", cache cleared");
         }
+        cacheValid = true;
     }
 
     /** Returns {@code true} when the stored cache was built for the currently-running IG version. */
     public static boolean isCacheValid() {
         return cacheValid;
+    }
+
+    static boolean isRestored() {
+        return restored;
     }
 
     /**
@@ -78,6 +87,7 @@ public class DexKitCache {
         if (prefs == null) return;
         prefs.edit().clear().apply();
         cacheValid = false;
+        restored = false;
         ModuleLog.line("(DexKitCache) Cache cleared; Instagram's code is searched again on the next start");
     }
 

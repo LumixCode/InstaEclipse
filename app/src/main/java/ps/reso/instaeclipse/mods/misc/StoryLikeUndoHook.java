@@ -23,7 +23,6 @@ import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
-import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -115,7 +114,6 @@ public class StoryLikeUndoHook {
         }
         ModuleLog.ok(TAG + "Ready for story likes");
         ModuleLog.detail(TAG + "story likes hooked: " + name(like) + ", liked check " + name(check) + ", button " + name(bind));
-        FeatureStatusTracker.setHooked("StoryLikeUndo");
     }
 
     /** The repository's like call, the store's liked check and the like button's bind, in that order. */
@@ -126,7 +124,7 @@ public class StoryLikeUndoHook {
         Method like = null;
         for (MethodData init : perform.getDeclaredClass().getMethods()) {
             if (!init.isConstructor()) continue;
-            for (MethodData caller : init.getCallers()) {
+            for (MethodData caller : DexKitQueryCache.callersUncached(init)) {
                 if (!caller.isMethod() || caller.getClassName().equals(perform.getClassName())) continue;
                 Method m = caller.getMethodInstance(loader);
                 if (m.getReturnType() != void.class || paramAt(m, mediaClass) < 0 || stateAt(m) < 0) continue;

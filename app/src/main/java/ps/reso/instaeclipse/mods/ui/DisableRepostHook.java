@@ -220,7 +220,7 @@ public class DisableRepostHook {
         List<Method> found = new ArrayList<>();
         try {
             for (String anchor : REELS_BUTTON_ANCHORS) {
-                for (MethodData md : bridge.findMethod(FindMethod.create()
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
                         .matcher(MethodMatcher.create().usingStrings(anchor)))) {
                     addBuilder(found, md, classLoader);
                 }
@@ -231,14 +231,14 @@ public class DisableRepostHook {
             // using the same id returns void and is skipped).
             int feedButton = res.getIdentifier("reposts_ufi_icon", "id", pkg);
             if (feedButton != 0) {
-                for (MethodData md : bridge.findMethod(FindMethod.create()
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
                         .matcher(MethodMatcher.create().paramCount(1).usingNumbers(feedButton)))) {
                     addBuilder(found, md, classLoader);
                 }
             }
             int reelCount = res.getIdentifier("repost_count", "id", pkg);
             if (reelCount != 0) {
-                for (MethodData md : bridge.findMethod(FindMethod.create()
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
                         .matcher(MethodMatcher.create().usingStrings("ufi_count").usingNumbers(reelCount)))) {
                     addBuilder(found, md, classLoader);
                 }
