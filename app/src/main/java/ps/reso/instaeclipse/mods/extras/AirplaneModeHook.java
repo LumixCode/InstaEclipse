@@ -1,10 +1,17 @@
 package ps.reso.instaeclipse.mods.extras;
 
+import android.app.Activity;
+import android.app.Application;
+import android.content.Context;
+import android.os.Bundle;
+
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
+import ps.reso.instaeclipse.Xposed.Module;
+import ps.reso.instaeclipse.xposedcompat.AndroidAppHelper;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
@@ -32,6 +39,7 @@ public class AirplaneModeHook {
     private static Method start;
     private static Method stop;
     private static volatile boolean loggedBlock;
+    private static volatile boolean watching;
 
     public void install(ClassLoader cl) {
         Class<?> manager = XposedHelpers.findClass(MANAGER, cl);
@@ -49,9 +57,7 @@ public class AirplaneModeHook {
         XC_MethodHook track = new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                synchronized (MANAGERS) {
-                    MANAGERS.add(new WeakReference<>(param.thisObject));
-                }
+                track(param.thisObject);
             }
         };
         for (java.lang.reflect.Constructor<?> c : ps.reso.instaeclipse.utils.core.SafeReflect.constructors(manager)) {
@@ -61,6 +67,7 @@ public class AirplaneModeHook {
         XposedBridge.hookMethod(start, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                track(param.thisObject);
                 if (!FeatureFlags.airplaneMode) return;
                 param.setResult(null);
                 if (!loggedBlock) {
@@ -83,8 +90,51 @@ public class AirplaneModeHook {
                     + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
 
+        watchResumes();
         FeatureStatusTracker.setHooked("airplaneMode");
         ModuleLog.ok(TAG + "ready");
+    }
+
+    private static void track(Object manager) {
+        if (manager == null) return;
+        synchronized (MANAGERS) {
+            for (int i = MANAGERS.size() - 1; i >= 0; i--) {
+                Object o = MANAGERS.get(i).get();
+                if (o == null) MANAGERS.remove(i);
+                else if (o == manager) return;
+            }
+            MANAGERS.add(new WeakReference<>(manager));
+        }
+    }
+
+    private static void watchResumes() {
+        Application app = application();
+        if (app == null) {
+            ModuleLog.detail(TAG + "no Application yet; turning appear offline off starts the live connection right away");
+            return;
+        }
+        app.registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
+            @Override public void onActivityResumed(Activity a) {
+                if (GATE.activityResumed() && !FeatureFlags.airplaneMode) invokeAll(start);
+            }
+            @Override public void onActivityPaused(Activity a) {
+                GATE.activityPaused();
+            }
+            @Override public void onActivityCreated(Activity a, Bundle b) {}
+            @Override public void onActivityStarted(Activity a) {}
+            @Override public void onActivityStopped(Activity a) {}
+            @Override public void onActivitySaveInstanceState(Activity a, Bundle b) {}
+            @Override public void onActivityDestroyed(Activity a) {}
+        });
+        watching = true;
+    }
+
+    private static Application application() {
+        Context context = Module.appContext();
+        if (context instanceof Application) return (Application) context;
+        Context app = context == null ? null : context.getApplicationContext();
+        if (app instanceof Application) return (Application) app;
+        return AndroidAppHelper.currentApplication();
     }
 
     /** Applies the current {@link FeatureFlags#airplaneMode} to every live realtime manager. */
@@ -92,7 +142,7 @@ public class AirplaneModeHook {
         if (FeatureFlags.airplaneMode) {
             GATE.switchedOn();
             invokeAll(stop);
-        } else if (GATE.switchedOff()) {
+        } else if (!watching || GATE.switchedOff()) {
             invokeAll(start);
         }
     }
