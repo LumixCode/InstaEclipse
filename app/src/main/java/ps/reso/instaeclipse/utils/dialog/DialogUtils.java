@@ -545,13 +545,9 @@ public class DialogUtils {
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_quick_toggle), layout, () -> {});
     }
 
-    /**
-     * Clears the application's cache and restarts it.
-     * Works for any package name this module is running in.
-     *
-     * @param context The application context.
-     */
-    private static void restartApp(Context context) {
+    static Runnable exit = () -> Runtime.getRuntime().exit(0);
+
+    public static void restart(Context context, boolean clearCache) {
         try {
             String packageName = context.getPackageName();
             Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(packageName);
@@ -560,7 +556,7 @@ public class DialogUtils {
                 clearAppCache(context);
                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                 context.startActivity(launchIntent);
-                Runtime.getRuntime().exit(0);
+                exit.run();
             } else {
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_dialog_restart_not_found), Toast.LENGTH_SHORT).show();
             }
@@ -3088,7 +3084,7 @@ public class DialogUtils {
         message.setPadding(0, 0, 0, dp(context, 10));
 
         layout.addView(message);
-        layout.addView(IeRows.actionRow(context, R.drawable.ic_restart, I18n.t(context, R.string.ig_dialog_restart_now), "#FF453A", v -> restartApp(context)));
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_restart, I18n.t(context, R.string.ig_dialog_restart_now), "#FF453A", v -> restart(context, true)));
 
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_restart), layout, () -> {
         });
@@ -3111,7 +3107,7 @@ public class DialogUtils {
         layout.addView(message);
         layout.addView(IeRows.actionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_dialog_clear_cache_now), "#FF9F0A", v -> {
             ps.reso.instaeclipse.utils.core.DexKitCache.clearCache();
-            restartApp(context);
+            restart(context, true);
         }));
 
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_clear_cache), layout, () -> {});
