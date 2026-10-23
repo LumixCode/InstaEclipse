@@ -19,9 +19,13 @@ import org.luckypray.dexkit.result.MethodData;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
@@ -52,6 +56,7 @@ public final class ProfileMenuHook {
     private static final String USER = "com.instagram.user.model.User";
     private static final String ROW_TAG = "ie_profile_menu_row";
     private static Method bioGetter;
+    private static final ConcurrentHashMap<Class<?>, Field[]> WALKED_FIELDS = new ConcurrentHashMap<>();
 
     public void install(DexKitBridge bridge, ClassLoader cl) {
         try {
@@ -85,6 +90,8 @@ public final class ProfileMenuHook {
     private static void inject(PopupWindow pw) {
         View content = pw.getContentView();
         if (content == null) return;
+        int options = ResIds.id(content.getContext(), "context_menu_options_list");
+        if (options == 0 || content.findViewById(options) == null) return;
         Activity a = activityOf(content.getContext());
         String username = profileUsername(a);
         if (username == null) return; // not a profile's menu
@@ -120,13 +127,13 @@ public final class ProfileMenuHook {
             if (FeatureFlags.profileMenuTools) {
                 column.addView(row(template, R.drawable.ic_download, I18n.t(ctx, R.string.ig_profile_download_all), () -> {
                     pw.dismiss();
-                    ps.reso.instaeclipse.mods.media.ProfileDownloadAll.start(a, username);
+                    ps.reso.instaeclipse.mods.media.ProfileDownloadAll.start(host(a), username);
                 }));
             }
             if (FeatureFlags.profileAnalyzer) {
                 column.addView(row(template, R.drawable.ic_search, I18n.t(ctx, R.string.ig_pa_analyze), () -> {
                     pw.dismiss();
-                    ps.reso.instaeclipse.mods.misc.ProfileAnalyzer.start(a, findUser(a, username), username);
+                    ps.reso.instaeclipse.mods.misc.ProfileAnalyzer.start(host(a), findUser(a, username), username);
                 }));
             }
             int listHeight = scroller.getHeight();
@@ -175,6 +182,10 @@ public final class ProfileMenuHook {
         int x = 0;
         for (View c = v; c != null && c != ancestor; c = c.getParent() instanceof View p ? p : null) x += c.getLeft();
         return x;
+    }
+
+    private static Activity host(Activity a) {
+        return UIHookManager.dialogHost(a) instanceof Activity h ? h : a;
     }
 
     static Activity activityOf(Context c) {
@@ -291,19 +302,23 @@ public final class ProfileMenuHook {
     public static Object findUser(Activity a, String username) {
         Method name = ps.reso.instaeclipse.utils.users.UserUtils.userUsernameGetter;
         if (name == null || a == null) return null;
-        Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-        java.util.ArrayDeque<Object[]> queue = new java.util.ArrayDeque<>();
-        // Roots: the adapters of the shown lists (the profile header and grid are RecyclerViews),
-        // then the activity itself.
+        List<Object> roots = new ArrayList<>();
         java.util.ArrayDeque<View> views = new java.util.ArrayDeque<>();
         views.push(a.getWindow().getDecorView());
         while (!views.isEmpty()) {
             View v = views.pop();
             if (!v.isShown()) continue;
-            if (isA(v.getClass(), "androidx.recyclerview.widget.RecyclerView")) queue.add(new Object[]{call(v, "getAdapter"), 0});
+            if (isA(v.getClass(), "androidx.recyclerview.widget.RecyclerView")) roots.add(call(v, "getAdapter"));
             if (v instanceof ViewGroup g) for (int i = 0; i < g.getChildCount(); i++) views.push(g.getChildAt(i));
         }
-        queue.add(new Object[]{a, 0});
+        roots.add(a);
+        return findUserFrom(roots, a, username, name, new int[1]);
+    }
+
+    static Object findUserFrom(Collection<Object> roots, Object activity, String username, Method usernameGetter, int[] visits) {
+        Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+        java.util.ArrayDeque<Object[]> queue = new java.util.ArrayDeque<>();
+        for (Object root : roots) queue.add(new Object[]{root, 0});
         int visited = 0;
         while (!queue.isEmpty() && visited++ < 40_000) {
             Object[] e = queue.poll();
@@ -312,7 +327,12 @@ public final class ProfileMenuHook {
             if (o == null || !seen.add(o)) continue;
             String cn = o.getClass().getName();
             if (cn.equals(USER)) {
-                try { if (username.equals(name.invoke(o))) return o; } catch (Throwable ignored) { }
+                try {
+                    if (username.equals(usernameGetter.invoke(o))) {
+                        visits[0] = visited;
+                        return o;
+                    }
+                } catch (Throwable ignored) { }
                 continue;
             }
             if (depth >= 8) continue;
@@ -320,7 +340,7 @@ public final class ProfileMenuHook {
                 try { for (Object v : m.values()) queue.add(new Object[]{v, depth + 1}); } catch (Throwable ignored) { }
                 continue;
             }
-            if (o instanceof java.util.Collection<?> col) {
+            if (o instanceof Collection<?> col) {
                 try { int n = 0; for (Object v : col) { if (n++ > 200) break; queue.add(new Object[]{v, depth + 1}); } } catch (Throwable ignored) { }
                 continue;
             }
@@ -328,22 +348,37 @@ public final class ProfileMenuHook {
                 for (int i = 0; i < Math.min(arr.length, 200); i++) queue.add(new Object[]{arr[i], depth + 1});
                 continue;
             }
-            if (!(cn.startsWith("X.") || cn.startsWith("com.instagram.") || o == a || cn.startsWith("kotlinx.coroutines.flow.")
+            if (!(cn.startsWith("X.") || cn.startsWith("com.instagram.") || o == activity || cn.startsWith("kotlinx.coroutines.flow.")
                     || isA(o.getClass(), "androidx.lifecycle.ViewModel"))) continue;
-            for (Class<?> c = o.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
-                String n = c.getName();
-                if (n.startsWith("android.") || n.startsWith("java.") || (n.startsWith("androidx.") && !n.startsWith("androidx.lifecycle.ViewModel")
-                        && !n.startsWith("androidx.recyclerview.") && !n.startsWith("androidx.fragment.app.FragmentActivity"))) break;
-                for (Field f : SafeReflect.fields(c)) {
-                    if (Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive() || f.getType() == String.class) continue;
-                    try {
-                        f.setAccessible(true);
-                        queue.add(new Object[]{f.get(o), depth + 1});
-                    } catch (Throwable ignored) { }
-                }
+            for (Field f : walkedFields(o.getClass())) {
+                try {
+                    queue.add(new Object[]{f.get(o), depth + 1});
+                } catch (Throwable ignored) { }
             }
         }
+        visits[0] = visited;
         return null;
+    }
+
+    private static Field[] walkedFields(Class<?> type) {
+        Field[] cached = WALKED_FIELDS.get(type);
+        if (cached != null) return cached;
+        List<Field> out = new ArrayList<>();
+        for (Class<?> c = type; c != null && c != Object.class; c = c.getSuperclass()) {
+            String n = c.getName();
+            if (n.startsWith("android.") || n.startsWith("java.") || (n.startsWith("androidx.") && !n.startsWith("androidx.lifecycle.ViewModel")
+                    && !n.startsWith("androidx.recyclerview.") && !n.startsWith("androidx.fragment.app.FragmentActivity"))) break;
+            for (Field f : SafeReflect.fields(c)) {
+                if (Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive() || f.getType() == String.class) continue;
+                try {
+                    f.setAccessible(true);
+                    out.add(f);
+                } catch (Throwable ignored) { }
+            }
+        }
+        Field[] fields = out.toArray(new Field[0]);
+        WALKED_FIELDS.putIfAbsent(type, fields);
+        return fields;
     }
 
     // Instagram's androidx classes come from its own class loader, so they are matched by name.
