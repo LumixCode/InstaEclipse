@@ -59,20 +59,22 @@ public final class HighResolutionImageHook {
                 protected void afterHookedMethod(MethodHookParam p) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                     if (!FeatureFlags.highResolutionImages) return;
                     if (p.hasThrowable() || !(p.args[1] instanceof List)) return;
-                    Object best = null;
-                    long area = 0;
-                    for (Object candidate : (List<?>) p.args[1]) {
+                    Object[] candidates = ((List<?>) p.args[1]).toArray();
+                    Object picked = p.getResult();
+                    int[] w = new int[candidates.length], h = new int[candidates.length];
+                    int igIndex = -1;
+                    for (int i = 0; i < candidates.length; i++) {
+                        Object candidate = candidates[i];
+                        if (igIndex < 0 && candidate == picked) igIndex = i;
                         if (!resultType.isInstance(candidate)) continue;
-                        Object w = width.invoke(candidate), h = height.invoke(candidate);
-                        if (!(w instanceof Number) || !(h instanceof Number)) continue;
-                        long x = ((Number) w).longValue(), y = ((Number) h).longValue();
-                        if (x <= 0 || y <= 0 || x > 65536 || y > 65536) continue;
-                        if (x * y > area) {
-                            area = x * y;
-                            best = candidate;
-                        }
+                        Object x = width.invoke(candidate), y = height.invoke(candidate);
+                        if (!(x instanceof Number) || !(y instanceof Number)) continue;
+                        w[i] = ((Number) x).intValue();
+                        h[i] = ((Number) y).intValue();
                     }
-                    if (best != null) p.setResult(best);
+                    int target = p.args[2] instanceof Number ? ((Number) p.args[2]).intValue() : 0;
+                    int best = HighResPick.choose(w, h, igIndex, target);
+                    if (best >= 0) p.setResult(candidates[best]);
                 }
             });
         }

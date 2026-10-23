@@ -25,17 +25,27 @@ final class OnboardingPromptPolicy {
      */
     static String skippedScreen(Object screen) {
         if (screen == null) return null;
-        for (Class<?> c = screen.getClass(); c != null && c.getClassLoader() != BOOT; c = c.getSuperclass()) {
+        for (Field field : stringFields(screen.getClass())) {
+            try {
+                Object value = field.get(screen);
+                if (CONTACTS_SETUP.equals(value) || LOCATION_SETUP.equals(value)) return (String) value;
+            } catch (ReflectiveOperationException | RuntimeException ignored) {}
+        }
+        return null;
+    }
+
+    static List<Field> stringFields(Class<?> type) {
+        List<Field> fields = new ArrayList<>();
+        for (Class<?> c = type; c != null && c.getClassLoader() != BOOT; c = c.getSuperclass()) {
             for (Field field : c.getDeclaredFields()) {
                 if (field.getType() != String.class || Modifier.isStatic(field.getModifiers())) continue;
                 try {
                     field.setAccessible(true);
-                    Object value = field.get(screen);
-                    if (CONTACTS_SETUP.equals(value) || LOCATION_SETUP.equals(value)) return (String) value;
-                } catch (ReflectiveOperationException | RuntimeException ignored) {}
+                    fields.add(field);
+                } catch (RuntimeException ignored) {}
             }
         }
-        return null;
+        return fields;
     }
 
     static boolean isLocationPermission(String permission) {
