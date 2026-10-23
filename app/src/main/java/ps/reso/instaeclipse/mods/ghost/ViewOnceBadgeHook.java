@@ -121,7 +121,7 @@ public class ViewOnceBadgeHook {
                         String hit = GhostPermanentViewHook.ORIGINAL_BY_KEY.get(k);
                         if (hit != null) { original = hit; break; }
                     }
-                    args[modeIdx] = (original != null) ? original : "once";
+                    ViewOnceBadgeMode.rewrite(original, args, modeIdx);
                     ModuleLog.probe("(IE|VOBadge|PROBE) resolved=" + args[modeIdx]
                             + " match=" + (original != null) + " candLongs=" + candidates);
                 } catch (Throwable t) {
