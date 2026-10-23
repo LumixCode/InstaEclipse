@@ -259,7 +259,7 @@
     <string name="folder_access_lost_title">Yükləmə qovluğunu yenidən seçin</string>
     <string name="folder_access_lost_message">InstaEclipse-in yükləmə qovluğunuza girişi yoxdur (yenidən quraşdırma və ya məlumat silinməsindən sonra olur), ona görə yükləmələr Download-a gedir. Düzəltmək üçün qovluğu yenidən seçin.</string>
     <string name="folder_access_lost_choose">Qovluq seç</string>
-    <string name="ig_profile_menu_tools">Profil menyusu: istifadəçi adı, bio kopyala və hamısını yüklə</string>
+    <string name="ig_profile_menu_tools">Profil: kopyalamaq üçün istifadəçi adını və ya bionu basılı saxla, ⋮ menyu: hamısını yüklə</string>
     <string name="ig_profile_spoofer">Profil saxtalaşdırıcı (yalnız bu telefonda)</string>
     <string name="ig_profile_spoofer_edit">Saxta profili redaktə et</string>
     <string name="ig_profile_spoofer_followers">İzləyicilər</string>
@@ -283,9 +283,6 @@
     <string name="ig_profile_spoofer_photo_saved">Profil şəkli təyin edildi</string>
     <string name="ig_profile_spoofer_reset_all">Hamısını sıfırla</string>
     <string name="ig_profile_spoofer_save">Saxla</string>
-    <string name="ig_profile_copy_username">İstifadəçi adını kopyala</string>
-    <string name="ig_profile_copy_bio">Bionu kopyala</string>
-    <string name="ig_profile_no_bio">Bu profilin biosu yoxdur</string>
     <string name="ig_profile_download_all">Bütün paylaşımları yüklə</string>
     <string name="ig_profile_dl_collecting">Paylaşımlar toplanır… %1$d tapıldı</string>
     <string name="ig_profile_dl_found">%1$d paylaşım tapıldı. Hamısı yüklənsin?</string>

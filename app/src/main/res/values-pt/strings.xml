@@ -258,7 +258,7 @@
     <string name="folder_access_lost_title">Escolha de novo sua pasta de downloads</string>
     <string name="folder_access_lost_message">O InstaEclipse não tem mais acesso à sua pasta de downloads (acontece após reinstalar ou limpar dados), então os downloads vão para Download. Escolha a pasta de novo.</string>
     <string name="folder_access_lost_choose">Escolher pasta</string>
-    <string name="ig_profile_menu_tools">Menu do perfil: copiar usuário, bio e baixar tudo</string>
+    <string name="ig_profile_menu_tools">Perfil: segure o usuário ou a bio para copiar, menu ⋮: baixar tudo</string>
     <string name="ig_profile_spoofer">Falsificar perfil (só neste telefone)</string>
     <string name="ig_profile_spoofer_edit">Editar perfil falso</string>
     <string name="ig_profile_spoofer_followers">Seguidores</string>
@@ -282,9 +282,6 @@
     <string name="ig_profile_spoofer_photo_saved">Foto de perfil definida</string>
     <string name="ig_profile_spoofer_reset_all">Redefinir tudo</string>
     <string name="ig_profile_spoofer_save">Salvar</string>
-    <string name="ig_profile_copy_username">Copiar nome de usuário</string>
-    <string name="ig_profile_copy_bio">Copiar bio</string>
-    <string name="ig_profile_no_bio">Este perfil não tem bio</string>
     <string name="ig_profile_download_all">Baixar todas as publicações</string>
     <string name="ig_profile_dl_collecting">Reunindo publicações… %1$d encontradas</string>
     <string name="ig_profile_dl_found">%1$d publicações encontradas. Baixar todas?</string>

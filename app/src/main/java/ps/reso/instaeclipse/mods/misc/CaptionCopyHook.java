@@ -1,8 +1,6 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import android.annotation.SuppressLint;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -13,7 +11,6 @@ import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
-import android.widget.Toast;
 
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
@@ -42,9 +39,8 @@ import ps.reso.instaeclipse.utils.core.HookFrames;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
-import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
-import ps.reso.instaeclipse.utils.toast.IeToast;
+import ps.reso.instaeclipse.utils.text.CopyFeedback;
 
 /**
  * Hold a feed or reel caption to copy it.
@@ -656,13 +652,7 @@ public class CaptionCopyHook {
 
     private static void copyToClipboard(Context ctx, String text) {
         try {
-            ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-            if (cm == null) return;
-            cm.setPrimaryClip(ClipData.newPlainText("caption", text));
-            // Android 13+ confirms every copy itself; a second toast would just repeat it.
-            if (android.os.Build.VERSION.SDK_INT < 33) {
-                IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_caption_copied), Toast.LENGTH_SHORT).show();
-            }
+            CopyFeedback.copy(ctx, "caption", text, R.string.ig_caption_copied);
         } catch (Throwable t) {
             ModuleLog.error("(IE|Caption) Could not copy the caption", t);
         }

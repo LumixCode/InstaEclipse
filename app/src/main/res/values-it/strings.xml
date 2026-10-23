@@ -405,7 +405,7 @@
     <string name="folder_access_lost_title">Scegli di nuovo la cartella dei download</string>
     <string name="folder_access_lost_message">InstaEclipse non ha più accesso alla tua cartella dei download (succede dopo una reinstallazione o la cancellazione dei dati), quindi i download vanno in Download. Scegli di nuovo la cartella.</string>
     <string name="folder_access_lost_choose">Scegli cartella</string>
-    <string name="ig_profile_menu_tools">Menu profilo: copia nome utente, bio e scarica tutto</string>
+    <string name="ig_profile_menu_tools">Profilo: tieni premuto nome utente o bio per copiare, menu ⋮: scarica tutto</string>
     <string name="ig_profile_spoofer">Profilo falso (solo su questo telefono)</string>
     <string name="ig_profile_spoofer_edit">Modifica profilo falso</string>
     <string name="ig_profile_spoofer_followers">Follower</string>
@@ -429,9 +429,6 @@
     <string name="ig_profile_spoofer_photo_saved">Foto profilo impostata</string>
     <string name="ig_profile_spoofer_reset_all">Ripristina tutto</string>
     <string name="ig_profile_spoofer_save">Salva</string>
-    <string name="ig_profile_copy_username">Copia nome utente</string>
-    <string name="ig_profile_copy_bio">Copia bio</string>
-    <string name="ig_profile_no_bio">Questo profilo non ha una bio</string>
     <string name="ig_profile_download_all">Scarica tutti i post</string>
     <string name="ig_profile_dl_collecting">Raccolta dei post… %1$d trovati</string>
     <string name="ig_profile_dl_found">%1$d post trovati. Scaricarli tutti?</string>

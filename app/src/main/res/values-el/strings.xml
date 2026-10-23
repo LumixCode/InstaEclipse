@@ -296,7 +296,7 @@
     <string name="folder_access_lost_title">Επιλέξτε ξανά τον φάκελο λήψεων</string>
     <string name="folder_access_lost_message">Το InstaEclipse δεν έχει πια πρόσβαση στον φάκελο λήψεων (συμβαίνει μετά από επανεγκατάσταση ή διαγραφή δεδομένων), οπότε οι λήψεις πάνε στο Download. Επιλέξτε ξανά τον φάκελο.</string>
     <string name="folder_access_lost_choose">Επιλογή φακέλου</string>
-    <string name="ig_profile_menu_tools">Μενού προφίλ: αντιγραφή ονόματος, βιογραφικού και λήψη όλων</string>
+    <string name="ig_profile_menu_tools">Προφίλ: κρατήστε πατημένο το όνομα χρήστη ή το βιογραφικό για αντιγραφή, μενού ⋮: λήψη όλων</string>
     <string name="ig_profile_spoofer">Παραποίηση προφίλ (μόνο σε αυτό το τηλέφωνο)</string>
     <string name="ig_profile_spoofer_edit">Επεξεργασία ψεύτικου προφίλ</string>
     <string name="ig_profile_spoofer_followers">Ακόλουθοι</string>
@@ -320,9 +320,6 @@
     <string name="ig_profile_spoofer_photo_saved">Ορίστηκε η φωτογραφία προφίλ</string>
     <string name="ig_profile_spoofer_reset_all">Επαναφορά όλων</string>
     <string name="ig_profile_spoofer_save">Αποθήκευση</string>
-    <string name="ig_profile_copy_username">Αντιγραφή ονόματος χρήστη</string>
-    <string name="ig_profile_copy_bio">Αντιγραφή βιογραφικού</string>
-    <string name="ig_profile_no_bio">Αυτό το προφίλ δεν έχει βιογραφικό</string>
     <string name="ig_profile_download_all">Λήψη όλων των δημοσιεύσεων</string>
     <string name="ig_profile_dl_collecting">Συλλογή δημοσιεύσεων… βρέθηκαν %1$d</string>
     <string name="ig_profile_dl_found">Βρέθηκαν %1$d δημοσιεύσεις. Λήψη όλων;</string>

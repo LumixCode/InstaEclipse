@@ -257,7 +257,7 @@
     <string name="folder_access_lost_title">اختر مجلد التنزيل مرة أخرى</string>
     <string name="folder_access_lost_message">لم يعد لدى InstaEclipse وصول إلى مجلد التنزيل (يحدث هذا بعد إعادة التثبيت أو مسح البيانات)، لذا تُحفظ التنزيلات في Download. اختر المجلد مرة أخرى لإصلاح ذلك.</string>
     <string name="folder_access_lost_choose">اختيار المجلد</string>
-    <string name="ig_profile_menu_tools">قائمة الملف الشخصي: نسخ اسم المستخدم والنبذة وتنزيل الكل</string>
+    <string name="ig_profile_menu_tools">الملف الشخصي: اضغط مطولًا على اسم المستخدم أو النبذة لنسخها، قائمة ⋮: تنزيل الكل</string>
     <string name="ig_profile_spoofer">تزييف الملف الشخصي (على هذا الهاتف فقط)</string>
     <string name="ig_profile_spoofer_edit">تعديل الملف الشخصي المزيف</string>
     <string name="ig_profile_spoofer_followers">المتابِعون</string>
@@ -281,9 +281,6 @@
     <string name="ig_profile_spoofer_photo_saved">تم تعيين صورة الملف الشخصي</string>
     <string name="ig_profile_spoofer_reset_all">إعادة تعيين الكل</string>
     <string name="ig_profile_spoofer_save">حفظ</string>
-    <string name="ig_profile_copy_username">نسخ اسم المستخدم</string>
-    <string name="ig_profile_copy_bio">نسخ النبذة</string>
-    <string name="ig_profile_no_bio">لا توجد نبذة في هذا الملف</string>
     <string name="ig_profile_download_all">تنزيل كل المنشورات</string>
     <string name="ig_profile_dl_collecting">جارٍ جمع المنشورات… تم العثور على %1$d</string>
     <string name="ig_profile_dl_found">تم العثور على %1$d منشور. تنزيلها كلها؟</string>

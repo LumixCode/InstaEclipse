@@ -2,8 +2,6 @@ package ps.reso.instaeclipse.mods.ui;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.view.View;
@@ -12,7 +10,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
@@ -38,11 +35,12 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
 /**
- * Profile ⋮ menu extras: Copy username, Copy bio, Download all posts (profileMenuTools) and
- * Analyze profile (profileAnalyzer, see ProfileAnalyzer).
+ * Profile ⋮ menu extras: Download all posts (profileMenuTools) and Analyze profile
+ * (profileAnalyzer, see ProfileAnalyzer). Copying the username or bio is a hold on them
+ * (profileMenuTools, see ProfileTextCopyHook), which reads the bio through {@link #bioOf}.
  *
  * <p>The menu is a plain PopupWindow whose content holds Instagram's context menu
- * (context_menu_start_items). When one opens over a profile, three rows are added, cloned from
+ * (context_menu_start_items). When one opens over a profile, the rows are added, cloned from
  * Instagram's own row so they match it. The username comes from the profile header; the bio from
  * the profile's User model (its "biography" getter, found by the field name's hash like the
  * module's other User getters).
@@ -122,17 +120,6 @@ public final class ProfileMenuHook {
             LinearLayout column = new LinearLayout(ctx);
             column.setOrientation(LinearLayout.VERTICAL);
             if (FeatureFlags.profileMenuTools) {
-                column.addView(row(template, R.drawable.ic_content_copy, I18n.t(ctx, R.string.ig_profile_copy_username), () -> {
-                    pw.dismiss();
-                    copy(a, username);
-                }));
-                column.addView(row(template, R.drawable.ic_content_copy, I18n.t(ctx, R.string.ig_profile_copy_bio), () -> {
-                    pw.dismiss();
-                    String bio = bioOf(a, username);
-                    if (bio == null || bio.trim().isEmpty())
-                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_profile_no_bio), Toast.LENGTH_SHORT).show();
-                    else copy(a, bio.trim());
-                }));
                 column.addView(row(template, R.drawable.ic_download, I18n.t(ctx, R.string.ig_profile_download_all), () -> {
                     pw.dismiss();
                     ps.reso.instaeclipse.mods.media.ProfileDownloadAll.start(a, username);
@@ -192,7 +179,7 @@ public final class ProfileMenuHook {
         return x;
     }
 
-    private static Activity activityOf(Context c) {
+    static Activity activityOf(Context c) {
         while (c instanceof android.content.ContextWrapper w) {
             if (c instanceof Activity act) return act;
             c = w.getBaseContext();
@@ -290,8 +277,8 @@ public final class ProfileMenuHook {
     }
 
     /** The bio from the profile's User model: a User reachable from the shown fragments whose
-     *  username matches the header. */
-    private static String bioOf(Activity a, String username) {
+     *  username matches the header. Null when the getter, the User or the bio is missing. */
+    static String bioOf(Activity a, String username) {
         if (bioGetter == null) return null;
         try {
             Object user = findUser(a, username);
@@ -372,13 +359,6 @@ public final class ProfileMenuHook {
     private static boolean isA(Class<?> c, String name) {
         for (; c != null; c = c.getSuperclass()) if (c.getName().equals(name)) return true;
         return false;
-    }
-
-    private static void copy(Context ctx, String text) {
-        ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-        if (cm == null) return;
-        cm.setPrimaryClip(ClipData.newPlainText("InstaEclipse", text));
-        ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_comment_copied), Toast.LENGTH_SHORT).show();
     }
 
     private static TextView firstText(View v) {

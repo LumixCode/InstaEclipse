@@ -261,7 +261,7 @@
     <string name="folder_access_lost_title">Vuelve a elegir tu carpeta de descargas</string>
     <string name="folder_access_lost_message">InstaEclipse ya no tiene acceso a tu carpeta de descargas (pasa tras reinstalar o borrar datos), así que las descargas van a Download. Vuelve a elegir la carpeta.</string>
     <string name="folder_access_lost_choose">Elegir carpeta</string>
-    <string name="ig_profile_menu_tools">Menú de perfil: copiar usuario, biografía y descargar todo</string>
+    <string name="ig_profile_menu_tools">Perfil: mantén pulsado el usuario o la biografía para copiar, menú ⋮: descargar todo</string>
     <string name="ig_profile_spoofer">Falsear perfil (solo en este teléfono)</string>
     <string name="ig_profile_spoofer_edit">Editar perfil falso</string>
     <string name="ig_profile_spoofer_followers">Seguidores</string>
@@ -285,9 +285,6 @@
     <string name="ig_profile_spoofer_photo_saved">Foto de perfil establecida</string>
     <string name="ig_profile_spoofer_reset_all">Restablecer todo</string>
     <string name="ig_profile_spoofer_save">Guardar</string>
-    <string name="ig_profile_copy_username">Copiar nombre de usuario</string>
-    <string name="ig_profile_copy_bio">Copiar biografía</string>
-    <string name="ig_profile_no_bio">Este perfil no tiene biografía</string>
     <string name="ig_profile_download_all">Descargar todas las publicaciones</string>
     <string name="ig_profile_dl_collecting">Reuniendo publicaciones… %1$d encontradas</string>
     <string name="ig_profile_dl_found">%1$d publicaciones encontradas. ¿Descargarlas todas?</string>

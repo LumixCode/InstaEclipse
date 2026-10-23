@@ -264,7 +264,7 @@
     <string name="folder_access_lost_title">Download-Ordner erneut wählen</string>
     <string name="folder_access_lost_message">InstaEclipse hat keinen Zugriff mehr auf deinen Download-Ordner (passiert nach Neuinstallation oder Daten löschen), daher landen Downloads in Download. Wähle den Ordner erneut.</string>
     <string name="folder_access_lost_choose">Ordner wählen</string>
-    <string name="ig_profile_menu_tools">Profilmenü: Benutzername &amp; Bio kopieren, alles laden</string>
+    <string name="ig_profile_menu_tools">Profil: Benutzername oder Bio gedrückt halten zum Kopieren, ⋮-Menü: alles laden</string>
     <string name="ig_profile_spoofer">Profil-Spoofer (nur auf diesem Gerät)</string>
     <string name="ig_profile_spoofer_edit">Gefälschtes Profil bearbeiten</string>
     <string name="ig_profile_spoofer_followers">Follower</string>
@@ -288,9 +288,6 @@
     <string name="ig_profile_spoofer_photo_saved">Profilbild festgelegt</string>
     <string name="ig_profile_spoofer_reset_all">Alles zurücksetzen</string>
     <string name="ig_profile_spoofer_save">Speichern</string>
-    <string name="ig_profile_copy_username">Benutzernamen kopieren</string>
-    <string name="ig_profile_copy_bio">Bio kopieren</string>
-    <string name="ig_profile_no_bio">Dieses Profil hat keine Bio</string>
     <string name="ig_profile_download_all">Alle Beiträge herunterladen</string>
     <string name="ig_profile_dl_collecting">Beiträge werden gesammelt… %1$d gefunden</string>
     <string name="ig_profile_dl_found">%1$d Beiträge gefunden. Alle herunterladen?</string>

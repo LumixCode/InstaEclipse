@@ -230,9 +230,6 @@
     <string name="ig_profile_spoofer_photo_saved">Đã đặt ảnh đại diện</string>
     <string name="ig_profile_spoofer_reset_all">Đặt lại tất cả</string>
     <string name="ig_profile_spoofer_save">Lưu</string>
-    <string name="ig_profile_copy_username">Sao chép tên người dùng</string>
-    <string name="ig_profile_copy_bio">Sao chép tiểu sử</string>
-    <string name="ig_profile_no_bio">Hồ sơ này không có tiểu sử</string>
     <string name="ig_profile_download_all">Tải tất cả bài viết</string>
     <string name="ig_profile_dl_collecting">Đang thu thập bài viết… đã tìm thấy %1$d</string>
     <string name="ig_profile_dl_found">Tìm thấy %1$d bài viết. Tải tất cả?</string>

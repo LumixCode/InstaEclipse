@@ -584,7 +584,7 @@
     <string name="folder_access_lost_title">İndirme klasörünüzü yeniden seçin</string>
     <string name="folder_access_lost_message">InstaEclipse\'in indirme klasörünüze erişimi kalmadı (yeniden kurulum veya veri silmeden sonra olur), bu yüzden indirmeler Download\'a gidiyor. Düzeltmek için klasörü yeniden seçin.</string>
     <string name="folder_access_lost_choose">Klasör seç</string>
-    <string name="ig_profile_menu_tools">Profil menüsü: kullanıcı adı, biyografi kopyala ve tümünü indir</string>
+    <string name="ig_profile_menu_tools">Profil: kopyalamak için kullanıcı adını veya biyografiyi basılı tut, ⋮ menüsü: tümünü indir</string>
     <string name="ig_profile_spoofer">Profil taklitçisi (yalnızca bu telefonda)</string>
     <string name="ig_profile_spoofer_edit">Sahte profili düzenle</string>
     <string name="ig_profile_spoofer_followers">Takipçi</string>
@@ -608,9 +608,6 @@
     <string name="ig_profile_spoofer_photo_saved">Profil fotoğrafı ayarlandı</string>
     <string name="ig_profile_spoofer_reset_all">Tümünü sıfırla</string>
     <string name="ig_profile_spoofer_save">Kaydet</string>
-    <string name="ig_profile_copy_username">Kullanıcı adını kopyala</string>
-    <string name="ig_profile_copy_bio">Biyografiyi kopyala</string>
-    <string name="ig_profile_no_bio">Bu profilin biyografisi yok</string>
     <string name="ig_profile_download_all">Tüm gönderileri indir</string>
     <string name="ig_profile_dl_collecting">Gönderiler toplanıyor… %1$d bulundu</string>
     <string name="ig_profile_dl_found">%1$d gönderi bulundu. Hepsi indirilsin mi?</string>

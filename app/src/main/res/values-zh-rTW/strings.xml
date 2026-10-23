@@ -258,7 +258,7 @@
     <string name="folder_access_lost_title">重新選擇下載資料夾</string>
     <string name="folder_access_lost_message">InstaEclipse 已無法存取你的下載資料夾（重新安裝或清除資料後會這樣），因此下載會存到 Download。請重新選擇資料夾。</string>
     <string name="folder_access_lost_choose">選擇資料夾</string>
-    <string name="ig_profile_menu_tools">個人檔案選單：複製用戶名稱、簡介和全部下載</string>
+    <string name="ig_profile_menu_tools">個人檔案：長按用戶名稱或簡介即可複製，⋮ 選單：全部下載</string>
     <string name="ig_profile_spoofer">個人檔案偽裝（僅限本機）</string>
     <string name="ig_profile_spoofer_edit">編輯偽裝個人檔案</string>
     <string name="ig_profile_spoofer_followers">粉絲</string>
@@ -282,9 +282,6 @@
     <string name="ig_profile_spoofer_photo_saved">已設定大頭貼</string>
     <string name="ig_profile_spoofer_reset_all">全部重設</string>
     <string name="ig_profile_spoofer_save">儲存</string>
-    <string name="ig_profile_copy_username">複製用戶名稱</string>
-    <string name="ig_profile_copy_bio">複製簡介</string>
-    <string name="ig_profile_no_bio">此個人檔案沒有簡介</string>
     <string name="ig_profile_download_all">下載全部貼文</string>
     <string name="ig_profile_dl_collecting">正在收集貼文… 已找到 %1$d 則</string>
     <string name="ig_profile_dl_found">找到 %1$d 則貼文。全部下載？</string>

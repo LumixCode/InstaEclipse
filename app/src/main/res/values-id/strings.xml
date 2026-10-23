@@ -295,7 +295,7 @@
     <string name="folder_access_lost_title">Pilih lagi folder unduhan Anda</string>
     <string name="folder_access_lost_message">InstaEclipse tidak lagi punya akses ke folder unduhan Anda (terjadi setelah instal ulang atau hapus data), jadi unduhan masuk ke Download. Pilih folder lagi untuk memperbaikinya.</string>
     <string name="folder_access_lost_choose">Pilih folder</string>
-    <string name="ig_profile_menu_tools">Menu profil: salin nama pengguna, bio &amp; unduh semua</string>
+    <string name="ig_profile_menu_tools">Profil: tahan nama pengguna atau bio untuk menyalin, menu ⋮: unduh semua</string>
     <string name="ig_profile_spoofer">Pemalsu profil (hanya di ponsel ini)</string>
     <string name="ig_profile_spoofer_edit">Edit profil palsu</string>
     <string name="ig_profile_spoofer_followers">Pengikut</string>
@@ -319,9 +319,6 @@
     <string name="ig_profile_spoofer_photo_saved">Foto profil diatur</string>
     <string name="ig_profile_spoofer_reset_all">Atur ulang semua</string>
     <string name="ig_profile_spoofer_save">Simpan</string>
-    <string name="ig_profile_copy_username">Salin nama pengguna</string>
-    <string name="ig_profile_copy_bio">Salin bio</string>
-    <string name="ig_profile_no_bio">Profil ini tidak punya bio</string>
     <string name="ig_profile_download_all">Unduh semua postingan</string>
     <string name="ig_profile_dl_collecting">Mengumpulkan postingan… %1$d ditemukan</string>
     <string name="ig_profile_dl_found">%1$d postingan ditemukan. Unduh semuanya?</string>

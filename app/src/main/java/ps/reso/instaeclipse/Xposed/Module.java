@@ -626,8 +626,14 @@ public class Module {
                     try {
                         if (!skip("ProfileMenuHook")) new ps.reso.instaeclipse.mods.ui.ProfileMenuHook().install(dexKitBridge, hostClassLoader);
                         if (!skip("PostCountSpoof")) ps.reso.instaeclipse.mods.feed.PostCountSpoof.install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(IE|ProfileMenu) ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|ProfileMenu) Could not start, so this feature will not work", t);
+                    }
+                    try {
+                        // Hold the username / bio to copy; after ProfileMenuHook (its bio getter)
+                        if (!skip("ProfileTextCopyHook")) new ps.reso.instaeclipse.mods.ui.ProfileTextCopyHook().install(dexKitBridge, hostClassLoader);
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|ProfileCopy) Could not start, so this feature will not work", t);
                     }
                     try {
                         if (!skip("ProfileSpoofHook")) new ps.reso.instaeclipse.mods.ui.ProfileSpoofHook().install(dexKitBridge, hostClassLoader);

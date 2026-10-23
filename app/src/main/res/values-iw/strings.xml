@@ -295,7 +295,7 @@
     <string name="folder_access_lost_title">בחר שוב את תיקיית ההורדות</string>
     <string name="folder_access_lost_message">ל-InstaEclipse כבר אין גישה לתיקיית ההורדות (קורה אחרי התקנה מחדש או מחיקת נתונים), ולכן ההורדות נשמרות ב-Download. בחר שוב את התיקייה כדי לתקן.</string>
     <string name="folder_access_lost_choose">בחירת תיקייה</string>
-    <string name="ig_profile_menu_tools">תפריט פרופיל: העתקת שם משתמש, ביו והורדת הכול</string>
+    <string name="ig_profile_menu_tools">פרופיל: לחיצה ארוכה על שם המשתמש או הביו מעתיקה אותם, תפריט ⋮: הורדת הכול</string>
     <string name="ig_profile_spoofer">זיוף פרופיל (רק בטלפון הזה)</string>
     <string name="ig_profile_spoofer_edit">עריכת פרופיל מזויף</string>
     <string name="ig_profile_spoofer_followers">עוקבים</string>
@@ -319,9 +319,6 @@
     <string name="ig_profile_spoofer_photo_saved">תמונת הפרופיל הוגדרה</string>
     <string name="ig_profile_spoofer_reset_all">אפס הכול</string>
     <string name="ig_profile_spoofer_save">שמור</string>
-    <string name="ig_profile_copy_username">העתקת שם משתמש</string>
-    <string name="ig_profile_copy_bio">העתקת ביו</string>
-    <string name="ig_profile_no_bio">לפרופיל הזה אין ביו</string>
     <string name="ig_profile_download_all">הורדת כל הפוסטים</string>
     <string name="ig_profile_dl_collecting">אוסף פוסטים… נמצאו %1$d</string>
     <string name="ig_profile_dl_found">נמצאו %1$d פוסטים. להוריד את כולם?</string>

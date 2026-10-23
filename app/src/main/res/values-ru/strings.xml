@@ -259,7 +259,7 @@
     <string name="folder_access_lost_title">Выберите папку загрузок снова</string>
     <string name="folder_access_lost_message">У InstaEclipse больше нет доступа к папке загрузок (так бывает после переустановки или очистки данных), поэтому загрузки идут в Download. Выберите папку снова.</string>
     <string name="folder_access_lost_choose">Выбрать папку</string>
-    <string name="ig_profile_menu_tools">Меню профиля: копировать имя, био и скачать всё</string>
+    <string name="ig_profile_menu_tools">Профиль: удерживайте имя или био, чтобы скопировать, меню ⋮: скачать всё</string>
     <string name="ig_profile_spoofer">Подмена профиля (только на этом телефоне)</string>
     <string name="ig_profile_spoofer_edit">Изменить поддельный профиль</string>
     <string name="ig_profile_spoofer_followers">Подписчики</string>
@@ -283,9 +283,6 @@
     <string name="ig_profile_spoofer_photo_saved">Фото профиля установлено</string>
     <string name="ig_profile_spoofer_reset_all">Сбросить всё</string>
     <string name="ig_profile_spoofer_save">Сохранить</string>
-    <string name="ig_profile_copy_username">Копировать имя пользователя</string>
-    <string name="ig_profile_copy_bio">Копировать био</string>
-    <string name="ig_profile_no_bio">В этом профиле нет био</string>
     <string name="ig_profile_download_all">Скачать все публикации</string>
     <string name="ig_profile_dl_collecting">Сбор публикаций… найдено %1$d</string>
     <string name="ig_profile_dl_found">Найдено публикаций: %1$d. Скачать все?</string>
