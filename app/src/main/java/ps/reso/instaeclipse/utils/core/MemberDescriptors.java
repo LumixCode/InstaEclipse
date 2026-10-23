@@ -3,18 +3,25 @@ package ps.reso.instaeclipse.utils.core;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public final class MemberDescriptors {
 
     private static final char SEP = '\u0000';
     private static final Map<String, Class<?>> PRIMITIVES = new HashMap<>();
+    private static final Map<Character, Class<?>> CODES = new HashMap<>();
 
     static {
         for (Class<?> c : new Class<?>[]{boolean.class, byte.class, char.class, short.class, int.class,
                 long.class, float.class, double.class, void.class}) {
             PRIMITIVES.put(c.getName(), c);
+            StringBuilder code = new StringBuilder();
+            typeDesc(code, c);
+            CODES.put(code.charAt(0), c);
         }
     }
 
@@ -33,14 +40,68 @@ public final class MemberDescriptors {
             String methodName = encoded.substring(i1 + 1, i2);
             String desc       = encoded.substring(i2 + 1);
             Class<?> clazz = Class.forName(className, false, loader);
-            for (Method m : SafeReflect.methods(clazz)) {
-                if (m.getName().equals(methodName) && descriptor(m).equals(desc)) {
-                    m.setAccessible(true);
-                    return m;
-                }
-            }
+            Method m = declaredMethod(clazz, methodName, desc, loader);
+            if (m == null) m = scanMethod(clazz, methodName, desc);
+            if (m != null) m.setAccessible(true);
+            return m;
         } catch (Throwable ignored) {}
         return null;
+    }
+
+    private static Method declaredMethod(Class<?> clazz, String name, String desc, ClassLoader loader) {
+        try {
+            Class<?>[] types = methodTypes(desc, loader);
+            if (types == null) return null;
+            Method m = clazz.getDeclaredMethod(name, Arrays.copyOf(types, types.length - 1));
+            return m.getReturnType() == types[types.length - 1] ? m : null;
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static Method scanMethod(Class<?> clazz, String name, String desc) {
+        for (Method m : SafeReflect.methods(clazz)) {
+            if (m.getName().equals(name) && descriptor(m).equals(desc)) return m;
+        }
+        return null;
+    }
+
+    static Class<?>[] methodTypes(String desc, ClassLoader loader) throws ClassNotFoundException {
+        int close = desc.indexOf(')');
+        if (!desc.startsWith("(") || close < 0) return null;
+        List<Class<?>> types = new ArrayList<>();
+        int i = 1;
+        while (i < close) {
+            int end = typeEnd(desc, i, close);
+            if (end < 0) return null;
+            Class<?> type = typeOf(desc.substring(i, end), loader);
+            if (type == void.class) return null;
+            types.add(type);
+            i = end;
+        }
+        if (typeEnd(desc, close + 1, desc.length()) != desc.length()) return null;
+        types.add(typeOf(desc.substring(close + 1), loader));
+        return types.toArray(new Class<?>[0]);
+    }
+
+    private static int typeEnd(String desc, int start, int limit) {
+        int i = start;
+        while (i < limit && desc.charAt(i) == '[') i++;
+        if (i >= limit) return -1;
+        char c = desc.charAt(i);
+        if (c == 'L') {
+            int semi = desc.indexOf(';', i);
+            return semi > i + 1 && semi < limit ? semi + 1 : -1;
+        }
+        if (c == 'V' && i > start) return -1;
+        return CODES.containsKey(c) ? i + 1 : -1;
+    }
+
+    private static Class<?> typeOf(String desc, ClassLoader loader) throws ClassNotFoundException {
+        char c = desc.charAt(0);
+        if (c == '[') return Class.forName(desc.replace('/', '.'), false, loader);
+        if (c == 'L') return Class.forName(desc.substring(1, desc.length() - 1).replace('/', '.'), false, loader);
+        return CODES.get(c);
     }
 
     public static String encode(Field f) {

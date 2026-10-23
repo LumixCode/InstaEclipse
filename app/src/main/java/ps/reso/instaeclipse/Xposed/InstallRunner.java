@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.LongSupplier;
 
+import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitStats;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.log.StartupTrace;
@@ -39,9 +40,11 @@ public final class InstallRunner {
     public void runAll(InstallPlan plan, InstallPlan.InstallCtx ctx, Reporter reporter) {
         String previous = DexKitStats.segment();
         DexKitStats.setSegment(segment);
+        DexKitCache.beginBatch();
         try {
             for (InstallStep step : plan.steps()) runStep(plan, step, ctx, reporter);
         } finally {
+            DexKitCache.flushBatch();
             DexKitStats.setSegment(DexKitStats.NONE.equals(previous) ? null : previous);
         }
     }

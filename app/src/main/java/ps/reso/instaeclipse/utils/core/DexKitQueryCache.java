@@ -13,6 +13,9 @@ import org.luckypray.dexkit.result.UsingFieldData;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -29,6 +32,8 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
  * direct lookups. The result is real DexKit data, so callers keep using it as before.
  */
 public final class DexKitQueryCache {
+
+    static final int QUERY_SCHEMA = 1;
 
     /** {@code BaseQuery.innerBuild(FlatBufferBuilder)}: the bytes DexKit itself sends to the native
      *  scan. Reflective, as flatbuffers is only on DexKit's runtime classpath. */
@@ -87,12 +92,9 @@ public final class DexKitQueryCache {
         ClassDataList result = bridge.findClass(query);
         searched(key, start);
         if (key != null) {
-            StringBuilder sb = new StringBuilder();
-            for (ClassData c : result) {
-                if (sb.length() > 0) sb.append('\n');
-                sb.append(c.getDescriptor());
-            }
-            DexKitCache.saveString(key, sb.toString());
+            List<String> descriptors = new ArrayList<>();
+            for (ClassData c : result) descriptors.add(c.getDescriptor());
+            DexKitCache.saveString(key, encodeResult(descriptors));
         }
         return result;
     }
@@ -166,20 +168,24 @@ public final class DexKitQueryCache {
     }
 
     private static String joinMethods(List<MethodData> methods) {
-        StringBuilder sb = new StringBuilder();
-        for (MethodData m : methods) {
-            if (sb.length() > 0) sb.append('\n');
-            sb.append(m.getDescriptor());
-        }
-        return sb.toString();
+        List<String> descriptors = new ArrayList<>();
+        for (MethodData m : methods) descriptors.add(m.getDescriptor());
+        return encodeResult(descriptors);
+    }
+
+    static String encodeResult(List<String> descriptors) {
+        return String.join("\n", descriptors);
+    }
+
+    static List<String> decodeResult(String cached) {
+        return cached.isEmpty() ? Collections.emptyList() : Arrays.asList(cached.split("\n"));
     }
 
     /** Null when a stored descriptor no longer resolves (treated as a miss). */
     private static MethodDataList methods(DexKitBridge bridge, String cached) {
         MethodDataList list = new MethodDataList();
-        if (cached.isEmpty()) return list;
         try {
-            for (String desc : cached.split("\n")) {
+            for (String desc : decodeResult(cached)) {
                 DexKitStats.nativeCalls(1);
                 MethodData m = bridge.getMethodData(desc);
                 if (m == null) return null;
@@ -193,9 +199,8 @@ public final class DexKitQueryCache {
 
     private static ClassDataList classes(DexKitBridge bridge, String cached) {
         ClassDataList list = new ClassDataList();
-        if (cached.isEmpty()) return list;
         try {
-            for (String desc : cached.split("\n")) {
+            for (String desc : decodeResult(cached)) {
                 DexKitStats.nativeCalls(1);
                 ClassData c = bridge.getClassData(desc);
                 if (c == null) return null;
