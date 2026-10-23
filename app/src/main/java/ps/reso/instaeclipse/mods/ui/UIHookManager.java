@@ -4,6 +4,7 @@ import static ps.reso.instaeclipse.mods.ghost.ui.GhostEmojiManager.addGhostEmoji
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.Application;
 import android.content.BroadcastReceiver;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -28,6 +29,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.GhostModeUtils;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.toast.CustomToast;
+import ps.reso.instaeclipse.utils.ui.TopActivityTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.log.StartupTrace;
 
@@ -37,13 +39,19 @@ public class UIHookManager {
 
     @SuppressLint("StaticFieldLeak")
     private static Activity currentActivity;
+    private static final TopActivityTracker<Activity> topActivities =
+            new TopActivityTracker<>(a -> a.isFinishing() || a.isDestroyed());
+    private static volatile boolean trackingActivities;
+
     public static Activity getCurrentActivity() {
         return currentActivity;
     }
 
-    /** Activity to show our dialogs on: the one {@code ctx} belongs to (posts, stories and
-     *  highlights opened from a profile run in their own activity above the main one), else the
-     *  main activity, else {@code ctx} itself. */
+    public static Activity topActivity() {
+        Activity top = topActivities.top();
+        return top != null && !top.isFinishing() && !top.isDestroyed() ? top : currentActivity;
+    }
+
     public static android.content.Context dialogHost(android.content.Context ctx) {
         android.content.Context c = ctx;
         while (c instanceof android.content.ContextWrapper) {
@@ -53,8 +61,27 @@ public class UIHookManager {
             }
             c = ((android.content.ContextWrapper) c).getBaseContext();
         }
-        Activity main = currentActivity;
-        return main != null && !main.isFinishing() ? main : ctx;
+        Activity top = topActivity();
+        return top != null && !top.isFinishing() ? top : ctx;
+    }
+
+    private static synchronized void trackActivities(Activity activity, boolean resumed) {
+        if (trackingActivities) return;
+        trackingActivities = true;
+        try {
+            activity.getApplication().registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
+                @Override public void onActivityResumed(Activity a) { topActivities.onResumed(a); }
+                @Override public void onActivityPaused(Activity a) { topActivities.onPaused(a); }
+                @Override public void onActivityDestroyed(Activity a) { topActivities.onDestroyed(a); }
+                @Override public void onActivityCreated(Activity a, Bundle b) {}
+                @Override public void onActivityStarted(Activity a) {}
+                @Override public void onActivityStopped(Activity a) {}
+                @Override public void onActivitySaveInstanceState(Activity a, Bundle b) {}
+            });
+            if (resumed) topActivities.onResumed(activity);
+        } catch (Throwable t) {
+            ModuleLog.detail("(InstaEclipse) dialogs open on the main screen only: " + t);
+        }
     }
 
     /**
@@ -93,7 +120,7 @@ public class UIHookManager {
             sDirectTabId = res.getIdentifier("direct_tab", "id", pkg);
     }
 
-    public static void setupHooks(Activity activity) {
+    public static void setupHooks(Activity activity, boolean isMain) {
         // Ghost emoji visibility must update on every resume (reflects current ghost state).
         addGhostEmojiNextToInbox(activity, GhostModeUtils.isGhostModeActive());
 
@@ -134,7 +161,7 @@ public class UIHookManager {
         // Register at most ONE GlobalLayoutListener per activity to retry search wiring
         // when the view isn't inflated yet. Skip if we already found search, if a listener
         // is already pending, or if the listener already completed successfully.
-        if (!anySearchFound
+        if (isMain && !anySearchFound
                 && !Boolean.TRUE.equals(sGlobalListenerPending.get(activity))
                 && !Boolean.TRUE.equals(sSearchWiringDone.get(activity))) {
             sGlobalListenerPending.put(activity, true);
@@ -185,9 +212,10 @@ public class UIHookManager {
                     (activity, param) -> {
                         StartupTrace.watchFirstFrame();
                         currentActivity = activity;
+                        trackActivities(activity, true);
                         activity.runOnUiThread(() -> {
                             try {
-                                setupHooks(activity);
+                                setupHooks(activity, true);
                             } catch (Exception e) {
                                 ModuleLog.warn("(InstaEclipse) Could not set up InstaEclipse's buttons on this screen: "
                                         + e.getClass().getSimpleName() + ": " + e.getMessage());
@@ -230,7 +258,7 @@ public class UIHookManager {
             LifecycleHookUtil.hookAfter(classLoader, "com.instagram.modal.ModalActivity", "onResume",
                     (activity, param) -> activity.runOnUiThread(() -> {
                         try {
-                            setupHooks(activity);
+                            setupHooks(activity, false);
                         } catch (Exception ignored) {
                         }
                     }));
@@ -242,12 +270,13 @@ public class UIHookManager {
 
     private static void onMainActivityCreated(Activity activity) {
         currentActivity = activity;
+        trackActivities(activity, false);
 
         // Use runOnUiThread to ensure we are touching the UI safely
         activity.runOnUiThread(() -> {
             try {
                 // 1. Initialize Hooks
-                setupHooks(activity);
+                setupHooks(activity, true);
 
                 // 2. Delay UI injections slightly.
                 // Instagram's Main is complex; the Inbox/UI might not be inflated immediately.
