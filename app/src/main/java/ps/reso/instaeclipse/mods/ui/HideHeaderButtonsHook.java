@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.WeakHashMap;
 
+import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
@@ -25,6 +26,7 @@ import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
  * Hides two header buttons that have no view id of their own:
@@ -69,8 +71,7 @@ public class HideHeaderButtonsHook {
                     scan(decor);
                 }
             });
-            FeatureStatusTracker.setHooked("HideThreadsButton");
-            FeatureStatusTracker.setHooked("HideDmBlend");
+            if (ResIds.id(Module.appContext(), "header_right_buttons") != 0) FeatureStatusTracker.setHooked("HideDmBlend");
             ModuleLog.ok(TAG + "ready");
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Hiding the Threads and Blend buttons will not work: setup failed", t);
@@ -108,6 +109,7 @@ public class HideHeaderButtonsHook {
                 }
             });
             gateHooked = true;
+            FeatureStatusTracker.setHooked("HideThreadsButton");
             ModuleLog.detail(TAG + "Threads gate hooked: " + gate.getDeclaringClass().getName() + "." + gate.getName());
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "Using the backup way to hide the Threads button on your profile: "
@@ -162,6 +164,7 @@ public class HideHeaderButtonsHook {
                     } catch (Throwable ignored) {}
                 }
             });
+            FeatureStatusTracker.setHooked("HideThreadsButton");
             ModuleLog.detail(TAG + "ProfileActionBar fallback hooked: " + bind.getName());
         } catch (Throwable t) {
             ModuleLog.detail(TAG + "ProfileActionBar fallback unavailable: " + t.getClass().getSimpleName() + ": " + t.getMessage());

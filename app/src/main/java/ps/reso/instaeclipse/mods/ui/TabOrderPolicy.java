@@ -9,6 +9,8 @@ final class TabOrderPolicy {
     static final String[] ORDERABLE_TABS =
             {"feed_tab", "clips_tab", "search_tab", "creation_tab", "direct_tab", "news_tab", "profile_tab"};
 
+    private String seen;
+    private boolean custom;
     private boolean reordered;
 
     static boolean isCustom(String saved) {
@@ -23,8 +25,16 @@ final class TabOrderPolicy {
         return !order.equals(all);
     }
 
+    boolean custom(String order) {
+        if (order != seen) {
+            custom = isCustom(order);
+            seen = order;
+        }
+        return custom;
+    }
+
     boolean sweeps(String order) {
-        return !order.isEmpty();
+        return custom(order) || reordered;
     }
 
     void reordered(boolean custom) {

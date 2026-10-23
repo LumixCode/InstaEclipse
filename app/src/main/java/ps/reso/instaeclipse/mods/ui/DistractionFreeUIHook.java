@@ -156,12 +156,17 @@ public class DistractionFreeUIHook {
             if (FeatureFlags.hideInstants && instantsId != 0)
                 ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("HideInstants");
             if (FeatureFlags.disableReels && tabPagerId != 0) disableTabSwipe((ViewGroup) root);
-            if (tabOrder.sweeps(FeatureFlags.navTabOrder)) reorderTabs(a, (ViewGroup) root);
+            String order = FeatureFlags.navTabOrder;
+            if (tabOrder.sweeps(order)) {
+                boolean custom = tabOrder.custom(order);
+                if (reorderTabs(a, (ViewGroup) root, custom ? order : igTabOrder)) tabOrder.reordered(custom);
+            }
         } catch (Throwable ignored) {}
     }
 
     public static final String[] ORDERABLE_TABS = TabOrderPolicy.ORDERABLE_TABS;
     private static boolean orderLogged;
+    private static String igTabOrder;
 
     public static boolean isCustomTabOrder(String saved) {
         return TabOrderPolicy.isCustom(saved);
@@ -174,10 +179,10 @@ public class DistractionFreeUIHook {
      * children of the bar stay where they are. Tabs are found by id, so their click handling is
      * unaffected.
      */
-    private static void reorderTabs(Activity a, ViewGroup root) {
+    private static boolean reorderTabs(Activity a, ViewGroup root, String order) {
         int feedId = ResIds.id(a, "feed_tab");
         View feed = feedId != 0 ? root.findViewById(feedId) : null;
-        if (feed == null || !(feed.getParent() instanceof ViewGroup bar)) return;
+        if (feed == null || !(feed.getParent() instanceof ViewGroup bar)) return false;
         java.util.Map<String, View> tabs = new java.util.LinkedHashMap<>();
         java.util.List<Integer> slots = new java.util.ArrayList<>();
         for (int i = 0; i < bar.getChildCount(); i++) {
@@ -187,20 +192,22 @@ public class DistractionFreeUIHook {
             try { name = a.getResources().getResourceEntryName(c.getId()); } catch (Throwable t) { continue; }
             if (java.util.Arrays.asList(ORDERABLE_TABS).contains(name)) { tabs.put(name, c); slots.add(i); }
         }
-        if (tabs.size() < 2) return;
+        if (tabs.size() < 2) return false;
+        if (igTabOrder == null) igTabOrder = String.join(",", tabs.keySet());
         java.util.List<View> wanted = new java.util.ArrayList<>();
-        for (String n : FeatureFlags.navTabOrder.split(","))
+        for (String n : (order != null ? order : "").split(","))
             if (tabs.containsKey(n.trim()) && !wanted.contains(tabs.get(n.trim()))) wanted.add(tabs.get(n.trim()));
         for (View v : tabs.values()) if (!wanted.contains(v)) wanted.add(v);
         boolean same = true;
         for (int k = 0; k < slots.size(); k++) if (bar.getChildAt(slots.get(k)) != wanted.get(k)) { same = false; break; }
-        if (same) return;
+        if (same) return true;
         for (View v : wanted) bar.removeView(v);
         for (int k = 0; k < wanted.size(); k++) bar.addView(wanted.get(k), Math.min(slots.get(k), bar.getChildCount()));
         if (!orderLogged) {
             orderLogged = true;
-            ModuleLog.line("(IE|DistractUI) Bottom tabs reordered: " + FeatureFlags.navTabOrder);
+            ModuleLog.line("(IE|DistractUI) Bottom tabs reordered: " + order);
         }
+        return true;
     }
 
     private static boolean pagerTouchHooked;
