@@ -170,6 +170,7 @@ public final class LogLine {
         NAMES.put("ChannelMarkAsRead", "Channel mark as read button");
         NAMES.put("StoryLinks", "Story links");
         NAMES.put("StoryInfo", "Story info");
+        NAMES.put("Startup", "Startup time");
     }
 
     private LogLine() {}

@@ -14,6 +14,8 @@ import java.lang.reflect.Method;
 import java.security.MessageDigest;
 import java.util.List;
 
+import ps.reso.instaeclipse.utils.log.ModuleLog;
+
 /**
  * Remembers DexKit query results for the running Instagram version (#285).
  *
@@ -57,9 +59,14 @@ public final class DexKitQueryCache {
         String cached = load(key);
         if (cached != null) {
             MethodDataList hit = methods(bridge, cached);
-            if (hit != null) return hit;
+            if (hit != null) {
+                DexKitStats.hit();
+                return hit;
+            }
         }
+        long start = System.nanoTime();
         MethodDataList result = bridge.findMethod(query);
+        searched(key, start);
         if (key != null) DexKitCache.saveString(key, joinMethods(result));
         return result;
     }
@@ -70,9 +77,14 @@ public final class DexKitQueryCache {
         String cached = load(key);
         if (cached != null) {
             ClassDataList hit = classes(bridge, cached);
-            if (hit != null) return hit;
+            if (hit != null) {
+                DexKitStats.hit();
+                return hit;
+            }
         }
+        long start = System.nanoTime();
         ClassDataList result = bridge.findClass(query);
+        searched(key, start);
         if (key != null) {
             StringBuilder sb = new StringBuilder();
             for (ClassData c : result) {
@@ -90,16 +102,30 @@ public final class DexKitQueryCache {
         String cached = load(key);
         if (cached != null) {
             MethodDataList hit = methods(bridge, cached);
-            if (hit != null) return hit;
+            if (hit != null) {
+                DexKitStats.hit();
+                return hit;
+            }
         }
+        long start = System.nanoTime();
         MethodDataList result = method.getCallers();
+        searched(key, start);
         DexKitCache.saveString(key, joinMethods(result));
         return result;
     }
 
     private static String load(String key) {
         if (key == null || !DexKitCache.isCacheValid()) return null;
-        return DexKitCache.loadString(key);
+        return DexKitCache.loadSaved(key);
+    }
+
+    private static void searched(String key, long startNanos) {
+        long nanos = System.nanoTime() - startNanos;
+        DexKitStats.miss(nanos);
+        if (DexKitCache.isCacheValid()) {
+            ModuleLog.detail("(DexKitCache) Searched Instagram's code again although the saved lookups are valid: "
+                    + key + " in " + DexKitStats.currentStep() + " (" + nanos / 1_000_000L + " ms)");
+        }
     }
 
     /** Hash of the query as DexKit serializes it; null when it cannot be built. */
@@ -132,6 +158,7 @@ public final class DexKitQueryCache {
         if (cached.isEmpty()) return list;
         try {
             for (String desc : cached.split("\n")) {
+                DexKitStats.nativeCalls(1);
                 MethodData m = bridge.getMethodData(desc);
                 if (m == null) return null;
                 list.add(m);
@@ -147,6 +174,7 @@ public final class DexKitQueryCache {
         if (cached.isEmpty()) return list;
         try {
             for (String desc : cached.split("\n")) {
+                DexKitStats.nativeCalls(1);
                 ClassData c = bridge.getClassData(desc);
                 if (c == null) return null;
                 list.add(c);

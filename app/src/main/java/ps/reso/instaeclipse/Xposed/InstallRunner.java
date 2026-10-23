@@ -8,7 +8,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.LongSupplier;
 
+import ps.reso.instaeclipse.utils.core.DexKitStats;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.log.StartupTrace;
 
 public final class InstallRunner {
 
@@ -25,22 +27,40 @@ public final class InstallRunner {
 
     private final Set<String> skipped;
     private final LongSupplier clock;
+    private final String segment;
     private final List<Object[]> marks = Collections.synchronizedList(new ArrayList<>());
 
-    public InstallRunner(Set<String> skipped, LongSupplier clock) {
+    public InstallRunner(Set<String> skipped, LongSupplier clock, String segment) {
         this.skipped = skipped == null ? Collections.emptySet() : skipped;
         this.clock = clock;
+        this.segment = segment;
     }
 
     public void runAll(InstallPlan plan, InstallPlan.InstallCtx ctx, Reporter reporter) {
-        for (InstallStep step : plan.steps()) {
-            try {
-                if (step.gateKey != null && !plan.gateOpen(step.gateKey)) continue;
-                mark(step.name);
-                if (step.skippedBy(skipped)) continue;
-                plan.run(step, ctx);
-            } catch (Throwable t) {
-                reporter.error(step.failTag + step.failText, t);
+        String previous = DexKitStats.segment();
+        DexKitStats.setSegment(segment);
+        try {
+            for (InstallStep step : plan.steps()) runStep(plan, step, ctx, reporter);
+        } finally {
+            DexKitStats.setSegment(DexKitStats.NONE.equals(previous) ? null : previous);
+        }
+    }
+
+    private void runStep(InstallPlan plan, InstallStep step, InstallPlan.InstallCtx ctx, Reporter reporter) {
+        StartupTrace.Span span = null;
+        try {
+            if (step.gateKey != null && !plan.gateOpen(step.gateKey)) return;
+            mark(step.name);
+            if (step.skippedBy(skipped)) return;
+            span = StartupTrace.step(step.name);
+            DexKitStats.enterStep(step.name);
+            plan.run(step, ctx);
+        } catch (Throwable t) {
+            reporter.error(step.failTag + step.failText, t);
+        } finally {
+            if (span != null) {
+                DexKitStats.exitStep();
+                StartupTrace.end(span);
             }
         }
     }

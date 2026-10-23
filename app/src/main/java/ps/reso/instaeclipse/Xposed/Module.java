@@ -23,10 +23,12 @@ import ps.reso.instaeclipse.mods.ui.theme.IgThemeHook;
 import ps.reso.instaeclipse.mods.ui.theme.ThemeSettingsHelper;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitStats;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureManager;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.log.StartupTrace;
 
 
 @SuppressLint("UnsafeDynamicallyLoadedCode")
@@ -91,13 +93,18 @@ public class Module {
             ModuleLog.line("(InstaEclipse): Xposed backend: " + ps.reso.instaeclipse.xposedcompat.XposedBridge.backend().name());
             try {
                 if (dexKitBridge == null) {
-                    // Load the .so file from your module (if not already loaded)
-                    System.load(moduleLibDir + "/libdexkit.so");
-                    // ModuleLog.line("libdexkit.so loaded successfully.");
+                    StartupTrace.Span span = StartupTrace.begin(StartupTrace.DEXKIT);
+                    try {
+                        // Load the .so file from your module (if not already loaded)
+                        System.load(moduleLibDir + "/libdexkit.so");
+                        // ModuleLog.line("libdexkit.so loaded successfully.");
 
-                    // Initialize DexKitBridge with the target app's APK
-                    dexKitBridge = DexKitBridge.create(lpparam.appInfo.sourceDir);
-                    // ModuleLog.line("DexKitBridge initialized with target APK: " + lpparam.appInfo.sourceDir);
+                        // Initialize DexKitBridge with the target app's APK
+                        dexKitBridge = DexKitBridge.create(lpparam.appInfo.sourceDir);
+                        // ModuleLog.line("DexKitBridge initialized with target APK: " + lpparam.appInfo.sourceDir);
+                    } finally {
+                        StartupTrace.end(span);
+                    }
                 }
 
                 // Use the target app's ClassLoader
@@ -178,6 +185,7 @@ public class Module {
     }
 
     public static void attachBefore(Object application, Context context, XC_LoadPackage.LoadPackageParam lpparam) {
+        StartupTrace.Span span = StartupTrace.begin(StartupTrace.ATTACH_BEFORE);
         // Install CommentCopyButtonHook BEFORE Instagram's Application.attach() runs
         // so we catch any ViewBinding pre-inflation that happens during attach()
         if (application instanceof android.app.Application app)
@@ -203,9 +211,12 @@ public class Module {
         } catch (Throwable e) {
             ModuleLog.warn("(DexKitCache) Could not read the saved lookups, so this start takes longer: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
+        StartupTrace.end(span);
     }
 
     public static void attachAfter(Object application, Context context, XC_LoadPackage.LoadPackageParam lpparam) {
+        StartupTrace.Span span = StartupTrace.begin(StartupTrace.ATTACH_AFTER);
+        ps.reso.instaeclipse.utils.core.StartupIdle.armFallback();
         // Setup context, preferences
         SettingsManager.init(context);
         // Settings changed in the companion while Instagram wasn't running.
@@ -273,9 +284,10 @@ public class Module {
         } catch (Throwable e) {
             ModuleLog.error("(InstaEclipse | RestoreReceiver): Restoring settings or a backup from the InstaEclipse app will not work", e);
         }
+        StartupTrace.end(span);
         final Runnable installFeatureHooks = () -> installFeatureHooks(context, lpparam);
 
-        if (DexKitCache.isCacheValid() && CACHE_COMPLETE_VALUE.equals(DexKitCache.loadString(CACHE_COMPLETE_KEY))) {
+        if (installedBefore()) {
             // Warm cache: installing is quick (every DexKit query is answered by
             // DexKitQueryCache, the rest is reflection), so hooks are in place before
             // Instagram's own startup code runs.
@@ -291,16 +303,24 @@ public class Module {
                 long start = android.os.SystemClock.elapsedRealtime();
                 installFeatureHooks.run();
                 ModuleLog.ok("(InstaEclipse): Features are ready (background setup took "
-                        + (android.os.SystemClock.elapsedRealtime() - start) + " ms)");
+                        + (android.os.SystemClock.elapsedRealtime() - start) + " ms, "
+                        + StartupTrace.newSearches(StartupTrace.lastInstall()) + ")");
             }, "InstaEclipse-Init");
             t.setPriority(Thread.NORM_PRIORITY - 1);
             t.start();
         }
     }
 
+    private static boolean installedBefore() {
+        return DexKitCache.isCacheValid() && CACHE_COMPLETE_VALUE.equals(DexKitCache.loadString(CACHE_COMPLETE_KEY));
+    }
+
     public static void installFeatureHooks(Context context, XC_LoadPackage.LoadPackageParam lpparam) {
         appContext = context;
-        InstallRunner runner = new InstallRunner(skipSet(), android.os.SystemClock::elapsedRealtimeNanos);
+        boolean warm = installedBefore();
+        StartupTrace.Span span = StartupTrace.begin(StartupTrace.INSTALL);
+        InstallRunner runner = new InstallRunner(skipSet(), android.os.SystemClock::elapsedRealtimeNanos,
+                warm ? DexKitStats.INLINE : DexKitStats.BACKGROUND);
         lastRunner = runner;
         runner.runAll(new InstallPlan(), new InstallPlan.InstallCtx(context, lpparam, hostClassLoader, dexKitBridge), InstallRunner.LOG);
         runner.mark("(finish)");
@@ -308,6 +328,8 @@ public class Module {
         DexKitCache.saveString(CACHE_COMPLETE_KEY, CACHE_COMPLETE_VALUE);
         ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.logSummary(context);
         runner.mark(null);
+        StartupTrace.end(span);
+        StartupTrace.logInstallSummary(span, warm);
     }
 
     /**

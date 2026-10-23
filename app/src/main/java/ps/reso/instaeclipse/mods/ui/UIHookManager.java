@@ -29,6 +29,7 @@ import ps.reso.instaeclipse.utils.ghost.GhostModeUtils;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.toast.CustomToast;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.log.StartupTrace;
 
 public class UIHookManager {
 
@@ -185,6 +186,7 @@ public class UIHookManager {
         try {
             String where = LifecycleHookUtil.hookAfter(classLoader, INSTAGRAM_MAIN_ACTIVITY, "onResume",
                     (activity, param) -> {
+                        StartupTrace.watchFirstFrame();
                         currentActivity = activity;
                         activity.runOnUiThread(() -> {
                             try {

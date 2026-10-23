@@ -92,7 +92,9 @@ public class DexKitCache {
     public static Method loadMethod(String key, ClassLoader loader) {
         if (prefs == null) return null;
         String val = prefs.getString("m_" + key, null);
-        return val != null ? decode(val, loader) : null;
+        Method m = val != null ? decode(val, loader) : null;
+        if (m != null) savedHit();
+        return m;
     }
 
     // ── Multiple methods ─────────────────────────────────────────────────────
@@ -123,6 +125,7 @@ public class DexKitCache {
             if (m == null) return null;
             result.add(m);
         }
+        savedHit();
         return result;
     }
 
@@ -134,8 +137,18 @@ public class DexKitCache {
     }
 
     public static String loadString(String key) {
+        String val = loadSaved(key);
+        if (val != null) savedHit();
+        return val;
+    }
+
+    static String loadSaved(String key) {
         if (prefs == null) return null;
         return prefs.getString("s_" + key, null);
+    }
+
+    private static void savedHit() {
+        if (cacheValid) DexKitStats.hit();
     }
 
     // ── Encoding / Decoding ──────────────────────────────────────────────────

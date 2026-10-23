@@ -6,11 +6,13 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** Hook entry points with the legacy XposedBridge names, run on the active {@link HookBackend}. */
 public final class XposedBridge {
 
     private static volatile HookBackend backend;
+    private static final AtomicInteger HOOKS = new AtomicInteger();
 
     private XposedBridge() {}
 
@@ -34,7 +36,12 @@ public final class XposedBridge {
         }
         XC_MethodHook.Unhook unhook = backend().hook(method, callback);
         ps.reso.instaeclipse.utils.log.CrashForensics.noteHook(method);
+        HOOKS.incrementAndGet();
         return unhook;
+    }
+
+    public static int hookCount() {
+        return HOOKS.get();
     }
 
     public static Set<XC_MethodHook.Unhook> hookAllMethods(Class<?> clazz, String name, XC_MethodHook callback) {
