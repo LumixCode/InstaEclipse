@@ -96,4 +96,43 @@ public class FeatureStatusTracker {
     public static boolean hasEnabledFeatures() {
         return !features.isEmpty();
     }
+
+    /**
+     * One plain summary for the Logs tab once every hook has been set up: the Instagram version,
+     * how many features are turned on, and by name the ones that could not be loaded. Features
+     * that never report back (they hook lazily) are listed only in the technical details.
+     */
+    public static void logSummary(Context ctx) {
+        try {
+            String version = "?";
+            try {
+                version = ctx.getPackageManager().getPackageInfo(ctx.getPackageName(), 0).versionName;
+            } catch (Throwable ignored) {}
+            java.util.List<String> failed = new java.util.ArrayList<>();
+            java.util.List<String> unconfirmed = new java.util.ArrayList<>();
+            int on;
+            synchronized (features) {
+                on = features.size();
+                for (Map.Entry<String, Boolean> e : features.entrySet()) {
+                    if (Boolean.TRUE.equals(e.getValue())) continue;
+                    if (isBroken(e.getKey())) failed.add(getLabel(ctx, e.getKey()));
+                    else unconfirmed.add(e.getKey());
+                }
+            }
+            String head = "(InstaEclipse) Running in Instagram " + version + " with " + on + " features turned on";
+            if (failed.isEmpty()) {
+                ps.reso.instaeclipse.utils.log.ModuleLog.ok(head + "; none failed to load");
+            } else {
+                ps.reso.instaeclipse.utils.log.ModuleLog.ok(head);
+                ps.reso.instaeclipse.utils.log.ModuleLog.error("(InstaEclipse) Not working in this Instagram version: "
+                        + String.join(", ", failed));
+            }
+            if (!unconfirmed.isEmpty()) {
+                ps.reso.instaeclipse.utils.log.ModuleLog.detail("(InstaEclipse) Turned on, not confirmed by their hooks yet: "
+                        + String.join(", ", unconfirmed));
+            }
+        } catch (Throwable t) {
+            ps.reso.instaeclipse.utils.log.ModuleLog.detail("(InstaEclipse) Feature summary unavailable: " + t);
+        }
+    }
 }

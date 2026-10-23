@@ -896,6 +896,7 @@ public class Module {
 
                     // Every lookup is cached now: later launches install inline.
                     DexKitCache.saveString(CACHE_COMPLETE_KEY, CACHE_COMPLETE_VALUE);
+                    ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.logSummary(context);
                     };
 
                     if (DexKitCache.isCacheValid() && CACHE_COMPLETE_VALUE.equals(DexKitCache.loadString(CACHE_COMPLETE_KEY))) {
