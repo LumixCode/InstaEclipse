@@ -48,8 +48,7 @@ public class GhostPermanentViewHook {
     // once-vs-twice type is carried to the render side via ORIGINAL_BY_KEY, keyed by any id/timestamp
     // long on the media model that the DM render props (0E4S) also expose.
     public static final String PERMANENT = "permanent";
-    public static final java.util.Map<Long, String> ORIGINAL_BY_KEY =
-            new java.util.concurrent.ConcurrentHashMap<>();
+    static final ViewOnceStash STASH = new ViewOnceStash(ViewOnceStash.CAPACITY);
 
     public void install(DexKitBridge bridge, ClassLoader classLoader) {
         if (DexKitCache.isCacheValid()) {
@@ -143,20 +142,12 @@ public class GhostPermanentViewHook {
                         if (f.getType() != String.class) continue;
                         f.setAccessible(true);
                         try {
-                            String val = (String) f.get(result);
-                            String original = null;
-                            if ("once".equals(val)) {
-                                if (seenCount >= 1) return; // already viewed — URL gone
-                                original = "once";
-                            } else if ("replayable".equals(val) || "allow_replay".equals(val)) {
-                                if (seenCount >= 2) return; // replayable allows 2 views
-                                original = "replayable";
-                            }
-                            if (original != null) {
-                                for (Long k : keys) ORIGINAL_BY_KEY.put(k, original);
-                                ModuleLog.detail("(IE|ViewOnceMedia) mode=" + original + " keys=" + keys);
-                                f.set(result, PERMANENT);
-                            }
+                            String original = ViewOnceStash.original((String) f.get(result));
+                            if (original == null) continue;
+                            if (seenCount >= ("once".equals(original) ? 1 : 2)) return;
+                            STASH.rememberAll(keys, original);
+                            ModuleLog.detail("(IE|ViewOnceMedia) mode=" + original + " keys=" + keys);
+                            f.set(result, PERMANENT);
                         } catch (Throwable ignored) {}
                     }
                     cls = cls.getSuperclass();
@@ -188,10 +179,8 @@ public class GhostPermanentViewHook {
                         long v = f.getLong(obj);
                         if (v != 0 && v != Long.MAX_VALUE && !out.contains(v)) out.add(v);
                     } else if (t == String.class) {
-                        String s = (String) f.get(obj);
-                        if (s != null && s.length() >= 8 && s.length() <= 22 && s.chars().allMatch(Character::isDigit)) {
-                            try { long v = Long.parseLong(s); if (!out.contains(v)) out.add(v); } catch (NumberFormatException ignored) {}
-                        }
+                        Long v = ViewOnceStash.mediaKey((String) f.get(obj));
+                        if (v != null && !out.contains(v)) out.add(v);
                     } else if (!t.isPrimitive()) {
                         collectIdKeys(f.get(obj), out, depth + 1, seen);
                     }

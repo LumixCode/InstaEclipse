@@ -93,12 +93,7 @@ public class ViewOnceBadgeHook {
                     java.util.List<Long> candidates = new java.util.ArrayList<>();
                     collectLongs(args, candidates, 0,
                             java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
-                    String original = null;
-                    for (Long k : candidates) {
-                        String hit = GhostPermanentViewHook.ORIGINAL_BY_KEY.get(k);
-                        if (hit != null) { original = hit; break; }
-                    }
-                    ViewOnceBadgeMode.rewrite(original, args, modeIdx);
+                    ViewOnceBadgeMode.rewrite(GhostPermanentViewHook.STASH.find(candidates), args, modeIdx);
                 } catch (Throwable t) {
                     ModuleLog.detail("(IE|VOBadge) badge update failed: " + t);
                 }
@@ -126,10 +121,8 @@ public class ViewOnceBadgeHook {
                         if (v != 0 && v != Long.MAX_VALUE && !out.contains(v)) out.add(v);
                     } else if (t == String.class) {
                         // media ids often arrive as numeric strings (e.g. ExtendedImageUrl.A07)
-                        String s = (String) f.get(obj);
-                        if (s != null && s.length() >= 8 && s.length() <= 22 && s.chars().allMatch(Character::isDigit)) {
-                            try { long v = Long.parseLong(s); if (!out.contains(v)) out.add(v); } catch (NumberFormatException ignored) {}
-                        }
+                        Long v = ViewOnceStash.mediaKey((String) f.get(obj));
+                        if (v != null && !out.contains(v)) out.add(v);
                     } else if (!t.isPrimitive()) {
                         collectLongs(f.get(obj), out, depth + 1, seen);
                     }
