@@ -11,9 +11,9 @@ import android.widget.Toast;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -32,7 +32,7 @@ final class EditHistoryDialog {
 
     /** Shows the rows on the resumed activity; {@code missing} edits have no saved version. */
     static void show(List<EditHistoryTimeline.Row> rows, int missing) {
-        Activity host = resumedActivity();
+        Activity host = host();
         if (host == null) {
             ModuleLog.warn("(IE|EditHistory) Could not show the edit history: no open screen found");
             return;
@@ -51,7 +51,7 @@ final class EditHistoryDialog {
 
     /** Says plainly that nothing earlier was saved for this message. */
     static void none() {
-        Context ctx = resumedActivity();
+        Context ctx = host();
         if (ctx == null) ctx = ps.reso.instaeclipse.xposedcompat.AndroidAppHelper.currentApplication();
         if (ctx == null) return;
         try {
@@ -100,28 +100,8 @@ final class EditHistoryDialog {
         return I18n.t(ctx, kind) + "  ·  " + when;
     }
 
-    /** This process's resumed activity (a chat can sit in its own activity above the main one). */
-    private static Activity resumedActivity() {
-        try {
-            Class<?> at = Class.forName("android.app.ActivityThread");
-            Object thread = at.getMethod("currentActivityThread").invoke(null);
-            java.lang.reflect.Field records = at.getDeclaredField("mActivities");
-            records.setAccessible(true);
-            Map<?, ?> all = (Map<?, ?>) records.get(thread);
-            if (all != null) {
-                for (Object r : all.values()) {
-                    java.lang.reflect.Field paused = r.getClass().getDeclaredField("paused");
-                    paused.setAccessible(true);
-                    if (paused.getBoolean(r)) continue;
-                    java.lang.reflect.Field activity = r.getClass().getDeclaredField("activity");
-                    activity.setAccessible(true);
-                    if (activity.get(r) instanceof Activity a && !a.isFinishing()) return a;
-                }
-            }
-        } catch (Throwable t) {
-            ModuleLog.detail("(IE|EditHistory) resumed activity lookup failed: " + t);
-        }
-        Activity main = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
-        return main != null && !main.isFinishing() ? main : null;
+    private static Activity host() {
+        Context host = UIHookManager.dialogHost(ps.reso.instaeclipse.xposedcompat.AndroidAppHelper.currentApplication());
+        return host instanceof Activity a && !a.isFinishing() ? a : null;
     }
 }

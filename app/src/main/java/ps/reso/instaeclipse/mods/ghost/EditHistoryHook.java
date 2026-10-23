@@ -146,12 +146,14 @@ public class EditHistoryHook {
     private static String hookRecording(DexKitBridge bridge, ClassLoader cl, Class<?> message) {
         List<String> hooked = new ArrayList<>();
         try {
-            Method merge = null;
-            for (Method m : SafeReflect.methods(message)) {
-                Class<?>[] p = m.getParameterTypes();
-                if (p.length == 3 && p[1] == message && p[0].getName().equals(SESSION)
-                        && Modifier.isSynchronized(m.getModifiers()) && !Modifier.isStatic(m.getModifiers())) { merge = m; break; }
-            }
+            Method merge = cachedMethod("merge", cl, () -> {
+                for (Method m : SafeReflect.methods(message)) {
+                    Class<?>[] p = m.getParameterTypes();
+                    if (p.length == 3 && p[1] == message && p[0].getName().equals(SESSION)
+                            && Modifier.isSynchronized(m.getModifiers()) && !Modifier.isStatic(m.getModifiers())) return m;
+                }
+                return null;
+            });
             if (merge != null) {
                 // stored.merge(session, incoming, x): the server's copy replaces the stored text.
                 XposedBridge.hookMethod(merge, new XC_MethodHook() {
@@ -171,15 +173,18 @@ public class EditHistoryHook {
             ModuleLog.warn(TAG + "Edits that arrive from the server may not be saved", t);
         }
         try {
-            Method setter = null;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                    .declaredClass(message.getName()).usingStrings("unsupported message type: ")
-                    .paramCount(2).returnType("void")))) {
-                Method m = md.getMethodInstance(cl);
-                if (Modifier.isStatic(m.getModifiers()) || m.getParameterTypes()[1] != Object.class) continue;
-                if (setter != null) { setter = null; break; } // ambiguous
-                setter = m;
-            }
+            Method setter = cachedMethod("setter", cl, () -> {
+                Method found = null;
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                        .declaredClass(message.getName()).usingStrings("unsupported message type: ")
+                        .paramCount(2).returnType("void")))) {
+                    Method m = md.getMethodInstance(cl);
+                    if (Modifier.isStatic(m.getModifiers()) || m.getParameterTypes()[1] != Object.class) continue;
+                    if (found != null) return null;
+                    found = m;
+                }
+                return found;
+            });
             if (setter != null) {
                 // message.setContent(type, value): the sync engine's in-place edit (no session at hand).
                 XposedBridge.hookMethod(setter, new XC_MethodHook() {
@@ -290,7 +295,7 @@ public class EditHistoryHook {
                 ids.addAll(UnsentIdentity.messageIds(t.message));
             }
             List<EditHistoryStore.Version> server = serverVersions(t.server);
-            String thread = CurrentThreadTracker.currentThreadId();
+            String thread = tappedThread(t.message);
             EditHistoryStore store = EditHistoryStore.shared();
             if (store.mergeServer(t.account, thread, ids, server,
                     EditHistoryTimeline.complete(count, server.size()), System.currentTimeMillis())) {
@@ -305,6 +310,10 @@ public class EditHistoryHook {
         } catch (Throwable e) {
             ModuleLog.error(TAG + "Could not show the edit history", e);
         }
+    }
+
+    static String tappedThread(Object message) {
+        return message != null ? UnsentIdentity.thread(message) : null;
     }
 
     /** Instagram's DirectMessageEditHistory list as versions (body, timestamp), oldest first. */
