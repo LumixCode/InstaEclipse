@@ -3,37 +3,4 @@
     <string-array name="target_app">
         <item>com.instagram.android</item>
     </string-array>
-
-    <string-array name="theme_preset_names">
-        <item>Midnight Eclipse</item>
-        <item>Pure OLED</item>
-        <item>Arctic Frost</item>
-        <item>Rose Gold</item>
-        <item>Ocean Deep</item>
-        <item>Forest Canopy</item>
-        <item>Sunset Amber</item>
-        <item>Lavender Dream</item>
-        <item>Cherry Blossom</item>
-        <item>Cyber Neon</item>
-        <item>Coffee Mocha</item>
-        <item>Royal Purple</item>
-        <item>Mint Fresh</item>
-        <item>Slate Pro</item>
-        <item>Coral Reef</item>
-        <item>Nordic Ice</item>
-        <item>Golden Hour</item>
-        <item>Matrix Green</item>
-        <item>Amethyst Night</item>
-        <item>Peach Soft</item>
-        <item>Steel Gray</item>
-        <item>Tropical Teal</item>
-        <item>Wine Burgundy</item>
-        <item>Sky Blue</item>
-        <item>Sand Dune</item>
-        <item>Violet Storm</item>
-        <item>Emerald City</item>
-        <item>Blush Pink</item>
-        <item>Carbon Fiber</item>
-        <item>Aurora Borealis</item>
-    </string-array>
 </resources>

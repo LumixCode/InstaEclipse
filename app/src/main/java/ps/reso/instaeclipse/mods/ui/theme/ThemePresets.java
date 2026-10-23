@@ -10,6 +10,7 @@ import java.util.List;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
+import ps.reso.instaeclipse.utils.i18n.I18n;
 
 public final class ThemePresets {
 
@@ -160,19 +161,16 @@ public final class ThemePresets {
 
     public static String getDisplayName(Context context, int id) {
         if (id > VARIANT_OFFSET) {
-            // Generated counterpart: the base theme's name plus the mode it was built for.
             String base = getDisplayName(context, id - VARIANT_OFFSET);
-            return base + (isLightPreset(id) ? " Light" : " Dark");
+            return variantLabel(I18n.t(context, isLightPreset(id) ? R.string.theme_preset_light : R.string.theme_preset_dark), base);
         }
         int index = id - 1;
         if (index >= 0 && index < PRESET_NAMES.length) return PRESET_NAMES[index];
-        if (context != null) {
-            try {
-                String[] names = ps.reso.instaeclipse.utils.i18n.I18n.moduleResources(context).getStringArray(R.array.theme_preset_names);
-                if (index >= 0 && index < names.length) return names[index];
-            } catch (Throwable ignored) {}
-        }
         return PRESET_NAMES.length > 0 ? PRESET_NAMES[0] : "";
+    }
+
+    static String variantLabel(String format, String base) {
+        return String.format(format, base);
     }
 
     /**
