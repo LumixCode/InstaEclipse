@@ -56,13 +56,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.ExportBrand;
+import ps.reso.instaeclipse.utils.text.SearchText;
 import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
 import ps.reso.instaeclipse.ui.theme.ThemeCustomizerActivity;
 
@@ -1178,19 +1178,19 @@ public class FeaturesFragment extends Fragment implements TabFragment {
      * cascade-off and locked-by-extreme logic. A query matching a category name lists all its rows.
      */
     private void runSearch(String raw) {
-        String q = raw == null ? "" : raw.trim().toLowerCase(Locale.getDefault());
+        String q = raw == null ? "" : SearchText.fold(raw.trim());
         if (q.isEmpty()) {
             loadMainMenu();
             return;
         }
         List<Object> defs = new ArrayList<>();
         for (Category cat : getCategories()) {
-            boolean categoryMatch = cat.title.toLowerCase(Locale.getDefault()).contains(q);
+            boolean categoryMatch = SearchText.fold(cat.title).contains(q);
             List<FeatureItem> hits = new ArrayList<>();
             for (FeatureItem fi : flattenItems(cat.builder.build())) {
                 if (fi.type != FeatureItem.TYPE_SWITCH && fi.type != FeatureItem.TYPE_CLICKABLE) continue;
                 if (fi.title == null) continue;
-                if (categoryMatch || fi.title.toLowerCase(Locale.getDefault()).contains(q)) hits.add(fi);
+                if (categoryMatch || SearchText.fold(fi.title).contains(q)) hits.add(fi);
             }
             if (!hits.isEmpty()) {
                 defs.add(cat.title);
