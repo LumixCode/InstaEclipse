@@ -23,34 +23,6 @@ public class IGNetworkInterceptor {
     private static final String FAKE_URL = "https://127.0.0.1/404";
 
     /**
-     * Neutralise a dropped request by redirecting it to a dead local URL. IG 446+/447.0.0.39+ keeps
-     * the request URL in MULTIPLE fields on the request object (e.g. a String copy plus two java.net.URI
-     * copies), and the actual dispatch reads one of the copies — not necessarily the single URI field
-     * we resolve for inspection. Rewriting only that one field is silently ignored, so the request
-     * still goes out. Rewrite EVERY url-bearing field: every java.net.URI field, and every String
-     * field that currently holds this request's URL (matched by the original value / same path).
-     */
-    private static void neutralizeUrlFields(Object requestObj, URI original) {
-        String orig = original.toString();
-        String origPath = original.getPath();
-        for (java.lang.reflect.Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(requestObj.getClass())) {
-            try {
-                // Never touch statics: the request class keeps a shared static URI constant
-                // ("https://malformed.url.invalid/") that other requests read.
-                if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
-                f.setAccessible(true);
-                Object v = f.get(requestObj);
-                if (v instanceof URI) {
-                    f.set(requestObj, FAKE_URI);
-                } else if (v instanceof String s && s.startsWith("http")
-                        && (s.equals(orig) || (origPath != null && !origPath.isEmpty() && s.contains(origPath)))) {
-                    f.set(requestObj, FAKE_URL);
-                }
-            } catch (Throwable ignored) {}
-        }
-    }
-
-    /**
      * TigonServiceLayer is the LAST of ~25 decorator layers (RequestCacheServiceLayer,
      * ZeroRewriteAsyncServiceLayer, ...) that all implement the same startRequest interface. A
      * layer that answers from cache never reaches TigonServiceLayer, so also apply the same
@@ -82,34 +54,6 @@ public class IGNetworkInterceptor {
             ModuleLog.warn("(InstaEclipse | Interceptor): Requests Instagram answers from its own cache may not be filtered; all other requests still are: "
                     + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
-    }
-
-    /**
-     * Disable Explore: the Explore grid and search's top results. IG 446/451 only call
-     * fbsearch/top_serp_stream/ (X.0WJF on 451); the "/top_serp" prefix still covers the older top_serp/.
-     */
-    static boolean isExploreRequest(String host, String path) {
-        return path.contains("/discover/topical_explore")
-                || path.contains("/discover/topical_explore_stream")
-                || (host != null && host.contains("i.instagram.com") && path.contains("/fbsearch/top_serp"));
-    }
-
-    /**
-     * Spoof last seen's REST rules, kept for older builds. On IG 451 only set_presence_disabled/
-     * (the activity-status setting) and banyan/banyan/ (share-sheet ranking) still exist, and
-     * neither reports activity: presence goes over MQTT (/t_fs foreground state,
-     * XplatNativeClientWrapper.setForeground) and the distribgw PresenceStreamHandler, which never
-     * pass through Tigon. So the feature is not reported as hooked from here.
-     */
-    static boolean isLastSeenRequest(String path) {
-        return path.contains("/push/setForegroundState/")
-                || path.contains("/accounts/update_active_status")
-                || path.contains("/notes/create_note")
-                || path.contains("/accounts/set_presence_disabled")
-                || path.contains("/update_active_status")
-                || path.contains("/banyan/banyan/")
-                || path.endsWith("/last_active/")
-                || path.contains("/presence/");
     }
 
     public void handleInterceptor(XC_LoadPackage.LoadPackageParam lpparam) {
@@ -159,29 +103,9 @@ public class IGNetworkInterceptor {
 
                                 if (uri != null && uri.getPath() != null) {
                                     final String host = uri.getHost(); // null for opaque/relative URIs — guard before use
-                                    boolean shouldDrop = false;
+                                    boolean shouldDrop = NetworkDropRules.shouldDrop(host, uri.getPath(),
+                                            ps.reso.instaeclipse.utils.ghost.ReadReceiptWhitelist::pathMentionsAllowed);
 
-
-                                    // Don't save searches (#280): the server keeps Recent from these
-                                    if (FeatureFlags.disableSearchHistory) {
-                                        shouldDrop |= uri.getPath().contains("/fbsearch/register_recent_search_click/");
-                                    }
-
-                                    // Ghost Mode URIs
-                                    if (FeatureFlags.isGhostSeen) {
-                                        shouldDrop |= uri.getPath().contains("/threads/") && uri.getPath().contains("/opened")
-                                                && !ps.reso.instaeclipse.utils.ghost.ReadReceiptWhitelist.pathMentionsAllowed(uri.getPath());
-                                    }
-                                    if (FeatureFlags.keepEphemeralMessages) {
-                                        shouldDrop |= uri.getPath().contains("/mark_ephemeral_item_ranges_viewed");
-                                    }
-                                    if (FeatureFlags.isGhostScreenshot) {
-                                        shouldDrop |= uri.getPath().endsWith("/screenshot/") || uri.getPath().endsWith("/ephemeral_screenshot/");
-                                    }
-                                    if (FeatureFlags.isGhostViewOnce) {
-                                        shouldDrop |= uri.getPath().endsWith("/item_replayed/");
-                                        shouldDrop |= (uri.getPath().contains("/direct") && uri.getPath().endsWith("/item_seen/"));
-                                    }
                                     // Version-agnostic: getPath() excludes the ?reel=... query, so it
                                     // reads /api/vN/media/seen/ on both old (v2) and new (447: v1) builds.
                                     // A manual receipt (marked) is authorized in the Tigon pass only: the
@@ -199,31 +123,7 @@ public class IGNetworkInterceptor {
                                         }
                                     }
                                     if (FeatureFlags.isGhostStory) FeatureStatusTracker.setHooked("GhostStories");
-                                    if (FeatureFlags.isGhostLive) {
-                                        shouldDrop |= uri.getPath().contains("/heartbeat_and_get_viewer_count/");
-                                        FeatureStatusTracker.setHooked("GhostLive");
-                                    }
-                                    // Remove Meta AI (#179): stop Meta AI from replying/loading.
-                                    if (FeatureFlags.removeMetaAI) {
-                                        String p = uri.getPath();
-                                        shouldDrop |= p.contains("/ig_meta_ai_side_chat_send_contextual_query/")
-                                                || p.contains("/ig_meta_ai_side_chat_new_session/")
-                                                || p.contains("/create_ig_meta_ai_side_chat/")
-                                                || p.contains("/genai/response")
-                                                || (uri.getHost() != null && uri.getHost().contains("aistudio.instagram.com"));
-                                    }
-
-                                    // Distraction Free
-                                    if (FeatureFlags.disableStories) {
-                                        shouldDrop |= uri.getPath().contains("/feed/reels_tray/")
-                                                || uri.getPath().contains("feed/get_latest_reel_media/")
-                                                || uri.getPath().contains("direct_v2/pending_inbox/?visual_message")
-                                                || uri.getPath().contains("stories/hallpass/")
-                                                || uri.getPath().contains("/api/v1/feed/reels_media_stream/");
-                                    }
-                                    if (FeatureFlags.disableFeed) {
-                                        shouldDrop |= uri.getPath().endsWith("/feed/timeline/");
-                                    }
+                                    if (FeatureFlags.isGhostLive) FeatureStatusTracker.setHooked("GhostLive");
                                     // Disable Reels, quiet hours and the daily cap share one policy. Its
                                     // DM exception only lets single reel items through and never returns
                                     // early, so the privacy drops above and below still apply.
@@ -231,50 +131,14 @@ public class IGNetworkInterceptor {
                                     shouldDrop |= ReelRequestPolicy.shouldBlock(uri,
                                             reelReason != ReelBlockPolicy.Reason.NONE,
                                             ReelBlockPolicy.requestAllowsDm(reelReason));
-                                    if (FeatureFlags.disableExplore) {
-                                        shouldDrop |= isExploreRequest(host, uri.getPath());
-                                    }
-                                    // Suggested accounts under the DM inbox (#282): the inbox's
-                                    // "empty state" unit carries them; the chat list is unaffected.
-                                    if (FeatureFlags.hideDmSuggestions) {
-                                        shouldDrop |= uri.getPath().contains("/dynamic_onboarding/get_direct_empty_state/");
-                                    }
-                                    if (FeatureFlags.disableComments) {
-                                        shouldDrop |= uri.getPath().contains("/api/v1/media/") && uri.getPath().contains("comments/");
-                                    }
-
-                                    // Ads
-                                    if (FeatureFlags.isAdBlockEnabled) {
-                                        shouldDrop |= uri.getPath().contains("profile_ads/get_profile_ads/")
-                                                || uri.getPath().contains("/async_ads/")
-                                                || uri.getPath().contains("/feed/injected_reels_media/")
-                                                || uri.getPath().equals("/api/v1/ads/graphql/");
-                                    }
-
-                                    // Analytics
-                                    if (FeatureFlags.isAnalyticsBlocked) {
-                                        shouldDrop |= (host != null && (host.contains("graph.instagram.com")
-                                                || host.contains("graph.facebook.com")))
-                                                || uri.getPath().contains("/logging_client_events");
-                                    }
-
-                                    // Misc
-                                    // Not marked hooked: no request here reports presence on IG 451.
-                                    if (FeatureFlags.spoofLastSeen) {
-                                        shouldDrop |= isLastSeenRequest(uri.getPath());
-                                    }
                                     // NOTE: Disable Repost is handled at the UI/action level in
                                     // mods.ui.DisableRepostHook — NOT here. Dropping the repost network
                                     // request is ineffective because IG applies the repost optimistically
                                     // client-side, so the repost completes even when the request is dropped.
-                                    if (FeatureFlags.disableDiscoverPeople) {
-                                        shouldDrop |= uri.getPath().contains("/discover/ayml/");
-                                        shouldDrop |= uri.getPath().contains("discover/chaining/");
-                                        FeatureStatusTracker.setHooked("DisableDiscoverPeople");
-                                    }
+                                    if (FeatureFlags.disableDiscoverPeople) FeatureStatusTracker.setHooked("DisableDiscoverPeople");
 
                                     if (shouldDrop) {
-                                        neutralizeUrlFields(requestObj, uri);
+                                        NetworkDropRules.neutralize(requestObj, uri, FAKE_URI, FAKE_URL);
                                     }
 
                                     // Follower toast / follow label: only notes which profile's
