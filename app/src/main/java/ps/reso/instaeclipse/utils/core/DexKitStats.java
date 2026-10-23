@@ -69,6 +69,10 @@ public final class DexKitStats {
     private static final ThreadLocal<String> SEGMENT = new ThreadLocal<>();
     private static final Map<String, Counter> COUNTERS = new LinkedHashMap<>();
     private static final Counter TOTAL = new Counter();
+    private static final Map<String, List<String>> KEYS = new LinkedHashMap<>();
+    private static long bridgeCreates;
+    private static long mainThreadNative;
+    private static volatile boolean recordKeys;
     private static volatile Thread mainThread;
     private static volatile boolean mainThreadResolved;
 
@@ -110,6 +114,58 @@ public final class DexKitStats {
         if (calls > 0) add(0, 0, 0, calls, false);
     }
 
+    public static void libraryLoaded() {
+        boolean main = onMainThread();
+        synchronized (COUNTERS) {
+            if (main) mainThreadNative++;
+        }
+    }
+
+    public static void bridgeCreated() {
+        boolean main = onMainThread();
+        synchronized (COUNTERS) {
+            bridgeCreates++;
+            if (main) mainThreadNative++;
+        }
+    }
+
+    public static long bridgeCreates() {
+        synchronized (COUNTERS) {
+            return bridgeCreates;
+        }
+    }
+
+    public static long mainThreadNative() {
+        synchronized (COUNTERS) {
+            return mainThreadNative;
+        }
+    }
+
+    public static void recordKeys(boolean on) {
+        recordKeys = on;
+    }
+
+    public static void keyRead(String key) {
+        if (!recordKeys || key == null) return;
+        String step = currentStep();
+        synchronized (KEYS) {
+            List<String> keys = KEYS.get(step);
+            if (keys == null) {
+                keys = new ArrayList<>();
+                KEYS.put(step, keys);
+            }
+            keys.add(key);
+        }
+    }
+
+    public static Map<String, List<String>> keysRead() {
+        Map<String, List<String>> out = new LinkedHashMap<>();
+        synchronized (KEYS) {
+            for (Map.Entry<String, List<String>> e : KEYS.entrySet()) out.put(e.getKey(), new ArrayList<>(e.getValue()));
+        }
+        return out;
+    }
+
     public static boolean onMainThread() {
         Thread main = mainThread;
         if (main == null && !mainThreadResolved) {
@@ -140,6 +196,7 @@ public final class DexKitStats {
             }
             apply(c, hits, misses, scanNanos, natives, scan && main);
             apply(TOTAL, hits, misses, scanNanos, natives, scan && main);
+            if (scan && main) mainThreadNative++;
         }
     }
 
@@ -186,6 +243,11 @@ public final class DexKitStats {
             TOTAL.scanNanos = 0;
             TOTAL.nativeCalls = 0;
             TOTAL.mainThreadScans = 0;
+            bridgeCreates = 0;
+            mainThreadNative = 0;
+        }
+        synchronized (KEYS) {
+            KEYS.clear();
         }
     }
 }

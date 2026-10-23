@@ -115,6 +115,7 @@ public final class DexKitQueryCache {
     }
 
     private static String load(String key) {
+        DexKitStats.keyRead(key);
         if (key == null || !DexKitCache.isCacheValid()) return null;
         return DexKitCache.loadSaved(key);
     }

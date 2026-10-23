@@ -97,10 +97,12 @@ public class Module {
                     try {
                         // Load the .so file from your module (if not already loaded)
                         System.load(moduleLibDir + "/libdexkit.so");
+                        DexKitStats.libraryLoaded();
                         // ModuleLog.line("libdexkit.so loaded successfully.");
 
                         // Initialize DexKitBridge with the target app's APK
                         dexKitBridge = DexKitBridge.create(lpparam.appInfo.sourceDir);
+                        DexKitStats.bridgeCreated();
                         // ModuleLog.line("DexKitBridge initialized with target APK: " + lpparam.appInfo.sourceDir);
                     } finally {
                         StartupTrace.end(span);
