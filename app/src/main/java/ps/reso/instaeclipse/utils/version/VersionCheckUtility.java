@@ -25,19 +25,20 @@ import java.util.concurrent.Executors;
 public class VersionCheckUtility {
 
     private static final String VERSION_CHECK_URL = "https://raw.githubusercontent.com/ReSo7200/InstaEclipse/refs/heads/main/version.json";
-    private static final String RELEASES_PREFIX = "https://github.com/ReSo7200/InstaEclipse/";
-    private static final String RELEASES_URL = RELEASES_PREFIX + "releases/latest";
+    private static final String REPO = "ReSo7200/InstaEclipse";
     private static final int TIMEOUT_MS = 10_000;
     private static final int MAX_RESPONSE_CHARS = 16 * 1024;
 
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
 
     public static void checkForUpdates(Activity activity) {
+        if (!UpdateCheckPolicy.shouldCheck(System.currentTimeMillis(), 0, BuildConfig.DEBUG)) return;
         // Hold the activity weakly: the request can outlive a rotation or back press.
         WeakReference<Activity> ref = new WeakReference<>(activity);
         EXECUTOR.execute(() -> {
-            VersionCheck result = fetch();
+            VersionCheck check = fetch();
             // Offline or unreachable: an update check must never interrupt the app (fetch() logs it).
+            ReleaseInfo result = check == null ? null : ReleaseInfo.of(check.getLatestVersion(), check.getUpdateUrl(), null, REPO);
             if (result == null) return;
             new Handler(Looper.getMainLooper()).post(() -> {
                 Activity a = ref.get();
@@ -74,20 +75,10 @@ public class VersionCheckUtility {
         }
     }
 
-    private static void handleVersionCheckResult(Activity activity, VersionCheck versionCheck) {
-        String latestVersion = versionCheck.getLatestVersion();
-        if (latestVersion == null) return;
-        // Only prompt when the published version is actually newer (dev builds are often ahead).
-        // BuildConfig can't fail like a PackageManager lookup, which would read as "0" and prompt
-        // on every start; VersionComparator ignores the "-debug" suffix.
-        if (VersionComparator.compare(latestVersion, BuildConfig.VERSION_NAME) > 0) {
-            showUpdateDialog(activity, safeUpdateUrl(versionCheck.getUpdateUrl()), latestVersion);
+    private static void handleVersionCheckResult(Activity activity, ReleaseInfo release) {
+        if (UpdateCheckPolicy.shouldPrompt(release.version, BuildConfig.VERSION_NAME, null)) {
+            showUpdateDialog(activity, release.url, release.version);
         }
-    }
-
-    /** The URL comes from the network: only ever open this project's GitHub pages. */
-    private static String safeUpdateUrl(String url) {
-        return url != null && url.startsWith(RELEASES_PREFIX) ? url : RELEASES_URL;
     }
 
     private static void showUpdateDialog(Activity activity, String updateUrl, String newVersion) {
