@@ -70,6 +70,9 @@ public class HelpFragment extends Fragment implements TabFragment {
         view.findViewById(R.id.github_button).setOnClickListener(v -> openUrl(ExportBrand.GITHUB + "/issues"));
         view.findViewById(R.id.telegram_button).setOnClickListener(v -> openUrl(ExportBrand.TELEGRAM));
         view.findViewById(R.id.source_button).setOnClickListener(v -> openUrl(ExportBrand.GITHUB));
+        TextView basedOn = view.findViewById(R.id.based_on_button);
+        basedOn.setText(getString(R.string.about_based_on, ExportBrand.UPSTREAM_OWNER));
+        basedOn.setOnClickListener(v -> openUrl(ExportBrand.UPSTREAM));
 
         TextView version = view.findViewById(R.id.about_version);
         version.setText(getString(R.string.help_version, readVersionName(requireContext())));

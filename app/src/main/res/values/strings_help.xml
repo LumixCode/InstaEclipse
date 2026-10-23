@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Help tab redesign (0.8) -->
     <string name="help_get_help_title">Get help</string>
     <string name="help_get_help_body">Found a bug or something stopped working? Open an issue on GitHub or ask the community on Telegram.</string>
@@ -14,4 +14,5 @@
     <string name="help_lspatch_title">LSPatch (JingMatrix)</string>
     <string name="help_lspatch_sub">Not rooted? Install this</string>
     <string name="help_lspatch_guide">Follow the setup guide</string>
+    <string name="about_based_on" tools:ignore="MissingTranslation">Based on InstaEclipse by %1$s</string>
 </resources>

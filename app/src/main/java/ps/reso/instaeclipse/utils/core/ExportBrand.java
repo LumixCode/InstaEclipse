@@ -28,7 +28,10 @@ public final class ExportBrand {
                 + "<span style=\"opacity:.9;font-weight:500\">" + escape(what) + " · " + escape(now()) + "</span></div>";
     }
 
-    public static final String GITHUB   = "https://github.com/ReSo7200/InstaEclipse";
+    public static final String REPO_SLUG = "LumixCode/InstaEclipse";
+    public static final String GITHUB   = "https://github.com/" + REPO_SLUG;
+    public static final String UPSTREAM = "https://github.com/ReSo7200/InstaEclipse";
+    public static final String UPSTREAM_OWNER = UPSTREAM.split("/")[3];
     public static final String TELEGRAM = "https://t.me/InstaEclipse";
 
     /** The Instagram build this release is tested on; "Get APK" opens its APKMirror page. */
@@ -49,6 +52,8 @@ public final class ExportBrand {
                 + "<div style=\"display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:10px\">"
                 + button(GITHUB, GITHUB_SVG, "GitHub") + button(TELEGRAM, TELEGRAM_SVG, "Telegram")
                 + "</div>"
+                + "<div style=\"margin-bottom:6px\"><a href=\"" + UPSTREAM + "\" target=_blank rel=noopener"
+                + " style=\"color:inherit;font-size:11px\">Based on " + NAME + " by " + UPSTREAM_OWNER + "</a></div>"
                 + "Exported " + escape(now()) + "</div>";
     }
 
