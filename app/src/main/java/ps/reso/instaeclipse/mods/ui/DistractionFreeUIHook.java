@@ -81,9 +81,11 @@ public class DistractionFreeUIHook {
     private static final java.util.Set<View> pendingSweeps =
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
+    private static final TabOrderPolicy tabOrder = new TabOrderPolicy();
+
     private static boolean anyFlag() {
         return FeatureFlags.disableStories || FeatureFlags.hideStoriesTray || FeatureFlags.disableReels || anyNavTabHidden() || FeatureFlags.hidePlusUpsells
-                || !FeatureFlags.navTabOrder.isEmpty() || FeatureFlags.disableDiscoverPeople || FeatureFlags.hideInstants;
+                || tabOrder.sweeps(FeatureFlags.navTabOrder) || FeatureFlags.disableDiscoverPeople || FeatureFlags.hideInstants;
     }
 
     /** A sweep is needed while a flag is on, or to restore views collapsed before a flag went off. */
@@ -154,26 +156,15 @@ public class DistractionFreeUIHook {
             if (FeatureFlags.hideInstants && instantsId != 0)
                 ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("HideInstants");
             if (FeatureFlags.disableReels && tabPagerId != 0) disableTabSwipe((ViewGroup) root);
-            if (!FeatureFlags.navTabOrder.isEmpty()) reorderTabs(a, (ViewGroup) root);
+            if (tabOrder.sweeps(FeatureFlags.navTabOrder)) reorderTabs(a, (ViewGroup) root);
         } catch (Throwable ignored) {}
     }
 
-    /** Every bottom-nav tab that can be reordered, in Instagram's default order. */
-    public static final String[] ORDERABLE_TABS =
-            {"feed_tab", "clips_tab", "search_tab", "creation_tab", "direct_tab", "news_tab", "profile_tab"};
+    public static final String[] ORDERABLE_TABS = TabOrderPolicy.ORDERABLE_TABS;
     private static boolean orderLogged;
 
-    /** True when a saved tab order actually differs from Instagram's default order. */
     public static boolean isCustomTabOrder(String saved) {
-        if (saved == null || saved.trim().isEmpty()) return false;
-        java.util.List<String> order = new java.util.ArrayList<>();
-        java.util.List<String> all = java.util.Arrays.asList(ORDERABLE_TABS);
-        for (String n : saved.split(",")) {
-            String t = n.trim();
-            if (all.contains(t) && !order.contains(t)) order.add(t);
-        }
-        for (String n : ORDERABLE_TABS) if (!order.contains(n)) order.add(n);
-        return !order.equals(all);
+        return TabOrderPolicy.isCustom(saved);
     }
 
     /**
