@@ -444,7 +444,7 @@ public class StoryDownloadHook {
                     .usingStrings("ReelViewerFragment.onCurrentActiveItemBound")))) {
                 try { XposedBridge.hookMethod(md.getMethodInstance(cl), capture); n++; } catch (Throwable ignored) {}
             }
-            if (n > 0 && FeatureFlags.cacheStories) FeatureStatusTracker.setHooked("CacheStories");
+            if (n > 0) FeatureStatusTracker.setHooked("CacheStories");
             if (n > 0) ModuleLog.ok("(IE|StoryCache) ready");
             else ModuleLog.error("(IE|StoryCache) Could not turn on the story cache: the story viewer was not found in this Instagram version");
             ModuleLog.detail("(IE|StoryCache) capture hook: " + n + " method(s)");

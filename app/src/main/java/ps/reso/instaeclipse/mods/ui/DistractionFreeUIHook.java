@@ -147,6 +147,8 @@ public class DistractionFreeUIHook {
             if (discoverPeopleId != 0) hide.put(discoverPeopleId, FeatureFlags.disableDiscoverPeople);
             if (instantsId != 0) hide.put(instantsId, FeatureFlags.hideInstants);
             collapseAllById((ViewGroup) root, hide);
+            if (FeatureFlags.hideStoriesTray && trayId != 0)
+                ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("hideStoriesTray");
             if (anyNavTabHidden()) ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("HideNavTabs");
             if (FeatureFlags.hidePlusUpsells) ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("HidePlusUpsells");
             if (FeatureFlags.hideInstants && instantsId != 0)

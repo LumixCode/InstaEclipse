@@ -175,8 +175,9 @@ public class LockDirectMessagesHook {
             }
             checkGate(activity);
             // Both gates run from here: the whole-app one and the Direct one keep their own status.
-            if (FeatureFlags.lockWholeApp) FeatureStatusTracker.setHooked("LockWholeApp");
-            if (FeatureFlags.lockDirectMessages) FeatureStatusTracker.setHooked("LockDirectMessages");
+            boolean passcodeSet = FeatureFlags.lockDirectPasscode != null && !FeatureFlags.lockDirectPasscode.isEmpty();
+            if (passcodeSet && FeatureFlags.lockWholeApp) FeatureStatusTracker.setHooked("LockWholeApp");
+            if (passcodeSet && FeatureFlags.lockDirectMessages) FeatureStatusTracker.setHooked("LockDirectMessages");
         });
     }
 

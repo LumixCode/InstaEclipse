@@ -168,12 +168,21 @@ public class ProfilePicDownloadHook {
     }
 
     public static void install() {
-        // Mark status before hook setup so the toast shows correctly
+        try {
+            hookExpandedPicture();
+        } catch (Throwable t) {
+            if (FeatureFlags.enableProfileDownload) {
+                FeatureStatusTracker.setBroken("ProfileDownload", R.string.ig_dialog_downloader_profiles);
+            }
+            throw t;
+        }
         if (FeatureFlags.enableProfileDownload) {
             FeatureStatusTracker.setEnabled("ProfileDownload", R.string.ig_dialog_downloader_profiles);
             FeatureStatusTracker.setHooked("ProfileDownload");
         }
+    }
 
+    private static void hookExpandedPicture() {
         // Hook View.onAttachedToWindow — fires once per view attachment, works for any
         // window type (Activity, Dialog, BottomSheet) without relying on layout listeners.
         XposedHelpers.findAndHookMethod(View.class, "onAttachedToWindow", new XC_MethodHook() {

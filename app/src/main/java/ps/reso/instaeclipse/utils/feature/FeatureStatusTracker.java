@@ -5,6 +5,7 @@ import android.content.Context;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,6 +77,7 @@ public class FeatureStatusTracker {
     }
 
     public static void setHooked(String name) {
+        if (hooked.contains(name) && !broken.contains(name) && !Boolean.FALSE.equals(features.get(name))) return;
         hooked.add(name);
         broken.remove(name); // a successful hook clears any earlier broken mark
         if (features.containsKey(name)) {
@@ -90,7 +92,9 @@ public class FeatureStatusTracker {
     }
 
     public static Map<String, Boolean> getStatus() {
-        return features;
+        synchronized (features) {
+            return new LinkedHashMap<>(features);
+        }
     }
 
     public static boolean hasEnabledFeatures() {
