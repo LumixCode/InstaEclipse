@@ -2,7 +2,7 @@ package ps.reso.instaeclipse.mods.misc;
 
 import java.util.List;
 
-/** Argument layout verified against the Timestamp.kt -> IgText call in Instagram 446. */
+/** Argument layout verified against the Timestamp.kt -> IgText call in Instagram 446 and 451. */
 final class StoryTimestampComposeLayout {
     private StoryTimestampComposeLayout() {}
 

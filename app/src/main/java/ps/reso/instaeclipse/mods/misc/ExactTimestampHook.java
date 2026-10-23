@@ -12,6 +12,7 @@ import android.widget.TextView;
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
+import org.luckypray.dexkit.query.enums.StringMatchType;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.ClassData;
@@ -248,15 +249,21 @@ public final class ExactTimestampHook {
         List<Method> methods = DexKitCache.isCacheValid()
                 ? DexKitCache.loadMethods(COMPOSE_STORY_CACHE, loader) : null;
         if (methods == null || methods.size() != 2) {
+            // Compose source markers carry a line number that moves between versions (446
+            // Timestamp.kt:12, 451 :13), so match the file prefix; the shape check stays exact.
             List<MethodData> entries = bridge.findMethod(FindMethod.create().matcher(MethodMatcher.create()
-                    .returnType("void").usingStrings(
-                            "instagram.features.stories.mvvm.feature.header.compose.Timestamp (Timestamp.kt:12)")));
+                    .returnType("void").addUsingString(
+                            "instagram.features.stories.mvvm.feature.header.compose.Timestamp (Timestamp.kt:",
+                            StringMatchType.StartsWith)));
             if (entries.size() != 1) throw new IllegalStateException("Compose story timestamp entry missing");
             MethodData entry = entries.get(0);
             MethodData text = null;
             for (MethodData call : entry.getInvokes()) {
-                if (!call.getUsingStrings().contains("com.instagram.compose.core.ui.IgText (IgText.kt:50)")
-                        || !StoryTimestampComposeLayout.matches(call.getParamTypeNames())) continue;
+                boolean igText = false;
+                for (String marker : call.getUsingStrings()) {
+                    igText |= marker.startsWith("com.instagram.compose.core.ui.IgText (IgText.kt:");
+                }
+                if (!igText || !StoryTimestampComposeLayout.matches(call.getParamTypeNames())) continue;
                 if (text != null) throw new IllegalStateException("Ambiguous Compose story text layout");
                 text = call;
             }
