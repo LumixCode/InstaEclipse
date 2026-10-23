@@ -6,9 +6,6 @@
 # Keep ALL classes & members (methods, fields)
 -keep class ps.reso.instaeclipse.** { *; }
 
-# Keep everything related to Xposed API
--keep class de.robv.android.xposed.** { *; }
-
 # LibXposed API & Service (API 101/102+)
 -keep public class * extends io.github.libxposed.api.XposedModule {
     public <init>();

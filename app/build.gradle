@@ -82,7 +82,6 @@ dependencies {
     // Xposed APIs, provided by the framework at runtime. The module loads through libxposed API 102
     // (META-INF/xposed: Vector 2.2+, LSPatch 1.0+); the legacy API stays behind the compat layer.
     // See docs/xposed-api-102.
-    compileOnly files('libs/api-82.jar')
     compileOnly 'io.github.libxposed:api:102.0.0'
     // Lets the companion write remote preferences that the hooked app reads. The classes of io.github.libxposed:service/interface 102.0.0 (Apache-2.0), used as jars: the
     // AARs declare minCompileSdk 37, which this project's AGP/compileSdk 34 doesn't meet; their
