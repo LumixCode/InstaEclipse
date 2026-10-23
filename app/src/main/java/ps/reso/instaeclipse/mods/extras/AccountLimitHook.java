@@ -19,7 +19,7 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 public class AccountLimitHook {
 
     public void install(DexKitBridge bridge, ClassLoader cl) {
-        Method check = ExtrasLookup.method("Extras_AccountLimit", cl, () -> {
+        Method check = ExtrasLookup.method("Extras_AccountLimit", "unlimitedAccounts", FeatureFlags.unlimitedAccounts, cl, () -> {
             for (MethodData owner : ExtrasLookup.byStrings(bridge, "account_switcher_max_limit_reached")) {
                 Method m = ExtrasLookup.firstStaticInvoke(owner, cl, c -> c.getReturnType() == boolean.class
                         && c.getParameterCount() == 2 && c.getParameterTypes()[1] == int.class);

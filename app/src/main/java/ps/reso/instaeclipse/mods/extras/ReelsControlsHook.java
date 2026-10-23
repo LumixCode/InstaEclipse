@@ -28,7 +28,7 @@ public class ReelsControlsHook {
 
 
     private void installAutoScroll(DexKitBridge bridge, ClassLoader cl) {
-        Method gate = ExtrasLookup.method("Extras_ReelsAutoScroll", cl, () -> {
+        Method gate = ExtrasLookup.method("Extras_ReelsAutoScroll", "reelsAutoScroll", FeatureFlags.reelsAutoScroll, cl, () -> {
             for (MethodData md : ExtrasLookup.byStrings(bridge,
                     "android_purge_26_q2_ClipsViewerExperimentUtil_isOptInAutoscrollEnabled")) {
                 if ("boolean".equals(md.getReturnTypeName())) return md.getMethodInstance(cl);

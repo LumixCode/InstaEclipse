@@ -5,6 +5,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
 /** What "Hide onboarding prompts" swallows; kept Android-free for JVM tests. */
@@ -14,6 +16,7 @@ final class OnboardingPromptPolicy {
     static final String LOCATION_SETUP = "com.bloks.www.bloks.ig.ndx.ls.entry.screen";
 
     private static final ClassLoader BOOT = Object.class.getClassLoader();
+    private static final Map<Class<?>, List<Field>> STRING_FIELDS = new ConcurrentHashMap<>();
 
     private OnboardingPromptPolicy() {}
 
@@ -35,6 +38,8 @@ final class OnboardingPromptPolicy {
     }
 
     static List<Field> stringFields(Class<?> type) {
+        List<Field> cached = STRING_FIELDS.get(type);
+        if (cached != null) return cached;
         List<Field> fields = new ArrayList<>();
         for (Class<?> c = type; c != null && c.getClassLoader() != BOOT; c = c.getSuperclass()) {
             for (Field field : c.getDeclaredFields()) {
@@ -45,7 +50,8 @@ final class OnboardingPromptPolicy {
                 } catch (RuntimeException ignored) {}
             }
         }
-        return fields;
+        List<Field> raced = STRING_FIELDS.putIfAbsent(type, fields);
+        return raced != null ? raced : fields;
     }
 
     static boolean isLocationPermission(String permission) {

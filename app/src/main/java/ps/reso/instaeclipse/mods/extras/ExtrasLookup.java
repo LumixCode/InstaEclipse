@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.function.Predicate;
 
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 
@@ -26,12 +27,11 @@ final class ExtrasLookup {
 
     private ExtrasLookup() {}
 
-    /** Cached method for {@code key}; runs {@code finder} on a cache miss. Null when not found. */
-    static Method method(String key, ClassLoader cl, Finder finder) {
+    static Method method(String key, String feature, boolean enabled, ClassLoader cl, Finder finder) {
         if (DexKitCache.isCacheValid()) {
             Method cached = DexKitCache.loadMethod(key, cl);
             if (cached != null) return cached;
-            if ("missing".equals(DexKitCache.loadString(key))) return null;
+            if ("missing".equals(DexKitCache.loadString(key))) return missing(feature, enabled);
         }
         Method m = null;
         try {
@@ -41,11 +41,18 @@ final class ExtrasLookup {
         }
         if (m != null) {
             DexKitCache.saveMethod(key, m);
-        } else {
-            DexKitCache.saveString(key, "missing");
-            ModuleLog.error("(InstaEclipse | Extras): " + key + " is not available in this Instagram version, so that feature will not work");
+            return m;
         }
-        return m;
+        DexKitCache.saveString(key, "missing");
+        String message = "(InstaEclipse | Extras): " + key + " is not available in this Instagram version, so that feature will not work";
+        if (enabled) ModuleLog.error(message);
+        else ModuleLog.detail(message);
+        return missing(feature, enabled);
+    }
+
+    private static Method missing(String feature, boolean enabled) {
+        if (enabled) FeatureStatusTracker.setBroken(feature);
+        return null;
     }
 
     /** Methods whose body references every given string. */
@@ -65,10 +72,5 @@ final class ExtrasLookup {
             }
         }
         return null;
-    }
-
-    static boolean takesSession(Method m) {
-        Class<?>[] p = m.getParameterTypes();
-        return p.length == 1 && p[0].getName().equals("com.instagram.common.session.UserSession");
     }
 }

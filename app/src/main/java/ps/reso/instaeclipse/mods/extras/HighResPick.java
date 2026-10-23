@@ -7,17 +7,24 @@ final class HighResPick {
     private HighResPick() {}
 
     static int choose(int[] w, int[] h, int igIndex, int target) {
-        int best = -1;
-        long area = 0;
+        if (igIndex < 0 || igIndex >= w.length || !valid(w[igIndex], h[igIndex])) return -1;
+        boolean square = w[igIndex] == h[igIndex];
+        long sharp = 2L * target;
+        int smallest = -1, largest = -1;
+        long smallestArea = Long.MAX_VALUE, largestArea = 0;
         for (int i = 0; i < w.length; i++) {
-            if (!valid(w[i], h[i])) continue;
+            if (!valid(w[i], h[i]) || (w[i] == h[i]) != square) continue;
             long a = (long) w[i] * h[i];
-            if (a > area) {
-                area = a;
-                best = i;
+            if (a > largestArea) {
+                largestArea = a;
+                largest = i;
+            }
+            if (w[i] >= sharp && a < smallestArea) {
+                smallestArea = a;
+                smallest = i;
             }
         }
-        return best;
+        return smallest >= 0 ? smallest : largest;
     }
 
     private static boolean valid(int w, int h) {
