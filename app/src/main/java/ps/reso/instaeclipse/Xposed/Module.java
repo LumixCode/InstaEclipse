@@ -358,8 +358,14 @@ public class Module {
 
                     try {
                         if (!skip("HideChatsHook")) new ps.reso.instaeclipse.mods.ghost.HideChatsHook().install(dexKitBridge, lpparam.classLoader); // Hide Specific Chats
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | HideChats): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | HideChats): Could not start, so this feature will not work", t);
+                    }
+
+                    try {
+                        if (!skip("InboxDiscoverPeopleHook")) new ps.reso.instaeclipse.mods.ui.InboxDiscoverPeopleHook().install(dexKitBridge, lpparam.classLoader); // Disable Discover People in Messages
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | InboxDiscover): Could not start, so this feature will not work", t);
                     }
 
                     try {
