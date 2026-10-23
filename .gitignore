@@ -16,10 +16,48 @@
 local.properties
 /app/release
 /app/debug
-/.claude
+.claude/
+CLAUDE.local.md
 /APK
 
 # Release signing secrets
 keystore.properties
+*-release.properties
+signing.properties
 *.jks
 *.keystore
+*.p12
+*.pfx
+*.pem
+.env
+.env.*
+
+# Private notes: only these shared docs belong in the repo
+/docs/*
+!/docs/remaining-fork-improvements.md
+!/docs/xposed-api-102/
+
+# Device logs, crash and heap dumps, and data exported from Instagram (accounts, chats, follower lists)
+*.log
+logcat*.txt
+bugreport*.zip
+tombstone*
+*.dmp
+*.hprof
+*.csv
+/exports/
+chat_*.html
+chat_*/
+unsent_*.json
+ie_*.json
+instaeclipse_data_*.zip
+instaeclipse_settings.json
+ig_crash/
+
+# Built packages, git bundles and screen captures outside the build folders
+*.apk
+*.aab
+*.bundle
+/screenshots/
+Screenshot_*
+Screen_Recording_*
