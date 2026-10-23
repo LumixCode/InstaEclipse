@@ -2,6 +2,7 @@ package ps.reso.instaeclipse.utils.ui;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.view.View;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -32,6 +33,11 @@ public final class ResIds {
 
     public static int attr(Context ctx, String name) {
         return resolve(ATTRS, ctx, name, "attr");
+    }
+
+    public static boolean is(View view, String name) {
+        int id = id(view.getContext(), name);
+        return id != 0 && view.getId() == id;
     }
 
     @SuppressLint("DiscouragedApi")

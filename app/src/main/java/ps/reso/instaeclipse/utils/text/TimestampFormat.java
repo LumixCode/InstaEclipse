@@ -23,19 +23,36 @@ public final class TimestampFormat {
             "EEE, d MMM yyyy HH:mm",
     };
 
+    private static volatile Checked lastChecked;
+
     private TimestampFormat() {}
+
+    private static final class Checked {
+        final String pattern;
+        final boolean valid;
+
+        Checked(String pattern, boolean valid) {
+            this.pattern = pattern;
+            this.valid = valid;
+        }
+    }
 
     /** A pattern SimpleDateFormat accepts (empty = the device default, also valid). */
     public static boolean isValid(String pattern) {
         if (pattern == null) return false;
         if (pattern.isEmpty()) return true;
         if (pattern.length() > 64) return false;
+        Checked last = lastChecked;
+        if (last != null && last.pattern.equals(pattern)) return last.valid;
+        boolean valid;
         try {
             new SimpleDateFormat(pattern, Locale.US).format(new Date(0));
-            return true;
+            valid = true;
         } catch (IllegalArgumentException e) {
-            return false;
+            valid = false;
         }
+        lastChecked = new Checked(pattern, valid);
+        return valid;
     }
 
     /** {@code date} in {@code pattern}; the device's short format when it is empty or invalid. */

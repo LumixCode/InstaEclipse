@@ -31,6 +31,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 
 public class DisableDoubleTapLikeHook {
 
@@ -463,28 +464,14 @@ public class DisableDoubleTapLikeHook {
 
     private static boolean looksLikeClipsView(View view) {
         for (View current = view; current != null; ) {
-            String entryName = resourceEntryName(current);
-            if (entryName != null && (entryName.contains("clips_video_container")
-                    || entryName.contains("clips_viewer_video_layout")
-                    || entryName.contains("sponsored_clips_showreel_view"))) {
+            if (ResIds.is(current, "clips_video_container") || ResIds.is(current, "clips_viewer_video_layout")
+                    || ResIds.is(current, "sponsored_clips_showreel_view") || ResIds.is(current, "sponsored_clips_showreel_view_stub")) {
                 return true;
             }
             ViewParent parent = current.getParent();
             current = parent instanceof View ? (View) parent : null;
         }
         return false;
-    }
-
-    private static String resourceEntryName(View view) {
-        int id = view.getId();
-        // Generated ids (package byte 0) are no resources; looking them up makes Android log
-        // "Invalid resource ID" on every touch.
-        if (id == View.NO_ID || (id >>> 24) == 0) return null;
-        try {
-            return view.getResources().getResourceEntryName(id);
-        } catch (Throwable ignored) {
-            return null;
-        }
     }
 
     private static String signature(Method method) {
