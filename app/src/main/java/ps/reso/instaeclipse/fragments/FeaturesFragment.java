@@ -89,10 +89,14 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private ActivityResultLauncher<String> profilePhotoLauncher;
 
     private String currentMenu = "main";
+    private String searchShown;
+    private Map<String, Runnable> menuLoaders;
     private boolean restoringMenu;
     private OnBackPressedCallback backCallback;
     /** True once Instagram answered the current request with today's reel count. */
     private boolean reelUsageSynced;
+    private int reelsWatchedToday;
+    private String reelUsageDate = "";
 
     // STAGING SYSTEM: Holds changes before applying
     private final Map<String, Boolean> stagedChanges = new HashMap<>();
@@ -115,10 +119,18 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     if (suppressPath) editor.remove("pathJustSetLocally");
                     // Older builds stored the reply's nonce extra as if it were a setting.
                     editor.remove(ps.reso.instaeclipse.utils.core.IpcSecurity.EXTRA_NONCE);
+                    editor.remove("dailyReelsWatchedToday").remove("dailyReelUsageDate");
                     // Instagram's values, minus the ones this app changed more recently (pending
                     // in Instagram) — see PrefsMerge. Also drops the nonce and stamp extras.
                     Map<String, Object> incoming = new HashMap<>();
                     for (String key : bundle.keySet()) incoming.put(key, bundle.get(key));
+                    Object watched = incoming.remove("dailyReelsWatchedToday");
+                    Object usageDate = incoming.remove("dailyReelUsageDate");
+                    if (watched instanceof Integer) {
+                        reelsWatchedToday = (Integer) watched;
+                        reelUsageDate = usageDate instanceof String ? (String) usageDate : "";
+                        reelUsageSynced = true;
+                    }
                     Map<String, Object> changes =
                             ps.reso.instaeclipse.utils.core.PrefsMerge.select(incoming, localCache.getAll());
                     for (Map.Entry<String, Object> change : changes.entrySet()) {
@@ -136,18 +148,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                         }
                     }
                     editor.apply();
-                    if (bundle.containsKey("dailyReelsWatchedToday")) reelUsageSynced = true;
-                    // Rebuild downloader/reels/distraction menus so the current value reflects immediately
-                    if ("downloader".equals(currentMenu)) {
-                        loadDownloaderMenu();
-                    } else if ("quality".equals(currentMenu)) {
-                        loadQualityMenu();
-                    } else if ("distract".equals(currentMenu)) {
-                        loadDistractionMenu();
-                    } else {
-                        // Also recomputes the main-menu "N on" counts
-                        refreshVisibleMenu();
-                    }
+                    reloadCurrentMenu();
                 }
             }
         }
@@ -232,7 +233,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     }
                 }
                 editor.apply();
-                refreshVisibleMenu();
+                reloadCurrentMenu();
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), skipped == 0
                         ? getString(R.string.ig_toast_settings_restored)
                         : getString(R.string.ig_toast_settings_restored_skipped, skipped), Toast.LENGTH_SHORT).show();
@@ -266,13 +267,11 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     b2.putExtra("value", String.valueOf(lng));
                     ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b2);
 
-                    if ("location".equals(currentMenu)) loadLocationMenu();
+                    reloadCurrentMenu();
                 });
 
         themeCustomizerLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(), result -> {
-                    if ("theme".equals(currentMenu)) loadThemeMenu();
-                });
+                new ActivityResultContracts.StartActivityForResult(), result -> reloadCurrentMenu());
 
         profilePhotoLauncher = registerForActivityResult(new ActivityResultContracts.GetContent(), this::onProfilePhotoPicked);
 
@@ -315,9 +314,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_toast_download_folder_updated), Toast.LENGTH_SHORT).show();
 
-                if ("downloader".equals(currentMenu)) {
-                    loadDownloaderMenu();
-                }
+                reloadCurrentMenu();
             }
         });
     }
@@ -732,11 +729,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                                         updateMasterSwitches();
                                         refreshConditionalItems();
                                     })
-                                    .setNegativeButton(getString(R.string.ig_dialog_cancel), (dialog, which) -> {
-                                        itemHolder.swToggle.setChecked(false);
-                                    })
-                                    // Back / tap outside = Cancel, so the switch never shows on while it isn't
-                                    .setOnCancelListener(dialog -> itemHolder.swToggle.setChecked(false))
+                                    .setNegativeButton(getString(R.string.ig_dialog_cancel), (dialog, which) -> rebind(item))
+                                    .setOnCancelListener(dialog -> rebind(item))
                                     .show();
                             return;
                         }
@@ -769,6 +763,11 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     });
                 }
             }
+        }
+
+        private void rebind(FeatureItem item) {
+            int position = items.indexOf(item);
+            if (position >= 0) notifyItemChanged(position);
         }
 
         private void refreshRowByKey(String prefKey) {
@@ -834,14 +833,16 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     // =========================================================
 
     private void showMenu(String key, String title, List<Object> definitions) {
-        showMenu(key, title, definitions, true);
+        boolean inPlace = key.equals(currentMenu) && searchShown == null && adapter.getItemCount() > 0;
+        searchShown = null;
+        showMenu(key, title, definitions, true, inPlace);
     }
 
     /** @param animate false for live search updates (no header transition / list slide-in per keystroke). */
-    private void showMenu(String key, String title, List<Object> definitions, boolean animate) {
+    private void showMenu(String key, String title, List<Object> definitions, boolean animate, boolean inPlace) {
         currentMenu = key;
         boolean isMain = "main".equals(key);
-        animate = animate && !restoringMenu;
+        animate = animate && !inPlace && !restoringMenu;
         if (animate) {
             ViewGroup topBar = fragmentView.findViewById(R.id.top_bar);
             TransitionManager.beginDelayedTransition(topBar, new AutoTransition().setDuration(200));
@@ -880,6 +881,13 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         }
 
         updateBackEnabled();
+        if (inPlace) {
+            RecyclerView.LayoutManager manager = recyclerFeatures.getLayoutManager();
+            android.os.Parcelable scroll = manager != null ? manager.onSaveInstanceState() : null;
+            adapter.setItems(displayList);
+            if (scroll != null) manager.onRestoreInstanceState(scroll);
+            return;
+        }
         if (!animate) {
             recyclerFeatures.animate().cancel();
             recyclerFeatures.setAlpha(1f);
@@ -1086,7 +1094,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         off.putExtra("key", ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.KEY);
         off.putExtra("value", false);
         ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), off);
-        if ("main".equals(currentMenu) && !isSearching()) showMenu("main", getString(R.string.features), buildMainDefs(), false);
+        if ("main".equals(currentMenu) && !isSearching()) loadMainMenu();
     }
 
     private void loadParentMenu() {
@@ -1210,15 +1218,21 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return false;
     }
 
-    /** Recomputes the category counts when the main menu is showing, then rebinds the visible rows. */
-    private void refreshVisibleMenu() {
-        if (adapter == null || localCache == null || !isAdded()) return;
-        if ("main".equals(currentMenu)) {
-            for (FeatureItem fi : adapter.items) {
-                if (fi.category != null) applyCategorySubtitle(fi);
-            }
+    private void reloadCurrentMenu() {
+        if (adapter == null || localCache == null || !isAdded() || getView() == null) return;
+        if (isSearching()) {
+            runSearch(etSearch.getText().toString());
+            return;
         }
-        adapter.notifyDataSetChanged();
+        if (menuLoaders == null) {
+            menuLoaders = new HashMap<>();
+            menuLoaders.put("main", this::loadMainMenu);
+            for (Category category : getCategories()) menuLoaders.put(category.key, category.loader);
+            menuLoaders.put("distract", this::loadDistractionMenu);
+        }
+        Runnable loader = menuLoaders.get(currentMenu);
+        if (loader != null) loader.run();
+        else loadMainMenu();
     }
 
     // =========================================================
@@ -1275,7 +1289,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
             }
         }
         if (defs.isEmpty()) defs.add(getString(R.string.feat_search_no_results));
-        showMenu("main", getString(R.string.features), defs, false);
+        boolean inPlace = q.equals(searchShown) && "main".equals(currentMenu);
+        searchShown = q;
+        showMenu("main", getString(R.string.features), defs, false, inPlace);
     }
 
     private void loadDevMenu() {
@@ -1487,7 +1503,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.ig_feed_corner_radius)
                 .setSingleChoiceItems(labels, selected, (dialog, which) -> {
                     putIntPref("feedCornerRadius", radii[which]);
-                    dialog.dismiss(); loadFeedMenu();
+                    dialog.dismiss(); reloadCurrentMenu();
                 }).setNegativeButton(android.R.string.cancel, null).show();
     }
 
@@ -1498,13 +1514,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         requestPrefs();
     }
 
-    /** Rebuilds in place (keeping the scroll position) when the page is already showing. */
     private void loadDistractionMenu() {
-        boolean reload = "distract".equals(currentMenu);
-        RecyclerView.LayoutManager manager = recyclerFeatures.getLayoutManager();
-        android.os.Parcelable scroll = reload && manager != null ? manager.onSaveInstanceState() : null;
-        showMenu("distract", getString(R.string.ig_dialog_section_distraction_free), buildDistractionDefs(), !reload);
-        if (scroll != null) manager.onRestoreInstanceState(scroll);
+        showMenu("distract", getString(R.string.ig_dialog_section_distraction_free), buildDistractionDefs());
     }
 
     private List<Object> buildDistractionDefs() {
@@ -1558,7 +1569,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showDailyReelLimitPicker(requireContext(), limit, value -> {
                         if (!reelLimitsEditable() || !getCurrentState("dailyReelLimitEnabled")) return;
                         putIntPref("dailyReelLimit", value);
-                        loadDistractionMenu();
+                        reloadCurrentMenu();
                     }));
             amount.enabled = reelsAllowed;
             amount.disabledWhenTrue = "isExtremeMode";
@@ -1633,19 +1644,18 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private void updateNightReelTime(String key, int value) {
         if (!reelLimitsEditable() || !getCurrentState("nightReelBlockEnabled")) return;
         putIntPref(key, value);
-        loadDistractionMenu();
+        reloadCurrentMenu();
     }
 
     /** Today's reel count from Instagram; "—" until a reply to the current request arrives. */
     private void addDailyReelStatus(List<Object> defs) {
         int limit = ps.reso.instaeclipse.mods.reels.DailyReelLimit.validLimit(localCache.getInt("dailyReelLimit", 100));
-        boolean today = java.time.LocalDate.now().toString().equals(localCache.getString("dailyReelUsageDate", ""));
+        boolean today = java.time.LocalDate.now().toString().equals(reelUsageDate);
         String count = getString(R.string.ig_reel_debug_waiting);
         if (reelUsageSynced && today) {
-            int watched = localCache.getInt("dailyReelsWatchedToday", 0);
             count = getCurrentState("dailyReelLimitEnabled")
-                    ? getString(R.string.ig_reel_limit_usage, watched, limit)
-                    : getString(R.string.ig_reel_usage_count, watched);
+                    ? getString(R.string.ig_reel_limit_usage, reelsWatchedToday, limit)
+                    : getString(R.string.ig_reel_usage_count, reelsWatchedToday);
         }
         defs.add(getString(R.string.ig_reel_limit_title));
         defs.add(Arrays.asList(createClickable(R.drawable.ic_timer, "#30D158", count, this::openDistractionMenu)));
@@ -1779,7 +1789,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     b.putExtra("key", "customShareDomain");
                     b.putExtra("value", domain);
                     ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
-                    loadAppMenu();
+                    reloadCurrentMenu();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -1885,7 +1895,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         b.putExtra("key", "exactTimestampFormat");
         b.putExtra("value", pattern);
         ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
-        loadFeedMenu();
+        reloadCurrentMenu();
     }
 
     private String[] spoofDeviceNames() {
@@ -1918,7 +1928,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
                     d.dismiss();
                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), R.string.ig_spoof_device_note, Toast.LENGTH_LONG).show();
-                    loadQualityMenu();
+                    reloadCurrentMenu();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -1943,7 +1953,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     b.putExtra("value", tabs[which]);
                     ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
                     d.dismiss();
-                    loadNavigationMenu();
+                    reloadCurrentMenu();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -2155,7 +2165,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 .setSingleChoiceItems(labels, sel, (dialog, which) -> {
                     putIntPref("autoClearCacheSizeMb", values[which]);
                     dialog.dismiss();
-                    loadAppMenu();
+                    reloadCurrentMenu();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -2260,7 +2270,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 rows.add(createNav(R.drawable.ic_timer, "#FFD60A", p.title(), () -> {
                     ps.reso.instaeclipse.mods.location.LocationPresets.applyFromCompanion(requireContext(), p);
                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), R.string.ig_dialog_location_applied, Toast.LENGTH_SHORT).show();
-                    loadLocationMenu();
+                    reloadCurrentMenu();
                 }));
             }
             defs.add(getString(R.string.ig_dialog_location_recent));
@@ -2342,7 +2352,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 .setSingleChoiceItems(labels, sel, (dialog, which) -> {
                     putIntPref("themePresetId", values[which]);
                     dialog.dismiss();
-                    loadThemeMenu();
+                    reloadCurrentMenu();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -2373,7 +2383,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
 
                     dialog.dismiss();
-                    loadThemeMenu();
+                    reloadCurrentMenu();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -2440,7 +2450,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.ig_story_tray_size)
                 .setSingleChoiceItems(labels, selected, (dialog, which) -> {
                     putIntPref("storyTrayScale", sizes[which]);
-                    dialog.dismiss(); loadStoriesMenu();
+                    dialog.dismiss(); reloadCurrentMenu();
                 }).setNegativeButton(android.R.string.cancel, null).show();
     }
 
@@ -2468,7 +2478,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 .setView(scroll)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     putStringPref("storyRingColor", picked[0]);
-                    loadStoriesMenu();
+                    reloadCurrentMenu();
                 })
                 .setNegativeButton(android.R.string.cancel, null).show();
     }
@@ -2510,7 +2520,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
 
                     dialog.dismiss();
-                    loadQualityMenu();
+                    reloadCurrentMenu();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -2529,7 +2539,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showStoryCacheDurationPicker(requireContext(), cacheHours, value -> {
                     if (!getCurrentState("cacheStories")) return;
                     putIntPref("storyCacheHours", ps.reso.instaeclipse.utils.media.StoryCacheRetention.normalize(value));
-                    loadDownloaderMenu();
+                    reloadCurrentMenu();
                 }));
         cacheDuration.requiresAnyOf = Arrays.asList("cacheStories");
 
@@ -2604,7 +2614,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 .setSingleChoiceItems(labels, selected, (dialog, which) -> {
                     putBoolPref("downloaderUseOriginal", values[which] < 0);
                     if (values[which] >= 0) putIntPref("downloaderQualityMaxShortSide", values[which]);
-                    dialog.dismiss(); loadDownloaderMenu();
+                    dialog.dismiss(); reloadCurrentMenu();
                 }).setNegativeButton(android.R.string.cancel, null).show();
     }
 
@@ -2700,9 +2710,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_toast_download_folder_reset), Toast.LENGTH_SHORT).show();
 
-        if ("downloader".equals(currentMenu)) {
-            loadDownloaderMenu();
-        }
+        reloadCurrentMenu();
     }
 
     private void backupSettings() {
@@ -3020,7 +3028,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     /** Settings changed elsewhere (inside Instagram, pushed by its sync, or a restore) redraw the
      *  page on screen, so both menus always show the same values. Coalesced and posted, so a burst
      *  of changes or a change made from a switch callback never rebinds mid-toggle. */
-    private final Runnable syncRefresh = this::refreshVisibleMenu;
+    private final Runnable syncRefresh = this::reloadCurrentMenu;
     private final SharedPreferences.OnSharedPreferenceChangeListener prefsListener = (prefs, key) -> {
         View v = getView();
         if (v == null) return;
@@ -3044,12 +3052,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         reelUsageSynced = false;
         if (localCache != null) localCache.registerOnSharedPreferenceChangeListener(prefsListener);
         requestPrefs();
-        // Prefs may have changed while away (e.g. toggled from inside Instagram): refresh counts
-        if ("distract".equals(currentMenu)) {
-            loadDistractionMenu();
-        } else {
-            refreshVisibleMenu();
-        }
+        reloadCurrentMenu();
         updateBackEnabled();
     }
 
