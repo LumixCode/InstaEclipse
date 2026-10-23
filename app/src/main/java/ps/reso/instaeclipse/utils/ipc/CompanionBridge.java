@@ -19,6 +19,10 @@ import android.os.Process;
 import android.view.View;
 import android.widget.Toast;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -39,25 +43,24 @@ public final class CompanionBridge {
     // Official Instagram signing identity; never enroll a host by package name alone.
     // hasSigningCertificate also validates its signing-history descendants (APK v3 rotation).
     private static final String HOST_SIGNER_SHA256 = "5f3e50f435583c9ae626302a71f7340044087a7e2c60adacfc254205a993e305";
-    private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    static final byte[][] HOST_SIGNERS = { hex(HOST_SIGNER_SHA256) };
+    private static final int CONFIG_MAX_BYTES = 64 * 1024;
     private static final ThreadPoolExecutor IPC = new ThreadPoolExecutor(2, 2, 30, TimeUnit.SECONDS,
             new ArrayBlockingQueue<>(16), new ThreadPoolExecutor.AbortPolicy());
     private CompanionBridge() { }
 
     public interface Callback { void onResult(String error); }
     private interface Writer { void write(Parcel parcel); }
+    private static final class Main { static final Handler HANDLER = new Handler(Looper.getMainLooper()); }
 
     /** Name alone never enrolls a host. This intentionally excludes companion and clone packages. */
     public static boolean isTrustedHost(Context context, String packageName) {
         if (context == null || !BrokerPayload.HOST.equals(packageName)) return false;
         try {
-            byte[] expected = new byte[32];
-            if (HOST_SIGNER_SHA256.length() != 64) return false;
-            for (int i = 0; i < expected.length; i++)
-                expected[i] = (byte) Integer.parseInt(HOST_SIGNER_SHA256.substring(i * 2, i * 2 + 2), 16);
-            if (context.getPackageManager().hasSigningCertificate(packageName, expected, PackageManager.CERT_INPUT_SHA256))
-                return true;
-            return lspatchOriginalSigner(context, packageName, expected);
+            PackageManager pm = context.getPackageManager();
+            for (byte[] pin : HOST_SIGNERS)
+                if (pm.hasSigningCertificate(packageName, pin, PackageManager.CERT_INPUT_SHA256)) return true;
+            return lspatchOriginalSigner(context, packageName);
         } catch (RuntimeException ignored) { return false; }
     }
 
@@ -70,7 +73,7 @@ public final class CompanionBridge {
      * assets/lspatch/config.json ("originalSignature", the certificate in hex). Without root that
      * is how Instagram arrives, so its recorded signer is checked against the same pinned hash.
      */
-    private static boolean lspatchOriginalSigner(Context context, String packageName, byte[] expected) {
+    private static boolean lspatchOriginalSigner(Context context, String packageName) {
         try {
             android.content.pm.PackageInfo info = context.getPackageManager().getPackageInfo(packageName, 0);
             String key = info.applicationInfo.sourceDir + "@" + info.lastUpdateTime;
@@ -78,24 +81,41 @@ public final class CompanionBridge {
             boolean trusted = false;
             try (java.util.zip.ZipFile apk = new java.util.zip.ZipFile(info.applicationInfo.sourceDir)) {
                 java.util.zip.ZipEntry entry = apk.getEntry("assets/lspatch/config.json");
-                if (entry != null && entry.getSize() > 0 && entry.getSize() < 64 * 1024) {
+                if (entry != null && entry.getSize() > 0 && entry.getSize() < CONFIG_MAX_BYTES) {
                     byte[] raw;
-                    try (java.io.InputStream in = apk.getInputStream(entry)) { raw = in.readAllBytes(); }
+                    try (InputStream in = apk.getInputStream(entry)) { raw = readBounded(in, CONFIG_MAX_BYTES); }
                     String cert = new org.json.JSONObject(new String(raw, java.nio.charset.StandardCharsets.UTF_8))
                             .optString("originalSignature", "");
-                    if (!cert.isEmpty() && cert.length() % 2 == 0 && cert.matches("[0-9a-fA-F]+")) {
-                        byte[] der = new byte[cert.length() / 2];
-                        for (int i = 0; i < der.length; i++)
-                            der[i] = (byte) Integer.parseInt(cert.substring(i * 2, i * 2 + 2), 16);
-                        trusted = java.security.MessageDigest.isEqual(expected,
-                                java.security.MessageDigest.getInstance("SHA-256").digest(der));
-                    }
+                    if (!cert.isEmpty() && cert.length() % 2 == 0 && cert.matches("[0-9a-fA-F]+"))
+                        trusted = matchesPin(hex(cert), HOST_SIGNERS);
                 }
             }
             lspatchTrusted = trusted;
             lspatchCheckedFor = key;
             return trusted;
         } catch (Exception ignored) { return false; }
+    }
+
+    static byte[] readBounded(InputStream in, int max) throws IOException {
+        byte[] raw = in.readAllBytes();
+        if (raw.length > max) throw new IOException();
+        return raw;
+    }
+
+    static boolean matchesPin(byte[] der, byte[][] pins) {
+        if (der == null) return false;
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(der);
+            for (byte[] pin : pins) if (MessageDigest.isEqual(pin, digest)) return true;
+            return false;
+        } catch (GeneralSecurityException missing) { return false; }
+    }
+
+    private static byte[] hex(String value) {
+        byte[] out = new byte[value.length() / 2];
+        for (int i = 0; i < out.length; i++)
+            out[i] = (byte) Integer.parseInt(value.substring(i * 2, i * 2 + 2), 16);
+        return out;
     }
 
     /** Called only inside a Binder transaction with Binder.getCallingUid(), never a claimed extra. */
@@ -178,14 +198,14 @@ public final class CompanionBridge {
 
     private static void begin(Context context, int code, Writer writer, Callback callback) {
         if (context == null) { report(callback, "Companion unavailable"); return; }
-        MAIN.post(() -> new Operation(context, code, writer, callback).start());
+        Main.HANDLER.post(() -> new Operation(context, code, writer, callback).start());
     }
     private static void report(Callback callback, String error) {
-        MAIN.post(() -> { if (callback != null) callback.onResult(error); });
+        Main.HANDLER.post(() -> { if (callback != null) callback.onResult(error); });
     }
     private static void errorToast(Context context, String error) {
         if (context == null) return;
-        MAIN.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, error, Toast.LENGTH_LONG).show());
+        Main.HANDLER.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, error, Toast.LENGTH_LONG).show());
     }
 
     private static Activity activity(Context context) {
@@ -222,7 +242,7 @@ public final class CompanionBridge {
         }
         void start() {
             if (code == ACTIVITY && !visible(activity(caller))) { finish(null, "Open this action from the current screen"); return; }
-            MAIN.postDelayed(timeout, 10_000);
+            Main.HANDLER.postDelayed(timeout, 10_000);
             try {
                 expectedUid = app.getPackageManager().getApplicationInfo(BuildConfig.APPLICATION_ID, 0).uid;
             } catch (Exception missing) {
@@ -271,9 +291,9 @@ public final class CompanionBridge {
             } finally { data.recycle(); reply.recycle(); }
         }
         void finish(PendingIntent token, String error) {
-            MAIN.post(() -> {
+            Main.HANDLER.post(() -> {
                 if (!complete.compareAndSet(false, true)) { if (token != null) token.cancel(); return; }
-                MAIN.removeCallbacks(timeout);
+                Main.HANDLER.removeCallbacks(timeout);
                 if (bound) { try { app.unbindService(this); } catch (RuntimeException ignored) { } bound = false; }
                 String result = error;
                 if (token != null) {
