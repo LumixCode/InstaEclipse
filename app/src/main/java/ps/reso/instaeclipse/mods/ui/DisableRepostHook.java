@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.res.Resources;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -12,8 +13,11 @@ import java.util.List;
 import java.util.Set;
 
 import org.luckypray.dexkit.DexKitBridge;
+import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
+import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
+import org.luckypray.dexkit.result.ClassData;
 import org.luckypray.dexkit.result.MethodData;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -83,11 +87,14 @@ public class DisableRepostHook {
             "android_purge_26_q3_ClipsRepostButtonComponent_render",
     };
     private static final String BUTTON_CACHE = "DisableRepost_buttons_v2";
+    private static final String UFI_STATE_CACHE = "DisableRepost_ufiState_v1";
+    private static final String REPOST_BUTTON_LABEL = ", isRepostButtonEnabled=";
 
     public void install(Context context, DexKitBridge bridge, ClassLoader classLoader) {
         int total = installActionHandler(bridge, classLoader);
         total += installFeedCommit(classLoader);
         total += installButtonRemoval(context, bridge, classLoader);
+        total += installUfiState(bridge, classLoader);
 
         if (total > 0) FeatureStatusTracker.setHooked("DisableRepost");
         if (total > 0) ModuleLog.ok("(IE|Repost) ready");
@@ -213,6 +220,60 @@ public class DisableRepostHook {
         if (total == 0) ModuleLog.warn("(IE|Repost) Repost buttons cannot be hidden in this Instagram version; only the repost itself is blocked");
         ModuleLog.detail("(IE|Repost) repost buttons: " + total + " builder(s)");
         return total;
+    }
+
+    private int installUfiState(DexKitBridge bridge, ClassLoader classLoader) {
+        try {
+            Field field = DexKitCache.isCacheValid() ? DexKitCache.loadField(UFI_STATE_CACHE, classLoader) : null;
+            if (field == null) {
+                field = findUfiStateField(bridge, classLoader);
+                if (field == null) return 0;
+                DexKitCache.saveField(UFI_STATE_CACHE, field);
+            }
+            field.setAccessible(true);
+            final Field repostButton = field;
+            int total = XposedBridge.hookAllConstructors(field.getDeclaringClass(), new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    if (!FeatureFlags.disableRepost) return;
+                    try {
+                        repostButton.setBoolean(param.thisObject, false);
+                    } catch (Throwable ignored) {}
+                }
+            }).size();
+            ModuleLog.detail("(IE|Repost) feed repost button state: " + field.getDeclaringClass().getName() + "." + field.getName()
+                    + ", " + total + " constructor(s)");
+            return total;
+        } catch (Throwable t) {
+            ModuleLog.warn("(IE|Repost) The repost button may stay visible on home-feed posts; reposting is still blocked");
+            ModuleLog.detail("(IE|Repost) feed UFI state: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            return 0;
+        }
+    }
+
+    private static Field findUfiStateField(DexKitBridge bridge, ClassLoader classLoader) throws Exception {
+        if (bridge == null) return null;
+        List<ClassData> found = DexKitQueryCache.findClass(bridge, FindClass.create().matcher(ClassMatcher.create()
+                .usingStrings(REPOST_BUTTON_LABEL)));
+        if (found.size() != 1) {
+            ModuleLog.warn("(IE|Repost) The repost button may stay visible on home-feed posts; reposting is still blocked");
+            ModuleLog.detail("(IE|Repost) feed UFI state class " + (found.isEmpty() ? "not found" : "ambiguous (" + found.size() + ")"));
+            return null;
+        }
+        Class<?> state = found.get(0).getInstance(classLoader);
+        Field field = UfiStateField.fieldFor(blank(state), REPOST_BUTTON_LABEL);
+        if (field == null) {
+            ModuleLog.warn("(IE|Repost) The repost button may stay visible on home-feed posts; reposting is still blocked");
+            ModuleLog.detail("(IE|Repost) no single boolean of " + state.getName() + " drives the repost button");
+        }
+        return field;
+    }
+
+    private static Object blank(Class<?> cls) throws Exception {
+        Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
+        Field theUnsafe = unsafeClass.getDeclaredField("theUnsafe");
+        theUnsafe.setAccessible(true);
+        return unsafeClass.getMethod("allocateInstance", Class.class).invoke(theUnsafe.get(null), cls);
     }
 
     @SuppressLint("DiscouragedApi")
