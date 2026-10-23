@@ -44,6 +44,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 
@@ -411,14 +412,14 @@ public class CommentSearchHook {
     }
 
     /** The magnifier: 24dp glyph in a 44dp touch target, tinted like Instagram's primary icons. */
-    @android.annotation.SuppressLint({"DiscouragedApi", "UseCompatLoadingForDrawables", "ClickableViewAccessibility"})
+    @android.annotation.SuppressLint({"UseCompatLoadingForDrawables", "ClickableViewAccessibility"})
     private static android.widget.ImageView newIcon(Context ctx, int tint) {
         float d = ctx.getResources().getDisplayMetrics().density;
         android.widget.ImageView icon = new android.widget.ImageView(ctx);
         icon.setTag(ICON_TAG);
         android.graphics.drawable.Drawable glyph = null;
         for (String name : new String[]{"instagram_search_outline_24", "instagram_search_pano_outline_24", "tab_search_drawable"}) {
-            int id = ctx.getResources().getIdentifier(name, "drawable", ctx.getPackageName());
+            int id = ResIds.drawable(ctx, name);
             if (id == 0) continue;
             try { glyph = ctx.getDrawable(id); } catch (Throwable ignored) {}
             if (glyph != null) break;
@@ -499,8 +500,7 @@ public class CommentSearchHook {
         for (Context c : new Context[]{themed, ctx}) {
             if (c == null) continue;
             try {
-                @android.annotation.SuppressLint("DiscouragedApi")
-                int attr = c.getResources().getIdentifier("igds_color_primary_icon", "attr", c.getPackageName());
+                int attr = ResIds.attr(c, "igds_color_primary_icon");
                 android.util.TypedValue v = new android.util.TypedValue();
                 if (attr == 0 || !c.getTheme().resolveAttribute(attr, v, true)) continue;
                 if (v.resourceId != 0) return c.getColor(v.resourceId);
@@ -554,9 +554,8 @@ public class CommentSearchHook {
     }
 
     /** The layout holding the sheet's "Comments" title (id title_text_view), nearest to the sheet. */
-    @android.annotation.SuppressLint("DiscouragedApi")
     private static ViewGroup headerRow(View sheet) {
-        int id = sheet.getResources().getIdentifier("title_text_view", "id", sheet.getContext().getPackageName());
+        int id = ResIds.id(sheet.getContext(), "title_text_view");
         if (id == 0) return null;
         for (View v = sheet; v != null; v = v.getParent() instanceof View p ? p : null) {
             View title = v.findViewById(id);
@@ -1812,11 +1811,10 @@ public class CommentSearchHook {
      * events dispatched into Instagram's own window, so no permission is needed and the sheet's
      * own drag logic opens it. Returns true when a drag was started (the sheet was not open yet).
      */
-    @android.annotation.SuppressLint("DiscouragedApi")
     private static boolean expandSheet(View sheetRoot) {
         try {
             View decor = sheetRoot.getRootView();
-            int id = decor.getResources().getIdentifier("bottom_sheet_drag_handle_frame", "id", decor.getContext().getPackageName());
+            int id = ResIds.id(decor.getContext(), "bottom_sheet_drag_handle_frame");
             View handle = id != 0 ? decor.findViewById(id) : null;
             if (handle == null || !handle.isShown()) return false;
             int[] at = new int[2];

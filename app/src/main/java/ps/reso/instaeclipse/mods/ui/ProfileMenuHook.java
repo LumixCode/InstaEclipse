@@ -31,6 +31,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
@@ -94,14 +95,11 @@ public final class ProfileMenuHook {
      * The menu is a RecyclerView (context_menu_options_list) inside context_menu; its rows exist
      * only after its first layout, so ours go in, above it, once it has laid out.
      */
-    @SuppressLint("DiscouragedApi")
     private static void inject(PopupWindow pw, View content, Activity a, String username, int attempt) {
         try {
             if (!pw.isShowing() && attempt > 0) return;
             Context ctx = content.getContext();
-            String pkg = ctx.getPackageName();
-            android.content.res.Resources res = ctx.getResources();
-            View options = content.findViewById(res.getIdentifier("context_menu_options_list", "id", pkg));
+            View options = content.findViewById(ResIds.id(ctx, "context_menu_options_list"));
             if (!(options instanceof ViewGroup scroller) || !(scroller.getParent() instanceof LinearLayout list)) return;
             if (list.getOrientation() != LinearLayout.VERTICAL) {
                 // context_menu lays its parts side by side; here the list is its only shown part
@@ -237,14 +235,11 @@ public final class ProfileMenuHook {
     }
 
     /** The open profile's username (its header title), or null when no profile is on screen. */
-    @SuppressLint("DiscouragedApi")
     public static String profileUsername(Activity a) {
         if (a == null) return null;
-        android.content.res.Resources r = a.getResources();
-        String pkg = a.getPackageName();
-        int header = r.getIdentifier("profile_header_container", "id", pkg);
-        int title = r.getIdentifier("action_bar_title", "id", pkg);
-        int bar = r.getIdentifier("profile_action_bar", "id", pkg);
+        int header = ResIds.id(a, "profile_header_container");
+        int title = ResIds.id(a, "action_bar_title");
+        int bar = ResIds.id(a, "profile_action_bar");
         if (header == 0 || title == 0) return null;
         // Profiles stay in the view tree behind other tabs (isShown still true), so both the
         // header and the profile action bar's title must really be on screen.

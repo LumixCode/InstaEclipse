@@ -161,8 +161,8 @@ public final class MenuIcons {
                 if (!(tv.getParent() instanceof ViewGroup row)) continue;
                 View iv = row.findViewById(iconId);
                 if (!(iv instanceof ImageView img)) continue;
-                int res = c.getResources().getIdentifier(icon, "drawable", c.getPackageName());
-                if (res == 0) res = c.getResources().getIdentifier(icon.replace("_pano", ""), "drawable", c.getPackageName());
+                int res = ResIds.drawable(c, icon);
+                if (res == 0) res = ResIds.drawable(c, icon.replace("_pano", ""));
                 if (res == 0 || Integer.valueOf(res).equals(APPLIED.get(img))) continue;
                 img.setImageResource(res); // keeps the row's tint
                 APPLIED.put(img, res);

@@ -30,6 +30,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
  * One module button in the DM thread header (right of the back arrow) whose popup lists the
@@ -143,12 +144,9 @@ final class ThreadHeaderMenu {
         return FeatureFlags.hideChatMenuButton ? View.GONE : View.VISIBLE;
     }
 
-    @SuppressLint("DiscouragedApi")
     private static View createButton(Activity a) {
-        String pkg = a.getPackageName();
-        android.content.res.Resources res = a.getResources();
         View decor = a.getWindow().getDecorView();
-        View header = findShown(decor, res.getIdentifier("direct_thread_header", "id", pkg));
+        View header = findShown(decor, ResIds.id(a, "direct_thread_header"));
         if (header == null) return null;
         ViewGroup target;
         int insertAt;
@@ -156,8 +154,8 @@ final class ThreadHeaderMenu {
         // is the generic action bar's and is not in the chat header, which put the button in front
         // of the arrow. The main activity can hold other action bars (and hidden cached chats), so
         // only the arrow on screen next to this header counts.
-        View back = findShown(header, res.getIdentifier("header_left_button", "id", pkg));
-        int backId = res.getIdentifier("action_bar_button_back", "id", pkg);
+        View back = findShown(header, ResIds.id(a, "header_left_button"));
+        int backId = ResIds.id(a, "action_bar_button_back");
         for (View scope = header; scope != null && scope != decor && back == null;
              scope = scope.getParent() instanceof View p ? p : null) back = findShown(scope, backId);
         if (back != null && back.getParent() instanceof ViewGroup g) {

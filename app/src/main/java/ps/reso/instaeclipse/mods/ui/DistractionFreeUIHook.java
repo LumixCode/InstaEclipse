@@ -10,6 +10,7 @@ import android.view.ViewGroup;
 
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
  * Distraction Free — view-level removal of the story tray and the Reels tab.
@@ -180,9 +181,8 @@ public class DistractionFreeUIHook {
      * children of the bar stay where they are. Tabs are found by id, so their click handling is
      * unaffected.
      */
-    @SuppressLint("DiscouragedApi")
     private static void reorderTabs(Activity a, ViewGroup root) {
-        int feedId = a.getResources().getIdentifier("feed_tab", "id", a.getPackageName());
+        int feedId = ResIds.id(a, "feed_tab");
         View feed = feedId != 0 ? root.findViewById(feedId) : null;
         if (feed == null || !(feed.getParent() instanceof ViewGroup bar)) return;
         java.util.Map<String, View> tabs = new java.util.LinkedHashMap<>();
@@ -280,9 +280,8 @@ public class DistractionFreeUIHook {
         }
     }
 
-    @SuppressLint("DiscouragedApi")
     private static View findTab(View root, String name) {
-        int id = root.getResources().getIdentifier(name, "id", root.getContext().getPackageName());
+        int id = ResIds.id(root.getContext(), name);
         return id != 0 ? root.findViewById(id) : null;
     }
 

@@ -16,6 +16,7 @@ public final class ResIds {
 
     private static final ConcurrentHashMap<String, Integer> IDS = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, Integer> DRAWABLES = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Integer> ATTRS = new ConcurrentHashMap<>();
 
     private ResIds() {}
 
@@ -27,6 +28,10 @@ public final class ResIds {
     /** {@code R.drawable.<name>} of the app owning {@code ctx}, or 0 if it doesn't exist. */
     public static int drawable(Context ctx, String name) {
         return resolve(DRAWABLES, ctx, name, "drawable");
+    }
+
+    public static int attr(Context ctx, String name) {
+        return resolve(ATTRS, ctx, name, "attr");
     }
 
     @SuppressLint("DiscouragedApi")
