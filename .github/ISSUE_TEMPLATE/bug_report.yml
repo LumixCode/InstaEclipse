@@ -31,7 +31,7 @@ body:
     attributes:
       label: InstaEclipse version and fork commit
       description: The version shown in the companion app, and the commit you built from if you know it.
-      placeholder: e.g. 0.8.2-debug, built from commit abc1234
+      placeholder: e.g. 0.8.2-lumix.3 (Releases page), or 0.8.2-debug + commit if you built it
     validations:
       required: true
 
@@ -88,5 +88,6 @@ body:
     id: logs
     attributes:
       label: Logs (if available)
-      description: Paste the relevant lines from the companion app's Logs screen, or from LSPatch or Vector. Remove usernames, chat names and message text first, since issues are public.
+      description: >-
+        Paste the relevant lines from the companion app's Logs screen, or from LSPatch or Vector, including the line "(InstaEclipse): Xposed backend: ...". Remove usernames, chat names and message text first, since issues are public.
       render: text

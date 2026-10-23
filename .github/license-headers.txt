@@ -1,0 +1,22 @@
+app/src/main/java/ps/reso/instaeclipse/mods/media/SelectedMediaAdapter.java|adapted from HushGram MediaBridges.kt
+app/src/main/java/ps/reso/instaeclipse/mods/media/SelectedMediaAdapter.java|Copyright 2026 HushGram contributors, https://github.com/SysAdminDoc/HushGram
+app/src/main/java/ps/reso/instaeclipse/mods/media/SelectedMediaAdapter.java|SPDX-License-Identifier: GPL-3.0-only
+app/src/main/java/ps/reso/instaeclipse/utils/download/DashManifest.java|Based on HushGram DashManifest, Copyright 2026 Andrew Liang (GPL-3.0)
+app/src/main/java/ps/reso/instaeclipse/utils/download/DashManifest.java|Hushfacebook and HushGram contributors. See third-party/HushGram/NOTICE.md
+app/src/main/java/ps/reso/instaeclipse/utils/download/DashManifest.java|Modified for InstaEclipse
+app/src/main/java/ps/reso/instaeclipse/utils/download/DownloadEngine.java|HushGram-derived fetch/join engine, adapted for InstaEclipse. GPL-3.0-only.
+app/src/main/java/ps/reso/instaeclipse/utils/download/DownloadEngine.java|See third-party/HushGram/NOTICE.md
+app/src/main/java/ps/reso/instaeclipse/utils/download/Downloader.java|https://github.com/andrewliang25/morphe-patches/
+app/src/main/java/ps/reso/instaeclipse/utils/download/Downloader.java|Copyright 2026 Andrew Liang (GPL-3.0).
+app/src/main/java/ps/reso/instaeclipse/utils/download/Downloader.java|Modified for Hushfacebook (Facebook), 2026.
+app/src/main/java/ps/reso/instaeclipse/utils/download/Downloader.java|Modified for HushGram (Instagram), 2026.
+app/src/main/java/ps/reso/instaeclipse/utils/download/DownloadRequest.java|HushGram-based downloader integration. SPDX-License-Identifier: GPL-3.0-only
+app/src/main/java/ps/reso/instaeclipse/utils/download/MediaUrlPolicy.java|Copyright 2026 Hushfacebook contributors
+app/src/main/java/ps/reso/instaeclipse/utils/download/MediaUrlPolicy.java|https://github.com/SysAdminDoc/Hushfacebook
+app/src/main/java/ps/reso/instaeclipse/utils/download/MediaUrlPolicy.java|Modified for HushGram (Instagram), 2026.
+app/src/main/java/ps/reso/instaeclipse/utils/download/Mp4Join.java|Copyright 2026 Hushfacebook contributors
+app/src/main/java/ps/reso/instaeclipse/utils/download/Mp4Join.java|https://github.com/SysAdminDoc/Hushfacebook
+app/src/main/java/ps/reso/instaeclipse/utils/download/Mp4Join.java|Modified for HushGram (Instagram), 2026.
+app/src/main/java/ps/reso/instaeclipse/utils/download/RenditionPicker.java|Based on HushGram ranking; GPL-3.0-only. See third-party/HushGram/NOTICE.md.
+app/src/main/res/drawable/ic_logo_lspatch.xml|LSPatch launcher icon (JingMatrix/LSPatch, GPL-3.0)
+app/src/main/res/drawable/ic_vector_statue.xml|Vector (JingMatrix) app icon, used as a link to that project. Source: github.com/JingMatrix/Vector, GPL-3.0.
