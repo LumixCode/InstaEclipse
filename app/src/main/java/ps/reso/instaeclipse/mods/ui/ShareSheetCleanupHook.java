@@ -109,6 +109,7 @@ public class ShareSheetCleanupHook {
     private static Field buttonStyleField;
     private static boolean buttonStyleLookedUp;
     private static final java.util.Map<Class<?>, Field> fillPaintFields = new java.util.HashMap<>();
+    private static final java.util.Map<Class<?>, Integer> paintCounts = new java.util.HashMap<>();
     private static final java.util.Map<View, SendTint> sendTints = new java.util.WeakHashMap<>();
 
     private static final Set<View> watchedShareRows =
@@ -451,19 +452,23 @@ public class ShareSheetCleanupHook {
 
     private static Field buttonStyleField(View button) throws IllegalAccessException {
         if (buttonStyleLookedUp) return buttonStyleField;
-        buttonStyleLookedUp = true;
         Field found = null;
         int matches = 0;
+        int paints = 0;
         for (Field f : SafeReflect.fields(igdsButtonClass)) {
             Class<?> type = f.getType();
             if (Modifier.isStatic(f.getModifiers()) || type.isPrimitive() || type.isArray() || type.isEnum()
                     || View.class.isAssignableFrom(type) || CharSequence.class.isAssignableFrom(type)) continue;
             f.setAccessible(true);
             Object value = f.get(button);
-            if (value == null || paintField(value.getClass()) == null) continue;
+            if (value == null) continue;
+            paints = Math.max(paints, paintCount(value.getClass()));
+            if (paintField(value.getClass()) == null) continue;
             found = f;
             matches++;
         }
+        if (!ButtonStyleLatch.shouldLatch(matches, paints)) return null;
+        buttonStyleLookedUp = true;
         if (matches != 1) {
             ModuleLog.warn("(IE|ShareSheet) \"Send separately\" keeps Instagram's colour: the button's fill was not found");
             ModuleLog.detail("(IE|ShareSheet) IgdsButton fields holding one Paint: " + matches);
@@ -472,6 +477,19 @@ public class ShareSheetCleanupHook {
         ModuleLog.detail("(IE|ShareSheet) send button fill = IgdsButton." + found.getName()
                 + " (" + found.get(button).getClass().getName() + ")");
         return buttonStyleField = found;
+    }
+
+    private static int paintCount(Class<?> type) {
+        Integer cached = paintCounts.get(type);
+        if (cached != null) return cached;
+        int count = 0;
+        for (Class<?> c = type; c != null && c != Object.class; c = c.getSuperclass()) {
+            for (Field f : SafeReflect.fields(c)) {
+                if (!Modifier.isStatic(f.getModifiers()) && f.getType() == Paint.class) count++;
+            }
+        }
+        paintCounts.put(type, count);
+        return count;
     }
 
     /** The renderer's only instance Paint, or null when it has none or several (another style). */
