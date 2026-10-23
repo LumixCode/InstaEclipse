@@ -1,6 +1,7 @@
 package ps.reso.instaeclipse.mods.feed;
 
-import android.annotation.SuppressLint;
+import android.content.Context;
+import android.util.AttributeSet;
 import android.view.View;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -8,6 +9,7 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
  * Rounded feed posts (#276): the corners of a post's photo or video are rounded to the chosen
@@ -22,18 +24,16 @@ public final class RoundedFeedPostsHook {
 
     private static final String MEDIA_FRAME = "com.instagram.ui.widget.framelayout.MediaFrameLayout";
 
-    private static int videoContainerId = -1;
-
     private RoundedFeedPostsHook() {}
 
     public static void install(ClassLoader cl) {
         try {
             Class<?> frame = cl.loadClass(MEDIA_FRAME);
             View.OnLayoutChangeListener onLayout = (v, l, t, r, b, ol, ot, or, ob) -> apply(v);
-            XposedBridge.hookAllConstructors(frame, new XC_MethodHook() {
+            XposedBridge.hookMethod(frame.getDeclaredConstructor(Context.class, AttributeSet.class, int.class), new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (param.thisObject instanceof View v) v.addOnLayoutChangeListener(onLayout);
+                    if (param.thisObject instanceof View v && v.getClass() == frame) v.addOnLayoutChangeListener(onLayout);
                 }
             });
             FeatureStatusTracker.setHooked("RoundedFeedPosts");
@@ -44,12 +44,8 @@ public final class RoundedFeedPostsHook {
         }
     }
 
-    /** The view to clip: the outermost video_container around the media frame, else the frame. */
-    @SuppressLint("DiscouragedApi")
     private static View target(View frame) {
-        if (videoContainerId == -1) {
-            videoContainerId = frame.getResources().getIdentifier("video_container", "id", frame.getContext().getPackageName());
-        }
+        int videoContainerId = ResIds.id(frame.getContext(), "video_container");
         View best = frame;
         android.view.ViewParent p = frame.getParent();
         for (int depth = 0; p instanceof View pv && depth < 4; depth++, p = pv.getParent()) {
@@ -59,10 +55,20 @@ public final class RoundedFeedPostsHook {
         return best;
     }
 
+    private static boolean isPostMedia(View frame) {
+        int id = frame.getId();
+        if (id == View.NO_ID) return false;
+        Context context = frame.getContext();
+        return id == ResIds.id(context, "media_group") || id == ResIds.id(context, "carousel_media_group");
+    }
+
     private static void apply(View frame) {
         try {
+            int dp = FeatureFlags.feedCornerRadius;
+            if (dp <= 0 && !OutlineRestore.applied(frame)) return;
+            if (!isPostMedia(frame)) return;
             View v = target(frame);
-            OutlineRestore.update(frame, v, FeatureFlags.feedCornerRadius * v.getResources().getDisplayMetrics().density);
+            OutlineRestore.update(frame, v, dp * v.getResources().getDisplayMetrics().density);
         } catch (Throwable ignored) {}
     }
 }
