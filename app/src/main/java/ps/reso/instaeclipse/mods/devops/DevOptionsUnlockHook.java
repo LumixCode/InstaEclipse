@@ -1,23 +1,19 @@
 package ps.reso.instaeclipse.mods.devops;
 
 import org.luckypray.dexkit.DexKitBridge;
-import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
-import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.query.matchers.MethodsMatcher;
-import org.luckypray.dexkit.result.ClassData;
 import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
-import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -27,187 +23,68 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 
 public class DevOptionsUnlockHook {
 
-    private static final String MOBILECONFIG_GETTER_CLASS = "com.facebook.mobileconfig.factory.MobileConfigUnsafeContext";
-    private static final String USER_SESSION_CLASS = "com.instagram.common.session.UserSession";
-
-    // Structural-tier tuning. Confirmed against IG 436: among ~140 (UserSession)->boolean
-    // methods that read MobileConfig, the real "is employee" gate is the one minimal,
-    // branch-free pass-through (~9 opcodes) reused from 9 unrelated classes — every other
-    // candidate is either a bigger cached/branchy check (40+ opcodes) or has 1-2 callers.
-    private static final int MAX_GATE_OPCODES = 16;
-    private static final int MIN_CALLER_FAN_IN = 3;
-
-    // Legacy hardcoded MobileConfig IDs, kept only as a last-resort fallback below the
-    // structural tier. Meta regenerates this ID per build and NOT in version order (IG 436
-    // used a higher schema byte than IG 437), so this list is inherently a losing game —
-    // do not add to it; the structural tier (Tier 2) should make it unnecessary going forward.
-    private static final long[] IS_EMPLOYEE_CONFIG_IDS = {
-            36310834636390667L, // IG 436 (LX/02mx;->A00, 0x8100830000010b)
-            36310830341423371L, // IG 437+ (LX/5sG;->A00, 0x8100820000010b)
-            36310856111227168L, // IG <= 429 (LX/02il;->A00, 0x81008800000120)
-            36310864701161762L, // older observed build
-    };
+    private static final String CACHE_KEY = "DevOptionsMethod_v2";
+    private static final String GATE_ANCHOR = "caller is not an employee";
+    private static final String CROSS_CHECK_ANCHOR = "Enabling rageshake for employee";
 
     public void handleDevOptions(DexKitBridge bridge) {
         if (DexKitCache.isCacheValid()) {
-            Method cachedMethod = DexKitCache.loadMethod("DevOptionsMethod", Module.hostClassLoader);
+            Method cachedMethod = DexKitCache.loadMethod(CACHE_KEY, Module.hostClassLoader);
             if (cachedMethod != null) {
                 hookExactMethod(cachedMethod);
                 return;
             }
-            String cachedClass = DexKitCache.loadString("DevOptionsClass");
-            if (cachedClass != null) {
-                hookBooleanMethodsViaReflection(cachedClass);
-                return;
-            }
         }
         try {
-            findAndHookDynamicMethod(bridge);
-        } catch (Exception e) {
+            Method gate = findEmployeeGate(bridge);
+            if (gate == null) return;
+            DexKitCache.saveMethod(CACHE_KEY, gate);
+            hookExactMethod(gate);
+        } catch (Throwable e) {
             ModuleLog.error("(InstaEclipse | DevOptionsEnable): Could not unlock developer options", e);
         }
     }
 
-    private void findAndHookDynamicMethod(DexKitBridge bridge) {
-        try {
-            // Tier 1: Existing String-based search
-            ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Discovery Tier 1 (String)...");
-            List<ClassData> classes = DexKitQueryCache.findClass(bridge, FindClass.create()
-                    .matcher(ClassMatcher.create().usingStrings("is_employee"))
-            );
-
-            boolean found = false;
-            if (!classes.isEmpty()) {
-                for (ClassData classData : classes) {
-                    String className = classData.getName();
-                    if (!className.startsWith("X.")) continue;
-
-                    List<MethodData> methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                            .matcher(MethodMatcher.create()
-                                    .declaredClass(className)
-                                    .usingStrings("is_employee"))
-                    );
-
-                    for (MethodData method : methods) {
-                        if (inspectInvokedMethods(bridge, method)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (found) break;
-                }
-            }
-
-            // Tier 2: Structural discovery — no string, no hardcoded ID. Finds the gate by
-            // its shape: a minimal, branch-free (UserSession)->boolean check that reads
-            // MobileConfig directly and is reused from many unrelated classes. Survives
-            // both string stripping and per-build MobileConfig ID churn.
-            if (!found) {
-                ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Tier 1 found nothing, trying Tier 2 (Structural)...");
-                MethodData structural = resolveEmployeeGateStructurally(bridge);
-                if (structural != null) {
-                    try {
-                        Method targetMethod = structural.getMethodInstance(Module.hostClassLoader);
-                        DexKitCache.saveMethod("DevOptionsMethod", targetMethod);
-                        hookExactMethod(targetMethod);
-                        ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Found via structural match: "
-                                + structural.getClassName() + "." + structural.getName());
-                        found = true;
-                    } catch (Throwable e) {
-                        ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Structural match failed to bind: " + e.getMessage());
-                    }
-                }
-            }
-
-            // Tier 3: Failover to hardcoded MobileConfig IDs (legacy, last resort)
-            if (!found) {
-                ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Tier 2 found nothing, trying Tier 3 (Config ID)...");
-                for (long configId : IS_EMPLOYEE_CONFIG_IDS) {
-                    List<MethodData> idMethods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                            .matcher(MethodMatcher.create()
-                                    .usingNumbers(configId)
-                                    .returnType("boolean")
-                                    .paramCount(1))
-                    );
-
-                    if (!idMethods.isEmpty()) {
-                        String targetClass = idMethods.get(0).getClassName();
-                        ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Found via Config ID " + configId + " in: " + targetClass);
-                        DexKitCache.saveString("DevOptionsClass", targetClass);
-                        hookAllBooleanMethodsInClass(bridge, targetClass);
-                        found = true;
-                        break;
-                    }
-                }
-            }
-
-            // Final Debug Trace: If all tiers fail, log where the string is used ANYWHERE
-            if (!found) {
-                ModuleLog.error("(InstaEclipse | DevOptionsEnable): Could not unlock developer options: the check was not found in this Instagram version");
-                ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Tier 3 found nothing. Debugging global references...");
-                List<MethodData> debugMethods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                        .matcher(MethodMatcher.create().usingStrings("is_employee")));
-                for (MethodData m : debugMethods) {
-                    ModuleLog.detail("(InstaEclipse | DevOptionsDebug): String 'is_employee' found in: " + m.getClassName() + "." + m.getName());
-                }
-            }
-
-        } catch (Exception e) {
-            ModuleLog.error("(InstaEclipse | DevOptionsEnable): Could not unlock developer options", e);
+    private Method findEmployeeGate(DexKitBridge bridge) throws NoSuchMethodException {
+        Map<String, MethodData> invoked = new LinkedHashMap<>();
+        for (MethodData anchor : usingString(bridge, GATE_ANCHOR)) {
+            for (MethodData call : anchor.getInvokes()) invoked.put(call.getDescriptor(), call);
         }
-    }
-
-    /**
-     * Resolves the "is employee" gate by shape instead of by name/ID:
-     * 1. Find MobileConfig's raw boolean-by-id getter — declaring class is
-     *    {@code MobileConfigUnsafeContext}, which keeps its real package name across
-     *    builds (shared Meta infra, not app-feature code), and it has exactly one
-     *    {@code (long)->boolean} overload, so this step is always unambiguous.
-     * 2. Collect every {@code (UserSession)->boolean} method that calls it directly —
-     *    there are ~140 of these on a typical build, one per MobileConfig-backed flag.
-     * 3. Discard anything bigger than a minimal pass-through (cached/branchy checks for
-     *    other flags are much larger), then rank survivors by how many distinct classes
-     *    call them. Ordinary single-feature checks have 1-2 callers; the shared employee
-     *    gate is reused everywhere.
-     */
-    private MethodData resolveEmployeeGateStructurally(DexKitBridge bridge) {
-        try {
-            List<MethodData> getters = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                    .matcher(MethodMatcher.create()
-                            .declaredClass(MOBILECONFIG_GETTER_CLASS)
-                            .returnType("boolean")
-                            .paramTypes("long")));
-            if (getters.isEmpty()) return null;
-
-            MethodsMatcher getterInvoke = MethodsMatcher.create();
-            for (MethodData getter : getters) {
-                getterInvoke.add(MethodMatcher.create(getter.getDescriptor()));
-            }
-
-            List<MethodData> candidates = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                    .matcher(MethodMatcher.create()
-                            .returnType("boolean")
-                            .paramTypes(USER_SESSION_CLASS)
-                            .invokeMethods(getterInvoke)));
-
-            MethodData best = null;
-            int bestFanIn = 0;
-            for (MethodData candidate : candidates) {
-                if (candidate.getOpCodes().size() > MAX_GATE_OPCODES) continue;
-
-                Set<String> callerClasses = new HashSet<>();
-                for (MethodData caller : DexKitQueryCache.callers(bridge, candidate)) {
-                    callerClasses.add(caller.getClassName());
-                }
-                if (callerClasses.size() > bestFanIn) {
-                    bestFanIn = callerClasses.size();
-                    best = candidate;
-                }
-            }
-            return bestFanIn >= MIN_CALLER_FAN_IN ? best : null;
-        } catch (Exception e) {
-            ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Structural discovery error: " + e.getMessage());
+        String gate = DevGatePick.choose(new ArrayList<>(invoked.keySet()), descriptor -> isStatic(invoked.get(descriptor)));
+        if (gate == null) {
+            ModuleLog.error("(InstaEclipse | DevOptionsEnable): Could not unlock developer options: the check was not found in this Instagram version");
             return null;
+        }
+        crossCheck(bridge, gate);
+        return invoked.get(gate).getMethodInstance(Module.hostClassLoader);
+    }
+
+    private void crossCheck(DexKitBridge bridge, String gate) {
+        try {
+            for (MethodData other : usingString(bridge, CROSS_CHECK_ANCHOR)) {
+                for (MethodData call : other.getInvokes()) {
+                    if (gate.equals(call.getDescriptor())) {
+                        ModuleLog.detail("(InstaEclipse | DevOptionsEnable): " + gate + " is also checked by " + other.getClassName() + "." + other.getName());
+                        return;
+                    }
+                }
+            }
+            ModuleLog.warn("(InstaEclipse | DevOptionsEnable): The rageshake employee check does not call " + gate);
+        } catch (Throwable e) {
+            ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Cross-check failed: " + e);
+        }
+    }
+
+    private static List<MethodData> usingString(DexKitBridge bridge, String text) {
+        return DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                .matcher(MethodMatcher.create().usingStrings(text)));
+    }
+
+    private static boolean isStatic(MethodData data) {
+        try {
+            return Modifier.isStatic(data.getMethodInstance(Module.hostClassLoader).getModifiers());
+        } catch (Throwable e) {
+            return false;
         }
     }
 
@@ -227,97 +104,6 @@ public class DevOptionsUnlockHook {
             ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Hooked: " + m.getDeclaringClass().getName() + "." + m.getName());
         } catch (Throwable e) {
             ModuleLog.error("(InstaEclipse | DevOptionsEnable): Could not unlock developer options", e);
-        }
-    }
-
-    private boolean inspectInvokedMethods(DexKitBridge bridge, MethodData method) {
-        try {
-            List<MethodData> invokedMethods = method.getInvokes();
-            if (invokedMethods.isEmpty()) return false;
-
-            for (MethodData invokedMethod : invokedMethods) {
-                String returnType = String.valueOf(invokedMethod.getReturnType());
-                if (!returnType.contains("boolean")) continue;
-
-                List<String> paramTypes = new ArrayList<>();
-                for (Object param : invokedMethod.getParamTypes()) {
-                    paramTypes.add(String.valueOf(param));
-                }
-
-                if (paramTypes.size() == 1 && paramTypes.get(0).contains("com.instagram.common.session.UserSession")) {
-                    String targetClass = invokedMethod.getClassName();
-                    ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Hooking via String detection: " + targetClass);
-                    DexKitCache.saveString("DevOptionsClass", targetClass);
-                    hookAllBooleanMethodsInClass(bridge, targetClass);
-                    return true;
-                }
-            }
-        } catch (Exception e) {
-            ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Error inspecting invoked methods: " + e.getMessage());
-        }
-        return false;
-    }
-
-    private void hookBooleanMethodsViaReflection(String className) {
-        try {
-            Class<?> clazz = Module.hostClassLoader.loadClass(className);
-            XC_MethodHook hook = new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (FeatureFlags.isDevEnabled) {
-                        param.setResult(true);
-                        FeatureStatusTracker.setHooked("DevOptions");
-                    }
-                }
-            };
-            for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(clazz)) {
-                if (m.getReturnType() != boolean.class) continue;
-                Class<?>[] params = m.getParameterTypes();
-                if (params.length != 1) continue;
-                if (!params[0].getName().equals("com.instagram.common.session.UserSession")) continue;
-                m.setAccessible(true);
-                XposedBridge.hookMethod(m, hook);
-                ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Hooked (cache): " + className + "." + m.getName());
-            }
-        } catch (Throwable e) {
-            ModuleLog.error("(InstaEclipse | DevOptionsEnable): Could not unlock developer options", e);
-        }
-    }
-
-    private void hookAllBooleanMethodsInClass(DexKitBridge bridge, String className) {
-        try {
-            List<MethodData> methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                    .matcher(MethodMatcher.create().declaredClass(className))
-            );
-
-            for (MethodData method : methods) {
-                String returnType = String.valueOf(method.getReturnType());
-                List<String> paramTypes = new ArrayList<>();
-                for (Object param : method.getParamTypes()) {
-                    paramTypes.add(String.valueOf(param));
-                }
-
-                if (returnType.contains("boolean") && paramTypes.size() == 1 && paramTypes.get(0).contains("com.instagram.common.session.UserSession")) {
-                    try {
-                        Method targetMethod = method.getMethodInstance(Module.hostClassLoader);
-                        XposedHelpers.findAndHookMethod(targetMethod.getDeclaringClass(), targetMethod.getName(), targetMethod.getParameterTypes()[0], new XC_MethodHook() {
-                            @Override
-                            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                                if (FeatureFlags.isDevEnabled) {
-                                    param.setResult(true);
-                                    FeatureStatusTracker.setHooked("DevOptions");
-                                }
-                            }
-                        });
-                        ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Hooked: " + method.getClassName() + "." + method.getName());
-                    } catch (Throwable e) {
-                        ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Failed to hook " + method.getName() + ": " + e.getMessage());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            ModuleLog.error("(InstaEclipse | DevOptionsEnable): Could not unlock developer options", e);
-            ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Error while hooking class: " + className + " → " + e.getMessage());
         }
     }
 }
