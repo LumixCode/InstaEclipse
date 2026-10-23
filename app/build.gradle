@@ -21,6 +21,10 @@ android {
         versionName project.findProperty('forkVersionName') ?: '0.8.2'
 
         resourceConfigurations += ['en', 'ar', 'az', 'de', 'el', 'es', 'fr', 'he', 'in', 'it', 'iw', 'pl', 'pt', 'ru', 'sv', 'tr', 'vi', 'zh-rCN', 'zh-rTW']
+
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+        }
     }
 
     signingConfigs {
@@ -54,10 +58,11 @@ android {
 
     lint {
         error 'MissingQuantity', 'UnusedQuantity'
+        fatal 'NewApi'
     }
-    packagingOptions {
+    packaging {
         resources {
-            merges += 'META-INF/xposed/*'
+            excludes += ['/kotlin/**', '/DebugProbesKt.bin', '/META-INF/*.version', '/META-INF/versions/9/OSGI-INF/MANIFEST.MF']
         }
         jniLibs {
             useLegacyPackaging true
@@ -69,15 +74,10 @@ dependencies {
     // Core Android dependencies
     implementation libs.appcompat
     implementation libs.material
-    implementation libs.constraintlayout
     implementation libs.gson
     implementation libs.dexkit
-    implementation 'com.google.android.material:material:1.12.0'
     implementation "androidx.documentfile:documentfile:1.1.0"
     implementation libs.osmdroid
-
-    // External library for shared preferences
-    implementation libs.fileprefs
 
     // Xposed APIs, provided by the framework at runtime. The module loads through libxposed API 102
     // (META-INF/xposed: Vector 2.2+, LSPatch 1.0+); the legacy API stays behind the compat layer.

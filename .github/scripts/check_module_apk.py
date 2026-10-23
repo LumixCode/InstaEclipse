@@ -8,7 +8,7 @@ import subprocess
 import sys
 import zipfile
 
-DEFAULT_ABIS = ("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+DEFAULT_ABIS = ("arm64-v8a", "armeabi-v7a", "x86_64")
 ENTRY_CLASS = "ps.reso.instaeclipse.Xposed.ModernEntry"
 TARGET_API = "102"
 SCOPE = "com.instagram.android"
