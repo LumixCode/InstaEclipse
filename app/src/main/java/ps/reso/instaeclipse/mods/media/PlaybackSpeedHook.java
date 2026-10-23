@@ -19,9 +19,11 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -407,6 +409,23 @@ public class PlaybackSpeedHook {
         return ok;
     }
 
+    record WrapperShape(boolean isStatic, boolean isSetter, Set<String> interfaces, Set<String> setterInterfaces) {}
+
+    static boolean isVideoWrapper(WrapperShape shape) {
+        return !shape.isStatic() && !shape.isSetter();
+    }
+
+    static Set<String> interfaceNames(Class<?> type) {
+        Set<String> names = new LinkedHashSet<>();
+        ArrayDeque<Class<?>> pending = new ArrayDeque<>();
+        for (Class<?> c = type; c != null; c = c.getSuperclass()) Collections.addAll(pending, c.getInterfaces());
+        while (!pending.isEmpty()) {
+            Class<?> i = pending.poll();
+            if (names.add(i.getName())) Collections.addAll(pending, i.getInterfaces());
+        }
+        return names;
+    }
+
     private void installFeed(DexKitBridge bridge, ClassLoader cl) {
         try {
             List<Method> cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethods("PlaybackSpeed_setters", cl) : null;
@@ -494,7 +513,8 @@ public class PlaybackSpeedHook {
                         .paramTypes("float").returnType("void").addInvoke(MethodMatcher.create(setter))))) {
                     Method m;
                     try { m = md.getMethodInstance(cl); } catch (Throwable t) { continue; }
-                    if (Modifier.isStatic(m.getModifiers()) || SETTERS.contains(m)) continue;
+                    if (!isVideoWrapper(new WrapperShape(Modifier.isStatic(m.getModifiers()), SETTERS.contains(m),
+                            interfaceNames(m.getDeclaringClass()), interfaceNames(setter.getDeclaringClass())))) continue;
                     m.setAccessible(true);
                     WRAPPERS.add(m);
                     XposedBridge.hookMethod(m, new XC_MethodHook() {
