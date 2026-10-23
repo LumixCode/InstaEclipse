@@ -56,21 +56,13 @@ public class Module {
     public static void setModulePaths(String apkPath, String nativeLibDir) {
         moduleSourceDir = apkPath;
         ps.reso.instaeclipse.xposedcompat.ModuleResources.setApkPath(apkPath);
-        if (nativeLibDir != null && new java.io.File(nativeLibDir, "libdexkit.so").exists()) {
-            moduleLibDir = nativeLibDir;
-            return;
+        boolean is64Bit = android.os.Process.is64Bit();
+        java.util.function.Predicate<java.io.File> hasLib = dir -> new java.io.File(dir, DexKitLibPath.LIB).exists();
+        moduleLibDir = DexKitLibPath.choose(apkPath, nativeLibDir, is64Bit,
+                Build.SUPPORTED_64_BIT_ABIS, Build.SUPPORTED_32_BIT_ABIS, hasLib);
+        if (!is64Bit && !DexKitLibPath.usable(moduleLibDir, false, hasLib)) {
+            ModuleLog.warn("(InstaEclipse): Instagram runs as a 32-bit app; install the 64-bit (arm64-v8a) Instagram build");
         }
-
-        String abi = Build.SUPPORTED_ABIS[0];
-        String abiFolder;
-        if (abi.equalsIgnoreCase("arm64-v8a")) abiFolder = "arm64";
-        else if (abi.equalsIgnoreCase("armeabi-v7a") || abi.equalsIgnoreCase("armeabi") || abi.equalsIgnoreCase("armv8i"))
-            abiFolder = "arm";
-        else if (abi.equalsIgnoreCase("x86")) abiFolder = "x86";
-        else if (abi.equalsIgnoreCase("x86_64")) abiFolder = "x86_64";
-        else abiFolder = abi;
-
-        moduleLibDir = moduleSourceDir.substring(0, moduleSourceDir.lastIndexOf("/")) + "/lib/" + abiFolder;
     }
 
     public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) {
