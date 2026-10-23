@@ -7,7 +7,6 @@ final class SecureFlags {
     private SecureFlags() {}
 
     static int[] strip(int flags, int mask) {
-        int secure = WindowManager.LayoutParams.FLAG_SECURE;
-        return new int[]{flags & ~secure, mask & ~secure};
+        return new int[]{flags & ~WindowManager.LayoutParams.FLAG_SECURE, mask};
     }
 }
