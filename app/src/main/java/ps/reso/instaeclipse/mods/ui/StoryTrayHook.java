@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.regex.Pattern;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -37,15 +38,47 @@ public final class StoryTrayHook {
 
     private static final String SPINNER = "com.instagram.ui.widget.gradientspinner.GradientSpinner";
     private static final String TAG = "(IE|StoryTray) ";
-    /** Tag on the tray list: its height before scaling. */
-    private static final int ORIGINAL_HEIGHT_TAG = 0x7e1e0283;
+    private static final int ORIGINAL_TAG = 0x7e1e0283;
+    private static final Pattern HEX_COLOR = Pattern.compile("#?[0-9A-Fa-f]{6}");
 
     private static int trayId;
     private static final Set<View> watched = Collections.newSetFromMap(new WeakHashMap<>());
-    private static final android.os.Handler MAIN = new android.os.Handler(android.os.Looper.getMainLooper());
     private static final Set<View> pending = Collections.newSetFromMap(new WeakHashMap<>());
-    /** Tray lists scaled now (they carry ORIGINAL_HEIGHT_TAG); main thread only. */
     private static final Set<View> scaled = Collections.newSetFromMap(new WeakHashMap<>());
+    private static volatile Memo ringMemo = new Memo(null, 0, null);
+    private static volatile Memo spreadMemo = new Memo(null, 0, null);
+
+    private static final class Main {
+        static final android.os.Handler HANDLER = new android.os.Handler(android.os.Looper.getMainLooper());
+    }
+
+    private static final class Memo {
+        final Object key;
+        final int count;
+        final int[] value;
+
+        Memo(Object key, int count, int[] value) {
+            this.key = key;
+            this.count = count;
+            this.value = value;
+        }
+    }
+
+    private static final class Original {
+        final int height;
+        final int listWidth;
+        final int listHeight;
+        final int containerHeight;
+        final boolean clipChildren;
+
+        Original(int height, int listWidth, int listHeight, int containerHeight, boolean clipChildren) {
+            this.height = height;
+            this.listWidth = listWidth;
+            this.listHeight = listHeight;
+            this.containerHeight = containerHeight;
+            this.clipChildren = clipChildren;
+        }
+    }
 
     private StoryTrayHook() {}
 
@@ -63,10 +96,10 @@ public final class StoryTrayHook {
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                        int[] custom = parseColors(FeatureFlags.storyRingColor);
+                        int[] custom = ringColors(FeatureFlags.storyRingColor);
                         if (custom == null || !(param.args[arg] instanceof int[] colors) || colors.length == 0) return;
                         if (isCloseFriends(colors)) return;
-                        param.args[arg] = spread(custom, colors.length);
+                        param.args[arg] = ringSpread(custom, colors.length);
                     }
                 });
                 hooked++;
@@ -90,9 +123,25 @@ public final class StoryTrayHook {
         int[] out = new int[parts.length];
         for (int i = 0; i < parts.length; i++) {
             String p = parts[i].trim();
-            if (!p.matches("#?[0-9A-Fa-f]{6}")) return null;
+            if (!HEX_COLOR.matcher(p).matches()) return null;
             out[i] = 0xFF000000 | Integer.parseInt(p.startsWith("#") ? p.substring(1) : p, 16);
         }
+        return out;
+    }
+
+    static int[] ringColors(String value) {
+        Memo memo = ringMemo;
+        if (memo.key == value) return memo.value;
+        int[] colors = parseColors(value);
+        ringMemo = new Memo(value, 0, colors);
+        return colors;
+    }
+
+    static int[] ringSpread(int[] custom, int count) {
+        Memo memo = spreadMemo;
+        if (memo.key == custom && memo.count == count) return memo.value;
+        int[] out = spread(custom, count);
+        spreadMemo = new Memo(custom, count, out);
         return out;
     }
 
@@ -144,7 +193,7 @@ public final class StoryTrayHook {
             decor.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
                 try {
                     if (!needsWalk() || !pending.add(decor)) return;
-                    MAIN.postDelayed(() -> {
+                    Main.HANDLER.postDelayed(() -> {
                         pending.remove(decor);
                         try { apply(decor); } catch (Throwable t) { ModuleLog.warn(TAG + "Could not resize the story tray: " + t.getClass().getSimpleName() + ": " + t.getMessage()); }
                     }, 150);
@@ -177,26 +226,27 @@ public final class StoryTrayHook {
     }
 
     /** Scales the tray's list to {@code percent} of its size; 100 puts Instagram's layout back. */
-    private static void scale(ViewGroup container, int percent) {
+    static void scale(ViewGroup container, int percent) {
         if (container.getChildCount() == 0) return;
         View list = container.getChildAt(0);
-        Object saved = list.getTag(ORIGINAL_HEIGHT_TAG);
+        Original saved = list.getTag(ORIGINAL_TAG) instanceof Original o ? o : null;
         if (percent >= 100 || percent < 30) {
             if (saved == null) return;
             list.setScaleX(1f);
             list.setScaleY(1f);
             ViewGroup.LayoutParams lp = list.getLayoutParams();
-            lp.width = ViewGroup.LayoutParams.MATCH_PARENT;
-            lp.height = (int) saved;
+            lp.width = saved.listWidth;
+            lp.height = saved.listHeight;
             list.setLayoutParams(lp);
             ViewGroup.LayoutParams clp = container.getLayoutParams();
-            clp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+            clp.height = saved.containerHeight;
             container.setLayoutParams(clp);
-            list.setTag(ORIGINAL_HEIGHT_TAG, null);
+            container.setClipChildren(saved.clipChildren);
+            list.setTag(ORIGINAL_TAG, null);
             scaled.remove(list);
             return;
         }
-        int height = saved instanceof Integer h ? h : list.getHeight();
+        int height = saved != null ? saved.height : list.getHeight();
         int width = container.getWidth();
         if (height <= 0 || width <= 0) return;
         float s = percent / 100f;
@@ -204,7 +254,9 @@ public final class StoryTrayHook {
         ViewGroup.LayoutParams lp = list.getLayoutParams();
         ViewGroup.LayoutParams clp = container.getLayoutParams();
         if (saved != null && list.getScaleX() == s && lp.width == wantWidth && clp.height == wantHeight) return;
-        list.setTag(ORIGINAL_HEIGHT_TAG, height);
+        if (saved == null) {
+            list.setTag(ORIGINAL_TAG, new Original(height, lp.width, lp.height, clp.height, container.getClipChildren()));
+        }
         scaled.add(list);
         list.setPivotX(0f);
         list.setPivotY(0f);
