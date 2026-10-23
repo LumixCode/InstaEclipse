@@ -277,7 +277,8 @@ public final class ExactTimestampHook {
     }
 
     private static boolean hasResourceName(View view, String name) {
-        if (view.getId() == View.NO_ID) return false;
+        // Generated ids (package byte 0) are no resources: skip the lookup and Android's log line.
+        if (view.getId() == View.NO_ID || (view.getId() >>> 24) == 0) return false;
         try {
             return name.equals(view.getResources().getResourceEntryName(view.getId()));
         } catch (Resources.NotFoundException ignored) {

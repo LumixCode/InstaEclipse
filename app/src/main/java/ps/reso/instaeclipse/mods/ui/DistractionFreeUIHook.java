@@ -189,7 +189,7 @@ public class DistractionFreeUIHook {
         java.util.List<Integer> slots = new java.util.ArrayList<>();
         for (int i = 0; i < bar.getChildCount(); i++) {
             View c = bar.getChildAt(i);
-            if (c.getId() == View.NO_ID) continue;
+            if (c.getId() == View.NO_ID || (c.getId() >>> 24) == 0) continue;
             String name;
             try { name = a.getResources().getResourceEntryName(c.getId()); } catch (Throwable t) { continue; }
             if (java.util.Arrays.asList(ORDERABLE_TABS).contains(name)) { tabs.put(name, c); slots.add(i); }

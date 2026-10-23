@@ -577,7 +577,7 @@ public class CommentSearchHook {
         // centre it in the row, then slide the icon to the row end once it is laid out.
         View title = null;
         for (int i = 0; i < row.getChildCount(); i++)
-            if (row.getChildAt(i) instanceof TextView t && t.getId() != View.NO_ID
+            if (row.getChildAt(i) instanceof TextView t && t.getId() != View.NO_ID && (t.getId() >>> 24) != 0
                     && "title_text_view".equals(row.getResources().getResourceEntryName(t.getId()))) title = t;
         if (title == null) return null;
         ViewGroup.LayoutParams src = title.getLayoutParams();

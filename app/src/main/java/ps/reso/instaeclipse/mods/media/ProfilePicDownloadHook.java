@@ -182,7 +182,9 @@ public class ProfilePicDownloadHook {
                 if (!FeatureFlags.enableProfileDownload) return;
                 View v = (View) param.thisObject;
                 int vid = v.getId();
-                if (vid == View.NO_ID) return;
+                // Generated ids (package byte 0) are no resources: a lookup only makes Android log
+                // "Invalid resource ID" for every such view attached.
+                if (vid == View.NO_ID || (vid >>> 24) == 0) return;
 
                 // Fast path: cached int comparison (only resolves resource name once)
                 if (expandedPicViewId != 0) {

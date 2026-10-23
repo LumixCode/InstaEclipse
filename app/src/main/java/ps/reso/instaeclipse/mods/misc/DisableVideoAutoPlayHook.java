@@ -353,7 +353,8 @@ public class DisableVideoAutoPlayHook {
     }
 
     private static String resourceEntryName(View view) {
-        if (view == null || view.getId() == View.NO_ID) return null;
+        // Generated ids (package byte 0) are no resources: skip the lookup and Android's log line.
+        if (view == null || view.getId() == View.NO_ID || (view.getId() >>> 24) == 0) return null;
         try {
             return view.getResources().getResourceEntryName(view.getId());
         } catch (Resources.NotFoundException ignored) {

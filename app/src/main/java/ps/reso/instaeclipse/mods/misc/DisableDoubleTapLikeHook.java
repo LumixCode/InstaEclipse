@@ -477,7 +477,9 @@ public class DisableDoubleTapLikeHook {
 
     private static String resourceEntryName(View view) {
         int id = view.getId();
-        if (id == View.NO_ID) return null;
+        // Generated ids (package byte 0) are no resources; looking them up makes Android log
+        // "Invalid resource ID" on every touch.
+        if (id == View.NO_ID || (id >>> 24) == 0) return null;
         try {
             return view.getResources().getResourceEntryName(id);
         } catch (Throwable ignored) {
