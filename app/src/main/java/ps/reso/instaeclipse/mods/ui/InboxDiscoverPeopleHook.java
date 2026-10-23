@@ -55,7 +55,8 @@ public class InboxDiscoverPeopleHook {
                     if (!FeatureFlags.disableDiscoverPeople && !FeatureFlags.hideDmSuggestions) return;
                     try {
                         String type = sections.typeOf(param.args);
-                        if (!InboxSectionPath.drops(type, FeatureFlags.hideDmSuggestions, FeatureFlags.disableDiscoverPeople)) return;
+                        if (!InboxSectionPath.drops(type, FeatureFlags.hideDmSuggestions, FeatureFlags.disableDiscoverPeople,
+                                FeatureFlags.hideNotesTray)) return;
                         param.setResult(false); // what the emitter returns for a section without rows
                         if (dropped.add(type)) ModuleLog.detail(TAG + "dropped inbox section " + type);
                     } catch (Throwable t) {
