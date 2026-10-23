@@ -64,8 +64,10 @@ public class FeatureManager {
 
         if (FeatureFlags.permanentViewMode) {
             FeatureStatusTracker.setEnabled("PermanentViewMode", R.string.ig_dialog_ghost_permanent_view_once);
+            FeatureStatusTracker.setEnabled("ViewOnceBadge", R.string.ig_feature_view_once_badge);
         } else {
             FeatureStatusTracker.setDisabled("PermanentViewMode");
+            FeatureStatusTracker.setDisabled("ViewOnceBadge");
         }
 
         if (FeatureFlags.keepUnsentMessages) {

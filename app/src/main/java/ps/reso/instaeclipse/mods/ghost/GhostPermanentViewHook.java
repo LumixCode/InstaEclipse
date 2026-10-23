@@ -7,6 +7,7 @@ import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.List;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -37,17 +38,8 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
  */
 public class GhostPermanentViewHook {
 
-    // We rewrite the view_mode to a non-ephemeral value so IG shows the media as permanent /
-    // re-viewable. To let ViewOnceBadgeHook still restore IG's native once-vs-twice corner badge,
-    // we encode the ORIGINAL type in the value we write: view-once -> PERMANENT_ONCE, view-twice
-    // (replayable) -> PERMANENT_TWICE. IG treats any value that is not exactly "once"/"replayable"
-    // as non-ephemeral, so both markers get the permanent behavior; ViewOnceBadgeHook maps them
-    // back to "once"/"replayable" only at the DM render props so the correct badge is drawn.
-    // IG's re-viewable/no-consume behavior requires the view_mode to be EXACTLY "permanent" (a
-    // different marker makes view-twice consume again). So both types get "permanent"; the original
-    // once-vs-twice type is carried to the render side via ORIGINAL_BY_KEY, keyed by any id/timestamp
-    // long on the media model that the DM render props (0E4S) also expose.
     public static final String PERMANENT = "permanent";
+    private static final String MEDIA = "com.instagram.feed.media.Media";
     static final ViewOnceStash STASH = new ViewOnceStash(ViewOnceStash.CAPACITY);
 
     public void install(DexKitBridge bridge, ClassLoader classLoader) {
@@ -69,6 +61,7 @@ public class GhostPermanentViewHook {
 
             if (methods.isEmpty()) {
                 ModuleLog.error("(IE|ViewOnceMedia) Could not turn on permanent view: not supported by this Instagram version (view mode parser not found)");
+                if (FeatureFlags.permanentViewMode) FeatureStatusTracker.setBroken("PermanentViewMode");
                 return;
             }
 
@@ -90,6 +83,7 @@ public class GhostPermanentViewHook {
                     target = methods.get(0).getMethodInstance(classLoader);
                 } catch (Throwable t) {
                     ModuleLog.error("(IE|ViewOnceMedia) Could not turn on permanent view", t);
+                    if (FeatureFlags.permanentViewMode) FeatureStatusTracker.setBroken("PermanentViewMode");
                     return;
                 }
             }
@@ -105,6 +99,7 @@ public class GhostPermanentViewHook {
 
         } catch (Throwable t) {
             ModuleLog.error("(IE|ViewOnceMedia) Could not turn on permanent view", t);
+            if (FeatureFlags.permanentViewMode) FeatureStatusTracker.setBroken("PermanentViewMode");
         }
     }
 
@@ -116,76 +111,51 @@ public class GhostPermanentViewHook {
                 Object result = param.getResult();
                 if (result == null) return;
 
-                // Pass 1: read seen_count (small int field) so we don't "un-consume" media whose
-                // CDN URL is already gone; collect id/timestamp keys from the object graph (the
-                // parsed model X/02b7 holds a nested Media whose id also appears on the render side
-                // as ExtendedImageUrl.A07 — that shared id is our once/twice join key).
-                int seenCount = 0;
-                java.util.List<Long> keys = new java.util.ArrayList<>();
-                Class<?> cls = result.getClass();
-                while (cls != null && cls != Object.class) {
-                    for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(cls)) {
-                        if (f.getType() != int.class) continue;
-                        f.setAccessible(true);
-                        try { seenCount = f.getInt(result); } catch (Throwable ignored) {}
-                    }
-                    cls = cls.getSuperclass();
-                }
-                collectIdKeys(result, keys, 0,
-                        java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
-
-                // Pass 2: rewrite the view_mode to "permanent" (both types) so IG shows it as
-                // re-viewable media; stash the original once/twice type by each key for the render side.
-                cls = result.getClass();
-                while (cls != null && cls != Object.class) {
+                int seenCount = -1;
+                for (Class<?> cls = result.getClass(); cls != null && cls != Object.class; cls = cls.getSuperclass()) {
                     for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(cls)) {
                         if (f.getType() != String.class) continue;
                         f.setAccessible(true);
                         try {
                             String original = ViewOnceStash.original((String) f.get(result));
                             if (original == null) continue;
+                            if (seenCount < 0) seenCount = seenCount(result);
                             if (seenCount >= ("once".equals(original) ? 1 : 2)) return;
-                            STASH.rememberAll(keys, original);
-                            ModuleLog.detail("(IE|ViewOnceMedia) mode=" + original + " keys=" + keys);
+                            String mediaId = mediaId(result);
+                            STASH.remember(mediaId, original);
+                            ModuleLog.detail("(IE|ViewOnceMedia) mode=" + original + " media=" + mediaId);
                             f.set(result, PERMANENT);
                         } catch (Throwable ignored) {}
                     }
-                    cls = cls.getSuperclass();
                 }
             }
         };
     }
 
-    /**
-     * Walks the parsed model's object graph (depth-limited) collecting id/timestamp longs and
-     * numeric-string ids (e.g. the nested Media / ExtendedImageUrl media id). These are the keys
-     * the render side (ViewOnceBadgeHook) also derives, letting us join the original view-once type.
-     */
-    private static void collectIdKeys(Object obj, java.util.List<Long> out, int depth, java.util.Set<Object> seen) {
-        if (obj == null || depth > 4 || out.size() > 60 || !seen.add(obj)) return;
-        if (obj instanceof Object[]) {
-            for (Object e : (Object[]) obj) collectIdKeys(e, out, depth + 1, seen);
-            return;
-        }
-        String cn = obj.getClass().getName();
-        if (!cn.startsWith("X.") && !cn.startsWith("com.instagram.")) return;
-        for (Class<?> c = obj.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
-            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(c)) {
-                if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
+    private static int seenCount(Object result) {
+        int seenCount = 0;
+        for (Class<?> cls = result.getClass(); cls != null && cls != Object.class; cls = cls.getSuperclass()) {
+            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(cls)) {
+                if (f.getType() != int.class) continue;
                 f.setAccessible(true);
-                Class<?> t = f.getType();
+                try { seenCount = f.getInt(result); } catch (Throwable ignored) {}
+            }
+        }
+        return seenCount;
+    }
+
+    private static String mediaId(Object result) {
+        for (Class<?> cls = result.getClass(); cls != null && cls != Object.class; cls = cls.getSuperclass()) {
+            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(cls)) {
+                if (Modifier.isStatic(f.getModifiers()) || !f.getType().getName().equals(MEDIA)) continue;
                 try {
-                    if (t == long.class) {
-                        long v = f.getLong(obj);
-                        if (v != 0 && v != Long.MAX_VALUE && !out.contains(v)) out.add(v);
-                    } else if (t == String.class) {
-                        Long v = ViewOnceStash.mediaKey((String) f.get(obj));
-                        if (v != null && !out.contains(v)) out.add(v);
-                    } else if (!t.isPrimitive()) {
-                        collectIdKeys(f.get(obj), out, depth + 1, seen);
-                    }
+                    f.setAccessible(true);
+                    Object media = f.get(result);
+                    if (media == null) continue;
+                    if (media.getClass().getMethod("getId").invoke(media) instanceof String id) return id;
                 } catch (Throwable ignored) {}
             }
         }
+        return null;
     }
 }

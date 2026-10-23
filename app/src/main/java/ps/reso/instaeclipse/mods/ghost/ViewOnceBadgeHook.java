@@ -46,6 +46,7 @@ public class ViewOnceBadgeHook {
             if (methods.isEmpty()) {
                 ModuleLog.warn("(IE|VOBadge) The view-once icon is not shown on this Instagram version (the media still stays viewable)");
                 ModuleLog.detail("(IE|VOBadge) view-once props ctor not found");
+                if (FeatureFlags.permanentViewMode) FeatureStatusTracker.setBroken("ViewOnceBadge");
                 return;
             }
             int hooked = 0;
@@ -62,12 +63,14 @@ public class ViewOnceBadgeHook {
             if (hooked == 0) {
                 ModuleLog.warn("(IE|VOBadge) The view-once icon is not shown on this Instagram version (the media still stays viewable)");
                 ModuleLog.detail("(IE|VOBadge) props ctor found but none reflectable");
+                if (FeatureFlags.permanentViewMode) FeatureStatusTracker.setBroken("ViewOnceBadge");
                 return;
             }
             ModuleLog.ok("(IE|VOBadge) ready");
-            FeatureStatusTracker.setHooked("PermanentViewMode");
+            FeatureStatusTracker.setHooked("ViewOnceBadge");
         } catch (Throwable t) {
             ModuleLog.warn("(IE|VOBadge) The view-once icon could not be set up (the media still stays viewable)", t);
+            if (FeatureFlags.permanentViewMode) FeatureStatusTracker.setBroken("ViewOnceBadge");
         }
     }
 

@@ -45,7 +45,7 @@ public class CustomToast {
                 return "Appearance";
             case "GhostSeen": case "GhostTyping": case "GhostStories": case "GhostLive":
             case "GhostViewOnce": case "GhostScreenshot": case "AllowScreenshots":
-            case "KeepEphemeralMessages": case "KeepUnsentMessages": case "PermanentViewMode":
+            case "KeepEphemeralMessages": case "KeepUnsentMessages": case "PermanentViewMode": case "ViewOnceBadge":
             case "UnsentIndicator": case "ManualStorySeen":
             case "LockDirectMessages": case "HideSpecificChats": case "AdBlocker":
             case "DisableTrackingLinks": case "OpenLinksExternally": case "RemoveMetaAI": case "SpoofLastSeen":
