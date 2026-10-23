@@ -344,6 +344,7 @@
     <string name="ig_pa_watch_empty">Inga bevakade profiler ännu. På en profil, tryck ⋮ → Analysera profil.</string>
     <string name="ig_pa_watch_hint">Tryck på en profil för att se dess ändringslogg. För att uppdatera, öppna den och tryck ⋮ → Analysera profil.</string>
     <string name="ig_pa_watch_row">%1$d följare · %2$d följer · %3$s</string>
+    <string name="ig_pa_count_delta">Ändringar av antal följare / följer på profiler</string>
     <string name="ig_pa_watch_changes">ändringar: %1$d</string>
     <string name="ig_pa_tap_hint">Tryck på ett namn för att öppna profilen, håll in för att kopiera användarnamnet.</string>
     <string name="ig_pa_changelog">Ändringshistorik</string>

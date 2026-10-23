@@ -343,6 +343,7 @@
     <string name="ig_pa_watch_empty">لا توجد ملفات مراقَبة بعد. في أي ملف شخصي، اضغط ⋮ ← تحليل الملف الشخصي.</string>
     <string name="ig_pa_watch_hint">اضغط على ملف لرؤية سجل تغييراته. لتحديثه، افتحه واضغط ⋮ ← تحليل الملف الشخصي.</string>
     <string name="ig_pa_watch_row">%1$d متابِع · %2$d متابَع · %3$s</string>
+    <string name="ig_pa_count_delta">تغيّر أعداد المتابِعين والمتابَعين على الملفات الشخصية</string>
     <string name="ig_pa_watch_changes">التغييرات: %1$d</string>
     <string name="ig_pa_tap_hint">اضغط على اسم لفتح الملف الشخصي، واضغط مطولًا لنسخ اسم المستخدم.</string>
     <string name="ig_pa_changelog">تاريخ التغييرات</string>

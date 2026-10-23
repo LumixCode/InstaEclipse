@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- View tags of ProfileCountDeltaHook (profile header count changes since the last analysis). -->
+<resources>
+    <item type="id" name="ie_count_delta_cell" />
+    <item type="id" name="ie_count_delta_row" />
+</resources>

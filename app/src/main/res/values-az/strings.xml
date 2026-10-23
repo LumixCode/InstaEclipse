@@ -345,6 +345,7 @@
     <string name="ig_pa_watch_empty">Hələ izlənilən profil yoxdur. Profildə ⋮ → Profili analiz et toxunun.</string>
     <string name="ig_pa_watch_hint">Dəyişiklik jurnalını görmək üçün profilə toxunun. Yeniləmək üçün onu açıb ⋮ → Profili analiz et toxunun.</string>
     <string name="ig_pa_watch_row">%1$d izləyici · %2$d izlənilən · %3$s</string>
+    <string name="ig_pa_count_delta">Profillərdə izləyici / izlənilən sayının dəyişməsi</string>
     <string name="ig_pa_watch_changes">dəyişikliklər: %1$d</string>
     <string name="ig_pa_tap_hint">Profili açmaq üçün ada toxunun, istifadəçi adını kopyalamaq üçün basılı saxlayın.</string>
     <string name="ig_pa_changelog">Dəyişiklik tarixçəsi</string>

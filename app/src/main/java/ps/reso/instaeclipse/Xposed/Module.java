@@ -516,8 +516,14 @@ public class Module {
                     }
                     try {
                         if (!skip("ProfileFollowsYouHook")) new ps.reso.instaeclipse.mods.ui.ProfileFollowsYouHook().install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | FollowsYou): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | FollowsYou): Could not start, so this feature will not work", t);
+                    }
+                    // Profile analyzer: header count changes since a profile's last analysis
+                    try {
+                        if (!skip("ProfileCountDeltaHook")) new ps.reso.instaeclipse.mods.misc.ProfileCountDeltaHook().install(dexKitBridge, hostClassLoader);
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|CountDelta) Could not start, so this feature will not work", t);
                     }
 
                     // Follower toast: hooks IG's friendship-status handling here, once, never at runtime

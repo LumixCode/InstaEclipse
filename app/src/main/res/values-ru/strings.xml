@@ -345,6 +345,7 @@
     <string name="ig_pa_watch_empty">Пока нет отслеживаемых профилей. В профиле нажмите ⋮ → Анализировать профиль.</string>
     <string name="ig_pa_watch_hint">Нажмите на профиль, чтобы увидеть журнал изменений. Чтобы обновить, откройте его и нажмите ⋮ → Анализировать профиль.</string>
     <string name="ig_pa_watch_row">%1$d подписчиков · %2$d подписок · %3$s</string>
+    <string name="ig_pa_count_delta">Изменения числа подписчиков / подписок в профилях</string>
     <string name="ig_pa_watch_changes">изменений: %1$d</string>
     <string name="ig_pa_tap_hint">Нажмите на имя, чтобы открыть профиль; удерживайте, чтобы скопировать имя пользователя.</string>
     <string name="ig_pa_changelog">История изменений</string>

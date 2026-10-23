@@ -381,6 +381,7 @@
     <string name="ig_pa_watch_empty">אין עדיין פרופילים במעקב. בפרופיל, הקישו ⋮ ← ניתוח פרופיל.</string>
     <string name="ig_pa_watch_hint">הקישו על פרופיל כדי לראות את יומן השינויים שלו. לעדכון, פתחו אותו והקישו ⋮ ← ניתוח פרופיל.</string>
     <string name="ig_pa_watch_row">%1$d עוקבים · %2$d במעקב · %3$s</string>
+    <string name="ig_pa_count_delta">שינויים במספר העוקבים / במעקב בפרופילים</string>
     <string name="ig_pa_watch_changes">שינויים: %1$d</string>
     <string name="ig_pa_tap_hint">הקישו על שם כדי לפתוח את הפרופיל, לחיצה ארוכה מעתיקה את שם המשתמש.</string>
     <string name="ig_pa_changelog">היסטוריית שינויים</string>

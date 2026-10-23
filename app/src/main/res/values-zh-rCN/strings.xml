@@ -382,6 +382,7 @@
     <string name="ig_pa_watch_empty">还没有关注清单中的主页。在主页上点按 ⋮ → 分析主页。</string>
     <string name="ig_pa_watch_hint">点按主页查看其变更记录。要更新，请打开它并点按 ⋮ → 分析主页。</string>
     <string name="ig_pa_watch_row">%1$d 位粉丝 · %2$d 位已关注 · %3$s</string>
+    <string name="ig_pa_count_delta">主页上的粉丝 / 已关注数量变化</string>
     <string name="ig_pa_watch_changes">变化：%1$d</string>
     <string name="ig_pa_tap_hint">点按名字打开主页，长按复制用户名。</string>
     <string name="ig_pa_changelog">变更历史</string>

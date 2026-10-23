@@ -381,6 +381,7 @@
     <string name="ig_pa_watch_empty">Belum ada profil yang dipantau. Di sebuah profil, ketuk ⋮ → Analisis profil.</string>
     <string name="ig_pa_watch_hint">Ketuk profil untuk melihat log perubahannya. Untuk memperbarui, buka profilnya lalu ketuk ⋮ → Analisis profil.</string>
     <string name="ig_pa_watch_row">%1$d pengikut · %2$d mengikuti · %3$s</string>
+    <string name="ig_pa_count_delta">Perubahan jumlah pengikut / mengikuti di profil</string>
     <string name="ig_pa_watch_changes">perubahan: %1$d</string>
     <string name="ig_pa_tap_hint">Ketuk nama untuk membuka profil, tahan untuk menyalin nama pengguna.</string>
     <string name="ig_pa_changelog">Riwayat perubahan</string>

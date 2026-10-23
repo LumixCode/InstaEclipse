@@ -289,6 +289,7 @@
     <string name="ig_pa_watch_empty">Chưa có hồ sơ nào được theo dõi. Trên một hồ sơ, nhấn ⋮ → Phân tích hồ sơ.</string>
     <string name="ig_pa_watch_hint">Nhấn vào một hồ sơ để xem nhật ký thay đổi. Để cập nhật, hãy mở hồ sơ và nhấn ⋮ → Phân tích hồ sơ.</string>
     <string name="ig_pa_watch_row">%1$d người theo dõi · %2$d đang theo dõi · %3$s</string>
+    <string name="ig_pa_count_delta">Thay đổi số người theo dõi / đang theo dõi trên hồ sơ</string>
     <string name="ig_pa_watch_changes">thay đổi: %1$d</string>
     <string name="ig_pa_tap_hint">Nhấn vào tên để mở hồ sơ, nhấn giữ để sao chép tên người dùng.</string>
     <string name="ig_pa_changelog">Lịch sử thay đổi</string>

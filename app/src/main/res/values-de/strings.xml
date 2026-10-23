@@ -350,6 +350,7 @@
     <string name="ig_pa_watch_empty">Noch keine beobachteten Profile. Tippe auf einem Profil auf ⋮ → Profil analysieren.</string>
     <string name="ig_pa_watch_hint">Tippe auf ein Profil, um sein Änderungsprotokoll zu sehen. Zum Aktualisieren öffne es und tippe auf ⋮ → Profil analysieren.</string>
     <string name="ig_pa_watch_row">%1$d Follower · %2$d gefolgt · %3$s</string>
+    <string name="ig_pa_count_delta">Änderungen der Follower-/Gefolgt-Zahlen im Profil</string>
     <string name="ig_pa_watch_changes">Änderungen: %1$d</string>
     <string name="ig_pa_tap_hint">Tippe auf einen Namen, um das Profil zu öffnen; halte ihn gedrückt, um den Benutzernamen zu kopieren.</string>
     <string name="ig_pa_changelog">Änderungsverlauf</string>

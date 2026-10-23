@@ -344,6 +344,7 @@
     <string name="ig_pa_watch_empty">Nenhum perfil observado ainda. Em um perfil, toque em ⋮ → Analisar perfil.</string>
     <string name="ig_pa_watch_hint">Toque em um perfil para ver o registro de mudanças. Para atualizar, abra-o e toque em ⋮ → Analisar perfil.</string>
     <string name="ig_pa_watch_row">%1$d seguidores · %2$d seguindo · %3$s</string>
+    <string name="ig_pa_count_delta">Mudanças no número de seguidores / seguindo nos perfis</string>
     <string name="ig_pa_watch_changes">mudanças: %1$d</string>
     <string name="ig_pa_tap_hint">Toque em um nome para abrir o perfil; segure para copiar o nome de usuário.</string>
     <string name="ig_pa_changelog">Histórico de mudanças</string>

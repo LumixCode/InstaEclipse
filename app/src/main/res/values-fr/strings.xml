@@ -381,6 +381,7 @@
     <string name="ig_pa_watch_empty">Aucun profil surveillé pour l\'instant. Sur un profil, touchez ⋮ → Analyser le profil.</string>
     <string name="ig_pa_watch_hint">Touchez un profil pour voir son journal. Pour le mettre à jour, ouvrez-le et touchez ⋮ → Analyser le profil.</string>
     <string name="ig_pa_watch_row">%1$d abonnés · %2$d abonnements · %3$s</string>
+    <string name="ig_pa_count_delta">Évolution du nombre d\'abonnés / abonnements sur les profils</string>
     <string name="ig_pa_watch_changes">changements : %1$d</string>
     <string name="ig_pa_tap_hint">Touchez un nom pour ouvrir le profil, maintenez-le pour copier le nom d\'utilisateur.</string>
     <string name="ig_pa_changelog">Historique des changements</string>

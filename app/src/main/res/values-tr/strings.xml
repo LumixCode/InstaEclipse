@@ -670,6 +670,7 @@
     <string name="ig_pa_watch_empty">Henüz izlenen profil yok. Bir profilde ⋮ → Profili analiz et\'e dokunun.</string>
     <string name="ig_pa_watch_hint">Değişiklik günlüğünü görmek için bir profile dokunun. Güncellemek için profili açıp ⋮ → Profili analiz et\'e dokunun.</string>
     <string name="ig_pa_watch_row">%1$d takipçi · %2$d takip edilen · %3$s</string>
+    <string name="ig_pa_count_delta">Profillerde takipçi / takip edilen sayısı değişimleri</string>
     <string name="ig_pa_watch_changes">değişiklik: %1$d</string>
     <string name="ig_pa_tap_hint">Profili açmak için bir isme dokunun, kullanıcı adını kopyalamak için basılı tutun.</string>
     <string name="ig_pa_changelog">Değişiklik geçmişi</string>

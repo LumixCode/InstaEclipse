@@ -382,6 +382,7 @@
     <string name="ig_pa_watch_empty">Δεν υπάρχουν προφίλ σε παρακολούθηση. Σε ένα προφίλ, πατήστε ⋮ → Ανάλυση προφίλ.</string>
     <string name="ig_pa_watch_hint">Πατήστε ένα προφίλ για να δείτε το ιστορικό του. Για ενημέρωση, ανοίξτε το και πατήστε ⋮ → Ανάλυση προφίλ.</string>
     <string name="ig_pa_watch_row">%1$d ακόλουθοι · %2$d ακολουθεί · %3$s</string>
+    <string name="ig_pa_count_delta">Αλλαγές αριθμού ακολούθων / ακολουθεί στα προφίλ</string>
     <string name="ig_pa_watch_changes">αλλαγές: %1$d</string>
     <string name="ig_pa_tap_hint">Πατήστε ένα όνομα για να ανοίξει το προφίλ, κρατήστε το πατημένο για αντιγραφή του ονόματος χρήστη.</string>
     <string name="ig_pa_changelog">Χρονολόγιο αλλαγών</string>

@@ -483,6 +483,7 @@
     <string name="ig_pa_watch_empty">Brak obserwowanych profili. Na profilu dotknij ⋮ → Analizuj profil.</string>
     <string name="ig_pa_watch_hint">Dotknij profilu, aby zobaczyć jego dziennik zmian. Aby go zaktualizować, otwórz go i dotknij ⋮ → Analizuj profil.</string>
     <string name="ig_pa_watch_row">%1$d obserwujących · %2$d obserwowanych · %3$s</string>
+    <string name="ig_pa_count_delta">Zmiany liczby obserwujących / obserwowanych na profilach</string>
     <string name="ig_pa_watch_changes">zmiany: %1$d</string>
     <string name="ig_pa_tap_hint">Dotknij nazwy, aby otworzyć profil, przytrzymaj, aby skopiować nazwę użytkownika.</string>
     <string name="ig_pa_changelog">Historia zmian</string>

@@ -620,6 +620,7 @@
     <string name="ig_pa_watch_empty">No watched profiles yet. On a profile, tap ⋮ → Analyze profile.</string>
     <string name="ig_pa_watch_hint">Tap a profile to see its change log. To update one, open it and tap ⋮ → Analyze profile.</string>
     <string name="ig_pa_watch_row">%1$d followers · %2$d following · %3$s</string>
+    <string name="ig_pa_count_delta">Follower / following count changes on profiles</string>
     <string name="ig_pa_watch_changes">changes: %1$d</string>
     <string name="ig_pa_tap_hint">Tap a name to open the profile, hold it to copy the username.</string>
     <string name="ig_pa_changelog">Changelog</string>

@@ -491,6 +491,7 @@
     <string name="ig_pa_watch_empty">Nessun profilo controllato. Su un profilo, tocca ⋮ → Analizza profilo.</string>
     <string name="ig_pa_watch_hint">Tocca un profilo per vedere il suo registro. Per aggiornarlo, aprilo e tocca ⋮ → Analizza profilo.</string>
     <string name="ig_pa_watch_row">%1$d follower · %2$d seguiti · %3$s</string>
+    <string name="ig_pa_count_delta">Variazioni di follower / seguiti nei profili</string>
     <string name="ig_pa_watch_changes">modifiche: %1$d</string>
     <string name="ig_pa_tap_hint">Tocca un nome per aprire il profilo, tienilo premuto per copiare il nome utente.</string>
     <string name="ig_pa_changelog">Cronologia modifiche</string>

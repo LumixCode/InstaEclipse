@@ -344,6 +344,7 @@
     <string name="ig_pa_watch_empty">觀察清單中還沒有個人檔案。在個人檔案上點按 ⋮ → 分析個人檔案。</string>
     <string name="ig_pa_watch_hint">點按個人檔案查看其變更紀錄。要更新，請開啟它並點按 ⋮ → 分析個人檔案。</string>
     <string name="ig_pa_watch_row">%1$d 位粉絲 · %2$d 位追蹤中 · %3$s</string>
+    <string name="ig_pa_count_delta">個人檔案上的粉絲 / 追蹤中人數變化</string>
     <string name="ig_pa_watch_changes">變化：%1$d</string>
     <string name="ig_pa_tap_hint">點按名稱開啟個人檔案，長按複製使用者名稱。</string>
     <string name="ig_pa_changelog">變更歷史</string>
