@@ -26,7 +26,6 @@ public final class ModuleReplies {
     private static final String EXTRA_REPLY = BuildConfig.APPLICATION_ID + ".ipc.REPLY";
     private static final int RESULT = 1;
     private static final long REPLY_LIFETIME_MS = 30_000;
-    public static final int MAX_CONFIG_CHARS = 200_000;
     static final int MAX_PREFERENCE_STRING_CHARS = 16 * 1024;
     private static final int MAX_REPLY_BYTES = 512 * 1024;
     private static final Map<String, Class<?>> PREFERENCE_TYPES = preferenceTypes();
@@ -134,7 +133,6 @@ public final class ModuleReplies {
             else if (type == int.class) types.put(field.getName(), Integer.class);
             else if (type == String.class) types.put(field.getName(), String.class);
         }
-        for (String flag : ps.reso.instaeclipse.utils.feature.ExtrasFeatures.flags()) types.put(flag, Boolean.class);
         // SettingsManager persists these double-valued flags as strings.
         types.put("spoofLat", String.class);
         types.put("spoofLng", String.class);

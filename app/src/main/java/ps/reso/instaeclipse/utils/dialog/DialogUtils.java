@@ -1347,7 +1347,6 @@ public class DialogUtils {
             dlg.onClose(cancelExtreme); // ✕ / Back / outside = Cancel
             dlg.primary(I18n.t(context, R.string.ig_dialog_yes), () -> {
                 FeatureFlags.isExtremeMode = true;
-                FeatureFlags.isDistractionFree = true;
                 SettingsManager.saveAllFlags();
                 refresh.run();
             });

@@ -668,7 +668,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                                     .setMessage(getString(R.string.ig_dialog_distraction_extreme_message))
                                     .setPositiveButton(getString(R.string.ig_dialog_yes), (dialog, which) -> {
                                         stageChange(item.prefKey, true);
-                                        stageChange("isDistractionFree", true);
                                         updateMasterSwitches();
                                         refreshConditionalItems();
                                     })

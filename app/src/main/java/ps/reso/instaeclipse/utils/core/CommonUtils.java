@@ -87,7 +87,7 @@ public class CommonUtils {
     public static final java.util.Set<String> STALE_CACHE_KEYS = new java.util.HashSet<>(java.util.Arrays.asList(
             "lockDirectPasscode", "lockDirectSalt", "lockedDirectThreads", "hideCreateGroupButton", "blockLocationPrompts",
             "loadedModuleVersion", "dailyReelHooksAvailable", "dailyReelTrackingAvailable",
-            "dailyReelBlockingAvailable"));
+            "dailyReelBlockingAvailable", "isGhostModeEnabled", "isMiscEnabled", "isDistractionFree"));
 
     /** Drops {@link #STALE_CACHE_KEYS} from the companion cache; writes nothing when none is there. */
     public static void dropStaleCacheKeys(Context context) {

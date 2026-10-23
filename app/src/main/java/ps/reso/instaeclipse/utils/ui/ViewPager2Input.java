@@ -4,7 +4,6 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -25,8 +24,6 @@ public final class ViewPager2Input {
 
     private static Field userInputField;
     private static boolean userInputFieldTried;
-    private static Method setter;
-    private static boolean setterTried;
 
     /**
      * ViewPager2's {@code mUserInputEnabled}. Its inner RecyclerView reads it in
@@ -80,42 +77,6 @@ public final class ViewPager2Input {
             ModuleLog.warn("(IE|ViewPager2) Swiping between pages cannot be locked: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
         return null;
-    }
-
-    /**
-     * Sets the pager's user-input flag. Prefers the public setUserInputEnabled() when the build
-     * kept it (it also refreshes accessibility state); otherwise writes the resolved field.
-     * Returns false when neither could be found.
-     */
-    public static boolean setEnabled(View pager, boolean enabled) {
-        try {
-            Method m = setter(pager);
-            if (m != null) {
-                m.invoke(pager, enabled);
-                return true;
-            }
-            Field f = field(pager);
-            if (f == null) return false;
-            if (f.getBoolean(pager) != enabled) f.setBoolean(pager, enabled);
-            return true;
-        } catch (Throwable t) {
-            return false;
-        }
-    }
-
-    private static synchronized Method setter(View pager) {
-        if (setterTried) return setter;
-        setterTried = true;
-        Class<?> vp = viewPager2Class(pager);
-        if (vp == null) return null;
-        try {
-            Method m = vp.getDeclaredMethod("setUserInputEnabled", boolean.class);
-            m.setAccessible(true);
-            return setter = m;
-        } catch (NoSuchMethodException e) {
-            ModuleLog.detail("(IE|ViewPager2) setUserInputEnabled missing — using the field");
-            return null;
-        }
     }
 
     private static Class<?> viewPager2Class(View pager) {

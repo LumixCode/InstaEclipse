@@ -15,7 +15,6 @@ public class FeatureFlags {
     public static volatile boolean isDevEnabled = false;
 
     // Ghost Mode
-    public static volatile boolean isGhostModeEnabled = false;
     public static volatile boolean isGhostSeen = false;
     public static volatile boolean isGhostTyping = false;
     public static volatile boolean isGhostScreenshot = false;
@@ -112,7 +111,6 @@ public class FeatureFlags {
 
     // Distraction Free
     public static volatile boolean isExtremeMode = false; // Extreme Mode
-    public static volatile boolean isDistractionFree = false;
     public static volatile boolean disableStories = false;
     public static volatile boolean disableFeed = false;
     public static volatile boolean disableReels = false;
@@ -134,7 +132,6 @@ public class FeatureFlags {
     public static volatile boolean openLinksExternally = false;
 
     // Misc Options
-    public static volatile boolean isMiscEnabled = false;
     public static volatile boolean disableStoryFlipping = false;
     public static volatile boolean disableVideoAutoPlay = false;
     public static volatile boolean spoofLastSeen = false;

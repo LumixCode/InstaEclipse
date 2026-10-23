@@ -55,7 +55,6 @@ public class SettingsManager {
         editor.putBoolean("isDevEnabled", FeatureFlags.isDevEnabled);
 
         // Ghost Mode
-        editor.putBoolean("isGhostModeEnabled", FeatureFlags.isGhostModeEnabled);
         editor.putBoolean("isGhostSeen", FeatureFlags.isGhostSeen);
         editor.putBoolean("isGhostTyping", FeatureFlags.isGhostTyping);
         editor.putBoolean("isGhostScreenshot", FeatureFlags.isGhostScreenshot);
@@ -104,7 +103,6 @@ public class SettingsManager {
 
         // Distraction Free
         editor.putBoolean("isExtremeMode", FeatureFlags.isExtremeMode);
-        editor.putBoolean("isDistractionFree", FeatureFlags.isDistractionFree);
         editor.putBoolean("disableStories", FeatureFlags.disableStories);
         editor.putBoolean("disableFeed", FeatureFlags.disableFeed);
         editor.putBoolean("disableReels", FeatureFlags.disableReels);
@@ -165,7 +163,6 @@ public class SettingsManager {
         editor.putBoolean("openLinksExternally", FeatureFlags.openLinksExternally);
 
         // Misc
-        editor.putBoolean("isMiscEnabled", FeatureFlags.isMiscEnabled);
         editor.putBoolean("disableStoryFlipping", FeatureFlags.disableStoryFlipping);
         editor.putBoolean("disableVideoAutoPlay", FeatureFlags.disableVideoAutoPlay);
         editor.putBoolean("spoofLastSeen", FeatureFlags.spoofLastSeen);
@@ -276,10 +273,10 @@ public class SettingsManager {
             prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         }
 
+        dropDeadKeys(prefs);
         FeatureFlags.isDevEnabled = prefs.getBoolean("isDevEnabled", false);
 
         // Ghost Mode
-        FeatureFlags.isGhostModeEnabled = prefs.getBoolean("isGhostModeEnabled", false);
         FeatureFlags.isGhostSeen = prefs.getBoolean("isGhostSeen", false);
         FeatureFlags.isGhostTyping = prefs.getBoolean("isGhostTyping", false);
         FeatureFlags.isGhostScreenshot = prefs.getBoolean("isGhostScreenshot", false);
@@ -328,7 +325,6 @@ public class SettingsManager {
 
         // Distraction Free
         FeatureFlags.isExtremeMode = prefs.getBoolean("isExtremeMode", false);
-        FeatureFlags.isDistractionFree = prefs.getBoolean("isDistractionFree", false);
         FeatureFlags.disableStories = prefs.getBoolean("disableStories", false);
         FeatureFlags.disableFeed = prefs.getBoolean("disableFeed", false);
         FeatureFlags.disableReels = prefs.getBoolean("disableReels", false);
@@ -395,7 +391,6 @@ public class SettingsManager {
         FeatureFlags.openLinksExternally = prefs.getBoolean("openLinksExternally", false);
 
         // Misc
-        FeatureFlags.isMiscEnabled = prefs.getBoolean("isMiscEnabled", false);
         FeatureFlags.disableStoryFlipping = prefs.getBoolean("disableStoryFlipping", false);
         FeatureFlags.disableVideoAutoPlay = prefs.getBoolean("disableVideoAutoPlay", false);
         FeatureFlags.spoofLastSeen = prefs.getBoolean("spoofLastSeen", false);
@@ -510,6 +505,16 @@ public class SettingsManager {
         int quality = Boolean.TRUE.equals(stored) ? 1080 : 0;
         if (stored != null) preferences.edit().putInt("forceReelQuality", quality).apply();
         return quality;
+    }
+
+    private static void dropDeadKeys(SharedPreferences p) {
+        SharedPreferences.Editor e = null;
+        for (String key : new String[]{"isGhostModeEnabled", "isMiscEnabled", "isDistractionFree"}) {
+            if (!p.contains(key)) continue;
+            if (e == null) e = p.edit();
+            e.remove(key);
+        }
+        if (e != null) e.apply();
     }
 
     /** The older "hideCreateGroupButton" became upstream's "hideShareCreateGroup" (same sheet row). */
