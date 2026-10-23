@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongSupplier;
 
 import ps.reso.instaeclipse.utils.core.DexKitCache;
@@ -25,6 +26,8 @@ public final class InstallRunner {
             ModuleLog.error(message, t);
         }
     };
+
+    private static final Set<String> RAN = ConcurrentHashMap.newKeySet();
 
     private final Set<String> skipped;
     private final LongSupplier clock;
@@ -58,6 +61,7 @@ public final class InstallRunner {
             span = StartupTrace.step(step.name);
             DexKitStats.enterStep(step.name);
             plan.run(step, ctx);
+            RAN.add(step.name);
         } catch (Throwable t) {
             reporter.error(step.failTag + step.failText, t);
         } finally {
@@ -66,6 +70,10 @@ public final class InstallRunner {
                 StartupTrace.end(span);
             }
         }
+    }
+
+    public static boolean ran(String stepName) {
+        return RAN.contains(stepName);
     }
 
     public void mark(String name) {

@@ -244,7 +244,7 @@ public class InstallPlan {
         s.add(new InstallStep(AD_BLOCKER, "AdBlocker", null, "(InstaEclipse | AdBlocker): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(TRACKING_LINK_DISABLE, "TrackingLinkDisable", null, "(InstaEclipse | TrackingLinkDisable): ", COULD_NOT_START, false, null));
         s.add(new InstallStep(EXACT_TIMESTAMP_HOOK, "ExactTimestampHook", null, "(InstaEclipse | ExactTime): ", COULD_NOT_START, true, null));
-        s.add(new InstallStep(EXPAND_CAPTIONS_HOOK, "ExpandCaptionsHook", null, "(InstaEclipse | ExpandCaptions): ", COULD_NOT_START, true, null));
+        s.add(new InstallStep(EXPAND_CAPTIONS_HOOK, "ExpandCaptionsHook", null, "(InstaEclipse | ExpandCaptions): ", COULD_NOT_START, true, "expandCaptions"));
         s.add(new InstallStep(HIDE_COMMUNITY_NOTES_HOOK, "HideCommunityNotesHook", null, "(InstaEclipse | CommunityNotes): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(REELS_CONTROLS_HOOK, "ReelsControlsHook", null, "(InstaEclipse | Reels): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(ACCOUNT_LIMIT_HOOK, "AccountLimitHook", null, "(InstaEclipse | UnlimitedAccounts): ", COULD_NOT_START, true, null));
@@ -252,7 +252,7 @@ public class InstallPlan {
         s.add(new InstallStep(HIGH_RESOLUTION_IMAGE_HOOK, "HighResolutionImageHook", null, "(InstaEclipse | HighResImages): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(ONBOARDING_PROMPT_HOOK, "OnboardingPromptHook", null, "(InstaEclipse | Onboarding): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(NOTIFICATION_REGISTRATION_HOOK, "NotificationRegistrationHook", null, "(InstaEclipse | NotificationFix): ", COULD_NOT_START, false, null));
-        s.add(new InstallStep(STARTUP_TAB_HOOK, "StartupTabHook", null, "(InstaEclipse | StartupTab): ", COULD_NOT_START, false, null));
+        s.add(new InstallStep(STARTUP_TAB_HOOK, "StartupTabHook", null, "(InstaEclipse | StartupTab): ", COULD_NOT_START, false, "startupTab"));
         s.add(new InstallStep(BACK_LEAVES_HOME_HOOK, "BackLeavesHomeHook", null, "(IE|BackLeavesHome): ", COULD_NOT_START, false, null));
         s.add(new InstallStep(SWIPE_TO_CAMERA_HOOK, "SwipeToCameraHook", null, "(InstaEclipse | SwipeCamera): ", COULD_NOT_START, false, null));
         s.add(new InstallStep(FOLLOWING_ONLY_FEED_HOOK, "FollowingOnlyFeedHook", null, "(InstaEclipse | FollowingOnlyFeed): ", COULD_NOT_START, true, null));
@@ -276,9 +276,9 @@ public class InstallPlan {
         s.add(new InstallStep(STORY_LIKE_UNDO_HOOK, "StoryLikeUndoHook", null, "(InstaEclipse | LikeUndo): ", STORY_LIKES, true, null));
         s.add(new InstallStep(FOLLOW_CONFIRM_HOOK, "FollowConfirmHook", null, "(InstaEclipse | FollowConfirm): ", COULD_NOT_START, true, "confirmFollows"));
         s.add(new InstallStep(PROFILE_MENU_HOOK, "ProfileMenuHook", null, "(IE|ProfileMenu) ", COULD_NOT_START, true, null));
-        s.add(new InstallStep(POST_COUNT_SPOOF, "PostCountSpoof", null, "(IE|PostCounts) ", COULD_NOT_START, true, null));
+        s.add(new InstallStep(POST_COUNT_SPOOF, "PostCountSpoof", null, "(IE|PostCounts) ", COULD_NOT_START, true, "postCountSpoof"));
         s.add(new InstallStep(PROFILE_TEXT_COPY_HOOK, "ProfileTextCopyHook", null, "(IE|ProfileCopy) ", COULD_NOT_START, true, null));
-        s.add(new InstallStep(PROFILE_SPOOF_HOOK, "ProfileSpoofHook", null, "(IE|ProfileSpoof) ", COULD_NOT_START, true, null));
+        s.add(new InstallStep(PROFILE_SPOOF_HOOK, "ProfileSpoofHook", null, "(IE|ProfileSpoof) ", COULD_NOT_START, true, "profileSpoofer|postCountSpoof"));
         s.add(new InstallStep(SHARE_SHEET_CLEANUP_HOOK, "ShareSheetCleanupHook", null, "(InstaEclipse | ShareSheet): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(EXTERNAL_BROWSER_HOOK, "ExternalBrowserHook", null, "(InstaEclipse | ExternalBrowser): ", COULD_NOT_START, false, null));
         s.add(new InstallStep(OPEN_LINKS_EXTERNALLY_HOOK, "OpenLinksExternallyHook", null, "(InstaEclipse | OpenLinksExternally): ", COULD_NOT_START, true, null));
@@ -334,6 +334,14 @@ public class InstallPlan {
                 return FeatureFlags.confirmFollows;
             case "confirmCalls":
                 return FeatureFlags.confirmCalls;
+            case "expandCaptions":
+                return FeatureFlags.expandCaptions;
+            case "startupTab":
+                return FeatureFlags.startupTab != null && !FeatureFlags.startupTab.isEmpty();
+            case "postCountSpoof":
+                return FeatureFlags.postCountSpoof;
+            case "profileSpoofer|postCountSpoof":
+                return FeatureFlags.profileSpoofer || FeatureFlags.postCountSpoof;
             default:
                 throw new IllegalArgumentException("Unknown install gate: " + gateKey);
         }

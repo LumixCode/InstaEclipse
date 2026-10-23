@@ -140,10 +140,6 @@ public final class PostCountSpoof {
                     }
             } catch (Throwable ignored) { }
         }
-        // The row hooks sit on very hot framework methods (TextView.setText,
-        // View.setContentDescription); hooking those app-wide triggers ART's JIT SIGSEGV on IG
-        // 451+ / Android 13, so they are only installed when the feature is on (turning it on
-        // later updates the row after an Instagram restart; the getters above apply at once).
         if (FeatureFlags.postCountSpoof) hookCountViews();
         if (hooked > 0) FeatureStatusTracker.setHooked("PostCountSpoof");
         if (hooked > 0) ModuleLog.ok(TAG + "ready");

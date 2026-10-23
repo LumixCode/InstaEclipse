@@ -46,7 +46,7 @@ public class CustomFontHook {
 
     public void install(ClassLoader cl) {
         installFontHooks(cl);
-        installEmojiHook(cl);
+        if (FeatureFlags.customEmojiEnabled) installEmojiHook(cl);
         deleteSupersededFonts();
     }
 
@@ -84,16 +84,19 @@ public class CustomFontHook {
     }
 
     private void installFontHooks(ClassLoader cl) {
-        // The typeface hooks sit on very hot framework methods (Paint/TextView.setTypeface); merely
-        // installing them makes ART's JIT crash IG every ~40 s on Android 13, so they are only
-        // installed when a custom font is active (a newly picked font asks for an IG restart anyway).
-        if (FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled) installTypefaceHooks();
+        boolean font = FeatureFlags.customFontEnabled && isFile(FeatureFlags.customFontPath);
+        boolean emoji = FeatureFlags.customEmojiEnabled && isFile(FeatureFlags.customEmojiPath);
+        if (FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled) installTypefaceHooks(font || emoji);
         installPickResultHook();
-        if (FeatureFlags.customFontEnabled) FeatureStatusTracker.setHooked("CustomFont");
+        if (font) FeatureStatusTracker.setHooked("CustomFont");
         ModuleLog.ok("(IE|Font) ready");
     }
 
-    private void installTypefaceHooks() {
+    static boolean isFile(String path) {
+        return path != null && !path.isEmpty() && new File(path).isFile();
+    }
+
+    private void installTypefaceHooks(boolean setTypeface) {
         XC_MethodHook replace = new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                 if (!(FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled)) return;
@@ -134,11 +137,6 @@ public class CustomFontHook {
                 if (tf != null && p.args[0] != tf) p.args[0] = tf;
             }
         };
-        try {
-            XposedHelpers.findAndHookMethod(android.widget.TextView.class, "setTypeface", Typeface.class, setTf1);
-        } catch (Throwable ignored) {}
-        // setTypeface(Typeface, int) applies a style over a base family; force our font as the base
-        // and let the style (bold/italic) be derived from it.
         XC_MethodHook setTf2 = new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                 if (!(FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled) || Boolean.TRUE.equals(loading.get())) return;
@@ -146,9 +144,14 @@ public class CustomFontHook {
                 if (tf != null && p.args[0] != tf) p.args[0] = tf;
             }
         };
-        try {
-            XposedHelpers.findAndHookMethod(android.widget.TextView.class, "setTypeface", Typeface.class, int.class, setTf2);
-        } catch (Throwable ignored) {}
+        if (setTypeface) {
+            try {
+                XposedHelpers.findAndHookMethod(android.widget.TextView.class, "setTypeface", Typeface.class, setTf1);
+            } catch (Throwable ignored) {}
+            try {
+                XposedHelpers.findAndHookMethod(android.widget.TextView.class, "setTypeface", Typeface.class, int.class, setTf2);
+            } catch (Throwable ignored) {}
+        }
 
         // Litho/Compose text (DM chats, captions) is drawn via a Paint, not a TextView. Hooking
         // Paint.setTypeface reached it but is far too hot (ART's JIT crashes IG within a minute), so

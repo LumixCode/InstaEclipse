@@ -67,6 +67,10 @@ public final class ProfileSpoofHook {
     private static volatile boolean idFieldSearched;
 
     public void install(DexKitBridge bridge, ClassLoader cl) {
+        if (!FeatureFlags.profileSpoofer) {
+            ModuleLog.detail(TAG + "account tracking=" + trackAccount(cl));
+            return;
+        }
         int hooked = 0;
         StringBuilder log = new StringBuilder();
         hooked += hook(bridge, cl, "follower_count", "ProfileSpoofFollowers", log, new String[]{"java.lang.Integer", "int", "java.lang.Long", "long"}, 0);
@@ -74,14 +78,8 @@ public final class ProfileSpoofHook {
         hooked += hook(bridge, cl, "media_count", "ProfileSpoofPosts", log, new String[]{"java.lang.Integer", "int", "java.lang.Long", "long"}, 2);
         hooked += hook(bridge, cl, "is_verified", "ProfileSpoofVerified", log, new String[]{"java.lang.Boolean", "boolean"}, 3);
         boolean session = trackAccount(cl);
-        // The view hooks sit on very hot framework methods (TextView.setText,
-        // ImageView.setImageDrawable/setImageBitmap); hooking those app-wide triggers ART's JIT
-        // SIGSEGV on IG 451+ / Android 13, so they are only installed when the feature is on
-        // (turning it on later applies to the header views after an Instagram restart).
-        if (FeatureFlags.profileSpoofer) {
-            hookHeaderViews();
-            hookAvatarView();
-        }
+        hookHeaderViews();
+        hookAvatarView();
         hookBioState(bridge, cl, log);
         if (hooked > 0 && session) FeatureStatusTracker.setHooked("ProfileSpoofer");
         if (hooked > 0 && session) ModuleLog.ok(TAG + "ready");
@@ -256,7 +254,6 @@ public final class ProfileSpoofHook {
             Method args = fragment.getMethod("getArguments");
             XposedBridge.hookMethod(resume, new XC_MethodHook() {
                 @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    // Always kept (cheap, only on resume), so turning the feature on applies at once.
                     try {
                         Object b = args.invoke(param.thisObject);
                         if (!(b instanceof android.os.Bundle bundle) || !(bundle.get(TOKEN) instanceof String t)) return;

@@ -315,7 +315,8 @@ public class PostDownloadContextMenuHook {
                 boolean wantCopyImage = FeatureFlags.offerCopyImage && copyImageOptionValue != null;
                 boolean wantInfo = FeatureFlags.offerMediaInfo && mediaInfoOptionValue != null;
                 boolean wantSpeed = FeatureFlags.offerPlaybackSpeed && speedOptionValue != null;
-                boolean wantCounts = FeatureFlags.postCountSpoof && countsOptionValue != null;
+                boolean wantCounts = FeatureFlags.postCountSpoof && countsOptionValue != null
+                        && ps.reso.instaeclipse.Xposed.InstallRunner.ran("PostCountSpoof");
                 if (!wantDownload && !wantCopyLink && !wantCopyImage && !wantInfo && !wantSpeed && !wantCounts) return;
 
                 // Don't react to our own target option types (suppressed in beforeHook)
