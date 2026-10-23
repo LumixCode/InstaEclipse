@@ -188,6 +188,26 @@ public final class UnsentIdentity {
         return getters;
     }
 
+    public static boolean isFromAccount(Object message, String accountId) {
+        return isFromAccount(message, accountId, null);
+    }
+
+    static boolean isFromAccount(Object message, String accountId, Field sender) {
+        return anyStringFieldIs(message, accountId);
+    }
+
+    public static boolean anyStringFieldIs(Object message, String value) {
+        if (message == null || value == null) return false;
+        for (Field field : stringFields(message.getClass())) {
+            try { if (value.equals(field.get(message))) return true; } catch (Throwable ignored) {}
+        }
+        return false;
+    }
+
+    static String pickSenderField(List<List<String>> readsPerMethod) {
+        return null;
+    }
+
     public static String messageText(Object message, Field field) {
         if (message == null || field == null || field.getType() != String.class
                 || !field.getDeclaringClass().isInstance(message)) return null;

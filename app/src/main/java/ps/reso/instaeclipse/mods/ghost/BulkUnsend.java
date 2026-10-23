@@ -42,6 +42,7 @@ import java.util.Set;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
+import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
@@ -110,7 +111,7 @@ public final class BulkUnsend {
                 String owner = md.getClassName();
                 for (MethodData m : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(owner)))) {
-                    for (MethodData inv : m.getInvokes()) {
+                    for (MethodData inv : DexKitQueryCache.invokes(m)) {
                         if (!"com.google.common.util.concurrent.ListenableFuture".equals(inv.getReturnTypeName())) continue;
                         List<String> p = inv.getParamTypeNames();
                         if (p.size() != 2 || !DTK.equals(p.get(1))) continue;
@@ -235,18 +236,6 @@ public final class BulkUnsend {
         catch (Throwable t) { return null; }
     }
 
-    /** True when one of the message's own String fields is our user id (its sender). */
-    private static boolean isMine(Object msg, String me) {
-        if (me == null) return false;
-        for (Class<?> k = msg.getClass(); k != null && k != Object.class; k = k.getSuperclass()) {
-            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
-                if (Modifier.isStatic(f.getModifiers()) || f.getType() != String.class) continue;
-                try { f.setAccessible(true); if (me.equals(f.get(msg))) return true; } catch (Throwable ignored) {}
-            }
-        }
-        return false;
-    }
-
     private static Object threadKeyOf(Object msg) {
         for (Class<?> k = msg.getClass(); k != null && k != Object.class; k = k.getSuperclass()) {
             for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
@@ -369,7 +358,7 @@ public final class BulkUnsend {
         boolean isMine(Object msg) {
             Boolean b = mineCache.get(msg);
             if (b == null) {
-                b = selected.contains(msg) || BulkUnsend.isMine(msg, me);
+                b = selected.contains(msg) || UnsentIdentity.isFromAccount(msg, me);
                 mineCache.put(msg, b);
             }
             return b;
