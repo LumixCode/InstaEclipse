@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.util.AtomicFile;
-import android.os.SystemClock;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -21,7 +20,14 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 
+import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 /**
@@ -76,39 +82,73 @@ public class UnsentLog {
         }
     }
 
+    interface Disk {
+        byte[] read() throws IOException;
+
+        void write(List<Entry> entries, List<List<String>> aliases) throws Exception;
+
+        boolean setAside();
+    }
+
+    static final class FileDisk implements Disk {
+        final AtomicFile file;
+
+        FileDisk(AtomicFile file) { this.file = file; }
+
+        @Override public byte[] read() throws IOException { return readBytes(file); }
+
+        @Override public void write(List<Entry> entries, List<List<String>> aliases) throws Exception {
+            UnsentLog.write(file, entries, aliases);
+        }
+
+        @Override public boolean setAside() {
+            File base = file.getBaseFile();
+            return base.renameTo(new File(base.getPath() + SET_ASIDE_SUFFIX));
+        }
+    }
+
     private static final String FILE_NAME = "ie_unsent_log.json";
+    static final String SET_ASIDE_SUFFIX = ".corrupt";
     private static final int MAX_ENTRIES = 1000;
+    private static final long VIEWER_WAIT_MS = 3000;
+    static long retryNanos = TimeUnit.SECONDS.toNanos(5);
 
     private static final List<Entry> cache = new ArrayList<>();
-    private static boolean loaded = false;
+    private static volatile boolean loaded = false;
     private static long retryLoadAfter;
     private static AtomicFile storage;
+    private static Disk disk;
+    private static Disk loading;
+    private static Executor executor;
+    private static ExecutorService background;
+    private static int failedParses;
+    private static boolean quarantined;
+    private static boolean setAsideNoticeShown;
+    private static boolean writeQueued;
+    private static final List<Runnable> loadedListeners = new ArrayList<>();
     private static String currentAccount;
     private static UnsentMessageIndex deletions = new UnsentMessageIndex(MAX_ENTRIES);
     private static UnsentMessageIndex clearedIds = new UnsentMessageIndex(MAX_ENTRIES);
     private static long revisionBase;
+    private static volatile long revision;
     /** Entries already looked up in the restart copies this process (see getForThread). */
     private static final Set<UnsentMessageIndex.Key> copyLookups = new HashSet<>();
 
     public static synchronized boolean wasUnsent(String account, String thread, String messageId) {
-        ensureLoaded();
-        return deletions.contains(account, thread, messageId);
+        return ready() && deletions.contains(account, thread, messageId);
     }
 
     public static synchronized UnsentMessageIndex.Key findUnsent(String account, String thread, Iterable<String> ids) {
-        ensureLoaded();
-        return deletions.find(account, thread, ids);
+        return ready() ? deletions.find(account, thread, ids) : null;
     }
 
     public static synchronized UnsentMessageIndex.Key findCleared(String account, String thread, Iterable<String> ids) {
-        ensureLoaded();
-        return valid(account) && valid(thread) ? clearedIds.find(account, thread, ids) : null;
+        return ready() && valid(account) && valid(thread) ? clearedIds.find(account, thread, ids) : null;
     }
 
     public static synchronized List<List<String>> getClearedIds(String account, String thread) {
-        ensureLoaded();
         List<List<String>> result = new ArrayList<>();
-        if (!valid(account) || !valid(thread)) return result;
+        if (!ready() || !valid(account) || !valid(thread)) return result;
         for (Entry entry : cache) {
             if (!entry.cleared || !account.equals(entry.account) || !thread.equals(entry.thread)) continue;
             List<String> ids = clearedIds.aliases(key(entry));
@@ -117,55 +157,230 @@ public class UnsentLog {
         return result;
     }
 
-    public static synchronized long revision() { ensureLoaded(); return revisionBase + deletions.revision(); }
+    public static long revision() { return revision; }
 
     public static synchronized void init(Context context) {
         if (storage != null) return;
         storage = new AtomicFile(new File(context.getFilesDir(), FILE_NAME));
-        ensureLoaded();
+        open(new FileDisk(storage), background());
+        if (FeatureFlags.keepUnsentMessages) requestLoad();
     }
 
-    private static synchronized void ensureLoaded() {
-        if (loaded || SystemClock.elapsedRealtime() < retryLoadAfter) return;
+    static synchronized Executor background() {
+        if (background == null) {
+            background = Executors.newSingleThreadExecutor(task -> {
+                Thread thread = new Thread(task, "IE-Unsent");
+                thread.setDaemon(true);
+                return thread;
+            });
+        }
+        return background;
+    }
+
+    static synchronized void open(Disk target, Executor runner) {
+        disk = target;
+        executor = runner;
+        loading = null;
+        loaded = false;
+        retryLoadAfter = 0;
+        failedParses = 0;
+        quarantined = false;
+        setAsideNoticeShown = false;
+        writeQueued = false;
+        loadedListeners.clear();
+        cache.clear();
+        copyLookups.clear();
+        deletions = new UnsentMessageIndex(MAX_ENTRIES);
+        clearedIds = new UnsentMessageIndex(MAX_ENTRIES);
+        revisionBase = Math.max(revisionBase, revision) + 1;
+        revision = 0;
+        UnsentLog.class.notifyAll();
+    }
+
+    private static boolean ready() {
+        requestLoad();
+        return loaded;
+    }
+
+    private static void requestLoad() {
+        if (loaded || disk == null || loading == disk) return;
+        if (retryLoadAfter != 0 && System.nanoTime() - retryLoadAfter < 0) return;
+        Disk target = disk;
+        loading = target;
+        executor.execute(() -> load(target));
+    }
+
+    private static void load(Disk target) {
+        byte[] bytes;
         try {
-            if (storage == null) return;
-            UnsentMessageIndex restored = new UnsentMessageIndex(MAX_ENTRIES);
-            UnsentMessageIndex restoredCleared = new UnsentMessageIndex(MAX_ENTRIES);
-            List<Entry> entries = read(storage, restored, restoredCleared);
-            cache.clear();
-            cache.addAll(entries);
-            revisionBase += deletions.revision() + 1;
-            deletions = restored;
-            clearedIds = restoredCleared;
-            loaded = true;
-            ModuleLog.detail("(IE|UnsentLog) Restored " + entries.size() + " saved entries");
+            bytes = target.read();
         } catch (Throwable t) {
-            retryLoadAfter = SystemClock.elapsedRealtime() + 5000;
-            ModuleLog.warn("(IE|UnsentLog) Could not read the saved unsent messages, trying again in a few seconds: "
+            readFailed(target, t);
+            return;
+        }
+        UnsentMessageIndex restored = new UnsentMessageIndex(MAX_ENTRIES);
+        UnsentMessageIndex restoredCleared = new UnsentMessageIndex(MAX_ENTRIES);
+        List<Entry> entries;
+        try {
+            entries = bytes == null ? new ArrayList<>() : parse(bytes, restored, restoredCleared);
+        } catch (Throwable t) {
+            parseFailed(target, t);
+            runLoadedListeners();
+            return;
+        }
+        publish(target, entries, restored, restoredCleared);
+        runLoadedListeners();
+    }
+
+    private static synchronized void readFailed(Disk target, Throwable t) {
+        if (disk != target || loaded) return;
+        loading = null;
+        retryLoadAfter = System.nanoTime() + retryNanos;
+        ModuleLog.warn("(IE|UnsentLog) Could not read the saved unsent messages, trying again in a few seconds: "
+                + t.getClass().getSimpleName() + ": " + t.getMessage());
+        UnsentLog.class.notifyAll();
+    }
+
+    private static synchronized void parseFailed(Disk target, Throwable t) {
+        if (disk != target || loaded) return;
+        if (++failedParses < 2) {
+            ModuleLog.detail("(IE|UnsentLog) saved list unreadable, reading it once more: " + t.getClass().getSimpleName());
+            executor.execute(() -> load(target));
+            return;
+        }
+        if (!target.setAside()) {
+            loading = null;
+            retryLoadAfter = System.nanoTime() + retryNanos;
+            ModuleLog.warn("(IE|UnsentLog) Could not read the saved unsent messages and could not set them aside: "
                     + t.getClass().getSimpleName() + ": " + t.getMessage());
+            UnsentLog.class.notifyAll();
+            return;
+        }
+        quarantined = true;
+        ModuleLog.warn("(IE|UnsentLog) Could not read the saved unsent messages; the file was set aside as "
+                + FILE_NAME + SET_ASIDE_SUFFIX + " and new ones are saved again: "
+                + t.getClass().getSimpleName() + ": " + t.getMessage());
+        publish(target, new ArrayList<>(), new UnsentMessageIndex(MAX_ENTRIES), new UnsentMessageIndex(MAX_ENTRIES));
+    }
+
+    private static synchronized void publish(Disk target, List<Entry> entries, UnsentMessageIndex restored,
+                                             UnsentMessageIndex restoredCleared) {
+        if (disk != target || loaded) return;
+        List<Entry> captured = new ArrayList<>(cache);
+        UnsentMessageIndex capturedIds = deletions;
+        cache.clear();
+        cache.addAll(entries);
+        deletions = restored;
+        clearedIds = restoredCleared;
+        loaded = true;
+        loading = null;
+        for (Entry entry : captured) merge(entry, capturedIds.aliases(key(entry)));
+        publishRevision();
+        if (!captured.isEmpty() || quarantined) persist();
+        ModuleLog.detail("(IE|UnsentLog) Restored " + entries.size() + " saved entries"
+                + (captured.isEmpty() ? "" : ", merged " + captured.size() + " captured while loading"));
+        UnsentLog.class.notifyAll();
+    }
+
+    private static void runLoadedListeners() {
+        List<Runnable> listeners;
+        synchronized (UnsentLog.class) {
+            if (!loaded || loadedListeners.isEmpty()) return;
+            listeners = new ArrayList<>(loadedListeners);
+            loadedListeners.clear();
+        }
+        for (Runnable listener : listeners) {
+            try {
+                listener.run();
+            } catch (Throwable t) {
+                ModuleLog.warn("(IE|UnsentLog) A task waiting for the saved unsent messages failed", t);
+            }
+        }
+    }
+
+    public static void whenLoaded(Runnable listener) {
+        synchronized (UnsentLog.class) {
+            if (!loaded) {
+                loadedListeners.add(listener);
+                requestLoad();
+                return;
+            }
+        }
+        listener.run();
+    }
+
+    public static boolean awaitLoaded(long timeoutMs) {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        synchronized (UnsentLog.class) {
+            requestLoad();
+            while (!loaded && loading != null) {
+                long left = deadline - System.nanoTime();
+                if (left <= 0) break;
+                try {
+                    UnsentLog.class.wait(Math.max(1, TimeUnit.NANOSECONDS.toMillis(left)));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+            return loaded;
+        }
+    }
+
+    public static boolean flush(long timeoutMs) {
+        Executor runner;
+        synchronized (UnsentLog.class) {
+            runner = executor;
+        }
+        if (runner == null) return true;
+        FutureTask<Void> marker = new FutureTask<>(() -> null);
+        runner.execute(marker);
+        try {
+            marker.get(timeoutMs, TimeUnit.MILLISECONDS);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public static synchronized boolean takeSetAsideNotice() {
+        if (!quarantined || setAsideNoticeShown) return false;
+        setAsideNoticeShown = true;
+        return true;
+    }
+
+    static byte[] readBytes(AtomicFile file) throws IOException {
+        try {
+            return file.readFully();
+        } catch (FileNotFoundException e) {
+            if (file.getBaseFile().exists()) throw e;
+            return null;
         }
     }
 
     static List<Entry> read(AtomicFile file, UnsentMessageIndex index, UnsentMessageIndex cleared) throws Exception {
-        byte[] bytes;
-        try { bytes = file.readFully(); }
-        catch (FileNotFoundException e) {
-            if (file.getBaseFile().exists()) throw e;
-            return new ArrayList<>();
+        byte[] bytes = readBytes(file);
+        return bytes == null ? new ArrayList<>() : parse(bytes, index, cleared);
+    }
+
+    static List<Entry> parse(byte[] bytes, UnsentMessageIndex index, UnsentMessageIndex cleared) {
+        if (!(UnsentJson.parse(new String(bytes, StandardCharsets.UTF_8)) instanceof List<?> arr)) {
+            throw new IllegalArgumentException("not a list");
         }
-        JSONArray arr = new JSONArray(new String(bytes, StandardCharsets.UTF_8));
         List<Entry> entries = new ArrayList<>();
-        for (int i = 0; i < arr.length(); i++) {
-            JSONObject o = arr.getJSONObject(i);
-            Entry entry = new Entry(o.optLong("t"), o.optString("a", ""),
-                    o.optString("th", ""), o.optString("id", ""), o.optString("s", ""),
-                    o.optString("m", ""), o.optBoolean("body", true), o.optBoolean("cleared", false),
-                    o.optBoolean("logOnly", false), readDetail(o.optJSONObject("d")));
+        for (Object item : arr) {
+            if (!(item instanceof Map<?, ?> o)) throw new IllegalArgumentException("not an entry");
+            Entry entry = new Entry(number(o.get("t")), text(o.get("a"), ""),
+                    text(o.get("th"), ""), text(o.get("id"), ""), text(o.get("s"), ""),
+                    text(o.get("m"), ""), flag(o.get("body"), true), flag(o.get("cleared"), false),
+                    flag(o.get("logOnly"), false), readDetail(o.get("d") instanceof Map<?, ?> d ? d : null));
             entries.add(entry);
             List<String> ids = new ArrayList<>();
             ids.add(entry.messageId);
-            JSONArray aliases = o.optJSONArray("ids");
-            if (aliases != null) for (int j = 0; j < aliases.length(); j++) ids.add(aliases.optString(j));
+            if (o.get("ids") instanceof List<?> aliases) for (Object alias : aliases) ids.add(text(alias, ""));
             (entry.cleared ? cleared : index).recordAliases(entry.account, entry.thread, ids);
             if (entries.size() > MAX_ENTRIES) {
                 Entry removed = entries.remove(0);
@@ -175,20 +390,71 @@ public class UnsentLog {
         return entries;
     }
 
-    private static synchronized void persist() {
-        // A failed read must never turn into an empty overwrite of the user's saved messages.
-        if (!loaded) return;
+    private static String text(Object value, String fallback) {
+        if (value instanceof String s) return s;
+        if (value instanceof Double d && d == Math.rint(d) && Math.abs(d) < 1e15) return Long.toString(d.longValue());
+        return value == null ? fallback : String.valueOf(value);
+    }
+
+    private static long number(Object value) {
+        if (value instanceof Number n) return n.longValue();
+        if (value instanceof String s) {
+            try {
+                return (long) Double.parseDouble(s);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 0;
+    }
+
+    private static boolean flag(Object value, boolean fallback) {
+        if (value instanceof Boolean b) return b;
+        if (value instanceof String s) {
+            if ("true".equalsIgnoreCase(s)) return true;
+            if ("false".equalsIgnoreCase(s)) return false;
+        }
+        return fallback;
+    }
+
+    private static void persist() {
+        if (!loaded || disk == null || writeQueued) return;
+        writeQueued = true;
+        Disk target = disk;
+        executor.execute(() -> writeNow(target));
+    }
+
+    private static void writeNow(Disk target) {
+        List<Entry> entries;
+        List<List<String>> aliases;
+        synchronized (UnsentLog.class) {
+            if (disk != target) return;
+            writeQueued = false;
+            if (!loaded) return;
+            entries = new ArrayList<>(cache);
+            aliases = aliasesOf(entries, deletions, clearedIds);
+        }
         try {
-            write(storage, cache, deletions, clearedIds);
+            target.write(entries, aliases);
         } catch (Throwable t) {
             ModuleLog.warn("(IE|UnsentLog) Could not save the unsent messages log: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
+    private static List<List<String>> aliasesOf(List<Entry> entries, UnsentMessageIndex index, UnsentMessageIndex cleared) {
+        List<List<String>> out = new ArrayList<>(entries.size());
+        for (Entry e : entries) out.add((e.cleared ? cleared : index).aliases(key(e)));
+        return out;
+    }
+
     static void write(AtomicFile file, List<Entry> entries, UnsentMessageIndex index,
                       UnsentMessageIndex cleared) throws Exception {
+        write(file, entries, aliasesOf(entries, index, cleared));
+    }
+
+    static void write(AtomicFile file, List<Entry> entries, List<List<String>> aliases) throws Exception {
         JSONArray arr = new JSONArray();
-        for (Entry e : entries) {
+        for (int i = 0; i < entries.size(); i++) {
+            Entry e = entries.get(i);
             JSONObject o = new JSONObject();
             o.put("t", e.time); o.put("th", e.thread);
             o.put("a", e.account); o.put("id", e.messageId);
@@ -199,7 +465,7 @@ public class UnsentLog {
                 if (e.logOnly) o.put("logOnly", true);
                 if (e.detail != null) o.put("d", writeDetail(e.detail));
             }
-            o.put("ids", new JSONArray((e.cleared ? cleared : index).aliases(key(e))));
+            o.put("ids", new JSONArray(aliases.get(i)));
             arr.put(o);
         }
         FileOutputStream out = file.startWrite();
@@ -214,10 +480,10 @@ public class UnsentLog {
 
     /** "d": {k: kind, u: owner handle, ms: play length, x: extra words}; null when absent or of a
      *  kind this build does not know. */
-    static UnsentDetail readDetail(JSONObject d) {
+    static UnsentDetail readDetail(Map<?, ?> d) {
         if (d == null) return null;
-        return UnsentDetail.of(d.optString("k", ""), d.optString("u", null), d.optLong("ms", 0),
-                d.optString("x", null));
+        return UnsentDetail.of(text(d.get("k"), ""), text(d.get("u"), null), number(d.get("ms")),
+                text(d.get("x"), null));
     }
 
     static JSONObject writeDetail(UnsentDetail detail) throws org.json.JSONException {
@@ -247,38 +513,51 @@ public class UnsentLog {
     /** @param detail what a message without text was; fills an entry that lacks one. */
     public static synchronized void add(String account, String thread, List<String> ids, String sender, String text,
                                         boolean logOnly, UnsentDetail detail) {
-        ensureLoaded();
-        if (!loaded) return;
-        UnsentMessageIndex.Key cleared = findCleared(account, thread, ids);
+        requestLoad();
+        if (!record(account, thread, ids, sender, text, logOnly, detail, System.currentTimeMillis(), false)) return;
+        publishRevision();
+        persist();
+    }
+
+    private static void merge(Entry entry, List<String> aliases) {
+        List<String> ids = aliases.isEmpty() ? Collections.singletonList(entry.messageId) : aliases;
+        record(entry.account, entry.thread, ids, entry.sender, entry.hasBody ? entry.text : null, entry.logOnly,
+                entry.detail, entry.time, true);
+    }
+
+    private static boolean record(String account, String thread, List<String> ids, String sender, String text,
+                                  boolean logOnly, UnsentDetail detail, long time, boolean newerWins) {
+        UnsentMessageIndex.Key cleared = valid(account) && valid(thread) ? clearedIds.find(account, thread, ids) : null;
         if (cleared != null) {
-            if (ids != null) for (String id : ids) if (deletions.contains(account, thread, id)) return;
+            if (ids != null) for (String id : ids) if (deletions.contains(account, thread, id)) return false;
             long revision = clearedIds.revision();
             clearedIds.recordAliases(account, thread, ids);
-            if (revision != clearedIds.revision()) persist();
-            return;
+            return revision != clearedIds.revision();
         }
         // Ambiguous aliases must not resurrect either of two cleared messages.
-        if (ids != null) for (String id : ids) if (clearedIds.contains(account, thread, id)) return;
+        if (ids != null) for (String id : ids) if (clearedIds.contains(account, thread, id)) return false;
         long revision = deletions.revision();
         UnsentMessageIndex.Key key = deletions.recordAliases(account, thread, ids);
-        if (key == null) return;
+        if (key == null) return false;
         boolean hasBody = text != null && !text.isEmpty();
         for (int i = 0; i < cache.size(); i++) {
             Entry old = cache.get(i);
             if (!old.account.equals(key.account) || !old.thread.equals(key.thread) || !old.messageId.equals(key.message)) continue;
             // A removal is useful even when the native cache has already dropped its body. A later
             // exact row/reconcile capture may fill it in without duplicating the deletion event.
-            if (!old.hasBody && hasBody) {
-                cache.set(i, new Entry(old.time, old.account, old.thread, old.messageId, old.sender, text,
+            if (hasBody && (!old.hasBody || newerWins)) {
+                String label = newerWins && sender != null && !sender.isEmpty() ? sender : old.sender;
+                cache.set(i, new Entry(old.time, old.account, old.thread, old.messageId, label, text,
                         true, false, old.logOnly, old.detail));
-                persist();
-            } else if (!hasBody && improves(old, detail)) {
+                return true;
+            }
+            if (!hasBody && improves(old, detail)) {
                 cache.set(i, old.withDetail(detail));
-                persist();
-            } else if (revision != deletions.revision()) persist();
-            return;
+                return true;
+            }
+            return revision != deletions.revision();
         }
-        cache.add(new Entry(System.currentTimeMillis(), account, thread, key.message, sender == null ? "" : sender,
+        cache.add(new Entry(time, account, thread, key.message, sender == null ? "" : sender,
                 // Kept as before for older builds and backups; the viewer shows the detail instead.
                 // Log-only mode keeps nothing in the chat, so "retained" would be wrong there.
                 hasBody ? text : logOnly ? "[Unsent message]" : "[Retained message]", hasBody, false, logOnly,
@@ -287,7 +566,11 @@ public class UnsentLog {
             Entry removed = cache.remove(0);
             (removed.cleared ? clearedIds : deletions).remove(key(removed));
         }
-        persist();
+        return true;
+    }
+
+    private static void publishRevision() {
+        revision = loaded ? revisionBase + deletions.revision() : 0;
     }
 
     /** A real description replaces none or the generic "without text" one, never the other way. */
@@ -299,8 +582,7 @@ public class UnsentLog {
     /** True when the message's entry has no text and no description yet (or none exists), so a
      *  capture should take the trouble to describe it. */
     public static synchronized boolean needsDetail(String account, String thread, List<String> ids) {
-        ensureLoaded();
-        if (!loaded) return false;
+        if (!ready()) return false;
         UnsentMessageIndex.Key key = deletions.find(account, thread, ids);
         if (key == null) return true;
         for (Entry e : cache) {
@@ -359,21 +641,23 @@ public class UnsentLog {
     }
 
     /** All entries, newest first. */
-    public static synchronized List<Entry> getAll(Context context) {
-        refreshAccount(context);
-        ensureLoaded();
-        List<Entry> out = new ArrayList<>();
-        for (Entry entry : cache) if (!entry.cleared && belongsToCurrentAccount(entry)) out.add(entry);
-        java.util.Collections.reverse(out);
-        return out;
+    public static List<Entry> getAll(Context context) {
+        awaitLoaded(VIEWER_WAIT_MS);
+        synchronized (UnsentLog.class) {
+            refreshAccount(context);
+            List<Entry> out = new ArrayList<>();
+            for (Entry entry : cache) if (!entry.cleared && belongsToCurrentAccount(entry)) out.add(entry);
+            java.util.Collections.reverse(out);
+            return out;
+        }
     }
 
     /** Entries for one thread id, newest first; entries without text are described where possible. */
     public static List<Entry> getForThread(Context context, String thread) {
+        awaitLoaded(VIEWER_WAIT_MS);
         List<CopyLookup> lookups;
         synchronized (UnsentLog.class) {
             refreshAccount(context);
-            ensureLoaded();
             lookups = loaded ? pendingCopyLookups(threadEntries(thread)) : List.of();
         }
         Map<Entry, UnsentDetail> found = Collections.emptyMap();
@@ -398,20 +682,19 @@ public class UnsentLog {
         return out;
     }
 
-    public static synchronized String clear(Context context) {
-        refreshAccount(context);
-        return markCleared(currentAccount, null);
+    public static String clear(Context context) {
+        return markCleared(viewer(context), null);
     }
 
     /** True when the viewer's saved entries in {@code thread} (all threads when null) include a
      *  message that was kept in the chat, which only Instagram's own local removal can take out. */
-    public static synchronized boolean hasRetained(Context context, String thread) {
-        refreshAccount(context);
-        return hasRetained(currentAccount, thread);
+    public static boolean hasRetained(Context context, String thread) {
+        awaitLoaded(VIEWER_WAIT_MS);
+        return hasRetained(viewer(context), thread);
     }
 
     static synchronized boolean hasRetained(String account, String thread) {
-        ensureLoaded();
+        if (!ready()) return false;
         for (Entry e : cache) {
             if (!e.cleared && !e.logOnly && valid(account) && account.equals(e.account)
                     && (thread == null || thread.equals(e.thread))) return true;
@@ -420,14 +703,37 @@ public class UnsentLog {
     }
 
     /** Clear content only in this thread; return its account only after the durable write succeeds. */
-    public static synchronized String clearThread(Context context, String thread) {
-        refreshAccount(context);
-        return valid(thread) ? markCleared(currentAccount, thread) : null;
+    public static String clearThread(Context context, String thread) {
+        String account = viewer(context);
+        return valid(thread) ? markCleared(account, thread) : null;
     }
 
-    static synchronized String markCleared(String account, String thread) {
-        ensureLoaded();
-        if (!loaded || !valid(account) || (thread != null && !valid(thread))) return null;
+    private static synchronized String viewer(Context context) {
+        refreshAccount(context);
+        return currentAccount;
+    }
+
+    static String markCleared(String account, String thread) {
+        if (!valid(account) || (thread != null && !valid(thread)) || !awaitLoaded(VIEWER_WAIT_MS)) return null;
+        FutureTask<String> task = new FutureTask<>(() -> clearNow(account, thread));
+        Executor runner;
+        synchronized (UnsentLog.class) {
+            runner = executor;
+        }
+        runner.execute(task);
+        try {
+            return task.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
+        } catch (ExecutionException e) {
+            ModuleLog.error("(IE|UnsentLog) Could not clear the unsent messages log: " + e.getCause());
+            return null;
+        }
+    }
+
+    private static synchronized String clearNow(String account, String thread) {
+        if (!loaded) return null;
         boolean changed = false;
         List<Entry> updated = new ArrayList<>(cache);
         UnsentMessageIndex updatedCleared = new UnsentMessageIndex(MAX_ENTRIES);
@@ -445,7 +751,7 @@ public class UnsentLog {
         }
         if (changed) {
             try {
-                write(storage, updated, deletions, updatedCleared);
+                disk.write(updated, aliasesOf(updated, deletions, updatedCleared));
             } catch (Exception e) {
                 ModuleLog.error("(IE|UnsentLog) Could not clear the unsent messages log: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                 return null;
@@ -454,6 +760,7 @@ public class UnsentLog {
             cache.addAll(updated);
             clearedIds = updatedCleared;
             deletions.clear(account, thread);
+            publishRevision();
         }
         return account;
     }

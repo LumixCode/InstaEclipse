@@ -2,6 +2,8 @@ package ps.reso.instaeclipse.utils.ghost;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -29,7 +31,8 @@ public final class UnsentMessageIndex {
 
     private final int capacity;
     private final Map<Key, LinkedHashSet<String>> deleted = new LinkedHashMap<>();
-    private long revision;
+    private final Map<String, List<Key>> byAlias = new HashMap<>();
+    private volatile long revision;
 
     public UnsentMessageIndex(int capacity) {
         if (capacity < 1) throw new IllegalArgumentException("capacity");
@@ -50,22 +53,33 @@ public final class UnsentMessageIndex {
         if (aliases.isEmpty()) return null;
 
         Key match = null;
-        for (Map.Entry<Key, LinkedHashSet<String>> entry : deleted.entrySet()) {
-            Key key = entry.getKey();
-            if (!account.equals(key.account) || !thread.equals(key.thread)
-                    || Collections.disjoint(entry.getValue(), aliases)) continue;
-            // A pair that would join different observed deletions is ambiguous; change neither.
-            if (match != null) return null;
-            match = key;
+        for (String alias : aliases) {
+            List<Key> keys = byAlias.get(alias);
+            if (keys == null) continue;
+            for (Key key : keys) {
+                if (!account.equals(key.account) || !thread.equals(key.thread) || key.equals(match)) continue;
+                // A pair that would join different observed deletions is ambiguous; change neither.
+                if (match != null) return null;
+                match = key;
+            }
         }
         if (match != null) {
-            if (deleted.get(match).addAll(aliases)) revision++;
+            LinkedHashSet<String> known = deleted.get(match);
+            boolean added = false;
+            for (String alias : aliases) {
+                if (known.add(alias)) {
+                    index(alias, match);
+                    added = true;
+                }
+            }
+            if (added) revision++;
             return match;
         }
 
         Key key = new Key(account, thread, aliases.iterator().next());
         deleted.put(key, aliases);
-        if (deleted.size() > capacity) deleted.remove(deleted.keySet().iterator().next());
+        for (String alias : aliases) index(alias, key);
+        if (deleted.size() > capacity) drop(deleted.keySet().iterator().next());
         revision++;
         return key;
     }
@@ -81,10 +95,10 @@ public final class UnsentMessageIndex {
         Key match = null;
         for (String id : ids) {
             if (!valid(id)) continue;
-            for (Map.Entry<Key, LinkedHashSet<String>> entry : deleted.entrySet()) {
-                Key key = entry.getKey();
-                if (!account.equals(key.account) || !entry.getValue().contains(id)
-                        || (valid(thread) && !thread.equals(key.thread))) continue;
+            List<Key> keys = byAlias.get(id);
+            if (keys == null) continue;
+            for (Key key : keys) {
+                if (!account.equals(key.account) || (valid(thread) && !thread.equals(key.thread))) continue;
                 if (match != null && !match.equals(key)) return null;
                 match = key;
             }
@@ -101,17 +115,50 @@ public final class UnsentMessageIndex {
     }
 
     public synchronized boolean isEmpty() { return deleted.isEmpty(); }
-    public synchronized long revision() { return revision; }
+    public long revision() { return revision; }
     public synchronized boolean remove(Key key) {
         if (key == null || !valid(key.account) || !valid(key.thread) || !valid(key.message)
-                || deleted.remove(key) == null) return false;
+                || !deleted.containsKey(key)) return false;
+        drop(key);
         revision++;
         return true;
     }
     public synchronized void clear(String account, String thread) {
         if (!valid(account)) return;
-        if (deleted.keySet().removeIf(key -> account.equals(key.account)
-                && (!valid(thread) || thread.equals(key.thread)))) revision++;
+        boolean removed = false;
+        for (Iterator<Map.Entry<Key, LinkedHashSet<String>>> it = deleted.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<Key, LinkedHashSet<String>> entry = it.next();
+            Key key = entry.getKey();
+            if (!account.equals(key.account) || (valid(thread) && !thread.equals(key.thread))) continue;
+            it.remove();
+            unindex(key, entry.getValue());
+            removed = true;
+        }
+        if (removed) revision++;
     }
+
+    private void index(String alias, Key key) {
+        List<Key> keys = byAlias.get(alias);
+        if (keys == null) {
+            keys = new ArrayList<>(1);
+            byAlias.put(alias, keys);
+        }
+        keys.add(key);
+    }
+
+    private void drop(Key key) {
+        LinkedHashSet<String> aliases = deleted.remove(key);
+        if (aliases != null) unindex(key, aliases);
+    }
+
+    private void unindex(Key key, Iterable<String> aliases) {
+        for (String alias : aliases) {
+            List<Key> keys = byAlias.get(alias);
+            if (keys == null) continue;
+            keys.remove(key);
+            if (keys.isEmpty()) byAlias.remove(alias);
+        }
+    }
+
     private static boolean valid(String value) { return value != null && !value.isEmpty(); }
 }
