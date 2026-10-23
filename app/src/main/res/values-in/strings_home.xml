@@ -9,7 +9,6 @@
     <string name="home_status_version">Versi %1$s</string>
     <string name="home_status_no_version">Pasang Instagram untuk menggunakan InstaEclipse</string>
     <plurals name="home_features_enabled">
-        <item quantity="one">%d fitur aktif</item>
         <item quantity="other">%d fitur aktif</item>
     </plurals>
     <string name="home_action_launch">Buka</string>

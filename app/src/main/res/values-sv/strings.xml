@@ -6,7 +6,7 @@
     <string name="help">Hjälp</string>
 
     <!-- home -->
-    <string name="instagram_version">Versuvdna</string>
+    <string name="instagram_version">Version</string>
     <string name="module_disabled">Modulen är inaktiverad. Aktivera den i Xposed Installer.</string>
 
     <string name="module_status">Modulstatus:</string>
@@ -25,12 +25,12 @@
     <string name="not_installed_instagram">Instagram är inte installerat.</string>
     <string name="error_instagram">Fel vid verifiering av Instagram-status.</string>
     
-    <string name="launch_instagram">Lansere Instagram</string>
-    <string name="download_apk">Lasta APK</string>
-    <string name="how_to_use">Mo geavahit</string>
-    <string name="module_not_working_title">Modula ii doahttá ain?</string>
+    <string name="launch_instagram">Starta Instagram</string>
+    <string name="download_apk">Ladda ner APK</string>
+    <string name="how_to_use">Så använder du den</string>
+    <string name="module_not_working_title">Fungerar modulen fortfarande inte?</string>
 
-    <string name="usage_instructions">Doalvva gitta ohcamušikona</string>
+    <string name="usage_instructions">Håll in sökikonen</string>
     <string name="contributors">Bidragsgivare</string>
     <string name="special_thanks">Särskilt tack</string>
 

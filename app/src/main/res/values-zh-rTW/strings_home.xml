@@ -9,7 +9,6 @@
     <string name="home_status_version">版本 %1$s</string>
     <string name="home_status_no_version">請先安裝 Instagram 才能使用 InstaEclipse</string>
     <plurals name="home_features_enabled">
-        <item quantity="one">已啟用 %d 項功能</item>
         <item quantity="other">已啟用 %d 項功能</item>
     </plurals>
     <string name="home_action_launch">開啟</string>

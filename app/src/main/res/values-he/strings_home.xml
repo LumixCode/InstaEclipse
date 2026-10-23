@@ -11,7 +11,6 @@
     <plurals name="home_features_enabled">
         <item quantity="one">%d תכונה מופעלת</item>
         <item quantity="two">%d תכונות מופעלות</item>
-        <item quantity="many">%d תכונות מופעלות</item>
         <item quantity="other">%d תכונות מופעלות</item>
     </plurals>
     <string name="home_action_launch">הפעל</string>

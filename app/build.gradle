@@ -19,6 +19,8 @@ android {
         // The fork's release workflow passes -PforkVersionCode/-PforkVersionName; other builds keep upstream's version.
         versionCode project.findProperty('forkVersionCode')?.toInteger() ?: 20
         versionName project.findProperty('forkVersionName') ?: '0.8.2'
+
+        resourceConfigurations += ['en', 'ar', 'az', 'de', 'el', 'es', 'fr', 'he', 'in', 'it', 'iw', 'pl', 'pt', 'ru', 'sv', 'tr', 'vi', 'zh-rCN', 'zh-rTW']
     }
 
     signingConfigs {
@@ -50,6 +52,9 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+    lint {
+        error 'MissingQuantity', 'UnusedQuantity'
+    }
     packagingOptions {
         resources {
             merges += 'META-INF/xposed/*'

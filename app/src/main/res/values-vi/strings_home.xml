@@ -9,7 +9,6 @@
     <string name="home_status_version">Phiên bản %1$s</string>
     <string name="home_status_no_version">Hãy cài Instagram để dùng InstaEclipse</string>
     <plurals name="home_features_enabled">
-        <item quantity="one">Đã bật %d tính năng</item>
         <item quantity="other">Đã bật %d tính năng</item>
     </plurals>
     <string name="home_action_launch">Mở</string>
