@@ -4,7 +4,10 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 
+import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 /**
@@ -27,16 +30,19 @@ public final class TextTranslator {
                 .putExtra(Intent.EXTRA_TEXT, text);
         if (start(ctx, translate, newTask)) return;
 
+        String title = I18n.t(ctx, R.string.ig_translate_text);
+        Intent send = new Intent(Intent.ACTION_SEND)
+                .setType("text/plain")
+                .putExtra(Intent.EXTRA_TEXT, text);
         Intent process = new Intent(Intent.ACTION_PROCESS_TEXT)
                 .setType("text/plain")
                 .putExtra(Intent.EXTRA_PROCESS_TEXT, text)
                 .putExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, true);
-        if (start(ctx, Intent.createChooser(process, "Translate"), newTask)) return;
+        Intent chooser = Intent.createChooser(process, title);
+        if (Build.VERSION.SDK_INT >= 29) chooser.putExtra(Intent.EXTRA_ALTERNATE_INTENTS, new Intent[] {send});
+        if (start(ctx, chooser, newTask)) return;
 
-        Intent send = new Intent(Intent.ACTION_SEND)
-                .setType("text/plain")
-                .putExtra(Intent.EXTRA_TEXT, text);
-        start(ctx, Intent.createChooser(send, "Translate"), newTask);
+        start(ctx, Intent.createChooser(send, title), newTask);
     }
 
     private static boolean start(Context ctx, Intent intent, boolean newTask) {
