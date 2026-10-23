@@ -821,9 +821,9 @@ public class Module {
                     // Saved button on your own profile (#237)
                     try {
                         if (!skip("SavedOnProfileHook")) new ps.reso.instaeclipse.mods.ui.SavedOnProfileHook().install(dexKitBridge, hostClassLoader);
-                        if (!skip("HideHeaderButtonsHook")) new ps.reso.instaeclipse.mods.ui.HideHeaderButtonsHook().install(hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(IE|SavedProfile) ❌ Failed to hook");
+                        if (!skip("HideHeaderButtonsHook")) new ps.reso.instaeclipse.mods.ui.HideHeaderButtonsHook().install(dexKitBridge, hostClassLoader);
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|SavedProfile) Could not start, so this feature will not work", t);
                     }
 
                     // Download a post/reel link shared to InstaEclipse from another app (#236)
