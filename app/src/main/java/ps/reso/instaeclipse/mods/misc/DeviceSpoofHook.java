@@ -3,15 +3,9 @@ package ps.reso.instaeclipse.mods.misc;
 import android.content.Context;
 import android.os.Build;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -189,64 +183,11 @@ public final class DeviceSpoofHook {
         try {
             File marker = new File(context.getFilesDir(), APPLIED_MARKER);
             boolean on = profile() != null;
-            if (on == marker.exists()) return;
             File file = new File(context.getFilesDir(), "mobileconfig/mc_overrides.json");
-            String json = file.exists() ? new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8) : "{}";
-            String updated = on ? merge(json, HDR_OVERRIDES) : remove(json, HDR_OVERRIDES);
-            File parent = file.getParentFile();
-            if (parent != null && !parent.exists()) parent.mkdirs();
-            ps.reso.instaeclipse.utils.core.AtomicFiles.write(file, updated);
-            if (on) ps.reso.instaeclipse.utils.core.AtomicFiles.write(marker, "1");
-            else //noinspection ResultOfMethodCallIgnored
-                marker.delete();
+            if (!McOverridesJson.sync(file, marker, on, HDR_OVERRIDES)) return;
             ModuleLog.line("(InstaEclipse | DeviceSpoof): HDR developer options " + (on ? "added" : "removed"));
         } catch (Throwable t) {
             ModuleLog.warn("(InstaEclipse | DeviceSpoof): Could not update Instagram's HDR developer options for the spoofed device: " + t);
         }
-    }
-
-    /** The "index" part of an override entry ("12: : true" → "12"). */
-    private static String index(String entry) {
-        int i = entry.indexOf(':');
-        return i < 0 ? entry : entry.substring(0, i);
-    }
-
-    /** {@code add}'s entries merged into {@code json}, replacing entries with the same config and index. */
-    static String merge(String json, String add) throws Exception {
-        JSONObject out = new JSONObject(json);
-        JSONObject in = new JSONObject(add);
-        for (Iterator<String> it = in.keys(); it.hasNext(); ) {
-            String config = it.next();
-            JSONArray adds = in.getJSONArray(config);
-            JSONArray old = out.optJSONArray(config);
-            JSONArray merged = new JSONArray();
-            Set<String> replaced = new HashSet<>();
-            for (int i = 0; i < adds.length(); i++) replaced.add(index(adds.getString(i)));
-            if (old != null)
-                for (int i = 0; i < old.length(); i++)
-                    if (!replaced.contains(index(old.getString(i)))) merged.put(old.getString(i));
-            for (int i = 0; i < adds.length(); i++) merged.put(adds.getString(i));
-            out.put(config, merged);
-        }
-        return out.toString();
-    }
-
-    /** {@code json} without {@code add}'s exact entries (configs left empty are dropped). */
-    static String remove(String json, String add) throws Exception {
-        JSONObject out = new JSONObject(json);
-        JSONObject in = new JSONObject(add);
-        for (Iterator<String> it = in.keys(); it.hasNext(); ) {
-            String config = it.next();
-            JSONArray old = out.optJSONArray(config);
-            if (old == null) continue;
-            Set<String> drop = new HashSet<>();
-            JSONArray adds = in.getJSONArray(config);
-            for (int i = 0; i < adds.length(); i++) drop.add(adds.getString(i));
-            JSONArray kept = new JSONArray();
-            for (int i = 0; i < old.length(); i++) if (!drop.contains(old.getString(i))) kept.put(old.getString(i));
-            if (kept.length() == 0) out.remove(config);
-            else out.put(config, kept);
-        }
-        return out.toString();
     }
 }
