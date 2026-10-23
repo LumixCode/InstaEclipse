@@ -1,10 +1,7 @@
 package ps.reso.instaeclipse.mods.feed;
 
 import android.annotation.SuppressLint;
-import android.graphics.Outline;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.ViewOutlineProvider;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -24,8 +21,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 public final class RoundedFeedPostsHook {
 
     private static final String MEDIA_FRAME = "com.instagram.ui.widget.framelayout.MediaFrameLayout";
-    /** Tag on the clipped view: the radius applied, in pixels. */
-    private static final int RADIUS_TAG = 0x7e1e0276;
 
     private static int videoContainerId = -1;
 
@@ -67,26 +62,7 @@ public final class RoundedFeedPostsHook {
     private static void apply(View frame) {
         try {
             View v = target(frame);
-            int dp = FeatureFlags.feedCornerRadius;
-            Object applied = v.getTag(RADIUS_TAG);
-            if (dp <= 0) {
-                if (applied == null) return;
-                v.setTag(RADIUS_TAG, null);
-                v.setClipToOutline(false);
-                v.setOutlineProvider(ViewOutlineProvider.BACKGROUND);
-                return;
-            }
-            float radius = dp * v.getResources().getDisplayMetrics().density;
-            if (applied instanceof Float f && f == radius && v.getClipToOutline()) return;
-            v.setTag(RADIUS_TAG, radius);
-            v.setOutlineProvider(new ViewOutlineProvider() {
-                @Override
-                public void getOutline(View view, Outline outline) {
-                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
-                }
-            });
-            v.setClipToOutline(true);
-            v.invalidateOutline();
+            OutlineRestore.update(frame, v, FeatureFlags.feedCornerRadius * v.getResources().getDisplayMetrics().density);
         } catch (Throwable ignored) {}
     }
 }
