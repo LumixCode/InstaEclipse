@@ -52,7 +52,7 @@ public class InboxDiscoverPeopleHook {
             InboxSectionPath sections = path;
             XposedBridge.hookMethod(sections.emit, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (!FeatureFlags.disableDiscoverPeople && !FeatureFlags.hideDmSuggestions) return;
+                    if (!FeatureFlags.disableDiscoverPeople && !FeatureFlags.hideDmSuggestions && !FeatureFlags.hideNotesTray) return;
                     try {
                         String type = sections.typeOf(param.args);
                         if (!InboxSectionPath.drops(type, FeatureFlags.hideDmSuggestions, FeatureFlags.disableDiscoverPeople,
@@ -60,7 +60,7 @@ public class InboxDiscoverPeopleHook {
                         param.setResult(false); // what the emitter returns for a section without rows
                         if (dropped.add(type)) ModuleLog.detail(TAG + "dropped inbox section " + type);
                     } catch (Throwable t) {
-                        if (dropped.add("error")) ModuleLog.warn(TAG + "Could not check an inbox section; people suggestions may still show: "
+                        if (dropped.add("error")) ModuleLog.warn(TAG + "Could not check an inbox section; people suggestions or Notes may still show: "
                                 + t.getClass().getSimpleName() + ": " + t.getMessage());
                     }
                 }
