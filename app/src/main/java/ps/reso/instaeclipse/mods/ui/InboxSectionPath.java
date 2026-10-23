@@ -76,4 +76,8 @@ final class InboxSectionPath {
     static boolean suggestsPeople(String type) {
         return "FIND_PEOPLE".equals(type) || "RECOMMENDED_USER_SUGGESTIONS".equals(type);
     }
+
+    static boolean drops(String type, boolean hideDmSuggestions, boolean disableDiscoverPeople) {
+        return disableDiscoverPeople && suggestsPeople(type);
+    }
 }
