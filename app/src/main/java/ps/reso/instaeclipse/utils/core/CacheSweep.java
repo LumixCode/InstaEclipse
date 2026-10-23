@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public final class CacheSweep {
@@ -14,15 +15,30 @@ public final class CacheSweep {
 
     public static List<File> select(File cacheDir, File externalCacheDir, File filesDir) {
         Set<File> out = new LinkedHashSet<>();
-        out.addAll(children(cacheDir));
-        out.addAll(children(externalCacheDir));
+        addCacheChildren(out, cacheDir);
+        addCacheChildren(out, externalCacheDir);
         for (File k : children(filesDir)) {
-            if (k.isDirectory() && k.getName().toLowerCase().contains("cache")) out.addAll(children(k));
+            String name = k.getName();
+            if (k.isDirectory() && !isModuleFile(name) && name.toLowerCase(Locale.ROOT).contains("cache")) {
+                out.addAll(children(k));
+            }
         }
         return new ArrayList<>(out);
     }
 
-    static List<File> children(File dir) {
+    private static void addCacheChildren(Set<File> out, File dir) {
+        for (File k : children(dir)) {
+            String name = k.getName();
+            if (name.equals("lspatch") || name.startsWith("oat") || isModuleFile(name)) continue;
+            out.add(k);
+        }
+    }
+
+    private static boolean isModuleFile(String name) {
+        return name.startsWith("ie_") || name.startsWith(".ie_");
+    }
+
+    private static List<File> children(File dir) {
         List<File> out = new ArrayList<>();
         File[] kids = dir != null ? dir.listFiles() : null;
         if (kids != null) Collections.addAll(out, kids);
@@ -64,10 +80,8 @@ public final class CacheSweep {
         }
 
         public boolean stopped(boolean changingConfigurations) {
-            started--;
-            if (started > 0) return false;
-            started = 0;
-            return true;
+            if (started > 0) started--;
+            return started == 0 && !changingConfigurations;
         }
     }
 }

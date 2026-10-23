@@ -241,6 +241,7 @@ public class Module {
                         @Override public void onActivitySaveInstanceState(android.app.Activity a, Bundle b) {}
                         @Override public void onActivityDestroyed(android.app.Activity a) {}
                     });
+            ps.reso.instaeclipse.utils.core.CacheAutoClear.register((android.app.Application) application);
         }
 
         // In-app log viewer: every ModuleLog.line(...) call across the hook codebase
