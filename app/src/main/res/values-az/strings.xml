@@ -570,6 +570,14 @@
     <string name="ig_jump_first_done">İlk mesaja çatıldı</string>
     <string name="ig_jump_first_stopped">Dayandırıldı</string>
     <string name="ig_dialog_ghost_edit_history">Mesajların Redaktə Tarixçəsini Saxla</string>
+    <string name="ig_edit_history_title">Redaktə tarixçəsi</string>
+    <string name="ig_edit_history_original">Orijinal</string>
+    <string name="ig_edit_history_earlier">Əvvəlki versiya</string>
+    <string name="ig_edit_history_current">Cari</string>
+    <string name="ig_edit_history_time_unknown">vaxt məlum deyil</string>
+    <string name="ig_edit_history_noticed">%1$s qeydə alınıb</string>
+    <string name="ig_edit_history_missing">%1$d əvvəlki versiya bu telefonda saxlanmayıb.</string>
+    <string name="ig_edit_history_none">Bu mesajın əvvəlki versiyası bu telefonda saxlanmayıb</string>
     <string name="ig_dialog_unsent_title">Geri Götürülən Mesajlar</string>
     <string name="ig_dialog_unsent_clear">Bu söhbətin qeydini təmizlə</string>
     <string name="ig_dialog_unsent_export">JSON kimi ixrac et</string>

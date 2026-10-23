@@ -601,6 +601,14 @@
     <string name="ig_jump_first_done">Premier message atteint</string>
     <string name="ig_jump_first_stopped">Arrêté</string>
     <string name="ig_dialog_ghost_edit_history">Conserver l\'historique des modifications des messages</string>
+    <string name="ig_edit_history_title">Historique des modifications</string>
+    <string name="ig_edit_history_original">Original</string>
+    <string name="ig_edit_history_earlier">Version précédente</string>
+    <string name="ig_edit_history_current">Actuel</string>
+    <string name="ig_edit_history_time_unknown">heure inconnue</string>
+    <string name="ig_edit_history_noticed">remarqué %1$s</string>
+    <string name="ig_edit_history_missing">%1$d version(s) précédente(s) n\'ont pas été enregistrée(s) sur ce téléphone.</string>
+    <string name="ig_edit_history_none">Aucune version précédente de ce message n\'a été enregistrée sur ce téléphone</string>
     <string name="ig_dialog_unsent_title">Messages non envoyés</string>
     <string name="ig_dialog_unsent_clear">Effacer le journal de cette conversation</string>
     <string name="ig_dialog_unsent_export">Exporter en JSON</string>

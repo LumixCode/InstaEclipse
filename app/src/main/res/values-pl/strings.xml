@@ -644,6 +644,14 @@
     <string name="ig_jump_first_done">Osiągnięto pierwszą wiadomość</string>
     <string name="ig_jump_first_stopped">Zatrzymano</string>
     <string name="ig_dialog_ghost_edit_history">Zachowuj historię edycji wiadomości</string>
+    <string name="ig_edit_history_title">Historia edycji</string>
+    <string name="ig_edit_history_original">Oryginał</string>
+    <string name="ig_edit_history_earlier">Wcześniejsza wersja</string>
+    <string name="ig_edit_history_current">Obecna</string>
+    <string name="ig_edit_history_time_unknown">czas nieznany</string>
+    <string name="ig_edit_history_noticed">zauważono %1$s</string>
+    <string name="ig_edit_history_missing">Na tym telefonie nie zapisano wcześniejszych wersji: %1$d.</string>
+    <string name="ig_edit_history_none">Na tym telefonie nie zapisano żadnej wcześniejszej wersji tej wiadomości</string>
     <string name="ig_dialog_unsent_title">Niewysłane wiadomości</string>
     <string name="ig_dialog_unsent_clear">Wyczyść dziennik tego czatu</string>
     <string name="ig_dialog_unsent_export">Eksportuj jako JSON</string>

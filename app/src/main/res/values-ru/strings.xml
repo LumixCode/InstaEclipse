@@ -568,6 +568,14 @@
     <string name="ig_jump_first_done">Достигнуто первое сообщение</string>
     <string name="ig_jump_first_stopped">Остановлено</string>
     <string name="ig_dialog_ghost_edit_history">Сохранять историю правок сообщений</string>
+    <string name="ig_edit_history_title">История правок</string>
+    <string name="ig_edit_history_original">Оригинал</string>
+    <string name="ig_edit_history_earlier">Предыдущая версия</string>
+    <string name="ig_edit_history_current">Текущая</string>
+    <string name="ig_edit_history_time_unknown">время неизвестно</string>
+    <string name="ig_edit_history_noticed">замечено %1$s</string>
+    <string name="ig_edit_history_missing">Предыдущих версий не сохранено на этом телефоне: %1$d.</string>
+    <string name="ig_edit_history_none">На этом телефоне не сохранено ни одной предыдущей версии этого сообщения</string>
     <string name="ig_dialog_unsent_title">Неотправленные сообщения</string>
     <string name="ig_dialog_unsent_clear">Очистить журнал этого чата</string>
     <string name="ig_dialog_unsent_export">Экспорт в JSON</string>

@@ -566,6 +566,14 @@
     <string name="ig_jump_first_done">تم الوصول إلى أول رسالة</string>
     <string name="ig_jump_first_stopped">تم الإيقاف</string>
     <string name="ig_dialog_ghost_edit_history">الاحتفاظ بسجل تعديل الرسائل</string>
+    <string name="ig_edit_history_title">سجل التعديلات</string>
+    <string name="ig_edit_history_original">الأصلية</string>
+    <string name="ig_edit_history_earlier">نسخة سابقة</string>
+    <string name="ig_edit_history_current">الحالية</string>
+    <string name="ig_edit_history_time_unknown">الوقت غير معروف</string>
+    <string name="ig_edit_history_noticed">لوحظ %1$s</string>
+    <string name="ig_edit_history_missing">لم تُحفظ %1$d نسخة سابقة على هذا الهاتف.</string>
+    <string name="ig_edit_history_none">لم تُحفظ أي نسخة سابقة من هذه الرسالة على هذا الهاتف</string>
     <string name="ig_dialog_unsent_title">الرسائل الملغاة</string>
     <string name="ig_dialog_unsent_clear">مسح سجل هذه المحادثة</string>
     <string name="ig_dialog_unsent_export">تصدير كملف JSON</string>

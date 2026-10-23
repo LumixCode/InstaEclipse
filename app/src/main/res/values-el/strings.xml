@@ -600,6 +600,14 @@
     <string name="ig_jump_first_done">Φτάσατε στο πρώτο μήνυμα</string>
     <string name="ig_jump_first_stopped">Διακόπηκε</string>
     <string name="ig_dialog_ghost_edit_history">Διατήρηση Ιστορικού Επεξεργασίας Μηνυμάτων</string>
+    <string name="ig_edit_history_title">Ιστορικό επεξεργασίας</string>
+    <string name="ig_edit_history_original">Αρχικό</string>
+    <string name="ig_edit_history_earlier">Προηγούμενη έκδοση</string>
+    <string name="ig_edit_history_current">Τρέχουσα</string>
+    <string name="ig_edit_history_time_unknown">άγνωστη ώρα</string>
+    <string name="ig_edit_history_noticed">εντοπίστηκε %1$s</string>
+    <string name="ig_edit_history_missing">%1$d προηγούμενες εκδόσεις δεν αποθηκεύτηκαν σε αυτό το τηλέφωνο.</string>
+    <string name="ig_edit_history_none">Δεν αποθηκεύτηκε καμία προηγούμενη έκδοση αυτού του μηνύματος σε αυτό το τηλέφωνο</string>
     <string name="ig_dialog_unsent_title">Μη Απεσταλμένα Μηνύματα</string>
     <string name="ig_dialog_unsent_clear">Εκκαθάριση του αρχείου αυτής της συνομιλίας</string>
     <string name="ig_dialog_unsent_export">Εξαγωγή ως JSON</string>

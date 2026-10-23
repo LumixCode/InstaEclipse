@@ -599,6 +599,14 @@
     <string name="ig_jump_first_done">Sudah sampai di pesan pertama</string>
     <string name="ig_jump_first_stopped">Dihentikan</string>
     <string name="ig_dialog_ghost_edit_history">Simpan Riwayat Edit Pesan</string>
+    <string name="ig_edit_history_title">Riwayat edit</string>
+    <string name="ig_edit_history_original">Asli</string>
+    <string name="ig_edit_history_earlier">Versi sebelumnya</string>
+    <string name="ig_edit_history_current">Saat ini</string>
+    <string name="ig_edit_history_time_unknown">waktu tidak diketahui</string>
+    <string name="ig_edit_history_noticed">terdeteksi %1$s</string>
+    <string name="ig_edit_history_missing">%1$d versi sebelumnya tidak tersimpan di ponsel ini.</string>
+    <string name="ig_edit_history_none">Tidak ada versi sebelumnya dari pesan ini yang tersimpan di ponsel ini</string>
     <string name="ig_dialog_unsent_title">Pesan Tidak Terkirim</string>
     <string name="ig_dialog_unsent_clear">Bersihkan log obrolan ini</string>
     <string name="ig_dialog_unsent_export">Ekspor sebagai JSON</string>

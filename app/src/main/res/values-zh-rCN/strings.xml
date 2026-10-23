@@ -600,6 +600,14 @@
     <string name="ig_jump_first_done">已到达第一条消息</string>
     <string name="ig_jump_first_stopped">已停止</string>
     <string name="ig_dialog_ghost_edit_history">保留消息的编辑历史</string>
+    <string name="ig_edit_history_title">编辑历史</string>
+    <string name="ig_edit_history_original">原始</string>
+    <string name="ig_edit_history_earlier">较早版本</string>
+    <string name="ig_edit_history_current">当前</string>
+    <string name="ig_edit_history_time_unknown">时间未知</string>
+    <string name="ig_edit_history_noticed">于 %1$s 发现</string>
+    <string name="ig_edit_history_missing">有 %1$d 个较早版本未保存在此手机上。</string>
+    <string name="ig_edit_history_none">此手机上未保存这条消息的任何较早版本</string>
     <string name="ig_dialog_unsent_title">已撤回消息</string>
     <string name="ig_dialog_unsent_clear">清除此对话的记录</string>
     <string name="ig_dialog_unsent_export">导出为 JSON</string>

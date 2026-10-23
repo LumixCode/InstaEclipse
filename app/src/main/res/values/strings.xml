@@ -344,6 +344,14 @@
     <string name="ig_jump_first_done">Reached the first message</string>
     <string name="ig_jump_first_stopped">Stopped</string>
     <string name="ig_dialog_ghost_edit_history">Keep Edit History of Messages</string>
+    <string name="ig_edit_history_title">Edit history</string>
+    <string name="ig_edit_history_original">Original</string>
+    <string name="ig_edit_history_earlier">Earlier version</string>
+    <string name="ig_edit_history_current">Current</string>
+    <string name="ig_edit_history_time_unknown">time unknown</string>
+    <string name="ig_edit_history_noticed">noticed %1$s</string>
+    <string name="ig_edit_history_missing">%1$d earlier version(s) were not saved on this phone.</string>
+    <string name="ig_edit_history_none">No earlier version of this message was saved on this phone</string>
     <string name="ig_dialog_unsent_title">Unsent Messages</string>
     <string name="ig_dialog_unsent_clear">Clear this chat\'s log</string>
     <string name="ig_dialog_unsent_export">Export as JSON</string>

@@ -599,6 +599,14 @@
     <string name="ig_jump_first_done">הגעת להודעה הראשונה</string>
     <string name="ig_jump_first_stopped">נעצר</string>
     <string name="ig_dialog_ghost_edit_history">שמור היסטוריית עריכה של הודעות</string>
+    <string name="ig_edit_history_title">היסטוריית עריכה</string>
+    <string name="ig_edit_history_original">מקורי</string>
+    <string name="ig_edit_history_earlier">גרסה קודמת</string>
+    <string name="ig_edit_history_current">נוכחי</string>
+    <string name="ig_edit_history_time_unknown">זמן לא ידוע</string>
+    <string name="ig_edit_history_noticed">זוהה %1$s</string>
+    <string name="ig_edit_history_missing">%1$d גרסאות קודמות לא נשמרו בטלפון הזה.</string>
+    <string name="ig_edit_history_none">לא נשמרה בטלפון הזה גרסה קודמת של ההודעה</string>
     <string name="ig_dialog_unsent_title">הודעות שבוטלו</string>
     <string name="ig_dialog_unsent_clear">נקה את יומן הצ\'אט הזה</string>
     <string name="ig_dialog_unsent_export">ייצא כ-JSON</string>

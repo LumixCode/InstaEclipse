@@ -576,6 +576,14 @@
     <string name="ig_jump_first_done">Erste Nachricht erreicht</string>
     <string name="ig_jump_first_stopped">Gestoppt</string>
     <string name="ig_dialog_ghost_edit_history">Bearbeitungsverlauf von Nachrichten behalten</string>
+    <string name="ig_edit_history_title">Bearbeitungsverlauf</string>
+    <string name="ig_edit_history_original">Original</string>
+    <string name="ig_edit_history_earlier">Frühere Version</string>
+    <string name="ig_edit_history_current">Aktuell</string>
+    <string name="ig_edit_history_time_unknown">Zeit unbekannt</string>
+    <string name="ig_edit_history_noticed">bemerkt %1$s</string>
+    <string name="ig_edit_history_missing">%1$d frühere Version(en) wurden auf diesem Telefon nicht gespeichert.</string>
+    <string name="ig_edit_history_none">Auf diesem Telefon wurde keine frühere Version dieser Nachricht gespeichert</string>
     <string name="ig_dialog_unsent_title">Nicht gesendete Nachrichten</string>
     <string name="ig_dialog_unsent_clear">Protokoll dieses Chats leeren</string>
     <string name="ig_dialog_unsent_export">Als JSON exportieren</string>
