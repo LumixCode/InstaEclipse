@@ -602,8 +602,14 @@ public class Module {
                     // Like undo window (#235) — after HideSuggestedFeedItemsHook (has_liked getter)
                     try {
                         if (!skip("LikeUndoHook")) new ps.reso.instaeclipse.mods.misc.LikeUndoHook().install(dexKitBridge);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | LikeUndo): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | LikeUndo): Could not start, so this feature will not work", t);
+                    }
+                    // The same undo window for story likes (their own pipeline)
+                    try {
+                        if (!skip("StoryLikeUndoHook")) new ps.reso.instaeclipse.mods.misc.StoryLikeUndoHook().install(dexKitBridge);
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | LikeUndo): Could not start for story likes, so undo will not work there", t);
                     }
                     try {
                         // View.performClick hook: installed only while the feature is on (restart to enable).

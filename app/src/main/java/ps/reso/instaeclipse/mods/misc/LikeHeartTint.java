@@ -74,6 +74,9 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
  * the component it builds with a Drawable subclass and a size, every render that builds that
  * component is a like button, and the components those renders build with an ImageView.ScaleType
  * are the other two. A render's post is the one field path from it to its Media, matched by id.
+ *
+ * <p>A story's heart ({@link StoryLikeUndoHook}) is the image of the story footer's like button,
+ * an ImageView; its bind hands it to {@link #storyHeart}, which paints it the same way.
  */
 final class LikeHeartTint {
     private static final String TAG = "(InstaEclipse | LikeUndo): ";
@@ -642,6 +645,11 @@ final class LikeHeartTint {
             ModuleLog.detail(TAG + "heart: post without id");
             return null;
         }
+        return showById(id);
+    }
+
+    /** {@link #show(Object)} for a media known by its id (a story's like). */
+    static LikeHeartTint showById(String id) {
         LikeHeartTint tint = new LikeHeartTint(id);
         Map<Drawable, Drawable> found = new IdentityHashMap<>();
         LikeHeartTint old;

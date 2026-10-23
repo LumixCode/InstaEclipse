@@ -49,5 +49,6 @@ public class PendingLikesTest {
         likes.hold(b, "b");
         assertEquals("a", likes.cancel(a));
         assertTrue(likes.isHeld(b, "b"));
+        assertFalse(likes.contains(new String("media")));
     }
 }
