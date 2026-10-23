@@ -32,6 +32,6 @@ public final class NotificationRegistrationHook {
                     }
                 });
         FeatureStatusTracker.setHooked("fixNotificationRegistration");
-        ModuleLog.line("(InstaEclipse | NotificationFix): ✅ hooked");
+        ModuleLog.ok("(InstaEclipse | NotificationFix): ready");
     }
 }

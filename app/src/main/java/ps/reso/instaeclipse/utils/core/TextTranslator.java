@@ -47,7 +47,7 @@ public final class TextTranslator {
         } catch (ActivityNotFoundException e) {
             return false;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Translate) ⚠️ " + t);
+            ModuleLog.error("(IE|Translate) Could not open the translator: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return false;
         }
     }

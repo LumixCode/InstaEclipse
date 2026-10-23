@@ -47,7 +47,7 @@ public final class AtomicFiles {
             try {
                 write(target, content);
             } catch (Throwable t) {
-                ModuleLog.line("(IE|Store) save " + target.getName() + " failed: " + t.getMessage());
+                ModuleLog.warn("(IE|Store) Could not save " + target.getName() + ": " + t.getClass().getSimpleName() + ": " + t.getMessage());
             }
         });
     }

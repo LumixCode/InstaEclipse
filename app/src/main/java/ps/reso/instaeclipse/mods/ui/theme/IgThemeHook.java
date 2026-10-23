@@ -50,7 +50,7 @@ public class IgThemeHook {
         // devices (Android 13 / SM-G780G) that makes ART's JIT crash IG, so they are only installed
         // when the custom theme is on (turning it on later installs them in refreshCurrentActivity).
         if (!FeatureFlags.customThemeEnabled) {
-            ModuleLog.line("(InstaEclipse | Theme): off -> hooks not installed");
+            ModuleLog.detail("(InstaEclipse | Theme): off -> hooks not installed");
             return;
         }
         try {
@@ -63,9 +63,10 @@ public class IgThemeHook {
             hookPhoneWindowColors(classLoader);
             installed = true;
             FeatureStatusTracker.setHooked("CustomTheme");
-            ModuleLog.line("(InstaEclipse | Theme): hooks installed enabled=" + FeatureFlags.customThemeEnabled);
+            ModuleLog.ok("(InstaEclipse | Theme): ready");
+            ModuleLog.detail("(InstaEclipse | Theme): hooks installed enabled=" + FeatureFlags.customThemeEnabled);
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | Theme): hook failed", t);
+            ModuleLog.error("(InstaEclipse | Theme): Could not fully turn on the custom theme; some screens may keep Instagram's colors", t);
         }
     }
 
@@ -273,7 +274,7 @@ public class IgThemeHook {
         try {
             XposedHelpers.findAndHookMethod("com.android.internal.policy.PhoneWindow", cl, "setStatusBarColor", int.class, statusHook);
             XposedHelpers.findAndHookMethod("com.android.internal.policy.PhoneWindow", cl, "setNavigationBarColor", int.class, navHook);
-            ModuleLog.line("(InstaEclipse | Theme): PhoneWindow color hooks installed");
+            ModuleLog.detail("(InstaEclipse | Theme): PhoneWindow color hooks installed");
             return true;
         } catch (Throwable ignored) {
             return false;

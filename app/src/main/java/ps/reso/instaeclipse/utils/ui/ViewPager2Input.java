@@ -70,14 +70,14 @@ public final class ViewPager2Input {
                         Field f = vp.getDeclaredField(fd.getFieldName());
                         f.setAccessible(true);
                         DexKitCache.saveString(CACHE_PAGER_INPUT, f.getName());
-                        ModuleLog.line("(IE|ViewPager2) user-input field = " + f.getName());
+                        ModuleLog.detail("(IE|ViewPager2) user-input field = " + f.getName());
                         return userInputField = f;
                     }
                 }
             }
-            ModuleLog.line("(IE|ViewPager2) user-input field not found");
+            ModuleLog.warn("(IE|ViewPager2) Swiping between pages cannot be locked: the swipe switch was not found in this Instagram version");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ViewPager2) user-input field: " + t);
+            ModuleLog.warn("(IE|ViewPager2) Swiping between pages cannot be locked: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
         return null;
     }
@@ -113,7 +113,7 @@ public final class ViewPager2Input {
             m.setAccessible(true);
             return setter = m;
         } catch (NoSuchMethodException e) {
-            ModuleLog.line("(IE|ViewPager2) setUserInputEnabled missing — using the field");
+            ModuleLog.detail("(IE|ViewPager2) setUserInputEnabled missing — using the field");
             return null;
         }
     }

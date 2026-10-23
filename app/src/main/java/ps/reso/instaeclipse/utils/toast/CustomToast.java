@@ -4,7 +4,6 @@ import android.content.Context;
 import android.graphics.Color;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.view.Gravity;
 import android.widget.TextView;
 
@@ -16,7 +15,7 @@ public class CustomToast {
 
     public static void showCustomToast(Context context, String message) {
         if (context == null) {
-            ModuleLog.line("❌ CustomToast: Context is null!");
+            ModuleLog.detail("(IE|Toast) CustomToast: Context is null");
             return;
         }
 
@@ -186,7 +185,7 @@ public class CustomToast {
                 new Handler(Looper.getMainLooper()).postDelayed(toast::show, 3200);
                 new Handler(Looper.getMainLooper()).postDelayed(toast::cancel, 6500);
             } catch (Throwable t) {
-                ModuleLog.line("❌ showFeatureGrid failed: " + Log.getStackTraceString(t));
+                ModuleLog.warn("(IE|Toast) Could not show the list of active features", t);
             }
         });
     }

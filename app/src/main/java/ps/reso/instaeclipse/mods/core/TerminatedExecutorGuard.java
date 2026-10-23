@@ -50,9 +50,10 @@ public class TerminatedExecutorGuard {
                         }
                     }
             );
-            ModuleLog.line("(IE|ExecGuard) ✅ installed");
+            ModuleLog.ok("(IE|ExecGuard) ready");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ExecGuard) ⚠️ install failed: " + t.getMessage());
+            ModuleLog.warn("(IE|ExecGuard) Could not set up the crash guard; Instagram may crash in rare cases while closing videos or chats: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 }

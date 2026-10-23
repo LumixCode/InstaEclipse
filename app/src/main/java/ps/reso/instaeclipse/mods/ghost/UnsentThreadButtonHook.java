@@ -44,7 +44,7 @@ public class UnsentThreadButtonHook {
                     activity.runOnUiThread(() -> registerListener(activity));
                 });
             } catch (Throwable t) {
-                ModuleLog.line("(IE|UnsentBtn) ⚠️ hook " + act + ": " + t);
+                ModuleLog.detail("(IE|UnsentBtn) hook " + act + " failed (chat tracker still used): " + t);
             }
         }
         // Thread opened as a fragment inside the main activity fires no activity onResume.
@@ -54,7 +54,7 @@ public class UnsentThreadButtonHook {
         });
         // This hook fills the header menu, so it also owns the gesture that opens a hidden one.
         ThreadHeaderMenu.installTapGesture(classLoader);
-        ModuleLog.line("(IE|UnsentBtn) ✅ installed");
+        ModuleLog.ok("(IE|UnsentBtn) ready");
     }
 
     /** Export is injected only from here, so it must not depend on the unsent preferences. */
@@ -116,7 +116,7 @@ public class UnsentThreadButtonHook {
                 }
             });
         } catch (Throwable t) {
-            ModuleLog.line("(IE|UnsentBtn) ⚠️ register: " + t.getMessage());
+            ModuleLog.warn("(IE|UnsentBtn) Could not add the chat menu on this screen: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -155,18 +155,18 @@ public class UnsentThreadButtonHook {
                 if (!ThreadHeaderMenu.add(activity, "unsent",
                         ps.reso.instaeclipse.utils.i18n.I18n.t(activity, ps.reso.instaeclipse.R.string.ig_unsent_messages), () -> {
                     String threadId = thread.get();
-                    ModuleLog.line("(IE|UnsentBtn) open resolved=" + (threadId != null));
+                    ModuleLog.detail("(IE|UnsentBtn) open resolved=" + (threadId != null));
                     // Back from the list returns to this chat's menu, not the module's main menu.
                     ps.reso.instaeclipse.utils.dialog.DialogUtils.showThreadUnsent(activity, threadId, threadTitle(header),
                             () -> ThreadHeaderMenu.reopen(activity));
                 })) return false;
-                ModuleLog.line("(IE|UnsentBtn) ✅ added to the thread menu");
+                ModuleLog.probe("(IE|UnsentBtn) added to the thread menu");
             }
             if (FeatureFlags.jumpToFirstMessage) JumpToFirstMessageHook.inject(activity);
             ChatExportHook.inject(activity);
             return true;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|UnsentBtn) ⚠️ inject: " + t.getMessage());
+            ModuleLog.detail("(IE|UnsentBtn) inject failed: " + t.getMessage());
             return false;
         }
     }

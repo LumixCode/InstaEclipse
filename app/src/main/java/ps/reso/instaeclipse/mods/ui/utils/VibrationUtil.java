@@ -21,7 +21,7 @@ public class VibrationUtil {
                 }
             }
         } catch (Exception e) {
-            ModuleLog.line("InstaEclipse (vibrate error): " + e.getMessage());
+            ModuleLog.detail("InstaEclipse (vibrate error): " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 }

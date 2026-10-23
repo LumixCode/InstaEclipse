@@ -72,7 +72,7 @@ public final class UnsentMessageStore {
                     if (copy != null && account.equals(copy.account) && thread.equals(copy.thread)
                             && !Collections.disjoint(copy.ids, ids)) return copy;
                 } catch (Exception e) {
-                    ModuleLog.line("(IE|UnsentStore) unreadable copy skipped: " + e.getClass().getSimpleName());
+                    ModuleLog.detail("(IE|UnsentStore) unreadable copy skipped: " + e.getClass().getSimpleName());
                 }
             }
             return null;
@@ -112,7 +112,7 @@ public final class UnsentMessageStore {
                 remove(oldest);
             }
         } catch (Exception e) {
-            ModuleLog.line("(IE|UnsentStore) save failed: " + e.getClass().getSimpleName());
+            ModuleLog.warn("(IE|UnsentStore) Could not keep a copy of an unsent message: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
@@ -149,7 +149,7 @@ public final class UnsentMessageStore {
             try {
                 saved.add(read(file));
             } catch (Exception e) {
-                ModuleLog.line("(IE|UnsentStore) unreadable copy skipped: " + e.getClass().getSimpleName());
+                ModuleLog.detail("(IE|UnsentStore) unreadable copy skipped: " + e.getClass().getSimpleName());
             }
         }
         return saved;

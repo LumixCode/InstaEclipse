@@ -25,7 +25,8 @@ public class GhostViewOnceHook {
             Method cached = DexKitCache.loadMethod("GhostViewOnce", Module.hostClassLoader);
             if (cached != null) {
                 XposedBridge.hookMethod(cached, buildViewOnceHook());
-                ModuleLog.line("(InstaEclipse | ViewOnce): ✅ Hooked (cached): "
+                ModuleLog.ok("(InstaEclipse | ViewOnce): ready");
+                ModuleLog.detail("(InstaEclipse | ViewOnce): hooked (cached): "
                         + cached.getDeclaringClass().getName() + "." + cached.getName());
                 FeatureStatusTracker.setHooked("GhostViewOnce");
                 return;
@@ -52,7 +53,7 @@ public class GhostViewOnceHook {
             return;
         }
 
-        ModuleLog.line("(InstaEclipse | ViewOnce): ❌ No view-once seen-reporter method found");
+        ModuleLog.error("(InstaEclipse | ViewOnce): Could not turn on hiding view-once opens: not supported by this Instagram version");
     }
 
     /**
@@ -75,13 +76,14 @@ public class GhostViewOnceHook {
 
                 DexKitCache.saveMethod("GhostViewOnce", reflectMethod);
                 XposedBridge.hookMethod(reflectMethod, buildViewOnceHook());
-                ModuleLog.line("(InstaEclipse | ViewOnce): ✅ Hooked (" + tag + "): "
+                ModuleLog.ok("(InstaEclipse | ViewOnce): ready");
+                ModuleLog.detail("(InstaEclipse | ViewOnce): hooked (" + tag + "): "
                         + method.getClassName() + "." + method.getName());
                 FeatureStatusTracker.setHooked("GhostViewOnce");
                 return true;
             }
         } catch (Throwable e) {
-            ModuleLog.line("(InstaEclipse | ViewOnce): ❌ Exception (" + tag + "): " + e.getMessage());
+            ModuleLog.detail("(InstaEclipse | ViewOnce): lookup (" + tag + ") failed: " + e);
         }
         return false;
     }
@@ -119,7 +121,7 @@ public class GhostViewOnceHook {
             done.setAccessible(true);
             done.invoke(param.args[1], new Object[]{null, null});
         } catch (Throwable t) {
-            ModuleLog.line("(IE|" + tag + ") ⚠️ mutation skipped but not completed: " + t);
+            ModuleLog.warn("(IE|" + tag + ") Blocked the report, but could not finish it cleanly; later messages in this chat may wait to send", t);
         }
     }
 

@@ -94,7 +94,7 @@ public class CommentSearchHook {
                 vm = cl.loadClass(md.getClassName());
                 break;
             }
-            if (vm == null) { ModuleLog.line(TAG + "❌ view-model not found"); return; }
+            if (vm == null) { ModuleLog.error(TAG + "Could not turn on comment search: the comment sheet was not found in this Instagram version"); return; }
             int builders = 0;
             for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(vm)) {
                 if (!Modifier.isStatic(m.getModifiers()) || m.getReturnType().isPrimitive()
@@ -141,9 +141,9 @@ public class CommentSearchHook {
                     }
                     commentSerializer.setAccessible(true);
                 }
-                ModuleLog.line(TAG + "comment json: serializer=" + (commentSerializer != null) + " factory=" + (jsonFactory != null));
+                ModuleLog.detail(TAG + "comment json: serializer=" + (commentSerializer != null) + " factory=" + (jsonFactory != null));
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "⚠️ comment json: " + t);
+                ModuleLog.warn(TAG + "Comment search works on the text only: likes, dates and replies cannot be read: " + t);
             }
             try {
                 // The sort selector row's model takes the sort-order enum, whose int field is the label.
@@ -155,9 +155,9 @@ public class CommentSearchHook {
                         for (Class<?> t : c.getParameterTypes()) if (t.isEnum()) sortEnum = t;
                     if (sortEnum != null) { sortRowModel = model; break; }
                 }
-                ModuleLog.line(TAG + "sort order enum: " + (sortEnum != null ? sortEnum.getName() : "not found"));
+                ModuleLog.detail(TAG + "sort order enum: " + (sortEnum != null ? sortEnum.getName() : "not found"));
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "⚠️ sort order enum: " + t);
+                ModuleLog.warn(TAG + "The search icon goes to the sheet's header instead of the sort row: " + t);
             }
             try {
                 // The sort row's composable: the moment it composes, look for it on screen.
@@ -174,9 +174,9 @@ public class CommentSearchHook {
                     });
                     selectors++;
                 }
-                if (selectors == 0) ModuleLog.line(TAG + "sort row composable not found (icon finds the row by polling)");
+                if (selectors == 0) ModuleLog.detail(TAG + "sort row composable not found (icon finds the row by polling)");
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "⚠️ sort row composable: " + t);
+                ModuleLog.detail(TAG + "sort row composable: " + t);
             }
             int frags = 0;
             for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
@@ -196,10 +196,12 @@ public class CommentSearchHook {
                     break;
                 } catch (NoSuchMethodException ignored) {}
             }
-            ModuleLog.line(TAG + "✅ vm " + vm.getName() + " builders=" + builders + " fragments=" + frags);
+            ModuleLog.line(TAG + (builders > 0 && frags > 0 ? "✅ Ready"
+                    : "❌ Could not turn on comment search: the comment sheet is not supported in this Instagram version"));
+            ModuleLog.detail(TAG + "vm " + vm.getName() + " builders=" + builders + " fragments=" + frags);
             if (builders > 0 && frags > 0) FeatureStatusTracker.setHooked("CommentSearch");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.error(TAG + "Could not turn on comment search", t);
         }
     }
 
@@ -300,7 +302,7 @@ public class CommentSearchHook {
     private static String[] commentRow(Object c, String user) {
         if (commentSerializer == null || jsonFactory == null) return null;
         if (!commentSerializer.getParameterTypes()[1].isInstance(c)) {
-            if (!rowLogged) { rowLogged = true; ModuleLog.line(TAG + "row class " + c.getClass().getName() + " is not " + commentSerializer.getParameterTypes()[1].getName()); }
+            if (!rowLogged) { rowLogged = true; ModuleLog.detail(TAG + "row class " + c.getClass().getName() + " is not " + commentSerializer.getParameterTypes()[1].getName()); }
             return null;
         }
         String[] cached = ROW_CACHE.get(c);
@@ -325,7 +327,7 @@ public class CommentSearchHook {
             ROW_CACHE.put(c, row);
             return row;
         } catch (Throwable t) {
-            if (!rowLogged) { rowLogged = true; ModuleLog.line(TAG + "⚠️ comment json: " + (t.getCause() != null ? t.getCause() : t)); }
+            if (!rowLogged) { rowLogged = true; ModuleLog.warn(TAG + "Some comment details (likes, dates, replies) could not be read; search and export still use the text: " + (t.getCause() != null ? t.getCause() : t)); }
             return null;
         }
     }
@@ -404,7 +406,7 @@ public class CommentSearchHook {
                     new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             return;
         }
-        ModuleLog.line(TAG + "search icon: no sort labels / frame, header fallback");
+        ModuleLog.detail(TAG + "search icon: no sort labels / frame, header fallback");
         headerIcon(content, newIcon(ctx, tint));
     }
 
@@ -442,7 +444,7 @@ public class CommentSearchHook {
             try {
                 showSearch(v.getContext());
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "⚠️ search dialog: " + t);
+                ModuleLog.error(TAG + "Could not open comment search", t);
             }
         });
         // The bottom sheet's touch handling can swallow the click (DOWN/UP reach the icon but
@@ -530,7 +532,7 @@ public class CommentSearchHook {
                     return;
                 }
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "⚠️ header icon: " + t);
+                ModuleLog.detail(TAG + "header icon: " + t);
             }
         }
         try {
@@ -547,7 +549,7 @@ public class CommentSearchHook {
             }
             icon.setElevation(30 * d);
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ icon: " + t);
+            ModuleLog.warn(TAG + "Could not add the search icon to the comments", t);
         }
     }
 
@@ -750,7 +752,7 @@ public class CommentSearchHook {
             try {
                 track();
             } catch (Throwable t) {
-                if (!logged) { logged = true; ModuleLog.line(TAG + "⚠️ sort row: " + t); }
+                if (!logged) { logged = true; ModuleLog.warn(TAG + "The search icon is hidden on this comment sheet: " + t); }
                 show(false);
             }
             super.dispatchDraw(canvas);
@@ -764,7 +766,7 @@ public class CommentSearchHook {
         private void checkFallback() {
             if (found || fallbackUsed || !isAttachedToWindow()) return;
             if (stateHasSortRow && stateAt >= attachedAt - 1500) {
-                if (!waitLogged) { waitLogged = true; ModuleLog.line(TAG + "search icon waits for the sort row to scroll into view"); }
+                if (!waitLogged) { waitLogged = true; ModuleLog.probe(TAG + "search icon waits for the sort row to scroll into view"); }
                 return;
             }
             // No sort row yet: wait while comments are still loading, then use the header.
@@ -775,7 +777,7 @@ public class CommentSearchHook {
         private void useFallback(String why) {
             if (fallbackUsed) return;
             fallbackUsed = true;
-            ModuleLog.line(TAG + "search icon in the header: " + why);
+            ModuleLog.detail(TAG + "search icon in the header: " + why);
             post(() -> headerIcon(content, headerIcon));
         }
 
@@ -849,7 +851,7 @@ public class CommentSearchHook {
             show(true);
             if (!found) {
                 found = true;
-                ModuleLog.line(TAG + "search icon on sort row " + (what instanceof View v ? v.getClass().getSimpleName() : "'" + what + "'")
+                ModuleLog.probe(TAG + "search icon on sort row " + (what instanceof View v ? v.getClass().getSimpleName() : "'" + what + "'")
                         + " at " + bounds.toShortString()
                         + " after " + (android.os.SystemClock.uptimeMillis() - attachedAt) + " ms");
                 // The header fallback ran while comments were slow to load: keep a single icon.
@@ -1504,8 +1506,8 @@ public class CommentSearchHook {
                                     ? "<video class=media controls preload=none src=\"" + name + "\" onerror=\"this.remove()\"></video>"
                                     : "<img class=media loading=lazy src=\"" + name + "\" onerror=\"this.remove()\">");
                         }
-                        ModuleLog.line(TAG + "post media: " + pi + " item(s) for " + mediaId);
-                    } catch (Throwable t) { ModuleLog.line(TAG + "post media failed: " + t); }
+                        ModuleLog.detail(TAG + "post media: " + pi + " item(s) for " + mediaId);
+                    } catch (Throwable t) { ModuleLog.warn(TAG + "The export will not include the post's photos or videos: " + t); }
                 }
                 Map<String, List<String[]>> kids = new java.util.HashMap<>();
                 Set<String> ids = new java.util.HashSet<>();
@@ -1617,20 +1619,20 @@ public class CommentSearchHook {
                         delegated = ps.reso.instaeclipse.utils.ipc.ExportDelegate.delegate(ctx, it, TAG,
                                 () -> writeExportInProcess(ctx, page, media, file, cCount));
                         if (!delegated) {
-                            ModuleLog.line(TAG + "comment export outside the companion's limits (" + cCount + " comments, "
+                            ModuleLog.detail(TAG + "comment export outside the companion's limits (" + cCount + " comments, "
                                     + media.size() + " media, " + page.length() + " html chars), writing locally");
                         } else {
-                            ModuleLog.line(TAG + "delegated comment export (" + cCount + " comments, "
-                                    + media.size() + " media) to companion service: " + folder);
+                            ModuleLog.line(TAG + "Exporting " + cCount + " comments and "
+                                    + media.size() + " media files through the InstaEclipse app to comments/" + folder);
                         }
                     } catch (Throwable t) {
-                        ModuleLog.line(TAG + "comment export delegate failed, writing locally: " + t);
+                        ModuleLog.warn(TAG + "Could not hand the export to the InstaEclipse app, saving it from Instagram instead (media links expire later): " + t);
                     }
                 }
 
                 if (!delegated) writeExportInProcess(ctx, page, media, file, cCount);
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "❌ export: " + t);
+                ModuleLog.error(TAG + "Could not export the comments", t);
                 MAIN.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_download_failed, String.valueOf(t.getMessage())), Toast.LENGTH_SHORT).show());
             }
         }).start();
@@ -1648,10 +1650,10 @@ public class CommentSearchHook {
             try (java.io.OutputStream out = ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook.openCommentsExport(ctx, file)) {
                 out.write(html.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             }
-            ModuleLog.line(TAG + "exported " + count + " comments to " + file);
+            ModuleLog.line(TAG + "Exported " + count + " comments to " + file);
             MAIN.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_comment_export_done, count, file), Toast.LENGTH_LONG).show());
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ export: " + t);
+            ModuleLog.error(TAG + "Could not save the comments export", t);
             MAIN.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_download_failed, String.valueOf(t.getMessage())), Toast.LENGTH_SHORT).show());
         }
     }
@@ -1746,7 +1748,7 @@ public class CommentSearchHook {
                             List<String> urls;
                             try { urls = ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook.extractAllUrlsFromMedia(ctx, o); }
                             catch (Throwable ex) { urls = null; }
-                            ModuleLog.line(TAG + "post media candidate " + o.getClass().getName() + " id=" + s + " urls=" + (urls == null ? 0 : urls.size()));
+                            ModuleLog.detail(TAG + "post media candidate " + o.getClass().getName() + " id=" + s + " urls=" + (urls == null ? 0 : urls.size()));
                             if (urls != null && !urls.isEmpty()) return urls;
                         }
                     }
@@ -1758,7 +1760,7 @@ public class CommentSearchHook {
                     }
             } catch (Throwable ignored) {}
         }
-        ModuleLog.line(TAG + "walkForMedia: " + seen.size() + " nodes, " + candidates + " id-bearing, no match for " + mediaId);
+        ModuleLog.detail(TAG + "walkForMedia: " + seen.size() + " nodes, " + candidates + " id-bearing, no match for " + mediaId);
         return new ArrayList<>();
     }
 
@@ -1840,10 +1842,10 @@ public class CommentSearchHook {
                     }
                 }, i * 16L);
             }
-            ModuleLog.line(TAG + "load all: opening the sheet to full height");
+            ModuleLog.detail(TAG + "load all: opening the sheet to full height");
             return true;
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ expand sheet: " + t);
+            ModuleLog.detail(TAG + "expand sheet: " + t);
             return false;
         }
     }
@@ -1851,9 +1853,9 @@ public class CommentSearchHook {
     private static void startLoadAll(java.util.function.IntConsumer progress, Runnable done) {
         View root = sheet.get();
         View list = root != null ? scrollable(root) : null; // inside the sheet, not the feed behind it
-        ModuleLog.line(TAG + "load all: list=" + (list != null ? list.getClass().getName() + " h=" + list.getHeight() : null));
+        ModuleLog.detail(TAG + "load all: list=" + (list != null ? list.getClass().getName() + " h=" + list.getHeight() : null));
         if (list == null) {
-            ModuleLog.line(TAG + "⚠️ load all: comment list not found");
+            ModuleLog.warn(TAG + "Could not load all comments: the comment list was not found, only the comments shown so far are searched");
             done.run();
             return;
         }
@@ -1884,7 +1886,7 @@ public class CommentSearchHook {
                 long idle = System.currentTimeMillis() - lastChange[0];
                 if (rv ? idle > 3000 && !list.canScrollVertically(1) : idle > 4000) {
                     loading = null; // at the end and nothing new for 3 s
-                    ModuleLog.line(TAG + "load all: " + count + " comments");
+                    ModuleLog.line(TAG + "Loaded all comments: " + count);
                     done.run();
                     return;
                 }
@@ -1958,7 +1960,7 @@ public class CommentSearchHook {
                 for (int i = 0; i < n.getChildCount(); i++) q.add((int) (((long) childIdMethod().invoke(n, i)) >> 32));
             }
             if (!a11yLogged) { a11yLogged = true; logA11y("nodes=" + nodes + " clicked=" + clicked); }
-            if (clicked > 0) ModuleLog.line(TAG + "load all: opened " + clicked + " reply thread(s)");
+            if (clicked > 0) ModuleLog.probe(TAG + "load all: opened " + clicked + " reply thread(s)");
             return clicked;
         } catch (Throwable t) {
             logA11y(String.valueOf(t.getCause() != null ? t.getCause() : t));
@@ -1987,7 +1989,7 @@ public class CommentSearchHook {
     }
 
     private static void logA11y(String msg) {
-        ModuleLog.line(TAG + "replies: " + msg);
+        ModuleLog.probe(TAG + "replies: " + msg);
     }
 
     /** RecyclerView scrolls directly; other lists (Compose) get a synthetic upward drag. */

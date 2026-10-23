@@ -65,7 +65,8 @@ public class ExpandCaptionsHook {
                 if (param.args[4] instanceof Integer) param.args[4] = Integer.MAX_VALUE;
             }
         });
-        ModuleLog.line(TAG + "✅ Hooked " + builder.getDeclaringClass().getName() + "." + builder.getName()
+        ModuleLog.ok(TAG + "ready");
+        ModuleLog.detail(TAG + "hooked " + builder.getDeclaringClass().getName() + "." + builder.getName()
                 + " → " + helper.getDeclaringClass().getName() + "." + helper.getName());
         FeatureStatusTracker.setHooked("ExpandCaptions");
     }
@@ -92,9 +93,10 @@ public class ExpandCaptionsHook {
                     } catch (Throwable ignored) {}
                 }
             }
-            ModuleLog.line(TAG + "❌ caption builder / truncation helper not found");
+            ModuleLog.error(TAG + "Will not work: the caption code was not found in this Instagram version");
+            ModuleLog.detail(TAG + "caption builder / truncation helper not found");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.error(TAG + "Will not work: search for the caption code failed", t);
         }
         return null;
     }

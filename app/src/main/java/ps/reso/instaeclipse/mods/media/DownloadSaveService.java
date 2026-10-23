@@ -96,7 +96,7 @@ public class DownloadSaveService extends Service {
         super.onCreate();
         Logging.init(this, "instaeclipse_companion.log");
         if (!FrameSessionCache.cleanupOrphans(getCacheDir()))
-            ModuleLog.line("(IE|Frame) Startup cache cleanup incomplete");
+            ModuleLog.detail("(IE|Frame) Startup cache cleanup incomplete (left-over frame files are removed later)");
         nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         ensureChannel();
     }
@@ -181,7 +181,9 @@ public class DownloadSaveService extends Service {
                                 : R.string.ie_download_verified, result.summary);
                         postDoneNotification(notificationId, verified, result.mime, saved);
                         showToast(verified);
-                        ModuleLog.line("(IE|Download) SAF published " + result.summary);
+                        ModuleLog.line("(IE|Download) Saved " + captured.filename
+                                + (result.lowerFallback ? " (lower quality, as you allowed)" : ""));
+                        ModuleLog.detail("(IE|Download) SAF published " + result.summary);
                     }
                     return;
                 }
@@ -194,7 +196,9 @@ public class DownloadSaveService extends Service {
                                 : downloadAndSave(fUrl, fFile, fMime, fSave, fUser, fUF);
                     } catch (Exception failedUpgrade) {
                         DownloadFiles.check(cancellation);
-                        ModuleLog.line("(IE|DL) Original DASH failed; using captured progressive fallback");
+                        ModuleLog.warn("(IE|DL) Could not download the original quality; saving the version Instagram was playing instead");
+                        ModuleLog.detail("(IE|DL) Original DASH failed: " + failedUpgrade.getClass().getSimpleName()
+                                + ": " + failedUpgrade.getMessage());
                         saved = downloadAndSave(fallbackUrl, fFile, fMime, fSave, fUser, fUF);
                     }
                 } else {
@@ -203,7 +207,8 @@ public class DownloadSaveService extends Service {
                 }
                 postDoneNotification(notificationId, "Saved: " + saved.filename, saved.mimeType, saved.uri);
                 showToast(getString(R.string.ig_toast_file_saved, saved.filename));
-                ModuleLog.line("(IE|Download) SAF published type=" + saved.mimeType);
+                ModuleLog.line("(IE|Download) Saved " + saved.filename);
+                ModuleLog.detail("(IE|Download) SAF published type=" + saved.mimeType);
             } catch (Throwable e) {
                 String reason = cancellation.isCancelled() ? getString(R.string.ie_download_cancelled)
                         : e instanceof DownloadEngine.Failure failure ? failure.getMessage() : "Could not save download";
@@ -214,7 +219,10 @@ public class DownloadSaveService extends Service {
                 showToast(getString(R.string.ig_toast_download_failed, reason));
                 String diagnostic = e instanceof DownloadEngine.Failure failure
                         && !failure.diagnostic.isEmpty() ? " " + failure.diagnostic : "";
-                ModuleLog.line("(IE|Download) " + (cancellation.isCancelled() ? "cancelled" : "failed")
+                if (cancellation.isCancelled()) ModuleLog.line("(IE|Download) Download cancelled");
+                else ModuleLog.error("(IE|Download) Could not save the download: " + reason
+                        + (retry != null ? " (a lower-quality version can be saved instead)" : ""));
+                ModuleLog.detail("(IE|Download) " + (cancellation.isCancelled() ? "cancelled" : "failed")
                         + " fallbackAvailable=" + (retry != null) + diagnostic);
             } finally {
                 Logging.flush();
@@ -247,7 +255,7 @@ public class DownloadSaveService extends Service {
                 }
             });
             MediaTypeDetector.Result detected = MediaTypeDetector.verified(responseType, filename);
-            ModuleLog.line("(IE|DL|Type) detected=" + detected.kind);
+            ModuleLog.detail("(IE|DL|Type) detected=" + detected.kind);
             pushProgress("Saving…", 97, 100, false);
             Uri uri = writeViaSaf(tmp, detected.filename, detected.mimeType,
                     saveUri, username, usernameFolder);
@@ -491,11 +499,14 @@ public class DownloadSaveService extends Service {
                 }
                 final int fSaved = saved;
                 DownloadFiles.check(cancellation);
-                ModuleLog.line("(IE|Export|Service) saved media=" + fSaved + "/" + total);
+                if (fSaved < total) ModuleLog.warn("(IE|Export|Service) Chat export saved, but " + (total - fSaved)
+                        + " of " + total + " media files could not be downloaded");
+                else ModuleLog.line("(IE|Export|Service) Chat export saved with all " + total + " media files");
                 postDoneNotification(notificationId, getString(R.string.ig_export_media_saved, fSaved, subdir), "text/html", htmlUri, true);
                 showToast(getString(R.string.ig_export_media_saved, fSaved, subdir));
             } catch (Throwable e) {
-                ModuleLog.line("(IE|ChatExport|Service) failed type=" + e.getClass().getSimpleName());
+                ModuleLog.error("(IE|ChatExport|Service) Could not save the chat export: " + e.getClass().getSimpleName()
+                        + ": " + e.getMessage());
                 postDoneNotification(notificationId, "Export failed", null, null);
                 showToast(getString(R.string.ig_toast_download_failed, "Export failed"));
             } finally {

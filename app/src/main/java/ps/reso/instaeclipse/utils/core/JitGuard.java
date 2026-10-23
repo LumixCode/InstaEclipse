@@ -48,7 +48,8 @@ public final class JitGuard {
             scan();
         } catch (Throwable t) {
             broken = true;
-            ModuleLog.line("(IE|JitGuard) disabled: " + t);
+            ModuleLog.warn("(IE|JitGuard) A crash safeguard for Android 13 is not available on this device; Instagram may crash more often there");
+            ModuleLog.detail("(IE|JitGuard) disabled: " + t);
         }
     }
 
@@ -88,7 +89,7 @@ public final class JitGuard {
                 }
             }
             if (done.size() <= 3 || done.size() % 25 == 0)
-                ModuleLog.line("(IE|JitGuard) stubs protected: " + done.size() + " (last: " + n + " of "
+                ModuleLog.detail("(IE|JitGuard) stubs protected: " + done.size() + " (last: " + n + " of "
                         + java.util.Arrays.toString(ps.reso.instaeclipse.utils.core.SafeReflect.methods(c)) + ")");
         }
     }

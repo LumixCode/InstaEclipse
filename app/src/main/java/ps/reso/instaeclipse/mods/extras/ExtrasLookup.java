@@ -37,13 +37,13 @@ final class ExtrasLookup {
         try {
             m = finder.find();
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | Extras): " + key + " lookup failed: " + t);
+            ModuleLog.detail("(InstaEclipse | Extras): " + key + " lookup failed: " + t);
         }
         if (m != null) {
             DexKitCache.saveMethod(key, m);
         } else {
             DexKitCache.saveString(key, "missing");
-            ModuleLog.line("(InstaEclipse | Extras): " + key + " not found in this Instagram version");
+            ModuleLog.error("(InstaEclipse | Extras): " + key + " is not available in this Instagram version, so that feature will not work");
         }
         return m;
     }

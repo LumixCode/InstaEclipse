@@ -43,7 +43,7 @@ public class HideHeaderButtonsHook {
             });
             FeatureStatusTracker.setHooked("HideThreadsButton");
             FeatureStatusTracker.setHooked("HideDmBlend");
-            ModuleLog.line(TAG + "✅ installed");
+            ModuleLog.ok(TAG + "ready");
         } catch (Throwable t) {
             ModuleLog.line(TAG + "❌ " + t);
         }

@@ -71,10 +71,12 @@ public final class StoryTrayHook {
                 });
                 hooked++;
             }
-            ModuleLog.line(TAG + "ring gradient hooks=" + hooked);
+            if (hooked > 0) ModuleLog.ok(TAG + "story ring color ready");
+            else ModuleLog.error(TAG + "Story ring color will not work: the ring drawing code was not found in this Instagram version");
+            ModuleLog.detail(TAG + "ring gradient hooks=" + hooked);
             if (hooked > 0) FeatureStatusTracker.setHooked("StoryRingColor");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ ring: " + t);
+            ModuleLog.error(TAG + "Story ring color will not work: setup failed", t);
         }
     }
 
@@ -144,14 +146,14 @@ public final class StoryTrayHook {
                     if (!needsWalk() || !pending.add(decor)) return;
                     MAIN.postDelayed(() -> {
                         pending.remove(decor);
-                        try { apply(decor); } catch (Throwable t) { ModuleLog.line(TAG + "⚠️ " + t); }
+                        try { apply(decor); } catch (Throwable t) { ModuleLog.warn(TAG + "Could not resize the story tray: " + t.getClass().getSimpleName() + ": " + t.getMessage()); }
                     }, 150);
                 } catch (Throwable t) {
-                    ModuleLog.line(TAG + "⚠️ " + t);
+                    ModuleLog.warn(TAG + "Could not resize the story tray: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                 }
             });
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ " + t);
+            ModuleLog.warn(TAG + "Could not resize the story tray: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 

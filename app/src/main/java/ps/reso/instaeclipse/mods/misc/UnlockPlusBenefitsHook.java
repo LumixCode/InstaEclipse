@@ -42,7 +42,8 @@ public final class UnlockPlusBenefitsHook {
                     }
                 }
                 if (candidates.size() != 1) {
-                    ModuleLog.line("(IE|Plus) Expected one benefit checker; found " + candidates.size());
+                    ModuleLog.error("(IE|Plus) Could not turn on Plus benefits: the benefit check was not found in this Instagram version");
+                    ModuleLog.detail("(IE|Plus) Expected one benefit checker; found " + candidates.size());
                     if (FeatureFlags.unlockPlusBenefits) FeatureStatusTracker.setBroken("UnlockPlusBenefits");
                     return;
                 }
@@ -56,9 +57,10 @@ public final class UnlockPlusBenefitsHook {
                 }
             });
             FeatureStatusTracker.setHooked("UnlockPlusBenefits");
-            ModuleLog.line("(IE|Plus) Installed local benefit check: " + method);
+            ModuleLog.ok("(IE|Plus) Ready");
+            ModuleLog.detail("(IE|Plus) Installed local benefit check: " + method);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Plus) Benefit checker unavailable", t);
+            ModuleLog.error("(IE|Plus) Could not turn on Plus benefits", t);
             if (FeatureFlags.unlockPlusBenefits) FeatureStatusTracker.setBroken("UnlockPlusBenefits");
         }
     }

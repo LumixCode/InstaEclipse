@@ -54,9 +54,10 @@ public class LocationSpoofHook {
                 hookPermissions();
                 hookNearbySignals();
                 FeatureStatusTracker.setHooked("SpoofLocation");
-                ModuleLog.line(TAG + "✅ Hooked (parcel + getters + LocationManager + permission + nearby signals)");
+                ModuleLog.ok(TAG + "ready");
+                ModuleLog.detail(TAG + "Hooked (parcel + getters + LocationManager + permission + nearby signals)");
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "❌ Install failed: " + t.getMessage());
+                ModuleLog.error(TAG + "Could not turn on location spoofing", t);
             }
         }
     }
@@ -206,7 +207,8 @@ public class LocationSpoofHook {
                 }
             }
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "permission hook failed: " + t);
+            ModuleLog.warn(TAG + "Instagram cannot be told it has location access; spoofing still works once Instagram has real location access: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -272,7 +274,8 @@ public class LocationSpoofHook {
             }
         });
       } catch (Throwable t) {
-        ModuleLog.line(TAG + "nearby-signal hooks failed: " + t);
+        ModuleLog.warn(TAG + "Nearby Wi-Fi, cell and Bluetooth info cannot be hidden, so Instagram may still see your real area: "
+                + t.getClass().getSimpleName() + ": " + t.getMessage());
       }
     }
 
@@ -293,7 +296,8 @@ public class LocationSpoofHook {
             try {
                 XposedBridge.hookMethod(m, hook);
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "nearby-signal hook failed: " + c.getSimpleName() + "." + name + ": " + t);
+                ModuleLog.warn(TAG + "One source of nearby Wi-Fi, cell or Bluetooth info cannot be hidden; the others still are");
+                ModuleLog.detail(TAG + "nearby-signal hook failed: " + c.getSimpleName() + "." + name + ": " + t);
             }
         }
     }

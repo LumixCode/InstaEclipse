@@ -70,7 +70,8 @@ public class StartupTabHook {
             }
         }
         if (hooked == 0) {
-            ModuleLog.line(TAG + "❌ callActivityOnCreate not found");
+            ModuleLog.error(TAG + "Will not work: Android's screen start method was not found");
+            ModuleLog.detail(TAG + "callActivityOnCreate not found");
             return;
         }
         // During onCreate IG puts "is_cold_start_feed"/"is_cold_start_reel_tab" on the launch
@@ -89,7 +90,8 @@ public class StartupTabHook {
                         }
                     });
         } catch (NoSuchMethodException e) {
-            ModuleLog.line(TAG + "Intent.getBooleanExtra missing");
+            ModuleLog.warn(TAG + "Instagram may still open on its default tab after a fresh start");
+            ModuleLog.detail(TAG + "Intent.getBooleanExtra missing");
         }
         // The extras can be read while the tab controller is still null, so the pick is dropped;
         // switch tabs through the controller once the activity first resumes.
@@ -110,7 +112,8 @@ public class StartupTabHook {
             });
         }
         FeatureStatusTracker.setHooked("StartupTab");
-        ModuleLog.line(TAG + "✅ hooked Instrumentation.callActivityOnCreate x" + hooked);
+        ModuleLog.ok(TAG + "ready");
+        ModuleLog.detail(TAG + "hooked Instrumentation.callActivityOnCreate x" + hooked);
     }
 
     /**
@@ -135,17 +138,17 @@ public class StartupTabHook {
                         if (controller == null) continue;
                         m.setAccessible(true);
                         m.invoke(controller, value, null, false);
-                        ModuleLog.line(TAG + "switched to " + tab);
+                        ModuleLog.line(TAG + "Opened on the startup tab: " + tab);
                         return;
                     } catch (IllegalArgumentException notThisEnum) {
                         // enum without that constant: not the tab enum
                     } catch (Throwable t) {
-                        ModuleLog.line(TAG + "switch failed: " + t);
+                        ModuleLog.warn(TAG + "Could not switch to the startup tab: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                         return;
                     }
                 }
             }
         }
-        ModuleLog.line(TAG + "tab controller not found");
+        ModuleLog.warn(TAG + "Could not switch to the startup tab (tab switcher not found in this Instagram version)");
     }
 }

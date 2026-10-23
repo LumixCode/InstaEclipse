@@ -59,7 +59,7 @@ public final class MenuIcons {
         try {
             start();
         } catch (Throwable t) {
-            ModuleLog.line("(IE|MenuIcons) start: " + t);
+            ModuleLog.detail("(IE|MenuIcons) start: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -76,7 +76,7 @@ public final class MenuIcons {
                 try {
                     for (View root : rootViews()) found |= watch(root);
                 } catch (Throwable t) {
-                    ModuleLog.line("(IE|MenuIcons) " + t);
+                    ModuleLog.detail("(IE|MenuIcons) watch: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                 }
                 if (!found && ++tries[0] < 25) MAIN.postDelayed(this, 80);
             }
@@ -89,7 +89,7 @@ public final class MenuIcons {
         try {
             listen(root);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|MenuIcons) listen: " + t);
+            ModuleLog.detail("(IE|MenuIcons) listen: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
         return true;
     }
@@ -136,7 +136,7 @@ public final class MenuIcons {
         try {
             return applyUnsafe(root);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|MenuIcons) apply: " + t);
+            ModuleLog.detail("(IE|MenuIcons) apply: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return NO_MENU;
         }
     }

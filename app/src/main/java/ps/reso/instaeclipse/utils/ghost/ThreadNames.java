@@ -48,7 +48,7 @@ public class ThreadNames {
                 cache.put(k, o.optString(k, ""));
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ThreadNames) load failed: " + t.getMessage());
+            ModuleLog.detail("(IE|ThreadNames) load failed: " + t.getMessage());
         }
         cleanupOnce();
     }
@@ -70,9 +70,9 @@ public class ThreadNames {
             cache.values().removeIf(v -> counts.getOrDefault(v, 0) > 1);
             if (cache.size() != before) persist();
             marker.createNewFile();
-            ModuleLog.line("(IE|ThreadNames) cleanup dropped " + (before - cache.size()) + " ambiguous name(s)");
+            ModuleLog.detail("(IE|ThreadNames) cleanup dropped " + (before - cache.size()) + " ambiguous name(s)");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ThreadNames) cleanup failed: " + t.getMessage());
+            ModuleLog.detail("(IE|ThreadNames) cleanup failed: " + t.getMessage());
         }
     }
 
@@ -85,7 +85,7 @@ public class ThreadNames {
             // temp file + rename: a crash mid-write keeps the previous version intact
             ps.reso.instaeclipse.utils.core.AtomicFiles.write(f, o.toString());
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ThreadNames) persist failed: " + t.getMessage());
+            ModuleLog.detail("(IE|ThreadNames) persist failed: " + t.getMessage());
         }
     }
 
@@ -159,7 +159,7 @@ public class ThreadNames {
             }
             return names.isEmpty() ? null : String.join(", ", names);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ThreadNames) db lookup failed: " + t.getMessage());
+            ModuleLog.detail("(IE|ThreadNames) db lookup failed: " + t.getMessage());
             return null;
         }
     }

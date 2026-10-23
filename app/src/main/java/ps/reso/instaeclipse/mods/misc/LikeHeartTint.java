@@ -184,7 +184,7 @@ final class LikeHeartTint {
                 }
             });
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ touch tracking: " + t);
+            ModuleLog.detail(TAG + "touch tracking: " + t);
         }
     }
 
@@ -197,7 +197,7 @@ final class LikeHeartTint {
             if (renders == null) {
                 renders = likeRenders(bridge, loader);
                 if (renders.isEmpty()) {
-                    ModuleLog.line(TAG + "❌ like buttons not found");
+                    ModuleLog.warn(TAG + "The heart will not turn blue while a like is held: like buttons not found in this Instagram version");
                     return;
                 }
                 DexKitCache.saveMethods(CACHE_KEY, renders);
@@ -222,7 +222,7 @@ final class LikeHeartTint {
             for (Method render : renders) {
                 Field[] path = mediaPath(render.getDeclaringClass());
                 if (path == null) {
-                    ModuleLog.line(TAG + "⚠️ no Media in " + render.getDeclaringClass().getName());
+                    ModuleLog.detail(TAG + "no Media in " + render.getDeclaringClass().getName());
                     continue;
                 }
                 XposedBridge.hookMethod(render, new XC_MethodHook() {
@@ -296,11 +296,13 @@ final class LikeHeartTint {
                     });
                 }
             }
-            ModuleLog.line(TAG + "✅ heart hooked: " + hooked + "/" + renders.size() + " like button(s); animated "
+            ModuleLog.line(TAG + (hooked > 0 ? "✅ Blue heart while a like is held: ready"
+                    : "⚠️ The heart will not turn blue while a like is held: like buttons not supported in this Instagram version"));
+            ModuleLog.detail(TAG + "heart hooked: " + hooked + "/" + renders.size() + " like button(s); animated "
                     + names(animated) + (filled == null ? " (no filled layer)" : " " + filled.getName())
                     + ", images " + names(images) + ", icons " + names(iconMakers));
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ heart: " + t);
+            ModuleLog.warn(TAG + "The heart will not turn blue while a like is held (undo still works)", t);
         }
         installCompose(bridge);
     }
@@ -315,7 +317,7 @@ final class LikeHeartTint {
                 if (md.isMethod()) { ufi = md; break; }
             }
             if (ufi == null) {
-                ModuleLog.line(TAG + "⚠️ Compose like row not found");
+                ModuleLog.detail(TAG + "Compose like row not found");
                 return;
             }
             Method row = ufi.getMethodInstance(loader);
@@ -352,7 +354,8 @@ final class LikeHeartTint {
                 if (spec != null) break;
             }
             if (media == null || spec == null) {
-                ModuleLog.line(TAG + "⚠️ Compose like row: media " + (media != null) + ", icon spec " + (spec != null));
+                ModuleLog.warn(TAG + "In the newer feed layout the heart will not turn blue while a like is held (undo still works)");
+                ModuleLog.detail(TAG + "Compose like row: media " + (media != null) + ", icon spec " + (spec != null));
                 return;
             }
             color.setAccessible(true);
@@ -366,7 +369,8 @@ final class LikeHeartTint {
                         && p.length == 1 && p[0] == Object.class) stateSet = m;
             }
             if (stateSet == null) {
-                ModuleLog.line(TAG + "⚠️ Compose state setter not found");
+                ModuleLog.warn(TAG + "In the newer feed layout the heart will not turn blue while a like is held (undo still works)");
+                ModuleLog.detail(TAG + "Compose state setter not found");
                 return;
             }
             media.setAccessible(true);
@@ -390,14 +394,14 @@ final class LikeHeartTint {
                     JitGuard.tick(param.method);
                     String id = COMPOSING.get();
                     if (id == null || !filledHeart(param.args)) return;
-                    if (seen.getAndIncrement(COMPOSE) == 0) ModuleLog.line(TAG + "heart drawn compose");
+                    if (seen.getAndIncrement(COMPOSE) == 0) ModuleLog.detail(TAG + "heart drawn compose");
                     Object read;
                     synchronized (hearts) {
                         if (!blue.containsKey(id)) return;
                         read = composeStates.get(id);
                         if (read == null) {
                             composeStates.put(id, read = newState());
-                            ModuleLog.line(TAG + "heart blue (compose)");
+                            ModuleLog.probe(TAG + "heart blue (compose)");
                         }
                     }
                     param.args[colorArg] = blueColor;
@@ -405,14 +409,14 @@ final class LikeHeartTint {
                     try {
                         stateGet.invoke(read);
                     } catch (Throwable t) {
-                        ModuleLog.line(TAG + "⚠️ Compose state: " + t);
+                        ModuleLog.detail(TAG + "Compose state: " + t);
                     }
                 }
             });
-            ModuleLog.line(TAG + "✅ Compose heart hooked: " + row.getDeclaringClass().getName() + "." + row.getName()
+            ModuleLog.detail(TAG + "Compose heart hooked: " + row.getDeclaringClass().getName() + "." + row.getName()
                     + ", icon " + spec.getDeclaringClass().getName());
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ Compose heart: " + t);
+            ModuleLog.warn(TAG + "In the newer feed layout the heart will not turn blue while a like is held (undo still works)", t);
         }
     }
 
@@ -591,7 +595,7 @@ final class LikeHeartTint {
     private static void built(String id, Drawable heart, Drawable red, int kind) {
         if (red == null) return;
         if (seen.getAndIncrement(kind) == 0) {
-            ModuleLog.line(TAG + "heart drawn " + KINDS[kind] + " (" + heart.getClass().getName() + ")");
+            ModuleLog.detail(TAG + "heart drawn " + KINDS[kind] + " (" + heart.getClass().getName() + ")");
         }
         LikeHeartTint tint;
         synchronized (hearts) {
@@ -625,7 +629,7 @@ final class LikeHeartTint {
     static LikeHeartTint show(Object media) {
         String id = idOf(media);
         if (id == null) {
-            ModuleLog.line(TAG + "heart: post without id");
+            ModuleLog.detail(TAG + "heart: post without id");
             return null;
         }
         LikeHeartTint tint = new LikeHeartTint(id);
@@ -681,7 +685,7 @@ final class LikeHeartTint {
             red.setColorFilter(BLUE);
             heart.invalidateSelf();
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ heart: " + t);
+            ModuleLog.warn(TAG + "Could not turn the heart blue: " + t);
         }
     }
 
@@ -692,7 +696,7 @@ final class LikeHeartTint {
             red.setColorFilter(original.remove(red));
             heart.invalidateSelf();
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ heart reset: " + t);
+            ModuleLog.warn(TAG + "Could not put the heart's colour back: " + t);
         }
     }
 }

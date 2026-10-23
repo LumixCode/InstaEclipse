@@ -53,7 +53,7 @@ public class ReadReceiptWhitelist {
                 map.put(k, o.optString(k, ""));
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ReadReceipts) load failed: " + t);
+            ModuleLog.warn("(IE|ReadReceipts) Could not read the chats that may send read receipts: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -66,7 +66,7 @@ public class ReadReceiptWhitelist {
             // temp file + rename: a crash mid-write keeps the previous version intact
             ps.reso.instaeclipse.utils.core.AtomicFiles.write(f, o.toString());
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ReadReceipts) save failed: " + t);
+            ModuleLog.error("(IE|ReadReceipts) Could not save the chats that may send read receipts: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 

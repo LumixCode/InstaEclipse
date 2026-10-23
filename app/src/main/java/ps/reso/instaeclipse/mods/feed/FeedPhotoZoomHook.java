@@ -53,7 +53,7 @@ public class FeedPhotoZoomHook {
         try {
             ViewBinding binding = ViewBinding.resolve(classLoader, VIEW_CLASSES);
             if (binding == null) {
-                ModuleLog.line("(IE|PhotoZoom) compatible image wrapper not found");
+                ModuleLog.error("(IE|PhotoZoom) Will not work: the feed image view was not found in this Instagram version");
                 if (FeatureFlags.enablePhotoZoom) FeatureStatusTracker.setBroken("PhotoZoom");
                 return;
             }
@@ -87,20 +87,21 @@ public class FeedPhotoZoomHook {
                                 showZoomOverlay(v.getContext(), snapshot);
                                 return true;
                             } catch (Throwable t) {
-                                ModuleLog.line("(IE|PhotoZoom) ❌ long-press: " + t);
+                                ModuleLog.error("(IE|PhotoZoom) Could not open the zoom view: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                                 return false;
                             }
                         });
                     } catch (Throwable t) {
-                        ModuleLog.line("(IE|PhotoZoom) ❌ attach hook: " + t);
+                        ModuleLog.warn("(IE|PhotoZoom) Could not add zoom to a feed photo: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                     }
                 }
             });
 
             FeatureStatusTracker.setHooked("PhotoZoom");
-            ModuleLog.line("(IE|PhotoZoom) ✅ hook installed on " + binding.attach.getDeclaringClass().getName());
+            ModuleLog.ok("(IE|PhotoZoom) ready");
+            ModuleLog.detail("(IE|PhotoZoom) hook installed on " + binding.attach.getDeclaringClass().getName());
         } catch (Throwable t) {
-            ModuleLog.line("(IE|PhotoZoom) ❌ install: " + t);
+            ModuleLog.error("(IE|PhotoZoom) Will not work: setup failed", t);
             if (FeatureFlags.enablePhotoZoom) FeatureStatusTracker.setBroken("PhotoZoom");
         }
     }
@@ -187,7 +188,7 @@ public class FeedPhotoZoomHook {
                 }
                 dialog.show();
             } catch (Throwable t) {
-                ModuleLog.line("(IE|PhotoZoom) ❌ overlay: " + t);
+                ModuleLog.error("(IE|PhotoZoom) Could not open the zoom view: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             }
         });
     }

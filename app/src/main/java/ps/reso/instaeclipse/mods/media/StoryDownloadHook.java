@@ -150,7 +150,7 @@ public class StoryDownloadHook {
         }
         final List<Object> copy = new ArrayList<>(items);
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_highlight_downloading, copy.size()), Toast.LENGTH_LONG).show();
-        ModuleLog.line("(IE|Highlight) downloading " + copy.size() + " items");
+        ModuleLog.line("(IE|Highlight) Downloading " + copy.size() + " highlight items");
         new Thread(() -> {
             int ok = 0;
             for (Object item : copy) {
@@ -166,7 +166,7 @@ public class StoryDownloadHook {
                     ok++;
                     Thread.sleep(400);
                 } catch (Throwable t) {
-                    ModuleLog.line("(IE|Highlight) item: " + t);
+                    ModuleLog.warn("(IE|Highlight) Skipped one highlight item that could not be downloaded: " + t);
                 }
             }
             final int done = ok;
@@ -182,9 +182,11 @@ public class StoryDownloadHook {
                 reelClass = classLoader.loadClass(md.getClassName());
                 break;
             }
-            ModuleLog.line("(IE|Highlight) reel class " + (reelClass != null ? reelClass.getName() : "not found"));
+            if (reelClass == null)
+                ModuleLog.warn("(IE|Highlight) Downloading a whole highlight (Download all) is not available in this Instagram version; single stories still download");
+            ModuleLog.detail("(IE|Highlight) reel class " + (reelClass != null ? reelClass.getName() : "not found"));
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Highlight) " + t);
+            ModuleLog.warn("(IE|Highlight) Downloading a whole highlight (Download all) is not available; single stories still download: " + t);
         }
         try {
             videoVersionIntfClass = classLoader.loadClass("com.instagram.model.mediasize.VideoVersionIntf");
@@ -213,7 +215,7 @@ public class StoryDownloadHook {
             MethodData builder = null;
             for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("HighlightsTrayDialogHelper").paramCount(4)))) { builder = md; break; }
-            if (builder == null) { ModuleLog.line("(IE|HighlightTray) builder not found"); return; }
+            if (builder == null) { ModuleLog.warn("(IE|HighlightTray) Download all is not available in the highlight menu in this Instagram version"); return; }
             Method build = builder.getMethodInstance(cl);
             final Class<?> helper = build.getDeclaringClass();
             Method addRow = null, legacyItems = null, popupSet = null, rowFactory = null;
@@ -251,7 +253,7 @@ public class StoryDownloadHook {
                         try {
                             Context c = AndroidAppHelper.currentApplication();
                             add.invoke(p.thisObject, I18n.t(c, R.string.ig_highlight_download_all), (View.OnClickListener) v -> trayDownload(h));
-                        } catch (Throwable t) { ModuleLog.line("(IE|HighlightTray) legacy row: " + t); }
+                        } catch (Throwable t) { ModuleLog.warn("(IE|HighlightTray) Could not add Download all to this highlight menu: " + t); }
                     }
                 });
             }
@@ -275,15 +277,19 @@ public class StoryDownloadHook {
                             @SuppressWarnings("unchecked") List<Object> list = (List<Object>) p.args[0];
                             try { list.addAll(rows); }
                             catch (UnsupportedOperationException e) { List<Object> copy = new ArrayList<>(list); copy.addAll(rows); p.args[0] = copy; }
-                        } catch (Throwable t) { ModuleLog.line("(IE|HighlightTray) popup row: " + t); }
+                        } catch (Throwable t) { ModuleLog.warn("(IE|HighlightTray) Could not add Download all to this highlight menu: " + t); }
                     }
                 });
             }
             findReelLoader(bridge, cl);
-            ModuleLog.line("(IE|HighlightTray) ✅ " + helper.getName() + " legacy=" + (addRow != null && legacyItems != null)
+            if ((addRow != null && legacyItems != null) || (popupSet != null && rowFactory != null))
+                ModuleLog.ok("(IE|HighlightTray) ready");
+            else
+                ModuleLog.warn("(IE|HighlightTray) Download all is not available in the highlight menu in this Instagram version");
+            ModuleLog.detail("(IE|HighlightTray) " + helper.getName() + " legacy=" + (addRow != null && legacyItems != null)
                     + " popup=" + (popupSet != null && rowFactory != null) + " loader=" + (loaderGetter != null && loaderFetch != null));
         } catch (Throwable t) {
-            ModuleLog.line("(IE|HighlightTray) " + t);
+            ModuleLog.warn("(IE|HighlightTray) Download all is not available in the highlight menu: " + t);
         }
     }
 
@@ -293,9 +299,9 @@ public class StoryDownloadHook {
         Object session = readFieldByTypeName(helper, "com.instagram.common.session.UserSession");
         Context ctx = (Context) readFieldByTypeName(helper, "android.app.Activity");
         if (ctx == null) ctx = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
-        if (ctx == null || reel == null) { ModuleLog.line("(IE|HighlightTray) no reel/context"); return; }
+        if (ctx == null || reel == null) { ModuleLog.error("(IE|HighlightTray) Could not download the highlight: it was not found on screen"); return; }
         List<?> items = highlightItemsWith(reel, session);
-        ModuleLog.line("(IE|HighlightTray) items loaded: " + (items != null ? items.size() : -1));
+        ModuleLog.detail("(IE|HighlightTray) items loaded: " + (items != null ? items.size() : -1));
         if (items != null && !items.isEmpty()) { downloadHighlightItems(ctx, items); return; }
         loadThenDownload(ctx, reel, session); // highlight never opened: only its cover is known
     }
@@ -334,7 +340,7 @@ public class StoryDownloadHook {
                     if (p.length == 2 && p[0] == loaderRegister.getParameterTypes()[0] && p[1] == String.class) loaderUnregister = m;
                 }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|HighlightTray) loader: " + t);
+            ModuleLog.warn("(IE|HighlightTray) Highlights that were never opened cannot be downloaded with Download all: " + t);
         }
     }
 
@@ -370,7 +376,8 @@ public class StoryDownloadHook {
                     if (!pendingLoads.remove(self[0])) return; // fire once
                     try { if (loaderUnregister != null) loaderUnregister.invoke(loader, self[0], id); } catch (Throwable ignored) {}
                     List<?> items = success ? highlightItemsWith(reel, session) : null;
-                    ModuleLog.line("(IE|HighlightTray) load " + (success ? "ok" : "failed") + ": " + (items != null ? items.size() : -1) + " items");
+                    if (!success) ModuleLog.error("(IE|HighlightTray) Could not download the highlight: Instagram could not load it");
+                    ModuleLog.detail("(IE|HighlightTray) load " + (success ? "ok" : "failed") + ": " + (items != null ? items.size() : -1) + " items");
                     downloadHighlightItems(ctx, items);
                 });
                 return null;
@@ -384,12 +391,12 @@ public class StoryDownloadHook {
             Object why;
             try { why = Enum.valueOf(reason, "PROFILE_HIGHLIGHTS_TRAY"); } catch (Throwable e) { why = Enum.valueOf(reason, "ON_TAP"); }
             loaderFetch.invoke(loader, why, id, "profile", null);
-            ModuleLog.line("(IE|HighlightTray) fetching " + id);
+            ModuleLog.detail("(IE|HighlightTray) fetching " + id);
             mainHandler.postDelayed(() -> { // give up after 20 s
                 if (pendingLoads.remove(cb)) ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_no_media_for_post), Toast.LENGTH_SHORT).show();
             }, 20000);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|HighlightTray) load: " + t);
+            ModuleLog.error("(IE|HighlightTray) Could not download the highlight: " + t);
         }
     }
 
@@ -412,7 +419,7 @@ public class StoryDownloadHook {
                     break;
                 } catch (Throwable ignored) {}
             }
-        } catch (Throwable t) { ModuleLog.line("(IE|StoryCache) expiring getter: " + t); }
+        } catch (Throwable t) { ModuleLog.detail("(IE|StoryCache) expiring getter: " + t); }
     }
 
     /**
@@ -438,8 +445,10 @@ public class StoryDownloadHook {
                 try { XposedBridge.hookMethod(md.getMethodInstance(cl), capture); n++; } catch (Throwable ignored) {}
             }
             if (n > 0 && FeatureFlags.cacheStories) FeatureStatusTracker.setHooked("CacheStories");
-            ModuleLog.line("(IE|StoryCache) capture hook: " + n + " method(s)");
-        } catch (Throwable t) { ModuleLog.line("(IE|StoryCache) ⚠️ capture hook: " + t.getMessage()); }
+            if (n > 0) ModuleLog.ok("(IE|StoryCache) ready");
+            else ModuleLog.error("(IE|StoryCache) Could not turn on the story cache: the story viewer was not found in this Instagram version");
+            ModuleLog.detail("(IE|StoryCache) capture hook: " + n + " method(s)");
+        } catch (Throwable t) { ModuleLog.error("(IE|StoryCache) Could not turn on the story cache: " + t.getClass().getSimpleName() + ": " + t.getMessage()); }
     }
 
     private void captureFromReelItem(Object reelItem) {
@@ -471,7 +480,7 @@ public class StoryDownloadHook {
             final String fid = id, fauthor = author; final long fexp = expiring;
             FeedVideoDownloadHook.executor.submit(() ->
                     ps.reso.instaeclipse.utils.media.StoryCache.capture(fid, fauthor, url, video, fexp));
-        } catch (Throwable t) { ModuleLog.line("(IE|StoryCache) captureFromReelItem: " + t); }
+        } catch (Throwable t) { ModuleLog.detail("(IE|StoryCache) captureFromReelItem: " + t); }
     }
 
     // ── Hook 1: inject "Download" into the story options button list ──────────
@@ -501,7 +510,7 @@ public class StoryDownloadHook {
                 try { out.add(md.getMethodInstance(cl)); } catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Story) ❌ click dispatchers: " + t);
+            ModuleLog.detail("(IE|Story) click dispatchers: " + t);
         }
         if (!out.isEmpty()) ps.reso.instaeclipse.utils.core.DexKitCache.saveMethods("StoryClickDispatchers", out);
         return out;
@@ -543,7 +552,7 @@ public class StoryDownloadHook {
                     .matcher(MethodMatcher.create()
                             .usingStrings("[INTERNAL] Pause Playback")));
             if (methods.isEmpty()) {
-                ModuleLog.line("(IE|Story) ❌ Button builder method not found");
+                ModuleLog.error("(IE|Story) Download will not appear in the story menu: the menu was not found in this Instagram version");
                 return;
             }
 
@@ -584,10 +593,10 @@ public class StoryDownloadHook {
                     hooked++;
                 } catch (Throwable ignored) {}
             }
-            ModuleLog.line("(IE|Story) button injector hooked " + hooked + " builder(s)");
-            if (hooked == 0) ModuleLog.line("(IE|Story) ❌ No CharSequence[] return type candidate found");
+            ModuleLog.detail("(IE|Story) button injector hooked " + hooked + " builder(s)");
+            if (hooked == 0) ModuleLog.error("(IE|Story) Download will not appear in the story menu: the menu's option list was not found in this Instagram version");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Story) ❌ Button builder DexKit: " + t);
+            ModuleLog.error("(IE|Story) Download will not appear in the story menu", t);
         }
     }
 
@@ -625,7 +634,8 @@ public class StoryDownloadHook {
                 }
             }
             if (anchors.size() != 1) {
-                ModuleLog.line("(IE|Story) Highlight menu anchor unavailable or ambiguous");
+                ModuleLog.warn("(IE|Story) Download is not available in the highlight menu in this Instagram version; stories still have it");
+                ModuleLog.detail("(IE|Story) Highlight menu anchor unavailable or ambiguous (" + anchors.size() + " matches)");
                 return;
             }
             MethodData anchor = anchors.get(0);
@@ -649,9 +659,10 @@ public class StoryDownloadHook {
                 XposedBridge.hookMethod(builder, injector);
                 hooked++;
             }
-            ModuleLog.line("(IE|Story) Highlight injector hooked " + hooked + " builder(s)");
+            ModuleLog.detail("(IE|Story) Highlight injector hooked " + hooked + " builder(s)");
         } catch (Throwable error) {
-            ModuleLog.line("(IE|Story) Highlight menu binding failed: " + error.getClass().getSimpleName());
+            ModuleLog.warn("(IE|Story) Download is not available in the highlight menu; stories still have it: "
+                    + error.getClass().getSimpleName() + ": " + error.getMessage());
         }
     }
 
@@ -671,11 +682,11 @@ public class StoryDownloadHook {
                             .returnType("void")
                             .usingStrings("[INTERNAL] Pause Playback")));
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Story) ❌ Click handler DexKit: " + t);
+            ModuleLog.error("(IE|Story) Tapping Download in the story menu will not work", t);
             return;
         }
         if (methods == null || methods.isEmpty()) {
-            ModuleLog.line("(IE|Story) ❌ Click handler not found");
+            ModuleLog.error("(IE|Story) Tapping Download in the story menu will not work: the menu's tap handler was not found in this Instagram version");
             return;
         }
 
@@ -719,7 +730,7 @@ public class StoryDownloadHook {
                                 if (args[i] instanceof CharSequence) { args[i] = "[INTERNAL] Resume Playback"; break; }
                             ps.reso.instaeclipse.xposedcompat.XposedBridge.invokeOriginalMethod(method, self, args);
                         } catch (Throwable t) {
-                            ModuleLog.line("(IE|Story) resume after speed: " + t);
+                            ModuleLog.warn("(IE|Story) Could not resume the story after choosing a speed: " + t);
                         }
                     };
                     if (ctx != null) PlaybackSpeedHook.showChooser(ctx, resume);
@@ -742,7 +753,7 @@ public class StoryDownloadHook {
                 //    SEPARATE args, so search 'this' AND every argument, not just the holder.
                 Context ctx = findContextAcrossParam(param, effectiveHolder);
                 if (ctx == null) {
-                    ModuleLog.line("(IE|Story) ❌ Context not found");
+                    ModuleLog.error("(IE|Story) Could not download the story: the screen was not found");
                     return;
                 }
 
@@ -766,10 +777,11 @@ public class StoryDownloadHook {
             } catch (Throwable ignored) {}
         }
         if (hooked == 0) {
-            ModuleLog.line("(IE|Story) ❌ no click dispatcher hooked");
+            ModuleLog.error("(IE|Story) Tapping Download in the story menu will not work: the menu's tap handler could not be changed");
             return;
         }
-        ModuleLog.line("(IE|Story) click handler hooked " + hooked + " dispatcher(s)");
+        ModuleLog.ok("(IE|Story) ready");
+        ModuleLog.detail("(IE|Story) click handler hooked " + hooked + " dispatcher(s)");
         FeatureStatusTracker.setHooked("StoryDownload");
     }
 
@@ -867,7 +879,7 @@ public class StoryDownloadHook {
         if (holder == null) return null;
         try {
             Object reelItem = direct ? holder : readFieldByTypeName(holder, "com.instagram.model.reels.ReelItem");
-            ModuleLog.line("(IE|Story) reelItem=" +
+            ModuleLog.probe("(IE|Story) reelItem=" +
                     (reelItem != null ? reelItem.getClass().getName() : "null"));
 
             Object target = reelItem != null ? reelItem : holder;
@@ -908,11 +920,11 @@ public class StoryDownloadHook {
                 List<CandidateInfo> candidates = new ArrayList<>();
                 collectImageCandidates(modelTarget, candidates,
                         Collections.newSetFromMap(new IdentityHashMap<>()), 0);
-                ModuleLog.line("(IE|Story) imageCandidates=" + candidates.size());
+                ModuleLog.probe("(IE|Story) imageCandidates=" + candidates.size());
                 if (!candidates.isEmpty()) {
                     candidates.sort((a, b) -> Integer.compare(b.area, a.area));
                     imageUrl = candidates.get(0).url;
-                    ModuleLog.line("(IE|Story) bestCandidate area=" + candidates.get(0).area);
+                    ModuleLog.probe("(IE|Story) bestCandidate area=" + candidates.get(0).area);
                 }
             }
 
@@ -937,7 +949,7 @@ public class StoryDownloadHook {
             return new StoryMediaOptions(imageUrl, videoUrl, modelSaysVideo);
 
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Story) extractStoryMediaOptions error: " + t);
+            ModuleLog.warn("(IE|Story) Could not read one story item: " + t);
         }
         return null;
     }
@@ -960,7 +972,7 @@ public class StoryDownloadHook {
         // Fallback for builds without a single own Media field: invoke the getters.
         if (!loggedMediaProbe) {
             loggedMediaProbe = true;
-            ModuleLog.line("(IE|Story) ⚠️ no own Media field on " + obj.getClass().getName()
+            ModuleLog.detail("(IE|Story) no own Media field on " + obj.getClass().getName()
                     + ", probing its getters");
         }
         Class<?> cls = obj.getClass();
@@ -1311,10 +1323,10 @@ public class StoryDownloadHook {
      */
     private static String extractUsernameFromReelItemHolder(Object holder) {
         if (holder == null) {
-            ModuleLog.line("(IE|Story|Username) holder is null");
+            ModuleLog.probe("(IE|Story|Username) holder is null");
             return null;
         }
-        ModuleLog.line("(IE|Story|Username) searching in holder=" + holder.getClass().getName());
+        ModuleLog.probe("(IE|Story|Username) searching in holder=" + holder.getClass().getName());
         try {
             // Step 1: find the ReelItem field on the holder
             Object reelItem = null;
@@ -1327,7 +1339,7 @@ public class StoryDownloadHook {
                         if (val != null && val.getClass().getName()
                                 .equals("com.instagram.model.reels.ReelItem")) {
                             reelItem = val;
-                            ModuleLog.line("(IE|Story|Username) found ReelItem in field="
+                            ModuleLog.probe("(IE|Story|Username) found ReelItem in field="
                                     + f.getName() + " on " + cls.getName());
                             break;
                         }
@@ -1339,10 +1351,10 @@ public class StoryDownloadHook {
             if (reelItem == null && holder.getClass().getName()
                     .equals("com.instagram.model.reels.ReelItem")) {
                 reelItem = holder;
-                ModuleLog.line("(IE|Story|Username) holder is itself a ReelItem");
+                ModuleLog.probe("(IE|Story|Username) holder is itself a ReelItem");
             }
             if (reelItem == null) {
-                ModuleLog.line("(IE|Story|Username) ❌ ReelItem not found in holder");
+                ModuleLog.probe("(IE|Story|Username) ReelItem not found in holder");
                 return null;
             }
 
@@ -1364,7 +1376,7 @@ public class StoryDownloadHook {
                     if (candidateClass.equals("com.instagram.user.model.User")) {
                         String username = UserUtils.callUsernameGetter(candidate);
                         if (username != null) {
-                            ModuleLog.line("(IE|Story|Username) reelItem." + m.getName() + "() [User] → " + username);
+                            ModuleLog.probe("(IE|Story|Username) reelItem." + m.getName() + "() [User] → " + username);
                             return username;
                         }
                         continue;
@@ -1374,7 +1386,7 @@ public class StoryDownloadHook {
                     if (candidateClass.equals("com.instagram.feed.media.Media")) {
                         String username = FeedVideoDownloadHook.extractUsernameFromMediaObject(candidate);
                         if (username != null) {
-                            ModuleLog.line("(IE|Story|Username) reelItem." + m.getName()
+                            ModuleLog.probe("(IE|Story|Username) reelItem." + m.getName()
                                     + "() [Media] → " + username);
                             return username;
                         }
@@ -1383,9 +1395,9 @@ public class StoryDownloadHook {
                 } catch (Throwable ignored) {}
             }
 
-            ModuleLog.line("(IE|Story|Username) ❌ username not found on ReelItem methods");
+            ModuleLog.probe("(IE|Story|Username) username not found on ReelItem methods");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Story|Username) ❌ Exception: " + t);
+            ModuleLog.detail("(IE|Story|Username) username lookup failed: " + t);
         }
         return null;
     }
@@ -1456,7 +1468,7 @@ public class StoryDownloadHook {
             dlg.secondary(ctx.getString(android.R.string.cancel), null);
             dlg.show();
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Story) format dialog failed: " + t);
+            ModuleLog.error("(IE|Story) Could not show the story download choices: " + t);
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_download_failed,
                     t.getMessage()), Toast.LENGTH_SHORT).show();
         }
@@ -1465,7 +1477,7 @@ public class StoryDownloadHook {
     private void startDownload(Context ctx, String url, boolean isVideo,
                                String username, String mediaId) {
         String fn = FeedVideoDownloadHook.buildFilename(username, "story", mediaId, isVideo);
-        ModuleLog.line("(IE|Story|DL) username=" + username + " mediaId=" + mediaId
+        ModuleLog.detail("(IE|Story|DL) username=" + username + " mediaId=" + mediaId
                 + " file=" + fn);
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, isVideo ? I18n.t(ctx, R.string.ig_toast_downloading_story_video) : I18n.t(ctx, R.string.ig_toast_downloading_story_photo), Toast.LENGTH_SHORT).show();
         mainHandler.post(() -> new Thread(() -> {

@@ -102,7 +102,7 @@ public final class BulkUnsend {
 
     public static void install(DexKitBridge bridge, ClassLoader cl, Class<?> message) {
         messageClass = message;
-        if (message == null) { ModuleLog.line(TAG + "❌ no message class"); return; }
+        if (message == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: not supported by this Instagram version (no message class)"); return; }
         try {
             Class<?> dtk = cl.loadClass(DTK);
             for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
@@ -125,7 +125,7 @@ public final class BulkUnsend {
                 }
                 if (unsendMethod != null) break;
             }
-            if (unsendMethod == null) { ModuleLog.line(TAG + "❌ unsend method not found"); return; }
+            if (unsendMethod == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: not supported by this Instagram version (unsend method not found)"); return; }
             unsendMethod.setAccessible(true);
             Class<?> refBase = unsendMethod.getParameterTypes()[0];
             for (ClassData cd : DexKitQueryCache.findClass(bridge, FindClass.create().matcher(ClassMatcher.create()
@@ -137,13 +137,14 @@ public final class BulkUnsend {
                 }
                 if (refCtor != null) break;
             }
-            if (refCtor == null) { ModuleLog.line(TAG + "❌ message ref not found"); return; }
+            if (refCtor == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: not supported by this Instagram version (message reference not found)"); return; }
             refCtor.setAccessible(true);
             FeatureStatusTracker.setHooked("BulkUnsend");
-            ModuleLog.line(TAG + "✅ unsend=" + unsendMethod.getDeclaringClass().getName() + "." + unsendMethod.getName()
+            ModuleLog.ok(TAG + "ready");
+            ModuleLog.detail(TAG + "unsend=" + unsendMethod.getDeclaringClass().getName() + "." + unsendMethod.getName()
                     + " ref=" + refCtor.getDeclaringClass().getName());
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ install: " + t);
+            ModuleLog.error(TAG + "Could not turn on bulk unsend", t);
         }
     }
 
@@ -276,18 +277,19 @@ public final class BulkUnsend {
         if (active != null) active.exit();
         if (!ready() || lastCache == null) { toast(act, I18n.t(act, R.string.ig_bulk_unsend_unavailable)); return; }
         Ctx c;
-        try { c = resolve(lastCache); } catch (Throwable t) { c = null; ModuleLog.line(TAG + "⚠️ resolve: " + t); }
+        try { c = resolve(lastCache); } catch (Throwable t) { c = null; ModuleLog.detail(TAG + "resolve failed: " + t); }
         @SuppressLint("DiscouragedApi")
         int listId = act.getResources().getIdentifier("message_list", "id", act.getPackageName());
         View list = listId != 0 ? act.getWindow().getDecorView().findViewById(listId) : null;
         if (c == null || c.sender == null || !(list instanceof ViewGroup rv) || !list.isShown()) {
-            ModuleLog.line(TAG + "⚠️ resolve: sender=" + (c != null && c.sender != null) + " list=" + (list != null));
+            ModuleLog.warn(TAG + "Could not start selecting messages: this chat is not ready yet");
+            ModuleLog.detail(TAG + "resolve: sender=" + (c != null && c.sender != null) + " list=" + (list != null));
             toast(act, I18n.t(act, R.string.ig_bulk_unsend_unavailable));
             return;
         }
         String me = c.session != null ? userId(c.session) : null;
         active = new Selection(act, rv, c, me, pressed);
-        ModuleLog.line(TAG + "selection mode: me=" + (me != null) + " key=" + (c.threadKey != null));
+        ModuleLog.detail(TAG + "selection mode: me=" + (me != null) + " key=" + (c.threadKey != null));
     }
 
     private static final class Selection {
@@ -524,20 +526,20 @@ public final class BulkUnsend {
                 try {
                     Object key = threadKeyOf(m);
                     if (key == null) key = c.threadKey;
-                    if (key == null) { ModuleLog.line(TAG + "⚠️ no thread key"); continue; }
+                    if (key == null) { ModuleLog.detail(TAG + "skipped a message: no thread key"); continue; }
                     rememberIds(m, key);
                     Object ref = refCtor.newInstance(m, key);
                     Object future = unsendMethod.invoke(c.sender, ref, key);
                     Object r = future instanceof java.util.concurrent.Future<?> f ? f.get(10, java.util.concurrent.TimeUnit.SECONDS) : future;
-                    ModuleLog.line(TAG + "unsend → " + r + " (key from " + (threadKeyOf(m) != null ? "message" : "thread") + ")");
+                    ModuleLog.detail(TAG + "unsend → " + r + " (key from " + (threadKeyOf(m) != null ? "message" : "thread") + ")");
                     ok++;
                     Thread.sleep(250);
                 } catch (Throwable t) {
-                    ModuleLog.line(TAG + "⚠️ unsend: " + t + " / " + t.getCause());
+                    ModuleLog.detail(TAG + "unsend failed: " + t + " / " + t.getCause());
                 }
             }
             final int done = ok;
-            ModuleLog.line(TAG + "✅ unsent " + done + "/" + msgs.size());
+            ModuleLog.line(TAG + (done == msgs.size() ? "" : done == 0 ? "❌ " : "⚠️ ") + "Unsent " + done + " of " + msgs.size() + " messages");
             main.post(() -> toast(act, I18n.t(act, R.string.ig_bulk_unsend_done, done)));
         }, "IE-BulkUnsend").start();
     }

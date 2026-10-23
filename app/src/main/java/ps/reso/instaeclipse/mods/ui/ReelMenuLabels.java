@@ -57,19 +57,22 @@ public final class ReelMenuLabels {
             Object[] values = (Object[]) mediaOptionEnumClass.getMethod("values").invoke(null);
             for (Object v : values) if (v.toString().equals("COPY_LINK")) copyLinkOptionForLabels = v;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ReelLabels) ❌ MediaOption$Option: " + t);
+            ModuleLog.warn("(IE|ReelLabels) The rows InstaEclipse adds to the reel menu may show the wrong names: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
             return;
         }
         Method resolver = labelResolver(bridge, classLoader);
         if (resolver == null) {
-            ModuleLog.line("(IE|ReelLabels) ❌ reel label resolver not found");
+            ModuleLog.warn("(IE|ReelLabels) The rows InstaEclipse adds to the reel menu may show the wrong names (not found in this Instagram version)");
+            ModuleLog.detail("(IE|ReelLabels) reel label resolver not found");
             return;
         }
         hookReelLabelResolver(resolver);
         try {
             installReelLabelOverrideHook(bridge, classLoader, resolver);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ReelLabels) ❌ installReelLabelOverrideHook: " + t);
+            ModuleLog.warn("(IE|ReelLabels) The rows InstaEclipse adds to the reel menu may show the wrong names: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -85,7 +88,7 @@ public final class ReelMenuLabels {
             DexKitCache.saveMethod("ReelLabelResolver", resolver);
             return resolver;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ReelLabels) ⚠️ reel label resolver: " + t);
+            ModuleLog.detail("(IE|ReelLabels) reel label resolver lookup failed: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return null;
         }
     }
@@ -106,7 +109,8 @@ public final class ReelMenuLabels {
                 }
             });
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ReelLabels) ⚠️ reel label resolver hook: " + t);
+            ModuleLog.warn("(IE|ReelLabels) The rows InstaEclipse adds to the reel menu may show the wrong names: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -119,7 +123,8 @@ public final class ReelMenuLabels {
                     try { m.setAccessible(true); XposedBridge.hookMethod(m, BUILDER_LABEL); }
                     catch (Throwable ignored) {}
                 }
-                ModuleLog.line("(IE|ReelLabels) ✅ reel label override (cached), "
+                ModuleLog.ok("(IE|ReelLabels) ready");
+                ModuleLog.detail("(IE|ReelLabels) reel label override (cached), "
                         + cached.size() + " builder(s)");
                 return;
             }
@@ -162,15 +167,17 @@ public final class ReelMenuLabels {
                     bm.setAccessible(true);
                     XposedBridge.hookMethod(bm, BUILDER_LABEL);
                     hooked.add(bm);
-                    ModuleLog.line("(IE|ReelLabels) ✅ reel label override on "
+                    ModuleLog.detail("(IE|ReelLabels) reel label override on "
                             + bm.getDeclaringClass().getName() + "." + bm.getName());
                 } catch (Throwable ignored) {}
             }
         }
 
         if (hooked.isEmpty()) {
-            ModuleLog.line("(IE|ReelLabels) ❌ no reel row-builder methods found");
+            ModuleLog.warn("(IE|ReelLabels) The rows InstaEclipse adds to the reel menu may show the wrong names (not found in this Instagram version)");
+            ModuleLog.detail("(IE|ReelLabels) no reel row-builder methods found");
         } else {
+            ModuleLog.ok("(IE|ReelLabels) ready");
             DexKitCache.saveMethods("ReelRowBuilders", hooked);
         }
     }
@@ -244,7 +251,7 @@ public final class ReelMenuLabels {
                 args[titleIdx] = I18n.t(ctx, label);
                 MenuIcons.fixSoon();
             } catch (Throwable t) {
-                ModuleLog.line("(IE|ReelLabels) ❌ reel label override (builder): " + t);
+                ModuleLog.warn("(IE|ReelLabels) Could not rename a row in the reel menu: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             }
         }
     };

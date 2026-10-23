@@ -142,7 +142,7 @@ public class Module {
                 hookInstagram(lpparam);
 
             } catch (Exception e) {
-                ModuleLog.line("(InstaEclipse): Failed to initialize DexKitBridge for " + lpparam.packageName + ": " + e.getMessage());
+                ModuleLog.error("(InstaEclipse): Could not start in " + lpparam.packageName + ", so no feature will work", e);
             }
         }
     }
@@ -208,7 +208,7 @@ public class Module {
                                 : moduleSourceDir + "|" + new java.io.File(moduleSourceDir).length();
                         DexKitCache.init(context, vc + "|" + module);
                     } catch (Throwable e) {
-                        ModuleLog.line("(DexKitCache) ❌ init failed: " + e.getMessage());
+                        ModuleLog.warn("(DexKitCache) Could not read the saved lookups, so this start takes longer: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                     }
                 }
 
@@ -275,13 +275,13 @@ public class Module {
                     try {
                         UIHookManager.registerConfigImportReceiver(context);
                     } catch (Throwable e) {
-                        ModuleLog.line("(InstaEclipse | ImportReceiver): ❌ " + e.getMessage());
+                        ModuleLog.error("(InstaEclipse | ImportReceiver): Importing a developer config from the InstaEclipse app will not work", e);
                     }
                     try {
                         UIHookManager.registerSettingsRestoreReceiver(context);
                         ps.reso.instaeclipse.mods.media.DataBackup.registerRestoreReceiver(context);
                     } catch (Throwable e) {
-                        ModuleLog.line("(InstaEclipse | RestoreReceiver): ❌ " + e.getMessage());
+                        ModuleLog.error("(InstaEclipse | RestoreReceiver): Restoring settings or a backup from the InstaEclipse app will not work", e);
                     }
                     final Runnable installFeatureHooks = () -> {
                     UIHookManager instagramUI = new UIHookManager();
@@ -291,7 +291,7 @@ public class Module {
                     try {
                         if (!skip("ReelViewerHook")) new ps.reso.instaeclipse.mods.reels.ReelViewerHook().install(dexKitBridge, hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | ReelViewer): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | ReelViewer): Could not start, so this feature will not work", t);
                     }
 
                     IGNetworkInterceptor interceptor = new IGNetworkInterceptor();
@@ -301,8 +301,8 @@ public class Module {
                     // Developer Options
                     try {
                         if (!skip("DevOptionsUnlockHook")) new DevOptionsUnlockHook().handleDevOptions(dexKitBridge);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | DevOptions): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | DevOptions): Could not start, so this feature will not work", t);
                     }
 
                     // Ghost Mode
@@ -310,50 +310,50 @@ public class Module {
                         if (!skip("GhostDMSeenHook")) new GhostDMSeenHook().handleSeenBlock(dexKitBridge); // DM Seen
                         if (!skip("GhostDMMarkAsReadHook")) new GhostDMMarkAsReadHook(moduleSourceDir).install(lpparam.classLoader); // Mark as Read Button
                         if (!skip("GhostChannelMarkAsReadHook")) new GhostChannelMarkAsReadHook().install(lpparam.classLoader); // Channel Mark as Read Button
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | GhostSeen): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | GhostSeen): Could not start, so this feature will not work", t);
                     }
 
                     try {
                         if (!skip("GhostTypingIndicatorHook")) new GhostTypingIndicatorHook().handleTypingBlock(dexKitBridge); // DM Typing
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | GhostTyping): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | GhostTyping): Could not start, so this feature will not work", t);
                     }
 
                     try {
                         if (!skip("GhostScreenshotDetectionHook")) new GhostScreenshotDetectionHook().handleScreenshotBlock(dexKitBridge); // Screenshot
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | GhostScreenshot): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | GhostScreenshot): Could not start, so this feature will not work", t);
                     }
 
                     try {
                         if (!skip("ScreenshotPermissionHook")) new ScreenshotPermissionHook().install(lpparam.classLoader); // Allow Screenshots
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | ScreenshotPermission): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | ScreenshotPermission): Could not start, so this feature will not work", t);
                     }
 
                     try {
                         if (!skip("GhostViewOnceHook")) new GhostViewOnceHook().handleViewOnceBlock(dexKitBridge); // View Once
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | GhostViewOnce): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | GhostViewOnce): Could not start, so this feature will not work", t);
                     }
 
                     try {
                         if (!skip("GhostStorySeenHook")) new GhostStorySeenHook().handleStorySeenBlock(dexKitBridge); // Story Seen
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | GhostStorySeen): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | GhostStorySeen): Could not start, so this feature will not work", t);
                     }
 
                     try {
                         if (!skip("KeepUnsentMessagesHook")) new KeepUnsentMessagesHook().install(dexKitBridge, lpparam.classLoader); // Keep Unsent
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | KeepUnsent): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | KeepUnsent): Could not start, so this feature will not work", t);
                     }
 
                     try {
                         if (!skip("UnsentThreadButtonHook")) new ps.reso.instaeclipse.mods.ghost.UnsentThreadButtonHook().install(lpparam.classLoader); // per-thread unsent button
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | UnsentBtn): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | UnsentBtn): Could not start, so this feature will not work", t);
                     }
 
                     try {
@@ -364,141 +364,141 @@ public class Module {
 
                     try {
                         if (!skip("CustomFontHook")) new ps.reso.instaeclipse.mods.ui.CustomFontHook().install(lpparam.classLoader); // Custom UI font
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | CustomFont): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | CustomFont): Could not start, so this feature will not work", t);
                     }
 
                     try {
                         ps.reso.instaeclipse.mods.ui.RemoveMetaAIHook metaAi = new ps.reso.instaeclipse.mods.ui.RemoveMetaAIHook();
                         if (!skip("metaAi")) metaAi.install(lpparam.classLoader);              // composer/search XML layouts
                         if (!skip("metaAi")) metaAi.installReels(dexKitBridge, lpparam.classLoader); // reels Litho unit (#179)
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | RemoveMetaAI): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | RemoveMetaAI): Could not start, so this feature will not work", t);
                     }
 
                     // Disable Repost (feed + reels) — UI/action level; network drop is ineffective
                     try {
                         if (!skip("DisableRepostHook")) new ps.reso.instaeclipse.mods.ui.DisableRepostHook().install(context, dexKitBridge, lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | DisableRepost): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | DisableRepost): Could not start, so this feature will not work", t);
                     }
 
                     try {
                         if (!skip("LockDirectMessagesHook")) new ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook().install(lpparam.classLoader); // Lock DMs (#182)
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | LockDMs): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | LockDMs): Could not start, so this feature will not work", t);
                     }
 
                     // Hide in-feed widget units (suggested users panels, surveys, carousels, etc.)
                     try {
                         if (!skip("HideSuggestedFeedItemsHook")) new HideSuggestedFeedItemsHook().install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | HideSuggested): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | HideSuggested): Could not start, so this feature will not work", t);
                     }
 
                     // Ads Blocker
                     try {
                         if (!skip("AdBlocker")) new AdBlocker().disableSponsoredContent(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | AdBlocker): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | AdBlocker): Could not start, so this feature will not work", t);
                     }
 
                     // tracking link disable
                     try {
                         if (!skip("TrackingLinkDisable")) new TrackingLinkDisable().disableTrackingLinks(hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | TrackingLinkDisable): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | TrackingLinkDisable): Could not start, so this feature will not work", t);
                     }
 
                     // Exact timestamps instead of "3h ago" (#232)
                     try {
                         if (!skip("ExactTimestampHook")) new ps.reso.instaeclipse.mods.misc.ExactTimestampHook().install(dexKitBridge, hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | ExactTime): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | ExactTime): Could not start, so this feature will not work", t);
                     }
 
                     // Auto-expand feed captions (#246)
                     try {
                         if (!skip("ExpandCaptionsHook")) new ps.reso.instaeclipse.mods.feed.ExpandCaptionsHook().install(dexKitBridge);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | ExpandCaptions): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | ExpandCaptions): Could not start, so this feature will not work", t);
                     }
 
                     // Hide community notes (#259)
                     try {
                         if (!skip("HideCommunityNotesHook")) new ps.reso.instaeclipse.mods.feed.HideCommunityNotesHook().install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | CommunityNotes): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | CommunityNotes): Could not start, so this feature will not work", t);
                     }
 
                     // Extras: Reels auto-scroll (the scroll lock lives in ReelViewerHook)
                     try {
                         if (!skip("ReelsControlsHook")) new ps.reso.instaeclipse.mods.extras.ReelsControlsHook().install(dexKitBridge, hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | Reels): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | Reels): Could not start, so this feature will not work", t);
                     }
 
                     // Extras: lift the 5-account limit
                     try {
                         if (!skip("AccountLimitHook")) new ps.reso.instaeclipse.mods.extras.AccountLimitHook().install(dexKitBridge, hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | UnlimitedAccounts): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | UnlimitedAccounts): Could not start, so this feature will not work", t);
                     }
 
                     // Extras: keep Instagram's realtime connection down (appear offline)
                     try {
                         if (!skip("AirplaneModeHook")) new ps.reso.instaeclipse.mods.extras.AirplaneModeHook().install(hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | Airplane): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | Airplane): Could not start, so this feature will not work", t);
                     }
 
                     // Extras: pick the largest image candidate
                     try {
                         if (!skip("HighResolutionImageHook")) new ps.reso.instaeclipse.mods.extras.HighResolutionImageHook().install(dexKitBridge, hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | HighResImages): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | HighResImages): Could not start, so this feature will not work", t);
                     }
 
                     // Extras: skip contact/location onboarding pages
                     try {
                         if (!skip("OnboardingPromptHook")) new ps.reso.instaeclipse.mods.extras.OnboardingPromptHook().install(dexKitBridge, hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | Onboarding): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | Onboarding): Could not start, so this feature will not work", t);
                     }
 
                     // Extras: add FLAG_IMMUTABLE to IG's legacy push registration intent
                     try {
                         if (!skip("NotificationRegistrationHook")) new ps.reso.instaeclipse.mods.extras.NotificationRegistrationHook().install();
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | NotificationFix): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | NotificationFix): Could not start, so this feature will not work", t);
                     }
 
                     // Startup tab
                     try {
                         if (!skip("StartupTabHook")) new ps.reso.instaeclipse.mods.ui.StartupTabHook().install(hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | StartupTab): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | StartupTab): Could not start, so this feature will not work", t);
                     }
 
                     // Back on the home feed leaves Instagram (#272)
                     try {
                         if (!skip("BackLeavesHomeHook")) new ps.reso.instaeclipse.mods.ui.BackLeavesHomeHook().install(hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(IE|BackLeavesHome): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(IE|BackLeavesHome): Could not start, so this feature will not work", t);
                     }
 
                     // Extras: no swipe to camera from the feed
                     try {
                         if (!skip("SwipeToCameraHook")) new ps.reso.instaeclipse.mods.extras.SwipeToCameraHook().install(hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | SwipeCamera): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | SwipeCamera): Could not start, so this feature will not work", t);
                     }
 
                     // home feed shows only accounts you follow
                     try {
                         if (!skip("FollowingOnlyFeedHook")) new ps.reso.instaeclipse.mods.feed.FollowingOnlyFeedHook().install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | FollowingOnlyFeed): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | FollowingOnlyFeed): Could not start, so this feature will not work", t);
                     }
 
                     // Follow-status label on profiles (#239): the header label first; the name-row
@@ -506,7 +506,7 @@ public class Module {
                     try {
                         if (!skip("ProfileFollowStatusHook")) new ps.reso.instaeclipse.mods.misc.ProfileFollowStatusHook().install(dexKitBridge, hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | FollowStatusLabel): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | FollowStatusLabel): Could not start, so this feature will not work", t);
                     }
                     try {
                         if (!skip("ProfileFollowsYouHook")) new ps.reso.instaeclipse.mods.ui.ProfileFollowsYouHook().install(dexKitBridge, hostClassLoader);
@@ -518,85 +518,85 @@ public class Module {
                     try {
                         if (!skip("FollowStatusHook")) new ps.reso.instaeclipse.mods.misc.FollowStatusHook().install(dexKitBridge, hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | FollowerToast): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | FollowerToast): Could not start, so this feature will not work", t);
                     }
 
                     // Follow status in your own following list
                     try {
                         if (!skip("FollowingFollowStatusHook")) new ps.reso.instaeclipse.mods.misc.FollowingFollowStatusHook().install(context, dexKitBridge, hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | FollowingFollowStatus): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | FollowingFollowStatus): Could not start, so this feature will not work", t);
                     }
 
                     // Playback speed for feed videos + forced reel seek bar (#247)
                     try {
                         if (!skip("PlaybackSpeedHook")) new ps.reso.instaeclipse.mods.media.PlaybackSpeedHook().install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | PlaybackSpeed): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | PlaybackSpeed): Could not start, so this feature will not work", t);
                     }
 
                     // Hide the DM Notes tray (#241)
                     try {
                         if (!skip("HideNotesTrayHook")) new ps.reso.instaeclipse.mods.ui.HideNotesTrayHook().install(dexKitBridge);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | NotesTray): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | NotesTray): Could not start, so this feature will not work", t);
                     }
 
                     // Download DM voice messages (#223)
                     try {
                         if (!skip("VoiceMessageDownloadHook")) new ps.reso.instaeclipse.mods.media.VoiceMessageDownloadHook().install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(IE|VoiceDL) ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|VoiceDL) Could not start, so this feature will not work", t);
                     }
 
                     // Keep DM edit history (#243)
                     try {
                         if (!skip("EditHistoryHook")) new ps.reso.instaeclipse.mods.ghost.EditHistoryHook().install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(IE|EditHistory) ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|EditHistory) Could not start, so this feature will not work", t);
                     }
 
                     // Jump to the first message of a DM (#244)
                     try {
                         if (!skip("JumpToFirstMessageHook")) new ps.reso.instaeclipse.mods.ghost.JumpToFirstMessageHook().install();
                         if (!skip("ReadReceiptChatHook")) new ps.reso.instaeclipse.mods.ghost.ReadReceiptChatHook().install(hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(IE|JumpFirst) ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|JumpFirst) Could not start, so this feature will not work", t);
                     }
 
                     // Search your story viewers (Plus-style)
                     try {
                         if (!skip("StoryViewerSearchHook")) new ps.reso.instaeclipse.mods.ui.StoryViewerSearchHook().install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(IE|ViewerSearch) ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|ViewerSearch) Could not start, so this feature will not work", t);
                     }
 
                     // Unlock Plus benefits (local override of Instagram's Plus eligibility checks)
                     try {
                         if (!skip("UnlockPlusBenefitsHook")) new ps.reso.instaeclipse.mods.misc.UnlockPlusBenefitsHook().install(dexKitBridge, hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | UnlockPlus): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | UnlockPlus): Could not start, so this feature will not work", t);
                     }
 
                     // Search inside the comments sheet (#230)
                     try {
                         if (!skip("CommentSearchHook")) new ps.reso.instaeclipse.mods.misc.CommentSearchHook().install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(IE|CommentSearch) ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|CommentSearch) Could not start, so this feature will not work", t);
                     }
 
                     // Export a DM chat to HTML (#225)
                     try {
                         if (!skip("ChatExportHook")) new ps.reso.instaeclipse.mods.ghost.ChatExportHook().install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(IE|ChatExport) ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|ChatExport) Could not start, so this feature will not work", t);
                     }
 
                     // Export followers / following to CSV (#224)
                     try {
                         if (!skip("FollowListExportHook")) new ps.reso.instaeclipse.mods.misc.FollowListExportHook().install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(IE|FollowExport) ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|FollowExport) Could not start, so this feature will not work", t);
                     }
 
                     // Like undo window (#235) — after HideSuggestedFeedItemsHook (has_liked getter)
@@ -608,8 +608,8 @@ public class Module {
                     try {
                         // View.performClick hook: installed only while the feature is on (restart to enable).
                         if (FeatureFlags.confirmFollows && !skip("FollowConfirmHook")) new ps.reso.instaeclipse.mods.misc.FollowConfirmHook().install(dexKitBridge);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | FollowConfirm): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | FollowConfirm): Could not start, so this feature will not work", t);
                     }
                     try {
                         if (!skip("ProfileMenuHook")) new ps.reso.instaeclipse.mods.ui.ProfileMenuHook().install(dexKitBridge, hostClassLoader);
@@ -619,35 +619,35 @@ public class Module {
                     }
                     try {
                         if (!skip("ProfileSpoofHook")) new ps.reso.instaeclipse.mods.ui.ProfileSpoofHook().install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(IE|ProfileSpoof) ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|ProfileSpoof) Could not start, so this feature will not work", t);
                     }
 
                     // Hide "Create group" on the DM share sheet (#240)
                     try {
                         if (!skip("ShareSheetCleanupHook")) new ps.reso.instaeclipse.mods.ui.ShareSheetCleanupHook().install(hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | ShareSheet): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | ShareSheet): Could not start, so this feature will not work", t);
                     }
 
                     // Open links in the external browser (#229): Activity launches here, and the
                     // fragment-hosted in-app browser modes in OpenLinksExternallyHook.
                     try {
                         if (!skip("ExternalBrowserHook")) new ps.reso.instaeclipse.mods.misc.ExternalBrowserHook().install();
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | ExternalBrowser): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | ExternalBrowser): Could not start, so this feature will not work", t);
                     }
                     try {
                         if (!skip("OpenLinksExternallyHook")) new ps.reso.instaeclipse.mods.misc.OpenLinksExternallyHook().install(dexKitBridge, hostClassLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | OpenLinksExternally): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | OpenLinksExternally): Could not start, so this feature will not work", t);
                     }
 
                     // Miscellaneous
                     try {
                         if (!skip("DisableStoryFlippingHook")) new DisableStoryFlippingHook().handleStoryFlippingDisable(dexKitBridge); // Story Flipping
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | StoryFlipping): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | StoryFlipping): Could not start, so this feature will not work", t);
                     }
 
                     // Story Mentions
@@ -655,8 +655,8 @@ public class Module {
                         if (!skip("StoryMentionHook")) new StoryMentionHook().install(dexKitBridge, lpparam.classLoader);
                         if (!skip("StoryLinksHook")) new ps.reso.instaeclipse.mods.misc.StoryLinksHook().install(dexKitBridge, lpparam.classLoader);
                         if (!skip("StoryInfoHook")) new ps.reso.instaeclipse.mods.misc.StoryInfoHook().install(dexKitBridge, lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | StoryMentions): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | StoryMentions): Could not start, so this feature will not work", t);
                     }
 
                     // Manual "Mark as seen" story row; after StoryMentionHook, whose cached menu
@@ -664,146 +664,146 @@ public class Module {
                     try {
                         if (!skip("ManualStorySeenHook")) new ps.reso.instaeclipse.mods.ghost.ManualStorySeenHook().install(dexKitBridge, lpparam.classLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | ManualStorySeen): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | ManualStorySeen): Could not start, so this feature will not work", t);
                     }
 
                     // Comment Copy (Instagram's own long-press Copy row)
                     try {
                         if (!skip("CommentCopyHook")) new CommentCopyHook().install(lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | CopyComment): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | CopyComment): Could not start, so this feature will not work", t);
                     }
 
                     // Caption Copy (hold a caption to copy it)
                     try {
                         if (!skip("CaptionCopyHook")) new CaptionCopyHook().install(dexKitBridge, lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | Caption): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | Caption): Could not start, so this feature will not work", t);
                     }
 
                     // Disable Double Tap to Like
                     try {
                         if (!skip("DisableDoubleTapLikeHook")) new DisableDoubleTapLikeHook().install(dexKitBridge, lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | DoubleTapLike): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | DoubleTapLike): Could not start, so this feature will not work", t);
                     }
                     // ...and in comments and DMs
                     try {
                         if (!skip("DoubleTapExtrasHook")) new ps.reso.instaeclipse.mods.misc.DoubleTapExtrasHook().install(dexKitBridge, lpparam.classLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | DoubleTapLike): ❌ comments/DMs: " + t);
+                        ModuleLog.error("(InstaEclipse | DoubleTapLike): Could not start for comments and chats, so double tap still likes there", t);
                     }
 
                     // Photo Zoom (long-press)
                     try {
                         if (!skip("FeedPhotoZoomHook")) new FeedPhotoZoomHook().install(lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | PhotoZoom): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | PhotoZoom): Could not start, so this feature will not work", t);
                     }
 
                     // Location Spoof
                     try {
                         if (!skip("LocationSpoofHook")) new LocationSpoofHook().install(lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | SpoofLocation): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | SpoofLocation): Could not start, so this feature will not work", t);
                     }
 
                     // Custom Theme
                     try {
                         if (!skip("IgThemeHook")) new IgThemeHook().install(hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | Theme): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | Theme): Could not start, so this feature will not work", t);
                     }
 
                     // Force Reel Quality
                     try {
                         if (!skip("ForceReelQualityHook")) new ForceReelQualityHook().install(dexKitBridge, lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | ForceReelQuality): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | ForceReelQuality): Could not start, so this feature will not work", t);
                     }
 
                     // Force "Upload at highest quality" always on
                     try {
                         if (!skip("MaxUploadQualityHook")) new ps.reso.instaeclipse.mods.media.MaxUploadQualityHook().install(dexKitBridge, lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(IE|MaxUploadQuality) ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|MaxUploadQuality) Could not start, so this feature will not work", t);
                     }
 
                     try {
                         if (!skip("DisableVideoAutoPlayHook")) new DisableVideoAutoPlayHook().handleAutoPlayDisable(dexKitBridge); // Video Autoplay
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | AutoPlayDisable): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | AutoPlayDisable): Could not start, so this feature will not work", t);
                     }
 
                     // Build Expired Popup
                     try {
                         if (!skip("BuildExpiredPopupHook")) new BuildExpiredPopupHook().install(dexKitBridge, lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | BuildExpired): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | BuildExpired): Could not start, so this feature will not work", t);
                     }
 
                     // Media Download (feed)
                     try {
                         if (!skip("FeedVideoDownloadHook")) new FeedVideoDownloadHook().install(lpparam.classLoader);
                         if (!skip("FeedVideoDownloadHook")) FeedVideoDownloadHook.installVideoUrlCaptureHook(dexKitBridge, lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | MediaDownload): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | MediaDownload): Could not start, so this feature will not work", t);
                     }
 
                     // Post Download — three-dots menu (replaces floating button + long-press)
                     try {
                         if (!skip("PostDownloadContextMenuHook")) new PostDownloadContextMenuHook().install(dexKitBridge, lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | PostDownload): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | PostDownload): Could not start, so this feature will not work", t);
                     }
 
                     // Titles for our rows in the reel ⋮ menu (Media info, Playback speed)
                     try {
                         if (!skip("ReelMenuLabels")) ps.reso.instaeclipse.mods.ui.ReelMenuLabels.install(dexKitBridge, lpparam.classLoader);
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | ReelMenuLabels): ❌ Failed to hook: " + t);
+                        ModuleLog.error("(InstaEclipse | ReelMenuLabels): Could not start, so this feature will not work", t);
                     }
 
                     // Save Instants (#184) — long-press a received Instant (quicksnap) to save it
                     try {
                         if (!skip("InstantSaveHook")) new ps.reso.instaeclipse.mods.media.InstantSaveHook().install(lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | InstantSave): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | InstantSave): Could not start, so this feature will not work", t);
                     }
 
                     // Upload Instants from gallery (#199) — swap gallery bitmap into quicksnap send
                     try {
                         if (!skip("InstantUploadHook")) new ps.reso.instaeclipse.mods.media.InstantUploadHook().install(lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | InstantUpload): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | InstantUpload): Could not start, so this feature will not work", t);
                     }
 
                     // Keep Ephemeral Messages
                     try {
                         if (!skip("GhostEphemeralKeepHook")) new GhostEphemeralKeepHook().install(dexKitBridge, lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | EphemeralHook): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | EphemeralHook): Could not start, so this feature will not work", t);
                     }
 
                     // Permanent View Mode (view-once / view-twice → permanent)
                     try {
                         if (!skip("GhostPermanentViewHook")) new GhostPermanentViewHook().install(dexKitBridge, lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | ViewOnceMedia): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | ViewOnceMedia): Could not start, so this feature will not work", t);
                     }
 
                     // Restore IG's native view-once/twice corner icon when Permanent View is on
                     try {
                         if (!skip("ViewOnceBadgeHook")) new ViewOnceBadgeHook().install(dexKitBridge, lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | VOBadge): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | VOBadge): Could not start, so this feature will not work", t);
                     }
 
                     // Locked saved collections (#219)
                     try {
                         if (!skip("LockedCollectionsHook")) new ps.reso.instaeclipse.mods.ui.LockedCollectionsHook().install(hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(IE|LockedColl) ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|LockedColl) Could not start, so this feature will not work", t);
                     }
 
                     // Saved button on your own profile (#237)
@@ -817,72 +817,72 @@ public class Module {
                     // Download a post/reel link shared to InstaEclipse from another app (#236)
                     try {
                         if (!skip("ShareLinkDownloadHook")) new ps.reso.instaeclipse.mods.media.ShareLinkDownloadHook().install(hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(IE|ShareDL) ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(IE|ShareDL) Could not start, so this feature will not work", t);
                     }
 
                     // Ask before calling (#277)
                     try {
                         // View.performClick hook: installed only while the feature is on (restart to enable).
                         if (FeatureFlags.confirmCalls && !skip("CallConfirmHook")) ps.reso.instaeclipse.mods.ghost.CallConfirmHook.install();
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | CallConfirm): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | CallConfirm): Could not start, so this feature will not work", t);
                     }
 
                     // Don't save searches (#280)
                     try {
                         if (!skip("SearchHistoryHook")) ps.reso.instaeclipse.mods.ghost.SearchHistoryHook.install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | SearchHistory): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | SearchHistory): Could not start, so this feature will not work", t);
                     }
 
                     // Ask before refreshing the feed (#278)
                     try {
                         if (!skip("FeedRefreshConfirmHook")) ps.reso.instaeclipse.mods.feed.FeedRefreshConfirmHook.install(hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | RefreshConfirm): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | RefreshConfirm): Could not start, so this feature will not work", t);
                     }
 
                     // Rounded feed post corners (#276)
                     try {
                         if (!skip("RoundedFeedPostsHook")) ps.reso.instaeclipse.mods.feed.RoundedFeedPostsHook.install(hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | RoundedPosts): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | RoundedPosts): Could not start, so this feature will not work", t);
                     }
 
                     // Story tray size and ring color (#283)
                     try {
                         if (!skip("StoryTrayHook")) ps.reso.instaeclipse.mods.ui.StoryTrayHook.install(hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | StoryTray): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | StoryTray): Could not start, so this feature will not work", t);
                     }
 
                     // Story Download
                     try {
                         if (!skip("StoryDownloadHook")) new StoryDownloadHook().install(dexKitBridge, lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | StoryDownload): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | StoryDownload): Could not start, so this feature will not work", t);
                     }
 
                     // Reel Download
                     try {
                         if (!skip("ReelDownloadHook")) new ReelDownloadHook().install(dexKitBridge, lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | ReelDownload): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | ReelDownload): Could not start, so this feature will not work", t);
                     }
 
                     // Profile Picture Download
                     try {
                         if (!skip("ProfilePicDownloadHook")) ProfilePicDownloadHook.install(dexKitBridge, hostClassLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | ProfileDownload): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | ProfileDownload): Could not start, so this feature will not work", t);
                     }
 
                     // Network Interceptor
                     try {
                         if (!skip("interceptor")) interceptor.handleInterceptor(lpparam);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | Interceptor): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | Interceptor): Could not start, so this feature will not work", t);
                     }
 
                     // Crash guard: drop tasks rejected by already-shut-down executors (carousel/
@@ -890,8 +890,8 @@ public class Module {
                     // throw and hard-crash the app.
                     try {
                         if (!skip("TerminatedExecutorGuard")) new ps.reso.instaeclipse.mods.core.TerminatedExecutorGuard().install(lpparam.classLoader);
-                    } catch (Throwable ignored) {
-                        ModuleLog.line("(InstaEclipse | ExecGuard): ❌ Failed to hook");
+                    } catch (Throwable t) {
+                        ModuleLog.error("(InstaEclipse | ExecGuard): Could not start, so this feature will not work", t);
                     }
 
                     // Every lookup is cached now: later launches install inline.
@@ -910,12 +910,12 @@ public class Module {
                         // risks Android killing the app for not finishing startup, before the cache
                         // is even written. Resolve in the background instead; features turn on a few
                         // seconds after launch, and from the next launch on everything is cached.
-                        ModuleLog.line("(InstaEclipse): first launch for this Instagram version or module build — installing hooks in background");
+                        ModuleLog.line("(InstaEclipse): First start after an Instagram or InstaEclipse update: setting up features in the background, they turn on in a few seconds");
                         Thread t = new Thread(() -> {
                             long start = android.os.SystemClock.elapsedRealtime();
                             installFeatureHooks.run();
-                            ModuleLog.line("(InstaEclipse): background hook installation took "
-                                    + (android.os.SystemClock.elapsedRealtime() - start) + " ms");
+                            ModuleLog.ok("(InstaEclipse): Features are ready (background setup took "
+                                    + (android.os.SystemClock.elapsedRealtime() - start) + " ms)");
                         }, "InstaEclipse-Init");
                         t.setPriority(Thread.NORM_PRIORITY - 1);
                         t.start();
@@ -925,7 +925,7 @@ public class Module {
             });
 
         } catch (Exception e) {
-            ModuleLog.line("(InstaEclipse): Failed to hook " + lpparam.packageName + ": " + e.getMessage());
+            ModuleLog.error("(InstaEclipse): Could not start in " + lpparam.packageName + ", so no feature will work", e);
         }
     }
 
@@ -1028,7 +1028,7 @@ public class Module {
                     Logging.clear();
 
                 } else if ("ps.reso.instaeclipse.ACTION_REQUEST_PREFS".equals(action)) {
-                    ModuleLog.line("(InstaEclipse) Sync: Companion app requested current preferences.");
+                    ModuleLog.detail("(InstaEclipse) Sync: Companion app requested current preferences.");
 
                     android.content.SharedPreferences prefs = ctx.getSharedPreferences("instaeclipse_prefs", Context.MODE_PRIVATE);
                     Intent reply = new Intent("ps.reso.instaeclipse.ACTION_SEND_PREFS");
@@ -1059,11 +1059,11 @@ public class Module {
                     ps.reso.instaeclipse.utils.ipc.ModuleReplies.reply(intent, reply.getExtras());
 
                 } else if ("ps.reso.instaeclipse.ACTION_EXPORT_CONFIG".equals(action)) {
-                    ModuleLog.line("(InstaEclipse) Sync: Companion app requested Dev Config export.");
+                    ModuleLog.detail("(InstaEclipse) Sync: Companion app requested Dev Config export.");
                     try {
                         java.io.File source = new java.io.File(ctx.getFilesDir(), "mobileconfig/mc_overrides.json");
                         if (!source.exists()) {
-                            ModuleLog.line("(InstaEclipse) Export: mc_overrides.json not found.");
+                            ModuleLog.line("(InstaEclipse) Export: there is no developer config to export yet (mc_overrides.json not found)");
                             Intent reply = new Intent("ps.reso.instaeclipse.ACTION_SEND_CONFIG");
                             reply.setPackage("ps.reso.instaeclipse");
                             reply.putExtra("error", "mc_overrides.json not found.");
@@ -1080,13 +1080,13 @@ public class Module {
                         reply.putExtra("json_content", json);
                         ps.reso.instaeclipse.utils.core.IpcSecurity.echoNonce(intent, reply);
                             ps.reso.instaeclipse.utils.ipc.ModuleReplies.reply(intent, reply.getExtras());
-                        ModuleLog.line("(InstaEclipse) Export: config reply sent to companion.");
+                        ModuleLog.line("(InstaEclipse) Export: developer config sent to the InstaEclipse app");
                     } catch (Exception e) {
                         Intent reply = new Intent("ps.reso.instaeclipse.ACTION_SEND_CONFIG");
                         reply.putExtra("error", "Configuration could not be read or exceeds the supported size");
                         ps.reso.instaeclipse.utils.core.IpcSecurity.echoNonce(intent, reply);
                         ps.reso.instaeclipse.utils.ipc.ModuleReplies.reply(intent, reply.getExtras());
-                        ModuleLog.line("(IE|Config) Configuration export failed");
+                        ModuleLog.error("(IE|Config) Could not export the developer config: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                     }
                 }
             }

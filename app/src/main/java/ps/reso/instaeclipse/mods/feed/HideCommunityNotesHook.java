@@ -43,13 +43,14 @@ public class HideCommunityNotesHook {
                 List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(PANDO).paramCount(0).usingNumbers(NOTES_BLOKS_DATA)));
                 if (found.size() != 1) {
-                    ModuleLog.line(TAG + "❌ notes getter not found (" + found.size() + ")");
+                    ModuleLog.error(TAG + "Will not work: community notes were not found in this Instagram version");
+                    ModuleLog.detail(TAG + "notes getter not found (" + found.size() + ")");
                     return;
                 }
                 name = found.get(0).getName();
                 DexKitCache.saveString(CACHE_KEY, name);
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "❌ " + t);
+                ModuleLog.error(TAG + "Will not work: search for community notes failed", t);
                 return;
             }
         }
@@ -66,10 +67,13 @@ public class HideCommunityNotesHook {
                 XposedBridge.hookMethod(m, hide);
                 n++;
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "⚠️ " + cls + "." + name + ": " + t);
+                ModuleLog.warn(TAG + "Community notes may still show on some posts: " + t.getClass().getSimpleName());
+                ModuleLog.detail(TAG + cls + "." + name + ": " + t);
             }
         }
-        ModuleLog.line(TAG + "✅ notes getter " + name + " hooked on " + n + " class(es)");
+        if (n > 0) ModuleLog.ok(TAG + "ready");
+        else ModuleLog.error(TAG + "Will not work: community notes could not be hidden in this Instagram version");
+        ModuleLog.detail(TAG + "notes getter " + name + " hooked on " + n + " class(es)");
         if (n > 0) FeatureStatusTracker.setHooked("HideCommunityNotes");
     }
 }

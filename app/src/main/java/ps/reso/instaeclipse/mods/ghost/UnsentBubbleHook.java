@@ -73,11 +73,11 @@ final class UnsentBubbleHook {
                 }
             });
             installed = true;
-            ModuleLog.line("(IE|UnsentBubble) Native text bubble background installed");
+            ModuleLog.detail("(IE|UnsentBubble) native text bubble background installed");
             installMedia(bridge, loader);
             return true;
         } catch (Throwable error) {
-            ModuleLog.line("(IE|UnsentBubble) Unavailable: " + error);
+            ModuleLog.detail("(IE|UnsentBubble) unavailable: " + error);
             return false;
         }
     }
@@ -290,8 +290,11 @@ final class UnsentBubbleHook {
                     } catch (Throwable error) { report(error); }
                 }
             });
-            ModuleLog.line("(IE|UnsentBubble) Native voice surface installed");
-        } catch (Throwable error) { ModuleLog.line("(IE|UnsentBubble) Voice unavailable: " + error); }
+            ModuleLog.detail("(IE|UnsentBubble) native voice surface installed");
+        } catch (Throwable error) {
+            ModuleLog.warn("(IE|UnsentBubble) Unsent voice messages are not colored red on this Instagram version");
+            ModuleLog.detail("(IE|UnsentBubble) voice unavailable: " + error);
+        }
 
         try {
             List<Method> preview = KeepUnsentMessagesHook.cachedMethods("UnsentBubble_preview", loader,
@@ -328,8 +331,11 @@ final class UnsentBubbleHook {
                     } catch (Throwable error) { report(error); }
                 }
             });
-            ModuleLog.line("(IE|UnsentBubble) Native shared-media preview outline installed");
-        } catch (Throwable error) { ModuleLog.line("(IE|UnsentBubble) Preview unavailable: " + error); }
+            ModuleLog.detail("(IE|UnsentBubble) native shared-media preview outline installed");
+        } catch (Throwable error) {
+            ModuleLog.warn("(IE|UnsentBubble) Unsent shared posts and reels get no red outline on this Instagram version");
+            ModuleLog.detail("(IE|UnsentBubble) preview unavailable: " + error);
+        }
     }
 
     /** [VoiceMessage, its content lambda, the voice surface factory]; empty when any is missing. */
@@ -502,7 +508,7 @@ final class UnsentBubbleHook {
     private void report(Throwable error) {
         if (reportedFailure) return;
         reportedFailure = true;
-        ModuleLog.line("(IE|UnsentBubble) Update failed: " + error.getClass().getSimpleName());
+        ModuleLog.warn("(IE|UnsentBubble) Could not update the color of an unsent message", error);
     }
 
     private static final class State {

@@ -58,15 +58,16 @@ public class MaxUploadQualityHook {
             }
 
             if (n == 0) {
-                ModuleLog.line(TAG + "❌ highest-quality-upload getter not found");
+                ModuleLog.error(TAG + "Could not turn on highest-quality uploads: the upload quality setting was not found in this Instagram version");
                 if (FeatureFlags.maxUploadQuality) FeatureStatusTracker.setBroken("MaxUploadQuality");
                 return;
             }
 
             FeatureStatusTracker.setHooked("MaxUploadQuality");
-            ModuleLog.line(TAG + "✅ hooked " + n + " method(s)");
+            ModuleLog.ok(TAG + "ready");
+            ModuleLog.detail(TAG + "hooked " + n + " method(s)");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ install – " + t);
+            ModuleLog.error(TAG + "Could not turn on highest-quality uploads", t);
             if (FeatureFlags.maxUploadQuality) FeatureStatusTracker.setBroken("MaxUploadQuality");
         }
     }

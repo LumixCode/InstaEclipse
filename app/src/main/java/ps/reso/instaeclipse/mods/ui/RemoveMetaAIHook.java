@@ -83,7 +83,7 @@ public class RemoveMetaAIHook {
                 if (id != 0) targetLayoutIds.add(id);
             }
             idsResolved = true;
-            ModuleLog.line("(IE|RemoveMetaAI) resolved " + targetLayoutIds.size() + " Meta AI layouts");
+            ModuleLog.detail("(IE|RemoveMetaAI) resolved " + targetLayoutIds.size() + " Meta AI layouts");
         } catch (Throwable ignored) {}
     }
 
@@ -126,16 +126,20 @@ public class RemoveMetaAIHook {
             XposedHelpers.findAndHookMethod(LayoutInflater.class, "inflate",
                     int.class, ViewGroup.class, boolean.class, inflateHook);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|RemoveMetaAI) ⚠️ inflate(3) hook: " + t.getMessage());
+            ModuleLog.warn("(IE|RemoveMetaAI) Some Meta AI banners in chats and search may still show: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
+            ModuleLog.detail("(IE|RemoveMetaAI) inflate(3) hook failed");
         }
         try {
             XposedHelpers.findAndHookMethod(LayoutInflater.class, "inflate",
                     int.class, ViewGroup.class, inflateHook);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|RemoveMetaAI) ⚠️ inflate(2) hook: " + t.getMessage());
+            ModuleLog.warn("(IE|RemoveMetaAI) Some Meta AI banners in chats and search may still show: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
+            ModuleLog.detail("(IE|RemoveMetaAI) inflate(2) hook failed");
         }
         FeatureStatusTracker.setHooked("RemoveMetaAI");
-        ModuleLog.line("(IE|RemoveMetaAI) ✅ installed");
+        ModuleLog.ok("(IE|RemoveMetaAI) ready");
     }
 
     /**
@@ -247,7 +251,7 @@ public class RemoveMetaAIHook {
                         Method m = md.getMethodInstance(cl);
                         String shared = sharedReason(md, m, marker);
                         if (shared != null) {
-                            ModuleLog.line("(IE|RemoveMetaAI) " + label + ": skipped "
+                            ModuleLog.detail("(IE|RemoveMetaAI) " + label + ": skipped "
                                     + md.getClassName() + "." + md.getName() + " (" + shared + ")");
                             continue;
                         }
@@ -263,9 +267,10 @@ public class RemoveMetaAIHook {
                 } catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|RemoveMetaAI) ⚠️ " + label + ": " + t.getMessage());
+            ModuleLog.warn("(IE|RemoveMetaAI) Could not look for one of the Meta AI elements; it may still show");
+            ModuleLog.detail("(IE|RemoveMetaAI) " + label + ": " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
-        ModuleLog.line("(IE|RemoveMetaAI) " + label + ": " + n + " method(s)");
+        ModuleLog.detail("(IE|RemoveMetaAI) " + label + ": " + n + " method(s)");
     }
 
     /** Why a marker hit is more than the marked method, or null when it is that method. */
@@ -335,10 +340,11 @@ public class RemoveMetaAIHook {
                     catch (Throwable ignored) {}
                 }
             } catch (Throwable t) {
-                ModuleLog.line("(IE|RemoveMetaAI) ⚠️ reels-card anchor " + a + ": " + t.getMessage());
+                ModuleLog.warn("(IE|RemoveMetaAI) The Meta AI card in Reels may still show: search failed");
+                ModuleLog.detail("(IE|RemoveMetaAI) reels-card anchor " + a + ": " + t.getClass().getSimpleName() + ": " + t.getMessage());
             }
         }
-        ModuleLog.line("(IE|RemoveMetaAI) reels-card eligibility: " + n + " method(s)");
+        ModuleLog.detail("(IE|RemoveMetaAI) reels-card eligibility: " + n + " method(s)");
     }
 
     /**
@@ -395,7 +401,7 @@ public class RemoveMetaAIHook {
         if (n == 0) n = hookGate(bridge, classLoader, forceFalse, new Number[]{META_AI_GATE_ID_1, META_AI_GATE_ID_2});
         if (n == 0) n = hookGate(bridge, classLoader, forceFalse, new Number[]{META_AI_GATE_ID_1});
         if (n == 0) n = hookGate(bridge, classLoader, forceFalse, new Number[]{META_AI_GATE_ID_2});
-        ModuleLog.line("(IE|RemoveMetaAI) reels-overflow gate: " + n + " method(s)");
+        ModuleLog.detail("(IE|RemoveMetaAI) reels-overflow gate: " + n + " method(s)");
     }
 
     private int hookGate(DexKitBridge bridge, ClassLoader cl, XC_MethodHook hook, Number[] ids) {
@@ -410,7 +416,7 @@ public class RemoveMetaAIHook {
                 catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|RemoveMetaAI) ⚠️ overflow gate: " + t.getMessage());
+            ModuleLog.detail("(IE|RemoveMetaAI) overflow gate search failed: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
         return n;
     }
@@ -483,7 +489,8 @@ public class RemoveMetaAIHook {
             if (addButton == null) {
                 addButton = findAddButton(bridge, cl, option);
                 if (addButton == null) {
-                    ModuleLog.line("(IE|RemoveMetaAI) ⚠️ overflow add-button not found");
+                    ModuleLog.warn("(IE|RemoveMetaAI) The Meta AI row may still show in some post menus (not found in this Instagram version)");
+                    ModuleLog.detail("(IE|RemoveMetaAI) overflow add-button not found");
                     return;
                 }
                 DexKitCache.saveMethod(ADD_BUTTON_CACHE, addButton);
@@ -498,9 +505,10 @@ public class RemoveMetaAIHook {
                     }
                 }
             });
-            ModuleLog.line("(IE|RemoveMetaAI) overflow add-button filter: 1 method(s)");
+            ModuleLog.detail("(IE|RemoveMetaAI) overflow add-button filter: 1 method(s)");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|RemoveMetaAI) ⚠️ add-button filter: " + t.getMessage());
+            ModuleLog.warn("(IE|RemoveMetaAI) The Meta AI row may still show in some post menus: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -530,9 +538,10 @@ public class RemoveMetaAIHook {
             for (MethodData md : DexKitQueryCache.findMethod(bridge, q)) {
                 try { XposedBridge.hookMethod(md.getMethodInstance(cl), hook); n++; } catch (Throwable ignored) {}
             }
-            ModuleLog.line("(IE|RemoveMetaAI) " + label + " filter: " + n + " method(s)");
+            ModuleLog.detail("(IE|RemoveMetaAI) " + label + " filter: " + n + " method(s)");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|RemoveMetaAI) ⚠️ " + label + ": " + t.getMessage());
+            ModuleLog.warn("(IE|RemoveMetaAI) The Meta AI row may still show in some post or reel menus: search failed");
+            ModuleLog.detail("(IE|RemoveMetaAI) " + label + ": " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 

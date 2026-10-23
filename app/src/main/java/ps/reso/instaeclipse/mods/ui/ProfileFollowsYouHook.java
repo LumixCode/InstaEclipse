@@ -66,7 +66,8 @@ public class ProfileFollowsYouHook {
                         .declaredClass(USER).paramCount(0).returnType("java.lang.Boolean")
                         .usingEqStrings(java.util.List.of("followed_by"))));
                 if (u.isEmpty() || f.size() != 1) {
-                    ModuleLog.line(TAG + "❌ onUserUpdated=" + u.size() + " followed_by=" + f.size());
+                    ModuleLog.error(TAG + "The follow status label will not work: profile code not found in this Instagram version");
+                    ModuleLog.detail(TAG + "onUserUpdated=" + u.size() + " followed_by=" + f.size());
                     return;
                 }
                 updated = u.get(0).getMethodInstance(cl);
@@ -105,10 +106,11 @@ public class ProfileFollowsYouHook {
                 }
             });
             active = true;
-            ModuleLog.line(TAG + "✅ Hooked " + updated.getName() + " / followed_by " + followedByGetter.getName());
+            ModuleLog.ok(TAG + "ready");
+            ModuleLog.detail(TAG + "hooked " + updated.getName() + " / followed_by " + followedByGetter.getName());
             FeatureStatusTracker.setHooked("FollowStatusLabel");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.error(TAG + "The follow status label will not work: setup failed", t);
         }
     }
 
@@ -133,7 +135,8 @@ public class ProfileFollowsYouHook {
                 Object user = vm != null ? fieldOfType(vm, USER) : null;
                 if (user != null && sameUser(user, userId)) apply(frag, followedBy);
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "⚠️ follow result: " + t);
+                ModuleLog.warn(TAG + "Could not show the follow status on this profile: "
+                        + t.getClass().getSimpleName() + ": " + t.getMessage());
             }
         });
     }
@@ -178,7 +181,8 @@ public class ProfileFollowsYouHook {
                 }
             }
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ apply: " + t);
+            ModuleLog.warn(TAG + "Could not show the follow status on this profile: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -203,7 +207,7 @@ public class ProfileFollowsYouHook {
                 try { known = followedBy(frag); } catch (Throwable ignored) {}
             }
             if (known != null) {
-                ModuleLog.line(TAG + "relationship read from the User model (retry " + (attempt + 1) + ")");
+                ModuleLog.probe(TAG + "relationship read from the User model (retry " + (attempt + 1) + ")");
                 apply(frag, known);
             } else {
                 retry(frag, root, attempt + 1);

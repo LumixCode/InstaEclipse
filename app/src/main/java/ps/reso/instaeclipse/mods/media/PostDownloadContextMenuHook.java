@@ -133,11 +133,11 @@ public class PostDownloadContextMenuHook {
                 if (v == null) continue;
             }
             if (downloadOptionValue == null)
-                ModuleLog.line("(IE|Post) ❌ DOWNLOAD enum value not found");
+                ModuleLog.error("(IE|Post) Download will not appear in the post menu: its menu entry was not found in this Instagram version");
             if (copyLinkOptionValue == null)
-                ModuleLog.line("(IE|Post) ❌ COPY_LINK enum value not found");
+                ModuleLog.error("(IE|Post) Copy link will not appear in the post menu: its menu entry was not found in this Instagram version");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Post) ❌ loadMediaOptionEnum: " + t);
+            ModuleLog.detail("(IE|Post) loadMediaOptionEnum: " + t);
         }
     }
 
@@ -197,7 +197,7 @@ public class PostDownloadContextMenuHook {
                             .usingStrings("MediaOptionsOverflowMenuCreator")));
 
             if (pass1.isEmpty()) {
-                ModuleLog.line("(IE|Post) ❌ MediaOptionsOverflowMenuCreator class not found");
+                ModuleLog.detail("(IE|Post) MediaOptionsOverflowMenuCreator class not found");
                 return;
             }
 
@@ -246,7 +246,7 @@ public class PostDownloadContextMenuHook {
             }
 
             if (addButtonMethod == null) {
-                ModuleLog.line("(IE|Post) ❌ addButtonMethod not found in " + creatorClassName);
+                ModuleLog.detail("(IE|Post) addButtonMethod not found in " + creatorClassName);
                 return;
             }
             DexKitCache.saveMethod("PostDownload_addButton", addButtonMethod);
@@ -271,7 +271,7 @@ public class PostDownloadContextMenuHook {
             if (enumNormalValue == null) enumNormalValue = firstVal;
 
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Post) ❌ findCreatorClassAndAddButtonMethod: " + t);
+            ModuleLog.detail("(IE|Post) findCreatorClassAndAddButtonMethod: " + t);
         }
     }
 
@@ -280,7 +280,7 @@ public class PostDownloadContextMenuHook {
     private static void installAddButtonHook() {
         if (addButtonMethod == null || enumNormalValue == null
                 || (downloadOptionValue == null && copyLinkOptionValue == null)) {
-            ModuleLog.line("(IE|Post) ❌ Cannot install addButton hook — prerequisites missing");
+            ModuleLog.error("(IE|Post) Could not add rows to the post menu: the menu was not found in this Instagram version");
             return;
         }
 
@@ -347,7 +347,7 @@ public class PostDownloadContextMenuHook {
         if (copyLinkOptionValue != null) FeatureStatusTracker.setHooked("CopyMediaLink");
         if (copyImageOptionValue != null) FeatureStatusTracker.setHooked("CopyImage");
         if (mediaInfoOptionValue != null) FeatureStatusTracker.setHooked("MediaInfo");
-        ModuleLog.line("(IE|Post) ✅ Post menu inject hook installed");
+        ModuleLog.ok("(IE|Post) ready");
     }
 
     /** Adds one button (Download / Copy Media Link) to the menu currently being built. */
@@ -362,7 +362,7 @@ public class PostDownloadContextMenuHook {
         try {
             addButtonMethod.invoke(null, callArgs);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Post) ❌ addButton invoke failed: " + t);
+            ModuleLog.warn("(IE|Post) Could not add a row to this menu: " + t);
         } finally {
             sAddingDownload.set(false);
         }
@@ -390,7 +390,7 @@ public class PostDownloadContextMenuHook {
             }
             if (methods.size() == 1) reelClickDispatcher = methods.iterator().next();
         } catch (Throwable ignored) { }
-        ModuleLog.line("(IE|Post) selected Reel dispatcher bound=" + (reelClickDispatcher != null));
+        ModuleLog.detail("(IE|Post) selected Reel dispatcher bound=" + (reelClickDispatcher != null));
     }
 
     private static void installClickHandlerHook(DexKitBridge bridge, ClassLoader classLoader) {
@@ -456,18 +456,18 @@ public class PostDownloadContextMenuHook {
                     XposedBridge.hookMethod(m, clickHook);
                     hooked.add(m);
                 } catch (Throwable t) {
-                    ModuleLog.line("(IE|Post) ❌ Failed to hook click candidate: " + t);
+                    ModuleLog.detail("(IE|Post) Failed to hook click candidate: " + t);
                 }
             }
 
             if (hooked.isEmpty()) {
-                ModuleLog.line("(IE|Post) ❌ No click handler methods could be hooked");
+                ModuleLog.error("(IE|Post) Taps on the added menu rows will not work: the menu's tap handler was not found in this Instagram version");
             } else {
                 DexKitCache.saveMethods("PostDownload_click_v3", hooked);
             }
 
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Post) ❌ installClickHandlerHook: " + t);
+            ModuleLog.error("(IE|Post) Taps on the added menu rows will not work", t);
         }
     }
 
@@ -509,7 +509,7 @@ public class PostDownloadContextMenuHook {
                     if (addSpeed) patched.add(speedOptionValue);
                     param.setResult(patched);
                 } catch (Throwable t) {
-                    ModuleLog.line("(IE|Post) ❌ allowlist patch failed: " + t);
+                    ModuleLog.warn("(IE|Post) Could not keep the added rows in this menu: " + t);
                 }
             }
         };
@@ -536,7 +536,8 @@ public class PostDownloadContextMenuHook {
                             .addUsingField(prefix + "GEN_AI_INFO:" + typeDesc)));
 
             if (results.isEmpty()) {
-                ModuleLog.line("(IE|Post) ⚠️ Allowlist method not found (menu may not be filtered on this build)");
+                ModuleLog.warn("(IE|Post) The shorter post menu may hide the added rows in this Instagram version; the full menu still shows them");
+                ModuleLog.detail("(IE|Post) Allowlist method not found (menu may not be filtered on this build)");
                 return;
             }
 
@@ -544,11 +545,11 @@ public class PostDownloadContextMenuHook {
             target.setAccessible(true);
             XposedBridge.hookMethod(target, allowlistHook);
             DexKitCache.saveMethod("PostDownload_allowlist", target);
-            ModuleLog.line("(IE|Post) ✅ Allowlist patch hooked: " +
+            ModuleLog.detail("(IE|Post) Allowlist patch hooked: " +
                     target.getDeclaringClass().getName() + "." + target.getName());
 
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Post) ❌ installAllowlistPatchHook: " + t);
+            ModuleLog.warn("(IE|Post) The shorter post menu may hide the added rows; the full menu still shows them: " + t);
         }
     }
 
@@ -596,7 +597,7 @@ public class PostDownloadContextMenuHook {
 
             Context ctx = findContext(thisObj);
             if (ctx == null) {
-                ModuleLog.line("(IE|Post) ❌ Context not found in click handler");
+                ModuleLog.error("(IE|Post) Could not handle the menu tap: the screen was not found");
                 return;
             }
 
@@ -611,7 +612,7 @@ public class PostDownloadContextMenuHook {
                 if (media == null) media = findMedia(thisObj);
             }
             if (media == null) {
-                ModuleLog.line("(IE|Post) ❌ Media not found in click handler");
+                ModuleLog.error("(IE|Post) Could not find the post for this menu tap");
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_no_media_for_post), Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -622,7 +623,7 @@ public class PostDownloadContextMenuHook {
             else if (isCopyImage) triggerCopyImage(ctx, media, thisObj);
             else                  triggerDownload(ctx, media, thisObj);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Post) ❌ onOptionClicked: " + t);
+            ModuleLog.error("(IE|Post) Could not handle the menu tap", t);
         }
     }
 

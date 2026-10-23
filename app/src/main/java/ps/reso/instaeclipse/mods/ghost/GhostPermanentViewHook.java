@@ -56,6 +56,7 @@ public class GhostPermanentViewHook {
             Method cached = DexKitCache.loadMethod("ViewOnceMedia", classLoader);
             if (cached != null) {
                 XposedBridge.hookMethod(cached, buildHook());
+                ModuleLog.ok("(IE|ViewOnceMedia) ready");
                 FeatureStatusTracker.setHooked("PermanentViewMode");
                 return;
             }
@@ -68,7 +69,7 @@ public class GhostPermanentViewHook {
                             .paramCount(1)));
 
             if (methods.isEmpty()) {
-                ModuleLog.line("(IE|ViewOnceMedia) ❌ unsafeParseFromJson not found");
+                ModuleLog.error("(IE|ViewOnceMedia) Could not turn on permanent view: not supported by this Instagram version (view mode parser not found)");
                 return;
             }
 
@@ -89,22 +90,22 @@ public class GhostPermanentViewHook {
                 try {
                     target = methods.get(0).getMethodInstance(classLoader);
                 } catch (Throwable t) {
-                    ModuleLog.line("(IE|ViewOnceMedia) ❌ Could not resolve method: " + t);
+                    ModuleLog.error("(IE|ViewOnceMedia) Could not turn on permanent view", t);
                     return;
                 }
             }
 
-            ModuleLog.line("(IE|ViewOnceMedia) ✅ hooking "
+            ModuleLog.detail("(IE|ViewOnceMedia) hooking "
                     + target.getDeclaringClass().getName() + "." + target.getName());
 
             DexKitCache.saveMethod("ViewOnceMedia", target);
             XposedBridge.hookMethod(target, buildHook());
 
             FeatureStatusTracker.setHooked("PermanentViewMode");
-            ModuleLog.line("(IE|ViewOnceMedia) ✅ hooked");
+            ModuleLog.ok("(IE|ViewOnceMedia) ready");
 
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ViewOnceMedia) ❌ " + t);
+            ModuleLog.error("(IE|ViewOnceMedia) Could not turn on permanent view", t);
         }
     }
 
@@ -153,7 +154,7 @@ public class GhostPermanentViewHook {
                             }
                             if (original != null) {
                                 for (Long k : keys) ORIGINAL_BY_KEY.put(k, original);
-                                ModuleLog.line("(IE|ViewOnceMedia) mode=" + original + " keys=" + keys);
+                                ModuleLog.detail("(IE|ViewOnceMedia) mode=" + original + " keys=" + keys);
                                 f.set(result, PERMANENT);
                             }
                         } catch (Throwable ignored) {}

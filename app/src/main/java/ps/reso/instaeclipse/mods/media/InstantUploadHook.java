@@ -84,7 +84,8 @@ public class InstantUploadHook {
             Class<?> vm = XposedHelpers.findClass(VM_CLASS, cl);
             SwapBinding binding = SwapBinding.resolve(vm, android.content.Context.class, Bitmap.class);
             if (binding == null) {
-                ModuleLog.line("(IE|InstantUpload) photo handoff unresolved or ambiguous");
+                ModuleLog.error("(IE|InstantUpload) Could not turn on sending gallery photos as Instants: the camera's photo handoff was not found in this Instagram version");
+                ModuleLog.detail("(IE|InstantUpload) photo handoff unresolved or ambiguous");
                 if (FeatureFlags.uploadInstants) FeatureStatusTracker.setBroken("UploadInstants");
                 return;
             }
@@ -115,19 +116,20 @@ public class InstantUploadHook {
                             // A pick armed again meanwhile is the next shot's, not this one's.
                             if (pendingBitmap == selected) clearPick();
                             FeedVideoDownloadHook.mainHandler.post(InstantUploadHook::removeChip);
-                            ModuleLog.line("(IE|InstantUpload) ✅ swapped in gallery bitmap");
+                            ModuleLog.line("(IE|InstantUpload) Sent the gallery photo as this Instant");
                         }
                     } catch (Throwable t) {
-                        ModuleLog.line("(IE|InstantUpload) ❌ swap: " + t);
+                        ModuleLog.error("(IE|InstantUpload) Could not use the gallery photo for this Instant", t);
                     }
                 }
             };
             binding.method.setAccessible(true);
             XposedBridge.hookMethod(binding.method, swap);
             FeatureStatusTracker.setHooked("UploadInstants");
-            ModuleLog.line("(IE|InstantUpload) ✅ capture handler hooked");
+            ModuleLog.ok("(IE|InstantUpload) ready");
+            ModuleLog.detail("(IE|InstantUpload) capture handler hooked: " + binding.method.getName());
         } catch (Throwable t) {
-            ModuleLog.line("(IE|InstantUpload) ⚠️ swap install: " + t.getMessage());
+            ModuleLog.error("(IE|InstantUpload) Could not turn on sending gallery photos as Instants: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             if (FeatureFlags.uploadInstants) FeatureStatusTracker.setBroken("UploadInstants");
         }
     }
@@ -226,9 +228,9 @@ public class InstantUploadHook {
                 if (m.isSynthetic() || m.isBridge()) continue;
                 try { XposedBridge.hookMethod(m, onActive); n++; } catch (Throwable ignored) {}
             }
-            ModuleLog.line("(IE|InstantUpload) ✅ camera-open hooked (" + n + " VM methods)");
+            ModuleLog.detail("(IE|InstantUpload) camera-open hooked (" + n + " VM methods)");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|InstantUpload) ⚠️ camera-open: " + t.getMessage());
+            ModuleLog.error("(IE|InstantUpload) The gallery button will not appear on the Instants camera: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -248,14 +250,14 @@ public class InstantUploadHook {
                     ps.reso.instaeclipse.xposedcompat.AndroidAppHelper.currentApplication();
             if (app == null) {
                 if (attempt < 30) FeedVideoDownloadHook.mainHandler.postDelayed(() -> registerLifecycle(attempt + 1), 1000);
-                else ModuleLog.line("(IE|InstantUpload) ⚠️ no Application; chip lifecycle not registered");
+                else ModuleLog.warn("(IE|InstantUpload) The gallery button may stay on screen after leaving the camera: Instagram was not ready in time");
                 return;
             }
             app.registerActivityLifecycleCallbacks(new Lifecycle());
             lifecycleRegistered = true;
-            ModuleLog.line("(IE|InstantUpload) ✅ lifecycle registered");
+            ModuleLog.detail("(IE|InstantUpload) lifecycle registered");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|InstantUpload) ❌ lifecycle: " + t);
+            ModuleLog.warn("(IE|InstantUpload) The gallery button may stay on screen after leaving the camera: " + t);
         }
     }
 
@@ -575,9 +577,9 @@ public class InstantUploadHook {
             // idle: an idle-looking chip would let the next shutter press send the old photo.
             Bitmap pick = pendingBitmap;
             if (pick != null && pickHost() == act) markChipReady(act, pick);
-            ModuleLog.line("(IE|InstantUpload) ✅ gallery chip injected");
+            ModuleLog.detail("(IE|InstantUpload) gallery chip injected");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|InstantUpload) ❌ chip: " + t);
+            ModuleLog.error("(IE|InstantUpload) Could not show the gallery button on the camera: " + t);
         }
     }
 
@@ -740,13 +742,13 @@ public class InstantUploadHook {
                                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(act, I18n.t(act, R.string.ig_instant_upload_ready),
                                         Toast.LENGTH_LONG).show();
                             } catch (Throwable t) {
-                                ModuleLog.line("(IE|InstantUpload) ❌ result: " + t);
+                                ModuleLog.error("(IE|InstantUpload) Could not use the picked photo", t);
                             }
                         }
                     });
-            ModuleLog.line("(IE|InstantUpload) ✅ picker-result hooked");
+            ModuleLog.detail("(IE|InstantUpload) picker-result hooked");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|InstantUpload) ⚠️ picker-result: " + t.getMessage());
+            ModuleLog.error("(IE|InstantUpload) Photos picked from the gallery will not reach the camera: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -777,7 +779,7 @@ public class InstantUploadHook {
             }
             return bmp;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|InstantUpload) ❌ decode: " + t);
+            ModuleLog.error("(IE|InstantUpload) Could not read the picked photo: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return null;
         }
     }

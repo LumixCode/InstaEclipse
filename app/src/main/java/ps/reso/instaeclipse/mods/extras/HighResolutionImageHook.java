@@ -40,7 +40,7 @@ public final class HighResolutionImageHook {
                 } catch (Throwable ignored) {}
             }
             if (pickers.isEmpty()) {
-                ModuleLog.line(TAG + "❌ image picker not found");
+                ModuleLog.error(TAG + "Could not turn on high-resolution images: the image size picker was not found in this Instagram version");
                 return;
             }
             DexKitCache.saveMethods(CACHE, pickers);
@@ -77,6 +77,7 @@ public final class HighResolutionImageHook {
             });
         }
         FeatureStatusTracker.setHooked("highResolutionImages");
-        ModuleLog.line(TAG + "✅ hooked " + pickers.size() + " picker(s)");
+        ModuleLog.ok(TAG + "ready");
+        ModuleLog.detail(TAG + "hooked " + pickers.size() + " picker(s)");
     }
 }

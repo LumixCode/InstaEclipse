@@ -92,9 +92,9 @@ public final class CurrentThreadTracker {
                 }
             });
             sInstalled = true;
-            ModuleLog.line("(IE|ThreadTracker) ✅ Fragment onResume/onPause hooked");
+            ModuleLog.detail("(IE|ThreadTracker) Fragment onResume/onPause hooked");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ThreadTracker) ❌ install: " + t);
+            ModuleLog.warn("(IE|ThreadTracker) Could not track which chat is open; chat-specific buttons and settings may not work", t);
         }
     }
 

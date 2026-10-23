@@ -40,7 +40,8 @@ public class AirplaneModeHook {
             start.setAccessible(true);
             stop.setAccessible(true);
         } catch (NoSuchMethodException e) {
-            ModuleLog.line(TAG + "❌ MQTT start/stop methods missing");
+            ModuleLog.error(TAG + "Could not turn on airplane mode: Instagram's live connection controls were not found in this version");
+            ModuleLog.detail(TAG + "MQTT start/stop methods missing: " + e.getMessage());
             return;
         }
 
@@ -63,7 +64,7 @@ public class AirplaneModeHook {
                 param.setResult(null);
                 if (!loggedBlock) {
                     loggedBlock = true;
-                    ModuleLog.line(TAG + "MQTT start blocked");
+                    ModuleLog.line(TAG + "Kept Instagram's live connection off");
                 }
             }
         });
@@ -77,11 +78,12 @@ public class AirplaneModeHook {
                 }
             });
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "event handler hook failed: " + t);
+            ModuleLog.warn(TAG + "Live events that still arrive cannot be dropped in this Instagram version; the live connection is still kept off: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
 
         FeatureStatusTracker.setHooked("airplaneMode");
-        ModuleLog.line(TAG + "✅ hooked");
+        ModuleLog.ok(TAG + "ready");
     }
 
     /** Applies the current {@link FeatureFlags#airplaneMode} to every live realtime manager. */
@@ -100,9 +102,10 @@ public class AirplaneModeHook {
             try {
                 m.invoke(o);
             } catch (Throwable t) {
-                ModuleLog.line(TAG + m.getName() + " failed: " + t);
+                ModuleLog.error(TAG + "Could not apply the change to Instagram's live connection right away; restart Instagram to apply it", t);
+                ModuleLog.detail(TAG + m.getName() + " failed: " + t);
             }
         }
-        ModuleLog.line(TAG + m.getName() + " on " + live.size() + " manager(s)");
+        ModuleLog.detail(TAG + m.getName() + " on " + live.size() + " manager(s)");
     }
 }

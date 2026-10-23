@@ -54,7 +54,7 @@ final class IgThemeColorSourceHooks {
         n += hookCslArg(GradientDrawable.class, "setColor", ColorStateList.class);
         n += hookColorArgCtor(PorterDuffColorFilter.class, int.class, PorterDuff.Mode.class);
         if (Build.VERSION.SDK_INT >= 29) n += hookColorArgCtor(BlendModeColorFilter.class, int.class, BlendMode.class);
-        ModuleLog.line("(InstaEclipse | Theme): color-source hooks installed=" + n);
+        ModuleLog.detail("(InstaEclipse | Theme): color-source hooks installed=" + n);
     }
 
     private static boolean active() {
@@ -156,7 +156,8 @@ final class IgThemeColorSourceHooks {
             });
             return 1;
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | Theme): ⚠️ ColorDrawable(state): " + t);
+            ModuleLog.warn("(InstaEclipse | Theme): Some colors may not follow the custom theme: " + t.getClass().getSimpleName());
+            ModuleLog.detail("(InstaEclipse | Theme): ColorDrawable(state): " + t);
             return 0;
         }
     }
@@ -215,7 +216,8 @@ final class IgThemeColorSourceHooks {
             }
             return 1;
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | Theme): ⚠️ compose drawing: " + t);
+            ModuleLog.warn("(InstaEclipse | Theme): Some colors may not follow the custom theme: " + t.getClass().getSimpleName());
+            ModuleLog.detail("(InstaEclipse | Theme): compose drawing: " + t);
             return 0;
         }
     }
@@ -253,7 +255,8 @@ final class IgThemeColorSourceHooks {
             });
             return 1;
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | Theme): ⚠️ ColorDrawable.draw: " + t);
+            ModuleLog.warn("(InstaEclipse | Theme): Some colors may not follow the custom theme: " + t.getClass().getSimpleName());
+            ModuleLog.detail("(InstaEclipse | Theme): ColorDrawable.draw: " + t);
             return 0;
         }
     }
@@ -270,7 +273,8 @@ final class IgThemeColorSourceHooks {
             r.run();
             return 1;
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | Theme): ⚠️ " + cls.getSimpleName() + "." + name + ": " + t);
+            ModuleLog.warn("(InstaEclipse | Theme): Some colors may not follow the custom theme: " + t.getClass().getSimpleName());
+            ModuleLog.detail("(InstaEclipse | Theme): " + cls.getSimpleName() + "." + name + ": " + t);
             return 0;
         }
     }

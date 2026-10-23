@@ -86,9 +86,10 @@ public final class ManualStorySeenHook {
         try {
             resolveReceiptPipeline(bridge, loader);
             receiptPipelineReady = true;
-            ModuleLog.line("(IE|ManualStorySeen) Receipt pipeline installed");
+            ModuleLog.detail("(IE|ManualStorySeen) receipt pipeline installed");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ManualStorySeen) Receipt resolution failed at " + resolutionStage
+            ModuleLog.error("(IE|ManualStorySeen) Could not turn on \"Mark as seen\" for stories: not supported by this Instagram version");
+            ModuleLog.detail("(IE|ManualStorySeen) receipt resolution failed at " + resolutionStage
                     + ": " + t.getClass().getSimpleName());
         }
         // A changed receipt implementation must not silently hide the user's menu action.
@@ -98,9 +99,10 @@ public final class ManualStorySeenHook {
             installMenu(bridge, loader);
             if (receiptPipelineReady) FeatureStatusTracker.setHooked("ManualStorySeen");
             else if (enabled()) FeatureStatusTracker.setBroken("ManualStorySeen");
+            if (receiptPipelineReady) ModuleLog.ok("(IE|ManualStorySeen) ready");
         } catch (Throwable t) {
             if (enabled()) FeatureStatusTracker.setBroken("ManualStorySeen");
-            ModuleLog.line("(IE|ManualStorySeen) Menu installation failed: " + t.getClass().getSimpleName());
+            ModuleLog.error("(IE|ManualStorySeen) Could not add \"Mark as seen\" to the story menu: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -133,7 +135,7 @@ public final class ManualStorySeenHook {
             if (context != null) toast(context, R.string.ig_manual_story_seen_sent);
             return true;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ManualStorySeen) request authorization failed: " + t.getClass().getSimpleName());
+            ModuleLog.error("(IE|ManualStorySeen) Could not send \"Mark as seen\"", t);
             return false;
         }
     }
@@ -308,12 +310,12 @@ public final class ManualStorySeenHook {
                     while (account.size() > 32) account.remove(account.keySet().iterator().next());
                     if (!loggedCapture) {
                         loggedCapture = true;
-                        ModuleLog.line("(IE|ManualStorySeen) First account-scoped story receipt captured");
+                        ModuleLog.detail("(IE|ManualStorySeen) first account-scoped story receipt captured");
                     }
                 }
             }
         });
-        ModuleLog.line("(IE|ManualStorySeen) Installed " + trackers.size() + " per-story tracker(s)");
+        ModuleLog.detail("(IE|ManualStorySeen) installed " + trackers.size() + " per-story tracker(s)");
     }
 
     /** Index of the method's only ReelItem parameter, or -1 when it has none. */
@@ -341,7 +343,7 @@ public final class ManualStorySeenHook {
             @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                 try {
                     if (menuDiagnostics.getAndIncrement() < 3) {
-                        ModuleLog.line("(IE|ManualStorySeen) Menu bind: option=" + FeatureFlags.manualStorySeen
+                        ModuleLog.detail("(IE|ManualStorySeen) menu bind: option=" + FeatureFlags.manualStorySeen
                             + ", ghost=" + FeatureFlags.isGhostStory + ", sender=" + receiptPipelineReady
                             + ", labels=" + (p.getResult() instanceof CharSequence[]));
                     }
@@ -350,7 +352,7 @@ public final class ManualStorySeenHook {
                     p.setResult(ManualStorySeenPolicy.appendAction(original, label));
                 } catch (Throwable t) {
                     if (menuDiagnostics.getAndIncrement() < 6) {
-                        ModuleLog.line("(IE|ManualStorySeen) Menu append failed: " + t.getClass().getSimpleName());
+                        ModuleLog.warn("(IE|ManualStorySeen) Could not add \"Mark as seen\" to this story menu: " + t.getClass().getSimpleName());
                     }
                 }
             }
@@ -361,7 +363,7 @@ public final class ManualStorySeenHook {
                 builders++;
             } catch (Throwable t) {
                 failed++;
-                if (failed <= 2) ModuleLog.line("(IE|ManualStorySeen) Menu candidate skipped: " + t.getClass().getSimpleName());
+                if (failed <= 2) ModuleLog.detail("(IE|ManualStorySeen) menu candidate skipped: " + t.getClass().getSimpleName());
             }
         }
         XC_MethodHook dispatcherHook = new XC_MethodHook() {
@@ -384,17 +386,17 @@ public final class ManualStorySeenHook {
                 handlers++;
             } catch (Throwable t) {
                 failed++;
-                if (failed <= 2) ModuleLog.line("(IE|ManualStorySeen) Menu candidate skipped: " + t.getClass().getSimpleName());
+                if (failed <= 2) ModuleLog.detail("(IE|ManualStorySeen) menu candidate skipped: " + t.getClass().getSimpleName());
             }
         }
-        ModuleLog.line("(IE|ManualStorySeen) Menu discovery: builders=" + builders
+        ModuleLog.detail("(IE|ManualStorySeen) menu discovery: builders=" + builders
             + ", dispatchers=" + handlers + ", skipped=" + failed);
         if (builders == 0 || handlers == 0) throw new NoSuchMethodException("Story options menu");
     }
 
     private void markSeen(Context context, Object session, String id) {
         if (!receiptPipelineReady) {
-            if (actionDiagnostics.getAndIncrement() < 3) ModuleLog.line("(IE|ManualStorySeen) Action refused: sender unresolved");
+            if (actionDiagnostics.getAndIncrement() < 3) ModuleLog.warn("(IE|ManualStorySeen) \"Mark as seen\" is not available on this Instagram version");
             toast(context, R.string.ig_manual_story_seen_unsupported);
             return;
         }
@@ -407,7 +409,7 @@ public final class ManualStorySeenHook {
                 receipt = account == null ? null : account.get(id);
             }
             if (actionDiagnostics.getAndIncrement() < 3) {
-                ModuleLog.line("(IE|ManualStorySeen) Action lookup: account=" + (session != null)
+                ModuleLog.detail("(IE|ManualStorySeen) action lookup: account=" + (session != null)
                         + ", currentStory=" + (id != null) + ", receipt=" + (receipt != null));
             }
             if (session == null || id == null || receipt == null) throw new IllegalStateException("Story receipt not captured");
@@ -430,7 +432,8 @@ public final class ManualStorySeenHook {
                 synchronized (notifications) { notifications.remove(token); }
             }
             toast(context, R.string.ig_manual_story_seen_unavailable);
-            ModuleLog.line("(IE|ManualStorySeen) send failed at " + stage + ": " + t.getClass().getSimpleName());
+            ModuleLog.error("(IE|ManualStorySeen) Could not mark the story as seen: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            ModuleLog.detail("(IE|ManualStorySeen) send failed at " + stage);
         } finally { dispatch.remove(); }
     }
 

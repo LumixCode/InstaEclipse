@@ -31,7 +31,7 @@ public final class ModuleResources {
             // Numeric resource IDs must match the loaded code, not a different companion version.
             loadedResources = pm.getResourcesForApplication(info);
         } catch (Exception e) {
-            ModuleLog.line("(IE|Resources) APK resources unavailable; trying installed module", e);
+            ModuleLog.detail("(IE|Resources) APK resources unavailable; trying installed module", e);
         }
     }
 
@@ -51,7 +51,7 @@ public final class ModuleResources {
         try {
             return get(context).getDrawable(resId, null);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Resources) Missing drawable " + Integer.toHexString(resId), t);
+            ModuleLog.warn("(IE|Resources) An icon could not be loaded (0x" + Integer.toHexString(resId) + ")", t);
             return null;
         }
     }

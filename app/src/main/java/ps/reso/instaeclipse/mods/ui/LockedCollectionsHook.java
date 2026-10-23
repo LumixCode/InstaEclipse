@@ -79,9 +79,9 @@ public class LockedCollectionsHook {
                 }
             });
             FeatureStatusTracker.setHooked("LockSavedCollections");
-            ModuleLog.line(TAG + "✅ installed");
+            ModuleLog.ok(TAG + "ready");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.error(TAG + "Will not work: setup failed", t);
         }
     }
 
@@ -132,7 +132,8 @@ public class LockedCollectionsHook {
                 }
             }
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "args: " + t);
+            ModuleLog.warn(TAG + "Could not tell which collection is open; it may open without the lock: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
         return null;
     }
@@ -227,7 +228,8 @@ public class LockedCollectionsHook {
                 if (Math.abs(btn.getLeft() - opt.getLeft()) < 4) btn.setTranslationX(-shift);
             });
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "button: " + t);
+            ModuleLog.warn(TAG + "Could not add the lock button to this collection: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 

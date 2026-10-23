@@ -139,7 +139,7 @@ public final class IgThemeEngine {
             String pkg = res.getResourcePackageName(android.R.color.black);
             initMappings(res, pkg, cl);
             initialized = true;
-            ModuleLog.line("(InstaEclipse | Theme): mapped " + attrToSlot.size() + " attrs, " + colorResToSlot.size() + " colors");
+            ModuleLog.detail("(InstaEclipse | Theme): mapped " + attrToSlot.size() + " attrs, " + colorResToSlot.size() + " colors");
         }
     }
 

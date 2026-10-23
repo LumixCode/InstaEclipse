@@ -77,9 +77,10 @@ public class IGNetworkInterceptor {
                 XposedBridge.hookMethod(m, dropHook);
                 n++;
             }
-            ModuleLog.line("(InstaEclipse | Interceptor): chain-entry hooks: " + n);
+            ModuleLog.detail("(InstaEclipse | Interceptor): chain-entry hooks: " + n);
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | Interceptor): ⚠️ chain-entry hook: " + t.getMessage());
+            ModuleLog.warn("(InstaEclipse | Interceptor): Requests Instagram answers from its own cache may not be filtered; all other requests still are: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -297,11 +298,11 @@ public class IGNetworkInterceptor {
                         "DisableReelsSection", "DisableExploreSection", "DisableCommentsSection", "HideDmSuggestions"})
                     FeatureStatusTracker.setHooked(key);
             } else {
-                ModuleLog.line("(InstaEclipse | Interceptor): Could not resolve required classes or fields.");
+                ModuleLog.error("(InstaEclipse | Interceptor): Network filters (analytics blocking, disabled sections, parts of ghost mode) will not work: Instagram's request classes were not found in this version");
             }
 
         } catch (Exception e) {
-            ModuleLog.line("(InstaEclipse | Interceptor): ❌ " + e.getMessage());
+            ModuleLog.error("(InstaEclipse | Interceptor): Network filters (analytics blocking, disabled sections, parts of ghost mode) will not work", e);
         }
     }
 }

@@ -32,7 +32,8 @@ public class SwipeToCameraHook {
             if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
             if (f.getType() == float.class) {
                 if (position != null) {
-                    ModuleLog.line(TAG + "❌ PositionConfig shape changed");
+                    ModuleLog.error(TAG + "Could not turn off swipe to camera: this Instagram version changed how swiping between screens works");
+                    ModuleLog.detail(TAG + "PositionConfig shape changed (more than one float field)");
                     return;
                 }
                 position = f;
@@ -66,7 +67,7 @@ public class SwipeToCameraHook {
             }
         });
         FeatureStatusTracker.setHooked("disableSwipeToCamera");
-        ModuleLog.line(TAG + "✅ hooked");
+        ModuleLog.ok(TAG + "ready");
     }
 
     private static boolean fromSwipe(Object cfg, List<Field> strings) throws IllegalAccessException {

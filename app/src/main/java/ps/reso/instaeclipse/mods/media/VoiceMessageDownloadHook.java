@@ -120,7 +120,7 @@ public class VoiceMessageDownloadHook {
                     }
                 });
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "sticker classes: " + t);
+                ModuleLog.error(TAG + "Downloading stickers and GIFs from chats will not work: " + t);
             }
             for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("audio_src_expiration_timestamp_us", "waveform_sampling_frequency_hz")
@@ -266,7 +266,7 @@ public class VoiceMessageDownloadHook {
                         if (FeatureFlags.translateMessages && hasAction(param.args, TRANSLATE_CARRIER)) {
                             Context tctx = null;
                             for (Object a : param.args) if (a instanceof Activity act) tctx = act;
-                            ModuleLog.line(TAG + "dispatch: translate");
+                            ModuleLog.probe(TAG + "dispatch: translate");
                             param.setResult(null);
                             translate(tctx);
                             return;
@@ -330,13 +330,13 @@ public class VoiceMessageDownloadHook {
                             return;
                         }
                         if (isOurRow(row, translateLabel(), TRANSLATE_CARRIER)) {
-                            ModuleLog.line(TAG + "row tap: translate");
+                            ModuleLog.probe(TAG + "row tap: translate");
                             param.setResult(null);
                             translate(null);
                             return;
                         }
                         if (!downloadEnabled() || !isOurRow(row, downloadLabel(), CARRIER)) return;
-                        ModuleLog.line(TAG + "row tap: " + (pendingSticker != null ? "sticker" : "voice"));
+                        ModuleLog.probe(TAG + "row tap: " + (pendingSticker != null ? "sticker" : "voice"));
                         // Not consumed: the action-selected listener that runs next consumes it.
                         downloadPending(null);
                     }
@@ -360,7 +360,7 @@ public class VoiceMessageDownloadHook {
                                 return;
                             }
                             if (FeatureFlags.translateMessages && param.args[0] instanceof Enum<?> te && TRANSLATE_CARRIER.equals(te.name())) {
-                                ModuleLog.line(TAG + "action selected: translate");
+                                ModuleLog.probe(TAG + "action selected: translate");
                                 param.setResult(null);
                                 translate(null);
                                 return;
@@ -372,7 +372,7 @@ public class VoiceMessageDownloadHook {
                             Object msg = messageClass != null
                                     ? VoiceMessageTargetResolver.readTypedField(param.thisObject, messageClass) : null;
                             if (isPendingSticker(msg)) {
-                                ModuleLog.line(TAG + "action selected via " + param.method.getDeclaringClass().getName() + ": sticker");
+                                ModuleLog.probe(TAG + "action selected via " + param.method.getDeclaringClass().getName() + ": sticker");
                                 param.setResult(null);
                                 downloadPending(null);
                                 clearPending();
@@ -380,7 +380,7 @@ public class VoiceMessageDownloadHook {
                             }
                             if (msg == null) msg = pendingVoice;
                             boolean voice = pendingVoice != null && hasOwnVoice(msg);
-                            ModuleLog.line(TAG + "action selected via " + param.method.getDeclaringClass().getName() + ": voice=" + voice);
+                            ModuleLog.probe(TAG + "action selected via " + param.method.getDeclaringClass().getName() + ": voice=" + voice);
                             if (!voice) return;
                             param.setResult(null);
                             downloadVoice(null, msg);
@@ -441,14 +441,14 @@ public class VoiceMessageDownloadHook {
                                         }
                                         if (method.getName().equals("invoke") && margs != null && margs.length == 1
                                                 && data.isInstance(margs[0]) && isOurRow(margs[0], translateLabel(), TRANSLATE_CARRIER)) {
-                                            ModuleLog.line(TAG + "compose row tap: translate");
+                                            ModuleLog.probe(TAG + "compose row tap: translate");
                                             dismissMenu();
                                             translate(null);
                                             return null;
                                         }
                                         if (method.getName().equals("invoke") && margs != null && margs.length == 1
                                                 && data.isInstance(margs[0]) && isOurRow(margs[0], downloadLabel(), CARRIER)) {
-                                            ModuleLog.line(TAG + "compose row tap: " + (pendingSticker != null ? "sticker" : "voice"));
+                                            ModuleLog.probe(TAG + "compose row tap: " + (pendingSticker != null ? "sticker" : "voice"));
                                             downloadPending(null);
                                             clearPending();
                                             dismissMenu();
@@ -468,11 +468,13 @@ public class VoiceMessageDownloadHook {
                     }
                 }
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "⚠️ compose rows: " + t + " / " + t.getCause());
+                ModuleLog.warn(TAG + "Taps on the added rows in the newer chat menu may not work: " + t + " / " + t.getCause());
             }
-            ModuleLog.line(TAG + "compose row hooks=" + composeRows + " (label field " + (labelFieldRef != null ? "ok" : "missing")
+            ModuleLog.detail(TAG + "compose row hooks=" + composeRows + " (label field " + (labelFieldRef != null ? "ok" : "missing")
                     + ", primary action " + (primaryActionField != null ? "ok" : "missing") + ")");
-            ModuleLog.line(TAG + "✅ lookups=" + lookups + " factories=" + factories + " dispatchers=" + dispatchers
+            if (factories > 0 && dispatchers > 0) ModuleLog.ok(TAG + "ready");
+            else ModuleLog.error(TAG + "Could not turn on downloads from chats (voice messages, stickers, photos): the message menu was not found in this Instagram version");
+            ModuleLog.detail(TAG + "lookups=" + lookups + " factories=" + factories + " dispatchers=" + dispatchers
                     + " mapper=" + (audioMapper != null) + " message=" + (messageClass != null ? messageClass.getName() : "?")
                     + " mode=" + (voiceType != null ? "precise" : "graph-walk fallback"));
             if (factories > 0 && dispatchers > 0) {
@@ -491,7 +493,7 @@ public class VoiceMessageDownloadHook {
             // Instagram restart, like the other DexKit features).
             if (FeatureFlags.bulkUnsend) ps.reso.instaeclipse.mods.ghost.BulkUnsend.install(bridge, cl, messageClass);
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.error(TAG + "Could not turn on downloads from chats", t);
             if (FeatureFlags.enableVoiceDownload) FeatureStatusTracker.setBroken("VoiceDownload");
             if (FeatureFlags.enableStickerDownload) FeatureStatusTracker.setBroken("StickerDownload");
             if (FeatureFlags.enableDmMediaDownload) FeatureStatusTracker.setBroken("DmMediaDownload");
@@ -532,7 +534,7 @@ public class VoiceMessageDownloadHook {
             voiceMediaField = media;
             voiceType = media.getDeclaringClass();
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ voice payload: " + t);
+            ModuleLog.detail(TAG + "voice payload (using the graph-walk fallback): " + t);
         }
     }
 
@@ -585,7 +587,7 @@ public class VoiceMessageDownloadHook {
     }
 
     private static void diagnose(String reason, String detail) {
-        if (diagnostics.add(reason)) ModuleLog.line(TAG + reason + ": " + detail);
+        if (diagnostics.add(reason)) ModuleLog.detail(TAG + reason + ": " + detail);
     }
 
     /**
@@ -610,7 +612,7 @@ public class VoiceMessageDownloadHook {
                     act.dispatchKeyEvent(new android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_BACK));
                     act.dispatchKeyEvent(new android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_BACK));
                 });
-                ModuleLog.line(TAG + "row wired (" + row.getClass().getSimpleName() + ")");
+                ModuleLog.probe(TAG + "row wired (" + row.getClass().getSimpleName() + ")");
             }
         });
     }
@@ -675,7 +677,7 @@ public class VoiceMessageDownloadHook {
             // keep letters of every script: a chat named in Cyrillic or Arabic stays readable
             if (chat != null && !chat.isEmpty()) return chat.replaceAll("[^\\p{L}\\p{N}._-]", "_");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ username: " + t);
+            ModuleLog.detail(TAG + "username: " + t);
         }
         return "voice";
     }
@@ -718,7 +720,7 @@ public class VoiceMessageDownloadHook {
                 }
             }
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ sender: " + t);
+            ModuleLog.detail(TAG + "sender: " + t);
         }
         return null;
     }
@@ -855,7 +857,7 @@ public class VoiceMessageDownloadHook {
             if (best == null && own.size() == 1) best = own.get(0);
             return best;
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ text: " + t);
+            ModuleLog.detail(TAG + "text: " + t);
             return null;
         }
     }
@@ -993,10 +995,10 @@ public class VoiceMessageDownloadHook {
                 if (urls.size() == 1 && !FeedVideoDownloadHook.isVideoUrl(urls.get(0))) {
                     Object[] big = StoryDownloadHook.largestImage(media);
                     long igArea = urlArea(urls.get(0));
-                    ModuleLog.line(TAG + "DM photo: largest=" + (big != null ? big[1] : null) + " ig=" + igArea);
+                    ModuleLog.detail(TAG + "DM photo: largest=" + (big != null ? big[1] : null) + " ig=" + igArea);
                     if (big != null && igArea > 0 && (int) big[1] > igArea) urls.set(0, (String) big[0]);
                 }
-                ModuleLog.line(TAG + "DM media: " + urls.size() + " item(s), user=" + fUser);
+                ModuleLog.detail(TAG + "DM media: " + urls.size() + " item(s), user=" + fUser);
                 if (urls.isEmpty()) throw new IllegalStateException("no media URL");
                 boolean delegated = false, anyVideo = false;
                 for (int i = 0; i < urls.size(); i++) {
@@ -1011,7 +1013,7 @@ public class VoiceMessageDownloadHook {
                 if (!delegated) FeedVideoDownloadHook.mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
                         I18n.t(ctx, saved), android.widget.Toast.LENGTH_SHORT).show());
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "DM media download failed: " + t);
+                ModuleLog.error(TAG + "Could not save the chat photo or video: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                 FeedVideoDownloadHook.mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
                         I18n.t(ctx, R.string.ig_toast_download_failed, String.valueOf(t.getMessage())), android.widget.Toast.LENGTH_SHORT).show());
             }
@@ -1079,7 +1081,7 @@ public class VoiceMessageDownloadHook {
             for (Object v : p[2].getEnumConstants()) if (carrier.equals(((Enum<?>) v).name())) action = v;
             return ctor.newInstance(null, style, action, null, null, icon, null, label, null, null, null);
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ row: " + t);
+            ModuleLog.warn(TAG + "Could not add a row to this message menu: " + t);
             return null;
         }
     }
@@ -1140,7 +1142,7 @@ public class VoiceMessageDownloadHook {
                 }
             }
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "\u26a0\ufe0f sticker url: " + t);
+            ModuleLog.detail(TAG + "sticker url: " + t);
         }
         return null;
     }
@@ -1167,7 +1169,7 @@ public class VoiceMessageDownloadHook {
             String url = (String) imageUrlClass.getMethod("getUrl").invoke(image);
             long area = (long) (int) imageUrlClass.getMethod("getWidth").invoke(image)
                     * (int) imageUrlClass.getMethod("getHeight").invoke(image);
-            ModuleLog.line(TAG + "store sticker: " + type + " " + area + " " + url);
+            ModuleLog.probe(TAG + "store sticker: " + type + " " + area + " " + url);
             if (url != null && url.startsWith("http") && area > bestArea) { best = url; bestArea = area; }
         }
         return best;
@@ -1186,7 +1188,7 @@ public class VoiceMessageDownloadHook {
                 if (!delegated) FeedVideoDownloadHook.mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
                         I18n.t(ctx, R.string.ig_toast_photo_saved), android.widget.Toast.LENGTH_SHORT).show());
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "sticker download failed: " + t);
+                ModuleLog.error(TAG + "Could not save the sticker: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                 FeedVideoDownloadHook.mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
                         I18n.t(ctx, R.string.ig_toast_download_failed, String.valueOf(t.getMessage())), android.widget.Toast.LENGTH_SHORT).show());
             }
@@ -1232,7 +1234,7 @@ public class VoiceMessageDownloadHook {
                 }
             }
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ audio url: " + t);
+            ModuleLog.detail(TAG + "audio url: " + t);
         }
         return null;
     }
@@ -1251,7 +1253,7 @@ public class VoiceMessageDownloadHook {
                 if (src instanceof String s && s.startsWith("http")) return s;
             }
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ audio url: " + t);
+            ModuleLog.detail(TAG + "audio url: " + t);
         }
         return null;
     }

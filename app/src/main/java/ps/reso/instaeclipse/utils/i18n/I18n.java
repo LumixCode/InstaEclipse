@@ -25,7 +25,7 @@ public final class I18n {
                     ? resources.getString(resId)
                     : resources.getString(resId, args);
         } catch (Exception e) {
-            ModuleLog.line("(IE|Resources) Missing string " + Integer.toHexString(resId), e);
+            ModuleLog.warn("(IE|Resources) A text could not be loaded (0x" + Integer.toHexString(resId) + ")", e);
             return "[Text unavailable]";
         }
     }

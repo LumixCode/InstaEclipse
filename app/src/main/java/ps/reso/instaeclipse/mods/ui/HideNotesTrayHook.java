@@ -47,11 +47,11 @@ public class HideNotesTrayHook {
                     }
                 });
                 n++;
-                ModuleLog.line(TAG + "✅ compose tray item " + md.getClassName() + "." + md.getName());
+                ModuleLog.detail(TAG + "compose tray item hooked: " + md.getClassName() + "." + md.getName());
             }
             if (n > 0) FeatureStatusTracker.setHooked("HideNotesTray");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ compose tray: " + t);
+            ModuleLog.warn(TAG + "The notes tray may still show in the inbox: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
         try {
             Member ctor = null;
@@ -65,7 +65,7 @@ public class HideNotesTrayHook {
                 if (ctor != null) break;
             }
             if (ctor == null) {
-                ModuleLog.line(TAG + "❌ notes tray holder not found");
+                ModuleLog.warn(TAG + "The notes tray may still show in the inbox (tray list item not found in this Instagram version)");
                 return;
             }
             XposedBridge.hookMethod(ctor, new XC_MethodHook() {
@@ -80,10 +80,11 @@ public class HideNotesTrayHook {
                     }
                 }
             });
-            ModuleLog.line(TAG + "✅ Hooked " + ctor.getDeclaringClass().getName() + ".<init>");
+            ModuleLog.ok(TAG + "ready");
+            ModuleLog.detail(TAG + "hooked " + ctor.getDeclaringClass().getName() + ".<init>");
             FeatureStatusTracker.setHooked("HideNotesTray");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.warn(TAG + "The notes tray may still show in the inbox: setup failed", t);
         }
     }
 

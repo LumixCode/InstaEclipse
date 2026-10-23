@@ -159,9 +159,9 @@ public class KeepUnsentMessagesHook {
                 return fields.size() == 1 ? fields.iterator().next() : null;
             });
             if (messageText != null) messageText.setAccessible(true);
-            else ModuleLog.line("(IE|KeepUnsent) message body field unavailable");
+            else ModuleLog.warn("(IE|KeepUnsent) The text of unsent messages cannot be read on this Instagram version (they are still kept)");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|KeepUnsent) body lookup unavailable: " + t.getMessage());
+            ModuleLog.warn("(IE|KeepUnsent) The text of unsent messages cannot be read (they are still kept): " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -223,10 +223,14 @@ public class KeepUnsentMessagesHook {
                 if (threadKey != null) threadKey.setAccessible(true);
                 messageThreadKey = threadKey;
             }
-            ModuleLog.line("(IE|KeepUnsent) restart copies " + (decodeMessage == null ? "unavailable"
+            ModuleLog.line("(IE|KeepUnsent) " + (decodeMessage == null
+                    ? "⚠️ Unsent messages are not kept after Instagram restarts on this version"
+                    : messageThreadKey == null ? "⚠️ Some unsent messages may not come back after Instagram restarts"
+                    : "Unsent messages are also kept after Instagram restarts"));
+            ModuleLog.detail("(IE|KeepUnsent) restart copies " + (decodeMessage == null ? "unavailable"
                     : messageThreadKey == null ? "available for in-session messages only" : "available"));
         } catch (Throwable t) {
-            ModuleLog.line("(IE|KeepUnsent) message codec unavailable: " + t.getMessage());
+            ModuleLog.warn("(IE|KeepUnsent) Unsent messages are not kept after Instagram restarts: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -351,9 +355,9 @@ public class KeepUnsentMessagesHook {
                         if (!bulk.isEmpty()) {
                             try { releaseBulkUnsend(param.thisObject, param.args[0], cacheGetter, bulk); }
                             catch (Throwable t) {
-                                ModuleLog.line("(IE|KeepUnsent) bulk release failed: " + t.getClass().getSimpleName());
+                                ModuleLog.warn("(IE|KeepUnsent) Messages you removed with bulk unsend may still show as unsent: " + t.getClass().getSimpleName());
                             }
-                            ModuleLog.line("(IE|KeepUnsent) bulk unsend passthrough");
+                            ModuleLog.detail("(IE|KeepUnsent) bulk unsend passthrough");
                             return;
                         }
                         if (!FeatureFlags.keepUnsentMessages) return;
@@ -374,7 +378,7 @@ public class KeepUnsentMessagesHook {
                             String entryAccount = UnsentIdentity.account(entry);
                             if (account == null) account = entryAccount;
                             if (account != null && entryAccount != null && !account.equals(entryAccount)) {
-                                ModuleLog.line("(IE|KeepUnsent) capture rejected: conflicting owner session");
+                                ModuleLog.detail("(IE|KeepUnsent) capture rejected: conflicting owner session");
                                 return;
                             }
                             Object message = cachedMessage(entry, lookups, ids, thread);
@@ -399,23 +403,24 @@ public class KeepUnsentMessagesHook {
                                         copy != null ? copy : new byte[0]);
                                 UnsentIndicatorHook.refreshVisibleRows();
                             }
-                            ModuleLog.line("(IE|KeepUnsent) removal captured=" + (key != null)
+                            ModuleLog.detail("(IE|KeepUnsent) removal captured=" + (key != null)
                                     + " kept=" + block + " cachedBody=" + (message != null));
                         } catch (Throwable t) {
-                            ModuleLog.line("(IE|KeepUnsent) capture failed: " + t.getClass().getSimpleName());
+                            ModuleLog.warn("(IE|KeepUnsent) Could not keep an unsent message", t);
                         } finally {
                             if (block) param.setResult(null);
                         }
                     }
                 });
                 hooked++;
-                ModuleLog.line("(IE|KeepUnsent) remove=" + removal.getName() + " cached-item queries=" + lookups.size()
+                ModuleLog.ok("(IE|KeepUnsent) ready");
+                ModuleLog.detail("(IE|KeepUnsent) remove=" + removal.getName() + " cached-item queries=" + lookups.size()
                         + " local clear=" + localClearingAvailable);
             }
             if (hooked > 0) FeatureStatusTracker.setHooked("KeepUnsentMessages");
-            else ModuleLog.line("(IE|KeepUnsent) remove primitive not found");
+            else ModuleLog.error("(IE|KeepUnsent) Could not turn on keeping unsent messages: not supported by this Instagram version");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|KeepUnsent) ❌ remove: " + t);
+            ModuleLog.error("(IE|KeepUnsent) Could not turn on keeping unsent messages", t);
         }
     }
 
@@ -550,7 +555,7 @@ public class KeepUnsentMessagesHook {
             UnsentMessageStore.save(key.account, key.thread, protectedIds.aliases(key),
                     (long) messageTime.invoke(message), copy);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|KeepUnsent) copy failed: " + t.getClass().getSimpleName());
+            ModuleLog.warn("(IE|KeepUnsent) Could not save an unsent message for after a restart", t);
         }
     }
 
@@ -559,13 +564,13 @@ public class KeepUnsentMessagesHook {
     private static byte[] encodeCopy(Object owner, Object message, Object threadKey) {
         Object table = messageTable(owner);
         if (table == null) {
-            ModuleLog.line("(IE|KeepUnsent) copy skipped: message table unavailable");
+            ModuleLog.detail("(IE|KeepUnsent) copy skipped: message table unavailable");
             return null;
         }
         try {
             return encode(table, message, threadKey);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|KeepUnsent) copy failed: " + t.getClass().getSimpleName());
+            ModuleLog.warn("(IE|KeepUnsent) Could not copy an unsent message (it may not come back after a restart)", t);
             return null;
         }
     }
@@ -666,7 +671,7 @@ public class KeepUnsentMessagesHook {
             loadedIds.addAll(copy.ids);
             times = inserted(times, index, copy.time);
         }
-        if (restored > 0) ModuleLog.line("(IE|KeepUnsent) restored " + restored + " saved unsent message(s)");
+        if (restored > 0) ModuleLog.detail("(IE|KeepUnsent) restored " + restored + " saved unsent message(s)");
     }
 
     private static long[] inserted(long[] values, int index, long value) {
@@ -770,7 +775,7 @@ public class KeepUnsentMessagesHook {
                     remove.invoke(owner, threadKey, server, client, true);
                 }
             } catch (Throwable t) {
-                ModuleLog.line("(IE|KeepUnsent) local trash removal failed: " + t.getClass().getSimpleName());
+                ModuleLog.warn("(IE|KeepUnsent) Could not remove cleared unsent messages from the chat: " + t.getClass().getSimpleName());
             } finally { clearingLocally.remove(); }
         }
     }
@@ -820,7 +825,7 @@ public class KeepUnsentMessagesHook {
                     // After the kept messages, so the delta scrub cannot drop a restored addition.
                     restoreCopies(args, liveList);
                 } catch (Throwable t) {
-                    ModuleLog.line("(IE|KeepUnsent) ❌ reconcile body: " + t);
+                    ModuleLog.warn("(IE|KeepUnsent) Kept messages may disappear from this chat until it is reopened", t);
                 }
             }
 
@@ -847,7 +852,7 @@ public class KeepUnsentMessagesHook {
                         if (!present) { liveList.add(msg); added++; }
                     }
                 }
-                if (added > 0) ModuleLog.line("(IE|KeepUnsent) ✅ re-injected " + added + " kept msg(s) into this thread");
+                if (added > 0) ModuleLog.detail("(IE|KeepUnsent) re-injected " + added + " kept msg(s) into this thread");
             }
         };
 
@@ -874,15 +879,15 @@ public class KeepUnsentMessagesHook {
                 return List.of();
             });
             if (reconcile.isEmpty()) {
-                ModuleLog.line("(IE|KeepUnsent) ❌ reconcile method not found");
+                ModuleLog.warn("(IE|KeepUnsent) Unsent messages may disappear from the chat when it refreshes on this Instagram version (they stay in the unsent log)");
                 return;
             }
             Method m = reconcile.get(0);
             m.setAccessible(true);
             XposedBridge.hookMethod(m, hook);
-            ModuleLog.line("(IE|KeepUnsent) ✅ reconcile hook → " + m.getDeclaringClass().getName() + "." + m.getName());
+            ModuleLog.detail("(IE|KeepUnsent) reconcile hook → " + m.getDeclaringClass().getName() + "." + m.getName());
         } catch (Throwable t) {
-            ModuleLog.line("(IE|KeepUnsent) ❌ reconcile resolve: " + t);
+            ModuleLog.warn("(IE|KeepUnsent) Unsent messages may disappear from the chat when it refreshes (they stay in the unsent log)", t);
         }
     }
 
@@ -944,7 +949,7 @@ public class KeepUnsentMessagesHook {
             UnsentLog.add(key.account, key.thread, ids, ThreadNames.get(key.thread), text,
                     !FeatureFlags.keepUnsentInChat, detail);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|KeepUnsent) log failed: " + t.getMessage());
+            ModuleLog.warn("(IE|KeepUnsent) Could not add an unsent message to the unsent log", t);
         }
     }
 
@@ -963,7 +968,7 @@ public class KeepUnsentMessagesHook {
         }
         UnsentDetail detail = copy == null || copy.length == 0 ? null
                 : UnsentDetail.fromMessageJson(new String(copy, StandardCharsets.UTF_8));
-        ModuleLog.line("(IE|KeepUnsent) described as " + (detail != null ? detail.kind.id : "none"));
+        ModuleLog.detail("(IE|KeepUnsent) described as " + (detail != null ? detail.kind.id : "none"));
         return detail != null ? detail : UnsentDetail.NO_TEXT;
     }
 

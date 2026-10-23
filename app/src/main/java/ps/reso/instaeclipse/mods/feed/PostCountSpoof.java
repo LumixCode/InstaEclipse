@@ -146,7 +146,9 @@ public final class PostCountSpoof {
         // later updates the row after an Instagram restart; the getters above apply at once).
         if (FeatureFlags.postCountSpoof) hookCountViews();
         if (hooked > 0) FeatureStatusTracker.setHooked("PostCountSpoof");
-        ModuleLog.line(TAG + (hooked > 0 ? "✅" : "❌") + " getters=" + hooked + log);
+        if (hooked > 0) ModuleLog.ok(TAG + "ready");
+        else ModuleLog.error(TAG + "Will not work: the post counts were not found in this Instagram version");
+        ModuleLog.detail(TAG + "getters=" + hooked + log);
     }
 
     private static volatile Class<?> mediaClass;
@@ -222,7 +224,7 @@ public final class PostCountSpoof {
             XposedBridge.hookAllMethods(android.view.View.class, "setContentDescription", rebind);
             XposedBridge.hookAllMethods(android.widget.TextView.class, "setText", rebind);
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "row: " + t);
+            ModuleLog.warn(TAG + "Edited counts may not show in the row under posts: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -483,7 +485,7 @@ public final class PostCountSpoof {
                     COUNTS.put(k, c);
                 }
             } catch (Throwable e) {
-                ModuleLog.line(TAG + "could not read saved counts");
+                ModuleLog.warn(TAG + "Could not read your saved post counts: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             }
         }
     }
@@ -506,7 +508,7 @@ public final class PostCountSpoof {
             fileTime = f.lastModified();
         } catch (Throwable t) {
             atomic.failWrite(out);
-            ModuleLog.line(TAG + "could not save counts");
+            ModuleLog.error(TAG + "Could not save the edited post counts: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 

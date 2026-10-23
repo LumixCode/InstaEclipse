@@ -203,7 +203,8 @@ public class HideChatsHook {
                     }
                 });
             } catch (Throwable t) {
-                ModuleLog.line("(IE|HideChats) gesture hook: " + t.getMessage());
+                ModuleLog.warn("(IE|HideChats) Triple tap to open hidden chats may not work in "
+                        + name.substring(name.lastIndexOf('.') + 1) + ": " + t.getClass().getSimpleName() + ": " + t.getMessage());
             }
         }
     }
@@ -240,17 +241,17 @@ public class HideChatsHook {
             default -> verdict = gesture.during();
         }
         String broken = gesture.takeBreak();
-        if (broken != null) ModuleLog.line("(IE|HideChats) inbox triple tap dropped: " + broken);
+        if (broken != null) ModuleLog.detail("(IE|HideChats) inbox triple tap dropped: " + broken);
         if (verdict == InboxTapGesture.Verdict.OPEN) openHiddenInboxPrompt(activity, gesture);
         return verdict == InboxTapGesture.Verdict.SWALLOW;
     }
 
     private void openHiddenInboxPrompt(Activity activity, InboxTapGesture gesture) {
-        ModuleLog.line("(IE|HideChats) header triple tap detected");
+        ModuleLog.detail("(IE|HideChats) header triple tap detected");
         activity.getWindow().getDecorView().post(() -> {
             if (inboxGestureBounds(activity) == null) {
                 gesture.endGuard();
-                ModuleLog.line("(IE|HideChats) triple tap dropped: the inbox is no longer shown");
+                ModuleLog.detail("(IE|HideChats) triple tap dropped: the inbox is no longer shown");
                 return;
             }
             boolean shown = LockDirectMessagesHook.authenticateForHiddenChats(activity, () -> {
@@ -260,7 +261,7 @@ public class HideChatsHook {
             });
             if (!shown) {
                 gesture.endGuard();
-                ModuleLog.line("(IE|HideChats) hidden chats prompt not shown (no passcode, or a prompt is open)");
+                ModuleLog.line("(IE|HideChats) Hidden chats did not open: no passcode is set, or a passcode prompt is already open");
             }
         });
     }
@@ -326,9 +327,11 @@ public class HideChatsHook {
                 } catch (Throwable ignored) {}
             }
             if (count > 0) FeatureStatusTracker.setHooked("HideSpecificChats");
-            ModuleLog.line("(IE|HideChats) inbox filter hooked " + count + " method(s)");
+            ModuleLog.line("(IE|HideChats) " + (count > 0 ? "✅ ready"
+                    : "❌ Could not turn on hidden chats: not supported by this Instagram version (chat list not found)"));
+            ModuleLog.detail("(IE|HideChats) inbox filter hooked " + count + " method(s)");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|HideChats) inbox filter: " + t.getMessage());
+            ModuleLog.error("(IE|HideChats) Could not turn on hidden chats", t);
         }
     }
 
@@ -369,10 +372,11 @@ public class HideChatsHook {
                 }
             });
             inboxPath = path;
-            ModuleLog.line("(IE|HideChats) native inbox presentation hooked " + model.getName()
+            ModuleLog.detail("(IE|HideChats) native inbox presentation hooked " + model.getName()
                     + " via " + path.submit.getDeclaringClass().getName());
         } catch (Throwable t) {
-            ModuleLog.line("(IE|HideChats) native inbox presentation unavailable: " + t.getMessage());
+            ModuleLog.warn("(IE|HideChats) The hidden chats inbox is not available on this Instagram version (chats are still hidden from the list)");
+            ModuleLog.detail("(IE|HideChats) native inbox presentation unavailable: " + t.getMessage());
         }
     }
 
@@ -427,7 +431,7 @@ public class HideChatsHook {
                     }
                 });
         threadsTracked = resumes > 0;
-        ModuleLog.line("(IE|HideChats) foreground tracker hooked resume=" + resumes
+        ModuleLog.detail("(IE|HideChats) foreground tracker hooked resume=" + resumes
                 + " pause=" + pauses);
     }
 
@@ -444,7 +448,7 @@ public class HideChatsHook {
                 } catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|HideChats) lifecycle " + anchor + ": " + t.getMessage());
+            ModuleLog.detail("(IE|HideChats) lifecycle " + anchor + " failed: " + t.getMessage());
         }
         return count;
     }
@@ -595,7 +599,7 @@ public class HideChatsHook {
                 LifecycleHookUtil.hookAfter(classLoader, activity, "onResume",
                         (a, param) -> a.runOnUiThread(() -> registerListener(a)));
             } catch (Throwable t) {
-                ModuleLog.line("(IE|HideChats) hook " + activity + ": " + t.getMessage());
+                ModuleLog.detail("(IE|HideChats) hook " + activity + " failed (chat tracker still used): " + t.getMessage());
             }
         }
         // A chat opened inside the main activity is a fragment transaction (no activity onResume);
@@ -604,7 +608,7 @@ public class HideChatsHook {
         CurrentThreadTracker.addListener((a, threadId) -> {
             if (FeatureFlags.hideSpecificChats) registerListener(a);
         });
-        ModuleLog.line("(IE|HideChats) installed");
+        ModuleLog.detail("(IE|HideChats) chat menu installed");
     }
 
     @SuppressLint("DiscouragedApi")
@@ -626,7 +630,7 @@ public class HideChatsHook {
             watchedRoots.put(decor, new WeakReference<>(activity));
             decor.getViewTreeObserver().addOnGlobalLayoutListener(() -> tryInject(activity));
         } catch (Throwable t) {
-            ModuleLog.line("(IE|HideChats) register: " + t.getMessage());
+            ModuleLog.warn("(IE|HideChats) Could not add the hide option on this screen: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -660,7 +664,7 @@ public class HideChatsHook {
                 hiddenOnlyMode = false;
                 hiddenAccount = null;
                 inboxRefreshPending = true;
-                ModuleLog.line("(IE|HideChats) hidden inbox relocked in background");
+                ModuleLog.line("(IE|HideChats) Hidden chats locked again because Instagram went to the background");
             }
 
             @Override public void onActivityResumed(Activity resumed) {
@@ -719,7 +723,7 @@ public class HideChatsHook {
             menuBindings.put(activity, new MenuBinding(header, threadId, hide));
             return true;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|HideChats) inject: " + t.getMessage());
+            ModuleLog.detail("(IE|HideChats) inject failed: " + t.getMessage());
             return false;
         }
     }
@@ -733,7 +737,7 @@ public class HideChatsHook {
             menuBindings.remove(activity);
             tryInject(activity);
             IeToast.makeText(activity, text(activity, R.string.ig_hide_chat_no_thread), Toast.LENGTH_SHORT).show();
-            ModuleLog.line("(IE|HideChats) rejected stale menu binding");
+            ModuleLog.detail("(IE|HideChats) rejected stale menu binding");
             return;
         }
         String liveTitle = knownThreadTitle(liveId);
@@ -744,7 +748,7 @@ public class HideChatsHook {
         refreshVisibleButtons();
         IeToast.makeText(activity, text(activity, hide ? R.string.ig_hide_chat_hidden : R.string.ig_hide_chat_unhidden),
                 Toast.LENGTH_SHORT).show();
-        ModuleLog.line("(IE|HideChats) visible thread=" + liveId + " hidden=" + hide);
+        ModuleLog.line("(IE|HideChats) " + (hide ? "Chat hidden" : "Chat unhidden") + " (thread " + liveId + ")");
     }
 
     @SuppressLint("RtlHardcoded") // The requested gesture is on the physical left in every locale.
@@ -832,7 +836,9 @@ public class HideChatsHook {
             synchronized (nativeInboxes) { state = nativeInboxes.get(consumer); }
             if (state == null || state.account == null) {
                 // Reached only without the native row path, or before this inbox delivered rows.
-                ModuleLog.line("(IE|HideChats) hidden inbox unavailable: path=" + (inboxPath != null)
+                ModuleLog.warn("(IE|HideChats) Could not open hidden chats: " + (inboxPath == null
+                        ? "not available on this Instagram version" : "the chat list has not loaded yet, try again"));
+                ModuleLog.detail("(IE|HideChats) hidden inbox unavailable: path=" + (inboxPath != null)
                         + " consumer=" + (consumer != null) + " rows=" + (state != null));
                 IeToast.makeText(activity, text(activity, R.string.ig_hidden_inbox_unavailable),
                         Toast.LENGTH_SHORT).show();
@@ -846,7 +852,7 @@ public class HideChatsHook {
             activeHook.refreshInbox(activity);
             activeHook.tryInject(activity);
         }
-        ModuleLog.line("(IE|HideChats) hidden-only inbox=" + enabled);
+        ModuleLog.line("(IE|HideChats) " + (enabled ? "Hidden chats opened" : "Hidden chats closed"));
     }
 
     /** The foreground inbox's row consumer once it has delivered rows; null otherwise. */
@@ -865,7 +871,7 @@ public class HideChatsHook {
                 inboxGetterOwner = fragment.getClass();
                 inboxGetter = NativeInboxPath.getter(inboxGetterOwner, path.generator);
                 if (inboxGetter == null) {
-                    ModuleLog.line("(IE|HideChats) no generator getter on " + inboxGetterOwner.getName());
+                    ModuleLog.detail("(IE|HideChats) no generator getter on " + inboxGetterOwner.getName());
                 }
             }
             Object generator = inboxGetter == null ? null : inboxGetter.generatorOf(fragment);
@@ -878,7 +884,7 @@ public class HideChatsHook {
             }
             return null;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|HideChats) inbox lookup failed: " + t.getMessage());
+            ModuleLog.detail("(IE|HideChats) inbox lookup failed: " + t.getMessage());
             return null;
         }
     }
@@ -898,10 +904,10 @@ public class HideChatsHook {
             // Bypass our capture hook: a filtered replay must never replace the complete source.
             XposedBridge.invokeOriginalMethod(inboxPath.submit, consumer, new Object[]{visible});
             inboxRefreshPending = false;
-            ModuleLog.line("(IE|HideChats) local inbox submitted rows=" + visible.size()
+            ModuleLog.probe("(IE|HideChats) local inbox submitted rows=" + visible.size()
                     + " hiddenOnly=" + hiddenOnlyMode);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|HideChats) local inbox refresh failed: " + t.getMessage());
+            ModuleLog.warn("(IE|HideChats) Could not update the chat list: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 

@@ -39,6 +39,7 @@ public class AdBlocker {
             Method cached = DexKitCache.loadMethod("AdBlocker", classLoader);
             if (cached != null) {
                 XposedBridge.hookMethod(cached, hook);
+                ModuleLog.ok("(InstaEclipse | AdBlocker): ready");
                 FeatureStatusTracker.setHooked("AdBlocker");
                 return;
             }
@@ -53,7 +54,7 @@ public class AdBlocker {
                 );
 
                 if (methods.isEmpty()) {
-                    ModuleLog.line("(InstaEclipse | AdBlocker): ⚠️ No methods found referencing '" + marker + "'");
+                    ModuleLog.detail("(InstaEclipse | AdBlocker): no methods found referencing '" + marker + "'");
                     continue;
                 }
 
@@ -66,23 +67,24 @@ public class AdBlocker {
                         DexKitCache.saveMethod("AdBlocker", targetMethod);
                         XposedBridge.hookMethod(targetMethod, hook);
 
-                        ModuleLog.line("(InstaEclipse | AdBlocker): ✅ Hooked (dynamic check, marker='" + marker + "'): " +
+                        ModuleLog.ok("(InstaEclipse | AdBlocker): ready");
+                        ModuleLog.detail("(InstaEclipse | AdBlocker): hooked (marker='" + marker + "'): " +
                                 method.getClassName() + "." + method.getName());
                         FeatureStatusTracker.setHooked("AdBlocker");
                         return; // Stop after first successful hook
 
                     } catch (Throwable hookEx) {
-                        ModuleLog.line("(InstaEclipse | AdBlocker): ❌ Failed to hook: " +
+                        ModuleLog.detail("(InstaEclipse | AdBlocker): candidate failed: " +
                                 method.getName() + " → " + hookEx.getMessage());
                     }
                 }
             }
 
-            ModuleLog.line("(InstaEclipse | AdBlocker): ❌ No valid methods hooked (all markers exhausted).");
+            ModuleLog.error("(InstaEclipse | AdBlocker): Could not turn on ad blocking: not supported by this Instagram version");
             if (FeatureFlags.isAdBlockEnabled) FeatureStatusTracker.setBroken("AdBlocker");
 
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | AdBlocker): ❌ Exception: " + t.getMessage());
+            ModuleLog.error("(InstaEclipse | AdBlocker): Could not turn on ad blocking", t);
         }
     }
 }

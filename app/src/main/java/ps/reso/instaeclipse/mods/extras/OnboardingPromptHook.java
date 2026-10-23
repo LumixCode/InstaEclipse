@@ -71,19 +71,21 @@ public final class OnboardingPromptHook {
                 XposedBridge.hookMethod(m, SKIP_ONBOARDING);
                 hooked++;
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "could not hook " + m.getName() + ": " + t);
+                ModuleLog.warn(TAG + "One of the ways Instagram opens setup pages could not be blocked; the others still are");
+                ModuleLog.detail(TAG + "could not hook " + m.getName() + ": " + t);
             }
         }
         int asks = hookLocationPlugin(cl) + hookPermissionRequests();
-        ModuleLog.line(TAG + "location ask hooks: " + asks);
+        ModuleLog.detail(TAG + "location ask hooks: " + asks);
         // The setup pages are what the switch promises; the ask layers only add to them.
         if (hooked == 0) {
-            ModuleLog.line(TAG + "❌ Bloks screen opener not found");
+            ModuleLog.error(TAG + "Could not skip setup pages: the screen opener was not found in this Instagram version");
             if (FeatureFlags.hideOnboardingPrompts) FeatureStatusTracker.setBroken(FLAG);
             return;
         }
         FeatureStatusTracker.setHooked(FLAG);
-        ModuleLog.line(TAG + "✅ hooked " + hooked + " Bloks screen opener(s)");
+        ModuleLog.ok(TAG + "ready");
+        ModuleLog.detail(TAG + "hooked " + hooked + " Bloks screen opener(s)");
     }
 
     // A launcher's opener holds the app id; the static presenter gets it in its screen-data argument.
@@ -97,7 +99,7 @@ public final class OnboardingPromptHook {
             for (int i = 1; id == null && i < p.args.length; i++) id = OnboardingPromptPolicy.skippedScreen(p.args[i]);
             if (id == null) return;
             p.setResult(null);
-            ModuleLog.line(TAG + "skipped " + id + " at "
+            ModuleLog.detail(TAG + "skipped " + id + " at "
                     + p.method.getDeclaringClass().getName() + "." + p.method.getName());
         }
     };
@@ -145,7 +147,8 @@ public final class OnboardingPromptHook {
         try {
             plugin = loader.loadClass(LOCATION_PLUGIN);
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "LocationPluginImpl not found; OS-dialog layer only");
+            ModuleLog.warn(TAG + "Instagram's own location prompt was not found in this version; Android's location dialog is still blocked");
+            ModuleLog.detail(TAG + "LocationPluginImpl not found; OS-dialog layer only");
             return 0;
         }
         int count = 0;
@@ -176,7 +179,7 @@ public final class OnboardingPromptHook {
                         try {
                             if (!(param.args[activityIndex] instanceof Activity activity) || hasLocationGrant(activity)) return;
                             param.setResult(null);
-                            ModuleLog.line(TAG + "blocked " + name + " prompt from " + appCaller());
+                            ModuleLog.detail(TAG + "blocked " + name + " prompt from " + appCaller());
                             Object callback = cbIndex >= 0 ? param.args[cbIndex] : null;
                             if (callback == null) return;
                             // Posted: the real flow answers after user input, never re-entrantly.
@@ -184,20 +187,21 @@ public final class OnboardingPromptHook {
                                 try {
                                     onResult.invoke(callback, denied);
                                 } catch (Throwable t) {
-                                    ModuleLog.line(TAG + "denial callback failed: " + t.getClass().getSimpleName());
+                                    ModuleLog.warn(TAG + "Blocked a location prompt but could not tell Instagram it was declined: " + t.getClass().getSimpleName());
                                 }
                             });
                         } catch (Throwable t) {
-                            ModuleLog.line(TAG + "plugin block failed: " + t.getClass().getSimpleName());
+                            ModuleLog.warn(TAG + "Could not block a location prompt from Instagram: " + t.getClass().getSimpleName());
                         }
                     }
                 });
                 count++;
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "could not hook " + method + ": " + t);
+                ModuleLog.warn(TAG + "One of Instagram's location prompts cannot be blocked; the others still are");
+                ModuleLog.detail(TAG + "could not hook " + method + ": " + t);
             }
         }
-        ModuleLog.line(TAG + "LocationPluginImpl hooks: " + count);
+        ModuleLog.detail(TAG + "LocationPluginImpl hooks: " + count);
         return count;
     }
 
@@ -221,12 +225,12 @@ public final class OnboardingPromptHook {
                                     // made: a caller may read grantResults by position, or unbox a
                                     // missing entry of a by-name result map, so dropping its location
                                     // entry could crash Instagram's permission callback.
-                                    ModuleLog.line(TAG + "left mixed permission request "
+                                    ModuleLog.detail(TAG + "left mixed permission request "
                                             + Arrays.toString(requested) + " from " + appCaller());
                                     return;
                                 }
                                 param.setResult(null);
-                                ModuleLog.line(TAG + "blocked OS location dialog "
+                                ModuleLog.detail(TAG + "blocked OS location dialog "
                                         + Arrays.toString(requested) + " from " + appCaller());
                                 int requestCode = (int) param.args[1];
                                 int[] results = new int[requested.length];
@@ -238,13 +242,13 @@ public final class OnboardingPromptHook {
                                     try {
                                         activity.onRequestPermissionsResult(requestCode, requested, results);
                                     } catch (Throwable t) {
-                                        ModuleLog.line(TAG + "denial delivery failed: " + t.getClass().getSimpleName());
+                                        ModuleLog.warn(TAG + "Blocked Android's location dialog but could not tell Instagram it was declined: " + t.getClass().getSimpleName());
                                     } finally {
                                         answeringSilently.remove();
                                     }
                                 });
                             } catch (Throwable t) {
-                                ModuleLog.line(TAG + "OS-dialog block failed: " + t.getClass().getSimpleName());
+                                ModuleLog.warn(TAG + "Could not block Android's location dialog: " + t.getClass().getSimpleName());
                             }
                         }
                     });
@@ -264,7 +268,7 @@ public final class OnboardingPromptHook {
                     });
             return 1;
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "could not hook Activity.requestPermissions: " + t);
+            ModuleLog.warn(TAG + "Android's location dialog cannot be blocked; setup pages are still skipped", t);
             return 0;
         }
     }

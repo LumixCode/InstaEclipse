@@ -51,14 +51,14 @@ public final class CallConfirmHook {
                     String kind = kind(v);
                     if (kind.equals(NONE)) return;
                     param.setResult(true);
-                    ModuleLog.line(TAG + "held " + kind);
+                    ModuleLog.detail(TAG + "held " + kind + " until confirmed");
                     ask(v, kind.equals("VIDEO_CALL"));
                 }
             });
             FeatureStatusTracker.setHooked("ConfirmCalls");
-            ModuleLog.line(TAG + "✅ hooked View.performClick");
+            ModuleLog.ok(TAG + "ready");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.error(TAG + "Could not turn on call confirmation", t);
         }
     }
 
@@ -128,7 +128,7 @@ public final class CallConfirmHook {
             });
             dlg.show();
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ dialog: " + t);
+            ModuleLog.error(TAG + "Could not show the call confirmation, so the call was not started", t);
         }
     }
 }

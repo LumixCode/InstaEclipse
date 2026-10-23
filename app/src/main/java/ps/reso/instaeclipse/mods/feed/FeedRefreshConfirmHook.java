@@ -47,7 +47,8 @@ public final class FeedRefreshConfirmHook {
                 }
             }
             if (set == null) {
-                ModuleLog.line(TAG + "❌ setListener not found");
+                ModuleLog.error(TAG + "Will not work: the pull-to-refresh code was not found in this Instagram version");
+                ModuleLog.detail(TAG + "setListener not found");
                 return;
             }
             final Method setRefreshing = container.getMethod("setRefreshing", boolean.class);
@@ -58,7 +59,8 @@ public final class FeedRefreshConfirmHook {
             java.lang.reflect.Field field = null;
             for (java.lang.reflect.Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(container)) if (f.getType() == type) field = f;
             if (field == null) {
-                ModuleLog.line(TAG + "❌ listener field not found");
+                ModuleLog.error(TAG + "Will not work: the pull-to-refresh code was not found in this Instagram version");
+                ModuleLog.detail(TAG + "listener field not found");
                 return;
             }
             field.setAccessible(true);
@@ -75,9 +77,10 @@ public final class FeedRefreshConfirmHook {
                 }
             });
             FeatureStatusTracker.setHooked("ConfirmFeedRefresh");
-            ModuleLog.line(TAG + "✅ hooked " + CONTAINER);
+            ModuleLog.ok(TAG + "ready");
+            ModuleLog.detail(TAG + "hooked " + CONTAINER);
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.error(TAG + "Will not work: setup failed", t);
         }
     }
 
@@ -103,7 +106,7 @@ public final class FeedRefreshConfirmHook {
         try {
             return m.invoke(target, args);
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ refresh: " + t);
+            ModuleLog.warn(TAG + "Pull to refresh failed: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return null;
         }
     }
@@ -134,7 +137,8 @@ public final class FeedRefreshConfirmHook {
             });
             dlg.show();
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ dialog: " + t);
+            ModuleLog.warn(TAG + "Could not show the confirmation, so the feed refreshed without asking: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
             refresh.run();
         }
     }

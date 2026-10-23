@@ -166,7 +166,7 @@ public class FeedVideoDownloadHook {
                 extVariant.setAccessible(true);
                 methodImageUrl = extVariant;
             }
-            ModuleLog.line("(IE|DL) image url method=" + (methodImageUrl == null ? "not found"
+            ModuleLog.detail("(IE|DL) image url method=" + (methodImageUrl == null ? "not found"
                     : methodImageUrl.getName() + (extendedImageUrlGetUrl != null ? " (ExtendedImageUrl)" : "")));
         } catch (Throwable ignored) {}
 
@@ -184,7 +184,7 @@ public class FeedVideoDownloadHook {
         liveTreeMediaDictClass = mediaModel.liveTreeDictClass;
         carouselCandidates.clear();
         carouselCandidates.addAll(mediaModel.listCandidates);
-        ModuleLog.line("(IE|DL) media model: mutable="
+        ModuleLog.detail("(IE|DL) media model: mutable="
                 + (mutableMediaDictIntfClass != null) + " liveTree="
                 + (liveTreeMediaDictClass != null) + " listCandidates="
                 + carouselCandidates.size());
@@ -222,7 +222,7 @@ public class FeedVideoDownloadHook {
             FeatureStatusTracker.setHooked("PostDownload");
             FeatureStatusTracker.setHooked("AudioDownload");
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | MediaDownload): ❌ Uri.parse hook: " + t);
+            ModuleLog.detail("(InstaEclipse | MediaDownload): Uri.parse hook (unused fallback buffer): " + t);
         }
     }
 
@@ -271,11 +271,11 @@ public class FeedVideoDownloadHook {
                                     if (media != null) {
                                         String url = bestVideoUrlFromMedia(media);
                                         if (url != null) {
-                                            ModuleLog.line("(IE|Reel) media tag hit, url=" + url);
+                                            ModuleLog.probe("(IE|Reel) media tag hit, url=" + url);
                                             onDownloadClicked(ctx, List.of(url), lv);
                                             return true;
                                         }
-                                        ModuleLog.line("(IE|Reel) media tag set but no video URL found in object");
+                                        ModuleLog.detail("(IE|Reel) media tag set but no video URL found in object");
                                     }
                                     // Fallback: filter buffer for m86 URLs only (combined stream, one per reel)
                                     List<String> all = snapshotUrlsSince(System.currentTimeMillis() - 60_000);
@@ -286,17 +286,17 @@ public class FeedVideoDownloadHook {
                                         ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_no_reel_url_scroll), Toast.LENGTH_SHORT).show();
                                         return true;
                                     }
-                                    ModuleLog.line("(IE|Reel) buffer fallback, m86=" + m86.size() + " total=" + all.size());
+                                    ModuleLog.detail("(IE|Reel) buffer fallback, m86=" + m86.size() + " total=" + all.size());
                                     // Take only the most recent URL (first in deque = newest)
                                     onDownloadClicked(ctx, List.of(pick.get(0)), lv);
                                     return true;
                                 });
-                                ModuleLog.line("(IE|Reel) long-press hook set on like_button");
+                                ModuleLog.probe("(IE|Reel) long-press hook set on like_button");
                             }
                         }
                     });
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | MediaDownload): ❌ View hook: " + t);
+            ModuleLog.detail("(InstaEclipse | MediaDownload): View hook (unused legacy button): " + t);
         }
     }
 
@@ -354,7 +354,7 @@ public class FeedVideoDownloadHook {
                 parent.addView(btn);
                 btn.bringToFront();
             } catch (Exception e) {
-                ModuleLog.line("(IE|DL) Cannot inject download button: " + e.getMessage());
+                ModuleLog.detail("(IE|DL) Cannot inject download button: " + e.getMessage());
             }
         });
     }
@@ -373,7 +373,7 @@ public class FeedVideoDownloadHook {
     private List<String> resolveUrls(View likeBtn, View downloadBtn) {
         // Tier-1a: like button's listener (works for standard feed posts)
         List<String> urls = urlsFromSaveBtnListener(likeBtn);
-        ModuleLog.line("(IE|DL) Tier-1a urls=" + urls.size());
+        ModuleLog.detail("(IE|DL) Tier-1a urls=" + urls.size());
         if (!urls.isEmpty()) return urls;
 
         // Tier-1b: bookmark/save button's listener.
@@ -389,9 +389,9 @@ public class FeedVideoDownloadHook {
             for (int i = 0; i < 4 && p instanceof ViewGroup vg; i++, p = vg.getParent()) {
                 View realSaveBtn = vg.findViewById(saveResId);
                 if (realSaveBtn != null) {
-                    ModuleLog.line("(IE|DL) Tier-1b found save btn at parent level " + i);
+                    ModuleLog.detail("(IE|DL) Tier-1b found save btn at parent level " + i);
                     urls = urlsFromSaveBtnListener(realSaveBtn);
-                    ModuleLog.line("(IE|DL) Tier-1b urls=" + urls.size());
+                    ModuleLog.detail("(IE|DL) Tier-1b urls=" + urls.size());
                     if (!urls.isEmpty()) return urls;
                     break; // found the button but listener had no URLs — no point going wider
                 }
@@ -434,7 +434,7 @@ public class FeedVideoDownloadHook {
                     //       that isn't exposed as a Java field until DIS() is called)
                     String videoUrl = findVideoUrlInObject(media,
                             Collections.newSetFromMap(new IdentityHashMap<>()), 0);
-                    ModuleLog.line("(IE|DL) stepA1 videoUrl=" + (videoUrl != null
+                    ModuleLog.detail("(IE|DL) stepA1 videoUrl=" + (videoUrl != null
                             ? videoUrl.substring(0, Math.min(80, videoUrl.length())) : "null"));
 
                     if (videoUrl == null
@@ -464,7 +464,7 @@ public class FeedVideoDownloadHook {
                                 } catch (Throwable ignored) {}
                             }
                         }
-                        ModuleLog.line("(IE|DL) stepA2 videoUrl=" + (videoUrl != null
+                        ModuleLog.detail("(IE|DL) stepA2 videoUrl=" + (videoUrl != null
                                 ? videoUrl.substring(0, Math.min(80, videoUrl.length())) : "null"));
                     }
                     if (videoUrl != null) return List.of(videoUrl);
@@ -475,7 +475,7 @@ public class FeedVideoDownloadHook {
                     if ((mutableMediaDictIntfClass != null || liveTreeMediaDictClass != null)
                             && !carouselCandidates.isEmpty()) {
                         Object dictIntf = findMediaDictionary(media);
-                        ModuleLog.line("(IE|DL) dictIntf=" + (dictIntf != null
+                        ModuleLog.detail("(IE|DL) dictIntf=" + (dictIntf != null
                                 ? dictIntf.getClass().getName() : "null"));
 
                         if (dictIntf != null) {
@@ -487,7 +487,7 @@ public class FeedVideoDownloadHook {
                                     if (videoVersionIntfClass != null && !items.isEmpty()
                                             && videoVersionIntfClass.isInstance(items.get(0))) continue;
 
-                                    ModuleLog.line("(IE|Car) candidate=" + candidate.getName()
+                                    ModuleLog.probe("(IE|Car) candidate=" + candidate.getName()
                                             + " items=" + items.size());
                                     List<String> carouselUrls = new ArrayList<>();
 
@@ -506,7 +506,7 @@ public class FeedVideoDownloadHook {
                                             try {
                                                 Object r = invokeImageUrl(saveBtn.getContext(), item);
                                                 if (r instanceof String s && isCdnMediaUrl(s)) {
-                                                    ModuleLog.line("(IE|Car) item[" + idx + "] mediaExtKt=" + s.substring(0, Math.min(60, s.length())));
+                                                    ModuleLog.probe("(IE|Car) item[" + idx + "] mediaExtKt=" + s.substring(0, Math.min(60, s.length())));
                                                     carouselUrls.add(s);
                                                     continue;
                                                 }
@@ -515,7 +515,7 @@ public class FeedVideoDownloadHook {
 
                                         // 3. Probe all no-param String methods (Pando JNI nodes: LX/VPC, LX/5q9)
                                         String probed = probeCdnUrlViaStringMethods(item);
-                                        ModuleLog.line("(IE|Car) item[" + idx + "] probed=" + probed);
+                                        ModuleLog.probe("(IE|Car) item[" + idx + "] probed=" + probed);
                                         if (probed != null) { carouselUrls.add(probed); continue; }
 
                                         // 4. Generic CDN field scan as last resort
@@ -525,7 +525,7 @@ public class FeedVideoDownloadHook {
                                         if (!scanned.isEmpty()) carouselUrls.add(pickBestImageUrl(scanned));
                                     }
 
-                                    ModuleLog.line("(IE|Car) carouselUrls=" + carouselUrls.size());
+                                    ModuleLog.detail("(IE|Car) carouselUrls=" + carouselUrls.size());
                                     if (carouselUrls.size() >= 2) return carouselUrls;
                                 } catch (Throwable ignored) {}
                             }
@@ -792,7 +792,7 @@ public class FeedVideoDownloadHook {
                 android.os.Build.VERSION.SDK_INT < 34);
         int dashH = dash != null ? Integer.parseInt(dash[1]) : -1;
         if (dashH > bestH) DASH_UPGRADE.put(best, new String[]{dash[0], extractAudioUrl(media)});
-        ModuleLog.line("(IE|DL) video " + bestH + "p of " + all.size() + " version(s)"
+        ModuleLog.probe("(IE|DL) video " + bestH + "p of " + all.size() + " version(s)"
                 + (dashH > bestH ? ", DASH " + dashH + "p" : ""));
         return best;
     }
@@ -1172,7 +1172,7 @@ public class FeedVideoDownloadHook {
             List<Method> cached = DexKitCache.loadMethods("VideoUrlCapture", classLoader);
             if (cached != null && !cached.isEmpty()) {
                 for (Method m : cached) XposedBridge.hookMethod(m, urlHook);
-                ModuleLog.line("(IE|DL|DexKit) VideoUrlCapture: " + cached.size() + " method(s) from cache");
+                ModuleLog.detail("(IE|DL|DexKit) VideoUrlCapture: " + cached.size() + " method(s) from cache");
                 resolveUsernameGetter(bridge, classLoader);
                 return;
             }
@@ -1184,7 +1184,7 @@ public class FeedVideoDownloadHook {
                             .addInterface("com.instagram.model.mediasize.VideoVersionIntf",
                                     StringMatchType.Equals, false)));
 
-            ModuleLog.line("(IE|DL|DexKit) VideoVersionIntf implementors found: " + classes.size());
+            ModuleLog.detail("(IE|DL|DexKit) VideoVersionIntf implementors found: " + classes.size());
 
             List<Method> hooked = new ArrayList<>();
             for (ClassData classData : classes) {
@@ -1200,22 +1200,22 @@ public class FeedVideoDownloadHook {
                         try {
                             Method m = methodData.getMethodInstance(classLoader);
                             XposedBridge.hookMethod(m, urlHook);
-                            ModuleLog.line("(IE|DL|DexKit) ✅ Hooked getUrl() on "
+                            ModuleLog.detail("(IE|DL|DexKit) Hooked getUrl() on "
                                     + classData.getName());
                             hooked.add(m);
                         } catch (Throwable e) {
-                            ModuleLog.line("(IE|DL|DexKit) ❌ Hook failed for "
+                            ModuleLog.detail("(IE|DL|DexKit) Hook failed for "
                                     + classData.getName() + ": " + e.getMessage());
                         }
                     }
                 } catch (Throwable e) {
-                    ModuleLog.line("(IE|DL|DexKit) ❌ findMethod failed for "
+                    ModuleLog.detail("(IE|DL|DexKit) findMethod failed for "
                             + classData.getName() + ": " + e.getMessage());
                 }
             }
             if (!hooked.isEmpty()) DexKitCache.saveMethods("VideoUrlCapture", hooked);
         } catch (Throwable e) {
-            ModuleLog.line("(IE|DL|DexKit) ❌ installVideoUrlCaptureHook: " + e.getMessage());
+            ModuleLog.detail("(IE|DL|DexKit) installVideoUrlCaptureHook (optional URL capture): " + e.getMessage());
         }
 
         resolveUsernameGetter(bridge, classLoader);
@@ -1258,10 +1258,10 @@ public class FeedVideoDownloadHook {
             liveTreeMediaDictClass = mediaModel.liveTreeDictClass;
             carouselCandidates.clear();
             carouselCandidates.addAll(mediaModel.listCandidates);
-            ModuleLog.line("(IE|DL|DexKit) dynamic media dict="
+            ModuleLog.detail("(IE|DL|DexKit) dynamic media dict="
                     + (liveTreeMediaDictClass == null ? "not found" : liveTreeMediaDictClass.getName()));
         } catch (Throwable t) {
-            ModuleLog.line("(IE|DL|DexKit) dynamic media model resolution failed: " + t);
+            ModuleLog.detail("(IE|DL|DexKit) dynamic media model resolution failed: " + t);
         }
     }
 
@@ -1314,10 +1314,10 @@ public class FeedVideoDownloadHook {
             for (Method getter : resolvedVideoVersionsGetters) {
                 if (!carouselCandidates.contains(getter)) carouselCandidates.add(getter);
             }
-            ModuleLog.line("(IE|DL|DexKit) video_versions getters="
+            ModuleLog.detail("(IE|DL|DexKit) video_versions getters="
                     + resolvedVideoVersionsGetters.size());
         } catch (Throwable t) {
-            ModuleLog.line("(IE|DL|DexKit) video_versions getter resolution failed: " + t);
+            ModuleLog.detail("(IE|DL|DexKit) video_versions getter resolution failed: " + t);
         }
     }
 
@@ -1359,11 +1359,11 @@ public class FeedVideoDownloadHook {
             if (carouselMediaGetter != null && !carouselCandidates.contains(carouselMediaGetter)) {
                 carouselCandidates.add(0, carouselMediaGetter);
             }
-            ModuleLog.line("(IE|DL|DexKit) carousel getter="
+            ModuleLog.detail("(IE|DL|DexKit) carousel getter="
                     + (carouselMediaGetter == null ? "not found"
                        : carouselMediaGetter.getDeclaringClass().getName() + "." + carouselMediaGetter.getName()));
         } catch (Throwable t) {
-            ModuleLog.line("(IE|DL|DexKit) carousel getter resolution failed: " + t);
+            ModuleLog.detail("(IE|DL|DexKit) carousel getter resolution failed: " + t);
         }
     }
 
@@ -1386,10 +1386,10 @@ public class FeedVideoDownloadHook {
                 hasAudioGetter = m;
                 DexKitCache.saveMethod("MediaDownload_HasAudio", m);
             }
-            ModuleLog.line("(IE|DL|DexKit) has_audio getter="
+            ModuleLog.detail("(IE|DL|DexKit) has_audio getter="
                     + (hasAudioGetter == null ? "not found" : hasAudioGetter.getName()));
         } catch (Throwable t) {
-            ModuleLog.line("(IE|DL|DexKit) has_audio getter failed: " + t);
+            ModuleLog.detail("(IE|DL|DexKit) has_audio getter failed: " + t);
         }
     }
 
@@ -1428,11 +1428,11 @@ public class FeedVideoDownloadHook {
                 DexKitCache.saveMethod("MediaDownload_DashManifest", m);
                 break;
             }
-            ModuleLog.line("(IE|DL|DexKit) dash manifest getter="
+            ModuleLog.detail("(IE|DL|DexKit) dash manifest getter="
                     + (dashManifestGetter == null ? "not found"
                        : dashManifestGetter.getDeclaringClass().getName() + "." + dashManifestGetter.getName()));
         } catch (Throwable t) {
-            ModuleLog.line("(IE|DL|DexKit) dash manifest getter failed: " + t);
+            ModuleLog.detail("(IE|DL|DexKit) dash manifest getter failed: " + t);
         }
     }
 
@@ -1528,7 +1528,7 @@ public class FeedVideoDownloadHook {
         String dashAudio = extractAudioUrl(media);
         String videoForAudio = dashAudio == null ? bestVideoUrlFromMedia(media) : null;
         Boolean sound = hasAudio(media);
-        ModuleLog.line("(IE|DL|Audio) has_audio=" + sound + " dash=" + (dashAudio != null)
+        ModuleLog.detail("(IE|DL|Audio) has_audio=" + sound + " dash=" + (dashAudio != null)
                 + " video=" + (videoForAudio != null));
         String url = dashAudio != null ? dashAudio : videoForAudio;
         if (url != null && !Boolean.FALSE.equals(sound)) return new Object[]{url, dashAudio == null, 0L, -1L, false};
@@ -1556,11 +1556,11 @@ public class FeedVideoDownloadHook {
                 if (cm != null && cm.get("audio_asset_start_time_in_ms") instanceof Number) {
                     start = ((Number) cm.get("audio_asset_start_time_in_ms")).longValue();
                 }
-                ModuleLog.line("(IE|DL|Music) song=\"" + tm.get("title") + "\" by " + tm.get("display_artist")
+                ModuleLog.detail("(IE|DL|Music) song=\"" + tm.get("title") + "\" by " + tm.get("display_artist")
                         + " start=" + start + "ms");
                 return new Object[]{url, true, start, MUSIC_CLIP_MS, true};
             } catch (Throwable t) {
-                ModuleLog.line("(IE|DL|Music) lookup: " + t);
+                ModuleLog.detail("(IE|DL|Music) lookup: " + t);
             }
         }
         return null;
@@ -1621,12 +1621,12 @@ public class FeedVideoDownloadHook {
                     Method m = md.getMethodInstance(classLoader);
                     if (m.getReturnType() == void.class) continue;
                     m.setAccessible(true);
-                    ModuleLog.line("(IE|DL|DexKit) " + field + " getter=" + m.getName());
+                    ModuleLog.detail("(IE|DL|DexKit) " + field + " getter=" + m.getName());
                     return m;
                 } catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|DL|DexKit) " + field + " getter failed: " + t);
+            ModuleLog.detail("(IE|DL|DexKit) " + field + " getter failed: " + t);
         }
         return null;
     }
@@ -1657,7 +1657,7 @@ public class FeedVideoDownloadHook {
                         .choices(labels.toArray(new String[0]), -1, which -> actions.get(which).run())
                         .show();
             } catch (Throwable t) {
-                ModuleLog.line("(IE|DL) chooser failed: " + t);
+                ModuleLog.warn("(IE|DL) Could not show the video or audio choice; downloading the video: " + t);
                 downloadAction.run();
             }
         });
@@ -1728,7 +1728,7 @@ public class FeedVideoDownloadHook {
                 }
                 mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_audio_saved), Toast.LENGTH_SHORT).show());
             } catch (Throwable e) {
-                ModuleLog.line("(IE|DL|Audio) failed: " + e);
+                ModuleLog.error("(IE|DL|Audio) Could not save the audio: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                 mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
                         I18n.t(ctx, R.string.ig_toast_download_failed, e.getMessage()), Toast.LENGTH_SHORT).show());
             }
@@ -1763,10 +1763,10 @@ public class FeedVideoDownloadHook {
                     if (resolvedIsVideoMethod != null) break;
                 }
             }
-            ModuleLog.line("(IE|DL|DexKit) isVideo="
+            ModuleLog.detail("(IE|DL|DexKit) isVideo="
                     + (resolvedIsVideoMethod == null ? "not found" : resolvedIsVideoMethod.getName()));
         } catch (Throwable t) {
-            ModuleLog.line("(IE|DL|DexKit) isVideo resolution failed: " + t);
+            ModuleLog.detail("(IE|DL|DexKit) isVideo resolution failed: " + t);
         }
     }
 
@@ -1801,13 +1801,14 @@ public class FeedVideoDownloadHook {
                             .usingStrings("username_missing_during_update")));
 
             if (userMethods.isEmpty()) {
-                ModuleLog.line("(IE|DL|Username) ❌ username_missing_during_update not found");
+                ModuleLog.warn("(IE|DL|Username) Usernames may be missing from download file names: the user model was not found in this Instagram version");
+                ModuleLog.detail("(IE|DL|Username) username_missing_during_update not found");
                 return;
             }
 
             userClass = userMethods.get(0).getMethodInstance(classLoader).getDeclaringClass();
             DexKitCache.saveString("UserClass", userClass.getName());
-            ModuleLog.line("(IE|DL|Username) userClass=" + userClass.getName());
+            ModuleLog.detail("(IE|DL|Username) userClass=" + userClass.getName());
 
             // Resolve the username getter on User via the stable GraphQL field ID -265713450
             // (== "username".hashCode(), a JDK-fixed constant → valid across builds).
@@ -1848,20 +1849,21 @@ public class FeedVideoDownloadHook {
                     UserUtils.userUsernameGetter = chosen.getMethodInstance(classLoader);
                     UserUtils.userUsernameGetter.setAccessible(true);
                     DexKitCache.saveMethod("UsernameGetter", UserUtils.userUsernameGetter);
-                    ModuleLog.line("(IE|DL|Username) userUsernameGetter=" + UserUtils.userUsernameGetter.getName()
+                    ModuleLog.detail("(IE|DL|Username) userUsernameGetter=" + UserUtils.userUsernameGetter.getName()
                             + " (excluded " + readsFullName.size() + " full_name getter(s))");
                 } else {
-                    ModuleLog.line("(IE|DL|Username) ❌ userUsernameGetter not found via -265713450");
+                    ModuleLog.warn("(IE|DL|Username) Usernames may be missing from download file names: the username field was not found in this Instagram version");
+                    ModuleLog.detail("(IE|DL|Username) userUsernameGetter not found via -265713450");
                 }
             } catch (Throwable t) {
-                ModuleLog.line("(IE|DL|Username) ❌ userUsernameGetter resolution: " + t);
+                ModuleLog.warn("(IE|DL|Username) Usernames may be missing from download file names: " + t);
             }
 
             resolveDictUserGetter(bridge, classLoader);
             resolveMediaAuthorGetter(bridge, classLoader);
 
         } catch (Throwable t) {
-            ModuleLog.line("(IE|DL|Username) ❌ resolveUsernameGetter: " + t);
+            ModuleLog.warn("(IE|DL|Username) Usernames may be missing from download file names: " + t);
         }
     }
 
@@ -1893,12 +1895,12 @@ public class FeedVideoDownloadHook {
                 m.setAccessible(true);
                 mediaAuthorGetter = m;
                 DexKitCache.saveMethod("MediaAuthorGetter", m);
-                ModuleLog.line("(IE|DL|Username) ✅ mediaAuthorGetter (Media.\"user\"): " + m.getName());
+                ModuleLog.detail("(IE|DL|Username) mediaAuthorGetter (Media.\"user\"): " + m.getName());
             } else {
-                ModuleLog.line("(IE|DL|Username) mediaAuthorGetter: no Media \"user\" getter (older build)");
+                ModuleLog.detail("(IE|DL|Username) mediaAuthorGetter: no Media \"user\" getter (older build)");
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|DL|Username) ❌ mediaAuthorGetter: " + t);
+            ModuleLog.detail("(IE|DL|Username) mediaAuthorGetter: " + t);
         }
     }
 
@@ -1931,7 +1933,7 @@ public class FeedVideoDownloadHook {
                     m.setAccessible(true);
                     dictUserGetter = m;
                     DexKitCache.saveMethod("DictUserGetter", m);
-                    ModuleLog.line("(IE|DL|Username) ✅ Resolved dictUserGetter: " + m.getName());
+                    ModuleLog.detail("(IE|DL|Username) Resolved dictUserGetter: " + m.getName());
                     return;
                 }
             }
@@ -1962,11 +1964,11 @@ public class FeedVideoDownloadHook {
                     m.setAccessible(true);
                     dictUserGetter = m;
                     DexKitCache.saveMethod("DictUserGetter", m);
-                    ModuleLog.line("(IE|DL|Username) ✅ Resolved dictUserGetter (concrete class): " + m.getName());
+                    ModuleLog.detail("(IE|DL|Username) Resolved dictUserGetter (concrete class): " + m.getName());
                     return;
                 }
             } catch (Throwable t) {
-                ModuleLog.line("(IE|DL|Username) ❌ dictUserGetter DexKit lookup: " + t);
+                ModuleLog.detail("(IE|DL|Username) dictUserGetter DexKit lookup: " + t);
             }
         }
 
@@ -2157,7 +2159,7 @@ public class FeedVideoDownloadHook {
             try {
                 return openRawPathOutputStream(filename, username, nestFolder);
             } catch (Exception e) {
-                ModuleLog.line("(InstaEclipse|DL) Raw path failed, trying SAF: " + e.getMessage());
+                ModuleLog.warn("(InstaEclipse|DL) Could not save to your download folder path; trying your picked folder instead: " + e.getMessage());
             }
         }
 
@@ -2167,7 +2169,7 @@ public class FeedVideoDownloadHook {
             try {
                 return openSafOutputStream(ctx, filename, mimeType, username, nestFolder);
             } catch (Exception e) {
-                ModuleLog.line("(InstaEclipse|DL) SAF failed, falling back to MediaStore: " + e.getMessage());
+                ModuleLog.warn("(InstaEclipse|DL) Could not save to your picked download folder; saving to the default Download folder instead: " + e.getMessage());
             }
         }
 
@@ -2393,7 +2395,8 @@ public class FeedVideoDownloadHook {
                         filename, MediaTypeDetector.Kind.VIDEO), "video/mp4", username);
                 return false;
             } catch (Throwable t) {
-                ModuleLog.line("(IE|DL) DASH download failed, saving the progressive file: " + t);
+                ModuleLog.warn("(IE|DL) Could not download the highest quality; saving the version Instagram was playing instead");
+                ModuleLog.detail("(IE|DL) DASH download failed, saving the progressive file: " + t);
             } finally {
                 //noinspection ResultOfMethodCallIgnored
                 tv.delete();
@@ -2412,7 +2415,7 @@ public class FeedVideoDownloadHook {
             String responseType = downloadToFileAndGetType(url, temp);
             MediaTypeDetector.Result detected = MediaTypeDetector.resolve(
                     temp, responseType, isVideo ? "video/mp4" : "image/jpeg", filename);
-            ModuleLog.line("(IE|DL|Type) requested=" + (isVideo ? "video" : "image")
+            ModuleLog.detail("(IE|DL|Type) requested=" + (isVideo ? "video" : "image")
                     + " response=" + responseType + " detected=" + detected.kind
                     + " file=" + detected.filename);
             // The detected MIME, so a sniffed audio or GIF file is not saved as image/jpeg.
@@ -2456,7 +2459,7 @@ public class FeedVideoDownloadHook {
         intent.putExtra("mimeType", isVideo ? "video/mp4" : "image/jpeg");
         intent.putExtra("username", username);
         ps.reso.instaeclipse.utils.ipc.CompanionBridge.downloadLegacy(ctx, intent, error -> companionResult(ctx, error, saveLocally));
-        ModuleLog.line("(IE|DL) Submitted companion download request");
+        ModuleLog.detail("(IE|DL) Submitted companion download request");
     }
 
     /**
@@ -2611,7 +2614,7 @@ public class FeedVideoDownloadHook {
                     return new ArrayList<>(List.of(candidate));
                 }
             }
-            ModuleLog.line("(IE|Post|DL) media is video but no video URL was resolved; "
+            ModuleLog.detail("(IE|Post|DL) media is video but no video URL was resolved; "
                     + "refusing image cover fallback");
             return new ArrayList<>();
         }
@@ -2664,7 +2667,7 @@ public class FeedVideoDownloadHook {
             }
             return urls;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Post) extractCarouselUrls: " + t);
+            ModuleLog.detail("(IE|Post) extractCarouselUrls: " + t);
             return null;
         }
     }
@@ -2712,7 +2715,7 @@ public class FeedVideoDownloadHook {
                                 Toast.LENGTH_SHORT).show());
                     }
                 } catch (Throwable e) {
-                    ModuleLog.line("(IE|Post|DL) single failed: " + e);
+                    ModuleLog.error("(IE|Post|DL) Could not save the post: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                     mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
                             I18n.t(ctx, R.string.ig_toast_download_failed, e.getMessage()), Toast.LENGTH_SHORT).show());
                 }
@@ -2771,7 +2774,7 @@ public class FeedVideoDownloadHook {
                             downloadAndSave(ctx, url, fn, isVid, username);
                         } catch (Throwable e) {
                             failed++;
-                            ModuleLog.line("(IE|Post|DL) item failed: " + e);
+                            ModuleLog.warn("(IE|Post|DL) Could not save one item of the post: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                         }
                     }
                     final int finalFailed = failed;
@@ -2811,7 +2814,7 @@ public class FeedVideoDownloadHook {
                     .show();
 
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Post) ❌ showCarouselBottomSheet: " + t);
+            ModuleLog.error("(IE|Post) Could not show the download choices", t);
         }
     }
 
@@ -2836,7 +2839,7 @@ public class FeedVideoDownloadHook {
                 cb.setPrimaryClip(ClipData.newPlainText("InstaEclipse", url));
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_copy_link_copied), Toast.LENGTH_SHORT).show();
             } catch (Throwable t) {
-                ModuleLog.line("(IE|Post) ❌ copyLinkToClipboard: " + t);
+                ModuleLog.error("(IE|Post) Could not copy the link: " + t);
             }
         }, 350);
     }
@@ -2870,14 +2873,14 @@ public class FeedVideoDownloadHook {
                         cb.setPrimaryClip(ClipData.newPlainText("InstaEclipse", allText));
                         ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_copy_link_copied_all, n), Toast.LENGTH_SHORT).show();
                     } catch (Throwable t) {
-                        ModuleLog.line("(IE|Post) ❌ copy all links: " + t);
+                        ModuleLog.error("(IE|Post) Could not copy the links: " + t);
                     }
                 }, 350);
             });
             dlg.show();
 
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Post) ❌ showCopyLinkSheet: " + t);
+            ModuleLog.error("(IE|Post) Could not show the link choices", t);
         }
     }
 
@@ -2960,19 +2963,19 @@ public class FeedVideoDownloadHook {
     private void onDownloadClicked(Context ctx, List<String> urls, View saveBtn) {
         currentDownloadUsername = getUsernameFromView(saveBtn);
         currentDownloadMediaId  = getMediaIdFromView(saveBtn);
-        ModuleLog.line("(IE|DL) onDownloadClicked username=" + currentDownloadUsername + " mediaId=" + currentDownloadMediaId);
+        ModuleLog.detail("(IE|DL) onDownloadClicked username=" + currentDownloadUsername + " mediaId=" + currentDownloadMediaId);
         List<String> videos = new ArrayList<>();
         List<String> images = new ArrayList<>();
         for (String url : urls) {
             if (isVideoUrl(url)) videos.add(url);
             else                 images.add(url);
         }
-        ModuleLog.line("(IE|DL) total=" + urls.size()
+        ModuleLog.detail("(IE|DL) total=" + urls.size()
                 + " videos=" + videos.size() + " images=" + images.size());
         for (int i = 0; i < videos.size(); i++)
-            ModuleLog.line("(IE|DL) video[" + i + "]=" + videos.get(i));
+            ModuleLog.probe("(IE|DL) video[" + i + "]=" + videos.get(i));
         for (int i = 0; i < images.size(); i++)
-            ModuleLog.line("(IE|DL) image[" + i + "]=" + images.get(i));
+            ModuleLog.probe("(IE|DL) image[" + i + "]=" + images.get(i));
 
         if (!videos.isEmpty() && !images.isEmpty()) {
             handleMixedContent(ctx, urls, videos, images, saveBtn);
@@ -2990,7 +2993,7 @@ public class FeedVideoDownloadHook {
         executor.submit(() -> {
             String videoUrl = videos.get(0);
             TrackInfo t = probeUrl(videoUrl);
-            ModuleLog.line("(IE|DL) probeUrl=" + videoUrl
+            ModuleLog.detail("(IE|DL) probeUrl=" + videoUrl
                     + " hasVideo=" + t.hasVideo + " hasAudio=" + t.hasAudio);
             mainHandler.post(() -> {
                 if (!t.hasVideo && t.hasAudio) {
@@ -3073,7 +3076,7 @@ public class FeedVideoDownloadHook {
     private void startDirectDownload(Context ctx, String url, boolean isVideo, int slide, int total) {
         String fn = withSlide(buildFilename(currentDownloadUsername, "post", currentDownloadMediaId, isVideo),
                 slide, total);
-        ModuleLog.line("(IE|DL) startDirectDownload file=" + fn);
+        ModuleLog.detail("(IE|DL) startDirectDownload file=" + fn);
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, isVideo ? I18n.t(ctx, R.string.ig_toast_downloading_video) : I18n.t(ctx, R.string.ig_toast_downloading_photo), Toast.LENGTH_SHORT).show();
         executor.submit(() -> {
             try {
@@ -3084,7 +3087,7 @@ public class FeedVideoDownloadHook {
                             Toast.LENGTH_SHORT).show());
                 }
             } catch (Throwable e) {
-                ModuleLog.line("(IE|DL) download failed: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                ModuleLog.error("(IE|DL) Could not save the download: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                 mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
                         I18n.t(ctx, R.string.ig_toast_download_failed, e.getMessage()), Toast.LENGTH_SHORT).show());
             }
@@ -3104,7 +3107,7 @@ public class FeedVideoDownloadHook {
                 try {
                     delegateUrlToCompanionApp(ctx, videoUrl, audioUrl, fn, true, currentDownloadUsername);
                 } catch (Throwable e) {
-                    ModuleLog.line("(IE|DL) merge delegate failed: " + e.getMessage());
+                    ModuleLog.warn("(IE|DL) Could not hand the video to the InstaEclipse app; saving the video without the separate audio track: " + e.getMessage());
                     mainHandler.post(() -> startDirectDownload(ctx, videoUrl, true));
                 }
                 return;

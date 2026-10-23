@@ -79,7 +79,7 @@ public final class CurrentConversation {
                 hooked++;
             }
         } catch (Throwable failure) { status("fragment lifecycle unavailable"); }
-        ModuleLog.line("(IE|Conversation) lifecycle dispatchers resolved=" + hooked);
+        ModuleLog.detail("(IE|Conversation) lifecycle dispatchers resolved=" + hooked);
         // igThreadIgid is also an ephemeral-removal path in this build. It is telemetry only:
         // neither a true boolean nor a background store callback proves a foreground conversation.
         try {
@@ -90,7 +90,7 @@ public final class CurrentConversation {
                     @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                         if (!logged) {
                             logged = true;
-                            ModuleLog.line("(IE|Conversation) igThreadIgid callback observed; not used as foreground authority");
+                            ModuleLog.detail("(IE|Conversation) igThreadIgid callback observed; not used as foreground authority");
                         }
                     }
                 });
@@ -279,7 +279,7 @@ public final class CurrentConversation {
                 }
             });
             rebindHooks.add(method);
-            ModuleLog.line("(IE|Conversation) owned controller rebind method resolved");
+            ModuleLog.detail("(IE|Conversation) owned controller rebind method resolved");
             return true;
         } catch (Throwable failure) { return false; }
     }
@@ -359,6 +359,6 @@ public final class CurrentConversation {
     }
     private static Snapshot unresolved(String reason) { state.invalidate(); status(reason); return null; }
     private static void status(String status) {
-        if (!status.equals(lastStatus)) { lastStatus = status; ModuleLog.line("(IE|Conversation) " + status); }
+        if (!status.equals(lastStatus)) { lastStatus = status; ModuleLog.detail("(IE|Conversation) " + status); }
     }
 }

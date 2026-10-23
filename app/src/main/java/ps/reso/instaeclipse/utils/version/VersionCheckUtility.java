@@ -67,7 +67,7 @@ public class VersionCheckUtility {
             }
             return new Gson().fromJson(response.toString(), VersionCheck.class);
         } catch (Exception e) {
-            ModuleLog.line("(InstaEclipse | Update): check failed: " + e.getMessage());
+            ModuleLog.detail("(InstaEclipse | Update): check failed: " + e.getMessage());
             return null;
         } finally {
             if (connection != null) connection.disconnect();

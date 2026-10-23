@@ -42,9 +42,10 @@ public class ExternalBrowserHook {
                 }
             }).size();
             FeatureStatusTracker.setHooked("OpenLinksExternally");
-            ModuleLog.line("(IE|ExtBrowser) ✅ hooked execStartActivity x" + n);
+            ModuleLog.ok("(IE|ExtBrowser) Ready");
+            ModuleLog.detail("(IE|ExtBrowser) hooked execStartActivity x" + n);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ExtBrowser) ❌ install: " + t);
+            ModuleLog.error("(IE|ExtBrowser) Could not turn on opening links in your browser", t);
         }
     }
 
@@ -62,7 +63,7 @@ public class ExternalBrowserHook {
             param.setResult(null);
             ModuleLog.probe("(IE|ExtBrowser) opening externally: " + Uri.parse(target).getHost());
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ExtBrowser) browser launch unavailable: " + t.getClass().getSimpleName());
+            ModuleLog.warn("(IE|ExtBrowser) Could not open the link in your browser, so it opens in Instagram: " + t.getClass().getSimpleName());
         }
     }
 

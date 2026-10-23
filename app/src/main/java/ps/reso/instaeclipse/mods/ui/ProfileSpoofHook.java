@@ -84,8 +84,9 @@ public final class ProfileSpoofHook {
         }
         hookBioState(bridge, cl, log);
         if (hooked > 0 && session) FeatureStatusTracker.setHooked("ProfileSpoofer");
-        ModuleLog.line(TAG + (hooked > 0 && session ? "✅" : "❌") + " getters hooked=" + hooked + log
-                + ", account tracking=" + session);
+        if (hooked > 0 && session) ModuleLog.ok(TAG + "ready");
+        else ModuleLog.error(TAG + "Will not work: profile counts or your account could not be found in this Instagram version");
+        ModuleLog.detail(TAG + "getters hooked=" + hooked + log + ", account tracking=" + session);
     }
 
     // ---- Bio (Compose): the header's bio UI state ----------------------------------------
@@ -239,7 +240,7 @@ public final class ProfileSpoofHook {
                         } catch (Throwable ignored) {}
                     }
                     // A User without an id yet can't tell us; look again on the next one.
-                    if (idField != null) ModuleLog.line(TAG + "user id field=" + idField.getName());
+                    if (idField != null) ModuleLog.detail(TAG + "user id field=" + idField.getName());
                 }
                 f = idField;
             }
@@ -263,13 +264,13 @@ public final class ProfileSpoofHook {
                         String id = t.substring(t.lastIndexOf(':') + 1);
                         if (!id.matches("\\d+") || id.equals(selfId)) return;
                         selfId = id;
-                        ModuleLog.line(TAG + "own account resolved");
+                        ModuleLog.detail(TAG + "own account resolved");
                     } catch (Throwable ignored) {}
                 }
             });
             return true;
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ account tracking: " + t);
+            ModuleLog.detail(TAG + "account tracking unavailable: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return false;
         }
     }

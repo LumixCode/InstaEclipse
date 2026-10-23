@@ -31,7 +31,7 @@ public final class ExportDelegate {
         CompanionBridge.downloadLegacy(context, request, error -> {
             if (error == null) return;
             // The broker answers on the main thread; the local write downloads media.
-            ModuleLog.line(tag + "companion export failed (" + error + "), writing locally");
+            ModuleLog.warn(tag + "Could not save through the InstaEclipse app (" + error + "), saving directly instead");
             new Thread(writeLocally, "IE-ExportLocal").start();
         });
         return true;

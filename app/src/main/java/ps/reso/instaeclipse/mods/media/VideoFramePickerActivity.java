@@ -310,7 +310,8 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
                 String filename = DownloadFiles.segment(base, 180) + "_frame_" + saved.timeUs / 1000 + "ms.png";
                 DownloadPublisher.saveFrame(this, png, filename, request.owner, cancellation);
                 boolean cleaned = cleanup();
-                ModuleLog.line("(IE|Frame) PNG published width=" + saved.width + " height=" + saved.height
+                ModuleLog.line("(IE|Frame) Saved the video frame (" + saved.width + "x" + saved.height + ")");
+                ModuleLog.detail("(IE|Frame) PNG published width=" + saved.width + " height=" + saved.height
                         + " timeUs=" + saved.timeUs + " temporaryCleanup=" + cleaned);
                 Logging.flush();
                 main.post(() -> {
@@ -328,7 +329,8 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
         boolean cleaned = cleanup();
         String code = failure instanceof VideoFrameExtractor.FrameFailure
                 ? ((VideoFrameExtractor.FrameFailure) failure).code : "PREPARE_OR_SAVE";
-        ModuleLog.line("(IE|Frame) failed cause=" + code + " temporaryCleanup=" + cleaned);
+        ModuleLog.error("(IE|Frame) Could not save the video frame (" + code + ")");
+        ModuleLog.detail("(IE|Frame) failed cause=" + code + " temporaryCleanup=" + cleaned);
         Logging.flush();
         main.post(() -> {
             if (!alive()) return;
@@ -375,7 +377,7 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
         if (pendingPreview != null) main.removeCallbacks(pendingPreview);
         preview.setImageDrawable(null);
         if (shownBitmap != null) { shownBitmap.recycle(); shownBitmap = null; }
-        worker.execute(() -> { if (!cleanup()) ModuleLog.line("(IE|Frame) temporary cleanup pending"); Logging.flush(); });
+        worker.execute(() -> { if (!cleanup()) ModuleLog.detail("(IE|Frame) temporary cleanup pending"); Logging.flush(); });
         worker.shutdown();
         super.onDestroy();
     }

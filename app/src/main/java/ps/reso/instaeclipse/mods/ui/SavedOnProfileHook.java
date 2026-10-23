@@ -96,7 +96,8 @@ public class SavedOnProfileHook {
                     && navMake.getReturnType() == navPush.getDeclaringClass();
             if (!built) navMake = null;
             if (factory == null || (navigator == null && navMake == null)) {
-                ModuleLog.line(TAG + "❌ factory=" + factory + " navigator=" + navigator + " navMake=" + navMake);
+                ModuleLog.error(TAG + "Will not work: the Saved screen was not found in this Instagram version");
+                ModuleLog.detail(TAG + "factory=" + factory + " navigator=" + navigator + " navMake=" + navMake);
                 return;
             }
             factory.setAccessible(true);
@@ -131,10 +132,11 @@ public class SavedOnProfileHook {
                 }
             });
             FeatureStatusTracker.setHooked("SavedOnProfile");
-            ModuleLog.line(TAG + "✅ " + factory.getDeclaringClass().getName() + "." + factory.getName()
+            ModuleLog.ok(TAG + "ready");
+            ModuleLog.detail(TAG + factory.getDeclaringClass().getName() + "." + factory.getName()
                     + " / " + (navigator != null ? navigator : navMake));
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.error(TAG + "Will not work: setup failed", t);
         }
     }
 
@@ -171,9 +173,9 @@ public class SavedOnProfileHook {
             btn.setLayoutParams(new LinearLayout.LayoutParams(w, ViewGroup.LayoutParams.MATCH_PARENT));
             btn.setOnClickListener(v -> openSaved(frag, v));
             bar.addView(btn, 0);
-            if (!logged) { logged = true; ModuleLog.line(TAG + "button added"); }
+            if (!logged) { logged = true; ModuleLog.detail(TAG + "button added"); }
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ inject: " + t);
+            ModuleLog.warn(TAG + "Could not add the Saved button to your profile: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -205,7 +207,8 @@ public class SavedOnProfileHook {
                  k = k instanceof android.content.ContextWrapper w ? w.getBaseContext() : null)
                 if (k instanceof Activity a) act = a;
             if (session == null || act == null) {
-                ModuleLog.line(TAG + "⚠️ session=" + session + " activity=" + act);
+                ModuleLog.error(TAG + "Could not open Saved: your account or the screen was not found");
+                ModuleLog.detail(TAG + "session=" + session + " activity=" + act);
                 return;
             }
             Object saved = factory.invoke(null, session, null, false, false);
@@ -222,7 +225,7 @@ public class SavedOnProfileHook {
                 navigator.invoke(null, saved, act, session);
             }
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ open: " + t);
+            ModuleLog.error(TAG + "Could not open Saved: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 }

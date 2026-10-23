@@ -95,7 +95,7 @@ public class ProfilePicDownloadHook {
                 }
             });
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ProfileDL) ⚠️ profile tracking: " + t);
+            ModuleLog.warn("(IE|ProfileDL) Full-size profile pictures are not available; the displayed picture is used instead: " + t);
         }
         install();
     }
@@ -110,7 +110,8 @@ public class ProfilePicDownloadHook {
                         .returnType("com.instagram.api.schemas.ProfilePicUrlInfo")
                         .paramCount(0)));
                 if (found.size() != 1) {
-                    ModuleLog.line("(IE|ProfileDL) ⚠️ hd_profile_pic_url_info getter: " + found.size() + " matches");
+                    ModuleLog.warn("(IE|ProfileDL) Full-size profile pictures are not available in this Instagram version; the displayed picture is used instead");
+                    ModuleLog.detail("(IE|ProfileDL) hd_profile_pic_url_info getter: " + found.size() + " matches");
                     return;
                 }
                 m = found.get(0).getMethodInstance(cl);
@@ -118,9 +119,10 @@ public class ProfilePicDownloadHook {
             }
             m.setAccessible(true);
             hdGetter = m;
-            ModuleLog.line("(IE|ProfileDL) ✅ HD getter User." + m.getName());
+            ModuleLog.ok("(IE|ProfileDL) ready (full-size pictures available)");
+            ModuleLog.detail("(IE|ProfileDL) HD getter User." + m.getName());
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ProfileDL) ⚠️ HD getter: " + t);
+            ModuleLog.warn("(IE|ProfileDL) Full-size profile pictures are not available; the displayed picture is used instead: " + t);
         }
     }
 
@@ -138,12 +140,12 @@ public class ProfilePicDownloadHook {
             Object url = info.getClass().getMethod("getUrl").invoke(info);
             if (!(url instanceof String hd) || !hd.startsWith("http")) return null;
             if (!fileName(hd).equals(fileName(displayedUrl))) {
-                ModuleLog.line("(IE|ProfileDL) HD picture belongs to another profile, keeping the displayed one");
+                ModuleLog.detail("(IE|ProfileDL) HD picture belongs to another profile, keeping the displayed one");
                 return null;
             }
             return hd;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ProfileDL) ⚠️ HD url: " + t);
+            ModuleLog.detail("(IE|ProfileDL) HD url, keeping the displayed one: " + t);
             return null;
         }
     }
@@ -211,18 +213,18 @@ public class ProfilePicDownloadHook {
                 String url = extractUrl(v);
                 if (url == null) {
                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_profile_pic_url_not_found), Toast.LENGTH_SHORT).show();
-                    ModuleLog.line("(IE|ProfileDL) ❌ URL extraction failed");
+                    ModuleLog.error("(IE|ProfileDL) Could not open the profile picture: its link was not found");
                     return true;
                 }
                 String username = activity != null ? extractUsername(activity) : null;
                 String hd = hdUrl(url);
-                ModuleLog.line("(IE|ProfileDL) viewer: " + (hd != null ? "HD original" : "displayed copy"));
+                ModuleLog.detail("(IE|ProfileDL) viewer: " + (hd != null ? "HD original" : "displayed copy"));
                 showViewer(ctx, hd != null ? hd : url, username);
                 return true;
             });
 
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ProfileDL) ❌ injectLongPress: " + t.getMessage());
+            ModuleLog.error("(IE|ProfileDL) Holding the profile picture will not open it: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -288,7 +290,7 @@ public class ProfilePicDownloadHook {
                 byte[] bytes = buf.toByteArray();
                 bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
             } catch (Throwable t) {
-                ModuleLog.line("(IE|ProfileDL) ⚠️ viewer load: " + t);
+                ModuleLog.error("(IE|ProfileDL) Could not load the profile picture: " + t);
             }
             final Bitmap b = bmp;
             mainHandler.post(() -> {
@@ -314,7 +316,7 @@ public class ProfilePicDownloadHook {
                             I18n.t(ctx, R.string.ig_toast_profile_pic_saved), Toast.LENGTH_SHORT).show());
                 }
             } catch (Throwable e) {
-                ModuleLog.line("(IE|ProfileDL) ❌ download: " + e.getMessage());
+                ModuleLog.error("(IE|ProfileDL) Could not save the profile picture: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                 mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
                         I18n.t(ctx, R.string.ig_toast_download_failed, e.getMessage()), Toast.LENGTH_SHORT).show());
             }
@@ -352,7 +354,7 @@ public class ProfilePicDownloadHook {
             if (tag instanceof String s && s.startsWith("http")) return s;
         } catch (Throwable ignored) {}
 
-        ModuleLog.line("(IE|ProfileDL) ❌ all URL strategies failed for " + view.getClass().getName());
+        ModuleLog.detail("(IE|ProfileDL) all URL strategies failed for " + view.getClass().getName());
         return null;
     }
 

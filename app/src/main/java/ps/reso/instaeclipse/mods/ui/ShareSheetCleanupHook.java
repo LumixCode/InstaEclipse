@@ -102,7 +102,8 @@ public class ShareSheetCleanupHook {
                     });
             hooked++;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ShareSheet) ⚠️ onViewCreated: " + t);
+            ModuleLog.warn("(IE|ShareSheet) \"Create group\" may still show in the share sheet: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            ModuleLog.detail("(IE|ShareSheet) onViewCreated hook failed");
         }
 
         XC_MethodHook inflate = new XC_MethodHook() {
@@ -131,11 +132,14 @@ public class ShareSheetCleanupHook {
                     int.class, ViewGroup.class, boolean.class, inflate);
             hooked++;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ShareSheet) ⚠️ inflate: " + t);
+            ModuleLog.warn("(IE|ShareSheet) \"Create group\" may still show in the share sheet: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            ModuleLog.detail("(IE|ShareSheet) inflate hook failed");
         }
 
         if (hooked > 0) FeatureStatusTracker.setHooked("HideShareCreateGroup");
-        ModuleLog.line("(IE|ShareSheet) ✅ installed (" + hooked + " hooks)");
+        if (hooked > 0) ModuleLog.ok("(IE|ShareSheet) ready");
+        else ModuleLog.error("(IE|ShareSheet) Hiding \"Create group\" will not work: setup failed");
+        ModuleLog.detail("(IE|ShareSheet) installed (" + hooked + " hooks)");
     }
 
     private static void watch(View root) {
@@ -370,7 +374,7 @@ public class ShareSheetCleanupHook {
                 java.util.List<?> current = (java.util.List<?>) decorations.get(row);
                 for (Object decoration : new java.util.ArrayList<>(current)) remover.invoke(row, decoration);
             } catch (Throwable t) {
-                ModuleLog.line("(IE|ShareSheet) Cannot remove share-row spacing", t);
+                ModuleLog.detail("(IE|ShareSheet) Cannot remove share-row spacing", t);
             } finally {
                 // A host change must not repeatedly enqueue cleanup.
                 shareDecorationsCleared.put(row, true);
@@ -420,7 +424,7 @@ public class ShareSheetCleanupHook {
             shareDecorations = decorations;
             removeShareDecoration = remover;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ShareSheet) Share-row spacing cleanup unavailable", t);
+            ModuleLog.detail("(IE|ShareSheet) Share-row spacing cleanup unavailable", t);
         }
     }
 }

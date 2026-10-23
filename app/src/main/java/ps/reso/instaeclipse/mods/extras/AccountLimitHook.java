@@ -35,6 +35,7 @@ public class AccountLimitHook {
             }
         });
         FeatureStatusTracker.setHooked("unlimitedAccounts");
-        ModuleLog.line("(InstaEclipse | UnlimitedAccounts): ✅ hooked " + check.getDeclaringClass().getName() + "." + check.getName());
+        ModuleLog.ok("(InstaEclipse | UnlimitedAccounts): ready");
+        ModuleLog.detail("(InstaEclipse | UnlimitedAccounts): hooked " + check.getDeclaringClass().getName() + "." + check.getName());
     }
 }

@@ -68,18 +68,21 @@ public final class ExactTimestampHook {
             try {
                 installDmTime(bridge, classLoader);
             } catch (Throwable error) {
-                ModuleLog.line("(ExactTimestamps) DM seconds unavailable: " + error);
+                ModuleLog.warn("(ExactTimestamps) Exact times in chats are not available in this Instagram version; other dates still work");
+                ModuleLog.detail("(ExactTimestamps) DM seconds unavailable: " + error);
             }
             try {
                 installStoryLayout(bridge, classLoader);
             } catch (Throwable error) {
-                ModuleLog.line("(ExactTimestamps) Story layout adjustment unavailable: " + error);
+                ModuleLog.warn("(ExactTimestamps) Long dates in stories may be cut off: the story date layout was not found in this Instagram version");
+                ModuleLog.detail("(ExactTimestamps) Story layout adjustment unavailable: " + error);
             }
             FeatureStatusTracker.setHooked("ExactTimestamps");
-            ModuleLog.line("(ExactTimestamps) Installed " + methods.size() + " absolute-date formatters");
+            ModuleLog.ok("(ExactTimestamps) Ready");
+            ModuleLog.detail("(ExactTimestamps) Installed " + methods.size() + " absolute-date formatters");
         } catch (Throwable error) {
             if (FeatureFlags.exactTimestamps) FeatureStatusTracker.setBroken("ExactTimestamps");
-            ModuleLog.line("(ExactTimestamps) Could not install: " + error);
+            ModuleLog.error("(ExactTimestamps) Could not turn on exact dates: " + error.getClass().getSimpleName() + ": " + error.getMessage());
         }
     }
 
@@ -102,7 +105,7 @@ public final class ExactTimestampHook {
         }
         if (entries.isEmpty()) throw new IllegalStateException("Content timestamp scopes missing");
         for (Method entry : entries) installScope(entry, contentScope, "ExactTimestampContentScope");
-        ModuleLog.line("(ExactTimestamps) Scoped exact dates to " + entries.size() + " content binders");
+        ModuleLog.detail("(ExactTimestamps) Scoped exact dates to " + entries.size() + " content binders");
     }
 
     private static void installScope(Method entry, ExactTimestampScope scope, String marker) {
@@ -270,7 +273,7 @@ public final class ExactTimestampHook {
                 }
             }
         });
-        ModuleLog.line("(ExactTimestamps) Installed scoped Compose story wrapping");
+        ModuleLog.detail("(ExactTimestamps) Installed scoped Compose story wrapping");
     }
 
     private static boolean hasResourceName(View view, String name) {
@@ -292,7 +295,7 @@ public final class ExactTimestampHook {
         } catch (IllegalStateException entryChanged) {
             // ReelItem's single (Context)->String entry is this path's one point of failure. The
             // date utility itself is still unique by its format strings, so fall back to that.
-            ModuleLog.line("(ExactTimestamps) Story entry unusable (" + entryChanged.getMessage()
+            ModuleLog.detail("(ExactTimestamps) Story entry unusable (" + entryChanged.getMessage()
                     + "), using the date utility anchor");
             storyFormatter = null;
             MethodData[] cores = anchoredCores(bridge, classLoader);
@@ -451,6 +454,6 @@ public final class ExactTimestampHook {
     private void reportFailure(Throwable error) {
         if (reportedFormatFailure) return;
         reportedFormatFailure = true;
-        ModuleLog.line("(ExactTimestamps) Timestamp update failed: " + error);
+        ModuleLog.warn("(ExactTimestamps) Some dates could not be shown exactly: " + error);
     }
 }

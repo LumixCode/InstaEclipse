@@ -44,11 +44,11 @@ public class ScreenshotPermissionHook {
                         }
                     });
 
-            ModuleLog.line("(InstaEclipse | ScreenshotPermission): ✅ Hooked Window.setFlags + addFlags");
+            ModuleLog.ok("(InstaEclipse | ScreenshotPermission): ready");
             FeatureStatusTracker.setHooked("AllowScreenshots");
 
         } catch (Throwable e) {
-            ModuleLog.line("(InstaEclipse | ScreenshotPermission): ❌ " + e.getMessage());
+            ModuleLog.error("(InstaEclipse | ScreenshotPermission): Could not turn on screenshots in protected screens", e);
         }
     }
 }

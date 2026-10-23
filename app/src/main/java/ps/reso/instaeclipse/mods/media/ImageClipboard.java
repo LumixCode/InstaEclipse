@@ -65,7 +65,7 @@ final class ImageClipboard {
     }
 
     private static void fail(Context ctx, Throwable t) {
-        ModuleLog.line("(IE|CopyImage) ❌ " + t);
+        ModuleLog.error("(IE|CopyImage) Could not copy the image: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_download_failed, String.valueOf(t.getMessage())),
                 Toast.LENGTH_SHORT).show();
     }
@@ -84,7 +84,7 @@ final class ImageClipboard {
                 }
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|CopyImage) provider lookup: " + t);
+            ModuleLog.detail("(IE|CopyImage) provider lookup: " + t);
         }
         return null;
     }

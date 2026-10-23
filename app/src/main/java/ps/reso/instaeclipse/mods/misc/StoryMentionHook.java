@@ -70,7 +70,7 @@ public class StoryMentionHook {
             if (g != null && c != null) {
                 rawMentionsGetter = g;
                 mentionsConverter = c;
-                ModuleLog.line("(IE|Mention) ✅ pipeline resolved from cache");
+                ModuleLog.detail("(IE|Mention) pipeline resolved from cache");
                 return;
             }
         }
@@ -109,9 +109,9 @@ public class StoryMentionHook {
                     } catch (Throwable ignored) {}
                 }
             }
-            if (rawMentionsGetter == null) ModuleLog.line("(IE|Mention) ❌ rawMentionsGetter not found");
+            if (rawMentionsGetter == null) ModuleLog.error("(IE|Mention) Could not turn on story mentions: the story's mention list was not found in this Instagram version");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Mention) ❌ rawMentionsGetter query failed: " + t);
+            ModuleLog.error("(IE|Mention) Could not turn on story mentions: the story's mention list could not be looked up: " + t);
         }
 
         try {
@@ -129,13 +129,13 @@ public class StoryMentionHook {
                     break;
                 } catch (Throwable ignored) {}
             }
-            if (mentionsConverter == null) ModuleLog.line("(IE|Mention) ❌ mentionsConverter not found");
+            if (mentionsConverter == null) ModuleLog.error("(IE|Mention) Could not turn on story mentions: the mention reader was not found in this Instagram version");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Mention) ❌ mentionsConverter query failed: " + t);
+            ModuleLog.error("(IE|Mention) Could not turn on story mentions: the mention reader could not be looked up: " + t);
         }
 
         if (rawMentionsGetter != null && mentionsConverter != null) {
-            ModuleLog.line("(IE|Mention) ✅ pipeline resolved: " + rawMentionsGetter.getName() + " -> " + mentionsConverter.getName());
+            ModuleLog.detail("(IE|Mention) pipeline resolved: " + rawMentionsGetter.getName() + " -> " + mentionsConverter.getName());
         }
     }
 
@@ -182,12 +182,12 @@ public class StoryMentionHook {
                 builders = new java.util.ArrayList<>(
                         ps.reso.instaeclipse.mods.media.StoryDownloadHook.storyOptionBuilders(methods, classLoader));
             } catch (Throwable t) {
-                ModuleLog.line("(IE|Mention) ❌ button hook DexKit: " + t);
+                ModuleLog.detail("(IE|Mention) button hook DexKit: " + t);
             }
         }
 
         if (builders == null || builders.isEmpty()) {
-            ModuleLog.line("(IE|Mention) ❌ button builder not found");
+            ModuleLog.error("(IE|Mention) Could not add the View mentions button: the story menu was not found in this Instagram version");
             return;
         }
         DexKitCache.saveMethods("MentionButtons", builders);
@@ -211,9 +211,9 @@ public class StoryMentionHook {
         int hooked = 0;
         for (Method m : builders) {
             try { XposedBridge.hookMethod(m, mentionHook); hooked++; }
-            catch (Throwable t) { ModuleLog.line("(IE|Mention) ❌ button hook: " + t); }
+            catch (Throwable t) { ModuleLog.warn("(IE|Mention) The View mentions button may be missing from some story menus: " + t); }
         }
-        ModuleLog.line("(IE|Mention) ✅ button hook installed on " + hooked + " builder(s)");
+        ModuleLog.detail("(IE|Mention) button hook installed on " + hooked + " builder(s)");
     }
 
     // ── Hook 2: handle "View Mentions" tap ───────────────────────────────────
@@ -224,7 +224,7 @@ public class StoryMentionHook {
     private void installClickHook(DexKitBridge bridge, ClassLoader classLoader) {
         List<Method> dispatchers = ps.reso.instaeclipse.mods.media.StoryDownloadHook.storyClickDispatchers(bridge, classLoader);
         if (dispatchers.isEmpty()) {
-            ModuleLog.line("(IE|Mention) ❌ click handler not found");
+            ModuleLog.error("(IE|Mention) Could not turn on story mentions: the story menu's tap handler was not found in this Instagram version");
             return;
         }
         try {
@@ -258,19 +258,19 @@ public class StoryMentionHook {
                         }
 
                         if (ctx == null) ctx = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
-                        if (ctx == null) { ModuleLog.line("(IE|Mention) ❌ context not found"); return; }
-                        if (media == null) { ModuleLog.line("(IE|Mention) ❌ Media not found"); return; }
+                        if (ctx == null) { ModuleLog.error("(IE|Mention) Could not show the mentions: no open screen found"); return; }
+                        if (media == null) { ModuleLog.error("(IE|Mention) Could not show the mentions: the story was not found"); return; }
 
                         showMentionsDialog(ctx, resolveMentions(media));
                     } catch (Throwable t) {
-                        ModuleLog.line("(IE|Mention) ❌ click handler: " + t);
+                        ModuleLog.error("(IE|Mention) Could not show the mentions", t);
                     }
                 }
             };
             for (Method m : dispatchers) XposedBridge.hookMethod(m, clickHook);
-            ModuleLog.line("(IE|Mention) ✅ click hook installed");
+            ModuleLog.ok("(IE|Mention) Ready");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Mention) ❌ click hook: " + t);
+            ModuleLog.error("(IE|Mention) Could not turn on story mentions", t);
         }
     }
 
@@ -281,7 +281,7 @@ public class StoryMentionHook {
         List<String> usernames = new ArrayList<>();
         try {
             if (rawMentionsGetter == null || mentionsConverter == null) {
-                ModuleLog.line("(IE|Mention) ❌ mention pipeline not resolved");
+                ModuleLog.error("(IE|Mention) Could not read the story's mentions: not supported in this Instagram version");
                 return usernames;
             }
 
@@ -291,7 +291,8 @@ public class StoryMentionHook {
             Class<?> owner = rawMentionsGetter.getDeclaringClass();
             Object receiver = owner.isInstance(media) ? media : findFieldByType(media, owner.getName());
             if (receiver == null) {
-                ModuleLog.line("(IE|Mention) ❌ mention receiver (" + owner.getName() + ") not found on media");
+                ModuleLog.error("(IE|Mention) Could not read the story's mentions");
+                ModuleLog.detail("(IE|Mention) mention receiver (" + owner.getName() + ") not found on media");
                 return usernames;
             }
 
@@ -313,7 +314,7 @@ public class StoryMentionHook {
                 if (username != null && !username.isEmpty()) usernames.add(username);
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Mention) resolveMentions exception: " + t);
+            ModuleLog.error("(IE|Mention) Could not read the story's mentions: " + t);
         }
         return usernames;
     }
@@ -392,7 +393,7 @@ public class StoryMentionHook {
                                     .setPackage(ctx.getPackageName())
                                     .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
                         } catch (Throwable t) {
-                            ModuleLog.line("(IE|Mention) open profile: " + t);
+                            ModuleLog.error("(IE|Mention) Could not open the profile: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                         }
                         return true;
                     });
@@ -414,7 +415,7 @@ public class StoryMentionHook {
                 }
                 dlg.show();
             } catch (Throwable t) {
-                ModuleLog.line("(IE|Mention) ❌ showMentionsDialog: " + t);
+                ModuleLog.error("(IE|Mention) Could not show the mentions", t);
             }
         });
     }

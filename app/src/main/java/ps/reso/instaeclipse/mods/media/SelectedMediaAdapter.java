@@ -59,13 +59,13 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
                 adapter.named(loader, type, "height", "getHeight");
             }
             installed = adapter;
-            ModuleLog.line("(IE|MediaAdapter) resolved properties=" + adapter.bindings.size()
+            ModuleLog.detail("(IE|MediaAdapter) resolved properties=" + adapter.bindings.size()
                     + " manifest=" + adapter.bindings.containsKey("video_dash_manifest")
                     + " direct=" + adapter.bindings.containsKey("video_versions")
                     + " story=" + (adapter.reelItemMedia != null));
         } catch (Throwable ignored) {
             installed = null;
-            ModuleLog.line("(IE|MediaAdapter) installation unavailable");
+            ModuleLog.error("(IE|MediaAdapter) Downloads will not work: Instagram's media details could not be read in this version");
         }
     }
 
@@ -107,7 +107,7 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
             }
         };
         SelectedMediaSnapshot result = ForceReelQualityHook.raw(() -> SelectedMediaSnapshot.capture(media, access));
-        ModuleLog.line("(IE|MediaAdapter) snapshot video=" + result.video + " manifest="
+        ModuleLog.detail("(IE|MediaAdapter) snapshot video=" + result.video + " manifest="
                 + (result.manifest != null) + " direct=" + result.renditions.size()
                 + " carousel=" + result.children.size());
         return result;

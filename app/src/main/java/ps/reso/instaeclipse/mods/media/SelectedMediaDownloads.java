@@ -338,7 +338,8 @@ final class SelectedMediaDownloads {
                 if (!batch || result.lowerFallback)
                     toast(ctx, I18n.t(ctx, result.lowerFallback ? R.string.ie_download_fallback_used
                             : R.string.ie_download_verified, result.summary));
-                ModuleLog.line("(IE|Download) published " + result.summary);
+                ModuleLog.line("(IE|Download) Saved " + request.filename);
+                ModuleLog.detail("(IE|Download) published " + result.summary);
             } catch (DownloadEngine.Failure failure) {
                 if (cancel.isCancelled()) toast(ctx, I18n.t(ctx, R.string.ie_download_cancelled));
                 else if (failure.canOfferFallback && !request.options.allowFallback && canShow(ctx)) {
@@ -400,8 +401,8 @@ final class SelectedMediaDownloads {
     }
 
     static void unavailable(Context ctx, Throwable error) {
-        ModuleLog.line("(IE|MediaAdapter) capture unavailable"
-                + (error == null ? "" : " (" + error.getClass().getSimpleName() + ")"));
+        ModuleLog.error("(IE|MediaAdapter) Could not download: this media's details could not be read"
+                + (error == null ? "" : " (" + error.getClass().getSimpleName() + ": " + error.getMessage() + ")"));
         toast(ctx, I18n.t(ctx, R.string.ie_download_unavailable));
     }
 

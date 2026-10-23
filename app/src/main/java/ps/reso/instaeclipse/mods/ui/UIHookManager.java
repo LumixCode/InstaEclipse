@@ -177,9 +177,9 @@ public class UIHookManager {
         try {
             String where = LifecycleHookUtil.hookAfter(classLoader, INSTAGRAM_MAIN_ACTIVITY, "onCreate",
                     (activity, param) -> onMainActivityCreated(activity), Bundle.class);
-            ModuleLog.line("(InstaEclipse): ✅ main onCreate hooked via " + where);
+            ModuleLog.detail("(InstaEclipse): main onCreate hooked via " + where);
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse): ❌ main onCreate hook failed: " + t);
+            ModuleLog.error("(InstaEclipse): Could not attach to Instagram's main screen; the InstaEclipse menu shortcut, ghost mode icon and feature summary may not show", t);
         }
 
         try {
@@ -190,13 +190,14 @@ public class UIHookManager {
                             try {
                                 setupHooks(activity);
                             } catch (Exception e) {
-                                ModuleLog.line("(InstaEclipse) UI Error: " + e);
+                                ModuleLog.warn("(InstaEclipse) Could not set up InstaEclipse's buttons on this screen: "
+                                        + e.getClass().getSimpleName() + ": " + e.getMessage());
                             }
                         });
                     });
-            ModuleLog.line("(InstaEclipse): ✅ main onResume hooked via " + where);
+            ModuleLog.detail("(InstaEclipse): main onResume hooked via " + where);
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse): ❌ main onResume hook failed: " + t);
+            ModuleLog.error("(InstaEclipse): Could not attach to Instagram's main screen; the InstaEclipse menu shortcut and ghost mode toggle may not work", t);
         }
 
         // Hook View.performLongClick — inbox long-press override.
@@ -230,7 +231,8 @@ public class UIHookManager {
                         }
                     }));
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse): ⚠️ ModalActivity onResume hook failed: " + t);
+            ModuleLog.warn("(InstaEclipse): InstaEclipse's buttons may be missing on pop-up screens: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -262,12 +264,14 @@ public class UIHookManager {
                                     I18n.t(activity, R.string.ig_toast_features_loaded), status);
                         }
                     } catch (Exception innerE) {
-                        ModuleLog.line("(InstaEclipse): UI Injection Error: " + innerE.getMessage());
+                        ModuleLog.warn("(InstaEclipse): Could not add the ghost mode icon or the feature summary: "
+                                + innerE.getClass().getSimpleName() + ": " + innerE.getMessage());
                     }
                 }, 1500); // 1.5s delay to let the UI settle
 
             } catch (Exception e) {
-                ModuleLog.line("(InstaEclipse): UI logic error in onCreate: " + e);
+                ModuleLog.warn("(InstaEclipse): Could not set up InstaEclipse on the main screen: "
+                        + e.getClass().getSimpleName() + ": " + e.getMessage());
             }
         });
     }
@@ -302,7 +306,7 @@ public class UIHookManager {
                 String json = intent.getStringExtra("json_content");
                 try { ps.reso.instaeclipse.utils.ipc.BrokerPayload.validateConfig(json); }
                 catch (IllegalArgumentException malformed) {
-                    ModuleLog.line("(IE|Config) Invalid or oversized configuration rejected");
+                    ModuleLog.error("(IE|Config) Settings import rejected: the file is invalid or too large");
                     return;
                 }
                 if (json != null && !json.isEmpty()) {
@@ -322,7 +326,7 @@ public class UIHookManager {
                 String json = intent.getStringExtra("json_content");
                 try { ps.reso.instaeclipse.utils.ipc.BrokerPayload.validateConfig(json); }
                 catch (IllegalArgumentException malformed) {
-                    ModuleLog.line("(IE|Config) Invalid or oversized configuration rejected");
+                    ModuleLog.error("(IE|Config) Settings restore rejected: the backup is invalid or too large");
                     return;
                 }
                 if (json == null || json.isEmpty()) return;
@@ -346,7 +350,8 @@ public class UIHookManager {
             ps.reso.instaeclipse.utils.core.IpcSecurity.registerCompanionOnlyReceiver(context, receiver,
                     new IntentFilter("ps.reso.instaeclipse.ACTION_RESTORE_SETTINGS"));
             } catch (Throwable e) {
-            ModuleLog.line("(InstaEclipse | RestoreReceiver): ❌ " + e.getMessage());
+            ModuleLog.error("(InstaEclipse | RestoreReceiver): Restoring a settings backup into Instagram will not work: "
+                    + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 

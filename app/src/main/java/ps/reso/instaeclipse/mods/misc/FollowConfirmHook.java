@@ -85,13 +85,13 @@ public class FollowConfirmHook {
                     }
                 }
                 if (sender == null) {
-                    ModuleLog.line(TAG + "❌ follow sender not found");
+                    ModuleLog.error(TAG + "Could not turn on follow confirmation: the follow action was not found in this Instagram version");
                     return;
                 }
                 DexKitCache.saveMethod(SENDER_KEY, sender);
                 if (statusSetter != null) DexKitCache.saveMethod(SETTER_KEY, statusSetter);
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "❌ " + t);
+                ModuleLog.error(TAG + "Could not turn on follow confirmation", t);
                 return;
             }
         }
@@ -120,7 +120,7 @@ public class FollowConfirmHook {
                     break;
                 }
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "⚠️ reset lookup: " + t);
+                ModuleLog.warn(TAG + "After Cancel, a profile's Follow button may show the wrong state until refreshed: " + t);
             }
         }
         hookDataSource(sender.getDeclaringClass());
@@ -135,12 +135,13 @@ public class FollowConfirmHook {
                     }
                 }
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "⚠️ status getter: " + t);
+                ModuleLog.warn(TAG + "A profile's Following or Requested button may ask for confirmation too: " + t);
             }
         }
         hookProfileButton();
         if (statusSetter != null) resolveStatusEvent(bridge, statusSetter.getParameterTypes()[0]);
-        ModuleLog.line(TAG + "✅ Hooked " + sender.getDeclaringClass().getName() + "." + sender.getName()
+        ModuleLog.ok(TAG + "Ready");
+        ModuleLog.detail(TAG + "Hooked " + sender.getDeclaringClass().getName() + "." + sender.getName()
                 + (statusSetter != null ? ", undo " + statusSetter.getName() : ", no undo")
                 + (resetMethod != null ? ", reset " + resetMethod.getName() : ", no reset")
                 + (statusGetter != null ? ", status " + statusGetter.getName() : ", no status"));
@@ -173,8 +174,8 @@ public class FollowConfirmHook {
                     replayingClick = true;
                     REPLAYING.set(Boolean.TRUE);
                     try { v.performClick(); } finally { replayingClick = false; REPLAYING.remove(); }
-                    ModuleLog.line(TAG + "profile follow sent");
-                }, () -> ModuleLog.line(TAG + "profile follow cancelled")));
+                    ModuleLog.line(TAG + "Profile follow confirmed and sent");
+                }, () -> ModuleLog.line(TAG + "Profile follow cancelled")));
             }
         });
     }
@@ -224,12 +225,12 @@ public class FollowConfirmHook {
                                 () -> reset(self, args, managerClass)));
                     }
                 });
-                ModuleLog.line(TAG + "✅ profile follow: " + m.getName());
+                ModuleLog.detail(TAG + "profile follow: " + m.getName());
                 return;
             }
-            ModuleLog.line(TAG + "⚠️ profile follow method not found");
+            ModuleLog.warn(TAG + "Some Follow buttons may follow without asking: the profile follow step was not found in this Instagram version");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ profile follow: " + t);
+            ModuleLog.warn(TAG + "Some Follow buttons may follow without asking: " + t);
         }
     }
 
@@ -266,9 +267,9 @@ public class FollowConfirmHook {
         try {
             REPLAYING.set(Boolean.TRUE);
             XposedBridge.invokeOriginalMethod(method, self, again);
-            ModuleLog.line(TAG + "profile follow sent");
+            ModuleLog.line(TAG + "Profile follow confirmed and sent");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ profile follow: " + t);
+            ModuleLog.error(TAG + "Could not send the follow: " + t);
         } finally {
             REPLAYING.remove();
         }
@@ -276,7 +277,7 @@ public class FollowConfirmHook {
 
     /** Cancel: the manager re-reads the profile's real status (its reset after a failed follow). */
     private static void reset(Object dataSource, Object[] args, Class<?> managerClass) {
-        ModuleLog.line(TAG + "profile follow cancelled");
+        ModuleLog.line(TAG + "Profile follow cancelled");
         Method r = resetMethod;
         if (r == null) return;
         try {
@@ -300,7 +301,7 @@ public class FollowConfirmHook {
                 }
             }
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ reset: " + t);
+            ModuleLog.warn(TAG + "Could not reset the Follow button after Cancel: " + t);
         }
     }
 
@@ -358,7 +359,7 @@ public class FollowConfirmHook {
             dlg.onDismiss(() -> { if (!followed[0]) onCancel.run(); });
             dlg.show();
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ confirm: " + t);
+            ModuleLog.error(TAG + "Could not show the follow confirmation, so the follow was cancelled", t);
             onCancel.run();
         }
     }
@@ -367,9 +368,9 @@ public class FollowConfirmHook {
         try {
             REPLAYING.set(Boolean.TRUE);
             XposedBridge.invokeOriginalMethod(method, null, args);
-            ModuleLog.line(TAG + "follow sent");
+            ModuleLog.line(TAG + "Follow confirmed and sent");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ send failed: " + t);
+            ModuleLog.error(TAG + "Could not send the follow: " + t);
         } finally {
             REPLAYING.remove();
         }
@@ -377,7 +378,7 @@ public class FollowConfirmHook {
 
     /** Back to "not following": a follow only starts from there. */
     private static void undo(Member method, Object[] args) {
-        ModuleLog.line(TAG + "follow cancelled");
+        ModuleLog.line(TAG + "Follow cancelled");
         Method setter = statusSetter;
         Object user = user(args);
         Object manager = null;
@@ -392,7 +393,7 @@ public class FollowConfirmHook {
             setter.invoke(manager, notFollowing, user, true);
             announce(manager, user, notFollowing);
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ undo: " + t);
+            ModuleLog.warn(TAG + "Could not reset the Follow button after Cancel: " + t);
         }
     }
 
@@ -420,13 +421,13 @@ public class FollowConfirmHook {
                     statusEvent = c.getDeclaredConstructor(statusType, String.class);
                     busFactory = factory;
                     busPost = post.getMethodInstance(Module.hostClassLoader);
-                    ModuleLog.line(TAG + "status event " + c.getName() + " on " + bus.getName());
+                    ModuleLog.detail(TAG + "status event " + c.getName() + " on " + bus.getName());
                     return;
                 }
             }
-            ModuleLog.line(TAG + "⚠️ status event not found");
+            ModuleLog.warn(TAG + "After Cancel, Follow buttons in the feed may only update after a refresh (not supported in this Instagram version)");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ status event: " + t);
+            ModuleLog.warn(TAG + "After Cancel, Follow buttons in the feed may only update after a refresh: " + t);
         }
     }
 
@@ -447,7 +448,7 @@ public class FollowConfirmHook {
             busPost.setAccessible(true);
             busPost.invoke(bus, statusEvent.newInstance(status, id));
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ announce: " + t);
+            ModuleLog.warn(TAG + "Could not update the Follow buttons in the feed after Cancel: " + t);
         }
     }
 

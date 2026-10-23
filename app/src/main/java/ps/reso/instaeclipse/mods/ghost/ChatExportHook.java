@@ -91,7 +91,7 @@ public class ChatExportHook {
                 store = cl.loadClass(md.getClassName());
                 break;
             }
-            if (store == null) { ModuleLog.line(TAG + "❌ message store not found"); return; }
+            if (store == null) { ModuleLog.error(TAG + "Could not turn on chat export: not supported by this Instagram version (message store not found)"); return; }
             for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(store)) {
                 Class<?>[] p = m.getParameterTypes();
                 if (p.length == 1 && p[0] == boolean.class && m.getReturnType() == java.util.ArrayList.class) messagesMethod = m;
@@ -122,11 +122,13 @@ public class ChatExportHook {
                 }
             }
             if (messagesMethod != null) messagesMethod.setAccessible(true);
-            ModuleLog.line(TAG + "✅ store " + store.getName() + " messages=" + (messagesMethod != null)
+            ModuleLog.line(TAG + (messagesMethod != null && serializer != null && factoryClass != null ? "✅ ready"
+                    : "❌ Could not turn on chat export: not supported by this Instagram version (message reader incomplete)"));
+            ModuleLog.detail(TAG + "store " + store.getName() + " messages=" + (messagesMethod != null)
                     + " serializer=" + (serializer != null) + " factory=" + (factoryClass != null ? factoryClass.getName() : "none"));
             if (messagesMethod != null && serializer != null && factoryClass != null) FeatureStatusTracker.setHooked("ChatExport");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.error(TAG + "Could not turn on chat export", t);
         }
     }
 
@@ -161,7 +163,7 @@ public class ChatExportHook {
         if (tracked == null) try { tracked = UnsentThreadButtonHook.openThread.get(); } catch (Throwable ignored) {}
         final String threadId = tracked;
         Object store = findStore(threadId);
-        ModuleLog.line(TAG + "export thread=" + threadId + " store=" + (store != null));
+        ModuleLog.detail(TAG + "export thread=" + threadId + " store=" + (store != null));
         if (store == null || messagesMethod == null) {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_none), Toast.LENGTH_SHORT).show();
             return;
@@ -282,14 +284,14 @@ public class ChatExportHook {
                             catch (Throwable t) { exportFailed(a, t); }
                         });
                         if (!delegated) {
-                            ModuleLog.line(TAG + "outside the companion's limits (" + count + " msgs, " + mUrls.size()
+                            ModuleLog.detail(TAG + "outside the companion's limits (" + count + " msgs, " + mUrls.size()
                                     + " media, " + page.length() + " html chars), writing locally");
                         } else {
-                            ModuleLog.line(TAG + "delegated export (" + count + " msgs, " + mUrls.size()
-                                    + " media) to companion service: " + folder);
+                            ModuleLog.line(TAG + "Exporting " + count + " messages and " + mUrls.size()
+                                    + " media files in the InstaEclipse app to " + folder);
                         }
                     } catch (Throwable t) {
-                        ModuleLog.line(TAG + "delegate failed, writing locally: " + t);
+                        ModuleLog.detail(TAG + "delegate failed, writing locally: " + t);
                     }
                 }
 
@@ -332,7 +334,7 @@ public class ChatExportHook {
             out.write(page.getBytes(StandardCharsets.UTF_8));
         }
         final int fsaved = saved;
-        ModuleLog.line(TAG + "exported locally " + count + " messages, " + fsaved + " media to " + folder);
+        ModuleLog.line(TAG + "Exported " + count + " messages and " + fsaved + " media files to " + folder);
         new Handler(Looper.getMainLooper()).post(() -> {
             if (fsaved > 0)
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_done_media, count, fsaved, folder), Toast.LENGTH_LONG).show();
@@ -342,7 +344,7 @@ public class ChatExportHook {
     }
 
     private static void exportFailed(Activity a, Throwable t) {
-        ModuleLog.line(TAG + "❌ export: " + t);
+        ModuleLog.error(TAG + "Could not export the chat", t);
         new Handler(Looper.getMainLooper()).post(() ->
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_toast_download_failed, String.valueOf(t.getMessage())), Toast.LENGTH_SHORT).show());
     }

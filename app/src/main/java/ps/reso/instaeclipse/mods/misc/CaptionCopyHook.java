@@ -108,12 +108,14 @@ public class CaptionCopyHook {
                 XposedBridge.hookMethod(onTouch, TOUCH);
                 hooked++;
             } catch (Throwable t) {
-                ModuleLog.line("(IE|Caption) ⚠️ hold-to-copy unavailable on " + type + ": " + t);
+                ModuleLog.warn("(IE|Caption) Hold to copy may not work on some captions: " + t);
             }
         }
         if (hooked > 0) FeatureStatusTracker.setHooked("CaptionCopy");
         else if (FeatureFlags.enableCaptionCopy) FeatureStatusTracker.setBroken("CaptionCopy", R.string.ig_dialog_misc_copy_caption);
-        ModuleLog.line("(IE|Caption) hold-to-copy on " + hooked + " caption view type(s)");
+        ModuleLog.line("(IE|Caption) " + (hooked > 0 ? "✅ Ready"
+                : "❌ Could not turn on hold to copy captions: caption views are not supported in this Instagram version"));
+        ModuleLog.detail("(IE|Caption) hold-to-copy on " + hooked + " caption view type(s)");
         markBuiltCaptions(bridge, loader);
     }
 
@@ -160,13 +162,13 @@ public class CaptionCopyHook {
                     Method m = md.getMethodInstance(loader);
                     if (Modifier.isStatic(m.getModifiers()) && m.getReturnType() != void.class) { builder = m; break; }
                 }
-                if (builder == null) { ModuleLog.line("(IE|Caption) ⚠️ caption builder not found, no post tags"); return; }
+                if (builder == null) { ModuleLog.warn("(IE|Caption) Copying expanded or short Reels captions may not work in this Instagram version (caption builder not found)"); return; }
                 DexKitCache.saveMethod("CaptionCopy_builder", builder);
             }
             // The config type: the builder's parameter that leads to a Media.
             Class<?> config = null;
             for (Class<?> p : builder.getParameterTypes()) if (pathToMedia(p) != null) { config = p; break; }
-            if (config == null) { ModuleLog.line("(IE|Caption) ⚠️ caption config not found, no post tags"); return; }
+            if (config == null) { ModuleLog.warn("(IE|Caption) Copying expanded or short Reels captions may not work in this Instagram version (caption config not found)"); return; }
             int hooked = 0;
             for (Method m : builder.getDeclaringClass().getDeclaredMethods()) {
                 Class<?> r = m.getReturnType();
@@ -188,10 +190,10 @@ public class CaptionCopyHook {
                 });
                 hooked++;
             }
-            ModuleLog.line("(IE|Caption) ✅ post tags on " + hooked + " caption builder method(s) of "
+            ModuleLog.detail("(IE|Caption) post tags on " + hooked + " caption builder method(s) of "
                     + builder.getDeclaringClass().getName());
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Caption) ⚠️ post tags: " + t);
+            ModuleLog.warn("(IE|Caption) Copying expanded or short Reels captions may not work: " + t);
         }
     }
 
@@ -286,14 +288,14 @@ public class CaptionCopyHook {
                         m.setAccessible(true);
                         captionGetter = m;
                         DexKitCache.saveMethod("CaptionGetter", m);
-                        ModuleLog.line("(IE|Caption) ✅ captionGetter=" + declClass + "." + m.getName());
+                        ModuleLog.detail("(IE|Caption) captionGetter=" + declClass + "." + m.getName());
                         return;
                     } catch (Throwable ignored) {}
                 }
             }
-            ModuleLog.line("(IE|Caption) ❌ captionGetter not found");
+            ModuleLog.error("(IE|Caption) Could not turn on caption copy: the caption was not found in this Instagram version");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Caption) ❌ resolveCaptionGetter: " + t);
+            ModuleLog.error("(IE|Caption) Could not turn on caption copy: " + t);
         }
     }
 
@@ -308,7 +310,8 @@ public class CaptionCopyHook {
                                 .addInterface(captionType.getName(), StringMatchType.Equals, false))
                         .usingNumbers("text".hashCode()).paramCount(0).returnType(String.class)));
                 if (found.size() != 1) {
-                    ModuleLog.line("(IE|Caption) ❌ caption text accessor matched " + found.size() + " methods");
+                    ModuleLog.error("(IE|Caption) Could not turn on caption copy: the caption text was not found in this Instagram version");
+                    ModuleLog.detail("(IE|Caption) caption text accessor matched " + found.size() + " methods");
                     return;
                 }
                 impl = found.get(0).getMethodInstance(classLoader);
@@ -317,9 +320,9 @@ public class CaptionCopyHook {
             // Call it through the caption type, so every implementation (Pando or immutable) answers.
             captionText = captionType.isInterface() ? captionType.getMethod(impl.getName()) : impl;
             captionText.setAccessible(true);
-            ModuleLog.line("(IE|Caption) ✅ captionText=" + captionType.getName() + "." + captionText.getName());
+            ModuleLog.detail("(IE|Caption) captionText=" + captionType.getName() + "." + captionText.getName());
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Caption) ❌ resolveCaptionText: " + t);
+            ModuleLog.error("(IE|Caption) Could not turn on caption copy: " + t);
         }
     }
 
@@ -352,7 +355,7 @@ public class CaptionCopyHook {
             Object captionObj = captionGetter.invoke(receiver);
             return captionObj == null ? null : (String) captionText.invoke(captionObj);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Caption) ❌ extractCaptionText: " + t);
+            ModuleLog.detail("(IE|Caption) extractCaptionText: " + t);
             return null;
         }
     }
@@ -475,12 +478,12 @@ public class CaptionCopyHook {
                 }
             }
             if (litho) {
-                ModuleLog.line("(IE|Caption) " + (reel ? "reel" : "sheet") + " caption not matched (spanned=" + (shown instanceof Spanned)
+                ModuleLog.detail("(IE|Caption) " + (reel ? "reel" : "sheet") + " caption not matched (spanned=" + (shown instanceof Spanned)
                         + " page=" + (page != null) + " tagged=" + tagged + " links=" + links
                         + " remembered=" + recentReelCaptions.size() + ")");
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Caption) ⚠️ hold-to-copy: " + t);
+            ModuleLog.detail("(IE|Caption) hold-to-copy: " + t);
         }
         return null;
     }
@@ -661,7 +664,7 @@ public class CaptionCopyHook {
                 IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_caption_copied), Toast.LENGTH_SHORT).show();
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Caption) ❌ Copy: " + t);
+            ModuleLog.error("(IE|Caption) Could not copy the caption", t);
         }
     }
 }

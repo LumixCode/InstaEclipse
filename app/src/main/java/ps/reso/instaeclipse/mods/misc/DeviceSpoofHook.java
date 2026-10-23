@@ -143,9 +143,9 @@ public final class DeviceSpoofHook {
                 XposedHelpers.findAndHookMethod(pm, "hasSystemFeature", String.class, int.class, feature);
             }
             ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("SpoofDevice");
-            ModuleLog.line("(InstaEclipse | DeviceSpoof): ✅ " + p.manufacturer + " " + p.model);
+            ModuleLog.ok("(InstaEclipse | DeviceSpoof): Ready, Instagram sees a " + p.manufacturer + " " + p.model);
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | DeviceSpoof): ❌ " + t);
+            ModuleLog.error("(InstaEclipse | DeviceSpoof): Could not turn on device spoofing", t);
         }
     }
 
@@ -201,7 +201,7 @@ public final class DeviceSpoofHook {
                 marker.delete();
             ModuleLog.line("(InstaEclipse | DeviceSpoof): HDR developer options " + (on ? "added" : "removed"));
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | DeviceSpoof): ❌ overrides: " + t);
+            ModuleLog.warn("(InstaEclipse | DeviceSpoof): Could not update Instagram's HDR developer options for the spoofed device: " + t);
         }
     }
 

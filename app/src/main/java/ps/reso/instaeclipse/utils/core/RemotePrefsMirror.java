@@ -54,7 +54,7 @@ public final class RemotePrefsMirror {
                     // The exported provider takes a binder from any app: keep the first service
                     // until its binder dies, so a later one can't take over every setting.
                     if (bound != null) {
-                        Log.w(TAG, "ignored another service binder while connected");
+                        Log.i(TAG, "ignored another service binder while connected");
                         return;
                     }
                     try {

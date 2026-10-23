@@ -541,22 +541,23 @@ public class SettingsManager {
         if (key == null) return false;
         // The PIN hash/salt and the locked-chat list are never the companion's to set.
         if (PrefsMerge.isPrivate(key)) {
-            ModuleLog.line("(InstaEclipse) Sync: refused private key " + key);
+            ModuleLog.detail("(InstaEclipse) Sync: refused private key " + key);
             return false;
         }
         java.util.Map<String, ?> all = preferences.getAll();
         Object existing = all.get(key);
         // A null String value removes the key, which can't leave a wrong type behind.
         if (existing != null && value != null && !existing.getClass().isInstance(value)) {
-            ModuleLog.line("(InstaEclipse) Sync: refused " + value.getClass().getSimpleName() + " for " + key);
+            ModuleLog.warn("(InstaEclipse) Sync: ignored a change to " + key + " from the InstaEclipse app (wrong value type "
+                    + value.getClass().getSimpleName() + "; update both apps to the same version)");
             return false;
         }
         if (isLockedByExtreme(key, value)) {
-            ModuleLog.line("(InstaEclipse) Sync: refused " + key + " while Extreme Mode is on");
+            ModuleLog.line("(InstaEclipse) Sync: kept " + key + " unchanged while Extreme Mode is on");
             return false;
         }
         if (isLockedByPasscode(key, value, all.get("lockDirectPasscode"))) {
-            ModuleLog.line("(InstaEclipse) Sync: refused " + key + " while a lock passcode is set");
+            ModuleLog.line("(InstaEclipse) Sync: kept " + key + " unchanged while a lock passcode is set");
             return false;
         }
         return true;

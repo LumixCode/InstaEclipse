@@ -106,7 +106,7 @@ public class DistractionFreeUIHook {
             discoverPeopleId = res.getIdentifier("similar_accounts_container", "id", pkg);
             instantsId = res.getIdentifier("direct_quick_snap_consumption_preview", "id", pkg);
             idsResolved = true;
-            ModuleLog.line("(IE|DistractUI) resolved: tray=" + trayId + " clipsTab=" + clipsTabId);
+            ModuleLog.detail("(IE|DistractUI) resolved: tray=" + trayId + " clipsTab=" + clipsTabId);
         } catch (Throwable ignored) {}
     }
 
@@ -206,7 +206,7 @@ public class DistractionFreeUIHook {
         for (int k = 0; k < wanted.size(); k++) bar.addView(wanted.get(k), Math.min(slots.get(k), bar.getChildCount()));
         if (!orderLogged) {
             orderLogged = true;
-            ModuleLog.line("(IE|DistractUI) nav tabs reordered: " + FeatureFlags.navTabOrder);
+            ModuleLog.line("(IE|DistractUI) Bottom tabs reordered: " + FeatureFlags.navTabOrder);
         }
     }
 
@@ -247,7 +247,7 @@ public class DistractionFreeUIHook {
                 n++;
             } catch (Throwable ignored) {}
         }
-        ModuleLog.line("(IE|DistractUI) main tab pager touch gate on " + inner.getName() + ": " + n);
+        ModuleLog.detail("(IE|DistractUI) main tab pager touch gate on " + inner.getName() + ": " + n);
     }
 
     // Swipe between Home and Messages while Reels is off (Reels sits between them in IG's pager):
@@ -302,7 +302,7 @@ public class DistractionFreeUIHook {
                         f.setBoolean(v, false);
                         if (!swipeLogged) { // IG turns it back on every few seconds; we keep switching it off
                             swipeLogged = true;
-                            ModuleLog.line("(IE|DistractUI) main tab swipe disabled (Reels off) via " + f.getName());
+                            ModuleLog.detail("(IE|DistractUI) main tab swipe disabled (Reels off) via " + f.getName());
                         }
                     }
                 } catch (Throwable ignored) {}

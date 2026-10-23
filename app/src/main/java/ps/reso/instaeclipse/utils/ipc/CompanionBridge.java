@@ -211,7 +211,7 @@ public final class CompanionBridge {
         final Callback callback;
         final AtomicBoolean complete = new AtomicBoolean();
         final Runnable timeout = () -> {
-            ps.reso.instaeclipse.utils.log.ModuleLog.line("(IE|Companion) connection timed out after 10 s (app frozen or starting slowly)");
+            ps.reso.instaeclipse.utils.log.ModuleLog.warn("(IE|Companion) The InstaEclipse app did not answer within 10 seconds (it may be frozen or starting slowly)");
             finish(null, "Companion connection timed out");
         };
         boolean bound;
@@ -239,7 +239,7 @@ public final class CompanionBridge {
             } catch (Exception error) { unreachable("bind failed: " + error); }
         }
         void unreachable(String why) {
-            ps.reso.instaeclipse.utils.log.ModuleLog.line("(IE|Companion) connection unavailable: " + why);
+            ps.reso.instaeclipse.utils.log.ModuleLog.warn("(IE|Companion) Could not reach the InstaEclipse app: " + why);
             finish(null, "Companion connection unavailable");
         }
         @Override public void onServiceConnected(ComponentName name, IBinder binder) {

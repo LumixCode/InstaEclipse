@@ -56,7 +56,7 @@ public class StoryLinksHook {
     public void install(DexKitBridge bridge, ClassLoader classLoader) {
         resolveGetters(bridge, classLoader);
         if (getters.isEmpty()) {
-            ModuleLog.line("(IE|StoryLinks) ❌ link getters not found");
+            ModuleLog.error("(IE|StoryLinks) Could not turn on story links: link stickers were not found in this Instagram version");
             return;
         }
         installButtonHook(bridge, classLoader);
@@ -91,7 +91,7 @@ public class StoryLinksHook {
                     break;
                 }
             } catch (Throwable t) {
-                ModuleLog.line("(IE|StoryLinks) getter " + key + ": " + t);
+                ModuleLog.detail("(IE|StoryLinks) getter " + key + ": " + t);
             }
         }
         if (!getters.isEmpty()) DexKitCache.saveMethods("StoryLinkGetters", getters);
@@ -109,11 +109,11 @@ public class StoryLinksHook {
                 builders = new ArrayList<>(
                         ps.reso.instaeclipse.mods.media.StoryDownloadHook.storyOptionBuilders(methods, classLoader));
             } catch (Throwable t) {
-                ModuleLog.line("(IE|StoryLinks) ❌ builder DexKit: " + t);
+                ModuleLog.detail("(IE|StoryLinks) builder DexKit: " + t);
             }
         }
         if (builders == null || builders.isEmpty()) {
-            ModuleLog.line("(IE|StoryLinks) ❌ builder not found");
+            ModuleLog.error("(IE|StoryLinks) Could not add the links entry to the story menu: the story menu was not found in this Instagram version");
             return;
         }
 
@@ -134,7 +134,7 @@ public class StoryLinksHook {
                     extended[original.length] = label;
                     param.setResult(extended);
                 } catch (Throwable t) {
-                    ModuleLog.line("(IE|StoryLinks) builder: " + t);
+                    ModuleLog.warn("(IE|StoryLinks) Could not add the links entry to this story's menu: " + t);
                 }
             }
         };
@@ -142,7 +142,7 @@ public class StoryLinksHook {
         for (Method m : builders) {
             try { XposedBridge.hookMethod(m, hook); hooked++; } catch (Throwable ignored) {}
         }
-        ModuleLog.line("(IE|StoryLinks) ✅ button hook on " + hooked + " builder(s)");
+        ModuleLog.detail("(IE|StoryLinks) button hook on " + hooked + " builder(s)");
     }
 
     // ── Hook 2: handle the tap ───────────────────────────────────────────────
@@ -150,7 +150,7 @@ public class StoryLinksHook {
     private void installClickHook(DexKitBridge bridge, ClassLoader classLoader) {
         List<Method> dispatchers = ps.reso.instaeclipse.mods.media.StoryDownloadHook.storyClickDispatchers(bridge, classLoader);
         if (dispatchers.isEmpty()) {
-            ModuleLog.line("(IE|StoryLinks) ❌ click handler not found");
+            ModuleLog.error("(IE|StoryLinks) Could not turn on story links: the story menu's tap handler was not found in this Instagram version");
             return;
         }
         try {
@@ -183,14 +183,14 @@ public class StoryLinksHook {
                             else showLinks(c, links);
                         });
                     } catch (Throwable t) {
-                        ModuleLog.line("(IE|StoryLinks) click: " + t);
+                        ModuleLog.error("(IE|StoryLinks) Could not show the story's links", t);
                     }
                 }
             };
             for (Method m : dispatchers) XposedBridge.hookMethod(m, clickHook);
-            ModuleLog.line("(IE|StoryLinks) ✅ click hook installed");
+            ModuleLog.ok("(IE|StoryLinks) Ready");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|StoryLinks) ❌ click hook: " + t);
+            ModuleLog.error("(IE|StoryLinks) Could not turn on story links", t);
         }
     }
 
@@ -324,7 +324,7 @@ public class StoryLinksHook {
                     () -> copy(ctx, String.join("\n", links), I18n.t(ctx, R.string.ig_toast_links_copied)));
             dlg.show();
         } catch (Throwable t) {
-            ModuleLog.line("(IE|StoryLinks) dialog: " + t);
+            ModuleLog.error("(IE|StoryLinks) Could not show the story's links", t);
         }
     }
 }

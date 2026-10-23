@@ -99,7 +99,7 @@ public final class ProfileAnalyzer {
         if (self != null) new Thread(() -> WatchlistStore.add(app, self, id, username)).start();
         Session s = begin(a, id, username, true);
         if (!openFollowers(a)) {
-            ModuleLog.line(TAG + "followers count not found / not tappable on @" + username);
+            ModuleLog.warn(TAG + "Could not open the followers list of @" + username + " (its followers count is not shown or cannot be tapped)");
             end(s);
             cantOpen(a, s.name());
         }
@@ -109,7 +109,7 @@ public final class ProfileAnalyzer {
         Session s = new Session(id, username, fromMenu);
         s.ctx = ctx;
         session = s;
-        ModuleLog.line(TAG + "analyze " + id + " (@" + username + ")" + (fromMenu ? " from menu" : " from list"));
+        ModuleLog.line(TAG + "Analyzing @" + username + " (" + id + ")" + (fromMenu ? ", started from the profile menu" : ", started from the list"));
         H.postDelayed(() -> drive(s), fromMenu ? 900 : 0);
         return s;
     }
@@ -272,7 +272,7 @@ public final class ProfileAnalyzer {
                 WatchlistStore.saveIndex(app, self, index);
             } catch (Throwable t) {
                 error = t.toString();
-                ModuleLog.line(TAG + "❌ save: " + t);
+                ModuleLog.error(TAG + "Could not save the analysis", t);
             }
             ModuleLog.line(TAG + "@" + s.name() + ": " + r.followers + " followers, " + r.following + " following, "
                     + r.added.size() + " changes" + (r.first ? " (first)" : ""));
@@ -295,7 +295,7 @@ public final class ProfileAnalyzer {
                     "row_profile_header_textview_followers_count"}) {
                 int id = res.getIdentifier(n, "id", pkg);
                 View v = id != 0 ? decor.findViewById(id) : null;
-                if (v != null && v.isShown() && tapUp(v)) { ModuleLog.line(TAG + "opened followers via " + n); return true; }
+                if (v != null && v.isShown() && tapUp(v)) { ModuleLog.detail(TAG + "opened followers via " + n); return true; }
             }
             // any shown view whose id names the followers count
             ArrayDeque<View> st = new ArrayDeque<>();
@@ -307,7 +307,7 @@ public final class ProfileAnalyzer {
                     try {
                         String n = res.getResourceEntryName(v.getId());
                         if (n.contains("followers") && !n.contains("follow_context") && tapUp(v)) {
-                            ModuleLog.line(TAG + "opened followers via " + n);
+                            ModuleLog.detail(TAG + "opened followers via " + n);
                             return true;
                         }
                     } catch (Throwable ignored) {}
@@ -315,7 +315,7 @@ public final class ProfileAnalyzer {
                 if (v instanceof ViewGroup g) for (int i = 0; i < g.getChildCount(); i++) st.push(g.getChildAt(i));
             }
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ open followers: " + t);
+            ModuleLog.detail(TAG + "open followers: " + t);
         }
         return false;
     }
@@ -333,7 +333,7 @@ public final class ProfileAnalyzer {
             new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_pa_analyze))
                     .message(I18n.t(ctx, R.string.ig_pa_cant_open, name)).show();
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ dialog: " + t);
+            ModuleLog.warn(TAG + "Could not show why the analysis could not start", t);
         }
     }
 
@@ -363,7 +363,7 @@ public final class ProfileAnalyzer {
             if (!p.events.isEmpty()) dlg.secondary(I18n.t(ctx, R.string.ig_pa_log), () -> showLog(ctx, self, p.id));
             dlg.show();
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ result dialog: " + t);
+            ModuleLog.error(TAG + "Could not show the analysis result", t);
         }
     }
 
@@ -529,7 +529,7 @@ public final class ProfileAnalyzer {
             }
             dlg.show();
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ watchlist dialog: " + t);
+            ModuleLog.error(TAG + "Could not show the watchlist", t);
         }
     }
 
@@ -559,7 +559,7 @@ public final class ProfileAnalyzer {
                     .setPackage(ctx.getPackageName())
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "open profile: " + t);
+            ModuleLog.error(TAG + "Could not open the profile: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 

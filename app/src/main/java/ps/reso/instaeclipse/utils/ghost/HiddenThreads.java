@@ -59,7 +59,8 @@ public class HiddenThreads {
             loaded = true;
         } catch (Throwable t) {
             loadFailed = true;
-            ModuleLog.line("(IE|HiddenThreads) load failed, changes stay unsaved until restart: " + t);
+            ModuleLog.error("(IE|HiddenThreads) Could not read the list of hidden chats; changes are not saved until Instagram restarts: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -74,7 +75,7 @@ public class HiddenThreads {
             // temp file + rename: a crash mid-write keeps the previous version intact
             ps.reso.instaeclipse.utils.core.AtomicFiles.write(f, o.toString());
         } catch (Throwable t) {
-            ModuleLog.line("(IE|HiddenThreads) save failed: " + t);
+            ModuleLog.error("(IE|HiddenThreads) Could not save the list of hidden chats: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 

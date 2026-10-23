@@ -91,7 +91,11 @@ public class FollowListExportHook {
             for (Class<?> c = frag; c != null && ovc == null; c = c.getSuperclass()) {
                 try { ovc = c.getDeclaredMethod("onViewCreated", View.class, android.os.Bundle.class); } catch (NoSuchMethodException ignored) {}
             }
-            if (ovc == null) { ModuleLog.line(TAG + "❌ onViewCreated not found"); return; }
+            if (ovc == null) {
+                ModuleLog.error(TAG + "Could not turn on the follower list tools: the follower list screen is not supported in this Instagram version");
+                ModuleLog.detail(TAG + "onViewCreated not found on " + frag.getName());
+                return;
+            }
             fragClass = frag;
             XposedBridge.hookMethod(ovc, new XC_MethodHook() {
                 @Override
@@ -122,7 +126,7 @@ public class FollowListExportHook {
             FeatureStatusTracker.setHooked("FollowersHistory");
             FeatureStatusTracker.setHooked("ProfileAnalyzer");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.error(TAG + "Could not turn on the follower list tools", t);
         }
     }
 
@@ -283,7 +287,7 @@ public class FollowListExportHook {
                 out.write(new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF}); // UTF-8 BOM for Excel
                 out.write(csv.toString().getBytes(StandardCharsets.UTF_8));
             }
-            ModuleLog.line(TAG + "exported " + users.size() + " users to " + file);
+            ModuleLog.line(TAG + "Exported " + users.size() + " accounts to " + file);
             new Handler(Looper.getMainLooper()).post(() ->
                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_follow_export_done, users.size(), file), Toast.LENGTH_LONG).show());
         } catch (Throwable t) {
@@ -433,7 +437,7 @@ public class FollowListExportHook {
                 }
             }
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ tab: " + t);
+            ModuleLog.detail(TAG + "tab: " + t);
         }
         return false;
     }
@@ -531,12 +535,12 @@ public class FollowListExportHook {
                     ps.reso.instaeclipse.utils.users.FollowersHistory.save(ctx, self, state);
                 } catch (Throwable t) {
                     error = t.toString();
-                    ModuleLog.line(TAG + "❌ history save: " + t);
+                    ModuleLog.error(TAG + "Could not save the followers history", t);
                 }
-                ModuleLog.line(TAG + "history: " + users.size() + " followers, " + result.added.size() + " new events"
+                ModuleLog.line(TAG + "Followers history: " + users.size() + " followers, " + result.added.size() + " new changes"
                         + (result.first ? " (first check)" : ""));
             } else {
-                ModuleLog.line(TAG + "history: list incomplete (" + users.size() + "), not compared");
+                ModuleLog.line(TAG + "Followers history: the list did not load completely (" + users.size() + " accounts), nothing was compared");
             }
             final ps.reso.instaeclipse.utils.users.FollowersHistory.Result r = result;
             final String err = error;
@@ -610,7 +614,7 @@ public class FollowListExportHook {
             }
             dlg.show();
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ history dialog: " + t);
+            ModuleLog.error(TAG + "Could not show the followers history", t);
         }
     }
 

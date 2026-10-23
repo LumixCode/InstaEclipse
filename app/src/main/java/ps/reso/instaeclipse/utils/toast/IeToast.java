@@ -57,7 +57,7 @@ public final class IeToast {
                 else Toast.makeText(ctx.getApplicationContext() != null ? ctx.getApplicationContext() : ctx,
                         text, duration).show();
             } catch (Throwable t) {
-                ModuleLog.line("(IE|Toast) fallback: " + t);
+                ModuleLog.detail("(IE|Toast) fallback: " + t);
                 try { Toast.makeText(ctx, text, duration).show(); } catch (Throwable ignored) {}
             }
         };

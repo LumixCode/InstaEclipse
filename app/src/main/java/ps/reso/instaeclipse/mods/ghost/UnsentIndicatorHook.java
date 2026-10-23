@@ -100,9 +100,11 @@ final class UnsentIndicatorHook {
             // Same condition FeatureManager registers the feature under.
             else if (FeatureFlags.showUnsentIndicator && FeatureFlags.keepUnsentMessages)
                 FeatureStatusTracker.setBroken("UnsentIndicator");
-            ModuleLog.line("(IE|UnsentIndicator) bound-row hooks=" + installed);
+            ModuleLog.line("(IE|UnsentIndicator) " + (installed > 0 && bubbleInstalled ? "✅ ready"
+                    : "❌ Could not turn on the unsent message marker: not supported by this Instagram version"));
+            ModuleLog.detail("(IE|UnsentIndicator) bound-row hooks=" + installed + " bubble=" + bubbleInstalled);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|UnsentIndicator) unavailable: " + t.getMessage());
+            ModuleLog.error("(IE|UnsentIndicator) Could not turn on the unsent message marker", t);
             if (FeatureFlags.showUnsentIndicator && FeatureFlags.keepUnsentMessages)
                 FeatureStatusTracker.setBroken("UnsentIndicator");
         }

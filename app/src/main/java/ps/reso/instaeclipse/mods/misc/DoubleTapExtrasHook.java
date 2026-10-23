@@ -99,7 +99,10 @@ public class DoubleTapExtrasHook {
         });
         for (Method m : composeDirect) XposedBridge.hookMethod(m, SKIP);
 
-        ModuleLog.line(TAG + "✅ comments " + comments.size() + ", DM senders " + direct.size()
+        ModuleLog.line(TAG + (comments.isEmpty() && direct.isEmpty() && composeDirect.isEmpty()
+                ? "⚠️ Double-tap likes on comments and in chats cannot be blocked in this Instagram version"
+                : "✅ Ready for comments and chats"));
+        ModuleLog.detail(TAG + "comments " + comments.size() + ", DM senders " + direct.size()
                 + ", DM double-tap " + composeDirect.size());
     }
 
@@ -117,7 +120,7 @@ public class DoubleTapExtrasHook {
         try {
             found = finder.find();
         } catch (Throwable t) {
-            ModuleLog.line(TAG + key + " lookup failed: " + t);
+            ModuleLog.detail(TAG + key + " lookup failed: " + t);
         }
         if (found.isEmpty()) DexKitCache.saveString(key, "missing");
         else DexKitCache.saveMethods(key, found);

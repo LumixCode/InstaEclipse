@@ -89,11 +89,12 @@ public final class FollowStatusHook {
                 }
             });
             FeatureStatusTracker.setHooked(KEY);
-            ModuleLog.line(TAG + "hooked " + apply.getDeclaringClass().getName() + "." + apply.getName()
+            ModuleLog.ok(TAG + "Ready");
+            ModuleLog.detail(TAG + "hooked " + apply.getDeclaringClass().getName() + "." + apply.getName()
                     + (followedBy != null ? ", followed_by = " + followedBy.getName() : ", learning followed_by"));
         } catch (Throwable t) {
             if (FeatureFlags.showFollowerToast) FeatureStatusTracker.setBroken(KEY, R.string.ig_dialog_misc_show_follower_toast);
-            ModuleLog.line(TAG + "unable to resolve IG's friendship status", t);
+            ModuleLog.error(TAG + "Could not turn on the follower toast: Instagram's follow status was not found", t);
         }
     }
 
@@ -208,7 +209,7 @@ public final class FollowStatusHook {
                 if (filled == null) return; // JSON null: wait for the next answer
                 followedBy = filled;
                 DexKitCache.saveString(FIELD_KEY, filled.getName());
-                ModuleLog.line(TAG + "followed_by = " + status.getName() + "." + filled.getName());
+                ModuleLog.detail(TAG + "followed_by = " + status.getName() + "." + filled.getName());
             }
         });
     }

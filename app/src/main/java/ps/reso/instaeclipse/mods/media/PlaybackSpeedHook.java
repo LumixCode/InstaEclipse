@@ -78,7 +78,7 @@ public class PlaybackSpeedHook {
         boolean was = HOLD.slowActive();
         float out = HOLD.speedFor(f, hero, android.os.SystemClock.uptimeMillis());
         if (out != f && !was) {
-            ModuleLog.line(TAG + "hold on the left: " + SLOW + "x");
+            ModuleLog.probe(TAG + "hold on the left: " + SLOW + "x");
             // IG shows its "2X" hint before it sets the speed: fix the one already on screen
             FeedVideoDownloadHook.mainHandler.post(PlaybackSpeedHook::relabel);
             FeedVideoDownloadHook.mainHandler.postDelayed(PlaybackSpeedHook::relabel, 200);
@@ -210,9 +210,9 @@ public class PlaybackSpeedHook {
             XposedBridge.hookAllMethods(android.text.BoringLayout.class, "make", hint);
             XposedBridge.hookAllMethods(android.text.BoringLayout.class, "replaceOrMake", hint);
             FeatureStatusTracker.setHooked("HoldSlowMotion");
-            ModuleLog.line(TAG + "✅ hold side tracking");
+            ModuleLog.ok(TAG + "hold for slow motion ready");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ hold side: " + t);
+            ModuleLog.error(TAG + "Could not turn on hold for slow motion: " + t);
         }
     }
 
@@ -243,7 +243,8 @@ public class PlaybackSpeedHook {
             Method set = findStatic(bridge, cl, "PlaybackSpeed_heroSet", "HeroManager.setPlaybackSpeed", 3);
             Method prepare = findStatic(bridge, cl, "PlaybackSpeed_heroPrepare", "HeroManager.prepareAndMayPlay", 1);
             if (set == null || prepare == null) {
-                ModuleLog.line(TAG + "⚠️ hero set=" + set + " prepare=" + prepare);
+                ModuleLog.warn(TAG + "Speed changes will not reach stories and highlights in this Instagram version; feed and reels still work");
+                ModuleLog.detail(TAG + "hero set=" + set + " prepare=" + prepare);
                 return;
             }
             set.setAccessible(true);
@@ -272,10 +273,10 @@ public class PlaybackSpeedHook {
                     if (FeatureFlags.offerPlaybackSpeed && speed != 1f) setHero(p, speed);
                 }
             });
-            ModuleLog.line(TAG + "✅ hero " + set.getDeclaringClass().getName() + "." + set.getName()
+            ModuleLog.detail(TAG + "hero " + set.getDeclaringClass().getName() + "." + set.getName()
                     + ", prepare " + prepare.getName());
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ hero: " + t);
+            ModuleLog.warn(TAG + "Speed changes will not reach stories and highlights; feed and reels still work: " + t);
         }
     }
 
@@ -304,7 +305,7 @@ public class PlaybackSpeedHook {
         }
         boolean ok = applyToPlayers(2f);
         ok |= applyToHeroes(2f);
-        ModuleLog.line(TAG + "hold on the right: 2x, applied=" + ok);
+        ModuleLog.probe(TAG + "hold on the right: 2x, applied=" + ok);
     };
     /** @return true to swallow the event (the rest of a right-side hold). */
     private static boolean onTouch(Activity a, MotionEvent ev) {
@@ -446,7 +447,8 @@ public class PlaybackSpeedHook {
                     }
                 }
                 if (start == null || cached.isEmpty()) {
-                    ModuleLog.line(TAG + "❌ feed player start=" + start + " setters=" + cached.size());
+                    ModuleLog.error(TAG + "Could not turn on playback speed: the video player was not found in this Instagram version");
+                    ModuleLog.detail(TAG + "feed player start=" + start + " setters=" + cached.size());
                     return;
                 }
                 DexKitCache.saveMethod("PlaybackSpeed_start", start);
@@ -518,13 +520,14 @@ public class PlaybackSpeedHook {
                     storyHooks++;
                 }
             }
-            ModuleLog.line(TAG + "story/reel speed methods: " + storyHooks);
-            ModuleLog.line(TAG + "✅ feed player " + start.getDeclaringClass().getName() + "." + start.getName()
+            ModuleLog.ok(TAG + "ready");
+            ModuleLog.detail(TAG + "story/reel speed methods: " + storyHooks);
+            ModuleLog.detail(TAG + "feed player " + start.getDeclaringClass().getName() + "." + start.getName()
                     + ", started-cb " + (started != null ? started.getDeclaringClass().getName() + "." + started.getName() : "none")
                     + ", setters " + SETTERS.size());
             FeatureStatusTracker.setHooked("PlaybackSpeed");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ feed: " + t);
+            ModuleLog.error(TAG + "Could not turn on playback speed", t);
         }
     }
 
@@ -540,7 +543,7 @@ public class PlaybackSpeedHook {
                     if (p.length == 4 && p[1] == long.class) { gate = m; break; }
                 }
                 if (gate == null) {
-                    ModuleLog.line(TAG + "⚠️ reel scrubber gate not found");
+                    ModuleLog.warn(TAG + "Always showing the reel seek bar is not available in this Instagram version");
                     return;
                 }
                 DexKitCache.saveMethod("PlaybackSpeed_scrubberGate", gate);
@@ -552,9 +555,10 @@ public class PlaybackSpeedHook {
                 }
             });
             FeatureStatusTracker.setHooked("ForceReelScrubber");
-            ModuleLog.line(TAG + "✅ reel scrubber gate " + gate.getDeclaringClass().getName() + "." + gate.getName());
+            ModuleLog.ok(TAG + "always-visible reel seek bar ready");
+            ModuleLog.detail(TAG + "reel scrubber gate " + gate.getDeclaringClass().getName() + "." + gate.getName());
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ reel scrubber: " + t);
+            ModuleLog.error(TAG + "Could not turn on the always-visible reel seek bar: " + t);
         }
     }
 
@@ -581,7 +585,7 @@ public class PlaybackSpeedHook {
                     boolean ok = applyToHeroes(speed);
                     ok |= applyToPlayers(speed);
                     ok |= p != null && apply(p, speed);
-                    ModuleLog.line(TAG + "chosen " + speed + "x, applied now=" + ok);
+                    ModuleLog.line(TAG + "Speed set to " + speed + "x" + (ok ? "" : " (applies from the next video)"));
                     if (!ok) ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_playback_speed_next), Toast.LENGTH_SHORT).show();
                 })
                 .onDismiss(onClosed)
@@ -592,7 +596,7 @@ public class PlaybackSpeedHook {
     private static boolean apply(Object feedPlayer, float s) {
         Object target = find(feedPlayer, 0, Collections.newSetFromMap(new IdentityHashMap<>()));
         if (target == null) {
-            ModuleLog.line(TAG + "⚠️ no player object for speed");
+            ModuleLog.probe(TAG + "no player object for speed");
             return false;
         }
         HOLD.own(s, android.os.SystemClock.uptimeMillis()); // reaches the Hero setter after a hop
@@ -601,10 +605,10 @@ public class PlaybackSpeedHook {
             try {
                 APPLYING.set(Boolean.TRUE);
                 m.invoke(target, s);
-                ModuleLog.line(TAG + "speed " + s + "× via " + m.getDeclaringClass().getName() + "." + m.getName());
+                ModuleLog.probe(TAG + "speed " + s + "× via " + m.getDeclaringClass().getName() + "." + m.getName());
                 return true;
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "⚠️ set speed: " + t);
+                ModuleLog.detail(TAG + "set speed: " + t);
             } finally {
                 APPLYING.remove();
             }

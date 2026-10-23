@@ -40,7 +40,7 @@ public final class SearchHistoryHook {
                 List<MethodData> owners = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("Error saving recent searches. Clearing results.")));
                 if (owners.isEmpty()) {
-                    ModuleLog.line(TAG + "❌ RecentSearchCache not found");
+                    ModuleLog.error(TAG + "Could not stop Instagram from saving searches: not supported by this Instagram version (recent search cache not found)");
                     return;
                 }
                 // The add: (Object) -> void that puts the new entry at the top (List.add(0, entry)).
@@ -54,7 +54,8 @@ public final class SearchHistoryHook {
                     break;
                 }
                 if (add == null) {
-                    ModuleLog.line(TAG + "❌ add method not found in " + owners.get(0).getClassName());
+                    ModuleLog.error(TAG + "Could not stop Instagram from saving searches: not supported by this Instagram version");
+                    ModuleLog.detail(TAG + "add method not found in " + owners.get(0).getClassName());
                     return;
                 }
                 DexKitCache.saveMethod(CACHE_KEY, add);
@@ -66,9 +67,10 @@ public final class SearchHistoryHook {
                 }
             });
             FeatureStatusTracker.setHooked("DisableSearchHistory");
-            ModuleLog.line(TAG + "✅ " + add.getDeclaringClass().getName() + "." + add.getName());
+            ModuleLog.ok(TAG + "ready");
+            ModuleLog.detail(TAG + "hooked " + add.getDeclaringClass().getName() + "." + add.getName());
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.error(TAG + "Could not stop Instagram from saving searches", t);
         }
     }
 }

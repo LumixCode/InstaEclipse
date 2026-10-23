@@ -81,7 +81,7 @@ public class StoryCache {
             cache.addAll(restored);
             loaded = true;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|StoryCache) load failed: " + t);
+            ModuleLog.detail("(IE|StoryCache) load failed: " + t);
             setAsideUnreadableIndex();
         }
     }
@@ -96,10 +96,10 @@ public class StoryCache {
         if (corrupt != null && index.renameTo(corrupt)) {
             cache.clear();
             loaded = true;
-            ModuleLog.line("(IE|StoryCache) unreadable index kept as " + corrupt.getName() + "; starting empty");
+            ModuleLog.warn("(IE|StoryCache) The list of kept stories could not be read; it was set aside as " + corrupt.getName() + " and the cache starts empty");
         } else {
             loadFailed = true;
-            ModuleLog.line("(IE|StoryCache) unreadable index could not be set aside; cache off until restart");
+            ModuleLog.error("(IE|StoryCache) The list of kept stories could not be read; stories are not kept until Instagram restarts");
         }
     }
 
@@ -125,7 +125,7 @@ public class StoryCache {
         if (!loaded) return;
         try {
             write(storage, cache);
-        } catch (Throwable t) { ModuleLog.line("(IE|StoryCache) save failed: " + t); }
+        } catch (Throwable t) { ModuleLog.warn("(IE|StoryCache) Could not save the list of kept stories: " + t.getClass().getSimpleName() + ": " + t.getMessage()); }
     }
 
     static void write(AtomicFile file, List<Entry> entries) throws Exception {
@@ -231,9 +231,9 @@ public class StoryCache {
                 prune();
                 persist();
             }
-            ModuleLog.line("(IE|StoryCache) cached story " + id + " by " + author);
+            ModuleLog.probe("(IE|StoryCache) cached story " + id + " by " + author);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|StoryCache) capture failed: " + t);
+            ModuleLog.warn("(IE|StoryCache) Could not keep a copy of a story: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         } finally {
             synchronized (StoryCache.class) { inFlight.remove(id); }
         }
@@ -252,7 +252,7 @@ public class StoryCache {
             }
             return out.length() > 0;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|StoryCache) download failed: " + t);
+            ModuleLog.detail("(IE|StoryCache) download failed: " + t);
             //noinspection ResultOfMethodCallIgnored
             out.delete();
             return false;

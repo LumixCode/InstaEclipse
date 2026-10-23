@@ -138,10 +138,11 @@ public class UnsentLog {
             deletions = restored;
             clearedIds = restoredCleared;
             loaded = true;
-            ModuleLog.line("(IE|UnsentLog) Restored " + entries.size() + " saved entries");
+            ModuleLog.detail("(IE|UnsentLog) Restored " + entries.size() + " saved entries");
         } catch (Throwable t) {
             retryLoadAfter = SystemClock.elapsedRealtime() + 5000;
-            ModuleLog.line("(IE|UnsentLog) load failed: " + t.getMessage());
+            ModuleLog.warn("(IE|UnsentLog) Could not read the saved unsent messages, trying again in a few seconds: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -180,7 +181,7 @@ public class UnsentLog {
         try {
             write(storage, cache, deletions, clearedIds);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|UnsentLog) persist failed: " + t.getMessage());
+            ModuleLog.warn("(IE|UnsentLog) Could not save the unsent messages log: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -353,7 +354,7 @@ public class UnsentLog {
         }
         if (described == 0) return;
         persist();
-        ModuleLog.line("(IE|UnsentLog) described " + described + " saved entr" + (described == 1 ? "y" : "ies")
+        ModuleLog.detail("(IE|UnsentLog) described " + described + " saved entr" + (described == 1 ? "y" : "ies")
                 + " from their copies");
     }
 
@@ -380,7 +381,7 @@ public class UnsentLog {
             try {
                 found = readCopies(lookups);
             } catch (Throwable t) {
-                ModuleLog.line("(IE|UnsentLog) describe failed: " + t.getClass().getSimpleName());
+                ModuleLog.detail("(IE|UnsentLog) describe failed: " + t.getClass().getSimpleName());
             }
         }
         synchronized (UnsentLog.class) {
@@ -446,7 +447,7 @@ public class UnsentLog {
             try {
                 write(storage, updated, deletions, updatedCleared);
             } catch (Exception e) {
-                ModuleLog.line("(IE|UnsentLog) clear failed: " + e.getMessage());
+                ModuleLog.error("(IE|UnsentLog) Could not clear the unsent messages log: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                 return null;
             }
             cache.clear();

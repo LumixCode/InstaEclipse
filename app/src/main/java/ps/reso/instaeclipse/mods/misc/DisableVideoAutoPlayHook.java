@@ -52,7 +52,7 @@ public class DisableVideoAutoPlayHook {
         try {
             findAndHookDynamicMethod(bridge);
         } catch (Exception e) {
-            ModuleLog.line("(InstaEclipse | AutoPlayDisable): Error: " + e.getMessage());
+            ModuleLog.error("(InstaEclipse | AutoPlayDisable): Could not turn on disable autoplay: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
@@ -66,7 +66,7 @@ public class DisableVideoAutoPlayHook {
             );
 
             if (methods.isEmpty()) {
-                ModuleLog.line("(InstaEclipse | AutoPlayDisable): ❌ No matching methods found.");
+                ModuleLog.error("(InstaEclipse | AutoPlayDisable): Could not turn on disable autoplay: the video autoplay check was not found in this Instagram version");
                 return;
             }
 
@@ -81,9 +81,10 @@ public class DisableVideoAutoPlayHook {
                 }
             }
 
-            ModuleLog.line("(InstaEclipse | AutoPlayDisable): ❌ No matching methods with correct signature.");
+            ModuleLog.error("(InstaEclipse | AutoPlayDisable): Could not turn on disable autoplay: the video autoplay check is not supported in this Instagram version");
+            ModuleLog.detail("(InstaEclipse | AutoPlayDisable): No matching methods with correct signature.");
         } catch (Exception e) {
-            ModuleLog.line("(InstaEclipse | AutoPlayDisable): ❌ Error during method discovery: " + e.getMessage());
+            ModuleLog.error("(InstaEclipse | AutoPlayDisable): Could not turn on disable autoplay: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
@@ -93,10 +94,11 @@ public class DisableVideoAutoPlayHook {
             DexKitCache.saveMethod("AutoPlayDisable", targetMethod);
             hookMethod(targetMethod);
             ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("DisableVideoAutoPlay");
-            ModuleLog.line("(InstaEclipse | AutoPlayDisable): ✅ Hooked (dynamic check): " +
+            ModuleLog.ok("(InstaEclipse | AutoPlayDisable): Ready");
+            ModuleLog.detail("(InstaEclipse | AutoPlayDisable): Hooked (dynamic check): " +
                     method.getClassName() + "." + method.getName());
         } catch (Exception e) {
-            ModuleLog.line("(InstaEclipse | AutoPlayDisable): ❌ Error hooking method: " + e.getMessage());
+            ModuleLog.error("(InstaEclipse | AutoPlayDisable): Could not turn on disable autoplay: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
@@ -120,9 +122,10 @@ public class DisableVideoAutoPlayHook {
             hookPlayDrawableLoads();
             hookPlayImageBinding();
             hookPlayOverlayClicks();
-            ModuleLog.line("(InstaEclipse | AutoPlayDisable): Hooked manual play overlay lifecycle.");
+            ModuleLog.detail("(InstaEclipse | AutoPlayDisable): Hooked manual play overlay lifecycle.");
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | AutoPlayDisable): Error hooking play overlay lifecycle: " + t.getMessage());
+            ModuleLog.warn("(InstaEclipse | AutoPlayDisable): Videos still do not autoplay, but the play button on paused videos may not work: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 

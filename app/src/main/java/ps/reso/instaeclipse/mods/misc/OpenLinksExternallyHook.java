@@ -60,21 +60,24 @@ public final class OpenLinksExternallyHook {
                             // Suppress the in-app browser only after Android accepted the launch.
                             param.setResult(true);
                         } catch (Throwable t) {
-                            ModuleLog.line("(IE|ExternalLinks) Browser launch unavailable: "
+                            ModuleLog.warn("(IE|ExternalLinks) Could not open the link in your browser, so it opens in Instagram: "
                                     + t.getClass().getSimpleName());
                         }
                     }
                 });
                 installed++;
-                ModuleLog.line("(IE|ExternalLinks) resolved " + owner.getName() + "." + method.getName());
+                ModuleLog.detail("(IE|ExternalLinks) resolved " + owner.getName() + "." + method.getName());
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ExternalLinks) Discovery failed", t);
+            ModuleLog.warn("(IE|ExternalLinks) Some links may still open inside Instagram; links that open a new screen still go to your browser", t);
         }
         // ExternalBrowserHook shares this status key and still covers activity launches, so a
         // miss here must not mark the feature broken over its working hook.
         if (installed > 0) FeatureStatusTracker.setHooked("OpenLinksExternally");
-        else ModuleLog.line("(IE|ExternalLinks) No in-app-browser launcher found; activity hook only");
+        else if (FeatureFlags.openLinksExternally) {
+            ModuleLog.warn("(IE|ExternalLinks) Some links may still open inside Instagram; links that open a new screen still go to your browser");
+            ModuleLog.detail("(IE|ExternalLinks) No in-app-browser launcher found; activity hook only");
+        }
     }
 
     private static List<Method> resolveLaunchers(DexKitBridge bridge, ClassLoader loader) throws NoSuchMethodException {

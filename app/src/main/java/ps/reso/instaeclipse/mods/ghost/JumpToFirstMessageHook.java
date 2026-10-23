@@ -49,13 +49,13 @@ public class JumpToFirstMessageHook {
                 public void run() {
                     if (inject(activity)) return;
                     if (++tries[0] < 15) MAIN.postDelayed(this, 300);
-                    else ModuleLog.line("(IE|JumpFirst) ⚠️ gave up: header=" + (threadHeaderId != 0 && activity.findViewById(threadHeaderId) != null)
+                    else ModuleLog.detail("(IE|JumpFirst) gave up adding the button: header=" + (threadHeaderId != 0 && activity.findViewById(threadHeaderId) != null)
                             + " unsentBtn=" + (activity.getWindow().getDecorView().findViewWithTag("ie_unsent_btn") != null)
                             + " endBtns=" + (actionBarEndId != 0 && activity.findViewById(actionBarEndId) != null));
                 }
             }, 300);
         });
-        ModuleLog.line("(IE|JumpFirst) ✅ installed");
+        ModuleLog.ok("(IE|JumpFirst) ready");
         FeatureStatusTracker.setHooked("JumpToFirstMessage");
     }
 
@@ -71,10 +71,10 @@ public class JumpToFirstMessageHook {
             if (header == null) return false;
             if (ThreadHeaderMenu.has(a, "jump")) return true;
             ThreadHeaderMenu.add(a, "jump", I18n.t(a, R.string.ig_jump_first_message), () -> toggle(a));
-            ModuleLog.line("(IE|JumpFirst) ✅ added to the thread menu");
+            ModuleLog.probe("(IE|JumpFirst) added to the thread menu");
             return true;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|JumpFirst) ⚠️ inject: " + t);
+            ModuleLog.warn("(IE|JumpFirst) Could not add the button to this chat", t);
             return true;
         }
     }
@@ -93,7 +93,7 @@ public class JumpToFirstMessageHook {
         }
         View list = findMessageList(a.getWindow().getDecorView());
         if (list == null) {
-            ModuleLog.line("(IE|JumpFirst) ⚠️ message list not found");
+            ModuleLog.warn("(IE|JumpFirst) Could not jump to the first message: the message list was not found");
             if (onDone != null) onDone.run();
             return;
         }
@@ -172,7 +172,7 @@ public class JumpToFirstMessageHook {
         } else if (e.getActionMasked() == MotionEvent.ACTION_MOVE && !Float.isNaN(downY)
                 && Math.abs(e.getRawY() - downY) > dragSlop) {
             downY = Float.NaN;
-            ModuleLog.line("(IE|JumpFirst) stopped by a scroll");
+            ModuleLog.detail("(IE|JumpFirst) stopped by a scroll");
             stop(a);
         }
     }

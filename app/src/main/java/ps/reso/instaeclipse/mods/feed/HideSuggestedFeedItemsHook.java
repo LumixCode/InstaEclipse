@@ -96,7 +96,8 @@ public class HideSuggestedFeedItemsHook {
                     markHookedForEnabledFlags();
                     return;
                 } catch (Throwable t) {
-                    ModuleLog.line("(InstaEclipse | HideSuggested): ⚠️ Cache hook failed: " + t.getMessage());
+                    ModuleLog.detail("(InstaEclipse | HideSuggested): cached parser hook failed, searching again: "
+                            + t.getClass().getSimpleName() + ": " + t.getMessage());
                 }
             }
         }
@@ -107,10 +108,11 @@ public class HideSuggestedFeedItemsHook {
             hookBridgeMethod(targetClass, classLoader, filterHook);
             DexKitCache.saveString(CACHE_KEY_PARSER, targetClass);
             markHookedForEnabledFlags();
-            ModuleLog.line("(InstaEclipse | HideSuggested): ✅ Hooked: " + targetClass);
+            ModuleLog.ok("(InstaEclipse | HideSuggested): ready");
+            ModuleLog.detail("(InstaEclipse | HideSuggested): hooked " + targetClass);
 
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | HideSuggested): ❌ Exception: " + t.getMessage());
+            ModuleLog.error("(InstaEclipse | HideSuggested): Hiding suggested and liked posts will not work: setup failed", t);
         }
     }
 
@@ -135,12 +137,13 @@ public class HideSuggestedFeedItemsHook {
             // fall back to the string queries, every match checked for the parser's shape.
             String fallback = findCheckedFeedItemParser(bridge, classLoader);
             if (fallback != null) {
-                ModuleLog.line("(InstaEclipse | HideSuggested): strict FeedItem parser query found nothing, "
+                ModuleLog.detail("(InstaEclipse | HideSuggested): strict FeedItem parser query found nothing, "
                         + "using the shape-checked fallback: " + fallback);
                 return fallback;
             }
         }
-        ModuleLog.line("(InstaEclipse | HideSuggested): ❌ FeedItem parser "
+        ModuleLog.error("(InstaEclipse | HideSuggested): Hiding suggested and liked posts will not work: the feed code was not found in this Instagram version");
+        ModuleLog.detail("(InstaEclipse | HideSuggested): FeedItem parser "
                 + (classes.isEmpty() ? "not found." : "ambiguous, not hooked: " + classes));
         return null;
     }
@@ -205,12 +208,13 @@ public class HideSuggestedFeedItemsHook {
                 m.setAccessible(true);
                 hasLikedGetter = m;
                 DexKitCache.saveMethod(CACHE_KEY_HAS_LIKED, m);
-                ModuleLog.line("(InstaEclipse | HideLiked): ✅ has_liked getter " + owner + "." + m.getName());
+                ModuleLog.detail("(InstaEclipse | HideLiked): has_liked getter " + owner + "." + m.getName());
                 return;
             }
-            ModuleLog.line("(InstaEclipse | HideLiked): ❌ has_liked getter not found");
+            ModuleLog.error("(InstaEclipse | HideLiked): Hiding liked posts will not work: the like status was not found in this Instagram version");
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | HideLiked): ❌ " + t.getMessage());
+            ModuleLog.error("(InstaEclipse | HideLiked): Hiding liked posts will not work: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 

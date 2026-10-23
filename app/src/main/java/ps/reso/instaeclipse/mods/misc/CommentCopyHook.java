@@ -91,7 +91,7 @@ public class CommentCopyHook {
             }
             if (hooked == 0) {
                 if (FeatureFlags.enableCopyComment) FeatureStatusTracker.setBroken("CopyComment", R.string.ig_dialog_misc_copy_comment);
-                ModuleLog.line("(InstaEclipse | CopyComment): ❌ comment long-press menu not found");
+                ModuleLog.error("(InstaEclipse | CopyComment): Could not turn on copy comment: the comment long-press menu was not found in this Instagram version");
                 return;
             }
             XposedBridge.hookMethod(presenter, new XC_MethodHook() {
@@ -106,16 +106,17 @@ public class CommentCopyHook {
                     if (call != null && call.rowsSeen && !call.rowAdded && FeatureFlags.enableCopyComment
                             && !loggedShapeMismatch) {
                         loggedShapeMismatch = true;
-                        ModuleLog.line("(InstaEclipse | CopyComment): ⚠️ menu rows no longer match, no Copy row");
+                        ModuleLog.error("(InstaEclipse | CopyComment): The Copy row could not be added: the comment menu changed in this Instagram version");
                     }
                 }
             });
             FeatureStatusTracker.setHooked("CopyComment");
-            ModuleLog.line("(InstaEclipse | CopyComment): ✅ menu rows via " + presenter.getDeclaringClass().getName()
+            ModuleLog.ok("(InstaEclipse | CopyComment): Ready");
+            ModuleLog.detail("(InstaEclipse | CopyComment): menu rows via " + presenter.getDeclaringClass().getName()
                     + "." + presenter.getName() + " + " + popup.getName() + " (" + hooked + " list methods)");
         } catch (Throwable t) {
             if (FeatureFlags.enableCopyComment) FeatureStatusTracker.setBroken("CopyComment", R.string.ig_dialog_misc_copy_comment);
-            ModuleLog.line("(InstaEclipse | CopyComment): ❌ install – " + t);
+            ModuleLog.error("(InstaEclipse | CopyComment): Could not turn on copy comment", t);
         }
     }
 
@@ -171,7 +172,7 @@ public class CommentCopyHook {
                 }
                 param.args[0] = out;
             } catch (Throwable t) {
-                ModuleLog.line("(InstaEclipse | CopyComment): ❌ menu row – " + t);
+                ModuleLog.warn("(InstaEclipse | CopyComment): Could not add the Copy row to this comment menu", t);
             }
         }
     };
@@ -335,7 +336,7 @@ public class CommentCopyHook {
                         I18n.t(ctx, R.string.ig_toast_comment_copied), Toast.LENGTH_SHORT).show();
             }
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | CopyComment): ❌ Copy – " + t.getMessage());
+            ModuleLog.error("(InstaEclipse | CopyComment): Could not copy the comment: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 }

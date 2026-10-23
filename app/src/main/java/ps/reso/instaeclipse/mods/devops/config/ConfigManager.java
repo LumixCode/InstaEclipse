@@ -31,9 +31,9 @@ public class ConfigManager {
                         ps.reso.instaeclipse.utils.toast.IeToast.makeText(context.getApplicationContext(),
                                 I18n.t(context, R.string.ig_toast_default_config_restored), Toast.LENGTH_SHORT).show()
                 );
-                ModuleLog.line("InstaEclipse | ✅ Default config restored.");
+                ModuleLog.line("(IE|Config) Default developer config restored");
             } catch (Exception e) {
-                ModuleLog.line("InstaEclipse | ❌ Default config restore failed: " + e.getMessage());
+                ModuleLog.error("(IE|Config) Could not restore the default developer config: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                 new Handler(Looper.getMainLooper()).post(() ->
                         ps.reso.instaeclipse.utils.toast.IeToast.makeText(context.getApplicationContext(),
                                 I18n.t(context, R.string.ig_toast_config_import_failed), Toast.LENGTH_LONG).show()
@@ -48,10 +48,10 @@ public class ConfigManager {
                 writeConfigJson(context, json);
                 new Handler(Looper.getMainLooper()).post(() -> {
                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(context.getApplicationContext(), I18n.t(context, R.string.ig_toast_config_imported), Toast.LENGTH_LONG).show();
-                    ModuleLog.line("InstaEclipse | ✅ JSON imported into mc_overrides.json");
+                    ModuleLog.line("(IE|Config) Developer config imported (mc_overrides.json)");
                 });
             } catch (Exception e) {
-                ModuleLog.line("InstaEclipse | ❌ Import failed: " + e.getMessage());
+                ModuleLog.error("(IE|Config) Could not import the developer config: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                 new Handler(Looper.getMainLooper()).post(() ->
                         ps.reso.instaeclipse.utils.toast.IeToast.makeText(context.getApplicationContext(), I18n.t(context, R.string.ig_toast_config_import_failed), Toast.LENGTH_LONG).show()
                 );

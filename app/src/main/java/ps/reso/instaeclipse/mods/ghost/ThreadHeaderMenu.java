@@ -118,7 +118,7 @@ final class ThreadHeaderMenu {
             btn.setVisibility(buttonVisibility()); // the option may have changed since the chat opened
             return true;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ThreadMenu) ⚠️ add " + key + ": " + t);
+            ModuleLog.warn("(IE|ThreadMenu) Could not add \"" + key + "\" to the chat menu", t);
             return false;
         }
     }
@@ -188,7 +188,7 @@ final class ThreadHeaderMenu {
         try { target.addView(btn, Math.min(insertAt, target.getChildCount())); }
         catch (Throwable t) { target.addView(btn); }
         lastHeader = new WeakReference<>(header);
-        ModuleLog.line("(IE|ThreadMenu) ✅ button injected in " + target.getClass().getSimpleName()
+        ModuleLog.probe("(IE|ThreadMenu) button injected in " + target.getClass().getSimpleName()
                 + (FeatureFlags.hideChatMenuButton ? " (hidden)" : ""));
         return btn;
     }
@@ -219,7 +219,7 @@ final class ThreadHeaderMenu {
                 .title(I18n.t(btn.getContext(), R.string.ig_thread_menu))
                 .choices(labels, -1, which -> {
                     try { list.get(which).action().run(); }
-                    catch (Throwable t) { ModuleLog.line("(IE|ThreadMenu) ⚠️ action: " + t); }
+                    catch (Throwable t) { ModuleLog.error("(IE|ThreadMenu) A chat menu action failed", t); }
                 })
                 .show();
     }
@@ -248,11 +248,13 @@ final class ThreadHeaderMenu {
                 });
                 hooked.add(dispatch);
             } catch (Throwable t) {
-                ModuleLog.line("(IE|ThreadMenu) ⚠️ tap gesture " + name + ": " + t);
+                ModuleLog.detail("(IE|ThreadMenu) tap gesture " + name + " failed: " + t);
             }
         }
         if (!hooked.isEmpty()) FeatureStatusTracker.setHooked("ChatMenuTripleTap");
-        ModuleLog.line("(IE|ThreadMenu) tap gesture hooked " + hooked.size() + " method(s)");
+        ModuleLog.line("(IE|ThreadMenu) " + (hooked.isEmpty()
+                ? "❌ Triple tap on the chat header is not available, keep the chat menu button visible" : "✅ ready"));
+        ModuleLog.detail("(IE|ThreadMenu) tap gesture hooked " + hooked.size() + " method(s)");
     }
 
     /**
@@ -306,7 +308,7 @@ final class ThreadHeaderMenu {
                 }
                 if (gapTaps.tap(e.getEventTime())) {
                     recycle(down);
-                    ModuleLog.line("(IE|ThreadMenu) header triple tap opened the menu");
+                    ModuleLog.detail("(IE|ThreadMenu) header triple tap opened the menu");
                     show(btn);
                     return true;
                 }

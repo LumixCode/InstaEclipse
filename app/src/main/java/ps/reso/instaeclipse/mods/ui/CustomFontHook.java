@@ -57,8 +57,8 @@ public class CustomFontHook {
         new Thread(() -> {
             try {
                 int n = deleteSuperseded(FONT_PREFIX, font) + deleteSuperseded(EMOJI_PREFIX, emoji);
-                if (n > 0) ModuleLog.line("(IE|Font) deleted " + n + " replaced font file(s)");
-            } catch (Throwable t) { ModuleLog.line("(IE|Font) cleanup: " + t); }
+                if (n > 0) ModuleLog.detail("(IE|Font) deleted " + n + " replaced font file(s)");
+            } catch (Throwable t) { ModuleLog.detail("(IE|Font) old font file cleanup failed: " + t.getClass().getSimpleName() + ": " + t.getMessage()); }
         }, "IE-FontCleanup").start();
     }
 
@@ -90,7 +90,7 @@ public class CustomFontHook {
         if (FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled) installTypefaceHooks();
         installPickResultHook();
         if (FeatureFlags.customFontEnabled) FeatureStatusTracker.setHooked("CustomFont");
-        ModuleLog.line("(IE|Font) ✅ installed");
+        ModuleLog.ok("(IE|Font) ready");
     }
 
     private void installTypefaceHooks() {
@@ -192,7 +192,7 @@ public class CustomFontHook {
             }
             try {
                 XposedHelpers.callStaticMethod(Typeface.class, "setDefault", Typeface.DEFAULT);
-            } catch (Throwable t) { ModuleLog.line("(IE|Font) setDefault: " + t); }
+            } catch (Throwable t) { ModuleLog.warn("(IE|Font) Could not make the font the default; some text may keep the old font: " + t.getClass().getSimpleName() + ": " + t.getMessage()); }
             try {
                 @SuppressWarnings("unchecked")
                 java.util.Map<String, Typeface> orig = (java.util.Map<String, Typeface>)
@@ -209,11 +209,11 @@ public class CustomFontHook {
                     n++;
                 }
                 XposedHelpers.setStaticObjectField(Typeface.class, "sSystemFontMap", map);
-            } catch (Throwable t) { ModuleLog.line("(IE|Font) system map: " + t); }
+            } catch (Throwable t) { ModuleLog.warn("(IE|Font) Could not replace the system fonts; some text may keep the old font: " + t.getClass().getSimpleName() + ": " + t.getMessage()); }
         } finally {
             loading.set(Boolean.FALSE);
         }
-        ModuleLog.line("(IE|Font) system defaults replaced: " + n);
+        ModuleLog.detail("(IE|Font) system defaults replaced: " + n);
     }
 
     private void installPickResultHook() {
@@ -250,7 +250,7 @@ public class CustomFontHook {
                                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(act,
                                             "Couldn't load that font file", android.widget.Toast.LENGTH_SHORT).show();
                                 }
-                            } catch (Throwable t) { ModuleLog.line("(IE|Font) result: " + t); }
+                            } catch (Throwable t) { ModuleLog.error("(IE|Font) Could not use the picked file", t); }
                         }
                     });
         } catch (Throwable ignored) {}
@@ -265,7 +265,7 @@ public class CustomFontHook {
             userFont = Typeface.createFromFile(path);
             loadedFrom = path;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Font) load failed: " + t);
+            ModuleLog.error("(IE|Font) Could not load the custom font file: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             userFont = null;
         } finally {
             loading.set(Boolean.FALSE);
@@ -319,7 +319,7 @@ public class CustomFontHook {
             }
             comboKey = key;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Emoji) combo build failed: " + t);
+            ModuleLog.warn("(IE|Emoji) Could not combine the emoji font with the text font; using the text font only: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             combo = getUserFont();
         }
         return combo;
@@ -348,7 +348,7 @@ public class CustomFontHook {
             loadedFrom = FeatureFlags.customFontPath;
             return true;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Font) saveFont: " + t);
+            ModuleLog.error("(IE|Font) Could not save the picked font: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return false;
         }
     }
@@ -391,7 +391,7 @@ public class CustomFontHook {
             finally { loading.set(Boolean.FALSE); }
             return tf != null && tf != Typeface.DEFAULT;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Font) not a font: " + t);
+            ModuleLog.warn("(IE|Font) The picked file is not a font Android can use: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return false;
         }
     }
@@ -437,7 +437,7 @@ public class CustomFontHook {
         // Version-proof: the androidx.emoji2 FontRequestMetadataLoader worker run() is anchored by
         // emoji2's own library strings (X.00aO.run on IG 451). The old hardcoded X.00aC#EXz path
         // matched a single build only (an ANR reporter on 447.0.0.1, absent on 451), so it is gone.
-        if (!installEmojiWorkerHook(cl)) ModuleLog.line("(IE|Emoji) ⚠️ emoji2 loader worker not found");
+        if (!installEmojiWorkerHook(cl)) ModuleLog.error("(IE|Emoji) Will not work: Instagram's emoji loader was not found in this Instagram version");
     }
 
     private boolean installEmojiWorkerHook(final ClassLoader cl) {
@@ -458,7 +458,7 @@ public class CustomFontHook {
                         try {
                             if (failEmojiLoad(p.thisObject, 0)) {
                                 p.setResult(null);
-                                ModuleLog.line("(IE|Emoji) EmojiCompat disabled — emoji via font fallback");
+                                ModuleLog.detail("(IE|Emoji) EmojiCompat disabled — emoji via font fallback");
                             }
                         } catch (Throwable ignored) {}
                     }
@@ -467,10 +467,11 @@ public class CustomFontHook {
             }
             if (n == 0) return false;
             if (FeatureFlags.customEmojiEnabled) FeatureStatusTracker.setHooked("CustomEmoji");
-            ModuleLog.line("(IE|Emoji) ✅ hook installed (emoji2 loader worker x" + n + ")");
+            ModuleLog.ok("(IE|Emoji) ready");
+            ModuleLog.detail("(IE|Emoji) emoji2 loader worker hooked x" + n);
             return true;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Emoji) ⚠️ worker hook: " + t.getMessage());
+            ModuleLog.detail("(IE|Emoji) emoji2 loader worker hook failed: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return false;
         }
     }
@@ -514,7 +515,7 @@ public class CustomFontHook {
             combo = null; // force rebuild with the new emoji font
             return true;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Emoji) saveEmoji: " + t);
+            ModuleLog.error("(IE|Emoji) Could not save the picked emoji font: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return false;
         }
     }

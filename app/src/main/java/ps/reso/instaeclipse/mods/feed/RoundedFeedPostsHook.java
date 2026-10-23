@@ -42,9 +42,10 @@ public final class RoundedFeedPostsHook {
                 }
             });
             FeatureStatusTracker.setHooked("RoundedFeedPosts");
-            ModuleLog.line("(IE|RoundedPosts) ✅ hooked " + MEDIA_FRAME);
+            ModuleLog.ok("(IE|RoundedPosts) ready");
+            ModuleLog.detail("(IE|RoundedPosts) hooked " + MEDIA_FRAME);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|RoundedPosts) ❌ " + t);
+            ModuleLog.error("(IE|RoundedPosts) Will not work: setup failed", t);
         }
     }
 

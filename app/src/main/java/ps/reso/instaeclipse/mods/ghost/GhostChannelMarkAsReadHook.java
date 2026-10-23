@@ -64,7 +64,7 @@ public class GhostChannelMarkAsReadHook {
                 }
             });
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse): Channel seen hook failed: " + t.getMessage());
+            ModuleLog.error("(InstaEclipse): Could not add the mark-as-read button to channels", t);
         }
     }
 

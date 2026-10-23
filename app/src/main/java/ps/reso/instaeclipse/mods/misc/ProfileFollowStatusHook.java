@@ -96,11 +96,11 @@ public final class ProfileFollowStatusHook {
             }
             if (installed == 0) throw new IllegalStateException("Profile binding boundary missing");
             FeatureStatusTracker.setHooked(KEY);
-            ModuleLog.line("(IE|FollowLabel) Profile-bound header hook installed");
+            ModuleLog.ok("(IE|FollowLabel) Ready");
             return true;
         } catch (Throwable t) {
             if (FeatureFlags.showFollowStatusLabel) FeatureStatusTracker.setBroken(KEY, R.string.ig_dialog_misc_profile_follows_label);
-            ModuleLog.line("(IE|FollowLabel) Unable to resolve profile header", t);
+            ModuleLog.error("(IE|FollowLabel) Could not turn on the follow label on profiles: the profile header was not found", t);
             return false;
         }
     }
@@ -113,7 +113,7 @@ public final class ProfileFollowStatusHook {
     }
 
     private static void diagnostic(String message) {
-        if (diagnostics.add(message)) ModuleLog.line("(IE|FollowLabel) " + message);
+        if (diagnostics.add(message)) ModuleLog.detail("(IE|FollowLabel) " + message);
     }
 
     private interface ProfileReader {

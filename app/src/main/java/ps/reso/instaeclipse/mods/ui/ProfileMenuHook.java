@@ -75,9 +75,10 @@ public final class ProfileMenuHook {
             XposedBridge.hookAllMethods(PopupWindow.class, "showAsDropDown", onShow);
             XposedBridge.hookAllMethods(PopupWindow.class, "showAtLocation", onShow);
             FeatureStatusTracker.setHooked("ProfileMenuTools");
-            ModuleLog.line(TAG + "✅ installed, bio getter=" + (bioGetter != null ? bioGetter.getName() : "none"));
+            ModuleLog.ok(TAG + "ready");
+            ModuleLog.detail(TAG + "bio getter=" + (bioGetter != null ? bioGetter.getName() : "none"));
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.error(TAG + "Profile menu tools will not work: setup failed", t);
         }
     }
 
@@ -168,7 +169,7 @@ public final class ProfileMenuHook {
             list.addView(sv, at, lp);
             pw.update(); // the popup measures its new height
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ inject: " + t);
+            ModuleLog.warn(TAG + "Could not add the extra rows to this menu: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 

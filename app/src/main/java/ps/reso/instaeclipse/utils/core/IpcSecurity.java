@@ -42,7 +42,9 @@ public final class IpcSecurity {
     public static void registerCompanionOnlyReceiver(Context context, BroadcastReceiver receiver,
                                                      IntentFilter filter) {
         if (!isCompanionPermission(context)) {
-            ps.reso.instaeclipse.utils.log.ModuleLog.line(
+            ps.reso.instaeclipse.utils.log.ModuleLog.warn(
+                    "(IE|Ipc) Changes made in the InstaEclipse app cannot reach Instagram while it runs: the app is missing or another app claims its permission");
+            ps.reso.instaeclipse.utils.log.ModuleLog.detail(
                     "(IE|Ipc) companion receiver not registered: " + PERMISSION + " is not the companion's");
             return;
         }

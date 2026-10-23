@@ -90,7 +90,9 @@ public class DisableRepostHook {
         total += installButtonRemoval(context, bridge, classLoader);
 
         if (total > 0) FeatureStatusTracker.setHooked("DisableRepost");
-        ModuleLog.line("(IE|Repost) ✅ installed: " + total + " method(s)");
+        if (total > 0) ModuleLog.ok("(IE|Repost) ready");
+        else ModuleLog.error("(IE|Repost) Will not work: the repost buttons and actions were not found in this Instagram version");
+        ModuleLog.detail("(IE|Repost) hooked " + total + " method(s)");
     }
 
     // Reels + profile path — swallow the shared handler's void entry points entirely.
@@ -100,7 +102,7 @@ public class DisableRepostHook {
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 if (FeatureFlags.disableRepost) {
                     param.setResult(null); // void method → skip original entirely
-                    ModuleLog.line("(IE|Repost) neutralized repost action");
+                    ModuleLog.line("(IE|Repost) Blocked a repost");
                 }
             }
         };
@@ -119,7 +121,8 @@ public class DisableRepostHook {
                     } catch (Throwable ignored) {}
                 }
             } catch (Throwable t) {
-                ModuleLog.line("(IE|Repost) ⚠️ anchor " + anchor + ": " + t.getMessage());
+                ModuleLog.warn("(IE|Repost) Reposting from Reels or profiles may not be blocked everywhere: search failed");
+                ModuleLog.detail("(IE|Repost) anchor " + anchor + ": " + t.getClass().getSimpleName() + ": " + t.getMessage());
             }
         }
         return total;
@@ -132,7 +135,7 @@ public class DisableRepostHook {
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 if (FeatureFlags.disableRepost) {
                     param.setResult(null); // void launcher → coroutine never built/launched
-                    ModuleLog.line("(IE|Repost) neutralized FEED repost (postRepost)");
+                    ModuleLog.line("(IE|Repost) Blocked a repost from the feed");
                 }
             }
         };
@@ -156,7 +159,8 @@ public class DisableRepostHook {
             }
 
             if (owner == null) {
-                ModuleLog.line("(IE|Repost) ⚠️ RepostsRepository owner not resolved");
+                ModuleLog.warn("(IE|Repost) Reposts from the feed are blocked only by hiding the button (repost code not found)");
+                ModuleLog.detail("(IE|Repost) RepostsRepository owner not resolved");
                 return 0;
             }
 
@@ -168,12 +172,13 @@ public class DisableRepostHook {
                     total++;
                 } catch (Throwable ignored) {}
             }
-            if (total == 0) ModuleLog.line("(IE|Repost) ⚠️ postRepost launcher not found on "
-                    + owner.getName());
+            if (total == 0) ModuleLog.warn("(IE|Repost) Reposts from the feed are blocked only by hiding the button (repost code not found)");
+            if (total == 0) ModuleLog.detail("(IE|Repost) postRepost launcher not found on " + owner.getName());
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Repost) ⚠️ feed postRepost hook: " + t.getMessage());
+            ModuleLog.warn("(IE|Repost) Reposts from the feed are blocked only by hiding the button: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
-        ModuleLog.line("(IE|Repost) feed postRepost launcher: " + total + " method(s)");
+        ModuleLog.detail("(IE|Repost) feed postRepost launcher: " + total + " method(s)");
         return total;
     }
 
@@ -201,10 +206,12 @@ public class DisableRepostHook {
                 XposedBridge.hookMethod(m, drawNothing);
                 total++;
             } catch (Throwable t) {
-                ModuleLog.line("(IE|Repost) ⚠️ button hook " + m.getName() + ": " + t.getMessage());
+                ModuleLog.warn("(IE|Repost) A repost button could not be hidden");
+                ModuleLog.detail("(IE|Repost) button hook " + m.getName() + ": " + t.getClass().getSimpleName() + ": " + t.getMessage());
             }
         }
-        ModuleLog.line("(IE|Repost) repost buttons: " + total + " builder(s)");
+        if (total == 0) ModuleLog.warn("(IE|Repost) Repost buttons cannot be hidden in this Instagram version; only the repost itself is blocked");
+        ModuleLog.detail("(IE|Repost) repost buttons: " + total + " builder(s)");
         return total;
     }
 
@@ -237,7 +244,8 @@ public class DisableRepostHook {
                 }
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Repost) ⚠️ button discovery: " + t.getMessage());
+            ModuleLog.warn("(IE|Repost) Could not finish looking for the repost buttons; some may stay visible");
+            ModuleLog.detail("(IE|Repost) button discovery: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
         return found;
     }
@@ -248,7 +256,7 @@ public class DisableRepostHook {
             Method m = md.getMethodInstance(classLoader);
             if (m.getReturnType() == void.class || m.getReturnType().isPrimitive() || found.contains(m)) return;
             if (!ownRender(m)) {
-                ModuleLog.line("(IE|Repost) shared render skipped: " + m.getDeclaringClass().getName() + "." + m.getName());
+                ModuleLog.detail("(IE|Repost) shared render skipped: " + m.getDeclaringClass().getName() + "." + m.getName());
                 return;
             }
             found.add(m);

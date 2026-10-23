@@ -88,11 +88,11 @@ public final class CompanionSync {
                 // Remote preferences unavailable (LSPatch local mode, companion not bound yet):
                 // only the provider reply in push() brings companion changes back then.
                 emptyLogged = true;
-                ModuleLog.line("(InstaEclipse) Sync: companion remote preferences empty or unavailable");
+                ModuleLog.detail("(InstaEclipse) Sync: companion remote preferences empty or unavailable");
             }
             return applyFrom(context, all);
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse) Sync: companion pull failed: " + t);
+            ModuleLog.warn("(InstaEclipse) Sync: could not read settings changed in the InstaEclipse app: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return new ArrayList<>();
         }
     }
@@ -144,7 +144,7 @@ public final class CompanionSync {
             ModuleLog.line("(InstaEclipse) Sync: applied " + applied.size() + " setting(s) changed in the companion app");
             return applied;
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse) Sync: applying companion settings failed: " + t);
+            ModuleLog.warn("(InstaEclipse) Sync: could not apply settings changed in the InstaEclipse app: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return new ArrayList<>();
         }
     }
@@ -201,7 +201,7 @@ public final class CompanionSync {
         } catch (Throwable t) {
             // Companion not installed / too old (no provider): the ACTION_REQUEST_PREFS reply
             // still syncs when the companion is opened while Instagram is running.
-            ModuleLog.line("(InstaEclipse) Sync: companion push failed: " + t);
+            ModuleLog.detail("(InstaEclipse) Sync: companion push failed: " + t);
         }
     }
 

@@ -47,7 +47,7 @@ final class MediaInfo {
     private MediaInfo() {}
 
     static void show(Context ctx, Object media, Object clickHandler) {
-        ModuleLog.line("(IE|MediaInfo) requested for " + (media == null ? "null" : media.getClass().getName()));
+        ModuleLog.detail("(IE|MediaInfo) requested for " + (media == null ? "null" : media.getClass().getName()));
         FeedVideoDownloadHook.executor.submit(() -> {
             String text;
             String[] mediaUrl = new String[1];
@@ -55,7 +55,7 @@ final class MediaInfo {
                 text = build(ctx, media, clickHandler, mediaUrl);
             } catch (Throwable t) {
                 text = String.valueOf(t);
-                ModuleLog.line("(IE|MediaInfo) ❌ " + t);
+                ModuleLog.error("(IE|MediaInfo) Could not read the media info", t);
             }
             final String body = text;
             FeedVideoDownloadHook.mainHandler.post(() -> {
@@ -63,7 +63,7 @@ final class MediaInfo {
                     // The menu's context may belong to a sheet that has closed by now; show on the
                     // Activity under it (a post opened from a profile has its own, above the main one).
                     Context host = ps.reso.instaeclipse.mods.ui.UIHookManager.dialogHost(ctx);
-                    ModuleLog.line("(IE|MediaInfo) showing (" + body.length() + " chars) on " + host.getClass().getSimpleName());
+                    ModuleLog.detail("(IE|MediaInfo) showing (" + body.length() + " chars) on " + host.getClass().getSimpleName());
                     ps.reso.instaeclipse.utils.dialog.IeDialog dlg = new ps.reso.instaeclipse.utils.dialog.IeDialog(host)
                             .title(I18n.t(ctx, R.string.ig_media_info_title));
                     // one rounded "label · value" card per line
@@ -104,7 +104,7 @@ final class MediaInfo {
                     dlg.primary(I18n.t(ctx, R.string.ig_dialog_ok), null);
                     dlg.show();
                 } catch (Throwable t) {
-                    ModuleLog.line("(IE|MediaInfo) dialog: " + t);
+                    ModuleLog.error("(IE|MediaInfo) Could not show the media info", t);
                 }
             });
         });
@@ -122,7 +122,7 @@ final class MediaInfo {
             if (!(host instanceof android.app.Activity)) chooser.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
             host.startActivity(chooser);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|MediaInfo) open with: " + t);
+            ModuleLog.error("(IE|MediaInfo) Could not open the media in another app: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 

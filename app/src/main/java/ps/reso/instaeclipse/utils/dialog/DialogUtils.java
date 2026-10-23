@@ -734,7 +734,7 @@ public class DialogUtils {
             }
         } catch (Exception e) {
             String packageName = context.getPackageName();
-            ModuleLog.line("InstaEclipse: Restart failed for " + packageName + " - " + e.getMessage());
+            ModuleLog.error("(InstaEclipse): Could not restart " + packageName + ": " + e.getClass().getSimpleName() + ": " + e.getMessage());
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_dialog_restart_failed, e.getMessage()), Toast.LENGTH_LONG).show();
         }
     }
@@ -749,12 +749,12 @@ public class DialogUtils {
             File cacheDir = context.getCacheDir();
             if (cacheDir != null && cacheDir.isDirectory()) {
                 deleteRecursive(cacheDir);
-                ModuleLog.line("InstaEclipse: Cache cleared for " + context.getPackageName());
+                ModuleLog.line("(InstaEclipse): Cache cleared for " + context.getPackageName());
             } else {
-                ModuleLog.line("InstaEclipse: Cache directory not found for " + context.getPackageName());
+                ModuleLog.detail("(InstaEclipse): Cache directory not found for " + context.getPackageName());
             }
         } catch (Exception e) {
-            ModuleLog.line("InstaEclipse: Failed to clear cache for " + context.getPackageName() + " - " + e.getMessage());
+            ModuleLog.error("(InstaEclipse): Could not clear the cache of " + context.getPackageName() + ": " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
@@ -803,7 +803,7 @@ public class DialogUtils {
                 try {
                     ps.reso.instaeclipse.utils.ipc.CompanionBridge.launchActivity(instagramActivity, importIntent);
                 } catch (Exception e) {
-                    ModuleLog.line("InstaEclipse | ❌ Failed to start JsonImportActivity: " + e.getMessage());
+                    ModuleLog.error("(IE|Config) Could not open the developer config import screen: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                     showSimpleDialog(context, I18n.t(context, R.string.ig_dialog_error), I18n.t(context, R.string.ig_dialog_unable_open_ui));
                 }
             } else {
@@ -1072,7 +1072,7 @@ public class DialogUtils {
             }
             return null;
         } catch (Throwable t) {
-            ModuleLog.line("(IE|UnsentExport) ❌ " + t.getMessage());
+            ModuleLog.error("(IE|UnsentExport) Could not export the unsent messages: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return null;
         }
     }
@@ -3699,7 +3699,7 @@ public class DialogUtils {
             icon.setColorFilter(new android.graphics.PorterDuffColorFilter(tintColor, android.graphics.PorterDuff.Mode.SRC_IN));
             return icon;
         } catch (Exception e) {
-            ModuleLog.line("(IE|Resources) Missing icon " + Integer.toHexString(iconRes), e);
+            ModuleLog.warn("(IE|Resources) An icon could not be loaded (0x" + Integer.toHexString(iconRes) + ")", e);
             return null;
         }
     }

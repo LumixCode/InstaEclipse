@@ -40,7 +40,7 @@ public class ReadReceiptChatHook {
                     if (FeatureFlags.readReceiptChats) a.runOnUiThread(() -> register(a));
                 });
             } catch (Throwable t) {
-                ModuleLog.line("(IE|ReadReceiptChat) ⚠️ hook " + act + ": " + t);
+                ModuleLog.detail("(IE|ReadReceiptChat) hook " + act + " failed (chat tracker still used): " + t);
             }
         }
         CurrentThreadTracker.install(classLoader);
@@ -48,7 +48,7 @@ public class ReadReceiptChatHook {
             if (FeatureFlags.readReceiptChats) register(a);
         });
         FeatureStatusTracker.setHooked("ReadReceiptChats");
-        ModuleLog.line("(IE|ReadReceiptChat) ✅ installed");
+        ModuleLog.ok("(IE|ReadReceiptChat) ready");
     }
 
     @SuppressLint("DiscouragedApi")
@@ -71,7 +71,7 @@ public class ReadReceiptChatHook {
                 }
             });
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ReadReceiptChat) ⚠️ register: " + t);
+            ModuleLog.warn("(IE|ReadReceiptChat) Could not add the read receipts option to this chat", t);
         }
     }
 

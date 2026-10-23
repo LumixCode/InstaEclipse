@@ -95,7 +95,7 @@ public final class ReelViewerHook {
                                         I18n.t(context, R.string.ig_reel_limit_warning, remaining));
                             }
                         } catch (Throwable t) {
-                            ModuleLog.line("(IE|ReelLimit) Cannot read viewed reel: " + t.getClass().getSimpleName());
+                            ModuleLog.detail("(IE|ReelLimit) cannot read viewed reel: " + t.getClass().getSimpleName());
                         }
                     }
                 });
@@ -138,7 +138,7 @@ public final class ReelViewerHook {
                                     param.setResult(null);
                                 }
                             } catch (Throwable t) {
-                                ModuleLog.line("(IE|ReelLimit) Playback gate: " + t.getClass().getSimpleName());
+                                ModuleLog.detail("(IE|ReelLimit) playback gate failed: " + t.getClass().getSimpleName());
                             }
                         }
                     });
@@ -163,10 +163,14 @@ public final class ReelViewerHook {
             blockingAvailable = viewerHooks > 0 && itemPlaybackHooks > 0 && pausePlayer != null;
             if (blockingAvailable) FeatureStatusTracker.setHooked("NightReelBlock");
             else if (FeatureFlags.nightReelBlockEnabled) FeatureStatusTracker.setBroken("NightReelBlock");
-            ModuleLog.line("(IE|ReelLimit) impression=" + trackingAvailable + " viewer=" + viewerHooks
+            ModuleLog.line("(IE|ReelLimit) " + (trackingAvailable && blockingAvailable ? "✅ ready"
+                    : "❌ Reel limits cannot fully work on this Instagram version ("
+                    + (trackingAvailable ? "reels are counted but cannot be blocked"
+                    : blockingAvailable ? "reels can be blocked but are not counted" : "reels are not counted or blocked") + ")"));
+            ModuleLog.detail("(IE|ReelLimit) impression=" + trackingAvailable + " viewer=" + viewerHooks
                     + " playback=" + playbackHooks + " pause=" + (pausePlayer != null));
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ReelLimit) Hook discovery failed: " + t);
+            ModuleLog.error("(IE|ReelLimit) Could not set up reel limits", t);
         }
     }
 
@@ -197,7 +201,7 @@ public final class ReelViewerHook {
                         }
                     });
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ReelLimit) Touch gate unavailable", t);
+            ModuleLog.warn("(IE|ReelLimit) Buttons on a blocked reel may still respond to taps", t);
         }
     }
 
@@ -239,7 +243,7 @@ public final class ReelViewerHook {
                         root.getOverlay().remove(cover);
                     }
                 } catch (Throwable t) {
-                    ModuleLog.line("(IE|ReelLimit) Viewer gate: " + t.getClass().getSimpleName());
+                    ModuleLog.probe("(IE|ReelLimit) viewer gate failed: " + t.getClass().getSimpleName());
                 }
                 return true;
             };
@@ -261,7 +265,7 @@ public final class ReelViewerHook {
             root.addOnAttachStateChangeListener(watcher);
             if (root.isAttachedToWindow()) watcher.onViewAttachedToWindow(root);
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ReelLimit) Cannot watch viewer: " + t);
+            ModuleLog.warn("(IE|ReelLimit) Could not apply reel limits to this reel viewer", t);
         }
     }
 
@@ -275,7 +279,7 @@ public final class ReelViewerHook {
                     pausePlayer.invoke(player, "instaeclipse_reels_blocked", false, false);
                 }
             } catch (Throwable t) {
-                ModuleLog.line("(IE|ReelLimit) Cannot pause player: " + t.getClass().getSimpleName());
+                ModuleLog.warn("(IE|ReelLimit) Could not pause a blocked reel: " + t.getClass().getSimpleName());
             }
         }
     }
@@ -287,14 +291,14 @@ public final class ReelViewerHook {
             try {
                 setter = pagerClass.getDeclaredMethod("setUserInputEnabled", boolean.class);
             } catch (NoSuchMethodException e) {
-                ModuleLog.line("(IE|ReelLimit) setUserInputEnabled inlined; writing the pager input field");
+                ModuleLog.detail("(IE|ReelLimit) setUserInputEnabled inlined; writing the pager input field");
             }
             Field inputField = null;
             if (setter != null) {
                 try {
                     inputField = setterInputField(bridge, loader, pagerClass, setter);
                 } catch (Throwable t) {
-                    ModuleLog.line("(IE|ReelLimit) Pager setter field unresolved; using ViewPager2Input", t);
+                    ModuleLog.detail("(IE|ReelLimit) pager setter field unresolved; using ViewPager2Input", t);
                 }
             }
             final Method enabledSetter = setter;
@@ -363,10 +367,10 @@ public final class ReelViewerHook {
                 });
             }
             FeatureStatusTracker.setHooked("reelsLockScroll");
-            ModuleLog.line("(IE|ReelLimit) Scroll gate pager owners=" + owners.size()
+            ModuleLog.detail("(IE|ReelLimit) scroll gate pager owners=" + owners.size()
                     + " setter=" + (setter != null));
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ReelLimit) Scroll gate unavailable; retaining viewer/playback fallback", t);
+            ModuleLog.error("(IE|ReelLimit) Could not turn on locking the reel scroll (blocked reels are still covered)", t);
         }
         try {
             // Pull-to-refresh on top of a locked pager would still reload the feed.
@@ -388,7 +392,7 @@ public final class ReelViewerHook {
                 }
             });
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ReelLimit) Refresh gate unavailable", t);
+            ModuleLog.warn("(IE|ReelLimit) Pull to refresh still works while reels are locked", t);
         }
     }
 
@@ -427,7 +431,7 @@ public final class ReelViewerHook {
             try {
                 gate.update(pager, inputLock(pager));
             } catch (Throwable t) {
-                ModuleLog.line("(IE|ReelLimit) Cannot update pager input", t);
+                ModuleLog.detail("(IE|ReelLimit) cannot update pager input", t);
             }
             locked |= gate.isLocked();
         }
@@ -525,9 +529,12 @@ public final class ReelViewerHook {
                 bindings++;
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|ReelLimit) DM impression source discovery failed: " + t);
+            ModuleLog.detail("(IE|ReelLimit) DM impression source discovery failed: " + t);
         }
-        ModuleLog.line("(IE|ReelLimit) DM impression source hooks=" + bindings);
+        if (bindings == 0 && FeatureFlags.dailyReelLimitEnabled) {
+            ModuleLog.warn("(IE|ReelLimit) Reels opened from chats may count toward the daily limit on this Instagram version");
+        }
+        ModuleLog.detail("(IE|ReelLimit) DM impression source hooks=" + bindings);
     }
 
     /** Registrar constructors taking the viewer config. DexKitCache stores Methods only, so cache class names. */

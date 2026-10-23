@@ -118,7 +118,7 @@ public final class ProfileDownloadAll {
                     dlg.dismiss();
                     newestFirst(found);
                     if (limit > 0 && found.size() > limit) found.subList(limit, found.size()).clear();
-                    ModuleLog.line(TAG + username + ": " + found.size() + " posts" + (stopped[0] ? " (stopped)" : ""));
+                    ModuleLog.line(TAG + "Found " + found.size() + " posts on " + username + "'s profile" + (stopped[0] ? " (stopped early)" : ""));
                     confirm(a, found);
                     return;
                 }
@@ -177,7 +177,7 @@ public final class ProfileDownloadAll {
                     else for (SelectedMediaDownloads.Captured child : c.children)
                         SelectedMediaDownloads.start(a, child, child.video != null, true);
                 } catch (Throwable t) {
-                    ModuleLog.line(TAG + "skip: " + t.getClass().getSimpleName());
+                    ModuleLog.warn(TAG + "Skipped one post that could not be downloaded: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                 }
                 if (last) { downloading = false; busy = false; }
             }, i * SPACING_MS);

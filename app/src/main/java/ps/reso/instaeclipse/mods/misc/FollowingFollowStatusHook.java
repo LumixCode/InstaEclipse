@@ -113,12 +113,12 @@ public final class FollowingFollowStatusHook {
                 }
             });
             FeatureStatusTracker.setHooked(KEY);
-            ModuleLog.line("(IE|FollowingStatus) Native following-row hook installed");
+            ModuleLog.ok("(IE|FollowingStatus) Ready");
         } catch (Throwable error) {
             if (FeatureFlags.showFollowingFollowStatus) {
                 FeatureStatusTracker.setBroken(KEY, R.string.ig_feature_following_follow_status);
             }
-            ModuleLog.line("(IE|FollowingStatus) Unable to resolve following rows", error);
+            ModuleLog.error("(IE|FollowingStatus) Could not turn on follow status in the following list: its rows were not found", error);
         }
     }
 
@@ -272,6 +272,6 @@ public final class FollowingFollowStatusHook {
     }
 
     private static void diagnostic(String message) {
-        if (diagnostics.add(message)) ModuleLog.line("(IE|FollowingStatus) " + message);
+        if (diagnostics.add(message)) ModuleLog.detail("(IE|FollowingStatus) " + message);
     }
 }

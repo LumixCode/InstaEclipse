@@ -75,10 +75,10 @@ public class StoryInfoHook {
     public void install(DexKitBridge bridge, ClassLoader classLoader) {
         resolveGetters(bridge, classLoader);
         if (getters.isEmpty()) {
-            ModuleLog.line("(IE|StoryInfo) ❌ no Media getters found");
+            ModuleLog.error("(IE|StoryInfo) Could not turn on story info: the story details were not found in this Instagram version");
             return;
         }
-        ModuleLog.line("(IE|StoryInfo) getters: " + getters.keySet());
+        ModuleLog.detail("(IE|StoryInfo) getters: " + getters.keySet());
         installButtonHook(bridge, classLoader);
         installClickHook(bridge, classLoader);
         FeatureStatusTracker.setHooked("StoryInfo");
@@ -118,7 +118,7 @@ public class StoryInfoHook {
                     break;
                 }
             } catch (Throwable t) {
-                ModuleLog.line("(IE|StoryInfo) getter " + key + ": " + t);
+                ModuleLog.detail("(IE|StoryInfo) getter " + key + ": " + t);
             }
         }
         DexKitCache.saveString("StoryInfoKeys", keys.toString());
@@ -137,7 +137,7 @@ public class StoryInfoHook {
                 builders = new ArrayList<>(
                         ps.reso.instaeclipse.mods.media.StoryDownloadHook.storyOptionBuilders(methods, classLoader));
             } catch (Throwable t) {
-                ModuleLog.line("(IE|StoryInfo) ❌ builder DexKit: " + t);
+                ModuleLog.error("(IE|StoryInfo) Could not add the story info entry to the story menu: " + t);
             }
         }
         if (builders == null || builders.isEmpty()) return;
@@ -166,7 +166,7 @@ public class StoryInfoHook {
                     for (int i = 0; i < add.size(); i++) extended[original.length + i] = add.get(i);
                     param.setResult(extended);
                 } catch (Throwable t) {
-                    ModuleLog.line("(IE|StoryInfo) builder: " + t);
+                    ModuleLog.warn("(IE|StoryInfo) Could not add the story info entry to this story's menu: " + t);
                 }
             }
         };
@@ -174,13 +174,13 @@ public class StoryInfoHook {
         for (Method m : builders) {
             try { XposedBridge.hookMethod(m, hook); hooked++; } catch (Throwable ignored) {}
         }
-        ModuleLog.line("(IE|StoryInfo) ✅ button hook on " + hooked + " builder(s)");
+        ModuleLog.detail("(IE|StoryInfo) button hook on " + hooked + " builder(s)");
     }
 
     private void installClickHook(DexKitBridge bridge, ClassLoader classLoader) {
         List<Method> dispatchers = ps.reso.instaeclipse.mods.media.StoryDownloadHook.storyClickDispatchers(bridge, classLoader);
         if (dispatchers.isEmpty()) {
-            ModuleLog.line("(IE|StoryInfo) ❌ click handler not found");
+            ModuleLog.error("(IE|StoryInfo) Could not turn on story info: the story menu's tap handler was not found in this Instagram version");
             return;
         }
         try {
@@ -207,7 +207,7 @@ public class StoryInfoHook {
                         for (Object a : param.args) if (ctx == null) ctx = StoryMentionHook.findContext(a);
                         if (ctx == null) ctx = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
                         if (media == null || ctx == null) {
-                            ModuleLog.line("(IE|StoryInfo) ❌ media/context not found");
+                            ModuleLog.error("(IE|StoryInfo) Could not show the story info: the story was not found");
                             return;
                         }
                         Context c = ctx;
@@ -218,18 +218,18 @@ public class StoryInfoHook {
                                 else if (which == 2) showPolls(c, media);
                                 else showSliders(c, media);
                             } catch (Throwable e) {
-                                ModuleLog.line("(IE|StoryInfo) dialog: " + e);
+                                ModuleLog.error("(IE|StoryInfo) Could not show the story info", e);
                             }
                         });
                     } catch (Throwable e) {
-                        ModuleLog.line("(IE|StoryInfo) click: " + e);
+                        ModuleLog.error("(IE|StoryInfo) Could not show the story info", e);
                     }
                 }
             };
             for (Method m : dispatchers) XposedBridge.hookMethod(m, clickHook);
-            ModuleLog.line("(IE|StoryInfo) ✅ click hook installed");
+            ModuleLog.ok("(IE|StoryInfo) Ready");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|StoryInfo) ❌ click hook: " + t);
+            ModuleLog.error("(IE|StoryInfo) Could not turn on story info", t);
         }
     }
 

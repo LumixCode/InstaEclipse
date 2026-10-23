@@ -89,12 +89,13 @@ public class LikeUndoHook {
                     if (target != null) break;
                 }
                 if (target == null) {
-                    ModuleLog.line(TAG + "❌ like sender not found (" + found.size() + " candidates)");
+                    ModuleLog.error(TAG + "Could not turn on like undo: the like action was not found in this Instagram version");
+                    ModuleLog.detail(TAG + "like sender not found (" + found.size() + " candidates)");
                     return;
                 }
                 DexKitCache.saveMethod(CACHE_KEY, target);
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "❌ " + t);
+                ModuleLog.error(TAG + "Could not turn on like undo", t);
                 return;
             }
         }
@@ -115,7 +116,7 @@ public class LikeUndoHook {
                         MAIN.removeCallbacks(held.fire);
                         held.clearTint();
                     });
-                    ModuleLog.line(TAG + "like taken back (heart tapped again)");
+                    ModuleLog.line(TAG + "Like taken back (heart tapped again)");
                     return;
                 }
                 // A heart tap confirmed a moment ago: Instagram sends it now, unless Undo holds it.
@@ -139,7 +140,8 @@ public class LikeUndoHook {
                 else hold(method, self, args, media);
             }
         });
-        ModuleLog.line(TAG + "✅ Hooked " + sender.getDeclaringClass().getName() + "." + sender.getName());
+        ModuleLog.ok(TAG + "Ready");
+        ModuleLog.detail(TAG + "Hooked " + sender.getDeclaringClass().getName() + "." + sender.getName());
         FeatureStatusTracker.setHooked("LikeUndo");
         installed = true;
         onLikeUndoChanged();
@@ -260,7 +262,7 @@ public class LikeUndoHook {
             });
             hooked++;
         }
-        ModuleLog.line(TAG + "like entry hooks=" + hooked);
+        ModuleLog.detail(TAG + "like entry hooks=" + hooked);
     }
 
     private static Activity activityOf(android.content.Context c) {
@@ -273,7 +275,7 @@ public class LikeUndoHook {
 
     /** Holds the like for DELAY_MS with its heart blue, then sends it; the heart turns red. */
     private static void hold(Member method, Object self, Object[] args, Object media) {
-        ModuleLog.line(TAG + "like held for " + DELAY_MS + " ms");
+        ModuleLog.detail(TAG + "like held for " + DELAY_MS + " ms");
         HeldLike like = new HeldLike(method, self, args, media);
         like.fire = () -> {
             like.clearTint();
@@ -300,10 +302,10 @@ public class LikeUndoHook {
             final boolean[] answered = {false};
             dlg.secondary(act.getString(android.R.string.cancel), () -> answered[0] = true);
             dlg.primary(I18n.t(act, R.string.ig_confirm_like_yes), () -> { answered[0] = true; onLike.run(); });
-            dlg.onDismiss(() -> { if (!answered[0]) ModuleLog.line(TAG + "like not confirmed"); });
+            dlg.onDismiss(() -> { if (!answered[0]) ModuleLog.detail(TAG + "like not confirmed"); });
             dlg.show();
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ confirm: " + t);
+            ModuleLog.error(TAG + "Could not show the like confirmation, so the like was not sent", t);
         }
     }
 
@@ -316,9 +318,9 @@ public class LikeUndoHook {
             Method m = (Method) method;
             m.setAccessible(true);
             m.invoke(self, args);
-            ModuleLog.line(TAG + "like sent");
+            ModuleLog.detail(TAG + "like sent");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ send failed: " + t);
+            ModuleLog.error(TAG + "Could not send the like: " + t);
         } finally {
             REPLAYING.remove();
         }

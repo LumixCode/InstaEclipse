@@ -21,7 +21,7 @@ public final class ModuleActivityLauncher {
     public static boolean launch(Context context, String activityClassName, Bundle extras) {
         Activity activity = UIHookManager.getCurrentActivity();
         if (activity == null || activity.isFinishing()) {
-            ModuleLog.line("(InstaEclipse | Launcher): no active Instagram activity");
+            ModuleLog.error("(InstaEclipse | Launcher): Could not open the InstaEclipse screen: Instagram is not in the foreground");
             return false;
         }
         try {
@@ -31,7 +31,8 @@ public final class ModuleActivityLauncher {
             if (extras != null) intent.putExtras(extras);
             return ps.reso.instaeclipse.utils.ipc.CompanionBridge.launchActivity(activity, intent);
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | Launcher): failed " + activityClassName + " -> " + t.getMessage());
+            ModuleLog.error("(InstaEclipse | Launcher): Could not open the InstaEclipse screen: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            ModuleLog.detail("(InstaEclipse | Launcher): failed " + activityClassName + " -> " + t.getMessage());
             return false;
         }
     }

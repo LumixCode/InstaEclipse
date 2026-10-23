@@ -66,6 +66,7 @@ public class GhostEphemeralKeepHook {
             List<Method> cached = DexKitCache.loadMethods("Ephemeral_vanish_v2", classLoader);
             if (cached != null && !cached.isEmpty()) {
                 for (Method m : cached) XposedBridge.hookMethod(m, keep);
+                ModuleLog.ok("(IE|Ephemeral) ready");
                 FeatureStatusTracker.setHooked("KeepEphemeralMessages");
                 return;
             }
@@ -86,21 +87,25 @@ public class GhostEphemeralKeepHook {
                             && !java.lang.reflect.Modifier.isStatic(m.getModifiers())) { shh = m; candidates++; }
                 }
                 if (candidates == 1) found.add(shh);
-                else ModuleLog.line("(IE|Ephemeral) ⚠️ vanish-mode purge ambiguous (" + candidates + " ()Z methods)");
+                else {
+                    ModuleLog.warn("(IE|Ephemeral) Vanish mode messages may not be kept on this Instagram version (other disappearing messages are)");
+                    ModuleLog.detail("(IE|Ephemeral) vanish-mode purge ambiguous (" + candidates + " ()Z methods)");
+                }
                 break;
             }
             if (!found.isEmpty()) {
                 for (Method m : found) {
                     XposedBridge.hookMethod(m, keep);
-                    ModuleLog.line("(IE|Ephemeral) ✅ local purge hook → "
+                    ModuleLog.detail("(IE|Ephemeral) local purge hook → "
                             + m.getDeclaringClass().getName() + "." + m.getName());
                 }
+                ModuleLog.ok("(IE|Ephemeral) ready");
                 DexKitCache.saveMethods("Ephemeral_vanish_v2", found);
                 FeatureStatusTracker.setHooked("KeepEphemeralMessages");
                 return;
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Ephemeral) ⚠️ local purge lookup: " + t.getMessage());
+            ModuleLog.detail("(IE|Ephemeral) local purge lookup failed, trying the older method: " + t.getMessage());
         }
 
         // Legacy (<=447): the orchestrating (DirectThreadKey, boolean) method.
@@ -108,6 +113,7 @@ public class GhostEphemeralKeepHook {
             Method cached = DexKitCache.loadMethod("Ephemeral_vanish", classLoader);
             if (cached != null) {
                 XposedBridge.hookMethod(cached, hook);
+                ModuleLog.ok("(IE|Ephemeral) ready");
                 FeatureStatusTracker.setHooked("KeepEphemeralMessages");
                 return;
             }
@@ -125,15 +131,16 @@ public class GhostEphemeralKeepHook {
                     Method m = md.getMethodInstance(classLoader);
                     DexKitCache.saveMethod("Ephemeral_vanish", m);
                     XposedBridge.hookMethod(m, hook);
-                    ModuleLog.line("(IE|Ephemeral) ✅ vanish-local-delete hook → "
+                    ModuleLog.ok("(IE|Ephemeral) ready");
+                    ModuleLog.detail("(IE|Ephemeral) vanish-local-delete hook → "
                             + md.getClassName() + "." + md.getName());
                     FeatureStatusTracker.setHooked("KeepEphemeralMessages");
                     return;
                 } catch (Throwable ignored) {}
             }
-            ModuleLog.line("(IE|Ephemeral) ❌ vanish-local-delete method not found");
+            ModuleLog.error("(IE|Ephemeral) Could not turn on keeping disappearing messages: not supported by this Instagram version");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Ephemeral) ❌ hookVanishLocalDelete: " + t.getMessage());
+            ModuleLog.error("(IE|Ephemeral) Could not turn on keeping disappearing messages", t);
         }
     }
 
@@ -171,13 +178,13 @@ public class GhostEphemeralKeepHook {
 
                 DexKitCache.saveMethod("Ephemeral_ping", method);
                 XposedBridge.hookMethod(method, hook);
-                ModuleLog.line("(IE|Ephemeral) ✅ server-ping hook → "
+                ModuleLog.detail("(IE|Ephemeral) server-ping hook → "
                         + md.getClassName() + "." + md.getName());
                 return;
             }
-            ModuleLog.line("(IE|Ephemeral) ❌ server-ping method not found");
+            ModuleLog.warn("(IE|Ephemeral) The extra block for the \"viewed\" report is not available on this Instagram version (the network filter still blocks it)");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Ephemeral) ❌ hookServerPing: " + t.getMessage());
+            ModuleLog.warn("(IE|Ephemeral) The extra block for the \"viewed\" report could not be set up (the network filter still blocks it)", t);
         }
     }
 
@@ -237,17 +244,17 @@ public class GhostEphemeralKeepHook {
                 try {
                     XposedBridge.hookMethod(m, hook);
                     hooked.add(m);
-                    ModuleLog.line("(IE|Ephemeral) ✅ expiry-parser hook → "
+                    ModuleLog.detail("(IE|Ephemeral) expiry-parser hook → "
                             + m.getDeclaringClass().getName() + "." + m.getName());
                 } catch (Throwable ignored) {}
             }
             if (hooked.isEmpty()) {
-                ModuleLog.line("(IE|Ephemeral) ❌ no expiry-parser methods hooked");
+                ModuleLog.warn("(IE|Ephemeral) Could not stop the disappearing-message timer on this Instagram version (messages are still kept)");
             } else {
                 DexKitCache.saveMethods("Ephemeral_expiry_v2", hooked);
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Ephemeral) ❌ hookExpiryParser: " + t.getMessage());
+            ModuleLog.warn("(IE|Ephemeral) Could not stop the disappearing-message timer (messages are still kept)", t);
         }
     }
 

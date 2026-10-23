@@ -132,7 +132,8 @@ public class LockDirectMessagesHook {
                         }
                     });
         } catch (Throwable t) {
-            ModuleLog.line("(IE|LockDMs) lifecycle: " + t.getMessage());
+            ModuleLog.warn("(IE|LockDMs) The lock may not cover chats opened in pop-up screens: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -151,7 +152,8 @@ public class LockDirectMessagesHook {
                         if (throttle.trailingDue(android.os.SystemClock.uptimeMillis())
                                 && resumed.contains(activity)) checkGate(activity);
                     } catch (Throwable t) {
-                        ModuleLog.line("(IE|LockDMs) gate: " + t.getMessage());
+                        ModuleLog.warn("(IE|LockDMs) Could not check whether to show the lock: "
+                                + t.getClass().getSimpleName() + ": " + t.getMessage());
                     }
                 };
                 android.view.ViewTreeObserver observer = decor.getViewTreeObserver();
@@ -165,7 +167,8 @@ public class LockDirectMessagesHook {
                             else if (delay > 0L) main.postDelayed(trailing, delay);
                         }
                     } catch (Throwable t) {
-                        ModuleLog.line("(IE|LockDMs) gate: " + t.getMessage());
+                        ModuleLog.warn("(IE|LockDMs) Could not check whether to show the lock: "
+                                + t.getClass().getSimpleName() + ": " + t.getMessage());
                     }
                     return true;
                 });
@@ -331,7 +334,7 @@ public class LockDirectMessagesHook {
                 else a.onBackPressed();
             });
         } catch (Throwable t) {
-            ModuleLog.line("(IE|LockDMs) gate: " + t.getMessage());
+            ModuleLog.error("(IE|LockDMs) Could not show the lock screen: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -586,7 +589,7 @@ public class LockDirectMessagesHook {
         if (reprompt == null || gate.completed.get()
                 || android.os.SystemClock.uptimeMillis() - gate.promptedAt > STRAY_TAP_MS) return;
         gate.reprompt = null;
-        ModuleLog.line("(IE|LockDMs) biometric prompt closed right away: shown again if the gate is still in front");
+        ModuleLog.detail("(IE|LockDMs) biometric prompt closed right away: shown again if the gate is still in front");
         // A moment later, once focus has settled: back on the gate after a stray tap, elsewhere
         // after Home or Recents.
         main.postDelayed(reprompt, REPROMPT_SETTLE_MS);
@@ -651,7 +654,8 @@ public class LockDirectMessagesHook {
                         }
                     });
         } catch (Throwable t) {
-            ModuleLog.line("(IE|LockDMs) ⚠️ biometric: " + t.getMessage());
+            ModuleLog.warn("(IE|LockDMs) Could not show the fingerprint prompt: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 

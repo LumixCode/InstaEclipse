@@ -56,11 +56,12 @@ public class DexKitCache {
         String stored = prefs.getString(KEY_VER, "");
         if (stored.equals(igVersion)) {
             cacheValid = true;
-            ModuleLog.line("(DexKitCache) Cache valid for IG " + igVersion);
+            ModuleLog.detail("(DexKitCache) Cache valid for IG " + igVersion);
         } else {
             cacheValid = false;
             prefs.edit().clear().putString(KEY_VER, igVersion).apply();
-            ModuleLog.line("(DexKitCache) Version " + stored + " → " + igVersion + ", cache cleared");
+            ModuleLog.line("(DexKitCache) Instagram or InstaEclipse changed since the last start, so Instagram's code is searched again (this start takes longer)");
+            ModuleLog.detail("(DexKitCache) Version " + stored + " → " + igVersion + ", cache cleared");
         }
     }
 
@@ -77,7 +78,7 @@ public class DexKitCache {
         if (prefs == null) return;
         prefs.edit().clear().apply();
         cacheValid = false;
-        ModuleLog.line("(DexKitCache) Cache manually cleared — DexKit will re-run on next launch");
+        ModuleLog.line("(DexKitCache) Cache cleared; Instagram's code is searched again on the next start");
     }
 
     // ── Single method ────────────────────────────────────────────────────────

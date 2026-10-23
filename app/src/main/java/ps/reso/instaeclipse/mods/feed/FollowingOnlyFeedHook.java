@@ -61,7 +61,8 @@ public class FollowingOnlyFeedHook {
         List<Method> adders = null;
         if (DexKitCache.isCacheValid()) {
             if ("missing".equals(DexKitCache.loadString(CACHE_BUILD))) {
-                ModuleLog.line(TAG + "not available on this version (cached)");
+                ModuleLog.error(TAG + "Will not work: the feed request code was not found in this Instagram version");
+                ModuleLog.detail(TAG + "not available on this version (cached)");
                 return;
             }
             build = DexKitCache.loadMethod(CACHE_BUILD, classLoader);
@@ -72,12 +73,14 @@ public class FollowingOnlyFeedHook {
             build = findBuildMethod(bridge, classLoader);
             if (build == null) {
                 DexKitCache.saveString(CACHE_BUILD, "missing");
-                ModuleLog.line(TAG + "❌ feed request builder not found");
+                ModuleLog.error(TAG + "Will not work: the feed request code was not found in this Instagram version");
+                ModuleLog.detail(TAG + "feed request builder not found");
                 return;
             }
             adders = findAdders(build);
             if (adders.isEmpty()) {
-                ModuleLog.line(TAG + "❌ no param adders on the request builder");
+                ModuleLog.error(TAG + "Will not work: the feed request code was not found in this Instagram version");
+                ModuleLog.detail(TAG + "no param adders on the request builder");
                 return;
             }
             DexKitCache.saveMethod(CACHE_BUILD, build);
@@ -104,7 +107,7 @@ public class FollowingOnlyFeedHook {
                     st.paramAdder.invoke(st.builder, KEY, VALUE);
                     ModuleLog.probe("(IE|FollowingFeed) pagination_source appended");
                 } catch (Throwable t) {
-                    ModuleLog.line(TAG + "append failed: " + t);
+                    ModuleLog.warn(TAG + "Could not limit this feed page to accounts you follow: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                 }
             }
         });
@@ -127,7 +130,8 @@ public class FollowingOnlyFeedHook {
         };
         for (Method m : adders) XposedBridge.hookMethod(m, adderHook);
         FeatureStatusTracker.setHooked("FollowingOnlyFeed");
-        ModuleLog.line(TAG + "✅ hooked " + build.getDeclaringClass().getName() + "."
+        ModuleLog.ok(TAG + "ready");
+        ModuleLog.detail(TAG + "hooked " + build.getDeclaringClass().getName() + "."
                 + build.getName() + " + " + adders.size() + " adders");
     }
 
@@ -140,7 +144,7 @@ public class FollowingOnlyFeedHook {
                 if (builderIndex(m) >= 0) return m;
             }
         } catch (Throwable t) {
-            ModuleLog.line(TAG + t);
+            ModuleLog.detail(TAG + "feed request search failed: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
         return null;
     }

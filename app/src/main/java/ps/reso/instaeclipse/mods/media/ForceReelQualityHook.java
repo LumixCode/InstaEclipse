@@ -104,7 +104,8 @@ public class ForceReelQualityHook {
                 heightGetterName = resolveHeightGetterName(bridge, classLoader);
 
                 if (videoVersionsGetter == null || heightGetterName == null) {
-                    ModuleLog.line("(InstaEclipse | ForceReelQuality): ❌ discovery failed");
+                    ModuleLog.error("(InstaEclipse | ForceReelQuality): Could not turn on reel quality: the video quality list was not found in this Instagram version");
+                    ModuleLog.detail("(InstaEclipse | ForceReelQuality): discovery failed getter=" + videoVersionsGetter + " height=" + heightGetterName);
                     return;
                 }
 
@@ -131,7 +132,7 @@ public class ForceReelQualityHook {
                             param.setResult(Collections.singletonList(chosen));
                         }
                     } catch (Throwable t) {
-                        ModuleLog.line("(InstaEclipse | ForceReelQuality): ❌ hook body – " + t);
+                        ModuleLog.warn("(InstaEclipse | ForceReelQuality): Could not pick the quality for one reel: " + t);
                     }
                 }
             });
@@ -140,12 +141,13 @@ public class ForceReelQualityHook {
             // with multiple qualities is actually intercepted — the status toast is built
             // ~1.5s after launch, before any video is guaranteed to have loaded yet.
             FeatureStatusTracker.setHooked("ForceReelQuality");
-            ModuleLog.line("(InstaEclipse | ForceReelQuality): ✅ Hooked "
+            ModuleLog.ok("(InstaEclipse | ForceReelQuality): ready");
+            ModuleLog.detail("(InstaEclipse | ForceReelQuality): Hooked "
                     + videoVersionsGetter.getDeclaringClass().getName()
                     + "#" + videoVersionsGetter.getName()
                     + " (height=" + heightGetterName + ")");
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | ForceReelQuality): ❌ install – " + t);
+            ModuleLog.error("(InstaEclipse | ForceReelQuality): Could not turn on reel quality", t);
         }
     }
 
@@ -166,7 +168,7 @@ public class ForceReelQualityHook {
                     } catch (Throwable ignored) {}
                 }
             } catch (Throwable t) {
-                ModuleLog.line("(InstaEclipse | ForceReelQuality): ❌ resolveVideoVersionsGetter[" + dictClass + "] – " + t);
+                ModuleLog.detail("(InstaEclipse | ForceReelQuality): resolveVideoVersionsGetter[" + dictClass + "] – " + t);
             }
         }
         return null;
@@ -184,7 +186,7 @@ public class ForceReelQualityHook {
 
                 if (!results.isEmpty()) return results.get(0).getName();
             } catch (Throwable t) {
-                ModuleLog.line("(InstaEclipse | ForceReelQuality): ❌ resolveHeightGetterName[" + versionClass + "] – " + t);
+                ModuleLog.detail("(InstaEclipse | ForceReelQuality): resolveHeightGetterName[" + versionClass + "] – " + t);
             }
         }
         return null;

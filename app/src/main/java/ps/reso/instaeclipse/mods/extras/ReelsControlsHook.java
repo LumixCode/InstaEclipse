@@ -43,6 +43,7 @@ public class ReelsControlsHook {
             }
         });
         FeatureStatusTracker.setHooked("reelsAutoScroll");
-        ModuleLog.line(TAG + "✅ auto-scroll gate " + gate.getDeclaringClass().getName() + "." + gate.getName());
+        ModuleLog.ok(TAG + "auto-scroll ready");
+        ModuleLog.detail(TAG + "auto-scroll gate " + gate.getDeclaringClass().getName() + "." + gate.getName());
     }
 }

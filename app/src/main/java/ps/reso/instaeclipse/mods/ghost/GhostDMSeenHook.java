@@ -46,7 +46,8 @@ public class GhostDMSeenHook {
             Method cached = DexKitCache.loadMethod("GhostSeen", Module.hostClassLoader);
             if (cached != null) {
                 XposedBridge.hookMethod(cached, hook);
-                ModuleLog.line("(InstaEclipse | GhostModeSeen): ✅ Hooked: " + cached.getDeclaringClass().getName() + "." + cached.getName());
+                ModuleLog.ok("(InstaEclipse | GhostModeSeen): ready");
+                ModuleLog.detail("(InstaEclipse | GhostModeSeen): hooked (cached): " + cached.getDeclaringClass().getName() + "." + cached.getName());
                 FeatureStatusTracker.setHooked("GhostSeen");
                 return;
             }
@@ -58,7 +59,7 @@ public class GhostDMSeenHook {
                     .matcher(MethodMatcher.create().usingStrings("mark_thread_seen-")));
 
             if (methods.isEmpty()) {
-                ModuleLog.line("(InstaEclipse | GhostModeSeen): ❌ No methods found using 'mark_thread_seen-'");
+                ModuleLog.error("(InstaEclipse | GhostModeSeen): Could not turn on hiding seen in chats: not supported by this Instagram version (no 'mark_thread_seen-' method)");
                 return;
             }
 
@@ -84,19 +85,20 @@ public class GhostDMSeenHook {
                         DexKitCache.saveMethod("GhostSeen", reflectMethod);
                         XposedBridge.hookMethod(reflectMethod, hook);
 
-                        ModuleLog.line("(InstaEclipse | GhostModeSeen): ✅ Hooked: " +
+                        ModuleLog.ok("(InstaEclipse | GhostModeSeen): ready");
+                        ModuleLog.detail("(InstaEclipse | GhostModeSeen): hooked: " +
                                 method.getClassName() + "." + method.getName());
                         FeatureStatusTracker.setHooked("GhostSeen");
                         return;
 
                     } catch (Throwable e) {
-                        ModuleLog.line("(InstaEclipse | GhostModeSeen): ❌ Hook error: " + e.getMessage());
+                        ModuleLog.warn("(InstaEclipse | GhostModeSeen): Hiding seen in chats may not work: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                     }
                 }
             }
 
         } catch (Throwable e) {
-            ModuleLog.line("(InstaEclipse | GhostModeSeen): ❌ DexKit exception: " + e.getMessage());
+            ModuleLog.error("(InstaEclipse | GhostModeSeen): Could not turn on hiding seen in chats", e);
         }
     }
 

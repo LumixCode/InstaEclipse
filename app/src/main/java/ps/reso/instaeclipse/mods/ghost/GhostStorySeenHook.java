@@ -48,17 +48,20 @@ public class GhostStorySeenHook {
                 try {
                     Class<?> storeClass = Class.forName(storeName, false, Module.hostClassLoader);
                     int n = hookStoreSendersScopedTo(storeClass);
-                    ModuleLog.line("(InstaEclipse | StoryBlock): ✅ Hooked (cached) " + n + " sender(s) on " + storeName);
+                    ModuleLog.line("(InstaEclipse | StoryBlock): " + (n > 0 ? "✅ ready"
+                            : "❌ Could not turn on hiding story views: nothing to block was found (saved lookup)"));
+                    ModuleLog.detail("(InstaEclipse | StoryBlock): hooked (cached) " + n + " sender(s) on " + storeName);
                     FeatureStatusTracker.setHooked("GhostStories");
                     return;
                 } catch (Throwable t) {
-                    ModuleLog.line("(InstaEclipse | StoryBlock): ⚠️ Cached modern resolve failed: " + t.getMessage());
+                    ModuleLog.detail("(InstaEclipse | StoryBlock): cached modern resolve failed: " + t.getMessage());
                 }
             }
             Method legacy = DexKitCache.loadMethod(CACHE_KEY_LEGACY, Module.hostClassLoader);
             if (legacy != null) {
                 XposedBridge.hookMethod(legacy, legacyHook());
-                ModuleLog.line("(InstaEclipse | StoryBlock): ✅ Hooked (cached legacy): "
+                ModuleLog.ok("(InstaEclipse | StoryBlock): ready");
+                ModuleLog.detail("(InstaEclipse | StoryBlock): hooked (cached legacy): "
                         + legacy.getDeclaringClass().getName() + "." + legacy.getName());
                 FeatureStatusTracker.setHooked("GhostStories");
                 return;
@@ -68,7 +71,7 @@ public class GhostStorySeenHook {
         // Modern first (447), then legacy (436) — keep the old path for older versions.
         if (tryModernBatchBlock(bridge)) return;
         if (tryLegacyBlock(bridge)) return;
-        ModuleLog.line("(InstaEclipse | StoryBlock): ❌ Story-seen sender not resolved on any path");
+        ModuleLog.error("(InstaEclipse | StoryBlock): Could not turn on hiding story views: not supported by this Instagram version");
     }
 
     /** IG 442+/447: block the reel-seen store's inserts + immediate sender. */
@@ -101,12 +104,13 @@ public class GhostStorySeenHook {
             if (n == 0) return false;
 
             DexKitCache.saveString(CACHE_KEY, storeClassName);
-            ModuleLog.line("(InstaEclipse | StoryBlock): ✅ Hooked " + n + " sender(s) on store " + storeClassName
+            ModuleLog.ok("(InstaEclipse | StoryBlock): ready");
+            ModuleLog.detail("(InstaEclipse | StoryBlock): hooked " + n + " sender(s) on store " + storeClassName
                     + " (item builder: " + itemClassName + "." + builder.getName() + ")");
             FeatureStatusTracker.setHooked("GhostStories");
             return true;
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | StoryBlock): ⚠️ modern path error: " + t.getMessage());
+            ModuleLog.detail("(InstaEclipse | StoryBlock): modern path failed, trying the older one: " + t.getMessage());
             return false;
         }
     }
@@ -124,14 +128,15 @@ public class GhostStorySeenHook {
                 if (Modifier.isFinal(mod) && m.getReturnType() == void.class && m.getParameterCount() == 0) {
                     DexKitCache.saveMethod(CACHE_KEY_LEGACY, m);
                     XposedBridge.hookMethod(m, legacyHook());
-                    ModuleLog.line("(InstaEclipse | StoryBlock): ✅ Hooked (legacy): "
+                    ModuleLog.ok("(InstaEclipse | StoryBlock): ready");
+                    ModuleLog.detail("(InstaEclipse | StoryBlock): hooked (legacy): "
                             + method.getClassName() + "." + method.getName());
                     FeatureStatusTracker.setHooked("GhostStories");
                     return true;
                 }
             }
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | StoryBlock): ⚠️ legacy path error: " + t.getMessage());
+            ModuleLog.detail("(InstaEclipse | StoryBlock): legacy path failed: " + t.getMessage());
         }
         return false;
     }
@@ -179,7 +184,7 @@ public class GhostStorySeenHook {
                 boolean bulk    = p.length == 1 && Map.class.isAssignableFrom(p[0]);
                 if (!perItem && !bulk) continue;
                 try { m.setAccessible(true); XposedBridge.hookMethod(m, gate); hooked++; found = true; }
-                catch (Throwable t) { ModuleLog.line("(InstaEclipse | StoryBlock): ⚠️ insert hook failed: " + t.getMessage()); }
+                catch (Throwable t) { ModuleLog.warn("(InstaEclipse | StoryBlock): Some story views may still be sent", t); }
             }
             if (found) break; // inserts all live on the same base level
         }
@@ -194,7 +199,7 @@ public class GhostStorySeenHook {
             if (pt.isPrimitive() || pt == String.class || Map.class.isAssignableFrom(pt)
                     || java.util.Collection.class.isAssignableFrom(pt)) continue;
             try { m.setAccessible(true); XposedBridge.hookMethod(m, gate); hooked++; }
-            catch (Throwable t) { ModuleLog.line("(InstaEclipse | StoryBlock): ⚠️ immediate-sender hook failed: " + t.getMessage()); }
+            catch (Throwable t) { ModuleLog.warn("(InstaEclipse | StoryBlock): Some story views may still be sent right away", t); }
         }
 
         return hooked;

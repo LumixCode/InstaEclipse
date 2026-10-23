@@ -33,7 +33,8 @@ public class GhostTypingIndicatorHook {
             Method cached = DexKitCache.loadMethod("GhostTyping", Module.hostClassLoader);
             if (cached != null) {
                 XposedBridge.hookMethod(cached, hook);
-                ModuleLog.line("(InstaEclipse | TypingBlock): ✅ Hooked (dynamic check): " + cached.getDeclaringClass().getName() + "." + cached.getName());
+                ModuleLog.ok("(InstaEclipse | TypingBlock): ready");
+                ModuleLog.detail("(InstaEclipse | TypingBlock): hooked (cached): " + cached.getDeclaringClass().getName() + "." + cached.getName());
                 FeatureStatusTracker.setHooked("GhostTyping");
                 return;
             }
@@ -45,7 +46,7 @@ public class GhostTypingIndicatorHook {
                     .matcher(MethodMatcher.create().usingStrings("is_typing_indicator_enabled")));
 
             if (methods.isEmpty()) {
-                ModuleLog.line("(InstaEclipse | TypingBlock): ❌ No methods found containing 'is_typing_indicator_enabled'");
+                ModuleLog.error("(InstaEclipse | TypingBlock): Could not turn on hiding typing: not supported by this Instagram version (no 'is_typing_indicator_enabled' method)");
                 if (FeatureFlags.isGhostTyping) FeatureStatusTracker.setBroken("GhostTyping");
                 return;
             }
@@ -84,22 +85,23 @@ public class GhostTypingIndicatorHook {
                         DexKitCache.saveMethod("GhostTyping", reflectMethod);
                         XposedBridge.hookMethod(reflectMethod, hook);
 
-                        ModuleLog.line("(InstaEclipse | TypingBlock): ✅ Hooked (dynamic check): " +
+                        ModuleLog.ok("(InstaEclipse | TypingBlock): ready");
+                        ModuleLog.detail("(InstaEclipse | TypingBlock): hooked: " +
                                 method.getClassName() + "." + method.getName());
                         FeatureStatusTracker.setHooked("GhostTyping");
                         return;
 
                     } catch (Throwable e) {
-                        ModuleLog.line("(InstaEclipse | TypingBlock): ❌ Hook error: " + e.getMessage());
+                        ModuleLog.detail("(InstaEclipse | TypingBlock): candidate failed: " + e.getMessage());
                     }
                 }
             }
 
-            ModuleLog.line("(InstaEclipse | TypingBlock): ❌ No candidate matched the expected method shape");
+            ModuleLog.error("(InstaEclipse | TypingBlock): Could not turn on hiding typing: not supported by this Instagram version (no matching method)");
             if (FeatureFlags.isGhostTyping) FeatureStatusTracker.setBroken("GhostTyping");
 
         } catch (Throwable t) {
-            ModuleLog.line("(InstaEclipse | TypingBlock): ❌ Exception: " + t.getMessage());
+            ModuleLog.error("(InstaEclipse | TypingBlock): Could not turn on hiding typing", t);
         }
     }
 }

@@ -66,7 +66,11 @@ public class StoryViewerSearchHook {
                 recordClass = cl.loadClass(md.getClassName());
                 break;
             }
-            if (adapter == null) { ModuleLog.line(TAG + "❌ viewer adapter not found"); return; }
+            if (adapter == null) {
+                ModuleLog.error(TAG + "Will not work: the story viewers list was not found in this Instagram version");
+                ModuleLog.detail(TAG + "viewer adapter not found");
+                return;
+            }
             Method build = null;
             for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(adapter)) {
                 Class<?>[] p = m.getParameterTypes();
@@ -79,7 +83,11 @@ public class StoryViewerSearchHook {
                 rebuild = md.getMethodInstance(cl);
                 break;
             }
-            if (build == null) { ModuleLog.line(TAG + "❌ row builder not found"); return; }
+            if (build == null) {
+                ModuleLog.error(TAG + "Will not work: the story viewers list was not found in this Instagram version");
+                ModuleLog.detail(TAG + "row builder not found");
+                return;
+            }
             build.setAccessible(true);
             if (rebuild != null) rebuild.setAccessible(true);
 
@@ -101,11 +109,12 @@ public class StoryViewerSearchHook {
                     param.args[0] = out;
                 }
             });
-            ModuleLog.line(TAG + "✅ adapter " + adapter.getName() + "." + build.getName()
+            ModuleLog.ok(TAG + "ready");
+            ModuleLog.detail(TAG + "adapter " + adapter.getName() + "." + build.getName()
                     + " rebuild=" + (rebuild != null ? rebuild.getName() : "none"));
             FeatureStatusTracker.setHooked("StoryViewerSearch");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.error(TAG + "Will not work: setup failed", t);
         }
     }
 
@@ -149,7 +158,7 @@ public class StoryViewerSearchHook {
                 public void afterTextChanged(Editable s) {
                     QUERIES.put(adapter, s.toString().trim().toLowerCase(Locale.ROOT));
                     try { if (rebuild != null) rebuild.invoke(adapter); } catch (Throwable t) {
-                        ModuleLog.line(TAG + "⚠️ rebuild: " + t);
+                        ModuleLog.warn(TAG + "Could not refresh the viewers list: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                     }
                 }
             });
@@ -159,9 +168,9 @@ public class StoryViewerSearchHook {
             lp.setMargins(m, m / 2, m, m / 2);
             try {
                 parent.addView(et, parent.indexOfChild(list), lp);
-                ModuleLog.line(TAG + "search box added in " + parent.getClass().getSimpleName());
+                ModuleLog.probe(TAG + "search box added in " + parent.getClass().getSimpleName());
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "⚠️ add box: " + t);
+                ModuleLog.warn(TAG + "Could not add the search box: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             }
         });
     }

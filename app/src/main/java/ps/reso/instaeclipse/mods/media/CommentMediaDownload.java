@@ -91,7 +91,7 @@ public final class CommentMediaDownload {
         // Read the URL on the UI thread, where Instagram itself reads these models.
         String url = found.gif ? gifUrl(found.source) : photoUrl(ctx, found.source);
         if (url == null) {
-            ModuleLog.line(TAG + "❌ no " + (found.gif ? "GIF" : "photo") + " URL");
+            ModuleLog.error(TAG + "Could not save the comment " + (found.gif ? "GIF" : "photo") + ": no download link found");
             IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_download_failed, "no URL"), Toast.LENGTH_SHORT).show();
             return;
         }
@@ -107,7 +107,7 @@ public final class CommentMediaDownload {
                 if (!delegated) FeedVideoDownloadHook.mainHandler.post(() -> IeToast.makeText(ctx,
                         I18n.t(ctx, R.string.ig_toast_saved), Toast.LENGTH_SHORT).show());
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "❌ media download: " + t);
+                ModuleLog.error(TAG + "Could not save the comment media: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                 FeedVideoDownloadHook.mainHandler.post(() -> IeToast.makeText(ctx,
                         I18n.t(ctx, R.string.ig_toast_download_failed, String.valueOf(t.getMessage())),
                         Toast.LENGTH_SHORT).show());
@@ -218,7 +218,7 @@ public final class CommentMediaDownload {
     }
 
     private static void logOnce(String key, String message) {
-        if (LOGGED.add(key)) ModuleLog.line(TAG + message);
+        if (LOGGED.add(key)) ModuleLog.detail(TAG + message);
     }
 
     private static String host(String url) {

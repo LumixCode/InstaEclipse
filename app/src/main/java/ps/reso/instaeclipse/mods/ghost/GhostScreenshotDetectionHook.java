@@ -35,7 +35,8 @@ public class GhostScreenshotDetectionHook {
             Method cached = DexKitCache.loadMethod("GhostScreenshot", Module.hostClassLoader);
             if (cached != null) {
                 XposedBridge.hookMethod(cached, hook);
-                ModuleLog.line("(InstaEclipse | ScreenshotBlock): ✅ Hooked (dynamic check): " + cached.getDeclaringClass().getName() + "." + cached.getName());
+                ModuleLog.ok("(InstaEclipse | ScreenshotBlock): ready");
+                ModuleLog.detail("(InstaEclipse | ScreenshotBlock): hooked (cached): " + cached.getDeclaringClass().getName() + "." + cached.getName());
                 FeatureStatusTracker.setHooked("GhostScreenshot");
                 return;
             }
@@ -47,7 +48,7 @@ public class GhostScreenshotDetectionHook {
                     .matcher(ClassMatcher.create().usingStrings("ScreenshotNotificationManager")));
 
             if (classes.isEmpty()) {
-                ModuleLog.line("(InstaEclipse | ScreenshotBlock): ❌ No class found containing 'ScreenshotNotificationManager'");
+                ModuleLog.error("(InstaEclipse | ScreenshotBlock): Could not turn on hiding screenshots: not supported by this Instagram version (no 'ScreenshotNotificationManager' class)");
                 return;
             }
 
@@ -72,20 +73,21 @@ public class GhostScreenshotDetectionHook {
                             DexKitCache.saveMethod("GhostScreenshot", targetMethod);
                             XposedBridge.hookMethod(targetMethod, hook);
 
-                            ModuleLog.line("(InstaEclipse | ScreenshotBlock): ✅ Hooked (dynamic check): " +
+                            ModuleLog.ok("(InstaEclipse | ScreenshotBlock): ready");
+                            ModuleLog.detail("(InstaEclipse | ScreenshotBlock): hooked: " +
                                     method.getClassName() + "." + method.getName());
                             FeatureStatusTracker.setHooked("GhostScreenshot");
                             return;
 
                         } catch (Throwable e) {
-                            ModuleLog.line("(InstaEclipse | ScreenshotBlock): ❌ Hook error: " + e.getMessage());
+                            ModuleLog.warn("(InstaEclipse | ScreenshotBlock): Hiding screenshots may not work: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                         }
                     }
                 }
             }
 
         } catch (Throwable e) {
-            ModuleLog.line("(InstaEclipse | ScreenshotBlock): ❌ Exception: " + e.getMessage());
+            ModuleLog.error("(InstaEclipse | ScreenshotBlock): Could not turn on hiding screenshots", e);
         }
     }
 }

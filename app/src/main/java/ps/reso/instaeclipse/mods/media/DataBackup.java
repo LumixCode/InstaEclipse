@@ -107,10 +107,10 @@ public final class DataBackup {
                 }
                 String name = "instaeclipse_data_" + new SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(new Date()) + ".zip";
                 DownloadPublisher.save(app, zip, name, "application/zip", "", "", false, new DownloadEngine.Cancellation());
-                ModuleLog.line(TAG + "backup saved: " + count + " files, " + zip.length() + " bytes");
+                ModuleLog.line(TAG + "Backup saved to Download/InstaEclipse/" + name + " (" + count + " files, " + zip.length() + " bytes)");
                 toast(app, I18n.t(app, R.string.ig_data_backup_saved, "Download/InstaEclipse/" + name), true);
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "backup failed: " + t);
+                ModuleLog.error(TAG + "Could not save the backup", t);
                 toast(app, I18n.t(app, R.string.ig_data_backup_failed), true);
             } finally {
                 if (zip != null) zip.delete();
@@ -159,7 +159,7 @@ public final class DataBackup {
         try {
             ps.reso.instaeclipse.utils.core.IpcSecurity.registerCompanionOnlyReceiver(context, receiver, new IntentFilter(ACTION_RESTORE));
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ receiver: " + t.getMessage());
+            ModuleLog.error(TAG + "Restoring a backup will not work: could not listen for the backup file: " + t.getMessage());
         }
     }
 
@@ -181,18 +181,18 @@ public final class DataBackup {
                         : name.equals(HIDDEN) || name.equals(NAMES) ? mergeKeepCurrent(target, e.getValue())
                         : e.getValue();
                 if (data == null) {
-                    ModuleLog.line(TAG + "kept the phone's " + name + ": it couldn't be read");
+                    ModuleLog.warn(TAG + "Kept this phone's " + name + " instead of the backup copy: the phone's file could not be read");
                     continue;
                 }
                 write(target, data);
                 restored++;
             }
-            ModuleLog.line(TAG + "restored " + restored + " files");
+            ModuleLog.line(TAG + "Backup restored (" + restored + " files); restarting Instagram");
             toast(app, I18n.t(app, R.string.ig_data_restore_done, restored), false);
             // Every store keeps a copy in memory: restart so they all read the restored files.
             new Handler(Looper.getMainLooper()).postDelayed(() -> restart(app), 1800);
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "restore failed: " + t);
+            ModuleLog.error(TAG + "Could not restore the backup: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             toast(app, I18n.t(app, R.string.ig_data_restore_failed), true);
         }
     }
@@ -231,7 +231,7 @@ public final class DataBackup {
             catch (java.io.IOException unreadable) { return null; }
             // A damaged log can't be loaded by UnsentLog either: the backup replaces it.
             try { onPhone = unsentRows(new JSONArray(new String(bytes, StandardCharsets.UTF_8))); }
-            catch (org.json.JSONException damaged) { ModuleLog.line(TAG + "phone's unsent log unreadable: " + damaged.getMessage()); }
+            catch (org.json.JSONException damaged) { ModuleLog.detail(TAG + "phone's unsent log unreadable, using the backup's: " + damaged.getMessage()); }
         }
         JSONArray out = new JSONArray();
         for (UnsentMerge.Row row : UnsentMerge.merge(onPhone, fromBackup, MAX_UNSENT)) {
@@ -275,7 +275,7 @@ public final class DataBackup {
             catch (java.io.IOException unreadable) { return null; }
             // A damaged file loads as empty in HiddenThreads/ThreadNames too: nothing to keep.
             try { onPhone = toMap(new JSONObject(new String(bytes, StandardCharsets.UTF_8))); }
-            catch (org.json.JSONException damaged) { ModuleLog.line(TAG + "phone's " + current.getName() + " unreadable: " + damaged.getMessage()); }
+            catch (org.json.JSONException damaged) { ModuleLog.detail(TAG + "phone's " + current.getName() + " unreadable, using the backup's: " + damaged.getMessage()); }
         }
         Map<String, Object> merged = unionKeepCurrent(toMap(new JSONObject(new String(backup, StandardCharsets.UTF_8))), onPhone);
         JSONObject out = new JSONObject();

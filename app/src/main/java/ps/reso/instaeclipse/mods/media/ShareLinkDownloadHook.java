@@ -53,7 +53,7 @@ public class ShareLinkDownloadHook {
                 }
             });
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ session hook: " + t);
+            ModuleLog.error(TAG + "Downloading shared links will not work: the account session could not be tracked: " + t);
         }
         XC_MethodHook onIntent = new XC_MethodHook() {
             @Override
@@ -68,15 +68,15 @@ public class ShareLinkDownloadHook {
         try {
             XposedHelpers.findAndHookMethod(Activity.class, "onCreate", Bundle.class, onIntent);
             XposedHelpers.findAndHookMethod(Activity.class, "onNewIntent", Intent.class, onIntent);
-            ModuleLog.line(TAG + "✅ installed");
+            ModuleLog.ok(TAG + "ready");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "⚠️ activity hooks: " + t);
+            ModuleLog.error(TAG + "Downloading shared links will not work: " + t);
         }
     }
 
     private static void start(Activity a, Uri uri) {
         String pk = uri != null ? pkFromLink(uri.toString()) : null;
-        ModuleLog.line(TAG + "link=" + uri + " pk=" + pk);
+        ModuleLog.detail(TAG + "link=" + uri + " pk=" + pk);
         if (pk == null) {
             toast(a, I18n.t(a, R.string.ig_share_dl_not_found));
             return;
@@ -103,7 +103,8 @@ public class ShareLinkDownloadHook {
                     FeedVideoDownloadHook.mainHandler.postDelayed(this, STEP_MS);
                 } else {
                     pendingPk = null;
-                    ModuleLog.line(TAG + "timed out pk=" + pk);
+                    ModuleLog.error(TAG + "Could not download the shared link: the post did not load in time");
+                    ModuleLog.detail(TAG + "timed out pk=" + pk);
                     toast(app, I18n.t(app, R.string.ig_share_dl_not_found));
                 }
             }
@@ -123,7 +124,7 @@ public class ShareLinkDownloadHook {
                 if (act instanceof Activity a && !a.isFinishing()) return a;
             }
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "resumed activity: " + t);
+            ModuleLog.detail(TAG + "resumed activity: " + t);
         }
         return null;
     }
@@ -162,7 +163,7 @@ public class ShareLinkDownloadHook {
                     }
                 }
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "cache: " + t);
+                ModuleLog.detail(TAG + "cache: " + t);
             }
         }
         return null;
@@ -172,7 +173,7 @@ public class ShareLinkDownloadHook {
         FeedVideoDownloadHook.executor.submit(() -> {
             try {
                 List<String> urls = FeedVideoDownloadHook.extractAllUrlsFromMedia(ctx, media);
-                ModuleLog.line(TAG + "pk=" + pk + " urls=" + (urls == null ? 0 : urls.size()));
+                ModuleLog.detail(TAG + "pk=" + pk + " urls=" + (urls == null ? 0 : urls.size()));
                 if (urls == null || urls.isEmpty()) {
                     toast(ctx, I18n.t(ctx, R.string.ig_share_dl_not_found));
                     return;
@@ -188,7 +189,7 @@ public class ShareLinkDownloadHook {
                             FeedVideoDownloadHook.buildFilename(user, vid ? "video" : "photo", id, vid), vid, user);
                 }
             } catch (Throwable t) {
-                ModuleLog.line(TAG + "❌ save: " + t);
+                ModuleLog.error(TAG + "Could not download the shared link: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             }
         });
     }

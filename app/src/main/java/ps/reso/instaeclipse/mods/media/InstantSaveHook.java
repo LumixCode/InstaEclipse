@@ -60,7 +60,7 @@ public class InstantSaveHook {
         try {
             Class<?> lambda = resolveViewerLambda(cl);
             if (lambda == null) {
-                ModuleLog.line("(IE|InstantSave) ⚠️ viewer cache: viewer lambda not found");
+                ModuleLog.error("(IE|InstantSave) Could not turn on saving Instants: the Instant viewer was not found in this Instagram version");
                 return;
             }
             for (java.lang.reflect.Constructor<?> c : ps.reso.instaeclipse.utils.core.SafeReflect.constructors(lambda)) {
@@ -73,9 +73,9 @@ public class InstantSaveHook {
                     }
                 });
             }
-            ModuleLog.line("(IE|InstantSave) ✅ viewer cache hooked: " + lambda.getName());
+            ModuleLog.detail("(IE|InstantSave) viewer cache hooked: " + lambda.getName());
         } catch (Throwable t) {
-            ModuleLog.line("(IE|InstantSave) ⚠️ viewer cache: " + t.getMessage());
+            ModuleLog.error("(IE|InstantSave) Could not turn on saving Instants: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -99,7 +99,7 @@ public class InstantSaveHook {
                 } catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
-            ModuleLog.line("(IE|InstantSave) ⚠️ viewer lambda search: " + t.getMessage());
+            ModuleLog.detail("(IE|InstantSave) viewer lambda search: " + t.getMessage());
         }
         return null;
     }
@@ -178,9 +178,9 @@ public class InstantSaveHook {
                 });
             }
             FeatureStatusTracker.setHooked("SaveInstants");
-            ModuleLog.line("(IE|InstantSave) ✅ long-press hooked");
+            ModuleLog.ok("(IE|InstantSave) ready");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|InstantSave) ⚠️ long-press: " + t.getMessage());
+            ModuleLog.error("(IE|InstantSave) Could not turn on holding an Instant to save it: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
@@ -208,7 +208,7 @@ public class InstantSaveHook {
                 try {
                     f.setAccessible(true);
                     if (f.get(p.thisObject) == longPress) {
-                        ModuleLog.line("(IE|InstantSave) long-press field = " + f.getName());
+                        ModuleLog.detail("(IE|InstantSave) long-press field = " + f.getName());
                         return longPressField = f;
                     }
                 } catch (Throwable ignored) {}
@@ -216,7 +216,9 @@ public class InstantSaveHook {
         }
         if (!longPressMissLogged) {
             longPressMissLogged = true;
-            ModuleLog.line("(IE|InstantSave) ⚠️ long-press field not found (Function1 args: " + seen + ")");
+            if (FeatureFlags.saveInstants)
+                ModuleLog.error("(IE|InstantSave) Holding an Instant will not save it: the hold gesture was not found in this Instagram version");
+            ModuleLog.detail("(IE|InstantSave) long-press field not found (Function1 args: " + seen + ")");
         }
         return null;
     }
@@ -258,7 +260,7 @@ public class InstantSaveHook {
                             ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_instant_saved), Toast.LENGTH_SHORT).show());
                 }
             } catch (Throwable e) {
-                ModuleLog.line("(IE|InstantSave) ❌ save failed: " + e);
+                ModuleLog.error("(IE|InstantSave) Could not save the Instant: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             }
         });
     }

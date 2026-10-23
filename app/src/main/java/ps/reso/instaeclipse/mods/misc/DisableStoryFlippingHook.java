@@ -31,14 +31,15 @@ public class DisableStoryFlippingHook {
             if (cached != null) {
                 XposedBridge.hookMethod(cached, HOOK);
                 ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("DisableStoryFlipping");
-                ModuleLog.line("(InstaEclipse | StoryFlipping): ✅ Hooked (dynamic check): " + cached.getDeclaringClass().getName() + "." + cached.getName());
+                ModuleLog.ok("(InstaEclipse | StoryFlipping): Ready");
+                ModuleLog.detail("(InstaEclipse | StoryFlipping): Hooked (dynamic check): " + cached.getDeclaringClass().getName() + "." + cached.getName());
                 return;
             }
         }
         try {
             findAndHookMethod(bridge);
         } catch (Exception e) {
-            ModuleLog.line("(InstaEclipse | StoryFlipping): ❌ Error handling Story Flipping hook: " + e.getMessage());
+            ModuleLog.error("(InstaEclipse | StoryFlipping): Could not turn on disable story flipping: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
@@ -72,7 +73,7 @@ public class DisableStoryFlippingHook {
             }
 
             if (methods.isEmpty()) {
-                ModuleLog.line("(InstaEclipse | StoryFlipping): ❌ story-advance method not found (end_scene / userSession).");
+                ModuleLog.error("(InstaEclipse | StoryFlipping): Could not turn on disable story flipping: the story auto-advance was not found in this Instagram version");
                 return;
             }
 
@@ -84,16 +85,17 @@ public class DisableStoryFlippingHook {
                     XposedBridge.hookMethod(targetMethod, HOOK);
 
                     ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.setHooked("DisableStoryFlipping");
-                    ModuleLog.line("(InstaEclipse | StoryFlipping): ✅ Hooked (dynamic check): " +
+                    ModuleLog.ok("(InstaEclipse | StoryFlipping): Ready");
+                    ModuleLog.detail("(InstaEclipse | StoryFlipping): Hooked (dynamic check): " +
                             method.getClassName() + "." + method.getName());
                     return;
 
                 } catch (Exception e) {
-                    ModuleLog.line("(InstaEclipse | StoryFlipping): ❌ Error hooking method: " + e.getMessage());
+                    ModuleLog.error("(InstaEclipse | StoryFlipping): Could not turn on disable story flipping: " + e.getClass().getSimpleName() + ": " + e.getMessage());
                 }
             }
         } catch (Exception e) {
-            ModuleLog.line("(InstaEclipse | StoryFlipping): ❌ Error during dynamic method discovery: " + e.getMessage());
+            ModuleLog.error("(InstaEclipse | StoryFlipping): Could not turn on disable story flipping: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 }

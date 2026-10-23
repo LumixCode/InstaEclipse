@@ -45,7 +45,8 @@ public class ViewOnceBadgeHook {
             Method cached = DexKitCache.loadMethod("ViewOnceBadge", classLoader);
             if (cached != null) {
                 XposedBridge.hookMethod(cached, hook);
-                ModuleLog.line("(IE|VOBadge) ✅ hooked (cached): "
+                ModuleLog.ok("(IE|VOBadge) ready");
+                ModuleLog.detail("(IE|VOBadge) hooked (cached): "
                         + cached.getDeclaringClass().getName());
                 FeatureStatusTracker.setHooked("PermanentViewMode");
                 return;
@@ -60,7 +61,8 @@ public class ViewOnceBadgeHook {
                             .name("<init>")
                             .usingStrings("once", "replayable")));
             if (methods.isEmpty()) {
-                ModuleLog.line("(IE|VOBadge) ❌ view-once props ctor not found");
+                ModuleLog.warn("(IE|VOBadge) The view-once icon is not shown on this Instagram version (the media still stays viewable)");
+                ModuleLog.detail("(IE|VOBadge) view-once props ctor not found");
                 return;
             }
             // PROBE build: hook EVERY match (ctor or method). The body is gated on
@@ -73,20 +75,22 @@ public class ViewOnceBadgeHook {
                             ? md.getConstructorInstance(classLoader)
                             : md.getMethodInstance(classLoader);
                     XposedBridge.hookMethod((java.lang.reflect.Member) member, hook);
-                    ModuleLog.line("(IE|VOBadge) ✅ hooked " + md.getClassName()
+                    ModuleLog.detail("(IE|VOBadge) hooked " + md.getClassName()
                             + (md.isConstructor() ? ".<init>" : "." + md.getName()));
                     hooked++;
                 } catch (Throwable e) {
-                    ModuleLog.line("(IE|VOBadge) ⚠️ skip " + md.getClassName() + ": " + e);
+                    ModuleLog.detail("(IE|VOBadge) skip " + md.getClassName() + ": " + e);
                 }
             }
             if (hooked == 0) {
-                ModuleLog.line("(IE|VOBadge) ❌ props ctor found but none reflectable");
+                ModuleLog.warn("(IE|VOBadge) The view-once icon is not shown on this Instagram version (the media still stays viewable)");
+                ModuleLog.detail("(IE|VOBadge) props ctor found but none reflectable");
                 return;
             }
+            ModuleLog.ok("(IE|VOBadge) ready");
             FeatureStatusTracker.setHooked("PermanentViewMode");
         } catch (Throwable t) {
-            ModuleLog.line("(IE|VOBadge) ❌ " + t);
+            ModuleLog.warn("(IE|VOBadge) The view-once icon could not be set up (the media still stays viewable)", t);
         }
     }
 
@@ -121,7 +125,7 @@ public class ViewOnceBadgeHook {
                     ModuleLog.probe("(IE|VOBadge|PROBE) resolved=" + args[modeIdx]
                             + " match=" + (original != null) + " candLongs=" + candidates);
                 } catch (Throwable t) {
-                    ModuleLog.line("(IE|VOBadge) ❌ hook body: " + t);
+                    ModuleLog.detail("(IE|VOBadge) badge update failed: " + t);
                 }
             }
         };

@@ -57,7 +57,7 @@ public class ReelDownloadHook {
                         onOptionsBuilt(param);
                     }
                 });
-                ModuleLog.line("(IE|Reel) ✅ hooked: " + hookMethod.getDeclaringClass().getName() + "." + hookMethod.getName());
+                ModuleLog.detail("(IE|Reel) legacy reel menu hooked: " + hookMethod.getDeclaringClass().getName() + "." + hookMethod.getName());
                 return;
             }
         }
@@ -68,7 +68,7 @@ public class ReelDownloadHook {
                             .usingStrings("ClipsOrganicMediaItemViewMoreOptionsController")));
 
             if (methods.isEmpty()) {
-                ModuleLog.line("(IE|Reel) ❌ ClipsOrganicMediaItemViewMoreOptionsController not found");
+                ModuleLog.detail("(IE|Reel) ClipsOrganicMediaItemViewMoreOptionsController not found (older reel menu not in this build)");
                 return;
             }
 
@@ -79,7 +79,7 @@ public class ReelDownloadHook {
                 try { candidates.add(md.getMethodInstance(classLoader).getDeclaringClass()); }
                 catch (Throwable ignored) {}
             }
-            ModuleLog.line("(IE|Reel) string matches=" + methods.size()
+            ModuleLog.detail("(IE|Reel) string matches=" + methods.size()
                     + " candidateClasses=" + candidates.size());
 
             // Options-builder: void(com.instagram.feed.media.Media, <ButtonAdder>), where the
@@ -100,7 +100,7 @@ public class ReelDownloadHook {
                     if (hasButtonAdderMethod(params[1])) { target = m; break; }
                 }
                 if (voidMedia > 0) {
-                    ModuleLog.line("(IE|Reel) candidate " + cand.getName()
+                    ModuleLog.detail("(IE|Reel) candidate " + cand.getName()
                             + " void(Media,X)=" + voidMedia);
                 }
                 if (target != null) { controllerClass = cand; break; }
@@ -127,10 +127,10 @@ public class ReelDownloadHook {
                     onOptionsBuilt(param);
                 }
             });
-            ModuleLog.line("(IE|Reel) ✅ hooked: " + hookMethod.getDeclaringClass().getName() + "." + hookMethod.getName());
+            ModuleLog.detail("(IE|Reel) legacy reel menu hooked: " + hookMethod.getDeclaringClass().getName() + "." + hookMethod.getName());
 
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Reel) ❌ install: " + t);
+            ModuleLog.warn("(IE|Reel) The older reel menu may not show Download: " + t);
         }
     }
 
@@ -178,7 +178,7 @@ public class ReelDownloadHook {
                 else if (n.equals(PostDownloadContextMenuHook.SPEED_CARRIER)) speedOption = v;
             }
             if (downloadOption == null && copyLinkOption == null) {
-                ModuleLog.line("(IE|Reel) ❌ DOWNLOAD/COPY_LINK enum values not found");
+                ModuleLog.error("(IE|Reel) Download and copy link will not appear in the reel menu: their menu entries were not found in this Instagram version");
                 return;
             }
             final Object download = downloadOption;
@@ -204,7 +204,7 @@ public class ReelDownloadHook {
                             if (wantSpeed && !mutable.contains(speedRow)) mutable.add(speedRow);
                         }
                     } catch (Throwable t) {
-                        ModuleLog.line("(IE|Reel) ❌ options-list patch failed: " + t);
+                        ModuleLog.warn("(IE|Reel) Could not add the rows to this reel menu: " + t);
                     }
                 }
             };
@@ -226,7 +226,8 @@ public class ReelDownloadHook {
                             .addUsingField(optionDesc + "->UNSAVE:" + optionDesc)));
 
             if (methods.isEmpty()) {
-                ModuleLog.line("(IE|Reel) ⚠️ Reduced options-list builder not found");
+                ModuleLog.warn("(IE|Reel) The reel menu may not show the added rows in this Instagram version");
+                ModuleLog.detail("(IE|Reel) Reduced options-list builder not found");
                 return;
             }
 
@@ -235,11 +236,12 @@ public class ReelDownloadHook {
             XposedBridge.hookMethod(target, hook);
             DexKitCache.saveMethod("ReelOptionsListBuilder", target);
             FeatureStatusTracker.setHooked("ReelDownload");
-            ModuleLog.line("(IE|Reel) ✅ Options-list patch hooked: " +
+            ModuleLog.ok("(IE|Reel) ready");
+            ModuleLog.detail("(IE|Reel) Options-list patch hooked: " +
                     target.getDeclaringClass().getName() + "." + target.getName());
 
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Reel) ❌ installReduceOptionsListPatch: " + t);
+            ModuleLog.error("(IE|Reel) Could not add rows to the reel menu", t);
         }
     }
 
@@ -304,11 +306,11 @@ public class ReelDownloadHook {
             XposedBridge.hookMethod(target, hook);
             DexKitCache.saveMethod(cacheKey, target);
             FeatureStatusTracker.setHooked("ReelDownload");
-            ModuleLog.line("(IE|Reel) ✅ Gate unlocked: " +
+            ModuleLog.detail("(IE|Reel) Gate unlocked: " +
                     target.getDeclaringClass().getName() + "." + target.getName() + " -> " + forcedResult);
 
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Reel) ❌ installGateHook(" + cacheKey + "): " + t);
+            ModuleLog.detail("(IE|Reel) installGateHook(" + cacheKey + "): " + t);
         }
     }
 
@@ -501,7 +503,7 @@ public class ReelDownloadHook {
                 }
             }
             if (activityField == null) {
-                ModuleLog.line("(IE|Reel) ❌ no Activity field on controller");
+                ModuleLog.warn("(IE|Reel) Could not add Download to this reel menu: the screen was not found");
                 return;
             }
 
@@ -522,7 +524,7 @@ public class ReelDownloadHook {
                 }
             }
             if (buttonAdderMethod == null) {
-                ModuleLog.line("(IE|Reel) ❌ buttonAdderMethod not found");
+                ModuleLog.warn("(IE|Reel) Could not add Download to this reel menu: the menu's add-row function was not found");
                 return;
             }
 
@@ -536,7 +538,7 @@ public class ReelDownloadHook {
                     I18n.t(activity, R.string.ig_dl_title), icon);
 
         } catch (Throwable t) {
-            ModuleLog.line("(IE|Reel) ❌ onOptionsBuilt: " + t);
+            ModuleLog.warn("(IE|Reel) Could not add Download to this reel menu: " + t);
         }
     }
 

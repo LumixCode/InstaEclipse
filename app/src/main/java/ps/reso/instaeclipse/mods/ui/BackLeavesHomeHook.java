@@ -40,7 +40,7 @@ public final class BackLeavesHomeHook {
                 try { back = c.getDeclaredMethod("onBackPressed"); } catch (NoSuchMethodException ignored) { }
             }
             if (back == null) {
-                ModuleLog.line(TAG + "❌ onBackPressed not found");
+                ModuleLog.error(TAG + "Will not work: the Back button handler was not found in this Instagram version");
                 return;
             }
             XposedBridge.hookMethod(back, new XC_MethodHook() {
@@ -56,9 +56,10 @@ public final class BackLeavesHomeHook {
                 }
             });
             FeatureStatusTracker.setHooked("BackLeavesHome");
-            ModuleLog.line(TAG + "✅ " + back.getDeclaringClass().getName() + ".onBackPressed");
+            ModuleLog.ok(TAG + "ready");
+            ModuleLog.detail(TAG + "hooked " + back.getDeclaringClass().getName() + ".onBackPressed");
         } catch (Throwable t) {
-            ModuleLog.line(TAG + "❌ " + t);
+            ModuleLog.error(TAG + "Will not work: setup failed", t);
         }
     }
 

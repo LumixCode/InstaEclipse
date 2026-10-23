@@ -89,7 +89,8 @@ public class DisableDoubleTapLikeHook {
                 cachedReelsHooked = hookMethods(reelsGestureCached, REELS_GESTURE_HOOK) > 0;
 
             if (cachedFeedHooked && cachedReelsHooked) {
-                ModuleLog.line("(InstaEclipse | DoubleTapLike): Hooked (cached)");
+                ModuleLog.ok("(InstaEclipse | DoubleTapLike): Ready");
+                ModuleLog.detail("(InstaEclipse | DoubleTapLike): hooked from the DexKit cache");
                 FeatureStatusTracker.setHooked("DisableDoubleTapLike");
                 return;
             }
@@ -97,7 +98,7 @@ public class DisableDoubleTapLikeHook {
         try {
             findAndHook(bridge, classLoader, cachedFeedHooked, cachedReelsHooked);
         } catch (Exception e) {
-            ModuleLog.line("(InstaEclipse | DoubleTapLike): " + e.getMessage());
+            ModuleLog.error("(InstaEclipse | DoubleTapLike): Could not turn on blocking double-tap likes: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             if (FeatureFlags.disableDoubleTapLike) FeatureStatusTracker.setBroken("DisableDoubleTapLike");
         }
     }
@@ -137,17 +138,17 @@ public class DisableDoubleTapLikeHook {
                     if (!splitAnchors) DexKitCache.saveMethod("DoubleTapLike", method);
                     if (hookMethod(method, HOOK)) {
                         feedHooked = true;
-                        ModuleLog.line("(InstaEclipse | DoubleTapLike): Feed hooked on " + md.getClassName() + "." + md.getMethodName());
+                        ModuleLog.detail("(InstaEclipse | DoubleTapLike): Feed hooked on " + md.getClassName() + "." + md.getMethodName());
                         if (!splitAnchors) break;
                         splitHooked.add(method);
                     }
                 } catch (Exception e) {
-                    ModuleLog.line("(InstaEclipse | DoubleTapLike): Feed: " + e.getMessage());
+                    ModuleLog.detail("(InstaEclipse | DoubleTapLike): Feed: " + e.getMessage());
                 }
             }
             if (!splitHooked.isEmpty()) DexKitCache.saveMethods(CACHE_FEED_SPLIT, splitHooked);
             if (feedMethods.isEmpty()) {
-                ModuleLog.line("(InstaEclipse | DoubleTapLike): Feed method not found");
+                ModuleLog.warn("(InstaEclipse | DoubleTapLike): Double-tap likes on feed posts cannot be blocked in this Instagram version");
             }
         }
 
@@ -159,7 +160,7 @@ public class DisableDoubleTapLikeHook {
                     Method m = md.getMethodInstance(classLoader);
                     if (hookMethod(m, HOOK)) {
                         reelLike.add(m);
-                        ModuleLog.line("(InstaEclipse | DoubleTapLike): Reels like action hooked on " + md.getClassName() + "." + md.getMethodName());
+                        ModuleLog.detail("(InstaEclipse | DoubleTapLike): Reels like action hooked on " + md.getClassName() + "." + md.getMethodName());
                     }
                 }
                 if (!reelLike.isEmpty()) {
@@ -167,7 +168,7 @@ public class DisableDoubleTapLikeHook {
                     reelsHooked = true;
                 }
             } catch (Throwable e) {
-                ModuleLog.line("(InstaEclipse | DoubleTapLike): Reels like action: " + e.getMessage());
+                ModuleLog.detail("(InstaEclipse | DoubleTapLike): Reels like action: " + e.getMessage());
             }
         }
 
@@ -176,7 +177,7 @@ public class DisableDoubleTapLikeHook {
             if (hookMethods(reelsGestureMethods, REELS_GESTURE_HOOK) > 0) {
                 DexKitCache.saveMethods("DoubleTapLikeReelsGestures", reelsGestureMethods);
                 reelsHooked = true;
-                ModuleLog.line("(InstaEclipse | DoubleTapLike): Reels gesture callbacks hooked: " + reelsGestureMethods.size());
+                ModuleLog.detail("(InstaEclipse | DoubleTapLike): Reels gesture callbacks hooked: " + reelsGestureMethods.size());
             }
         }
 
@@ -199,18 +200,19 @@ public class DisableDoubleTapLikeHook {
                         if (hookMethod(method, HOOK)) {
                             DexKitCache.saveMethod("DoubleTapLikeReels", method);
                             reelsHooked = true;
-                            ModuleLog.line("(InstaEclipse | DoubleTapLike): Reels legacy hooked on " + cd.getName() + "." + md.getMethodName());
+                            ModuleLog.detail("(InstaEclipse | DoubleTapLike): Reels legacy hooked on " + cd.getName() + "." + md.getMethodName());
                         }
                     } catch (Exception e) {
-                        ModuleLog.line("(InstaEclipse | DoubleTapLike): Reels: " + e.getMessage());
+                        ModuleLog.detail("(InstaEclipse | DoubleTapLike): Reels: " + e.getMessage());
                     }
                 }
             }
         }
         if (!reelsHooked) {
-            ModuleLog.line("(InstaEclipse | DoubleTapLike): Reels entry not found");
+            ModuleLog.warn("(InstaEclipse | DoubleTapLike): Double-tap likes on Reels cannot be blocked in this Instagram version");
         }
         if (feedHooked && reelsHooked) {
+            ModuleLog.ok("(InstaEclipse | DoubleTapLike): Ready");
             FeatureStatusTracker.setHooked("DisableDoubleTapLike");
         } else if (FeatureFlags.disableDoubleTapLike) {
             FeatureStatusTracker.setBroken("DisableDoubleTapLike");
@@ -282,10 +284,10 @@ public class DisableDoubleTapLikeHook {
             }
             hookedMethods.add(signature(setter));
             hookedMethods.add(signature(action));
-            ModuleLog.line("(InstaEclipse | DoubleTapLike): Reels like action bound");
+            ModuleLog.detail("(InstaEclipse | DoubleTapLike): Reels like action bound");
             return true;
         } catch (Throwable ignored) {
-            ModuleLog.line("(InstaEclipse | DoubleTapLike): Scoped Reels action unavailable");
+            ModuleLog.detail("(InstaEclipse | DoubleTapLike): Scoped Reels action unavailable");
             return false;
         }
     }
@@ -377,11 +379,11 @@ public class DisableDoubleTapLikeHook {
                         methods.add(method);
                     }
                 } catch (Throwable e) {
-                    ModuleLog.line("(InstaEclipse | DoubleTapLike): Reels gesture candidate skipped: " + e.getMessage());
+                    ModuleLog.detail("(InstaEclipse | DoubleTapLike): Reels gesture candidate skipped: " + e.getMessage());
                 }
             }
         } catch (Throwable e) {
-            ModuleLog.line("(InstaEclipse | DoubleTapLike): Reels gesture search failed: " + e.getMessage());
+            ModuleLog.detail("(InstaEclipse | DoubleTapLike): Reels gesture search failed: " + e.getMessage());
         }
         return methods;
     }
@@ -396,7 +398,7 @@ public class DisableDoubleTapLikeHook {
             hookedMethods.add(key);
             return true;
         } catch (Throwable e) {
-            ModuleLog.line("(InstaEclipse | DoubleTapLike): Hook failed: " + e.getMessage());
+            ModuleLog.detail("(InstaEclipse | DoubleTapLike): Hook failed: " + e.getMessage());
             return false;
         }
     }
