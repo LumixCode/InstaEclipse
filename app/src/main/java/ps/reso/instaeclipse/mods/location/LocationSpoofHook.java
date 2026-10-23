@@ -3,11 +3,15 @@ package ps.reso.instaeclipse.mods.location;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.Parcel;
 import android.os.SystemClock;
 
 import java.lang.reflect.Method;
 import java.util.Random;
+import java.util.concurrent.Executor;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -41,6 +45,7 @@ public class LocationSpoofHook {
     private static final String TAG = "(InstaEclipse | SpoofLocation): ";
     private static volatile boolean sHooked = false;
     private static final Random RANDOM = new Random();
+    private static final LocationDelivery.Nesting NESTING = new LocationDelivery.Nesting();
 
     public void install(ClassLoader classLoader) {
         if (sHooked) return;
@@ -72,7 +77,8 @@ public class LocationSpoofHook {
         XposedBridge.hookMethod(create, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (spoofing() && param.getResult() instanceof Location) apply((Location) param.getResult());
+                if (spoofing() && param.getResult() instanceof Location loc
+                        && LocationDelivery.rewritesUnparcelled(loc.getProvider(), isSpoofed(loc))) apply(loc);
             }
         });
     }
@@ -106,6 +112,22 @@ public class LocationSpoofHook {
     }
 
     private static void hookManager() {
+        XC_MethodHook request = new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                NESTING.enter();
+            }
+
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                boolean outermost = NESTING.exit();
+                if (!spoofing()) return;
+                if (param.getThrowable() instanceof SecurityException) param.setResult(null);
+                if (!outermost) return;
+                LocationListener listener = findListener(param.args);
+                if (listener != null) deliver(param.args, listener);
+            }
+        };
         for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(LocationManager.class)) {
             switch (m.getName()) {
                 case "getLastKnownLocation":
@@ -123,23 +145,7 @@ public class LocationSpoofHook {
                     break;
                 case "requestLocationUpdates":
                 case "requestSingleUpdate":
-                    // Deliver a fix right away; real ones that follow are rewritten by
-                    // hookUnparcel(). Without the real permission the platform throws, which
-                    // is swallowed so the app keeps working with the spoofed fix alone.
-                    XposedBridge.hookMethod(m, new XC_MethodHook() {
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                            if (!spoofing()) return;
-                            if (param.getThrowable() instanceof SecurityException) param.setResult(null);
-                            LocationListener listener = findListener(param.args);
-                            if (listener == null) return;
-                            try {
-                                listener.onLocationChanged(fakeLocation(LocationManager.GPS_PROVIDER));
-                            } catch (Throwable ignored) {
-                                // listener threw on our fix; the real delivery still follows
-                            }
-                        }
-                    });
+                    XposedBridge.hookMethod(m, request);
                     break;
                 case "getCurrentLocation":
                     // (provider[/request], CancellationSignal, Executor, Consumer<Location>)
@@ -255,9 +261,10 @@ public class LocationSpoofHook {
         for (String name : CELL_IDENTITIES) {
             try {
                 Class<?> c = Class.forName(name);
+                Method[] methods = ps.reso.instaeclipse.utils.core.SafeReflect.methods(c);
                 for (String getter : CELL_ID_GETTERS) {
-                    hookNamed(c, getter, int.class, unavailable);
-                    hookNamed(c, getter, long.class, unavailable);
+                    hookNamed(c, methods, getter, int.class, unavailable);
+                    hookNamed(c, methods, getter, long.class, unavailable);
                 }
             } catch (Throwable ignored) {
                 // CellIdentityNr is API 29+
@@ -290,7 +297,11 @@ public class LocationSpoofHook {
 
     /** Hooks each concrete method of {@code c} named {@code name} that returns {@code type}. */
     private static void hookNamed(Class<?> c, String name, Class<?> type, XC_MethodHook hook) {
-        for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(c)) {
+        hookNamed(c, ps.reso.instaeclipse.utils.core.SafeReflect.methods(c), name, type, hook);
+    }
+
+    private static void hookNamed(Class<?> c, Method[] methods, String name, Class<?> type, XC_MethodHook hook) {
+        for (Method m : methods) {
             if (!m.getName().equals(name) || m.getReturnType() != type
                     || java.lang.reflect.Modifier.isAbstract(m.getModifiers())) continue;
             try {
@@ -299,6 +310,22 @@ public class LocationSpoofHook {
                 ModuleLog.warn(TAG + "One source of nearby Wi-Fi, cell or Bluetooth info cannot be hidden; the others still are");
                 ModuleLog.detail(TAG + "nearby-signal hook failed: " + c.getSimpleName() + "." + name + ": " + t);
             }
+        }
+    }
+
+    private static void deliver(Object[] args, LocationListener listener) {
+        Location fix = fakeLocation(LocationManager.GPS_PROVIDER);
+        Runnable send = () -> {
+            try {
+                listener.onLocationChanged(fix);
+            } catch (Throwable ignored) {}
+        };
+        try {
+            Object target = LocationDelivery.target(args, Looper.class, Looper.myLooper(), Looper.getMainLooper());
+            if (target instanceof Executor executor) executor.execute(send);
+            else if (target instanceof Looper looper) new Handler(looper).post(send);
+        } catch (Throwable t) {
+            ModuleLog.detail(TAG + "could not hand out the spoofed fix: " + t);
         }
     }
 
@@ -331,11 +358,7 @@ public class LocationSpoofHook {
         loc.setLatitude(p[0]);
         loc.setLongitude(p[1]);
         loc.setAccuracy(6f + RANDOM.nextFloat() * 10f);
-        try {
-            Location.class.getMethod("setMock", boolean.class).invoke(loc, false); // API 31+
-        } catch (Throwable ignored) {
-            // older platform: isFromMockProvider() is hooked instead
-        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) loc.setMock(false);
         android.os.Bundle extras = loc.getExtras() != null ? new android.os.Bundle(loc.getExtras()) : new android.os.Bundle();
         extras.remove("mockLocation");
         extras.putBoolean(MARK, true);
