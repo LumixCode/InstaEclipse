@@ -12,6 +12,7 @@ import java.util.List;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.HookTargetGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
@@ -79,10 +80,9 @@ public class DoubleTapExtrasHook {
             for (MethodData getter : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .returnType("java.lang.String").paramTypes("com.instagram.common.session.UserSession", "int")
                     .usingStrings("❤")))) {
-                for (MethodData caller : DexKitQueryCache.callers(bridge, getter)) {
-                    if (caller.isMethod() && "void".equals(caller.getReturnTypeName())) {
-                        out.add(caller.getMethodInstance(cl));
-                    }
+                for (MethodData caller : DoubleTapCache.senders(DexKitQueryCache.callers(bridge, getter),
+                        c -> c.isMethod() && "void".equals(c.getReturnTypeName()), c -> mergedLambda(c, cl))) {
+                    out.add(caller.getMethodInstance(cl));
                 }
             }
             return out;
@@ -117,13 +117,23 @@ public class DoubleTapExtrasHook {
             if ("missing".equals(DexKitCache.loadString(key))) return new ArrayList<>();
         }
         List<Method> found = new ArrayList<>();
+        boolean returned = false;
         try {
             found = finder.find();
+            returned = true;
         } catch (Throwable t) {
             ModuleLog.detail(TAG + key + " lookup failed: " + t);
         }
-        if (found.isEmpty()) DexKitCache.saveString(key, "missing");
-        else DexKitCache.saveMethods(key, found);
+        if (DoubleTapCache.shouldStoreMissing(returned, found.size())) DexKitCache.saveString(key, "missing");
+        else if (!found.isEmpty()) DexKitCache.saveMethods(key, found);
         return found;
+    }
+
+    private static boolean mergedLambda(MethodData method, ClassLoader cl) {
+        try {
+            return HookTargetGuard.isMergedLambda(cl.loadClass(method.getClassName()), method.getOpCodes());
+        } catch (Throwable t) {
+            return false;
+        }
     }
 }
