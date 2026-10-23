@@ -181,6 +181,7 @@ public class HomeFragment extends Fragment implements TabFragment {
     private String activeVersionName;
     private List<String> installedPackages;
     private boolean moduleConfirmed;
+    private boolean restarting;
     private boolean pingReceiverRegistered;
 
     private AutoScroller contributorsScroller;
@@ -322,14 +323,7 @@ public class HomeFragment extends Fragment implements TabFragment {
     private void checkInstagramStatus() {
         PackageManager pm = requireContext().getPackageManager();
 
-        installedPackages = new ArrayList<>();
-        for (String pkg : CommonUtils.SUPPORTED_PACKAGES) {
-            try {
-                pm.getPackageInfo(pkg, 0);
-                installedPackages.add(pkg);
-            } catch (PackageManager.NameNotFoundException ignored) {
-            }
-        }
+        installedPackages = InstagramRestarter.installedPackages(requireContext());
 
         if (installedPackages.isEmpty()) {
             activePackage = null;
@@ -350,21 +344,14 @@ public class HomeFragment extends Fragment implements TabFragment {
             return;
         }
 
-        String remembered = uiPrefs.getString(CompanionUiPrefs.INSTAGRAM_PACKAGE, null);
-        if (remembered != null && installedPackages.contains(remembered)) {
-            activePackage = remembered;
-        } else {
-            activePackage = installedPackages.contains(CommonUtils.IG_PACKAGE_NAME)
-                    ? CommonUtils.IG_PACKAGE_NAME
-                    : installedPackages.get(0);
-        }
+        activePackage = InstagramRestarter.activePackage(requireContext(), installedPackages);
 
         instagramLogo.setImageResource(R.drawable.ic_instagram_logo);
         applyTonalSquare(logoContainer, instagramLogo, COLOR_INSTAGRAM);
         instagramVariantText.setVisibility(View.VISIBLE);
         instagramInfoIcon.setVisibility(View.VISIBLE);
         launchInstagramButton.setEnabled(true);
-        restartInstagramButton.setEnabled(true);
+        restartInstagramButton.setEnabled(!restarting);
         setupOpenButton.setEnabled(true);
 
         if (installedPackages.size() > 1) {
@@ -522,15 +509,14 @@ public class HomeFragment extends Fragment implements TabFragment {
     // =========================================================
 
     private void restartInstagram() {
-        final String pkg = activePackage;
-        if (pkg == null) {
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.not_installed_instagram), Toast.LENGTH_SHORT).show();
-            return;
-        }
+        restarting = true;
         restartInstagramButton.setEnabled(false);
-        InstagramRestarter.restart(requireActivity(), pkg, outcome -> {
+        restartInstagramButton.setText(R.string.home_restarting);
+        InstagramRestarter.restart(requireActivity(), activePackage, outcome -> {
+            restarting = false;
             if (!isAdded() || getView() == null) return;
-            restartInstagramButton.setEnabled(true);
+            restartInstagramButton.setText(R.string.home_action_restart);
+            restartInstagramButton.setEnabled(activePackage != null);
             if (outcome == RestartDecision.Outcome.RELAUNCH) {
                 moduleConfirmed = false;
                 updateStatusPill();

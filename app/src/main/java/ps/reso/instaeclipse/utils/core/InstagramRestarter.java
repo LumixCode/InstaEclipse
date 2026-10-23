@@ -1,13 +1,17 @@
 package ps.reso.instaeclipse.utils.core;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import ps.reso.instaeclipse.R;
@@ -23,9 +27,25 @@ public final class InstagramRestarter {
 
     private InstagramRestarter() {}
 
+    public static List<String> installedPackages(Context context) {
+        PackageManager pm = context.getPackageManager();
+        List<String> out = new ArrayList<>();
+        for (String pkg : CommonUtils.SUPPORTED_PACKAGES) {
+            if (isInstalled(pm, pkg)) out.add(pkg);
+        }
+        return out;
+    }
+
+    public static String activePackage(Context context, List<String> installed) {
+        if (installed.isEmpty()) return null;
+        String remembered = CompanionUiPrefs.get(context).getString(CompanionUiPrefs.INSTAGRAM_PACKAGE, null);
+        if (remembered != null && installed.contains(remembered)) return remembered;
+        return installed.contains(CommonUtils.IG_PACKAGE_NAME) ? CommonUtils.IG_PACKAGE_NAME : installed.get(0);
+    }
+
     public static void restart(Activity activity, String pkg, Callback callback) {
         Handler main = new Handler(Looper.getMainLooper());
-        if (pkg == null) {
+        if (pkg == null || !isInstalled(activity.getPackageManager(), pkg)) {
             finish(activity, null, RestartDecision.decide(null, null), callback, main);
             return;
         }
@@ -60,14 +80,20 @@ public final class InstagramRestarter {
                     activity.startActivity(intent);
                 } catch (Throwable ignored) { }
                 break;
-            case MANUAL_TOAST:
-                IeToast.makeText(activity, activity.getString(R.string.ig_toast_restart_manual), Toast.LENGTH_LONG).show();
-                break;
-            default:
+            case NOT_INSTALLED:
                 IeToast.makeText(activity, activity.getString(R.string.not_installed_instagram), Toast.LENGTH_SHORT).show();
                 break;
         }
         callback.onDone(outcome);
+    }
+
+    private static boolean isInstalled(PackageManager pm, String pkg) {
+        try {
+            pm.getPackageInfo(pkg, 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
     }
 
     private static void launch(Activity activity, String pkg) {

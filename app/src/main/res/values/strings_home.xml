@@ -43,4 +43,5 @@
     <string name="home_setup_step_3" tools:ignore="MissingTranslation">In Instagram, press and hold the Search tab at the bottom.</string>
     <string name="home_setup_open_instagram" tools:ignore="MissingTranslation">Open Instagram</string>
     <string name="home_setup_got_it" tools:ignore="MissingTranslation">Got it</string>
+    <string name="home_restarting" tools:ignore="MissingTranslation">Restarting…</string>
 </resources>

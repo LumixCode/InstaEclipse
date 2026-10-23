@@ -943,9 +943,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return item;
     }
 
-    /** Tools action row: own accent, normal title colour, a one-line description and an arrow. */
     private FeatureItem createTool(int iconRes, String accentHex, String title, String subtitle, Runnable onClick) {
         FeatureItem item = createNav(iconRes, accentHex, title, onClick);
+        item.isNav = false;
         item.subtitle = subtitle;
         return item;
     }
@@ -2747,7 +2747,10 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     }
 
     private void restartInstagram() {
-        ps.reso.instaeclipse.utils.core.InstagramRestarter.restart(requireActivity(), null, outcome -> { });
+        String pkg = ps.reso.instaeclipse.utils.core.InstagramRestarter.activePackage(requireContext(),
+                ps.reso.instaeclipse.utils.core.InstagramRestarter.installedPackages(requireContext()));
+        ps.reso.instaeclipse.utils.core.InstagramRestarter.restart(requireActivity(),
+                pkg != null ? pkg : ps.reso.instaeclipse.utils.core.CommonUtils.IG_PACKAGE_NAME, outcome -> { });
     }
 
     private void importDevConfig() {
