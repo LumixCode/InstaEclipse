@@ -7,6 +7,7 @@ import java.util.function.Predicate;
 
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
+import ps.reso.instaeclipse.utils.ghost.SeenPause;
 
 public final class NetworkDropRules {
     private NetworkDropRules() {}
@@ -16,7 +17,7 @@ public final class NetworkDropRules {
         if (FeatureFlags.disableSearchHistory) {
             shouldDrop |= path.contains("/fbsearch/register_recent_search_click/");
         }
-        if (FeatureFlags.isGhostSeen) {
+        if (SeenPause.blocks(FeatureFlags.isGhostSeen)) {
             shouldDrop |= path.contains("/threads/") && path.contains("/opened")
                     && !chatAllowed.test(path);
         }

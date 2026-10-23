@@ -5,15 +5,13 @@ import android.content.Context;
 import android.view.View;
 import android.view.ViewParent;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
+import ps.reso.instaeclipse.utils.ghost.HeaderButtonKind;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
@@ -30,8 +28,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 public final class CallConfirmHook {
 
     private static final String TAG = "(IE|CallConfirm) ";
-    private static final int KIND_TAG = 0x7e1e0277;
-    private static final String NONE = "";
 
     private static int headerButtonsId = -1;
     /** The view whose replayed tap must go through. */
@@ -48,11 +44,11 @@ public final class CallConfirmHook {
                     View v = (View) param.thisObject;
                     if (v == passThrough) { passThrough = null; return; }
                     if (!inHeaderButtons(v)) return;
-                    String kind = kind(v);
-                    if (kind.equals(NONE)) return;
+                    String kind = HeaderButtonKind.kind(v);
+                    if (!kind.equals(HeaderButtonKind.AUDIO_CALL) && !kind.equals(HeaderButtonKind.VIDEO_CALL)) return;
                     param.setResult(true);
                     ModuleLog.detail(TAG + "held " + kind + " until confirmed");
-                    ask(v, kind.equals("VIDEO_CALL"));
+                    ask(v, kind.equals(HeaderButtonKind.VIDEO_CALL));
                 }
             });
             FeatureStatusTracker.setHooked("ConfirmCalls");
@@ -70,45 +66,6 @@ public final class CallConfirmHook {
             headerButtonsId = v.getResources().getIdentifier("header_right_buttons", "id", v.getContext().getPackageName());
         }
         return headerButtonsId != 0 && pv.getId() == headerButtonsId;
-    }
-
-    /** AUDIO_CALL, VIDEO_CALL or NONE, from the enum in the button's click listener (cached). */
-    private static String kind(View v) {
-        Object cached = v.getTag(KIND_TAG);
-        if (cached instanceof String s) return s;
-        String found = NONE;
-        try {
-            Object info = field(View.class, "mListenerInfo", v);
-            Object listener = info != null ? field(info.getClass(), "mOnClickListener", info) : null;
-            found = findCallEnum(listener, 0);
-        } catch (Throwable ignored) {}
-        v.setTag(KIND_TAG, found);
-        return found;
-    }
-
-    private static String findCallEnum(Object o, int depth) throws IllegalAccessException {
-        if (o == null || depth > 3 || o instanceof View || o instanceof Context) return NONE;
-        if (o instanceof Enum<?> e) {
-            String n = e.name();
-            return n.equals("AUDIO_CALL") || n.equals("VIDEO_CALL") ? n : NONE;
-        }
-        String cn = o.getClass().getName();
-        if (!cn.startsWith("X.") && !cn.startsWith("com.instagram.")) return NONE;
-        for (Class<?> k = o.getClass(); k != null && k != Object.class; k = k.getSuperclass()) {
-            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
-                if (Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive() || f.getType() == String.class) continue;
-                f.setAccessible(true);
-                String r = findCallEnum(f.get(o), depth + 1);
-                if (!r.equals(NONE)) return r;
-            }
-        }
-        return NONE;
-    }
-
-    private static Object field(Class<?> c, String name, Object o) throws ReflectiveOperationException {
-        Field f = c.getDeclaredField(name);
-        f.setAccessible(true);
-        return f.get(o);
     }
 
     private static void ask(View button, boolean video) {

@@ -17,6 +17,7 @@ import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
+import ps.reso.instaeclipse.utils.ghost.SeenPause;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
@@ -103,7 +104,7 @@ public class GhostDMMarkAsReadHook {
                 // LayoutManager to the actual bottom
                 group.scrollBy(0, 100_000);
 
-                FeatureFlags.isGhostSeen = false;
+                SeenPause.pause(300);
                 group.scrollBy(0, -200);
 
                 view.postDelayed(() -> {

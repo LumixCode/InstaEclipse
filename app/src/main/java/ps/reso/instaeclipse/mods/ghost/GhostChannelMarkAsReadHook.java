@@ -13,6 +13,8 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
+import ps.reso.instaeclipse.utils.ghost.HeaderButtonKind;
+import ps.reso.instaeclipse.utils.ghost.SeenPause;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
@@ -46,19 +48,8 @@ public class GhostChannelMarkAsReadHook {
 
                     if (sCachedHeaderButtonsId != 0) {
                         View container = view.getRootView().findViewById(sCachedHeaderButtonsId);
-                        if (container instanceof ViewGroup viewGroup) {
-                            for (int i = 0; i < viewGroup.getChildCount(); i++) {
-                                CharSequence description = viewGroup.getChildAt(i).getContentDescription();
-                                if (description != null) {
-                                    String descStr = description.toString().toLowerCase();
-                                    if (descStr.contains("audio call") ||
-                                            descStr.contains("video call") ||
-                                            descStr.contains("blend")) {
-                                        return;
-                                    }
-                                }
-                            }
-                        }
+                        if (container instanceof ViewGroup header && HeaderButtonKind.classify(
+                                HeaderButtonKind.kinds(header)) != HeaderButtonKind.Header.CHANNEL) return;
                     }
                     updateChannelSeen(seenTextView);
                 }
@@ -99,7 +90,7 @@ public class GhostChannelMarkAsReadHook {
             if (messageList instanceof ViewGroup group) {
                 group.scrollBy(0, 100_000);
 
-                FeatureFlags.isGhostSeen = false;
+                SeenPause.pause(400);
                 group.scrollBy(0, -300);
 
                 view.postDelayed(() -> {
