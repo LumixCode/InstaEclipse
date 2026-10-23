@@ -37,6 +37,8 @@ public class LogMirrorProvider extends ContentProvider {
     private static final String DIR = "ig_logs";
     private static final String CRASH_DIR = "ig_crash";
     private static final int MAX_CRASH_FILES = 24;
+    static final long MAX_CRASH_BYTES = 256L * 1024 * 1024;
+    static final long MAX_MIRROR_BYTES = 16L * 1024 * 1024;
 
     /** Directory (in the companion's private storage) holding one mirrored log per package. */
     public static File mirrorDir(Context context) {
@@ -48,13 +50,21 @@ public class LogMirrorProvider extends ContentProvider {
         return new File(context.getFilesDir(), CRASH_DIR);
     }
 
-    /** Keeps the newest {@link #MAX_CRASH_FILES} - 1 files, making room for the one being written. */
     private static void pruneCrashDir(File dir) {
         File[] files = dir.listFiles(File::isFile);
-        if (files == null || files.length < MAX_CRASH_FILES) return;
+        if (files == null) return;
+        long budget = MAX_CRASH_BYTES - CrashForensics.MAX_COPY_BYTES;
+        long total = 0;
+        for (File f : files) total += f.length();
+        int count = files.length;
+        if (count < MAX_CRASH_FILES && total <= budget) return;
         java.util.Arrays.sort(files, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
-        for (int i = MAX_CRASH_FILES - 1; i < files.length; i++) //noinspection ResultOfMethodCallIgnored
-            files[i].delete();
+        for (int i = files.length - 1; i >= 0 && (count >= MAX_CRASH_FILES || total > budget); i--) {
+            long len = files[i].length();
+            if (!files[i].delete()) continue;
+            count--;
+            total -= len;
+        }
     }
 
     @Override
@@ -102,9 +112,9 @@ public class LogMirrorProvider extends ContentProvider {
         File dir = mirrorDir(ctx);
         if (!dir.isDirectory() && !dir.mkdirs()) throw new FileNotFoundException("cannot create " + dir);
         File f = new File(dir, pkg + ".log");
-        // Always append-only for the caller; it truncates with ftruncate() when it rewrites.
+        int truncate = f.length() > MAX_MIRROR_BYTES ? ParcelFileDescriptor.MODE_TRUNCATE : 0;
         return ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_WRITE_ONLY
-                | ParcelFileDescriptor.MODE_CREATE | ParcelFileDescriptor.MODE_APPEND);
+                | ParcelFileDescriptor.MODE_CREATE | ParcelFileDescriptor.MODE_APPEND | truncate);
     }
 
     @Nullable

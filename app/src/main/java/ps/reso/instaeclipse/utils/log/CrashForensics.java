@@ -7,7 +7,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -27,8 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Saves what explains Instagram's last crash into the companion app ({@code files/ig_crash/},
@@ -56,29 +54,37 @@ public final class CrashForensics {
     private static final String HOOKS_DIR = "instaeclipse_hooks";
     /** exit records and dumps older than this are history, not news */
     private static final long MAX_AGE_MS = 7L * 24 * 60 * 60 * 1000;
-    private static final long MAX_COPY_BYTES = 64L * 1024 * 1024;
+    static final long MAX_COPY_BYTES = 64L * 1024 * 1024;
     private static final int MAX_PARSE_BYTES = 16 * 1024 * 1024;
     private static final int MAX_EXITS = 16;
     private static final int MAX_SEEN = 200;
     private static final int KEEP_HOOK_FILES = 6;
-    private static final Pattern GC_BAD_REF = Pattern.compile("GC tried to mark invalid reference 0x([0-9a-f]{1,16})");
 
-    /** "artmethod-hex member" per hook installed in this process */
-    private static final List<String> hookLines = new ArrayList<>();
+    private static final List<Hooked> hooked = new ArrayList<>();
     private static volatile File hooksDir;
-    private static volatile boolean hookWritePending;
+    private static final AtomicBoolean hookWritePending = new AtomicBoolean();
     private static boolean hookListLogged;
     private static Field artMethodField;
     private static volatile String artMethodError;
 
     private CrashForensics() {}
 
+    private static final class Hooked {
+        final Member member;
+        final long artMethod;
+
+        Hooked(Member member, long artMethod) {
+            this.member = member;
+            this.artMethod = artMethod;
+        }
+    }
+
     /** Records a hooked member and its ArtMethod address; called by XposedBridge.hookMethod. */
     public static void noteHook(Member member) {
         try {
-            String line = Long.toHexString(artMethod(member)) + " " + member;
-            synchronized (hookLines) {
-                hookLines.add(line);
+            Hooked h = new Hooked(member, artMethod(member));
+            synchronized (hooked) {
+                hooked.add(h);
             }
             scheduleHookWrite();
         } catch (Throwable ignored) {
@@ -239,23 +245,23 @@ public final class CrashForensics {
             if (r != ApplicationExitInfo.REASON_CRASH_NATIVE && r != ApplicationExitInfo.REASON_ANR) continue;
             String base = stamp(e.getTimestamp()) + "_exit_" + e.getPid();
             String name = base + (r == ApplicationExitInfo.REASON_ANR ? "_anr.txt" : "_tombstone.pb");
-            ByteArrayOutputStream copy = r == ApplicationExitInfo.REASON_CRASH_NATIVE ? new ByteArrayOutputStream() : null;
+            ByteNeedle needle = r == ApplicationExitInfo.REASON_CRASH_NATIVE ? new ByteNeedle(ByteNeedle.GC_BAD_REF) : null;
             try (InputStream in = e.getTraceInputStream()) {
                 if (in == null) {
                     ModuleLog.detail(TAG + "no trace kept for pid " + e.getPid());
                 } else {
-                    long n = save(ctx, name, in, copy);
+                    long n = save(ctx, name, in, needle);
                     ModuleLog.detail(TAG + "saved " + reason(r) + " trace of pid " + e.getPid() + " → ig_crash/" + name + " (" + mb(n) + ")");
                 }
             } catch (Throwable ex) {
                 ModuleLog.detail(TAG + "could not save the trace of pid " + e.getPid() + ": " + ex);
             }
-            if (r == ApplicationExitInfo.REASON_CRASH_NATIVE) diagnose(ctx, hooks, e.getPid(), base, copy);
+            if (needle != null) diagnose(ctx, hooks, e.getPid(), base, needle.hexOrNull());
         }
     }
 
     /** Saves the crashed process's hook list and checks a GC "invalid reference" against it. */
-    private static void diagnose(Context ctx, File hooks, int pid, String base, ByteArrayOutputStream tombstone) {
+    private static void diagnose(Context ctx, File hooks, int pid, String base, String badHex) {
         File list = new File(hooks, pid + ".txt");
         List<String> lines = new ArrayList<>();
         if (list.isFile()) {
@@ -266,10 +272,8 @@ public final class CrashForensics {
             }
             lines = readSeen(list);
         }
-        String raw = tombstone == null ? "" : new String(tombstone.toByteArray(), StandardCharsets.ISO_8859_1);
-        Matcher m = GC_BAD_REF.matcher(raw);
-        if (!m.find()) return;
-        long bad = Long.parseLong(m.group(1), 16) & 0xffffffffL;
+        if (badHex == null) return;
+        long bad = Long.parseUnsignedLong(badHex, 16) & 0xffffffffL;
         String verdict;
         if (lines.isEmpty()) {
             verdict = "no hook list was kept for that process";
@@ -306,14 +310,13 @@ public final class CrashForensics {
     }
 
     private static void scheduleHookWrite() {
-        if (hooksDir == null || hookWritePending) return;
-        hookWritePending = true;
+        if (hooksDir == null || !hookWritePending.compareAndSet(false, true)) return;
         Thread t = new Thread(() -> {
             try {
                 Thread.sleep(3000); // hooks are installed in bursts: write once per burst
             } catch (InterruptedException ignored) {
             }
-            hookWritePending = false;
+            hookWritePending.set(false);
             writeHooks();
         }, "IE-HookList");
         t.setDaemon(true);
@@ -326,9 +329,11 @@ public final class CrashForensics {
         List<String> out = new ArrayList<>();
         out.add("# pid " + android.os.Process.myPid() + " " + stamp(System.currentTimeMillis())
                 + (artMethodError != null ? " artMethod unavailable: " + artMethodError : ""));
-        synchronized (hookLines) {
-            out.addAll(hookLines);
+        List<Hooked> copy;
+        synchronized (hooked) {
+            copy = new ArrayList<>(hooked);
         }
+        for (Hooked h : copy) out.add(Long.toHexString(h.artMethod) + " " + h.member);
         File f = new File(dir, android.os.Process.myPid() + ".txt");
         File tmp = new File(dir, f.getName() + ".tmp");
         try {
@@ -353,29 +358,26 @@ public final class CrashForensics {
             files[i].delete();
     }
 
-    /**
-     * Streams {@code in} into {@code ig_crash/<name>} in the companion, keeping a copy in
-     * {@code tee} (up to {@link #MAX_PARSE_BYTES}) when given; returns the bytes copied. A source
-     * over {@link #MAX_COPY_BYTES} is cut there, and the log says so.
-     */
-    private static long save(Context ctx, String name, InputStream in, ByteArrayOutputStream tee) throws IOException {
+    private static long save(Context ctx, String name, InputStream in, ByteNeedle needle) throws IOException {
         Uri uri = CRASH_URI.buildUpon().appendPath(name).build();
-        long total = 0;
+        ParcelFileDescriptor dup;
         try (ParcelFileDescriptor pfd = ctx.getContentResolver().openFileDescriptor(uri, "w")) {
             if (pfd == null) throw new IOException("companion refused " + name);
-            try (FileOutputStream out = new FileOutputStream(pfd.getFileDescriptor())) {
-                byte[] buf = new byte[64 * 1024];
-                int n;
-                while (total < MAX_COPY_BYTES
-                        && (n = in.read(buf, 0, (int) Math.min(buf.length, MAX_COPY_BYTES - total))) > 0) {
-                    out.write(buf, 0, n);
-                    if (tee != null && tee.size() < MAX_PARSE_BYTES) tee.write(buf, 0, n);
-                    total += n;
-                }
-                out.getFD().sync();
-                if (total >= MAX_COPY_BYTES && in.read() >= 0) {
-                    ModuleLog.detail(TAG + "ig_crash/" + name + " is cut at " + mb(total) + ": the source is larger");
-                }
+            dup = pfd.dup();
+        }
+        long total = 0;
+        try (ParcelFileDescriptor fd = dup; FileOutputStream out = new FileOutputStream(fd.getFileDescriptor())) {
+            byte[] buf = new byte[64 * 1024];
+            int n;
+            while (total < MAX_COPY_BYTES
+                    && (n = in.read(buf, 0, (int) Math.min(buf.length, MAX_COPY_BYTES - total))) > 0) {
+                out.write(buf, 0, n);
+                if (needle != null && total < MAX_PARSE_BYTES) needle.feed(buf, 0, n);
+                total += n;
+            }
+            out.getFD().sync();
+            if (total >= MAX_COPY_BYTES && in.read() >= 0) {
+                ModuleLog.detail(TAG + "ig_crash/" + name + " is cut at " + mb(total) + ": the source is larger");
             }
         }
         return total;
