@@ -12,8 +12,6 @@ import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -45,7 +43,6 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
@@ -53,6 +50,8 @@ import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
 import ps.reso.instaeclipse.utils.core.Contributor;
 import ps.reso.instaeclipse.utils.core.ExportBrand;
 import ps.reso.instaeclipse.utils.core.InstagramCompat;
+import ps.reso.instaeclipse.utils.core.InstagramRestarter;
+import ps.reso.instaeclipse.utils.core.RestartDecision;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.log.LogMirrorProvider;
 
@@ -155,7 +154,6 @@ public class HomeFragment extends Fragment implements TabFragment {
 
     private SharedPreferences localCache;
     private SharedPreferences uiPrefs;
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private MaterialButton launchInstagramButton;
     private MaterialButton restartInstagramButton;
@@ -310,7 +308,6 @@ public class HomeFragment extends Fragment implements TabFragment {
         super.onDestroyView();
         if (contributorsScroller != null) contributorsScroller.stop();
         if (specialThanksScroller != null) specialThanksScroller.stop();
-        mainHandler.removeCallbacksAndMessages(null);
     }
 
     @Override
@@ -524,11 +521,6 @@ public class HomeFragment extends Fragment implements TabFragment {
     // QUICK ACTIONS
     // =========================================================
 
-    /**
-     * FeaturesFragment's "Restart App" only asks the user to kill Instagram manually. Here we
-     * first try a root force-stop + relaunch; without root we fall back to that same message and
-     * open Instagram's App info page, where the Force stop button lives.
-     */
     private void restartInstagram() {
         final String pkg = activePackage;
         if (pkg == null) {
@@ -536,36 +528,15 @@ public class HomeFragment extends Fragment implements TabFragment {
             return;
         }
         restartInstagramButton.setEnabled(false);
-        new Thread(() -> {
-            boolean ok = false;
-            try {
-                Process p = Runtime.getRuntime().exec(new String[]{"su", "-c", "am force-stop " + pkg});
-                if (p.waitFor(15, TimeUnit.SECONDS)) {
-                    ok = p.exitValue() == 0;
-                } else {
-                    p.destroy();
-                }
-            } catch (Throwable ignored) { }
-            final boolean rooted = ok;
-            mainHandler.post(() -> {
-                if (!isAdded() || getView() == null) return;
-                restartInstagramButton.setEnabled(true);
-                if (rooted) {
-                    moduleConfirmed = false;
-                    updateStatusPill();
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.home_restart_done), Toast.LENGTH_SHORT).show();
-                    mainHandler.postDelayed(() -> launchPackage(pkg), 400);
-                } else {
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_toast_restart_manual), Toast.LENGTH_LONG).show();
-                    try {
-                        Intent intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                        intent.setData(Uri.parse("package:" + pkg));
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(intent);
-                    } catch (Throwable ignored) { }
-                }
-            });
-        }, "ie-restart-ig").start();
+        InstagramRestarter.restart(requireActivity(), pkg, outcome -> {
+            if (!isAdded() || getView() == null) return;
+            restartInstagramButton.setEnabled(true);
+            if (outcome == RestartDecision.Outcome.RELAUNCH) {
+                moduleConfirmed = false;
+                updateStatusPill();
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.home_restart_done), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     // =========================================================

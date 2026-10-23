@@ -2747,7 +2747,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     }
 
     private void restartInstagram() {
-        ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_toast_restart_manual), Toast.LENGTH_LONG).show();
+        ps.reso.instaeclipse.utils.core.InstagramRestarter.restart(requireActivity(), null, outcome -> { });
     }
 
     private void importDevConfig() {
