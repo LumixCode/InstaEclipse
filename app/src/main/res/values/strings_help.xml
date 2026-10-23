@@ -15,4 +15,8 @@
     <string name="help_lspatch_sub">Not rooted? Install this</string>
     <string name="help_lspatch_guide">Follow the setup guide</string>
     <string name="about_based_on" tools:ignore="MissingTranslation">Based on InstaEclipse by %1$s</string>
+    <string name="update_check_note" tools:ignore="MissingTranslation">Checks github.com for new InstaEclipse releases at most once a day.</string>
+    <string name="update_whats_new" tools:ignore="MissingTranslation">What\'s new</string>
+    <string name="update_skip_version" tools:ignore="MissingTranslation">Skip this version</string>
+    <string name="links_no_app" tools:ignore="MissingTranslation">No app can open this link</string>
 </resources>

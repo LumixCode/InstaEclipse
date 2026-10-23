@@ -360,6 +360,15 @@
                     android:layout_marginStart="-12dp"
                     app:icon="@drawable/ic_github_logo"
                     app:iconSize="18dp" />
+
+                <TextView
+                    android:id="@+id/update_check_note"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/update_check_note"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

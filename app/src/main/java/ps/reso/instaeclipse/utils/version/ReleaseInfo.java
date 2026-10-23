@@ -16,13 +16,17 @@ public final class ReleaseInfo {
 
     public static ReleaseInfo of(String tag, String url, String body, String repo) {
         if (tag == null) return null;
-        String prefix = "https://github.com/" + repo + "/";
-        String safe = url != null && url.startsWith(prefix) ? url : prefix + "releases/latest";
-        return new ReleaseInfo(tag, safe, body);
+        String version = tag.trim();
+        if (version.startsWith("v") || version.startsWith("V")) version = version.substring(1);
+        if (version.isEmpty()) return null;
+        String releases = "https://github.com/" + repo + "/releases/";
+        String safe = url != null && url.startsWith(releases) ? url : releases + "latest";
+        return new ReleaseInfo(version, safe, body);
     }
 
     public static ReleaseInfo from(Map<String, ?> release, String repo) {
         if (release == null) return null;
+        if (Boolean.TRUE.equals(release.get("draft")) || Boolean.TRUE.equals(release.get("prerelease"))) return null;
         return of(text(release.get("tag_name")), text(release.get("html_url")), text(release.get("body")), repo);
     }
 
