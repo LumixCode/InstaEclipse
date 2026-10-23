@@ -131,54 +131,10 @@ public class RemoveMetaAIHook {
         installReelsOverflowGate(bridge, classLoader);    // reel ⋮ "Ask Meta AI" entrypoint
         installMenuOptionFilter(bridge, classLoader);     // GEN_AI MediaOption rows in overflow menus
         installAddButtonFilter(bridge, classLoader);      // ... and rows added one at a time
-        installSearchSerpMetaAiHcm(bridge, classLoader);  // "Ask Meta AI" card in search results (446+)
         installReelContentDeepDive(bridge, classLoader);  // reel "Ask Meta AI about this" (Content Deep Dive)
     }
 
-    /**
-     * Reel "Ask Meta AI about this" — the Content Deep Dive prompt/entry (446+, Litho; appears in the
-     * reel more-options sheet and as a pill). It is NOT a MediaOption row, so the menu-option filter
-     * can't reach it. Kill it at the data layer instead: force its eligibility gate
-     * (ClipsMediaInfoComponent.shouldShowContentDeepDivePrompt) to false and no-op its prompt-data
-     * fetcher — with no eligibility and no prompt data, neither the pill nor the menu entry is built.
-     * Anchored on stable trace-marker strings (classes are obfuscated). Both are gated on the flag.
-     */
     private void installReelContentDeepDive(DexKitBridge bridge, ClassLoader cl) {
-        // Gate: shouldShowContentDeepDivePrompt(...) -> force false. Return type may be boolean OR
-        // boxed Boolean, so decide at runtime from the hooked method's actual return type (never
-        // clobber a non-boolean return).
-        XC_MethodHook forceFalse = new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
-                if (!FeatureFlags.removeMetaAI) return;
-                try {
-                    Class<?> rt = ((java.lang.reflect.Method) p.method).getReturnType();
-                    if (rt == boolean.class || rt == Boolean.class) p.setResult(false);
-                } catch (Throwable ignored) {}
-            }
-        };
-        hookByMarker(bridge, cl, forceFalse,
-                "android_purge_26_q3_ClipsMediaInfoComponent_shouldShowContentDeepDivePrompt",
-                "cdd-should-show", null);
-        // Also blank the Content Deep Dive UI-state builder (getUiState) — belt and braces if the
-        // gate lives elsewhere: with an empty/blanked ui-state the pill/entry has nothing to show.
-        // On IG 446 and 451 R8 inlined it into the whole Clips MediaInfoUseCase.getUiState
-        // (X.047j.A0V on 451), so hookByMarker skips it there rather than blank all reel media info.
-        XC_MethodHook blankUiState = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
-                if (!FeatureFlags.removeMetaAI) return;
-                Object r = p.getResult();
-                if (r == null) return;
-                try {
-                    for (java.lang.reflect.Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(r.getClass())) {
-                        if (f.getType() != String.class || java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
-                        f.setAccessible(true);
-                        if (f.get(r) != null) f.set(r, "");
-                    }
-                } catch (Throwable ignored) {}
-            }
-        };
-        hookByMarker(bridge, cl, blankUiState,
-                "android_purge_26_q3_ContentDeepDiveUseCase_getUiState", "cdd-uistate", null);
         // Fetcher: skip fetching prompt data so there is nothing to render.
         XC_MethodHook skip = new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
@@ -259,34 +215,6 @@ public class RemoveMetaAIHook {
     }
 
     /**
-     * Search-results "Ask Meta AI" HCM card (IG 446+, Litho-rendered — not XML-inflatable). The
-     * card's data comes from ClipsTopSerpDataSource.createDefaultMetaAIHcmFetchResults(...); if that
-     * produces no results, no card is shown. We anchor on the method's stable trace-marker string
-     * (the class itself is obfuscated) and empty its result at runtime. Only collection/map results
-     * are cleared; anything else is left untouched (and its type logged) so we never break the SERP.
-     * On IG 446 and 451 the method sits in an R8-merged lambda (X.0Q77 on 451, about 40 unrelated
-     * cases), which hookByMarker skips: clearing its result would hit the other cases.
-     */
-    private void installSearchSerpMetaAiHcm(DexKitBridge bridge, ClassLoader cl) {
-        XC_MethodHook neuter = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
-                if (!FeatureFlags.removeMetaAI) return;
-                Object r = p.getResult();
-                if (r == null) return;
-                try {
-                    if (r instanceof java.util.Collection) { ((java.util.Collection<?>) r).clear(); }
-                    else if (r instanceof java.util.Map) { ((java.util.Map<?, ?>) r).clear(); }
-                    else if (r instanceof Object[]) { p.setResult(java.util.Arrays.copyOf((Object[]) r, 0)); }
-                    else { ModuleLog.probe("(IE|RemoveMetaAI) serp-hcm result type=" + r.getClass().getName()); }
-                } catch (Throwable ignored) {}
-            }
-        };
-        hookByMarker(bridge, cl, neuter,
-                "android_purge_26_q2_ClipsTopSerpDataSource_createDefaultMetaAIHcmFetchResults",
-                "search-serp-hcm", null);
-    }
-
-    /**
      * In-feed Reels Meta AI card. The card is injected by MetaAiClipsEligibilityFetcher: its
      * fetch method builds the eligible-candidate list and hands it to the generic feed injector.
      * Skipping that method (return void) means no candidates → the unit is never injected.
@@ -350,15 +278,6 @@ public class RemoveMetaAIHook {
                 "video-attribution", null);
     }
 
-    // Meta-AI-reels-entrypoint eligibility gate. The reel more-options "blue circle" Meta AI
-    // entrypoint (and its sibling contextual entrypoints) is built only when this boolean returns
-    // true; the sheet builder checks it and skips the whole entrypoint block otherwise, and the
-    // header binder re-checks it at render. It is a boolean(UserSession) that reads exactly two
-    // MobileConfig ids — anchored on those (both present + co-located in this build), never an
-    // obfuscated name. The standard rows (Download / Copy Link / Save) are built in
-    // a different method that doesn't consult this gate, so they're unaffected.
-    private static final long META_AI_GATE_ID_1 = 0x81111100005b47L;
-    private static final long META_AI_GATE_ID_2 = 0x81106e000057c2L;
     // IG 451.0.0.20.80: same gate (X.05cD.A0B — "A && !B" over two MobileConfig booleans, the first
     // boolean(UserSession) the reel sheet's getBottomSheetHeaderItems builder calls), new ids.
     // Re-derive on a new build: find the builder via the marker
@@ -374,9 +293,6 @@ public class RemoveMetaAIHook {
             }
         };
         int n = hookGate(bridge, classLoader, forceFalse, new Number[]{META_AI_GATE_451_ID_1, META_AI_GATE_451_ID_2});
-        if (n == 0) n = hookGate(bridge, classLoader, forceFalse, new Number[]{META_AI_GATE_ID_1, META_AI_GATE_ID_2});
-        if (n == 0) n = hookGate(bridge, classLoader, forceFalse, new Number[]{META_AI_GATE_ID_1});
-        if (n == 0) n = hookGate(bridge, classLoader, forceFalse, new Number[]{META_AI_GATE_ID_2});
         ModuleLog.detail("(IE|RemoveMetaAI) reels-overflow gate: " + n + " method(s)");
     }
 
@@ -431,21 +347,8 @@ public class RemoveMetaAIHook {
                 } catch (Throwable ignored) {}
             }
         };
-        // Any option-list builder that references the GEN_AI_INFO enum field is, by construction, a
-        // menu that can contain the Meta AI item — post overflow, reel ⋮, or otherwise. Anchoring on
-        // that single stable field (rather than a specific neighbour-field combo) catches every
-        // surface across builds; IG 446 moved the reel ⋮ menu to a different builder than the old
-        // PLAYBACK_CONTROLS+UNSAVE ArrayList, which is why the narrow reel matcher missed it.
-        // Anchor on every Meta-AI menu enum constant: GEN_AI_INFO (post overflow), GEN_AI, and
-        // CONTENT_DEEP_DIVE — the reel ⋮ "Ask Meta AI about this" entry (its prompt string is
-        // meta_ai_content_deep_dive_prompt_v2), which neither GEN_AI anchor caught.
-        for (String constName : new String[]{"GEN_AI_INFO", "GEN_AI", "CONTENT_DEEP_DIVE"}) {
-            String field = od + "->" + constName + ":" + od;
-            hookBuilder(bridge, cl, filter, FindMethod.create().matcher(MethodMatcher.create()
-                    .returnType("java.util.List").addUsingField(field)), "list-" + constName);
-            hookBuilder(bridge, cl, filter, FindMethod.create().matcher(MethodMatcher.create()
-                    .returnType("java.util.ArrayList").addUsingField(field)), "arraylist-" + constName);
-        }
+        hookBuilder(bridge, cl, filter, FindMethod.create().matcher(MethodMatcher.create()
+                .returnType("java.util.List").addUsingField(od + "->GEN_AI_INFO:" + od)), "list-GEN_AI_INFO");
         // Reel options list (ArrayList referencing PLAYBACK_CONTROLS + UNSAVE) — kept for builds
         // where the reel menu builder does not statically reference GEN_AI_INFO.
         hookBuilder(bridge, cl, filter, FindMethod.create().matcher(MethodMatcher.create()
@@ -578,7 +481,7 @@ public class RemoveMetaAIHook {
             findViewsById(root, composerId, composers);
             for (View composer : composers) {
                 // Only inside an action sheet — never the DM thread composer.
-                if (sheetId != 0 && findAncestorById(composer, sheetId) == null) continue;
+                if (findAncestorById(composer, sheetId) == null) continue;
                 View recycler = findAncestorOfClass(composer, "RecyclerView");
                 // Already-collapsed views are skipped: collapse() always requests a layout, which
                 // would fire this listener again and re-lay out the window every frame.

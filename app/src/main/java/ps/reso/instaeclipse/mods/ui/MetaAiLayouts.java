@@ -23,5 +23,7 @@ final class MetaAiLayouts {
             "layout_meta_ai_in_thread_blocking_nux",
             "layout_meta_ai_hcm",
             "layout_meta_ai_hcm_shimmer",
+            "meta_ai_hcm_search_plugin_layout_v3",
+            "meta_ai_hcm_search_plugin_shimmer_layout",
     };
 }
