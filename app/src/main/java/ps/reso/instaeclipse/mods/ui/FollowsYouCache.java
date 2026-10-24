@@ -1,24 +1,34 @@
 package ps.reso.instaeclipse.mods.ui;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 final class FollowsYouCache {
 
-    private final Map<String, Boolean> results = new ConcurrentHashMap<>();
+    private static final int CAP = 200;
 
-    void put(String userId, boolean followedBy) {
+    private final Map<String, Boolean> results = new LinkedHashMap<>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, Boolean> eldest) {
+            return size() > CAP;
+        }
+    };
+
+    synchronized void put(String userId, boolean followedBy) {
         results.put(userId, followedBy);
     }
 
-    Boolean find(Set<String> userValues) {
-        for (Map.Entry<String, Boolean> e : results.entrySet())
-            if (userValues.contains(e.getKey())) return e.getValue();
+    synchronized Boolean find(Set<String> userValues) {
+        if (results.isEmpty()) return null;
+        for (String value : userValues) {
+            Boolean followedBy = results.get(value);
+            if (followedBy != null) return followedBy;
+        }
         return null;
     }
 
-    int size() {
+    synchronized int size() {
         return results.size();
     }
 }
