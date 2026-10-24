@@ -32,7 +32,7 @@ public final class PrefsMerge {
      */
     static final Set<String> EXCLUDED = new HashSet<>(Arrays.asList(
             "lockDirectPasscode", "lockDirectSalt", "lockedDirectThreads",
-            IpcSecurity.EXTRA_NONCE, "pathJustSetLocally"));
+            IpcSecurity.EXTRA_NONCE));
 
     private PrefsMerge() {}
 

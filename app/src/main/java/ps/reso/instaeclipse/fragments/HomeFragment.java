@@ -38,10 +38,12 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
+import ps.reso.instaeclipse.utils.core.CompanionSettings;
 import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
 import ps.reso.instaeclipse.utils.core.ExportBrand;
 import ps.reso.instaeclipse.utils.core.InstagramCompat;
@@ -52,8 +54,6 @@ import ps.reso.instaeclipse.utils.log.LogMirrorProvider;
 
 public class HomeFragment extends Fragment implements TabFragment {
 
-    private static final String PREFS_NAME = "instaeclipse_cache";
-    private static final String PREF_PINNED = "homePinnedShortcuts";
     private static final String DEFAULT_PINNED = "isGhostSeen,isGhostTyping,isGhostStory,isAdBlockEnabled";
     private static final int MAX_PINNED = 8;
 
@@ -506,7 +506,7 @@ public class HomeFragment extends Fragment implements TabFragment {
     // =========================================================
 
     private List<String> getPinnedKeys() {
-        String raw = localCache.getString(PREF_PINNED, null);
+        String raw = uiPrefs.getString(CompanionUiPrefs.HOME_PINNED_SHORTCUTS, null);
         if (raw == null) raw = DEFAULT_PINNED;
         List<String> out = new ArrayList<>();
         for (String k : raw.split(",")) {
@@ -603,38 +603,15 @@ public class HomeFragment extends Fragment implements TabFragment {
         return row;
     }
 
-    /**
-     * Writes a boolean feature pref exactly like FeaturesFragment does: commit() to the
-     * companion's cache, make the file world-readable for XSharedPreferences on a cold IG start,
-     * and broadcast ACTION_UPDATE_PREF so a running Instagram applies it live.
-     */
     private void setFeature(String key, boolean value) {
-        SharedPreferences.Editor editor = localCache.edit();
-        editor.putBoolean(key, value);
-        // Mirror FeaturesFragment's cascade: turning Reels back on also clears "except in DMs".
-        boolean cascade = !value && "disableReels".equals(key)
-                && localCache.getBoolean("disableReelsExceptDM", false);
-        if (cascade) editor.putBoolean("disableReelsExceptDM", false);
-        editor.commit();
-        makeLocalCacheWorldReadable();
-
-        sendPrefBroadcast(key, value);
-        if (cascade) sendPrefBroadcast("disableReelsExceptDM", false);
-    }
-
-    private void sendPrefBroadcast(String key, boolean value) {
-        Intent intent = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF");
-        intent.putExtra("key", key);
-        intent.putExtra("value", value);
-        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), intent);
-    }
-
-    private void makeLocalCacheWorldReadable() {
-        try {
-            java.io.File prefsFile = new java.io.File(
-                    requireContext().getApplicationInfo().dataDir + "/shared_prefs/" + PREFS_NAME + ".xml");
-            prefsFile.setReadable(true, false);
-        } catch (Throwable ignored) { }
+        if (!value && "disableReels".equals(key) && localCache.getBoolean("disableReelsExceptDM", false)) {
+            LinkedHashMap<String, Object> values = new LinkedHashMap<>();
+            values.put(key, false);
+            values.put("disableReelsExceptDM", false);
+            CompanionSettings.putAll(requireContext(), values);
+        } else {
+            CompanionSettings.put(requireContext(), key, value);
+        }
     }
 
     private void showEditShortcutsDialog() {
@@ -671,8 +648,7 @@ public class HomeFragment extends Fragment implements TabFragment {
                         String key = CATALOG.get(i).key;
                         if (checked[i] && !result.contains(key) && result.size() < MAX_PINNED) result.add(key);
                     }
-                    localCache.edit().putString(PREF_PINNED, String.join(",", result)).commit();
-                    makeLocalCacheWorldReadable();
+                    uiPrefs.edit().putString(CompanionUiPrefs.HOME_PINNED_SHORTCUTS, String.join(",", result)).apply();
                     renderShortcuts();
                 })
                 .setNegativeButton(R.string.ig_dialog_cancel, null)

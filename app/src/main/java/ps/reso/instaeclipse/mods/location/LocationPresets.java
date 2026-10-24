@@ -1,16 +1,17 @@
 package ps.reso.instaeclipse.mods.location;
 
 import android.content.Context;
-import android.content.Intent;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 
 import ps.reso.instaeclipse.utils.core.CommonUtils;
+import ps.reso.instaeclipse.utils.core.CompanionSettings;
 
 /**
  * The spoofed location and its recently used history, shared by the map picker (companion app),
@@ -113,31 +114,15 @@ public final class LocationPresets {
         return 2 * r * Math.asin(Math.min(1, Math.sqrt(a)));
     }
 
-    /**
-     * Companion-side save: writes the location and updated history to both pref stores and
-     * pushes them to Instagram's process, where the spoof picks them up without a restart.
-     */
     public static void applyFromCompanion(Context context, Preset picked) {
         android.content.SharedPreferences cache = CommonUtils.companionCache(context);
         String recent = serialize(remember(parse(cache.getString("spoofRecent", "")), picked));
-        String[][] values = {
-                {"spoofLat", String.valueOf(picked.lat)},
-                {"spoofLng", String.valueOf(picked.lng)},
-                {"spoofLabel", picked.label},
-                {"spoofRecent", recent},
-        };
-        for (String store : new String[]{"instaeclipse_prefs", "instaeclipse_cache"}) {
-            android.content.SharedPreferences.Editor e = ("instaeclipse_cache".equals(store)
-                    ? CommonUtils.companionCache(context) : context.getSharedPreferences(store, Context.MODE_PRIVATE)).edit();
-            for (String[] kv : values) e.putString(kv[0], kv[1]);
-            e.apply();
-        }
-        for (String[] kv : values) {
-            Intent i = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-            i.putExtra("key", kv[0]);
-            i.putExtra("value", kv[1]);
-            CommonUtils.broadcastToInstagram(context, i);
-        }
+        LinkedHashMap<String, Object> values = new LinkedHashMap<>();
+        values.put("spoofLat", String.valueOf(picked.lat));
+        values.put("spoofLng", String.valueOf(picked.lng));
+        values.put("spoofLabel", picked.label);
+        values.put("spoofRecent", recent);
+        CompanionSettings.putAll(context, values);
     }
 
     /** Max distance of a spoofed fix from the picked point. */

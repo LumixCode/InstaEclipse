@@ -5,6 +5,7 @@ import android.os.Process;
 
 import ps.reso.instaeclipse.mods.media.FrameSessionCache;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
+import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
 import ps.reso.instaeclipse.utils.core.RemotePrefsMirror;
 import ps.reso.instaeclipse.utils.log.Logging;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -15,6 +16,7 @@ public class InstaEclipseApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        CompanionUiPrefs.migrate(this);
         // before the mirror copies the cache: the old lock hash/salt/locked list must never reach
         // the remote preferences Instagram reads
         CommonUtils.dropStaleCacheKeys(this);

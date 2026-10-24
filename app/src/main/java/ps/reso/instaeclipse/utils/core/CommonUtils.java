@@ -1,8 +1,6 @@
 package ps.reso.instaeclipse.utils.core;
 
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 
 import java.util.Arrays;
 import java.util.List;
@@ -59,12 +57,6 @@ public class CommonUtils {
     }
 
     /**
-     * Companion side of CompanionSync: a setting sent to Instagram is also written, with a
-     * timestamp ("__ts_<key>"), to the companion's instaeclipse_cache prefs that Instagram reads
-     * through XSharedPreferences. Instagram applies it on its next start or activity resume when
-     * the live broadcast didn't reach it (not running, or frozen in the background).
-     */
-    /**
      * The companion's instaeclipse_cache prefs, opened MODE_WORLD_READABLE so Instagram can read
      * it through XSharedPreferences. Vector (xposedsharedprefs) allows that mode and keeps the
      * file under /data/misc/<id>/prefs; MODE_PRIVATE made it 0660 there, unreadable from
@@ -89,7 +81,8 @@ public class CommonUtils {
     public static final java.util.Set<String> STALE_CACHE_KEYS = new java.util.HashSet<>(java.util.Arrays.asList(
             "lockDirectPasscode", "lockDirectSalt", "lockedDirectThreads", "hideCreateGroupButton", "blockLocationPrompts",
             "loadedModuleVersion", "dailyReelHooksAvailable", "dailyReelTrackingAvailable",
-            "dailyReelBlockingAvailable", "isGhostModeEnabled", "isMiscEnabled", "isDistractionFree"));
+            "dailyReelBlockingAvailable", "isGhostModeEnabled", "isMiscEnabled", "isDistractionFree",
+            "homePinnedShortcuts", "backgroundAccessAsked", "pathJustSetLocally"));
 
     /** Drops {@link #STALE_CACHE_KEYS} from the companion cache; writes nothing when none is there. */
     public static void dropStaleCacheKeys(Context context) {
@@ -103,39 +96,6 @@ public class CommonUtils {
             }
             if (e != null) e.apply();
         } catch (Throwable ignored) {}
-    }
-
-    private static void stampSetting(Context context, Intent intent) {
-        String action = intent.getAction();
-        String key = intent.getStringExtra("key");
-        if (action == null || key == null || !action.startsWith("ps.reso.instaeclipse.ACTION_UPDATE_PREF")) return;
-        try {
-            long now = System.currentTimeMillis();
-            android.content.SharedPreferences.Editor e =
-                    companionCache(context).edit();
-            Object v = intent.getExtras() != null ? intent.getExtras().get("value") : null;
-            if (v instanceof Boolean) e.putBoolean(key, (Boolean) v);
-            else if (v instanceof Integer) e.putInt(key, (Integer) v);
-            else if (v instanceof String) e.putString(key, (String) v);
-            e.putLong("__ts_" + key, now).commit();
-            intent.putExtra("ts", now);
-        } catch (Throwable ignored) {}
-    }
-
-    /** Sends commands only to an explicitly trusted installed host signing identity. */
-    public static void broadcastToInstagram(Context context, Intent intent) {
-        stampSetting(context, intent);
-        PackageManager pm = context.getPackageManager();
-        for (String pkg : SUPPORTED_PACKAGES) {
-            try {
-                if (intent.getPackage() != null && !pkg.equals(intent.getPackage())) continue;
-                if (!ps.reso.instaeclipse.utils.ipc.CompanionBridge.isTrustedHost(context, pkg)) continue;
-                pm.getPackageInfo(pkg, 0);
-                Intent targeted = new Intent(intent);
-                targeted.setPackage(pkg);
-                context.sendBroadcast(targeted);
-            } catch (Throwable ignored) {}
-        }
     }
 
     /*

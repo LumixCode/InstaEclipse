@@ -40,7 +40,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.color.MaterialColors;
-import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.shape.ShapeAppearanceModel;
 import com.google.android.material.textfield.TextInputEditText;
@@ -55,6 +54,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -64,6 +64,7 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.devops.config.DevConfigReply;
 import ps.reso.instaeclipse.utils.text.SearchText;
 import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
+import ps.reso.instaeclipse.utils.core.CompanionSettings;
 import ps.reso.instaeclipse.ui.theme.ThemeCustomizerActivity;
 
 public class FeaturesFragment extends Fragment implements TabFragment {
@@ -76,7 +77,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private FeatureAdapter adapter;
     private TextView tvHeaderTitle;
     private ImageButton btnBack;
-    private ExtendedFloatingActionButton fabSave;
     private TextInputLayout tilSearch;
     private TextInputEditText etSearch;
     /** True while the search text is being changed programmatically (skip re-filtering). */
@@ -98,9 +98,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private int reelsWatchedToday;
     private String reelUsageDate = "";
 
-    // STAGING SYSTEM: Holds changes before applying
-    private final Map<String, Boolean> stagedChanges = new HashMap<>();
-
     /** Nonce of the last ACTION_REQUEST_PREFS; replies without it are ignored (IpcSecurity). */
     private String prefsNonce;
     private ps.reso.instaeclipse.utils.ipc.ModuleReplies.Pending prefsReply, configReply;
@@ -118,11 +115,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     && ps.reso.instaeclipse.utils.core.IpcSecurity.nonceMatches(prefsNonce, intent)) {
                 Bundle bundle = intent.getExtras();
                 if (bundle != null) {
-                    // If we just set the path locally (via dirPickerLauncher), the incoming
-                    // reply from Instagram may still carry the old value — skip overwriting.
-                    boolean suppressPath = localCache.getBoolean("pathJustSetLocally", false);
                     SharedPreferences.Editor editor = localCache.edit();
-                    if (suppressPath) editor.remove("pathJustSetLocally");
                     // Older builds stored the reply's nonce extra as if it were a setting.
                     editor.remove(ps.reso.instaeclipse.utils.core.IpcSecurity.EXTRA_NONCE);
                     editor.remove("dailyReelsWatchedToday").remove("dailyReelUsageDate");
@@ -145,9 +138,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                         if (value instanceof Boolean) {
                             editor.putBoolean(key, (Boolean) value);
                         } else if (value instanceof String) {
-                            if (suppressPath && ("downloaderCustomPath".equals(key) || "downloaderCustomUri".equals(key))) {
-                                continue;
-                            }
                             editor.putString(key, (String) value);
                         } else if (value instanceof Integer) {
                             editor.putInt(key, (Integer) value);
@@ -174,7 +164,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 // either switch on keeps it on, as in Instagram's prefs migration. The old key
                 // itself is skipped below (CommonUtils.STALE_CACHE_KEYS).
                 if (Boolean.TRUE.equals(s.opt("blockLocationPrompts"))) s.put("hideOnboardingPrompts", true);
-                SharedPreferences.Editor editor = localCache.edit();
                 Map<String, ?> current = localCache.getAll();
                 List<String> keys = new ArrayList<>();
                 for (Iterator<String> it = s.keys(); it.hasNext(); ) keys.add(it.next());
@@ -182,6 +171,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 keys.sort(java.util.Comparator.comparing(key -> "isExtremeMode".equals(key)));
                 // Settings in the file that are not restored, so the toast doesn't claim them.
                 int skipped = 0;
+                LinkedHashMap<String, Object> writes = new LinkedHashMap<>();
                 for (String key : keys) {
                     String target = key;
                     if ("hideCreateGroupButton".equals(key)) {
@@ -210,18 +200,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                                 s.optInt(key, ps.reso.instaeclipse.utils.media.StoryCacheRetention.DEFAULT_HOURS));
                     }
                     if (val instanceof Boolean) {
-                        editor.putBoolean(target, (Boolean) val);
-                        Intent intent = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF");
-                        intent.putExtra("key", target);
-                        intent.putExtra("value", (boolean) (Boolean) val);
-                        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), intent);
+                        writes.put(target, val);
                     } else if (val instanceof Number) {
-                        int value = ((Number) val).intValue();
-                        editor.putInt(target, value);
-                        Intent intent = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_INT");
-                        intent.putExtra("key", target);
-                        intent.putExtra("value", value);
-                        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), intent);
+                        writes.put(target, ((Number) val).intValue());
                     } else if (val instanceof String) {
                         // Checked as Instagram's own restore checks it (SettingsBackupManager.fromJson).
                         String value = ps.reso.instaeclipse.utils.backup.SettingsBackupManager.restorableString(target, (String) val);
@@ -229,16 +210,12 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                             skipped++;
                             continue;
                         }
-                        editor.putString(target, value);
-                        Intent intent = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-                        intent.putExtra("key", target);
-                        intent.putExtra("value", value);
-                        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), intent);
+                        writes.put(target, value);
                     } else {
                         skipped++; // null, a list or an object: no setting has that type
                     }
                 }
-                editor.apply();
+                CompanionSettings.putAll(requireContext(), writes);
                 reloadCurrentMenu();
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), skipped == 0
                         ? getString(R.string.ig_toast_settings_restored)
@@ -254,25 +231,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         locationPickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(), result -> {
                     if (result == null || result.getData() == null) return;
-                    Intent data = result.getData();
-                    double lat = data.getDoubleExtra(LocationPickerActivity.RESULT_LAT, 0.0);
-                    double lng = data.getDoubleExtra(LocationPickerActivity.RESULT_LNG, 0.0);
-                    SharedPreferences.Editor ed = localCache.edit();
-                    ed.putString("spoofLat", String.valueOf(lat));
-                    ed.putString("spoofLng", String.valueOf(lng));
-                    ed.commit();
-                    makeLocalCacheWorldReadable();
-
-                    Intent b1 = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-                    b1.putExtra("key", "spoofLat");
-                    b1.putExtra("value", String.valueOf(lat));
-                    ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b1);
-
-                    Intent b2 = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-                    b2.putExtra("key", "spoofLng");
-                    b2.putExtra("value", String.valueOf(lng));
-                    ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b2);
-
                     reloadCurrentMenu();
                 });
 
@@ -296,27 +254,11 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     path = uriString;
                 }
 
-                // Set flag + save new path atomically so the incoming ACTION_SEND_PREFS
-                // reply (triggered by onResume's ACTION_REQUEST_PREFS) doesn't overwrite us.
-                // commit() (not apply()) ensures the XML is flushed to disk before we make it
-                // world-readable so the module's XSharedPreferences can pick it up on cold start.
-                SharedPreferences.Editor editor = localCache.edit();
-                editor.putBoolean("pathJustSetLocally", true);
-                editor.putString("downloaderCustomUri", uriString);
-                editor.putString("downloaderCustomPath", path);
-                editor.commit();
-                ps.reso.instaeclipse.utils.core.BackgroundAccess.askIfNeeded(requireContext(), localCache, true);
-                makeLocalCacheWorldReadable();
-
-                Intent intentUri = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-                intentUri.putExtra("key", "downloaderCustomUri");
-                intentUri.putExtra("value", uriString);
-                ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), intentUri);
-
-                Intent intentPath = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-                intentPath.putExtra("key", "downloaderCustomPath");
-                intentPath.putExtra("value", path);
-                ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), intentPath);
+                LinkedHashMap<String, Object> folder = new LinkedHashMap<>();
+                folder.put("downloaderCustomUri", uriString);
+                folder.put("downloaderCustomPath", path);
+                CompanionSettings.putAll(requireContext(), folder);
+                ps.reso.instaeclipse.utils.core.BackgroundAccess.askIfNeeded(requireContext(), true);
 
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_toast_download_folder_updated), Toast.LENGTH_SHORT).show();
 
@@ -349,7 +291,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         if (ps.reso.instaeclipse.utils.core.BackgroundAccess.folderGrantLost(requireContext(), folder))
             ps.reso.instaeclipse.utils.core.BackgroundAccess.askToRechooseFolder(requireContext(), () -> dirPickerLauncher.launch(null));
         else if (!folder.isEmpty())
-            ps.reso.instaeclipse.utils.core.BackgroundAccess.askIfNeeded(requireContext(), localCache, false);
+            ps.reso.instaeclipse.utils.core.BackgroundAccess.askIfNeeded(requireContext(), false);
 
         recyclerFeatures = fragmentView.findViewById(R.id.recycler_features);
         recyclerFeatures.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -360,7 +302,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
         tvHeaderTitle = fragmentView.findViewById(R.id.tv_header_title);
         btnBack = fragmentView.findViewById(R.id.btn_back);
-        fabSave = fragmentView.findViewById(R.id.fab_save);
 
         tilSearch = fragmentView.findViewById(R.id.til_search);
         etSearch = fragmentView.findViewById(R.id.et_search);
@@ -407,8 +348,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
             }
         };
         requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), backCallback);
-
-        fabSave.setOnClickListener(v -> commitStagedChanges());
 
         if (savedInstanceState == null) {
             loadMainMenu();
@@ -751,9 +690,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                         }
 
                         if (item.type == FeatureItem.TYPE_MASTER_SWITCH) {
-                            for (String key : item.childKeys) {
-                                stageChange(key, checked);
-                            }
+                            LinkedHashMap<String, Boolean> children = new LinkedHashMap<>();
+                            for (String key : item.childKeys) children.put(key, checked);
+                            stageChanges(children);
                             for (int i = 0; i < items.size(); i++) {
                                 if (items.get(i).type == FeatureItem.TYPE_SWITCH) {
                                     notifyItemChanged(i);
@@ -761,17 +700,13 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                             }
                             refreshConditionalItems();
                         } else if (item.prefKey != null) {
-                            stageChange(item.prefKey, checked);
-                            // Auto-enable parent dependency (e.g. disableReels when disableReelsExceptDM is on)
-                            if (checked && item.dependsOn != null) {
-                                stageChange(item.dependsOn, true);
-                                refreshRowByKey(item.dependsOn);
-                            }
-                            // Auto-disable child when parent is turned off (e.g. disableReelsExceptDM when disableReels is off)
-                            if (!checked && item.cascadeOffKey != null) {
-                                stageChange(item.cascadeOffKey, false);
-                                refreshRowByKey(item.cascadeOffKey);
-                            }
+                            LinkedHashMap<String, Boolean> changes = new LinkedHashMap<>();
+                            changes.put(item.prefKey, checked);
+                            if (checked && item.dependsOn != null) changes.put(item.dependsOn, true);
+                            if (!checked && item.cascadeOffKey != null) changes.put(item.cascadeOffKey, false);
+                            stageChanges(changes);
+                            if (checked && item.dependsOn != null) refreshRowByKey(item.dependsOn);
+                            if (!checked && item.cascadeOffKey != null) refreshRowByKey(item.cascadeOffKey);
                             updateMasterSwitches();
                             refreshConditionalItems();
                         }
@@ -1117,10 +1052,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
     private void dismissSpoofLastSeenNotice() {
         ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.dismiss(localCache);
-        Intent off = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF");
-        off.putExtra("key", ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.KEY);
-        off.putExtra("value", false);
-        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), off);
+        CompanionSettings.put(requireContext(), ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.KEY, false);
         if ("main".equals(currentMenu) && !isSearching()) loadMainMenu();
     }
 
@@ -1528,7 +1460,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         }
         new MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.ig_feed_corner_radius)
                 .setSingleChoiceItems(labels, selected, (dialog, which) -> {
-                    putIntPref("feedCornerRadius", radii[which]);
+                    CompanionSettings.put(requireContext(), "feedCornerRadius", radii[which]);
                     dialog.dismiss(); reloadCurrentMenu();
                 }).setNegativeButton(android.R.string.cancel, null).show();
     }
@@ -1587,7 +1519,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
             FeatureItem amount = createValueRow(R.drawable.ic_movie, "#30D158", getString(R.string.ig_reel_limit_allowance), String.valueOf(limit),
                     () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showDailyReelLimitPicker(requireContext(), limit, value -> {
                         if (!reelLimitsEditable() || !getCurrentState("dailyReelLimitEnabled")) return;
-                        putIntPref("dailyReelLimit", value);
+                        CompanionSettings.put(requireContext(), "dailyReelLimit", value);
                         reloadCurrentMenu();
                     }));
             controls.add(reelRow(lockedByExtreme(amount), reelsAllowed));
@@ -1665,7 +1597,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
     private void updateNightReelTime(String key, int value) {
         if (!reelLimitsEditable() || !getCurrentState("nightReelBlockEnabled")) return;
-        putIntPref(key, value);
+        CompanionSettings.put(requireContext(), key, value);
         reloadCurrentMenu();
     }
 
@@ -1815,12 +1747,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                                 android.widget.Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    localCache.edit().putString("customShareDomain", domain).commit();
-                    makeLocalCacheWorldReadable();
-                    Intent b = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-                    b.putExtra("key", "customShareDomain");
-                    b.putExtra("value", domain);
-                    ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
+                    CompanionSettings.put(requireContext(), "customShareDomain", domain);
                     reloadCurrentMenu();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -1920,12 +1847,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     }
 
     private void saveTimestampFormat(String pattern) {
-        localCache.edit().putString("exactTimestampFormat", pattern).commit();
-        makeLocalCacheWorldReadable();
-        Intent b = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-        b.putExtra("key", "exactTimestampFormat");
-        b.putExtra("value", pattern);
-        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
+        CompanionSettings.put(requireContext(), "exactTimestampFormat", pattern);
         reloadCurrentMenu();
     }
 
@@ -1951,12 +1873,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.ig_spoof_device)
                 .setSingleChoiceItems(spoofDeviceNames(), current, (d, which) -> {
-                    localCache.edit().putString("spoofDevice", ids[which]).commit();
-                    makeLocalCacheWorldReadable();
-                    Intent b = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-                    b.putExtra("key", "spoofDevice");
-                    b.putExtra("value", ids[which]);
-                    ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
+                    CompanionSettings.put(requireContext(), "spoofDevice", ids[which]);
                     d.dismiss();
                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), R.string.ig_spoof_device_note, Toast.LENGTH_LONG).show();
                     reloadCurrentMenu();
@@ -1977,12 +1894,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.ig_dialog_extras_startup_tab)
                 .setSingleChoiceItems(startupTabNames(), current, (d, which) -> {
-                    localCache.edit().putString("startupTab", tabs[which]).commit();
-                    makeLocalCacheWorldReadable();
-                    Intent b = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-                    b.putExtra("key", "startupTab");
-                    b.putExtra("value", tabs[which]);
-                    ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
+                    CompanionSettings.put(requireContext(), "startupTab", tabs[which]);
                     d.dismiss();
                     reloadCurrentMenu();
                 })
@@ -1991,12 +1903,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     }
 
     private void saveTabOrder(String value) {
-        localCache.edit().putString("navTabOrder", value).commit();
-        makeLocalCacheWorldReadable();
-        Intent b = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-        b.putExtra("key", "navTabOrder");
-        b.putExtra("value", value);
-        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
+        CompanionSettings.put(requireContext(), "navTabOrder", value);
     }
 
     private FeatureItem createSwitchLockedByExtreme(String title, String prefKey) {
@@ -2107,14 +2014,14 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     /** Sends only what changed, so untouched settings keep Instagram's newer values. */
     private void saveProfileSpoof(ps.reso.instaeclipse.utils.dialog.ProfileSpoofEditor.Values old,
                                   ps.reso.instaeclipse.utils.dialog.ProfileSpoofEditor.Values now) {
-        if (!now.username.equals(old.username)) putStringPref("spoofUsername", now.username);
-        if (!now.name.equals(old.name)) putStringPref("spoofName", now.name);
-        if (!now.bio.equals(old.bio)) putStringPref("spoofBio", now.bio);
-        if (!now.avatar.equals(old.avatar)) putStringPref("spoofAvatar", now.avatar);
-        if (now.posts != old.posts) putIntPref("spoofPosts", now.posts);
-        if (now.followers != old.followers) putIntPref("spoofFollowers", now.followers);
-        if (now.following != old.following) putIntPref("spoofFollowing", now.following);
-        if (now.verified != old.verified) putBoolPref("spoofVerified", now.verified);
+        if (!now.username.equals(old.username)) CompanionSettings.put(requireContext(), "spoofUsername", now.username);
+        if (!now.name.equals(old.name)) CompanionSettings.put(requireContext(), "spoofName", now.name);
+        if (!now.bio.equals(old.bio)) CompanionSettings.put(requireContext(), "spoofBio", now.bio);
+        if (!now.avatar.equals(old.avatar)) CompanionSettings.put(requireContext(), "spoofAvatar", now.avatar);
+        if (now.posts != old.posts) CompanionSettings.put(requireContext(), "spoofPosts", now.posts);
+        if (now.followers != old.followers) CompanionSettings.put(requireContext(), "spoofFollowers", now.followers);
+        if (now.following != old.following) CompanionSettings.put(requireContext(), "spoofFollowing", now.following);
+        if (now.verified != old.verified) CompanionSettings.put(requireContext(), "spoofVerified", now.verified);
     }
 
     /** Picked photo: downscaled, JPEG, Base64 (SpoofAvatar), into the open editor; saved with it. */
@@ -2170,16 +2077,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 getString(R.string.not_installed_instagram), Toast.LENGTH_SHORT).show();
     }
 
-    /** Saves an int setting locally and pushes it to Instagram. */
-    private void putIntPref(String key, int value) {
-        localCache.edit().putInt(key, value).commit();
-        makeLocalCacheWorldReadable();
-        Intent b = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_INT");
-        b.putExtra("key", key);
-        b.putExtra("value", value);
-        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
-    }
-
     private void pickAutoClearSize() {
         // Same reachable presets as the in-IG dialog (IG's real cache is small).
         final int[] values = {50, 100, 200, 500};
@@ -2193,7 +2090,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(getString(R.string.ig_dialog_section_auto_clear_cache))
                 .setSingleChoiceItems(labels, sel, (dialog, which) -> {
-                    putIntPref("autoClearCacheSizeMb", values[which]);
+                    CompanionSettings.put(requireContext(), "autoClearCacheSizeMb", values[which]);
                     dialog.dismiss();
                     reloadCurrentMenu();
                 })
@@ -2378,7 +2275,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(getString(R.string.theme_dark_mode))
                 .setSingleChoiceItems(labels, sel, (dialog, which) -> {
-                    putIntPref("themePresetId", values[which]);
+                    CompanionSettings.put(requireContext(), "themePresetId", values[which]);
                     dialog.dismiss();
                     reloadCurrentMenu();
                 })
@@ -2399,17 +2296,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(getString(R.string.theme_light_mode))
                 .setSingleChoiceItems(labels, sel, (dialog, which) -> {
-                    int value = values[which];
-                    SharedPreferences.Editor ed = localCache.edit();
-                    ed.putInt("themeLightPresetId", value);
-                    ed.commit();
-                    makeLocalCacheWorldReadable();
-
-                    Intent b = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_INT");
-                    b.putExtra("key", "themeLightPresetId");
-                    b.putExtra("value", value);
-                    ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
-
+                    CompanionSettings.put(requireContext(), "themeLightPresetId", values[which]);
                     dialog.dismiss();
                     reloadCurrentMenu();
                 })
@@ -2477,7 +2364,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         }
         new MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.ig_story_tray_size)
                 .setSingleChoiceItems(labels, selected, (dialog, which) -> {
-                    putIntPref("storyTrayScale", sizes[which]);
+                    CompanionSettings.put(requireContext(), "storyTrayScale", sizes[which]);
                     dialog.dismiss(); reloadCurrentMenu();
                 }).setNegativeButton(android.R.string.cancel, null).show();
     }
@@ -2504,19 +2391,10 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(ctx).setTitle(R.string.ig_story_ring_color)
                 .setView(scroll)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
-                    putStringPref("storyRingColor", picked[0]);
+                    CompanionSettings.put(requireContext(), "storyRingColor", picked[0]);
                     reloadCurrentMenu();
                 })
                 .setNegativeButton(android.R.string.cancel, null).show();
-    }
-
-    private void putStringPref(String key, String value) {
-        localCache.edit().putString(key, value).commit();
-        makeLocalCacheWorldReadable();
-        Intent b = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-        b.putExtra("key", key);
-        b.putExtra("value", value);
-        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
     }
 
     private void pickQuality(int current) {
@@ -2535,17 +2413,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(getString(R.string.ig_dialog_quality_force_reels))
                 .setSingleChoiceItems(labels, sel, (dialog, which) -> {
-                    int value = values[which];
-                    SharedPreferences.Editor ed = localCache.edit();
-                    ed.putInt("forceReelQuality", value);
-                    ed.commit();
-                    makeLocalCacheWorldReadable();
-
-                    Intent b = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_INT");
-                    b.putExtra("key", "forceReelQuality");
-                    b.putExtra("value", value);
-                    ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
-
+                    CompanionSettings.put(requireContext(), "forceReelQuality", values[which]);
                     dialog.dismiss();
                     reloadCurrentMenu();
                 })
@@ -2565,7 +2433,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 getString(R.string.ig_story_cache_duration), getString(R.string.ig_story_cache_hours, cacheHours),
                 () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showStoryCacheDurationPicker(requireContext(), cacheHours, value -> {
                     if (!getCurrentState("cacheStories")) return;
-                    putIntPref("storyCacheHours", ps.reso.instaeclipse.utils.media.StoryCacheRetention.normalize(value));
+                    CompanionSettings.put(requireContext(), "storyCacheHours", ps.reso.instaeclipse.utils.media.StoryCacheRetention.normalize(value));
                     reloadCurrentMenu();
                 }));
         cacheDuration.requiresAnyOf = Arrays.asList("cacheStories");
@@ -2639,20 +2507,10 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         }
         new MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.ie_download_quality)
                 .setSingleChoiceItems(labels, selected, (dialog, which) -> {
-                    putBoolPref("downloaderUseOriginal", values[which] < 0);
-                    if (values[which] >= 0) putIntPref("downloaderQualityMaxShortSide", values[which]);
+                    CompanionSettings.put(requireContext(), "downloaderUseOriginal", values[which] < 0);
+                    if (values[which] >= 0) CompanionSettings.put(requireContext(), "downloaderQualityMaxShortSide", values[which]);
                     dialog.dismiss(); reloadCurrentMenu();
                 }).setNegativeButton(android.R.string.cancel, null).show();
-    }
-
-    private void putBoolPref(String key, boolean value) {
-        stagedChanges.remove(key);
-        localCache.edit().putBoolean(key, value).commit();
-        makeLocalCacheWorldReadable();
-        Intent b = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF");
-        b.putExtra("key", key);
-        b.putExtra("value", value);
-        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), b);
     }
 
     private void loadQualityMenu() {
@@ -2699,41 +2557,15 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     // TOOLS ACTIONS & HANDLERS
     // =========================================================
 
-    /**
-     * Makes the localCache SharedPreferences file world-readable so the module can
-     * access it via XSharedPreferences on a cold Instagram start (when the sync
-     * broadcast was never delivered because Instagram wasn't running at the time).
-     * Apps are allowed to change permissions on their own files.
-     */
-    private void makeLocalCacheWorldReadable() {
-        try {
-            java.io.File prefsFile = new java.io.File(
-                    requireContext().getApplicationInfo().dataDir + "/shared_prefs/instaeclipse_cache.xml");
-            prefsFile.setReadable(true, false);
-        } catch (Throwable ignored) {}
-    }
-
     private void pickDownloadFolder() {
         dirPickerLauncher.launch(null);
     }
 
     private void resetDownloadFolder() {
-        SharedPreferences.Editor editor = localCache.edit();
-        editor.remove("pathJustSetLocally");
-        editor.putString("downloaderCustomUri", "");
-        editor.putString("downloaderCustomPath", "");
-        editor.commit();
-        makeLocalCacheWorldReadable();
-
-        Intent intentUri = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-        intentUri.putExtra("key", "downloaderCustomUri");
-        intentUri.putExtra("value", "");
-        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), intentUri);
-
-        Intent intentPath = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-        intentPath.putExtra("key", "downloaderCustomPath");
-        intentPath.putExtra("value", "");
-        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), intentPath);
+        LinkedHashMap<String, Object> folder = new LinkedHashMap<>();
+        folder.put("downloaderCustomUri", "");
+        folder.put("downloaderCustomPath", "");
+        CompanionSettings.putAll(requireContext(), folder);
 
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_toast_download_folder_reset), Toast.LENGTH_SHORT).show();
 
@@ -2868,36 +2700,26 @@ public class FeaturesFragment extends Fragment implements TabFragment {
      *  live (or picked up by Instagram's sync on its next start / resume). No Save step. */
     private void stageChange(String prefKey, boolean isChecked) {
         if (localCache.getBoolean(prefKey, defaultState(prefKey)) == isChecked) return;
-        putBoolPref(prefKey, isChecked);
+        CompanionSettings.put(requireContext(), prefKey, isChecked);
     }
 
-    private void commitStagedChanges() {
-        if (stagedChanges.isEmpty()) return;
-
-        SharedPreferences.Editor editor = localCache.edit();
-        List<Map.Entry<String, Boolean>> changes = new ArrayList<>(stagedChanges.entrySet());
-        // Apply the selected restrictions before Instagram locks them with Extreme Mode.
-        changes.sort(java.util.Comparator.comparing(entry -> "isExtremeMode".equals(entry.getKey())));
-        for (Map.Entry<String, Boolean> entry : changes) {
-            String key = entry.getKey();
-            boolean value = entry.getValue();
-
-            editor.putBoolean(key, value);
-
-            Intent intent = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF");
-            intent.putExtra("key", key);
-            intent.putExtra("value", value);
-            ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), intent);
+    private void stageChanges(LinkedHashMap<String, Boolean> wanted) {
+        LinkedHashMap<String, Object> changed = new LinkedHashMap<>();
+        for (Map.Entry<String, Boolean> entry : wanted.entrySet()) {
+            if (localCache.getBoolean(entry.getKey(), defaultState(entry.getKey())) != entry.getValue()) {
+                changed.put(entry.getKey(), entry.getValue());
+            }
         }
-        editor.apply();
-        stagedChanges.clear();
-        fabSave.hide();
-        ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_toast_settings_applied), Toast.LENGTH_SHORT).show();
+        if (changed.size() == 1) {
+            Map.Entry<String, Object> only = changed.entrySet().iterator().next();
+            CompanionSettings.put(requireContext(), only.getKey(), only.getValue());
+        } else if (!changed.isEmpty()) {
+            CompanionSettings.putAll(requireContext(), changed);
+        }
     }
 
     private boolean getCurrentState(String prefKey) {
         if (prefKey == null) return false;
-        if (stagedChanges.containsKey(prefKey)) return stagedChanges.get(prefKey);
         return localCache.getBoolean(prefKey, defaultState(prefKey));
     }
 

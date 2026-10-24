@@ -10,7 +10,7 @@ import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 
 import ps.reso.instaeclipse.R;
-import ps.reso.instaeclipse.utils.core.CommonUtils;
+import ps.reso.instaeclipse.utils.core.CompanionSettings;
 import ps.reso.instaeclipse.utils.profile.SpoofAvatar;
 
 /**
@@ -60,13 +60,6 @@ public class ProfilePhotoPickerActivity extends Activity {
 
     /** Stores the picture in the companion's settings and sends it to Instagram. */
     public static void save(android.content.Context context, String b64) {
-        Intent b = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-        b.putExtra("key", "spoofAvatar");
-        b.putExtra("value", b64);
-        CommonUtils.broadcastToInstagram(context, b);
-        try {
-            new java.io.File(context.getApplicationInfo().dataDir + "/shared_prefs/instaeclipse_cache.xml")
-                    .setReadable(true, false);
-        } catch (Throwable ignored) {}
+        CompanionSettings.put(context, "spoofAvatar", b64);
     }
 }

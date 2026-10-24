@@ -1,7 +1,6 @@
 package ps.reso.instaeclipse.ui.theme;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
@@ -27,7 +26,7 @@ import com.google.android.material.color.MaterialColors;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.snackbar.Snackbar;
 
-import java.io.File;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import ps.reso.instaeclipse.R;
@@ -35,10 +34,10 @@ import ps.reso.instaeclipse.mods.ui.theme.IgThemePalette;
 import ps.reso.instaeclipse.mods.ui.theme.ThemePreset;
 import ps.reso.instaeclipse.mods.ui.theme.ThemePresets;
 import ps.reso.instaeclipse.mods.ui.theme.ThemeSettingsHelper;
+import ps.reso.instaeclipse.utils.core.CompanionSettings;
 
 public class ThemeCustomizerActivity extends AppCompatActivity implements AdvancedColorPickerDialog.Listener {
 
-    private static final String CACHE_NAME = "instaeclipse_cache";
     private static final String KEY_ENABLED = "customThemeEnabled";
     private static final String KEY_PRESET_ID = "themePresetId";
     private static final String KEY_PALETTE_JSON = "themePaletteJson";
@@ -224,66 +223,25 @@ public class ThemeCustomizerActivity extends AppCompatActivity implements Advanc
         return String.format("#%08X", color);
     }
 
-    /** Persists to the companion app's local cache and syncs to Instagram, matching every
-     *  other setting's broadcast convention in FeaturesFragment. */
     private void persist() {
         boolean enabled = enableSwitch.isChecked();
         if (lightMode) {
             persistLight(enabled);
             return;
         }
-        int presetId = customMode ? 0 : selectedPresetId;
-        String paletteJson = workingPalette.copy().toJson();
-
-        SharedPreferences.Editor editor = cache().edit();
-        editor.putBoolean(KEY_ENABLED, enabled);
-        editor.putInt(KEY_PRESET_ID, presetId);
-        editor.putString(KEY_PALETTE_JSON, paletteJson);
-        editor.commit();
-        makeCacheWorldReadable();
-
-        Intent enabledIntent = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF");
-        enabledIntent.putExtra("key", KEY_ENABLED);
-        enabledIntent.putExtra("value", enabled);
-        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(this, enabledIntent);
-
-        Intent presetIntent = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_INT");
-        presetIntent.putExtra("key", KEY_PRESET_ID);
-        presetIntent.putExtra("value", presetId);
-        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(this, presetIntent);
-
-        Intent paletteIntent = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
-        paletteIntent.putExtra("key", KEY_PALETTE_JSON);
-        paletteIntent.putExtra("value", paletteJson);
-        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(this, paletteIntent);
+        LinkedHashMap<String, Object> values = new LinkedHashMap<>();
+        values.put(KEY_ENABLED, enabled);
+        values.put(KEY_PRESET_ID, customMode ? 0 : selectedPresetId);
+        values.put(KEY_PALETTE_JSON, workingPalette.copy().toJson());
+        CompanionSettings.putAll(this, values);
     }
 
     /** Light mode: only the enable switch and the light theme id; the dark theme is left as is. */
     private void persistLight(boolean enabled) {
-        SharedPreferences.Editor editor = cache().edit();
-        editor.putBoolean(KEY_ENABLED, enabled);
-        if (selectedPresetId > 0) editor.putInt(KEY_LIGHT_PRESET_ID, selectedPresetId);
-        editor.commit();
-        makeCacheWorldReadable();
-
-        Intent enabledIntent = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF");
-        enabledIntent.putExtra("key", KEY_ENABLED);
-        enabledIntent.putExtra("value", enabled);
-        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(this, enabledIntent);
-
-        if (selectedPresetId > 0) {
-            Intent presetIntent = new Intent("ps.reso.instaeclipse.ACTION_UPDATE_PREF_INT");
-            presetIntent.putExtra("key", KEY_LIGHT_PRESET_ID);
-            presetIntent.putExtra("value", selectedPresetId);
-            ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(this, presetIntent);
-        }
-    }
-
-    private void makeCacheWorldReadable() {
-        try {
-            File file = new File(getApplicationInfo().dataDir + "/shared_prefs/" + CACHE_NAME + ".xml");
-            file.setReadable(true, false);
-        } catch (Throwable ignored) {}
+        LinkedHashMap<String, Object> values = new LinkedHashMap<>();
+        values.put(KEY_ENABLED, enabled);
+        if (selectedPresetId > 0) values.put(KEY_LIGHT_PRESET_ID, selectedPresetId);
+        CompanionSettings.putAll(this, values);
     }
 
     @Override

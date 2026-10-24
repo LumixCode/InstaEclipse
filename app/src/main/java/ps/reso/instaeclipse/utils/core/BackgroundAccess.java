@@ -21,8 +21,6 @@ import ps.reso.instaeclipse.R;
  */
 public final class BackgroundAccess {
 
-    private static final String ASKED = "backgroundAccessAsked";
-
     private BackgroundAccess() {}
 
     public static boolean unrestricted(Context ctx) {
@@ -31,9 +29,10 @@ public final class BackgroundAccess {
     }
 
     /** Asks if still restricted. {@code always}: also when asked before (a folder was just chosen). */
-    public static void askIfNeeded(Context ctx, SharedPreferences prefs, boolean always) {
-        if (unrestricted(ctx) || (!always && prefs.getBoolean(ASKED, false))) return;
-        prefs.edit().putBoolean(ASKED, true).apply();
+    public static void askIfNeeded(Context ctx, boolean always) {
+        SharedPreferences prefs = CompanionUiPrefs.get(ctx);
+        if (unrestricted(ctx) || (!always && prefs.getBoolean(CompanionUiPrefs.BACKGROUND_ACCESS_ASKED, false))) return;
+        prefs.edit().putBoolean(CompanionUiPrefs.BACKGROUND_ACCESS_ASKED, true).apply();
         new MaterialAlertDialogBuilder(ctx)
                 .setTitle(R.string.background_access_title)
                 .setMessage(R.string.background_access_message)

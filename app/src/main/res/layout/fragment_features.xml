@@ -86,21 +86,7 @@
         android:layout_below="@id/top_bar"
         android:paddingHorizontal="16dp"
         android:paddingTop="8dp"
-        android:paddingBottom="120dp"
+        android:paddingBottom="24dp"
         android:clipToPadding="false" />
-
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/fab_save"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginEnd="24dp"
-        android:layout_marginBottom="24dp"
-        android:text="@string/apply_changes"
-        android:textColor="?attr/colorOnPrimaryContainer"
-        app:backgroundTint="?attr/colorPrimaryContainer"
-        app:icon="@drawable/ic_save"
-        android:visibility="gone" />
 
 </RelativeLayout>
