@@ -1,6 +1,7 @@
 package ps.reso.instaeclipse.mods.ghost;
 
 import ps.reso.instaeclipse.xposedcompat.AndroidAppHelper;
+import android.app.Activity;
 import android.content.Context;
 import android.os.SystemClock;
 import android.widget.Toast;
@@ -24,17 +25,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
-import ps.reso.instaeclipse.mods.media.StoryDownloadHook;
+import ps.reso.instaeclipse.mods.misc.StoryMenu;
+import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.HookFrames;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
+import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.toast.IeToast;
@@ -43,13 +47,14 @@ import ps.reso.instaeclipse.utils.toast.IeToast;
 public final class ManualStorySeenHook {
     private static final String SESSION = "com.instagram.common.session.UserSession";
     private static final String REEL_ITEM = "com.instagram.model.reels.ReelItem";
-    private static final String OPTIONS = "[INTERNAL] Pause Playback";
+    private static final int MENU_ORDER = 3;
     // populate, send, store getter, path setter (in that order) / per-story trackers
     private static final String CACHE_PIPELINE = "ManualStorySeen_pipeline_v1";
     private static final String CACHE_TRACKERS = "ManualStorySeen_trackers_v1";
     private static final ManualStorySeenPolicy approvals = new ManualStorySeenPolicy();
     private static final ThreadLocal<Dispatch> dispatch = new ThreadLocal<>();
-    private final ThreadLocal<String> recordingStory = new ThreadLocal<>();
+    private static final AtomicBoolean loggedRejection = new AtomicBoolean();
+    private final ManualStorySeenPolicy.Tracking tracking = new ManualStorySeenPolicy.Tracking();
     private final Map<Object, LinkedHashMap<String, Receipt>> receipts = new WeakHashMap<>();
     private Constructor<?> itemConstructor;
     private Method populateItem;
@@ -59,7 +64,6 @@ public final class ManualStorySeenHook {
     private List<Method> trackers;
     private volatile boolean receiptPipelineReady;
     private String resolutionStage = "builder";
-    private final AtomicInteger menuDiagnostics = new AtomicInteger();
     private final AtomicInteger actionDiagnostics = new AtomicInteger();
     private boolean loggedCapture;
 
@@ -68,6 +72,8 @@ public final class ManualStorySeenHook {
         final String reelId;
         Receipt(Object graph, String reelId) { this.graph = graph; this.reelId = reelId; }
     }
+
+    private record Target(Object session, Receipt receipt) {}
 
     private static final class Dispatch {
         final Object item;
@@ -93,11 +99,9 @@ public final class ManualStorySeenHook {
             ModuleLog.detail("(IE|ManualStorySeen) receipt resolution failed at " + resolutionStage
                     + ": " + t.getClass().getSimpleName());
         }
-        // A changed receipt implementation must not silently hide the user's menu action.
-        // Keep the same independent menu installation used by StoryDownloadHook; dispatch still
-        // refuses to send anything until the entire single-story pipeline resolved successfully.
         try {
-            installMenu(bridge, loader);
+            if (!StoryMenu.install(bridge, loader)) throw new NoSuchMethodException("Story options menu");
+            StoryMenu.register(MENU_ORDER, new SeenRow());
             if (receiptPipelineReady) FeatureStatusTracker.setHooked("ManualStorySeen");
             else if (enabled()) FeatureStatusTracker.setBroken("ManualStorySeen");
             if (receiptPipelineReady) ModuleLog.ok("(IE|ManualStorySeen) ready");
@@ -119,26 +123,33 @@ public final class ManualStorySeenHook {
 
     /** The network fallback must call this for seen requests, even if ghost mode was just disabled. */
     public static boolean allowManualRequest(Object request, URI uri, Object tigonService) {
+        String token = ManualStorySeenPolicy.token(uri);
         try {
             Object session = typedValue(tigonService, SESSION, 1);
             URI clean = approvals.consume(uri, session, SystemClock.elapsedRealtime());
-            if (clean == null) return false;
-            String token = null;
-            for (String pair : uri.getRawQuery().split("&")) {
-                if (pair.startsWith(ManualStorySeenPolicy.PARAMETER + "=")) {
-                    token = pair.substring(ManualStorySeenPolicy.PARAMETER.length() + 1);
+            if (clean == null) {
+                approvals.revoke(token);
+                if (!loggedRejection.getAndSet(true)) {
+                    ModuleLog.warn("(IE|ManualStorySeen) A \"Mark as seen\" request was not sent: " + approvals.rejection());
                 }
+                notifyResult(token, R.string.ig_manual_story_seen_unavailable);
+                return false;
             }
             ManualStorySeenPolicy.stripMarker(request, uri, clean);
-            WeakReference<Context> reference;
-            synchronized (notifications) { reference = notifications.remove(token); }
-            Context context = reference == null ? null : reference.get();
-            if (context != null) toast(context, R.string.ig_manual_story_seen_sent);
+            notifyResult(token, R.string.ig_manual_story_seen_sent);
             return true;
         } catch (Throwable t) {
             ModuleLog.error("(IE|ManualStorySeen) Could not send \"Mark as seen\"", t);
+            notifyResult(token, R.string.ig_manual_story_seen_unavailable);
             return false;
         }
+    }
+
+    private static void notifyResult(String token, int message) {
+        WeakReference<Context> reference;
+        synchronized (notifications) { reference = token == null ? null : notifications.remove(token); }
+        Context context = reference == null ? null : reference.get();
+        if (context != null) toast(context, message);
     }
 
     private void resolveReceiptPipeline(DexKitBridge bridge, ClassLoader loader) throws Exception {
@@ -286,13 +297,10 @@ public final class ManualStorySeenHook {
 
                 @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                     HookFrames.Frame frame = frames.enter();
-                    frame.put("manual_story_previous", recordingStory.get());
-                    recordingStory.set(mediaId(p.args[index]));
+                    frame.put("manual_story_previous", tracking.enter(enabled(), () -> mediaId(p.args[index])));
                 }
                 @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
-                    HookFrames.Frame frame = frames.exit();
-                    String previous = (String) frame.get("manual_story_previous");
-                    if (previous == null) recordingStory.remove(); else recordingStory.set(previous);
+                    tracking.exit(frames.exit().get("manual_story_previous"));
                 }
             });
         }
@@ -302,7 +310,7 @@ public final class ManualStorySeenHook {
         int reelIndex = staticPopulation ? 3 : 2;
         XposedBridge.hookMethod(populateItem, new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
-                String id = recordingStory.get();
+                String id = tracking.current();
                 if (!enabled() || dispatch.get() != null || id == null || p.args[graphIndex] == null
                         || p.args[sessionIndex] == null || !(p.args[reelIndex] instanceof String reelId)) return;
                 synchronized (receipts) {
@@ -331,71 +339,49 @@ public final class ManualStorySeenHook {
         return index;
     }
 
-    private void installMenu(DexKitBridge bridge, ClassLoader loader) throws Exception {
-        int builders = 0, handlers = 0, failed = 0;
-        // Same builders and dispatchers as the other story-menu rows: IG 452 moved the anchor out of
-        // the others'-story builder. Static builders must stay hooked: every 446 builder is static.
-        List<Method> optionBuilders = DexKitCache.isCacheValid() ? DexKitCache.loadMethods("MentionButtons", loader) : null;
-        if (optionBuilders == null || optionBuilders.isEmpty()) {
-            optionBuilders = new ArrayList<>(StoryDownloadHook.storyOptionBuilders(DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                    .matcher(MethodMatcher.create().usingStrings(OPTIONS))), loader));
+    private final class SeenRow implements StoryMenu.Row {
+        @Override public boolean enabled() {
+            return ManualStorySeenHook.enabled();
         }
-        XC_MethodHook builderHook = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
-                try {
-                    if (menuDiagnostics.getAndIncrement() < 3) {
-                        ModuleLog.detail("(IE|ManualStorySeen) menu bind: option=" + FeatureFlags.manualStorySeen
-                            + ", ghost=" + FeatureFlags.isGhostStory + ", sender=" + receiptPipelineReady
-                            + ", labels=" + (p.getResult() instanceof CharSequence[]));
-                    }
-                    if (!enabled() || !(p.getResult() instanceof CharSequence[] original)) return;
-                    String label = I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_manual_story_seen_action);
-                    p.setResult(ManualStorySeenPolicy.appendAction(original, label));
-                } catch (Throwable t) {
-                    if (menuDiagnostics.getAndIncrement() < 6) {
-                        ModuleLog.warn("(IE|ManualStorySeen) Could not add \"Mark as seen\" to this story menu: " + t.getClass().getSimpleName());
-                    }
-                }
-            }
-        };
-        for (Method method : optionBuilders) {
-            try {
-                XposedBridge.hookMethod(method, builderHook);
-                builders++;
-            } catch (Throwable t) {
-                failed++;
-                if (failed <= 2) ModuleLog.detail("(IE|ManualStorySeen) menu candidate skipped: " + t.getClass().getSimpleName());
-            }
+
+        @Override public void rows(Object media, List<CharSequence> out) {
+            if (!receiptPipelineReady || target(mediaId(media), null) != null) out.add(label());
         }
-        XC_MethodHook dispatcherHook = new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
-                if (!enabled()) return;
-                String label = I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_manual_story_seen_action);
-                boolean selected = false;
-                for (Object arg : p.args) selected |= arg instanceof CharSequence && label.contentEquals((CharSequence) arg);
-                if (!selected) return;
-                p.setResult(null);
-                Object item = across(p, REEL_ITEM), session = across(p, SESSION);
-                Context context = AndroidAppHelper.currentApplication();
-                markSeen(context, session, mediaId(item));
-            }
-        };
-        for (Method method : StoryDownloadHook.storyClickDispatchers(bridge, loader)) {
-            if (method.getParameterCount() == 0) continue; // dispatchers receive the tapped label
-            try {
-                XposedBridge.hookMethod(method, dispatcherHook);
-                handlers++;
-            } catch (Throwable t) {
-                failed++;
-                if (failed <= 2) ModuleLog.detail("(IE|ManualStorySeen) menu candidate skipped: " + t.getClass().getSimpleName());
-            }
+
+        @Override public boolean owns(CharSequence tapped) {
+            return tapped != null && label().contentEquals(tapped);
         }
-        ModuleLog.detail("(IE|ManualStorySeen) menu discovery: builders=" + builders
-            + ", dispatchers=" + handlers + ", skipped=" + failed);
-        if (builders == 0 || handlers == 0) throw new NoSuchMethodException("Story options menu");
+
+        @Override public void tap(CharSequence tapped, Object media, Context ctx) {
+            markSeen(ctx, mediaId(media));
+        }
     }
 
-    private void markSeen(Context context, Object session, String id) {
+    private static String label() {
+        return I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_manual_story_seen_action);
+    }
+
+    private Target target(String id, Context context) {
+        if (id == null) return null;
+        Map<Object, Receipt> found = new IdentityHashMap<>();
+        synchronized (receipts) {
+            for (Map.Entry<Object, LinkedHashMap<String, Receipt>> account : receipts.entrySet()) {
+                Receipt receipt = account.getValue().get(id);
+                if (receipt != null) found.put(account.getKey(), receipt);
+            }
+        }
+        if (found.isEmpty()) return null;
+        Map<Object, String> accounts = new IdentityHashMap<>();
+        for (Object session : found.keySet()) accounts.put(session, UnsentIdentity.account(session));
+        Activity activity = context instanceof Activity a ? a : UIHookManager.topActivity();
+        Object session = ManualStorySeenPolicy.pickSession(accounts,
+                activity == null ? null : HideChatsHook.currentAccount(activity));
+        Receipt receipt = session == null ? null : found.get(session);
+        if (receipt == null || !ManualStorySeenPolicy.othersStory(receipt.reelId, accounts.get(session))) return null;
+        return new Target(session, receipt);
+    }
+
+    private void markSeen(Context context, String id) {
         if (!receiptPipelineReady) {
             if (actionDiagnostics.getAndIncrement() < 3) ModuleLog.warn("(IE|ManualStorySeen) \"Mark as seen\" is not available on this Instagram version");
             toast(context, R.string.ig_manual_story_seen_unsupported);
@@ -404,11 +390,9 @@ public final class ManualStorySeenHook {
         String token = null;
         String stage = "receipt lookup";
         try {
-            Receipt receipt;
-            synchronized (receipts) {
-                Map<String, Receipt> account = receipts.get(session);
-                receipt = account == null ? null : account.get(id);
-            }
+            Target target = target(id, context);
+            Object session = target == null ? null : target.session();
+            Receipt receipt = target == null ? null : target.receipt();
             if (actionDiagnostics.getAndIncrement() < 3) {
                 ModuleLog.detail("(IE|ManualStorySeen) action lookup: account=" + (session != null)
                         + ", currentStory=" + (id != null) + ", receipt=" + (receipt != null));
@@ -439,18 +423,6 @@ public final class ManualStorySeenHook {
     }
 
     private static boolean enabled() { return FeatureFlags.manualStorySeen && FeatureFlags.isGhostStory; }
-
-    private static Object across(XC_MethodHook.MethodHookParam p, String type) {
-        Set<Object> matches = Collections.newSetFromMap(new IdentityHashMap<>());
-        for (Object arg : p.args) if (arg != null && arg.getClass().getName().equals(type)) matches.add(arg);
-        if (!matches.isEmpty()) return matches.size() == 1 ? matches.iterator().next() : null;
-        // Both native menu dispatchers pass their declaring-class holder, whose direct typed fields
-        // are the current ReelItem and UserSession. Never walk the viewer/prefetch object graph.
-        Class<?> owner = p.method.getDeclaringClass();
-        if (owner.isInstance(p.thisObject)) collectTyped(p.thisObject, type, 1, matches);
-        for (Object arg : p.args) if (owner.isInstance(arg)) collectTyped(arg, type, 1, matches);
-        return matches.size() == 1 ? matches.iterator().next() : null;
-    }
 
     private static Object typedValue(Object object, String type, int depth) {
         Set<Object> matches = Collections.newSetFromMap(new IdentityHashMap<>());

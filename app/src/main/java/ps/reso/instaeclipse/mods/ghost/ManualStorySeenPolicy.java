@@ -9,21 +9,61 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /** One dispatch for one explicitly constructed receipt, bound to the originating login session. */
 final class ManualStorySeenPolicy {
     static final String PARAMETER = "instaeclipse_manual_seen";
+    static final Set<String> HOSTS = Set.of("i.instagram.com", "b.i.instagram.com",
+            "z-p4.i.instagram.com", "z-p42.i.instagram.com");
     private static final long LIFETIME_MS = 60_000;
     private final Map<String, Approval> approvals = new LinkedHashMap<>();
+    private String rejection;
 
-    static CharSequence[] appendAction(CharSequence[] original, String label) {
-        for (CharSequence entry : original) if (entry != null && label.contentEquals(entry)) return original;
-        CharSequence[] extended = original instanceof String[]
-                ? java.util.Arrays.copyOf(original, original.length + 1, String[].class)
-                : java.util.Arrays.copyOf(original, original.length + 1, CharSequence[].class);
-        extended[original.length] = label;
-        return extended;
+    static final class Tracking {
+        private static final Object OFF = new Object();
+        private final ThreadLocal<String> story = new ThreadLocal<>();
+
+        Object enter(boolean enabled, Supplier<String> id) {
+            if (!enabled) return OFF;
+            String previous = story.get();
+            story.set(id.get());
+            return previous;
+        }
+
+        void exit(Object entered) {
+            if (entered == OFF) return;
+            if (entered instanceof String previous) story.set(previous);
+            else story.remove();
+        }
+
+        String current() {
+            return story.get();
+        }
+    }
+
+    static String token(URI uri) {
+        if (uri == null || uri.getRawQuery() == null) return null;
+        for (String pair : uri.getRawQuery().split("&", -1)) {
+            if (pair.startsWith(PARAMETER + "=")) return pair.substring(PARAMETER.length() + 1);
+        }
+        return null;
+    }
+
+    static <S> S pickSession(Map<S, String> accounts, String current) {
+        S pick = null;
+        for (Map.Entry<S, String> entry : accounts.entrySet()) {
+            if (current != null && !current.equals(entry.getValue())) continue;
+            if (pick != null) return null;
+            pick = entry.getKey();
+        }
+        return pick;
+    }
+
+    static boolean othersStory(String reelId, String account) {
+        return reelId != null && !reelId.equals(account);
     }
 
     static boolean hasMarker(URI uri) {
@@ -112,18 +152,28 @@ final class ManualStorySeenPolicy {
 
     synchronized void revoke(String token) { approvals.remove(token); }
 
+    synchronized String rejection() {
+        return rejection;
+    }
+
+    private URI reject(String why) {
+        rejection = why;
+        return null;
+    }
+
     synchronized URI consume(URI uri, Object session, long now) {
-        if (uri == null || !"https".equals(uri.getScheme())
-                || !"i.instagram.com".equals(uri.getHost())
-                || uri.getRawPath() == null
-                || !uri.getRawPath().matches("/api/v[0-9]+/media/seen/")) return null;
+        if (uri == null || !"https".equals(uri.getScheme())) return reject("not an https request");
+        if (!HOSTS.contains(uri.getHost())) return reject("unknown host " + uri.getHost());
+        if (uri.getRawPath() == null || !uri.getRawPath().matches("/api/v[0-9]+/media/seen/")) {
+            return reject("not a story seen request");
+        }
         String query = uri.getRawQuery();
-        if (query == null) return null;
+        if (query == null) return reject("no query");
         String token = null;
         StringBuilder remaining = new StringBuilder();
         for (String pair : query.split("&", -1)) {
             if (pair.startsWith(PARAMETER + "=")) {
-                if (token != null) return null;
+                if (token != null) return reject("two markers");
                 token = pair.substring(PARAMETER.length() + 1);
             } else if (!pair.isEmpty()) {
                 if (remaining.length() > 0) remaining.append('&');
@@ -131,8 +181,9 @@ final class ManualStorySeenPolicy {
             }
         }
         Approval approval = approvals.get(token);
-        if (approval == null || approval.session.get() != session || session == null
-                || approval.expiresAt <= now) return null;
+        if (approval == null) return reject("no approval for this request");
+        if (session == null || approval.session.get() != session) return reject("another login session");
+        if (approval.expiresAt <= now) return reject("the approval expired");
         approvals.remove(token);
         return URI.create(uri.getScheme() + "://" + uri.getRawAuthority() + uri.getRawPath()
                 + (remaining.length() == 0 ? "" : "?" + remaining));
