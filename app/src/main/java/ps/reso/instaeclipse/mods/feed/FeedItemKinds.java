@@ -2,8 +2,11 @@ package ps.reso.instaeclipse.mods.feed;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import ps.reso.instaeclipse.utils.core.SafeReflect;
@@ -12,6 +15,11 @@ public final class FeedItemKinds {
 
     private static final Field[] NO_FIELDS = new Field[0];
     private static final Map<Class<?>, Layout> LAYOUTS = new ConcurrentHashMap<>();
+    private static final Set<String> NEVER_HIDDEN = new HashSet<>(Arrays.asList(
+            "END_OF_FEED_DEMARCATOR", "END_OF_FAVORITES_DEMARCATOR", "END_OF_EXCLUSIVE_CONTENT_DEMARCATOR",
+            "FOLLOW_REQUESTS", "TAKE_A_BREAK_NUDGE"));
+    private static final Set<String> THREADS_KINDS = new HashSet<>(Arrays.asList(
+            "THREAD", "THREADS_IN_FEED_UNIT", "THREADS_IN_FEED_UNIT_MUSE", "TIFU_IN_EXPLORE", "EOF_TIFU"));
 
     private FeedItemKinds() {}
 
@@ -38,7 +46,9 @@ public final class FeedItemKinds {
     }
 
     public static boolean hides(String kind, boolean threads, boolean hideSuggestions, boolean hideThreads) {
-        return threads ? hideThreads : hideSuggestions;
+        if (kind != null && NEVER_HIDDEN.contains(kind)) return false;
+        boolean threadsUnit = threads || (kind != null && THREADS_KINDS.contains(kind));
+        return threadsUnit ? hideThreads : hideSuggestions;
     }
 
     static boolean isMediaType(Class<?> type) {
@@ -47,7 +57,8 @@ public final class FeedItemKinds {
 
     static boolean isThreadsType(Class<?> type) {
         String name = type.getSimpleName();
-        return name.contains("Threads") || name.startsWith("TextApp") || name.startsWith("XDTTextApp");
+        return name.equals("Thread") || name.contains("Threads")
+                || name.startsWith("TextApp") || name.startsWith("XDTTextApp");
     }
 
     static boolean isKindType(Class<?> type) {

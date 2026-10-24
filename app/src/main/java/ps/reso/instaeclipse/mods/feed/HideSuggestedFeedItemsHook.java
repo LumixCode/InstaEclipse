@@ -9,6 +9,7 @@ import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -63,6 +64,7 @@ public class HideSuggestedFeedItemsHook {
                 try {
                     hookBridgeMethod(cached, classLoader, filterHook);
                     markHookedForEnabledFlags();
+                    ModuleLog.ok("(InstaEclipse | HideSuggested): ready");
                     return;
                 } catch (Throwable t) {
                     ModuleLog.detail("(InstaEclipse | HideSuggested): cached parser hook failed, searching again: "
@@ -222,12 +224,21 @@ public class HideSuggestedFeedItemsHook {
         }
         int hooked = 0;
         for (Method m : clazz.getDeclaredMethods()) {
-            if (m.isBridge()) {
+            if (m.isBridge() && implementsAbstract(clazz.getSuperclass(), m)) {
                 XposedBridge.hookMethod(m, hook);
                 hooked++;
             }
         }
         if (hooked == 0) throw new IllegalStateException(className + " has no parse bridge, not hooked");
+    }
+
+    private static boolean implementsAbstract(Class<?> base, Method m) {
+        if (base == null) return false;
+        try {
+            return Modifier.isAbstract(base.getDeclaredMethod(m.getName(), m.getParameterTypes()).getModifiers());
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     // Mark the feature(s) as hooked as soon as the filter is successfully attached, rather
