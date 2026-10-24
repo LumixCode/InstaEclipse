@@ -23,12 +23,14 @@ public class ShareDownloadActivity extends Activity {
         if (link == null) {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, R.string.share_dl_no_link, Toast.LENGTH_SHORT).show();
         } else {
+            boolean opaque = link.kind == ShareLinks.Kind.OPAQUE;
             Intent ig = new Intent(Intent.ACTION_VIEW, Uri.parse(link.canonicalUrl))
                     .setPackage("com.instagram.android")
-                    .putExtra(ShareLinkDownloadHook.EXTRA, true)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (!opaque) ig.putExtra(ShareLinkDownloadHook.EXTRA, true);
             try {
                 startActivity(ig);
+                if (opaque) ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, R.string.share_dl_opened_in_instagram, Toast.LENGTH_LONG).show();
             } catch (ActivityNotFoundException e) {
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, R.string.share_dl_no_instagram, Toast.LENGTH_SHORT).show();
             }
