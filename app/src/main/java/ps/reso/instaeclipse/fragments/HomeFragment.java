@@ -1,6 +1,5 @@
 package ps.reso.instaeclipse.fragments;
 
-import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -15,12 +14,9 @@ import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
-import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -47,7 +43,6 @@ import java.util.List;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
-import ps.reso.instaeclipse.utils.core.Contributor;
 import ps.reso.instaeclipse.utils.core.ExportBrand;
 import ps.reso.instaeclipse.utils.core.InstagramCompat;
 import ps.reso.instaeclipse.utils.core.InstagramRestarter;
@@ -56,9 +51,6 @@ import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.log.LogMirrorProvider;
 
 public class HomeFragment extends Fragment implements TabFragment {
-
-    // px/s scroll speed — feels like a gentle conveyor belt
-    private static final float SCROLL_SPEED_DP_PER_SEC = 48f;
 
     private static final String PREFS_NAME = "instaeclipse_cache";
     private static final String PREF_PINNED = "homePinnedShortcuts";
@@ -184,9 +176,6 @@ public class HomeFragment extends Fragment implements TabFragment {
     private boolean restarting;
     private boolean pingReceiverRegistered;
 
-    private AutoScroller contributorsScroller;
-    private AutoScroller specialThanksScroller;
-
     /**
      * Liveness ping: the module answers ACTION_REQUEST_PREFS with ACTION_SEND_PREFS from inside a
      * running Instagram process. A reply proves the module is loaded; no reply just means
@@ -276,8 +265,6 @@ public class HomeFragment extends Fragment implements TabFragment {
         });
         view.findViewById(R.id.home_shortcuts_edit).setOnClickListener(v -> showEditShortcutsDialog());
 
-        setupContributorsAndSpecialThanks(view);
-
         return view;
     }
 
@@ -285,8 +272,6 @@ public class HomeFragment extends Fragment implements TabFragment {
     public void onResume() {
         super.onResume();
         checkInstagramStatus();
-        if (contributorsScroller != null) contributorsScroller.start();
-        if (specialThanksScroller != null) specialThanksScroller.start();
         // Prefs may have changed in the Features tab or from inside Instagram.
         updateFeatureCount();
         renderShortcuts();
@@ -296,19 +281,10 @@ public class HomeFragment extends Fragment implements TabFragment {
     @Override
     public void onPause() {
         super.onPause();
-        if (contributorsScroller != null) contributorsScroller.stop();
-        if (specialThanksScroller != null) specialThanksScroller.stop();
         if (pingReceiverRegistered) {
             if (pingReply != null) { pingReply.cancel(); pingReply = null; }
             pingReceiverRegistered = false;
         }
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        if (contributorsScroller != null) contributorsScroller.stop();
-        if (specialThanksScroller != null) specialThanksScroller.stop();
     }
 
     @Override
@@ -732,230 +708,6 @@ public class HomeFragment extends Fragment implements TabFragment {
         return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics()));
     }
 
-    // =========================================================
-    // CONTRIBUTORS
-    // =========================================================
-
-    private void setupContributorsAndSpecialThanks(View rootView) {
-        HorizontalScrollView contributorsScroll = rootView.findViewById(R.id.contributors_scroll);
-        HorizontalScrollView specialThanksScroll = rootView.findViewById(R.id.special_thanks_scroll);
-        LinearLayout contributorsContainer = rootView.findViewById(R.id.contributors_container);
-        LinearLayout specialThanksContainer = rootView.findViewById(R.id.special_thanks_container);
-
-        List<Contributor> contributors = Arrays.asList(
-                new Contributor("ReSo7200", "https://github.com/ReSo7200", "https://linkedin.com/in/abdalhaleem-altamimi", null),
-                new Contributor("swakwork", "https://github.com/swakwork", null, null),
-                new Contributor("isma3iloiso", "https://github.com/isma3iloiso", null, null),
-                new Contributor("Placeholder6", "https://github.com/Placeholder6", null, null),
-                new Contributor("frknkrc44", "https://github.com/frknkrc44", null, null),
-                new Contributor("BrianML", "https://github.com/brianml31", null, "https://t.me/instamoon_channel"),
-                new Contributor("silvzr", "https://github.com/silvzr", null, null),
-                new Contributor("oct", "https://github.com/oct888", null, null),
-                new Contributor("HalfManBear", "https://github.com/halfmanbear", null, null),
-                new Contributor("ar5to", "https://github.com/ar5to", null, "https://t.me/ar5to"),
-                new Contributor("particle-box", "https://github.com/particle-box", null, null),
-                new Contributor("rsr", null, null, "https://t.me/rsr1337"),
-                // Merged-PR authors that were missing from this list.
-                new Contributor("akifakif32", "https://github.com/akifakif32", null, null),
-                new Contributor("HackZy01", "https://github.com/HackZy01", null, null),
-                new Contributor("Xiddoc", "https://github.com/Xiddoc", null, null),
-                new Contributor("GlitchDaBest", "https://github.com/GlitchDaBest", null, null),
-                new Contributor("NicKz101", "https://github.com/NicKz101", null, null),
-                new Contributor("HcNguyen111", "https://github.com/HcNguyen111", null, null),
-                new Contributor("Lxchoooo", "https://github.com/Lxchoooo", null, null),
-                new Contributor("EscapeA", "https://github.com/EscapeA", null, null),
-                new Contributor("Figim", "https://github.com/Figim", null, null),
-                new Contributor("oka1da", "https://github.com/oka1da", null, null),
-                new Contributor("uurcan7", "https://github.com/uurcan7", null, null),
-                new Contributor("zarzet", "https://github.com/zarzet", null, null),
-                new Contributor("xxOrdulu52xx", "https://github.com/xxOrdulu52xx", null, null),
-                new Contributor("dpwbusr", "https://github.com/dpwbusr", null, null),
-                new Contributor("d9k6s", "https://github.com/d9k6s", null, null),
-                new Contributor("izadiegizabal", "https://github.com/izadiegizabal", null, null),
-                new Contributor("b4lol", "https://github.com/b4lol", null, null)
-        );
-
-        List<Contributor> specialThanks = Arrays.asList(
-                new Contributor("xHookman", "https://github.com/xHookman", null, null),
-                new Contributor("Bluepapilte", null, null, "https://t.me/instasmashrepo"),
-                new Contributor("BdrcnAYYDIN", null, null, "https://t.me/BdrcnAYYDIN"),
-                new Contributor("Amàzing World", null, null, null)
-        );
-
-        // Inflate each list twice so the loop restarts seamlessly
-        inflateCards(contributors, contributorsContainer);
-        inflateCards(contributors, contributorsContainer);
-        inflateCards(specialThanks, specialThanksContainer);
-        inflateCards(specialThanks, specialThanksContainer);
-
-        // Start infinite scroll once layout is complete
-        contributorsContainer.getViewTreeObserver().addOnGlobalLayoutListener(
-                new ViewTreeObserver.OnGlobalLayoutListener() {
-                    @Override
-                    public void onGlobalLayout() {
-                        contributorsContainer.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                        int halfWidth = contributorsContainer.getWidth() / 2;
-                        contributorsScroller = new AutoScroller(contributorsScroll, halfWidth);
-                        contributorsScroller.attachTouchPause();
-                        if (isResumed()) contributorsScroller.start();
-                    }
-                });
-
-        specialThanksContainer.getViewTreeObserver().addOnGlobalLayoutListener(
-                new ViewTreeObserver.OnGlobalLayoutListener() {
-                    @Override
-                    public void onGlobalLayout() {
-                        specialThanksContainer.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                        int halfWidth = specialThanksContainer.getWidth() / 2;
-                        specialThanksScroller = new AutoScroller(specialThanksScroll, halfWidth);
-                        specialThanksScroller.attachTouchPause();
-                        if (isResumed()) specialThanksScroller.start();
-                    }
-                });
-    }
-
-    /**
-     * Continuous, seamless loop scroller for a duplicated-content HorizontalScrollView. It advances
-     * the scroll by a fixed speed every animation frame, reading the LIVE scroll position and
-     * wrapping it modulo one copy's width — so after a user drag it simply continues from wherever
-     * the finger left off (the content is duplicated, so the wrap is invisible). Momentum fling is
-     * disabled on the view (LoopScrollView), which is what removes the old snap-back / random jump.
-     */
-    private final class AutoScroller implements Runnable {
-        private final HorizontalScrollView sv;
-        private final int halfWidth;
-        private final float stepPxPerMs;
-        private boolean running;
-        private boolean paused;
-        private long lastFrame;
-
-        AutoScroller(HorizontalScrollView sv, int halfWidth) {
-            this.sv = sv;
-            this.halfWidth = halfWidth;
-            this.stepPxPerMs = SCROLL_SPEED_DP_PER_SEC * getResources().getDisplayMetrics().density / 1000f;
-        }
-
-        void start() {
-            if (running || halfWidth <= 0) return;
-            running = true;
-            lastFrame = 0;
-            sv.postOnAnimation(this);
-        }
-
-        void stop() {
-            running = false;
-            sv.removeCallbacks(this);
-        }
-
-        @Override
-        public void run() {
-            if (!running) return;
-            long now = android.view.animation.AnimationUtils.currentAnimationTimeMillis();
-            if (lastFrame == 0) lastFrame = now;
-            long dt = now - lastFrame;
-            lastFrame = now;
-            if (!paused && halfWidth > 0) {
-                int x = sv.getScrollX() + Math.round(stepPxPerMs * dt);
-                x %= halfWidth;
-                if (x < 0) x += halfWidth;
-                sv.scrollTo(x, 0);
-            }
-            sv.postOnAnimation(this);
-        }
-
-        @SuppressLint("ClickableViewAccessibility")
-        void attachTouchPause() {
-            sv.setOnTouchListener((v, event) -> {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                    case MotionEvent.ACTION_MOVE:
-                        paused = true;      // let the user drag freely
-                        break;
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        paused = false;     // resume from the live position (no fling to fight)
-                        lastFrame = 0;
-                        break;
-                }
-                return false; // keep normal drag handling
-            });
-        }
-    }
-
-    private void inflateCards(List<Contributor> list, LinearLayout container) {
-        for (Contributor c : list) {
-            View v = LayoutInflater.from(getContext()).inflate(R.layout.contributor_card, container, false);
-            setupContributorCard(v, c);
-            container.addView(v);
-        }
-    }
-
-    // A small palette of pleasant, saturated hues for the monogram avatars — each contributor gets
-    // a stable colour derived from their name so the row reads as a set of distinct people.
-    private static final int[] AVATAR_COLORS = {
-            0xFF5E5CE6, 0xFFFF375F, 0xFFFF9F0A, 0xFF30D158, 0xFF64D2FF,
-            0xFFBF5AF2, 0xFFFF9500, 0xFF32D74B, 0xFF0A84FF, 0xFFFFD60A
-    };
-
-    private void setupContributorCard(View view, Contributor contributor) {
-        TextView nameTextView = view.findViewById(R.id.contributor_name);
-        nameTextView.setText(contributor.name());
-
-        // Monogram avatar: first letter on a per-name coloured circle.
-        TextView avatar = view.findViewById(R.id.contributor_avatar);
-        if (avatar != null) {
-            String name = contributor.name() == null ? "" : contributor.name().trim();
-            String initial = "?";
-            for (int i = 0; i < name.length(); i++) {
-                char ch = name.charAt(i);
-                if (Character.isLetterOrDigit(ch)) { initial = String.valueOf(Character.toUpperCase(ch)); break; }
-            }
-            int color = AVATAR_COLORS[Math.abs(name.hashCode()) % AVATAR_COLORS.length];
-            android.graphics.drawable.GradientDrawable circle = new android.graphics.drawable.GradientDrawable();
-            circle.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-            circle.setColor(color);
-            avatar.setText(initial);
-            avatar.setBackground(circle);
-        }
-
-        // Overlay the GitHub profile photo when the contributor has a GitHub link — github.com/<user>.png
-        // resolves to their avatar. On no-link/failure the monogram above stays visible.
-        ImageView avatarImg = view.findViewById(R.id.contributor_avatar_img);
-        if (avatarImg != null) {
-            avatarImg.setVisibility(View.GONE); // reset (fresh inflate, but be safe)
-            String gh = contributor.githubUrl();
-            if (gh != null && !gh.trim().isEmpty()) {
-                String u = gh.trim();
-                if (u.endsWith("/")) u = u.substring(0, u.length() - 1);
-                ps.reso.instaeclipse.utils.ui.AvatarLoader.loadCircular(u + ".png?size=144", avatarImg);
-            }
-        }
-
-        ImageButton githubButton = view.findViewById(R.id.github_button);
-        if (contributor.githubUrl() != null) {
-            githubButton.setVisibility(View.VISIBLE);
-            githubButton.setOnClickListener(v -> openLink(contributor.githubUrl()));
-        } else {
-            githubButton.setVisibility(View.GONE);
-        }
-
-        ImageButton linkedinButton = view.findViewById(R.id.linkedin_button);
-        if (contributor.linkedinUrl() != null) {
-            linkedinButton.setVisibility(View.VISIBLE);
-            linkedinButton.setOnClickListener(v -> openLink(contributor.linkedinUrl()));
-        } else {
-            linkedinButton.setVisibility(View.GONE);
-        }
-
-        ImageButton telegramButton = view.findViewById(R.id.telegram_button);
-        if (contributor.telegramUrl() != null) {
-            telegramButton.setVisibility(View.VISIBLE);
-            telegramButton.setOnClickListener(v -> openLink(contributor.telegramUrl()));
-        } else {
-            telegramButton.setVisibility(View.GONE);
-        }
-    }
-
     private void showDetectedVersionsDialog(PackageManager pm) {
         String[] labels = new String[installedPackages.size()];
         for (int i = 0; i < installedPackages.size(); i++) {
@@ -986,9 +738,5 @@ public class HomeFragment extends Fragment implements TabFragment {
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
-    }
-
-    private void openLink(String url) {
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
     }
 }

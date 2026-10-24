@@ -12,4 +12,7 @@
     <string name="ie_frame_previous" tools:ignore="MissingTranslation">Previous frame</string>
     <string name="ie_frame_next" tools:ignore="MissingTranslation">Next frame</string>
     <string name="ie_frame_cleanup_pending_open" tools:ignore="MissingTranslation">Temporary cleanup is incomplete. Open InstaEclipse to retry cleanup.</string>
+    <string name="credits_on_github" tools:ignore="MissingTranslation">%1$s on GitHub</string>
+    <string name="credits_on_telegram" tools:ignore="MissingTranslation">%1$s on Telegram</string>
+    <string name="credits_on_linkedin" tools:ignore="MissingTranslation">%1$s on LinkedIn</string>
 </resources>

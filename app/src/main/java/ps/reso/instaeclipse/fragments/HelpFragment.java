@@ -4,6 +4,14 @@ import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.Paint;
+import android.graphics.PixelFormat;
+import android.graphics.Rect;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.text.Html;
 import android.text.Spannable;
@@ -30,9 +38,15 @@ import androidx.fragment.app.Fragment;
 import androidx.transition.AutoTransition;
 import androidx.transition.TransitionManager;
 
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.color.MaterialColors;
 
+import java.util.List;
+
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.utils.core.Contributor;
+import ps.reso.instaeclipse.utils.core.Credits;
 import ps.reso.instaeclipse.utils.core.ExportBrand;
 import ps.reso.instaeclipse.utils.ui.Links;
 
@@ -83,7 +97,95 @@ public class HelpFragment extends Fragment implements TabFragment {
         TextView tested = view.findViewById(R.id.about_tested_with);
         tested.setText(getString(R.string.help_tested_with, ExportBrand.TESTED_INSTAGRAM));
 
+        buildCredits(view.findViewById(R.id.credits_contributors), Credits.CONTRIBUTORS);
+        buildCredits(view.findViewById(R.id.credits_special_thanks), Credits.SPECIAL_THANKS);
+
         return view;
+    }
+
+    private static final int[] MONOGRAM_COLORS = {
+            0xFF5E5CE6, 0xFFFF375F, 0xFFFF9F0A, 0xFF30D158, 0xFF64D2FF,
+            0xFFBF5AF2, 0xFFFF9500, 0xFF32D74B, 0xFF0A84FF, 0xFFFFD60A
+    };
+
+    private void buildCredits(ChipGroup group, List<Contributor> people) {
+        Context ctx = group.getContext();
+        for (Contributor person : people) {
+            Chip chip = new Chip(ctx);
+            chip.setText(person.name());
+            chip.setEnsureMinTouchTargetSize(true);
+            chip.setChipIcon(new MonogramDrawable(Credits.initials(person.name()),
+                    MONOGRAM_COLORS[Math.floorMod(person.name().hashCode(), MONOGRAM_COLORS.length)], dp(24)));
+            chip.setChipIconTint(null);
+            chip.setChipIconVisible(true);
+            String link = Credits.mainLink(person);
+            if (link != null) {
+                chip.setContentDescription(getString(siteLabel(Credits.site(person)), person.name()));
+                chip.setOnClickListener(v -> openUrl(link));
+            } else {
+                chip.setClickable(false);
+                chip.setFocusable(false);
+            }
+            group.addView(chip);
+        }
+    }
+
+    private static int siteLabel(Credits.Site site) {
+        if (site == Credits.Site.TELEGRAM) return R.string.credits_on_telegram;
+        if (site == Credits.Site.LINKEDIN) return R.string.credits_on_linkedin;
+        return R.string.credits_on_github;
+    }
+
+    private static final class MonogramDrawable extends Drawable {
+        private final Paint circle = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final String initials;
+        private final int size;
+
+        MonogramDrawable(String initials, int color, int size) {
+            this.initials = initials;
+            this.size = size;
+            circle.setColor(color);
+            text.setColor(Color.WHITE);
+            text.setTextAlign(Paint.Align.CENTER);
+            text.setTypeface(Typeface.DEFAULT_BOLD);
+            text.setTextSize(size * (initials.length() > 1 ? 0.4f : 0.5f));
+        }
+
+        @Override
+        public void draw(@NonNull Canvas canvas) {
+            Rect b = getBounds();
+            float r = Math.min(b.width(), b.height()) / 2f;
+            canvas.drawCircle(b.exactCenterX(), b.exactCenterY(), r, circle);
+            float baseline = b.exactCenterY() - (text.descent() + text.ascent()) / 2f;
+            canvas.drawText(initials, b.exactCenterX(), baseline, text);
+        }
+
+        @Override
+        public int getIntrinsicWidth() {
+            return size;
+        }
+
+        @Override
+        public int getIntrinsicHeight() {
+            return size;
+        }
+
+        @Override
+        public void setAlpha(int alpha) {
+            circle.setAlpha(alpha);
+            text.setAlpha(alpha);
+        }
+
+        @Override
+        public void setColorFilter(@Nullable ColorFilter colorFilter) {
+            circle.setColorFilter(colorFilter);
+        }
+
+        @Override
+        public int getOpacity() {
+            return PixelFormat.TRANSLUCENT;
+        }
     }
 
     @Override
