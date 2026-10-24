@@ -134,10 +134,6 @@ public class UnsentLog {
     /** Entries already looked up in the restart copies this process (see getForThread). */
     private static final Set<UnsentMessageIndex.Key> copyLookups = new HashSet<>();
 
-    public static synchronized boolean wasUnsent(String account, String thread, String messageId) {
-        return ready() && deletions.contains(account, thread, messageId);
-    }
-
     public static synchronized UnsentMessageIndex.Key findUnsent(String account, String thread, Iterable<String> ids) {
         return ready() ? deletions.find(account, thread, ids) : null;
     }

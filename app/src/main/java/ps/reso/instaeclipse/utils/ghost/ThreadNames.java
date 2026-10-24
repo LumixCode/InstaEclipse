@@ -6,11 +6,20 @@ import android.content.Context;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 /**
@@ -21,179 +30,149 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
  */
 public class ThreadNames {
 
-    private static final String FILE_NAME = "ie_thread_names.json";
-    private static final Map<String, String> cache = new HashMap<>();
-    private static final java.util.Set<String> notFound = new java.util.HashSet<>();
-    private static boolean loaded = false;
-
-    private static File file() {
-        Context ctx = AndroidAppHelper.currentApplication();
-        if (ctx == null) return null;
-        return new File(ctx.getFilesDir(), FILE_NAME);
-    }
-
-    private static synchronized void ensureLoaded() {
-        if (loaded) return;
-        loaded = true;
-        try {
-            File f = file();
-            if (f == null || !f.exists()) return;
-            byte[] b = new byte[(int) f.length()];
-            try (java.io.FileInputStream in = new java.io.FileInputStream(f)) {
-                int off = 0, n;
-                while (off < b.length && (n = in.read(b, off, b.length - off)) > 0) off += n;
-            }
-            JSONObject o = new JSONObject(new String(b, StandardCharsets.UTF_8));
-            for (java.util.Iterator<String> it = o.keys(); it.hasNext(); ) {
-                String k = it.next();
-                cache.put(k, o.optString(k, ""));
-            }
-        } catch (Throwable t) {
-            ModuleLog.detail("(IE|ThreadNames) load failed: " + t.getMessage());
-        }
-        cleanupOnce();
-    }
+    static final int MAX_IDS_PER_QUERY = 500;
+    private static final IdTitleStore store = new IdTitleStore("ie_thread_names.json",
+            failure -> ModuleLog.detail("(IE|ThreadNames) load failed: " + failure),
+            failure -> ModuleLog.detail("(IE|ThreadNames) persist failed: " + failure),
+            ThreadNames::cleanupOnce);
+    private static final Set<String> notFound = new HashSet<>();
 
     /**
      * Older builds labelled threads with whatever chat header (or even message word) was on screen,
      * so one name ended up on several unrelated ids. Drop every name shared by more than one id,
      * once; the real names are learned again the next time each chat is opened.
      */
-    private static void cleanupOnce() {
+    private static boolean cleanupOnce(Map<String, String> names) {
         try {
             Context ctx = AndroidAppHelper.currentApplication();
-            if (ctx == null) return;
+            if (ctx == null) return false;
             File marker = new File(ctx.getFilesDir(), "ie_thread_names.v2");
-            if (marker.exists()) return;
+            if (marker.exists()) return false;
             Map<String, Integer> counts = new HashMap<>();
-            for (String v : cache.values()) counts.merge(v, 1, Integer::sum);
-            int before = cache.size();
-            cache.values().removeIf(v -> counts.getOrDefault(v, 0) > 1);
-            if (cache.size() != before) persist();
+            for (String v : names.values()) counts.merge(v, 1, Integer::sum);
+            int before = names.size();
+            names.values().removeIf(v -> counts.getOrDefault(v, 0) > 1);
             marker.createNewFile();
-            ModuleLog.detail("(IE|ThreadNames) cleanup dropped " + (before - cache.size()) + " ambiguous name(s)");
+            ModuleLog.detail("(IE|ThreadNames) cleanup dropped " + (before - names.size()) + " ambiguous name(s)");
+            return names.size() != before;
         } catch (Throwable t) {
             ModuleLog.detail("(IE|ThreadNames) cleanup failed: " + t.getMessage());
-        }
-    }
-
-    private static synchronized void persist() {
-        try {
-            File f = file();
-            if (f == null) return;
-            JSONObject o = new JSONObject();
-            for (Map.Entry<String, String> e : cache.entrySet()) o.put(e.getKey(), e.getValue());
-            // temp file + rename: a crash mid-write keeps the previous version intact
-            ps.reso.instaeclipse.utils.core.AtomicFiles.write(f, o.toString());
-        } catch (Throwable t) {
-            ModuleLog.detail("(IE|ThreadNames) persist failed: " + t.getMessage());
+            return false;
         }
     }
 
     /** Record a thread's display name (no-op for empty inputs or an unchanged value). */
-    public static synchronized void put(String threadId, String name) {
+    public static void put(String threadId, String name) {
         if (threadId == null || threadId.isEmpty() || name == null || name.trim().isEmpty()) return;
-        ensureLoaded();
-        String v = name.trim();
-        if (v.equals(cache.get(threadId))) return;
-        cache.put(threadId, v);
-        persist();
-    }
-
-    /** Snapshot of every known thread id -> name (chats opened while the module was active). */
-    public static synchronized Map<String, String> all() {
-        ensureLoaded();
-        return new java.util.LinkedHashMap<>(cache);
+        store.put(threadId, name.trim());
     }
 
     /** Best-known name for a thread id, or "" if unknown. */
-    public static synchronized String get(String threadId) {
-        if (threadId == null) return "";
-        ensureLoaded();
-        String v = cache.get(threadId);
-        return v == null ? "" : v;
+    public static String get(String threadId) {
+        return threadId == null ? "" : store.get(threadId);
     }
 
-    /**
-     * Like {@link #get}, but when the chat was never opened (so its header name was never seen)
-     * look the name up in Instagram's own thread cache (direct.db, table threads, thread_info
-     * JSON) and remember it. Must run inside Instagram's process.
-     */
-    public static synchronized String resolve(String threadId) {
-        String v = get(threadId);
-        if (!v.isEmpty() || threadId == null || threadId.isEmpty()) return v;
-        String found = lookupDb(java.util.Collections.singletonList(threadId)).get(threadId);
-        if (found != null && !found.isEmpty()) {
-            put(threadId, found);
-            return found;
-        }
-        return "";
+    public static String resolve(String threadId) {
+        if (threadId == null || threadId.isEmpty()) return "";
+        String name = resolveAll(Collections.singletonList(threadId)).get(threadId);
+        return name == null ? "" : name;
     }
 
-    public static Map<String, String> resolveAll(java.util.Collection<String> threadIds) {
-        Map<String, String> found = new java.util.LinkedHashMap<>();
-        java.util.List<String> missing = new java.util.ArrayList<>();
-        synchronized (ThreadNames.class) {
-            ensureLoaded();
-            for (String id : threadIds) {
-                if (id == null || id.isEmpty() || found.containsKey(id) || missing.contains(id)) continue;
-                String known = cache.get(id);
-                if (known != null && !known.isEmpty()) found.put(id, known);
-                else if (!notFound.contains(id)) missing.add(id);
-            }
+    public static Map<String, String> resolveAll(Collection<String> threadIds) {
+        Map<String, String> found = new LinkedHashMap<>();
+        Set<String> missing = new LinkedHashSet<>();
+        for (String id : threadIds) {
+            if (id == null || id.isEmpty() || found.containsKey(id) || missing.contains(id)) continue;
+            String known = store.get(id);
+            if (!known.isEmpty()) found.put(id, known);
+            else missing.add(id);
         }
         if (missing.isEmpty()) return found;
-        Map<String, String> looked = lookupDb(missing);
-        synchronized (ThreadNames.class) {
-            boolean changed = false;
-            for (String id : missing) {
-                String name = looked.get(id);
-                if (name == null || name.trim().isEmpty()) {
-                    notFound.add(id);
-                    continue;
-                }
-                name = name.trim();
-                found.put(id, name);
-                if (!name.equals(cache.get(id))) {
-                    cache.put(id, name);
-                    changed = true;
-                }
-            }
-            if (changed) persist();
+        String account = UnsentIdentity.account(UIHookManager.topActivity());
+        synchronized (notFound) {
+            missing.removeIf(id -> notFound.contains(missKey(account, id)));
         }
+        if (missing.isEmpty()) return found;
+        Map<String, String> looked = lookupDb(account, new ArrayList<>(missing));
+        synchronized (notFound) {
+            for (String id : missing) if (!looked.containsKey(id)) notFound.add(missKey(account, id));
+        }
+        store.putAll(looked);
+        found.putAll(looked);
         return found;
     }
 
-    private static Map<String, String> lookupDb(java.util.Collection<String> threadIds) {
-        Map<String, String> names = new HashMap<>();
+    private static String missKey(String account, String threadId) {
+        return (account == null ? "" : account) + "/" + threadId;
+    }
+
+    static String lookupSql(boolean scoped, int count) {
+        String[] marks = new String[count];
+        Arrays.fill(marks, "?");
+        return "SELECT thread_id, thread_info FROM threads WHERE thread_id IN (" + String.join(", ", marks) + ")"
+                + (scoped ? " AND user_id = ?" : "");
+    }
+
+    static String[] lookupArgs(String account, List<String> threadIds) {
+        List<String> args = new ArrayList<>(threadIds);
+        if (account != null) args.add(account);
+        return args.toArray(new String[0]);
+    }
+
+    static List<List<String>> chunks(List<String> threadIds) {
+        List<List<String>> out = new ArrayList<>();
+        for (int i = 0; i < threadIds.size(); i += MAX_IDS_PER_QUERY) {
+            out.add(threadIds.subList(i, Math.min(threadIds.size(), i + MAX_IDS_PER_QUERY)));
+        }
+        return out;
+    }
+
+    static Map<String, String> pick(List<String[]> rows, boolean scoped) {
+        Map<String, String> names = new LinkedHashMap<>();
+        Set<String> ambiguous = new HashSet<>();
+        for (String[] row : rows) {
+            String id = row[0];
+            String name = row[1] == null ? "" : row[1].trim();
+            if (id == null || name.isEmpty()) continue;
+            String first = names.putIfAbsent(id, name);
+            if (!scoped && first != null && !first.equals(name)) ambiguous.add(id);
+        }
+        names.keySet().removeAll(ambiguous);
+        return names;
+    }
+
+    private static Map<String, String> lookupDb(String account, List<String> threadIds) {
         Context ctx = AndroidAppHelper.currentApplication();
-        if (ctx == null) return names;
+        if (ctx == null) return new HashMap<>();
         File db = ctx.getDatabasePath("direct.db");
-        if (!db.exists()) return names;
+        if (!db.exists()) return new HashMap<>();
+        List<String[]> rows = new ArrayList<>();
         try (android.database.sqlite.SQLiteDatabase d = android.database.sqlite.SQLiteDatabase.openDatabase(
                 db.getPath(), null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY)) {
-            for (String threadId : threadIds) {
-                try (android.database.Cursor c = d.rawQuery(
-                        "SELECT thread_info FROM threads WHERE thread_id = ? LIMIT 1", new String[]{threadId})) {
-                    if (!c.moveToFirst()) continue;
-                    String raw = c.getType(0) == android.database.Cursor.FIELD_TYPE_BLOB
-                            ? new String(c.getBlob(0), StandardCharsets.UTF_8) : c.getString(0);
-                    String name = nameOf(new JSONObject(raw));
-                    if (name != null) names.put(threadId, name);
-                } catch (Throwable t) {
-                    ModuleLog.detail("(IE|ThreadNames) db lookup failed: " + t.getMessage());
+            for (List<String> chunk : chunks(threadIds)) {
+                try (android.database.Cursor c = d.rawQuery(lookupSql(account != null, chunk.size()),
+                        lookupArgs(account, chunk))) {
+                    while (c.moveToNext()) {
+                        try {
+                            String raw = c.getType(1) == android.database.Cursor.FIELD_TYPE_BLOB
+                                    ? new String(c.getBlob(1), StandardCharsets.UTF_8) : c.getString(1);
+                            rows.add(new String[]{c.getString(0), nameOf(new JSONObject(raw))});
+                        } catch (Throwable t) {
+                            ModuleLog.detail("(IE|ThreadNames) db lookup failed: " + t.getMessage());
+                        }
+                    }
                 }
             }
         } catch (Throwable t) {
             ModuleLog.detail("(IE|ThreadNames) db lookup failed: " + t.getMessage());
         }
-        return names;
+        return pick(rows, account != null);
     }
 
     private static String nameOf(JSONObject info) {
         String title = info.optString("thread_title", "").trim();
         if (!title.isEmpty()) return title;
-        java.util.List<String> names = new java.util.ArrayList<>();
+        List<String> names = new ArrayList<>();
         org.json.JSONArray users = info.optJSONArray("recipients");
         if (users != null) {
             for (int i = 0; i < users.length(); i++) {

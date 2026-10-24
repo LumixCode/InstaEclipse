@@ -4,6 +4,9 @@ import android.app.Activity;
 import android.content.Context;
 import android.widget.Toast;
 
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.ghost.ui.GhostEmojiManager;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
@@ -12,58 +15,36 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 
 public class GhostModeUtils {
+
+    private record Option(BooleanSupplier selected, BooleanSupplier on, Consumer<Boolean> set) {}
+
+    private static final Option[] OPTIONS = {
+            new Option(() -> FeatureFlags.quickToggleSeen, () -> FeatureFlags.isGhostSeen, v -> FeatureFlags.isGhostSeen = v),
+            new Option(() -> FeatureFlags.quickToggleTyping, () -> FeatureFlags.isGhostTyping, v -> FeatureFlags.isGhostTyping = v),
+            new Option(() -> FeatureFlags.quickToggleScreenshot, () -> FeatureFlags.isGhostScreenshot, v -> FeatureFlags.isGhostScreenshot = v),
+            new Option(() -> FeatureFlags.quickToggleViewOnce, () -> FeatureFlags.isGhostViewOnce, v -> FeatureFlags.isGhostViewOnce = v),
+            new Option(() -> FeatureFlags.quickToggleStory, () -> FeatureFlags.isGhostStory, v -> FeatureFlags.isGhostStory = v),
+            new Option(() -> FeatureFlags.quickToggleLive, () -> FeatureFlags.isGhostLive, v -> FeatureFlags.isGhostLive = v),
+            new Option(() -> FeatureFlags.quickToggleEphemeral, () -> FeatureFlags.keepEphemeralMessages, v -> FeatureFlags.keepEphemeralMessages = v),
+            new Option(() -> FeatureFlags.quickTogglePermanentView, () -> FeatureFlags.permanentViewMode, v -> FeatureFlags.permanentViewMode = v),
+            new Option(() -> FeatureFlags.quickToggleAllowScreenshots, () -> FeatureFlags.allowScreenshots, v -> FeatureFlags.allowScreenshots = v),
+    };
+
     public static boolean isGhostModeActive() {
-        if (FeatureFlags.quickToggleSeen && FeatureFlags.isGhostSeen) return true;
-        if (FeatureFlags.quickToggleTyping && FeatureFlags.isGhostTyping) return true;
-        if (FeatureFlags.quickToggleScreenshot && FeatureFlags.isGhostScreenshot) return true;
-        if (FeatureFlags.quickToggleViewOnce && FeatureFlags.isGhostViewOnce) return true;
-        if (FeatureFlags.quickToggleStory && FeatureFlags.isGhostStory) return true;
-        if (FeatureFlags.quickToggleLive && FeatureFlags.isGhostLive) return true;
-        if (FeatureFlags.quickToggleEphemeral && FeatureFlags.keepEphemeralMessages) return true;
-        if (FeatureFlags.quickTogglePermanentView && FeatureFlags.permanentViewMode) return true;
-        return FeatureFlags.quickToggleAllowScreenshots && FeatureFlags.allowScreenshots;
+        for (Option option : OPTIONS) {
+            if (option.selected().getAsBoolean() && option.on().getAsBoolean()) return true;
+        }
+        return false;
     }
 
 
     public static void toggleSelectedGhostOptions(Context context) {
         boolean anySelected = false;
         boolean shouldDisable = false;
-
-        if (FeatureFlags.quickToggleSeen) {
+        for (Option option : OPTIONS) {
+            if (!option.selected().getAsBoolean()) continue;
             anySelected = true;
-            if (FeatureFlags.isGhostSeen) shouldDisable = true;
-        }
-        if (FeatureFlags.quickToggleTyping) {
-            anySelected = true;
-            if (FeatureFlags.isGhostTyping) shouldDisable = true;
-        }
-        if (FeatureFlags.quickToggleScreenshot) {
-            anySelected = true;
-            if (FeatureFlags.isGhostScreenshot) shouldDisable = true;
-        }
-        if (FeatureFlags.quickToggleViewOnce) {
-            anySelected = true;
-            if (FeatureFlags.isGhostViewOnce) shouldDisable = true;
-        }
-        if (FeatureFlags.quickToggleStory) {
-            anySelected = true;
-            if (FeatureFlags.isGhostStory) shouldDisable = true;
-        }
-        if (FeatureFlags.quickToggleLive) {
-            anySelected = true;
-            if (FeatureFlags.isGhostLive) shouldDisable = true;
-        }
-        if (FeatureFlags.quickToggleEphemeral) {
-            anySelected = true;
-            if (FeatureFlags.keepEphemeralMessages) shouldDisable = true;
-        }
-        if (FeatureFlags.quickTogglePermanentView) {
-            anySelected = true;
-            if (FeatureFlags.permanentViewMode) shouldDisable = true;
-        }
-        if (FeatureFlags.quickToggleAllowScreenshots) {
-            anySelected = true;
-            if (FeatureFlags.allowScreenshots) shouldDisable = true;
+            if (option.on().getAsBoolean()) shouldDisable = true;
         }
 
         if (!anySelected) {
@@ -77,15 +58,9 @@ public class GhostModeUtils {
 
         boolean newState = !shouldDisable; // true = enable, false = disable
 
-        if (FeatureFlags.quickToggleSeen) FeatureFlags.isGhostSeen = newState;
-        if (FeatureFlags.quickToggleTyping) FeatureFlags.isGhostTyping = newState;
-        if (FeatureFlags.quickToggleScreenshot) FeatureFlags.isGhostScreenshot = newState;
-        if (FeatureFlags.quickToggleViewOnce) FeatureFlags.isGhostViewOnce = newState;
-        if (FeatureFlags.quickToggleStory) FeatureFlags.isGhostStory = newState;
-        if (FeatureFlags.quickToggleLive) FeatureFlags.isGhostLive = newState;
-        if (FeatureFlags.quickToggleEphemeral) FeatureFlags.keepEphemeralMessages = newState;
-        if (FeatureFlags.quickTogglePermanentView) FeatureFlags.permanentViewMode = newState;
-        if (FeatureFlags.quickToggleAllowScreenshots) FeatureFlags.allowScreenshots = newState;
+        for (Option option : OPTIONS) {
+            if (option.selected().getAsBoolean()) option.set().accept(newState);
+        }
 
         // Save changes
         SettingsManager.saveAllFlags();
