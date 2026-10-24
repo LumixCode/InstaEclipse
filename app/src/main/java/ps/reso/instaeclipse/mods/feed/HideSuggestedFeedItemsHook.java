@@ -43,46 +43,15 @@ public class HideSuggestedFeedItemsHook {
                 Object result = param.getResult();
                 if (result == null) return;
 
-                // The parsed FeedItem is a large union type — exactly one of its many
-                // optional fields is populated per server-sent unit. A real post always
-                // has its Media field set; every suggestion/injection type (clips netego,
-                // suggested users, Threads cross-promo units, ...) leaves it null.
-                boolean hasMedia = false;
-                boolean isThreadsUnit = false;
-                Object media = null;
-                for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(result.getClass())) {
-                    String typeName = f.getType().getSimpleName();
-                    if (typeName.equals("Media")) {
-                        try {
-                            f.setAccessible(true);
-                            media = f.get(result);
-                            if (media != null) { hasMedia = true; break; }
-                        } catch (Throwable ignored) {}
-                    } else if (typeName.contains("Threads") || typeName.startsWith("TextApp") || typeName.startsWith("XDTTextApp")) {
-                        // Threads-in-feed cross-promo unit types (ThreadsInFeedUnit...,
-                        // TextApp...UnitDictImpl, XDTTextApp...UnitDictImpl) — matched by
-                        // simple name since these are stable, unobfuscated GraphQL-generated
-                        // class names, unlike the surrounding obfuscated field names.
-                        try {
-                            f.setAccessible(true);
-                            if (f.get(result) != null) isThreadsUnit = true;
-                        } catch (Throwable ignored) {}
-                    }
-                }
-
-                if (hasMedia) {
-                    // Real post: only hidden when "Hide liked posts" is on and you already liked it.
-                    // Applied at parse time, so a post liked now disappears on the next refresh.
-                    if (FeatureFlags.hideLikedPosts && isLiked(media)) param.setResult(null);
+                FeedItemKinds.Unit unit = FeedItemKinds.read(result);
+                if (unit.media != null) {
+                    if (FeatureFlags.hideLikedPosts && isLiked(unit.media)) param.setResult(null);
                     return;
                 }
-                if (!FeatureFlags.hideSuggestionsInFeed && !FeatureFlags.hideThreadsSuggestions) return;
-
-                boolean shouldHide = isThreadsUnit ? FeatureFlags.hideThreadsSuggestions
-                                                    : FeatureFlags.hideSuggestionsInFeed;
-                if (!shouldHide) return;
-
-                param.setResult(null);
+                if (FeedItemKinds.hides(unit.kind, unit.threads,
+                        FeatureFlags.hideSuggestionsInFeed, FeatureFlags.hideThreadsSuggestions)) {
+                    param.setResult(null);
+                }
             }
         };
 
