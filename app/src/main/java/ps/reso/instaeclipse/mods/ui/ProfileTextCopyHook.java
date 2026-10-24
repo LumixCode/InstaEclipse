@@ -36,7 +36,6 @@ import java.util.Set;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
-import ps.reso.instaeclipse.utils.core.HookFrames;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -78,7 +77,6 @@ public final class ProfileTextCopyHook {
     private static final String COMPOSE_VIEW = "androidx.compose.ui.platform.AndroidComposeView";
     private static final String BIO_COMPOSABLE = "ProfileBioComponent (ProfileBioComponent.kt";
     private static final String BIO_STATE_KEY = "ProfileTextCopyBioState";
-    private static final String RESTORE_UP = "ie_profile_copy_restore_up";
     private static final int MAX_NODES = 400;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
@@ -86,8 +84,11 @@ public final class ProfileTextCopyHook {
     private static Method childIdMethod;
 
     // One hold at a time; touch events arrive on the main thread.
-    private static WeakReference<View> pressed = new WeakReference<>(null);
+    private static final WeakReference<View> NONE = new WeakReference<>(null);
+    private static WeakReference<View> pressed = NONE;
     private static Runnable pendingCopy;
+    private static View restoreView;
+    private static MotionEvent restoreUp;
     private static boolean copied;
     private static float downX, downY;
 
@@ -200,12 +201,10 @@ public final class ProfileTextCopyHook {
     }
 
     private static final XC_MethodHook TOUCH = new XC_MethodHook() {
-        private final HookFrames.Slot frames = new HookFrames.Slot();
-
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {
             JitGuard.tick(param.method);
-            HookFrames.Frame frame = frames.enter();
+            if (!FeatureFlags.profileMenuTools && pressed.get() == null) return;
             View view = (View) param.thisObject;
             MotionEvent event = (MotionEvent) param.args[0];
             boolean ours = view == pressed.get();
@@ -221,7 +220,8 @@ public final class ProfileTextCopyHook {
                     // or expand the bio.
                     if (wasCopied) {
                         event.setAction(MotionEvent.ACTION_CANCEL);
-                        frame.put(RESTORE_UP, Boolean.TRUE);
+                        restoreView = view;
+                        restoreUp = event;
                     }
                 }
                 case MotionEvent.ACTION_CANCEL -> { if (ours) cancel(); }
@@ -232,11 +232,12 @@ public final class ProfileTextCopyHook {
         @Override
         protected void afterHookedMethod(MethodHookParam param) {
             JitGuard.tick(param.method);
-            HookFrames.Frame frame = frames.exit();
             MotionEvent event = (MotionEvent) param.args[0];
-            if (Boolean.TRUE.equals(frame.get(RESTORE_UP))) {
+            if (event == restoreUp && param.thisObject == restoreView) {
+                restoreUp = null;
+                restoreView = null;
                 event.setAction(MotionEvent.ACTION_UP);
-            } else if (event.getActionMasked() == MotionEvent.ACTION_DOWN && param.thisObject == pressed.get()
+            } else if (param.thisObject == pressed.get() && event.getActionMasked() == MotionEvent.ACTION_DOWN
                     && !Boolean.TRUE.equals(param.getResult())) {
                 // Nothing in Compose took the press, so the rest of the gesture (its release
                 // included) goes elsewhere: don't time a hold that can't be seen ending.
@@ -272,7 +273,7 @@ public final class ProfileTextCopyHook {
     private static void cancel() {
         if (pendingCopy != null) MAIN.removeCallbacks(pendingCopy);
         pendingCopy = null;
-        pressed = new WeakReference<>(null);
+        pressed = NONE;
         copied = false;
     }
 
@@ -303,17 +304,22 @@ public final class ProfileTextCopyHook {
         if (held.isEmpty()) return null;
         Activity a = ProfileMenuHook.activityOf(compose.getContext());
         String username = ProfileMenuHook.profileUsername(a);
-        String model = username != null ? ProfileMenuHook.bioOf(a, username) : null;
-        List<String> header = headerBios(username);
-        String bio = ProfileTextPolicy.bioFor(held, model, header);
+        String own = ownHeaderBio(username);
+        String bio = own != null ? ProfileTextPolicy.bioFor(held, null, List.of(own)) : null;
+        String source = "own header";
         if (bio == null) {
-            ModuleLog.detail(TAG + "hold not on the bio (texts=" + held.size() + " model=" + (model != null)
-                    + " header=" + header.size() + ")");
-        } else {
-            String source = model != null && bio.equals(model.trim()) ? "user model" : "header";
-            ModuleLog.line(TAG + "Bio copied (" + bio.length() + " characters)");
-            ModuleLog.detail(TAG + "bio source: " + source);
+            String model = username != null ? ProfileMenuHook.bioOf(a, username) : null;
+            List<String> header = headerBios(username);
+            bio = ProfileTextPolicy.bioFor(held, model, header);
+            if (bio == null) {
+                ModuleLog.detail(TAG + "hold not on the bio (texts=" + held.size() + " model=" + (model != null)
+                        + " header=" + header.size() + ")");
+                return null;
+            }
+            source = model != null && bio.equals(model.trim()) ? "user model" : "header";
         }
+        ModuleLog.line(TAG + "Bio copied (" + bio.length() + " characters)");
+        ModuleLog.detail(TAG + "bio source: " + source);
         return bio;
     }
 
@@ -365,6 +371,13 @@ public final class ProfileTextCopyHook {
     }
 
     // ── The bio each header was built with ───────────────────────────────────
+
+    private static String ownHeaderBio(String username) {
+        if (username == null) return null;
+        synchronized (HEADER_BIOS) {
+            return HEADER_BIOS.get(username);
+        }
+    }
 
     /** The open profile's header bio first, then the others, most recently built first. */
     private static List<String> headerBios(String username) {

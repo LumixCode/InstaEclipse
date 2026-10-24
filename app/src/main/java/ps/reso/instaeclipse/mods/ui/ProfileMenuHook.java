@@ -32,6 +32,7 @@ import java.util.function.BooleanSupplier;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -56,6 +57,8 @@ public final class ProfileMenuHook {
 
     private static final String TAG = "(IE|ProfileMenu) ";
     private static final String USER = "com.instagram.user.model.User";
+    private static final String PROFILE_FRAGMENT = "com.instagram.profile.fragment.UserDetailFragment";
+    private static final String PROFILE_VIEW_MODEL = "com.instagram.profile.fragment.UserDetailViewModel";
     private static final String ROW_TAG = "ie_profile_menu_row";
     private static Method bioGetter;
     private static final ConcurrentHashMap<Class<?>, Field[]> WALKED_FIELDS = new ConcurrentHashMap<>();
@@ -221,7 +224,7 @@ public final class ProfileMenuHook {
         row.setPadding(Math.max(left, 0), 0, template.getPaddingRight(), 0);
         if (tplIcon != null) {
             ImageView icon = new ImageView(ctx);
-            Drawable d = ps.reso.instaeclipse.utils.dialog.DialogUtils.moduleIcon(iconRes, color);
+            Drawable d = ModuleResources.icon(ctx, iconRes, color);
             if (d != null) icon.setImageDrawable(d);
             ViewGroup.LayoutParams ilp = tplIcon.getLayoutParams();
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -265,7 +268,9 @@ public final class ProfileMenuHook {
 
     static String usernameFromTitle(CharSequence title, String spoofed, String known, BooleanSupplier ownProfile) {
         String s = title.toString().trim();
-        return s.isEmpty() ? null : s;
+        if (s.isEmpty()) return null;
+        if (known != null && spoofed != null && s.equals(spoofed.trim()) && ownProfile.getAsBoolean()) return known;
+        return s;
     }
 
     private static boolean ownProfile(View title) {
@@ -330,11 +335,43 @@ public final class ProfileMenuHook {
             if (v instanceof ViewGroup g) for (int i = 0; i < g.getChildCount(); i++) views.push(g.getChildAt(i));
         }
         roots.add(a);
-        return findUserFrom(null, roots, a, username, name, new int[1]);
+        return findUserFrom(profileFragment(a), roots, a, username, name, new int[1]);
+    }
+
+    private static Object profileFragment(Activity a) {
+        int header = ResIds.id(a, "profile_header_container");
+        int tag = ResIds.id(a, "fragment_container_view_tag");
+        if (header == 0 || tag == 0) return null;
+        for (View v = onScreen(a.getWindow().getDecorView(), header, 0); v != null; v = v.getParent() instanceof View p ? p : null) {
+            Object fragment = v.getTag(tag);
+            if (fragment != null && fragment.getClass().getName().equals(PROFILE_FRAGMENT)) return fragment;
+        }
+        return null;
     }
 
     static Object findUserFrom(Object profileFragment, Collection<Object> roots, Object activity, String username, Method usernameGetter, int[] visits) {
+        Object user = userOf(profileFragment, username, usernameGetter);
+        if (user != null) {
+            visits[0] = 0;
+            return user;
+        }
         return findUserFrom(roots, activity, username, usernameGetter, visits);
+    }
+
+    private static Object userOf(Object profileFragment, String username, Method usernameGetter) {
+        if (profileFragment == null || !profileFragment.getClass().getName().equals(PROFILE_FRAGMENT)) return null;
+        try {
+            Object model = valueOfType(profileFragment, PROFILE_VIEW_MODEL);
+            Object user = model != null ? valueOfType(model, USER) : null;
+            return user != null && username.equals(usernameGetter.invoke(user)) ? user : null;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static Object valueOfType(Object o, String type) throws IllegalAccessException {
+        for (Field f : walkedFields(o.getClass())) if (f.getType().getName().equals(type)) return f.get(o);
+        return null;
     }
 
     static Object findUserFrom(Collection<Object> roots, Object activity, String username, Method usernameGetter, int[] visits) {
