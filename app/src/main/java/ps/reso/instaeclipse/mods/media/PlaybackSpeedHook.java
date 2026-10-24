@@ -358,7 +358,7 @@ public class PlaybackSpeedHook {
         WeakReference<Activity> ref = touchActivity;
         Activity a = ref != null ? ref.get() : null;
         if (!HOLD.slowActive() || !FeatureFlags.holdLeftSlowMotion || a == null || a.getWindow() == null) return;
-        android.view.View page = ReelTouchTarget.page(a.getWindow().getDecorView(), downX, downY, ReelTouchTarget.containerId(a));
+        android.view.View page = ReelTouchTarget.page(a, downX, downY);
         if (page != null) relabel(page, 0);
     }
 
@@ -378,6 +378,16 @@ public class PlaybackSpeedHook {
     }
 
     static boolean setHero(HoldGate gate, Object p, float s, long now) {
+        gate.own(s, now);
+        try {
+            Field field = heroHandler(p.getClass());
+            Method post = heroHandlerSpeed;
+            Object handler = field == null ? null : field.get(p);
+            if (handler != null && post != null && post.getDeclaringClass().isInstance(handler)) {
+                post.invoke(handler, s);
+                return true;
+            }
+        } catch (Throwable ignored) { }
         Method m = heroSet;
         if (m == null) return false;
         try {
@@ -389,6 +399,42 @@ public class PlaybackSpeedHook {
         } finally {
             APPLYING.remove();
         }
+    }
+
+    private static volatile Field heroHandlerField;
+    private static volatile Method heroHandlerSpeed;
+
+    private static Field heroHandler(Class<?> heroClass) {
+        Field cached = heroHandlerField;
+        if (cached != null && cached.getDeclaringClass() == heroClass) return cached;
+        Field found = null;
+        Method speed = null;
+        for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(heroClass)) {
+            if (Modifier.isStatic(f.getModifiers()) || !android.os.Handler.Callback.class.isAssignableFrom(f.getType())) continue;
+            Method m = speedMethod(f.getType());
+            if (m == null) continue;
+            if (found != null) return null;
+            found = f;
+            speed = m;
+        }
+        if (found == null) return null;
+        found.setAccessible(true);
+        speed.setAccessible(true);
+        heroHandlerSpeed = speed;
+        heroHandlerField = found;
+        return found;
+    }
+
+    private static Method speedMethod(Class<?> type) {
+        Method found = null;
+        for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(type)) {
+            Class<?>[] p = m.getParameterTypes();
+            if (Modifier.isStatic(m.getModifiers()) || m.getReturnType() != void.class
+                    || p.length != 1 || p[0] != float.class) continue;
+            if (found != null) return null;
+            found = m;
+        }
+        return found;
     }
 
     /** Applies the speed to every live Hero player; true if any accepted it. */
@@ -424,7 +470,7 @@ public class PlaybackSpeedHook {
 
     private void installFeed(DexKitBridge bridge, ClassLoader cl) {
         try {
-            List<Method> cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethods("PlaybackSpeed_setters", cl) : null;
+            List<Method> cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethods("PlaybackSpeed_setters_v2", cl) : null;
             Method start = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("PlaybackSpeed_start", cl) : null;
             if (cached == null || cached.isEmpty() || start == null) {
                 List<ClassData> players = DexKitQueryCache.findClass(bridge, FindClass.create().matcher(ClassMatcher.create()
@@ -451,15 +497,13 @@ public class PlaybackSpeedHook {
                     if (start != null) break;
                 }
                 cached = new ArrayList<>();
-                for (MethodData sp : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                        .usingStrings("setPlaybackSpeed")))) {
-                    for (MethodData caller : DexKitQueryCache.callers(bridge, sp)) {
-                        try {
-                            Method m = caller.getMethodInstance(cl);
-                            Class<?>[] p = m.getParameterTypes();
-                            if (p.length == 1 && p[0] == float.class && !Modifier.isStatic(m.getModifiers())) cached.add(m);
-                        } catch (Throwable ignored) {}
-                    }
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                        .paramTypes("float").returnType("void")
+                        .addInvoke(MethodMatcher.create().usingStrings("setPlaybackSpeed"))))) {
+                    try {
+                        Method m = md.getMethodInstance(cl);
+                        if (!Modifier.isStatic(m.getModifiers())) cached.add(m);
+                    } catch (Throwable ignored) {}
                 }
                 if (start == null || cached.isEmpty()) {
                     ModuleLog.error(TAG + "Could not turn on playback speed: the video player was not found in this Instagram version");
@@ -467,7 +511,7 @@ public class PlaybackSpeedHook {
                     return;
                 }
                 DexKitCache.saveMethod("PlaybackSpeed_start", start);
-                DexKitCache.saveMethods("PlaybackSpeed_setters", cached);
+                DexKitCache.saveMethods("PlaybackSpeed_setters_v2", cached);
             }
             for (Method m : cached) { m.setAccessible(true); SETTERS.add(m); }
             XposedBridge.hookMethod(start, new XC_MethodHook() {
