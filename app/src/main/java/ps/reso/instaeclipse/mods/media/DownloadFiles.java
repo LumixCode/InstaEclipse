@@ -7,11 +7,38 @@ import java.io.OutputStream;
 import ps.reso.instaeclipse.utils.download.DownloadEngine;
 
 /** Shared file operations, with no host/Xposed dependency. */
-final class DownloadFiles {
+public final class DownloadFiles {
+    private static final java.util.regex.Pattern UNSAFE = java.util.regex.Pattern.compile("[^\\p{L}\\p{M}\\p{N} ._-]");
+
+    private DownloadFiles() {}
+
+    public static String safeSegment(String name, String fallback) {
+        return clean(name, fallback, 40);
+    }
+
     static String segment(String value, int max) {
-        String safe = value == null ? "unknown" : value.replaceAll("[^a-zA-Z0-9._-]", "_");
-        if (safe.isEmpty() || safe.equals(".") || safe.equals("..")) safe = "unknown";
-        return safe.substring(0, Math.min(max, safe.length()));
+        return clean(value, "unknown", max);
+    }
+
+    private static String clean(String name, String fallback, int max) {
+        String safe = trim(name == null ? "" : UNSAFE.matcher(name).replaceAll("_"));
+        if (safe.length() > max) {
+            int end = Character.isHighSurrogate(safe.charAt(max - 1)) ? max - 1 : max;
+            safe = trim(safe.substring(0, end));
+        }
+        for (int i = 0; i < safe.length(); ) {
+            int c = safe.codePointAt(i);
+            if (Character.isLetterOrDigit(c)) return safe;
+            i += Character.charCount(c);
+        }
+        return fallback == null || fallback.isEmpty() ? "unknown" : fallback;
+    }
+
+    private static String trim(String value) {
+        int start = 0, end = value.length();
+        while (start < end && (value.charAt(start) == '.' || value.charAt(start) == ' ')) start++;
+        while (end > start && (value.charAt(end - 1) == '.' || value.charAt(end - 1) == ' ')) end--;
+        return value.substring(start, end);
     }
 
     static void copy(File source, OutputStream out, DownloadEngine.Cancellation cancellation) throws IOException {

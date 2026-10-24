@@ -62,7 +62,7 @@ public class StoryCache {
     /** Per-author folder: filesDir/ie_stories/<username>/ (falls back to "unknown"). */
     private static File storyDir(String author) {
         Context c = ctx(); if (c == null) return null;
-        String sub = (author == null || author.isEmpty()) ? "unknown" : author.replaceAll("[^A-Za-z0-9._-]", "_");
+        String sub = ps.reso.instaeclipse.mods.media.DownloadFiles.safeSegment(author, "unknown");
         File d = new File(new File(c.getFilesDir(), DIR), sub);
         if (!d.exists()) d.mkdirs();
         return d;

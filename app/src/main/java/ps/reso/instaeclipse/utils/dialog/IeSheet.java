@@ -260,6 +260,10 @@ public final class IeSheet {
         return stack.size();
     }
 
+    public Page top() {
+        return stack.peek();
+    }
+
     ViewGroup footer() {
         return slot;
     }

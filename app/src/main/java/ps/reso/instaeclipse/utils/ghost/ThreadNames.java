@@ -23,6 +23,7 @@ public class ThreadNames {
 
     private static final String FILE_NAME = "ie_thread_names.json";
     private static final Map<String, String> cache = new HashMap<>();
+    private static final java.util.Set<String> notFound = new java.util.HashSet<>();
     private static boolean loaded = false;
 
     private static File file() {
@@ -121,7 +122,7 @@ public class ThreadNames {
     public static synchronized String resolve(String threadId) {
         String v = get(threadId);
         if (!v.isEmpty() || threadId == null || threadId.isEmpty()) return v;
-        String found = lookupDb(threadId);
+        String found = lookupDb(java.util.Collections.singletonList(threadId)).get(threadId);
         if (found != null && !found.isEmpty()) {
             put(threadId, found);
             return found;
@@ -129,38 +130,80 @@ public class ThreadNames {
         return "";
     }
 
-    /** Group title, else the other members' display names (full name, or username). */
-    private static String lookupDb(String threadId) {
-        Context ctx = AndroidAppHelper.currentApplication();
-        if (ctx == null) return null;
-        File db = ctx.getDatabasePath("direct.db");
-        if (!db.exists()) return null;
-        try (android.database.sqlite.SQLiteDatabase d = android.database.sqlite.SQLiteDatabase.openDatabase(
-                db.getPath(), null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
-             android.database.Cursor c = d.rawQuery(
-                     "SELECT thread_info FROM threads WHERE thread_id = ? LIMIT 1", new String[]{threadId})) {
-            if (!c.moveToFirst()) return null;
-            // thread_info is stored as a UTF-8 JSON blob.
-            String raw = c.getType(0) == android.database.Cursor.FIELD_TYPE_BLOB
-                    ? new String(c.getBlob(0), StandardCharsets.UTF_8) : c.getString(0);
-            JSONObject info = new JSONObject(raw);
-            String title = info.optString("thread_title", "").trim();
-            if (!title.isEmpty()) return title;
-            java.util.List<String> names = new java.util.ArrayList<>();
-            org.json.JSONArray users = info.optJSONArray("recipients");
-            if (users != null) {
-                for (int i = 0; i < users.length(); i++) {
-                    JSONObject u = users.optJSONObject(i);
-                    if (u == null) continue;
-                    String n = u.optString("full_name", "").trim();
-                    if (n.isEmpty()) n = u.optString("username", "").trim();
-                    if (!n.isEmpty()) names.add(n);
+    public static Map<String, String> resolveAll(java.util.Collection<String> threadIds) {
+        Map<String, String> found = new java.util.LinkedHashMap<>();
+        java.util.List<String> missing = new java.util.ArrayList<>();
+        synchronized (ThreadNames.class) {
+            ensureLoaded();
+            for (String id : threadIds) {
+                if (id == null || id.isEmpty() || found.containsKey(id) || missing.contains(id)) continue;
+                String known = cache.get(id);
+                if (known != null && !known.isEmpty()) found.put(id, known);
+                else if (!notFound.contains(id)) missing.add(id);
+            }
+        }
+        if (missing.isEmpty()) return found;
+        Map<String, String> looked = lookupDb(missing);
+        synchronized (ThreadNames.class) {
+            boolean changed = false;
+            for (String id : missing) {
+                String name = looked.get(id);
+                if (name == null || name.trim().isEmpty()) {
+                    notFound.add(id);
+                    continue;
+                }
+                name = name.trim();
+                found.put(id, name);
+                if (!name.equals(cache.get(id))) {
+                    cache.put(id, name);
+                    changed = true;
                 }
             }
-            return names.isEmpty() ? null : String.join(", ", names);
+            if (changed) persist();
+        }
+        return found;
+    }
+
+    private static Map<String, String> lookupDb(java.util.Collection<String> threadIds) {
+        Map<String, String> names = new HashMap<>();
+        Context ctx = AndroidAppHelper.currentApplication();
+        if (ctx == null) return names;
+        File db = ctx.getDatabasePath("direct.db");
+        if (!db.exists()) return names;
+        try (android.database.sqlite.SQLiteDatabase d = android.database.sqlite.SQLiteDatabase.openDatabase(
+                db.getPath(), null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY)) {
+            for (String threadId : threadIds) {
+                try (android.database.Cursor c = d.rawQuery(
+                        "SELECT thread_info FROM threads WHERE thread_id = ? LIMIT 1", new String[]{threadId})) {
+                    if (!c.moveToFirst()) continue;
+                    String raw = c.getType(0) == android.database.Cursor.FIELD_TYPE_BLOB
+                            ? new String(c.getBlob(0), StandardCharsets.UTF_8) : c.getString(0);
+                    String name = nameOf(new JSONObject(raw));
+                    if (name != null) names.put(threadId, name);
+                } catch (Throwable t) {
+                    ModuleLog.detail("(IE|ThreadNames) db lookup failed: " + t.getMessage());
+                }
+            }
         } catch (Throwable t) {
             ModuleLog.detail("(IE|ThreadNames) db lookup failed: " + t.getMessage());
-            return null;
         }
+        return names;
+    }
+
+    private static String nameOf(JSONObject info) {
+        String title = info.optString("thread_title", "").trim();
+        if (!title.isEmpty()) return title;
+        java.util.List<String> names = new java.util.ArrayList<>();
+        org.json.JSONArray users = info.optJSONArray("recipients");
+        if (users != null) {
+            for (int i = 0; i < users.length(); i++) {
+                JSONObject u = users.optJSONObject(i);
+                if (u == null) continue;
+                String n = u.optString("full_name", "").trim();
+                if (n.isEmpty()) n = u.optString("username", "").trim();
+                if (!n.isEmpty()) names.add(n);
+            }
+        }
+        return names.isEmpty() ? null : String.join(", ", names);
     }
 }

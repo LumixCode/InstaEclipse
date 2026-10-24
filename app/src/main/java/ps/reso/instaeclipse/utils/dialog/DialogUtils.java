@@ -672,17 +672,11 @@ public class DialogUtils {
         final java.util.List<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry> entries =
                 ps.reso.instaeclipse.utils.ghost.UnsentLog.getForThread(context, threadId != null ? threadId : "");
 
-        java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat("MMM d, HH:mm", java.util.Locale.getDefault());
-        final String who = (chatName != null && !chatName.trim().isEmpty()) ? chatName.trim()
-                : (threadId != null ? threadId : "unknown");
+        final String chat = chatName != null && !chatName.trim().isEmpty() ? chatName.trim() : null;
 
         if (!entries.isEmpty()) {
-            layout.addView(IeRows.actionRow(context, R.drawable.ic_upload, I18n.t(context, R.string.ig_dialog_unsent_export), "#0A84FF", v -> {
-                String path = exportUnsentJson(context, who, entries);
-                ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, path != null
-                        ? I18n.t(context, R.string.ig_dialog_unsent_exported, path)
-                        : I18n.t(context, R.string.ig_toast_download_failed, "export"), Toast.LENGTH_LONG).show();
-            }));
+            layout.addView(IeRows.actionRow(context, R.drawable.ic_upload, I18n.t(context, R.string.ig_dialog_unsent_export), "#0A84FF",
+                    v -> exportUnsent(context, chat, threadId, entries)));
             layout.addView(IeRows.actionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_unsent_clear_saved), "#FF453A", v -> {
                 try {
                     IeDialog dlg = new IeDialog(context)
@@ -735,7 +729,7 @@ public class DialogUtils {
                 sender.setEllipsize(android.text.TextUtils.TruncateAt.END);
                 meta.addView(sender, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
                 TextView when = new TextView(context);
-                when.setText(fmt.format(new java.util.Date(e.time)));
+                when.setText(shortDate(context, e.time));
                 when.setTextColor(p.sub);
                 when.setTextSize(12);
                 when.setPadding(tag.isEmpty() ? 0 : dp(context, 8), 0, 0, 0);
@@ -760,7 +754,38 @@ public class DialogUtils {
             }
         }
 
-        return new IeSheet.Page(who != null && !who.isEmpty() ? who : I18n.t(context, R.string.ig_dialog_unsent_title), layout);
+        return new IeSheet.Page(chat != null ? chat : I18n.t(context, R.string.ig_dialog_unsent_unknown_chat), layout);
+    }
+
+    private static String shortDate(Context context, long time) {
+        return android.text.format.DateUtils.formatDateTime(context, time,
+                android.text.format.DateUtils.FORMAT_SHOW_DATE | android.text.format.DateUtils.FORMAT_SHOW_TIME
+                        | android.text.format.DateUtils.FORMAT_ABBREV_MONTH);
+    }
+
+    private static TextView trailingLabel(Context context, String text, int color) {
+        TextView label = new TextView(context);
+        label.setText(text);
+        label.setTextSize(13);
+        label.setTextColor(IePalette.readable(color, IePalette.of(context).card, IePalette.TEXT));
+        label.setSingleLine(true);
+        label.setPaddingRelative(dp(context, 8), 0, dp(context, 4), 0);
+        return label;
+    }
+
+    private static void exportUnsent(Context context, String chat, String threadId,
+                                     java.util.List<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry> entries) {
+        MenuWorker.execute(() -> {
+            String message;
+            try {
+                message = I18n.t(context, R.string.ig_dialog_unsent_exported, exportUnsentJson(context, chat, threadId, entries));
+            } catch (Throwable t) {
+                message = I18n.t(context, R.string.ig_unsent_export_failed,
+                        t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName());
+            }
+            String text = message;
+            MenuWorker.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, text, Toast.LENGTH_LONG).show());
+        });
     }
 
     private static void reopenThreadUnsent(Context context, String threadId, String chatName, Runnable onBack) {
@@ -769,18 +794,16 @@ public class DialogUtils {
         if (sheet != null) sheet.replaceTop(threadUnsentPage(context, threadId, chatName, onBack));
     }
 
-    /** Write the thread's unsent messages as JSON into Download/InstaEclipse/<chat>/ ; returns a
-     *  display path, or null on failure. Uses MediaStore on API 29+, direct file otherwise. */
-    private static String exportUnsentJson(Context context, String chatName,
-                                           java.util.List<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry> entries) {
+    private static String exportUnsentJson(Context context, String chatName, String threadId,
+                                           java.util.List<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry> entries) throws Exception {
         try {
-            String safe = chatName.replaceAll("[^A-Za-z0-9._-]", "_");
-            if (safe.length() > 40) safe = safe.substring(0, 40);
+            String fallback = threadId != null ? threadId : "unknown";
+            String safe = ps.reso.instaeclipse.mods.media.DownloadFiles.safeSegment(chatName, fallback);
             String fileName = "unsent_" + new java.text.SimpleDateFormat("yyyyMMdd_HHmmss",
                     java.util.Locale.US).format(new java.util.Date()) + ".json";
 
             org.json.JSONObject root = new org.json.JSONObject();
-            root.put("chat", chatName);
+            root.put("chat", chatName != null ? chatName : fallback);
             root.put("exported_at", System.currentTimeMillis());
             org.json.JSONArray arr = new org.json.JSONArray();
             java.text.SimpleDateFormat iso = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US);
@@ -823,10 +846,10 @@ public class DialogUtils {
                 try (java.io.FileOutputStream fos = new java.io.FileOutputStream(out)) { fos.write(data); }
                 return out.getAbsolutePath();
             }
-            return null;
+            throw new java.io.IOException(dir.getPath());
         } catch (Throwable t) {
             ModuleLog.error("(IE|UnsentExport) Could not export the unsent messages: " + t.getClass().getSimpleName() + ": " + t.getMessage());
-            return null;
+            throw t;
         }
     }
 
@@ -860,26 +883,38 @@ public class DialogUtils {
         }
 
         LinearLayout foldersCard = IeRows.card(context, 5);
+        IePalette p = IePalette.of(context);
+        java.util.Map<String, TextView> unresolved = new java.util.LinkedHashMap<>();
+        java.util.Map<String, String[]> names = new java.util.HashMap<>();
         for (java.util.Map.Entry<String, java.util.List<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry>> t : byThread.entrySet()) {
             final String threadId = t.getKey();
-            final int count = t.getValue().size();
-            // Prefer Instagram's own inbox title, then the live resolved thread name, over the
-            // per-entry sender captured at log time — the latter can be stale/wrong (e.g. a token
-            // grabbed before the name resolved, or the viewer's own handle from an older capture bug).
-            String name = ps.reso.instaeclipse.mods.ghost.HideChatsHook.knownThreadTitle(threadId);
-            if (name == null || name.isEmpty()) name = ps.reso.instaeclipse.utils.ghost.ThreadNames.resolve(threadId);
-            if (name == null || name.isEmpty()) {
-                name = nameFor.get(threadId); // stored per-entry sender fallback
+            String title = ps.reso.instaeclipse.mods.ghost.HideChatsHook.knownThreadTitle(threadId);
+            boolean inboxTitle = title != null && !title.isEmpty();
+            final String[] name = {inboxTitle ? title : nameFor.get(threadId)};
+            LinearLayout row = (LinearLayout) IeRows.actionRow(context, R.drawable.ic_folder,
+                    name[0] != null ? name[0] : I18n.t(context, R.string.ig_dialog_unsent_unknown_chat), "#5E5CE6",
+                    v -> showThreadUnsent(context, threadId.isEmpty() ? null : threadId, name[0]));
+            row.addView(trailingLabel(context, java.text.NumberFormat.getIntegerInstance().format(t.getValue().size()), p.sub));
+            foldersCard.addView(row);
+            if (!inboxTitle && !threadId.isEmpty()) {
+                unresolved.put(threadId, (TextView) row.getChildAt(1));
+                names.put(threadId, name);
             }
-            if (name == null || name.isEmpty()) {
-                name = threadId.isEmpty() ? I18n.t(context, R.string.ig_dialog_unsent_unknown_chat) : threadId;
-            }
-            final String display = name;
-            foldersCard.addView(IeRows.actionRow(context, R.drawable.ic_folder,
-                    display + "   (" + count + ")", "#5E5CE6",
-                    v -> showThreadUnsent(context, threadId.isEmpty() ? null : threadId, display)));
         }
         layout.addView(foldersCard);
+        if (!unresolved.isEmpty()) {
+            java.util.List<String> ids = new java.util.ArrayList<>(unresolved.keySet());
+            MenuWorker.load(() -> ps.reso.instaeclipse.utils.ghost.ThreadNames.resolveAll(ids), resolved -> {
+                if (resolved == null) return;
+                for (java.util.Map.Entry<String, String> r : resolved.entrySet()) {
+                    TextView label = unresolved.get(r.getKey());
+                    String[] name = names.get(r.getKey());
+                    if (label == null || name == null) continue;
+                    name[0] = r.getValue();
+                    label.setText(r.getValue());
+                }
+            });
+        }
 
         layout.addView(IeRows.actionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_unsent_clear_saved), "#FF453A", v -> {
             try {
@@ -2726,14 +2761,20 @@ public class DialogUtils {
 
     /** Viewer for the story cache — a list per author; tap to view; plus a clear action. */
     private static void showCachedStories(Context context) {
-        showSection(context, cachedStoriesPage(context));
+        IeSheet sheet = IeSheet.showing(context);
+        IeSheet.Page from = sheet != null ? sheet.top() : null;
+        MenuWorker.load(ps.reso.instaeclipse.utils.media.StoryCache::entries, entries -> {
+            IeSheet.Page page = cachedStoriesPage(context, entries);
+            if (sheet == null) IeSheet.open(context, page, null);
+            else if (sheet.isShowing() && sheet.top() == from) sheet.push(page);
+        });
     }
 
-    private static IeSheet.Page cachedStoriesPage(Context context) {
+    private static IeSheet.Page cachedStoriesPage(Context context,
+                                                  java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry> entries) {
         LinearLayout layout = createSwitchLayout(context);
-        java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry> entries =
-                ps.reso.instaeclipse.utils.media.StoryCache.entries();
-        if (entries.isEmpty()) {
+        IeSheet.Page[] self = new IeSheet.Page[1];
+        if (entries == null || entries.isEmpty()) {
             layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_story_cache_empty_current)));
             return new IeSheet.Page(I18n.t(context, R.string.ig_story_cache_view), layout);
         }
@@ -2741,15 +2782,18 @@ public class DialogUtils {
         java.util.LinkedHashMap<String, java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry>> byUser =
                 new java.util.LinkedHashMap<>();
         for (ps.reso.instaeclipse.utils.media.StoryCache.Entry e : entries) {
-            String author = (e.author == null || e.author.isEmpty()) ? "unknown" : e.author;
+            String author = e.author == null ? "" : e.author;
             byUser.computeIfAbsent(author, k -> new java.util.ArrayList<>()).add(e);
         }
+        IePalette p = IePalette.of(context);
         LinearLayout foldersCard = IeRows.card(context, 5);
         for (java.util.Map.Entry<String, java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry>> u : byUser.entrySet()) {
-            final String author = u.getKey();
+            final String author = u.getKey().isEmpty() ? I18n.t(context, R.string.ig_story_cache_unknown_author) : u.getKey();
             final java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry> list = u.getValue();
-            foldersCard.addView(IeRows.actionRow(context, R.drawable.ic_folder,
-                    author + "   (" + list.size() + ")", "#FF9F0A", v -> showUserStories(context, author, list)));
+            LinearLayout row = (LinearLayout) IeRows.actionRow(context, R.drawable.ic_folder,
+                    author, "#FF9F0A", v -> showUserStories(context, author, list));
+            row.addView(trailingLabel(context, java.text.NumberFormat.getIntegerInstance().format(list.size()), p.sub));
+            foldersCard.addView(row);
         }
         layout.addView(foldersCard);
         layout.addView(IeRows.actionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_story_cache_clear),
@@ -2760,15 +2804,19 @@ public class DialogUtils {
                                 .title(I18n.t(context, R.string.ig_story_cache_clear))
                                 .message(I18n.t(context, R.string.ig_story_cache_clear_confirm));
                         dlg.secondary(context.getString(android.R.string.cancel), null);
-                        dlg.primary(I18n.t(context, R.string.ig_story_cache_clear), () -> {
+                        dlg.primary(I18n.t(context, R.string.ig_story_cache_clear), () -> MenuWorker.load(() -> {
                             ps.reso.instaeclipse.utils.media.StoryCache.clearAll();
+                            return ps.reso.instaeclipse.utils.media.StoryCache.entries();
+                        }, left -> {
                             ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_story_cache_cleared), Toast.LENGTH_SHORT).show();
-                            replaceTop(context, cachedStoriesPage(context));
-                        });
+                            IeSheet sheet = IeSheet.showing(context);
+                            if (sheet != null && sheet.top() == self[0]) sheet.replaceTop(cachedStoriesPage(context, left));
+                        }));
                         dlg.show();
                     } catch (Throwable ignored) {}
                 }));
-        return new IeSheet.Page(I18n.t(context, R.string.ig_story_cache_view), layout);
+        self[0] = new IeSheet.Page(I18n.t(context, R.string.ig_story_cache_view), layout);
+        return self[0];
     }
 
     /** Level 2: the cached stories for one username. */
@@ -2776,12 +2824,12 @@ public class DialogUtils {
                                         java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry> list) {
         LinearLayout layout = createSwitchLayout(context);
         LinearLayout cardView = IeRows.card(context, 5);
-        java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat("MMM d, HH:mm", java.util.Locale.getDefault());
+        IePalette p = IePalette.of(context);
         for (ps.reso.instaeclipse.utils.media.StoryCache.Entry e : list) {
-            String label = (e.video ? "🎬  " : "🖼  ") + fmt.format(new java.util.Date(e.at))
-                    + (e.isExpired() ? "   ·  Expired" : "");
-            cardView.addView(IeRows.actionRow(context, e.video ? R.drawable.ic_movie : R.drawable.ic_eye,
-                    label, "#FF9F0A", v -> openCachedStory(context, e)));
+            LinearLayout row = (LinearLayout) IeRows.actionRow(context, e.video ? R.drawable.ic_movie : R.drawable.ic_gallery,
+                    shortDate(context, e.at), "#FF9F0A", v -> openCachedStory(context, e));
+            if (e.isExpired()) row.addView(trailingLabel(context, I18n.t(context, R.string.ig_story_cache_expired), p.danger));
+            cardView.addView(row);
         }
         layout.addView(cardView);
         showSectionDialog(context, author, layout);
@@ -2804,14 +2852,29 @@ public class DialogUtils {
                 vv.setOnPreparedListener(mp -> { mp.setLooping(true); vv.start(); });
                 root.addView(vv);
             } else {
-                android.widget.ImageView iv = new android.widget.ImageView(context);
+                ps.reso.instaeclipse.mods.feed.ZoomableImageView iv = new ps.reso.instaeclipse.mods.feed.ZoomableImageView(context);
                 iv.setLayoutParams(new android.widget.FrameLayout.LayoutParams(-1, -1));
-                iv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
-                iv.setImageBitmap(android.graphics.BitmapFactory.decodeFile(e.path));
+                iv.setOnDismissRequest(dialog::dismiss);
                 root.addView(iv);
+                android.widget.ProgressBar spinner = new android.widget.ProgressBar(context);
+                spinner.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(Color.WHITE));
+                android.widget.FrameLayout.LayoutParams spinnerLp = new android.widget.FrameLayout.LayoutParams(dp(context, 48), dp(context, 48));
+                spinnerLp.gravity = Gravity.CENTER;
+                root.addView(spinner, spinnerLp);
+                android.util.DisplayMetrics screen = context.getResources().getDisplayMetrics();
+                int maxWidth = Math.max(1, screen.widthPixels);
+                int maxHeight = Math.max(1, screen.heightPixels);
+                MenuWorker.load(() -> decodeForScreen(e.path, maxWidth, maxHeight), bitmap -> {
+                    if (!dialog.isShowing()) return;
+                    spinner.setVisibility(View.GONE);
+                    if (bitmap == null) {
+                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_story_cache_open_failed), Toast.LENGTH_SHORT).show();
+                        dialog.dismiss();
+                        return;
+                    }
+                    iv.setImageBitmap(bitmap);
+                });
             }
-            // Native-ish story chrome: a full progress segment at the very top, then a header row
-            // (author + time) with a Saved/Expired badge — so it reads like IG's own story viewer.
             float d = context.getResources().getDisplayMetrics().density;
             int pad = Math.round(12 * d);
 
@@ -2830,9 +2893,8 @@ public class DialogUtils {
             header.setLayoutParams(hLp);
 
             TextView name = new TextView(context);
-            String who = (e.author == null || e.author.isEmpty()) ? "story" : e.author;
-            java.text.SimpleDateFormat f2 = new java.text.SimpleDateFormat("MMM d, HH:mm", java.util.Locale.getDefault());
-            name.setText(who + "   " + f2.format(new java.util.Date(e.at)));
+            String who = (e.author == null || e.author.isEmpty()) ? I18n.t(context, R.string.ig_story_cache_unknown_author) : e.author;
+            name.setText(who + "   " + shortDate(context, e.at));
             name.setTextColor(Color.WHITE);
             name.setTextSize(14);
             name.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -2840,23 +2902,24 @@ public class DialogUtils {
             name.setLayoutParams(nLp);
             header.addView(name);
 
-            TextView badge = new TextView(context);
-            boolean expired = e.isExpired();
-            badge.setText(expired ? "Expired" : "Saved");
-            badge.setTextColor(Color.WHITE);
-            badge.setTextSize(11);
-            badge.setTypeface(null, android.graphics.Typeface.BOLD);
-            badge.setPadding(Math.round(10 * d), Math.round(4 * d), Math.round(10 * d), Math.round(4 * d));
-            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-            bg.setColor(expired ? p.danger : p.accent);
-            bg.setCornerRadius(Math.round(10 * d));
-            badge.setBackground(bg);
-            header.addView(badge);
+            if (e.isExpired()) {
+                TextView badge = new TextView(context);
+                badge.setText(I18n.t(context, R.string.ig_story_cache_expired));
+                badge.setTextColor(Color.WHITE);
+                badge.setTextSize(11);
+                badge.setTypeface(null, android.graphics.Typeface.BOLD);
+                badge.setPadding(Math.round(10 * d), Math.round(4 * d), Math.round(10 * d), Math.round(4 * d));
+                android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+                bg.setColor(p.danger);
+                bg.setCornerRadius(Math.round(10 * d));
+                badge.setBackground(bg);
+                header.addView(badge);
+            }
             root.addView(header);
 
             // Save-to-gallery button (bottom-right): copies the cached file to the gallery.
             TextView save = new TextView(context);
-            save.setText("⤓ Save");
+            save.setText(I18n.t(context, R.string.ig_story_cache_save));
             save.setTextColor(Color.WHITE);
             save.setTextSize(14);
             save.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -2875,8 +2938,24 @@ public class DialogUtils {
             dialog.setContentView(root);
             dialog.show();
         } catch (Throwable t) {
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, "Couldn't open story", Toast.LENGTH_SHORT).show();
+            ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_story_cache_open_failed), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    static android.graphics.Bitmap decodeForScreen(String path, int maxWidth, int maxHeight) {
+        android.graphics.BitmapFactory.Options bounds = new android.graphics.BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        android.graphics.BitmapFactory.decodeFile(path, bounds);
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null;
+        android.graphics.BitmapFactory.Options options = new android.graphics.BitmapFactory.Options();
+        options.inSampleSize = sampleSize(bounds.outWidth, bounds.outHeight, maxWidth, maxHeight);
+        return android.graphics.BitmapFactory.decodeFile(path, options);
+    }
+
+    static int sampleSize(int width, int height, int maxWidth, int maxHeight) {
+        int sample = 1;
+        while (width / (sample * 2) >= maxWidth || height / (sample * 2) >= maxHeight) sample *= 2;
+        return sample;
     }
 
     /** Copies a cached story's local file into the gallery/download folder (off the UI thread). */

@@ -16,4 +16,9 @@
     <string name="ig_ring_add_colour" tools:ignore="MissingTranslation">Add colour</string>
     <string name="ig_ring_reverse" tools:ignore="MissingTranslation">Reverse colours</string>
     <string name="about_report_issue" tools:ignore="MissingTranslation">Report an issue</string>
+    <string name="ig_unsent_export_failed" tools:ignore="MissingTranslation">Couldn\'t export: %1$s</string>
+    <string name="ig_story_cache_unknown_author" tools:ignore="MissingTranslation">Unknown account</string>
+    <string name="ig_story_cache_expired" tools:ignore="MissingTranslation">Expired</string>
+    <string name="ig_story_cache_open_failed" tools:ignore="MissingTranslation">Couldn\'t open this story</string>
+    <string name="ig_story_cache_save" tools:ignore="MissingTranslation">Save</string>
 </resources>
