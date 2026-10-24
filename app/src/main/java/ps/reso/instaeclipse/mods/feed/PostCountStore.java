@@ -12,10 +12,12 @@ import ps.reso.instaeclipse.mods.ui.ProfileSpoofHook;
 final class PostCountStore {
 
     static final String[] FIELDS = {"likes", "comments", "reposts", "shares"};
+    static final String OWNER = "u";
 
     record Row(String[] shown, String author) {}
 
     private final ConcurrentHashMap<String, int[]> counts = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> owners = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, long[]> real = new ConcurrentHashMap<>();
 
     static String key(String id) {
@@ -37,14 +39,17 @@ final class PostCountStore {
 
     void put(String id, int[] edited, String owner) {
         counts.put(id, edited);
+        if (owner != null && !owner.isEmpty()) owners.put(id, owner);
     }
 
     void remove(String id) {
         counts.remove(id);
+        owners.remove(id);
     }
 
     void clear() {
         counts.clear();
+        owners.clear();
     }
 
     void remember(String id, int which, int value, long now) {
@@ -62,13 +67,13 @@ final class PostCountStore {
 
     boolean showsPost(Row row, String id, String owner, int[] before) {
         long[] v = real.get(id);
-        if (v == null) return false;
+        if (v == null || !byAuthor(row, owner)) return false;
         boolean any = false;
         for (int k = 0; k < FIELDS.length; k++) {
             String shown = row.shown()[k];
             if (shown == null) continue;
             String r = v[k] < 0 ? null : label((int) v[k]);
-            String b = before == null || before[k] < 0 ? null : ProfileSpoofHook.shortCount(before[k]);
+            String b = before == null || before[k] < 0 ? null : label(before[k]);
             if (!(shown.equals(r) || shown.equals(b) || (v[k] == 0 && shown.equals("0")))) return false;
             any = true;
         }
@@ -76,18 +81,17 @@ final class PostCountStore {
     }
 
     int[] byContent(Row row, String self) {
-        if (self != null && row.author() != null && !row.author().equalsIgnoreCase(self)) return null;
         String best = null;
         long bestTime = -1;
         for (Map.Entry<String, long[]> e : real.entrySet()) {
             int[] edited = counts.get(e.getKey());
-            if (edited == null) continue;
+            if (edited == null || !byAuthor(row, owners.getOrDefault(e.getKey(), self))) continue;
             long[] v = e.getValue();
             boolean ok = true;
             for (int k = 0; k < FIELDS.length && ok; k++) {
                 String shown = row.shown()[k];
                 if (shown == null || v[k] < 0) continue;
-                String ours = edited[k] < 0 ? null : ProfileSpoofHook.shortCount(edited[k]);
+                String ours = edited[k] < 0 ? null : label(edited[k]);
                 ok = shown.equals(label((int) v[k])) || shown.equals(ours) || (v[k] == 0 && shown.equals("0"));
             }
             if (ok && v[4] > bestTime) {
@@ -98,13 +102,17 @@ final class PostCountStore {
         return best == null ? null : counts.get(best);
     }
 
+    private static boolean byAuthor(Row row, String owner) {
+        return owner != null && row.author() != null && row.author().equalsIgnoreCase(owner);
+    }
+
     void read(JSONObject o) throws JSONException {
         for (Iterator<String> it = o.keys(); it.hasNext(); ) {
             String k = it.next();
             JSONObject v = o.getJSONObject(k);
             int[] c = new int[FIELDS.length];
             for (int i = 0; i < FIELDS.length; i++) c[i] = v.optInt(FIELDS[i], -1);
-            counts.put(k, c);
+            put(k, c, v.optString(OWNER, null));
         }
     }
 
@@ -113,6 +121,8 @@ final class PostCountStore {
         for (Map.Entry<String, int[]> e : counts.entrySet()) {
             JSONObject v = new JSONObject();
             for (int i = 0; i < FIELDS.length; i++) if (e.getValue()[i] >= 0) v.put(FIELDS[i], e.getValue()[i]);
+            String owner = owners.get(e.getKey());
+            if (owner != null) v.put(OWNER, owner);
             o.put(e.getKey(), v);
         }
         return o;
