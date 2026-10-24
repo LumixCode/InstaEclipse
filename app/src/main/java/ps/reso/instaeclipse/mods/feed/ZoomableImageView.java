@@ -1,5 +1,6 @@
 package ps.reso.instaeclipse.mods.feed;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Matrix;
 import android.graphics.RectF;
@@ -7,6 +8,7 @@ import android.graphics.drawable.Drawable;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
+import android.view.ViewConfiguration;
 import android.widget.ImageView;
 
 /**
@@ -20,19 +22,34 @@ public class ZoomableImageView extends ImageView {
     private static final float MIN_SCALE = 1f;
     private static final float MAX_SCALE = 5f;
     private static final float DOUBLE_TAP_SCALE = 2.5f;
+    private static final long SETTLE_MS = 150;
+
+    public interface SwipeListener {
+        void onSwipe(float fraction);
+
+        void onDismiss();
+    }
 
     private final Matrix matrix = new Matrix();
     private float scale = 1f;
-    private float lastTouchX, lastTouchY;
+    private final ZoomPointers pointers = new ZoomPointers();
+    private final EventTouch touch = new EventTouch();
+    private final int touchSlop;
 
     private final ScaleGestureDetector scaleDetector;
     private final GestureDetector gestureDetector;
     private Runnable onDismissRequest;
+    private SwipeListener swipeListener;
+    private ValueAnimator settle;
+    private float pendingSwipe;
+    private float swipeOffset;
+    private boolean swiping;
 
     public ZoomableImageView(Context ctx) {
         super(ctx);
         setScaleType(ScaleType.MATRIX);
         setClickable(true);
+        touchSlop = ViewConfiguration.get(ctx).getScaledTouchSlop();
 
         scaleDetector = new ScaleGestureDetector(ctx, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
             @Override
@@ -72,6 +89,10 @@ public class ZoomableImageView extends ImageView {
 
     public void setOnDismissRequest(Runnable r) {
         this.onDismissRequest = r;
+    }
+
+    public void setOnSwipeDown(SwipeListener listener) {
+        this.swipeListener = listener;
     }
 
     /** Also fits an image that arrives after layout (loaded in the background). */
@@ -139,23 +160,95 @@ public class ZoomableImageView extends ImageView {
         scaleDetector.onTouchEvent(event);
         gestureDetector.onTouchEvent(event);
 
+        touch.event = event;
+        boolean moved = pointers.update(touch);
+        touch.event = null;
         switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN:
-                lastTouchX = event.getX();
-                lastTouchY = event.getY();
-                break;
             case MotionEvent.ACTION_MOVE:
-                if (scale > MIN_SCALE + 0.01f && event.getPointerCount() == 1) {
-                    float dx = event.getX() - lastTouchX;
-                    float dy = event.getY() - lastTouchY;
-                    matrix.postTranslate(dx, dy);
-                    fixTranslation();
-                    setImageMatrix(matrix);
-                    lastTouchX = event.getX();
-                    lastTouchY = event.getY();
+                if (moved && event.getPointerCount() == 1) {
+                    if (scale > MIN_SCALE + 0.01f) {
+                        matrix.postTranslate(pointers.dx(), pointers.dy());
+                        fixTranslation();
+                        setImageMatrix(matrix);
+                    } else if (swipeListener != null) {
+                        swipe(pointers.dy());
+                    }
                 }
+                break;
+            case MotionEvent.ACTION_POINTER_DOWN:
+            case MotionEvent.ACTION_CANCEL:
+                endSwipe(false);
+                break;
+            case MotionEvent.ACTION_UP:
+                endSwipe(ZoomPointers.dismisses(swipeOffset, getHeight()));
                 break;
         }
         return true;
+    }
+
+    private void swipe(float dy) {
+        if (!swiping) {
+            pendingSwipe = Math.max(0f, pendingSwipe + dy);
+            if (pendingSwipe <= touchSlop) return;
+            swiping = true;
+            if (settle != null) settle.cancel();
+            swipeOffset = getTranslationY();
+        }
+        swipeOffset = Math.max(0f, swipeOffset + dy);
+        setTranslationY(swipeOffset);
+        report(swipeOffset);
+    }
+
+    private void endSwipe(boolean dismiss) {
+        pendingSwipe = 0f;
+        if (!swiping) return;
+        swiping = false;
+        float offset = swipeOffset;
+        swipeOffset = 0f;
+        if (dismiss) {
+            if (swipeListener != null) swipeListener.onDismiss();
+            return;
+        }
+        settle = ValueAnimator.ofFloat(offset, 0f);
+        settle.setDuration(SETTLE_MS);
+        settle.addUpdateListener(a -> {
+            float y = (float) a.getAnimatedValue();
+            setTranslationY(y);
+            report(y);
+        });
+        settle.start();
+    }
+
+    private void report(float offset) {
+        int h = getHeight();
+        if (swipeListener != null && h > 0) swipeListener.onSwipe(offset / h);
+    }
+
+    private final class EventTouch implements ZoomPointers.Touch {
+        MotionEvent event;
+
+        @Override public int action() {
+            return event.getActionMasked();
+        }
+
+        @Override public int actionIndex() {
+            return event.getActionIndex();
+        }
+
+        @Override public int count() {
+            return event.getPointerCount();
+        }
+
+        @Override public int id(int index) {
+            return event.getPointerId(index);
+        }
+
+        @Override public float x(int index) {
+            return event.getX(index) + getTranslationX();
+        }
+
+        @Override public float y(int index) {
+            return event.getY(index) + getTranslationY();
+        }
     }
 }

@@ -6,23 +6,29 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
+import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
+import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
  * Adds a long-press-to-zoom overlay to feed photos (issue #174) so photos can be examined
@@ -43,11 +49,9 @@ public class FeedPhotoZoomHook {
             "com.instagram.feed.widget.IgProgressImageView",
     };
 
-    // IgProgressImageView is a shared, general-purpose component — reused for feed rows,
-    // DM media previews, and story frames alike — so it carries no identity of its own.
-    // "row_feed_button_like" is the same feed-row-only anchor FeedVideoDownloadHook already
-    // relies on to tell a feed post apart from a reel/DM context. Cached once resolved.
-    private static volatile int sFeedLikeButtonId = 0;
+    private static final int FEED_ROW_TAG = 0x7e1e0290;
+    private static final long ANIMATION_MS = 150;
+    private static final float OPEN_SCALE = 0.92f;
 
     public void install(ClassLoader classLoader) {
         try {
@@ -82,7 +86,7 @@ public class FeedPhotoZoomHook {
                             try {
                                 Object imgViewObj = binding.image.invoke(v);
                                 if (!(imgViewObj instanceof ImageView)) return false;
-                                Bitmap snapshot = viewToBitmap((ImageView) imgViewObj);
+                                Bitmap snapshot = sharpBitmap((ImageView) imgViewObj, binding.bitmap);
                                 if (snapshot == null) return false;
                                 showZoomOverlay(v.getContext(), snapshot);
                                 return true;
@@ -110,10 +114,23 @@ public class FeedPhotoZoomHook {
     static final class ViewBinding {
         final Method attach;
         final Method image;
+        final Method bitmap;
 
         private ViewBinding(Method attach, Method image) {
             this.attach = attach;
             this.image = image;
+            this.bitmap = bitmapGetter(image.getReturnType());
+        }
+
+        private static Method bitmapGetter(Class<?> type) {
+            try {
+                Method getter = type.getMethod("getBitmap");
+                if (Modifier.isStatic(getter.getModifiers()) || getter.getReturnType() != Bitmap.class) return null;
+                getter.setAccessible(true);
+                return getter;
+            } catch (ReflectiveOperationException | LinkageError e) {
+                return null;
+            }
         }
 
         static ViewBinding resolve(ClassLoader loader, String... names) {
@@ -145,12 +162,16 @@ public class FeedPhotoZoomHook {
      * ancestor's own subtree (siblings like the like/save buttons, not just further ancestors).
      */
     private static boolean isInsideFeedRow(View view) {
-        sFeedLikeButtonId = ps.reso.instaeclipse.utils.ui.ResIds.id(view.getContext(), "row_feed_button_like");
-        if (sFeedLikeButtonId == 0) return false; // can't verify — be conservative and skip
+        if (view.getTag(FEED_ROW_TAG) == Boolean.TRUE) return true;
+        int likeButtonId = ResIds.id(view.getContext(), "row_feed_button_like");
+        if (likeButtonId == 0) return false;
 
         ViewParent parent = view.getParent();
         for (int depth = 0; depth < 6 && parent instanceof ViewGroup group; depth++) {
-            if (containsDescendantWithId(group, sFeedLikeButtonId, 4)) return true;
+            if (containsDescendantWithId(group, likeButtonId, 4)) {
+                view.setTag(FEED_ROW_TAG, Boolean.TRUE);
+                return true;
+            }
             parent = group.getParent();
         }
         return false;
@@ -172,25 +193,102 @@ public class FeedPhotoZoomHook {
     private static void showZoomOverlay(Context ctx, Bitmap bitmap) {
         MAIN.post(() -> {
             try {
-                Dialog dialog = new Dialog(ctx, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
-                dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-
-                ZoomableImageView zoomView = new ZoomableImageView(ctx);
-                zoomView.setImageBitmap(bitmap);
-                zoomView.setBackgroundColor(Color.BLACK);
-                zoomView.setOnDismissRequest(dialog::dismiss);
-
-                dialog.setContentView(zoomView);
-                Window w = dialog.getWindow();
-                if (w != null) {
-                    w.setBackgroundDrawable(new ColorDrawable(Color.BLACK));
-                    w.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
-                }
-                dialog.show();
+                show(ctx, bitmap);
             } catch (Throwable t) {
                 ModuleLog.error("(IE|PhotoZoom) Could not open the zoom view: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             }
         });
+    }
+
+    public static Dialog show(Context ctx, Bitmap bitmap) {
+        Dialog dialog = new Dialog(ctx, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        float dp = ctx.getResources().getDisplayMetrics().density;
+
+        FrameLayout root = new FrameLayout(ctx);
+        ColorDrawable backdrop = new ColorDrawable(Color.BLACK);
+        root.setBackground(backdrop);
+
+        ZoomableImageView zoomView = new ZoomableImageView(ctx);
+        zoomView.setImageBitmap(bitmap);
+        zoomView.setContentDescription(I18n.t(ctx, R.string.ig_feat_photo_zoom));
+        root.addView(zoomView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        ImageView close = new ImageView(ctx);
+        close.setImageDrawable(closeIcon(ctx));
+        close.setScaleType(ImageView.ScaleType.CENTER);
+        close.setContentDescription(I18n.t(ctx, R.string.ig_dialog_close));
+        int size = Math.round(48 * dp);
+        FrameLayout.LayoutParams closeLp = new FrameLayout.LayoutParams(size, size, Gravity.TOP | Gravity.START);
+        int margin = Math.round(8 * dp);
+        closeLp.setMargins(margin, margin, margin, margin);
+        root.addView(close, closeLp);
+
+        Runnable dismiss = () -> {
+            root.animate().alpha(0f).setDuration(ANIMATION_MS).withEndAction(dialog::dismiss).start();
+            zoomView.animate().scaleX(OPEN_SCALE).scaleY(OPEN_SCALE).setDuration(ANIMATION_MS).start();
+        };
+        close.setOnClickListener(v -> dismiss.run());
+        zoomView.setOnDismissRequest(dismiss);
+        zoomView.setOnSwipeDown(new ZoomableImageView.SwipeListener() {
+            @Override public void onSwipe(float fraction) {
+                float shown = 1f - Math.min(1f, fraction * 2f);
+                backdrop.setAlpha(Math.round(255 * shown));
+                close.setAlpha(shown);
+            }
+
+            @Override public void onDismiss() {
+                dismiss.run();
+            }
+        });
+
+        dialog.setContentView(root);
+        Window w = dialog.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            w.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            w.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
+        }
+        root.setAlpha(0f);
+        zoomView.setScaleX(OPEN_SCALE);
+        zoomView.setScaleY(OPEN_SCALE);
+        dialog.show();
+        root.animate().alpha(1f).setDuration(ANIMATION_MS).start();
+        zoomView.animate().scaleX(1f).scaleY(1f).setDuration(ANIMATION_MS).start();
+        return dialog;
+    }
+
+    private static Drawable closeIcon(Context ctx) {
+        Drawable icon = null;
+        int id = ResIds.drawable(ctx, "instagram_x_pano_outline_24");
+        if (id != 0) {
+            try {
+                icon = ctx.getDrawable(id);
+            } catch (Throwable ignored) {
+            }
+        }
+        if (icon == null) icon = ctx.getDrawable(android.R.drawable.ic_menu_close_clear_cancel);
+        if (icon != null) {
+            icon = icon.mutate();
+            icon.setTint(Color.WHITE);
+        }
+        return icon;
+    }
+
+    private static Bitmap sharpBitmap(ImageView image, Method bitmapGetter) {
+        if (bitmapGetter != null) {
+            try {
+                Object value = bitmapGetter.invoke(image);
+                if (value instanceof Bitmap shown && !shown.isRecycled()
+                        && shown.getWidth() > 0 && shown.getHeight() > 0) {
+                    Bitmap copy = shown.copy(Bitmap.Config.ARGB_8888, false);
+                    if (copy != null) return copy;
+                }
+            } catch (Throwable t) {
+                ModuleLog.detail("(IE|PhotoZoom) full image unavailable, using the shown view: " + t.getClass().getSimpleName());
+            }
+        }
+        return viewToBitmap(image);
     }
 
     // Instagram's feed image view is backed by a Fresco-style drawable that manages its own
