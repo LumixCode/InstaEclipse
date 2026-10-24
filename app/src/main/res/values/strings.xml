@@ -755,8 +755,8 @@ Stay on this screen until it finishes.</string>
     <string name="ig_instant_save_none">No Instant media found</string>
     <string name="ig_instant_upload_title">Upload Instant from Gallery</string>
     <string name="ig_dialog_misc_upload_instants">Upload Instant from Gallery</string>
-    <string name="ig_instant_upload_chip">🖼 Gallery</string>
-    <string name="ig_instant_upload_chip_ready">✓ Ready — tap shutter</string>
+    <string name="ig_instant_upload_chip">Gallery</string>
+    <string name="ig_instant_upload_chip_ready">Ready — tap shutter</string>
     <string name="ig_instant_upload_ready">Picked! Tap the shutter to send it as an Instant</string>
     <string name="ig_instant_upload_fail">Couldn\'t load that image</string>
 

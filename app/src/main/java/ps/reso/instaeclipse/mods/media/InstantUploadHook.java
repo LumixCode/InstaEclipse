@@ -330,7 +330,7 @@ public class InstantUploadHook {
             removePreview();
             if (decor instanceof ViewGroup) {
                 TextView hint = new TextView(act);
-                hint.setText(cleanLabel(I18n.t(act, R.string.ig_instant_upload_chip_ready)));
+                hint.setText(I18n.t(act, R.string.ig_instant_upload_chip_ready));
                 hint.setTextColor(Color.WHITE);
                 hint.setTextSize(13);
                 hint.setSingleLine(true);
@@ -398,8 +398,8 @@ public class InstantUploadHook {
                         .setInterpolator(new android.view.animation.OvershootInterpolator()).start();
             }
         }
-        chipBtn.setContentDescription(cleanLabel(I18n.t(act,
-                ready ? R.string.ig_instant_upload_chip_ready : R.string.ig_instant_upload_chip)));
+        chipBtn.setContentDescription(I18n.t(act,
+                ready ? R.string.ig_instant_upload_chip_ready : R.string.ig_instant_upload_chip));
     }
 
     private static void removePreview() {
@@ -408,18 +408,6 @@ public class InstantUploadHook {
                 ((ViewGroup) preview.getParent()).removeView(preview);
         } catch (Throwable ignored) {}
         preview = null;
-    }
-
-    /** Strip the leading emoji/✓ the chip strings carry — the button draws real icons instead. */
-    static String cleanLabel(String s) {
-        if (s == null) return "";
-        int i = 0;
-        while (i < s.length()) {
-            int cp = s.codePointAt(i);
-            if (Character.isLetterOrDigit(cp)) break;
-            i += Character.charCount(cp);
-        }
-        return i < s.length() ? s.substring(i).trim() : s.trim();
     }
 
     /** A drawable from the module APK (R.drawable ids only resolve against the module's Resources). */
@@ -649,12 +637,30 @@ public class InstantUploadHook {
      *  draws named com.instagram.quicksnap.camera.ui views (cover frame, dual bounds); the chat
      *  camera does not. Remembered per window once seen. */
     private static final java.util.Map<Activity, Boolean> quickSnapHosts = new java.util.WeakHashMap<>();
+    private static final java.util.Map<Activity, Long> quickSnapMisses = new java.util.WeakHashMap<>();
 
     private static boolean isQuickSnapCamera(Activity act) {
         if (Boolean.TRUE.equals(quickSnapHosts.get(act))) return true;
+        long now = android.os.SystemClock.uptimeMillis();
+        if (!CameraCheck.due(quickSnapMisses.get(act), now, quickSnapActiveAt)) return false;
         boolean found = hasQuickSnapView(act.getWindow().getDecorView(), 0);
-        if (found) quickSnapHosts.put(act, true);
+        if (found) {
+            quickSnapHosts.put(act, true);
+            quickSnapMisses.remove(act);
+        } else {
+            quickSnapMisses.put(act, now);
+        }
         return found;
+    }
+
+    static final class CameraCheck {
+        static final long RECHECK_MS = 1000;
+
+        private CameraCheck() {}
+
+        static boolean due(Long missedAt, long now, long viewModelAt) {
+            return missedAt == null || now - missedAt >= RECHECK_MS || viewModelAt > missedAt;
+        }
     }
 
     private static boolean hasQuickSnapView(View v, int depth) {
@@ -677,11 +683,7 @@ public class InstantUploadHook {
     private static void launchPicker(Activity act) {
         try {
             pickerOpen = true;
-            Intent i = new Intent(Intent.ACTION_GET_CONTENT);
-            i.setType("image/*");
-            i.addCategory(Intent.CATEGORY_OPENABLE);
-            act.startActivityForResult(Intent.createChooser(i,
-                    I18n.t(act, R.string.ig_instant_upload_chip)), PICK_REQUEST);
+            act.startActivityForResult(InstantPicker.intent(Build.VERSION.SDK_INT, InstantPicker.extension()), PICK_REQUEST);
         } catch (Throwable t) {
             pickerOpen = false;
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(act, I18n.t(act, R.string.ig_instant_upload_fail), Toast.LENGTH_SHORT).show();
@@ -723,23 +725,10 @@ public class InstantUploadHook {
                                     restoreChipAfterCancel(act);
                                     return;
                                 }
-                                Bitmap bmp = decode(act, uri);
-                                if (bmp == null) {
-                                    restoreChipAfterCancel(act);
-                                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(act, I18n.t(act, R.string.ig_instant_upload_fail),
-                                            Toast.LENGTH_SHORT).show();
-                                    return;
-                                }
-                                armPick(bmp, act);
-                                // The lifecycle callbacks track the chip on this screen; rebuild it
-                                // if a stale one (or none) survived the picker.
-                                if (chip == null || chipHost != act || chip.getParent() == null) {
-                                    removeChip();
-                                    injectChip(act);
-                                }
-                                markChipReady(act, bmp);
-                                ps.reso.instaeclipse.utils.toast.IeToast.makeText(act, I18n.t(act, R.string.ig_instant_upload_ready),
-                                        Toast.LENGTH_LONG).show();
+                                FeedVideoDownloadHook.executor.execute(() -> {
+                                    Bitmap bmp = decode(act, uri);
+                                    FeedVideoDownloadHook.mainHandler.post(() -> usePick(act, bmp));
+                                });
                             } catch (Throwable t) {
                                 ModuleLog.error("(IE|InstantUpload) Could not use the picked photo", t);
                             }
@@ -748,6 +737,28 @@ public class InstantUploadHook {
             ModuleLog.detail("(IE|InstantUpload) picker-result hooked");
         } catch (Throwable t) {
             ModuleLog.error("(IE|InstantUpload) Photos picked from the gallery will not reach the camera: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+        }
+    }
+
+    private static void usePick(Activity act, Bitmap bmp) {
+        try {
+            if (act.isFinishing() || act.isDestroyed()) return;
+            if (bmp == null) {
+                restoreChipAfterCancel(act);
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(act, I18n.t(act, R.string.ig_instant_upload_fail),
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            armPick(bmp, act);
+            if (chip == null || chipHost != act || chip.getParent() == null) {
+                removeChip();
+                injectChip(act);
+            }
+            markChipReady(act, bmp);
+            ps.reso.instaeclipse.utils.toast.IeToast.makeText(act, I18n.t(act, R.string.ig_instant_upload_ready),
+                    Toast.LENGTH_LONG).show();
+        } catch (Throwable t) {
+            ModuleLog.error("(IE|InstantUpload) Could not use the picked photo", t);
         }
     }
 
