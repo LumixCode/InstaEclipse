@@ -22,12 +22,14 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.media.CommentMediaDownload;
+import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.toast.IeToast;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 
 /**
@@ -48,6 +50,7 @@ public class CommentCopyHook {
 
     private static final String EFFECT_HANDLER_CLASS =
             "com.instagram.comments.mvvm.view.fragment.CommentViewUiEffectHandler$handleCommentUiEffects$1";
+    private static final String CACHE_KEY = "CommentCopyPresenter_v1";
 
     private static final class MenuCall {
         final Object comment;
@@ -60,40 +63,22 @@ public class CommentCopyHook {
 
     public void install(ClassLoader classLoader) {
         try {
-            Class<?> handler = classLoader.loadClass(EFFECT_HANDLER_CLASS);
-            Method presenter = null;
-            for (Field f : handler.getDeclaredFields()) {
-                for (Method m : f.getType().getDeclaredMethods()) {
-                    Class<?>[] p = m.getParameterTypes();
-                    if (m.getReturnType() == void.class && p.length == 5
-                            && p[3] == List.class && p[4] == float.class) {
-                        presenter = m;
-                        break;
-                    }
-                }
-                if (presenter != null) break;
-            }
-            Class<?> popup = null;
-            if (presenter != null) {
-                for (Field f : presenter.getDeclaringClass().getDeclaredFields()) {
-                    if (PopupWindow.class.isAssignableFrom(f.getType())) popup = f.getType();
-                }
+            List<Method> menu = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(CACHE_KEY, classLoader) : null;
+            if (menu == null || menu.size() < 2) {
+                menu = findMenu(classLoader.loadClass(EFFECT_HANDLER_CLASS));
+                if (menu.size() > 1) DexKitCache.saveMethods(CACHE_KEY, menu);
             }
             int hooked = 0;
-            if (popup != null) {
-                for (Method m : popup.getDeclaredMethods()) {
-                    Class<?>[] p = m.getParameterTypes();
-                    if (m.getReturnType() != void.class || p.length != 1 || p[0] != List.class
-                            || Modifier.isStatic(m.getModifiers())) continue;
-                    XposedBridge.hookMethod(m, ADD_ROW_HOOK);
-                    hooked++;
-                }
+            for (int i = 1; i < menu.size(); i++) {
+                XposedBridge.hookMethod(menu.get(i), ADD_ROW_HOOK);
+                hooked++;
             }
             if (hooked == 0) {
                 if (FeatureFlags.enableCopyComment) FeatureStatusTracker.setBroken("CopyComment", R.string.ig_dialog_misc_copy_comment);
                 ModuleLog.error("(InstaEclipse | CopyComment): Could not turn on copy comment: the comment long-press menu was not found in this Instagram version");
                 return;
             }
+            Method presenter = menu.get(0);
             XposedBridge.hookMethod(presenter, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam param) {
                     JitGuard.tick(param.method);
@@ -113,11 +98,43 @@ public class CommentCopyHook {
             FeatureStatusTracker.setHooked("CopyComment");
             ModuleLog.ok("(InstaEclipse | CopyComment): Ready");
             ModuleLog.detail("(InstaEclipse | CopyComment): menu rows via " + presenter.getDeclaringClass().getName()
-                    + "." + presenter.getName() + " + " + popup.getName() + " (" + hooked + " list methods)");
+                    + "." + presenter.getName() + " + " + menu.get(1).getDeclaringClass().getName() + " (" + hooked + " list methods)");
         } catch (Throwable t) {
             if (FeatureFlags.enableCopyComment) FeatureStatusTracker.setBroken("CopyComment", R.string.ig_dialog_misc_copy_comment);
             ModuleLog.error("(InstaEclipse | CopyComment): Could not turn on copy comment", t);
         }
+    }
+
+    private static List<Method> findMenu(Class<?> handler) {
+        List<Method> menu = new ArrayList<>();
+        Method presenter = null;
+        for (Field f : handler.getDeclaredFields()) {
+            String type = f.getType().getName();
+            if (type.startsWith("java.") || type.startsWith("android.") || type.startsWith("androidx.")) continue;
+            for (Method m : f.getType().getDeclaredMethods()) {
+                Class<?>[] p = m.getParameterTypes();
+                if (m.getReturnType() == void.class && p.length == 5
+                        && p[3] == List.class && p[4] == float.class) {
+                    presenter = m;
+                    break;
+                }
+            }
+            if (presenter != null) break;
+        }
+        if (presenter == null) return menu;
+        Class<?> popup = null;
+        for (Field f : presenter.getDeclaringClass().getDeclaredFields()) {
+            if (PopupWindow.class.isAssignableFrom(f.getType())) popup = f.getType();
+        }
+        if (popup == null) return menu;
+        menu.add(presenter);
+        for (Method m : popup.getDeclaredMethods()) {
+            Class<?>[] p = m.getParameterTypes();
+            if (m.getReturnType() != void.class || p.length != 1 || p[0] != List.class
+                    || Modifier.isStatic(m.getModifiers())) continue;
+            menu.add(m);
+        }
+        return menu;
     }
 
     /** The comment model is the presenter argument that carries its author. */
@@ -227,7 +244,7 @@ public class CommentCopyHook {
         return rows.size();
     }
 
-    @SuppressLint({"DiscouragedApi", "UseCompatLoadingForDrawables"}) // Instagram's own icons
+    @SuppressLint("UseCompatLoadingForDrawables")
     private static Object newRow(Constructor<?> row, Object template, Context ctx, String icon,
                                  String label, Runnable onTap) throws Exception {
         Class<?> callbackType = row.getParameterTypes()[2];
@@ -245,7 +262,7 @@ public class CommentCopyHook {
                     return null;
                 });
         Drawable drawable = null;
-        int id = ctx.getResources().getIdentifier(icon, "drawable", ctx.getPackageName());
+        int id = ResIds.drawable(ctx, icon);
         if (id != 0) drawable = ctx.getDrawable(id);
         // Same arguments Instagram passes for its own untinted rows; the flags follow below.
         Object[] args = new Object[row.getParameterCount()];

@@ -28,7 +28,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -42,6 +44,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.text.CopyFeedback;
+import ps.reso.instaeclipse.utils.users.UserUtils;
 
 /**
  * Hold a feed or reel caption to copy it.
@@ -55,21 +58,19 @@ import ps.reso.instaeclipse.utils.text.CopyFeedback;
  * Touches are watched instead of adding a long-click listener: the caption's link spans take the
  * press before View's own long-press detection sees it, and Litho reuses hosts for other
  * components, so a listener would leak onto them.
- *
- * Caption text: Media (or LiveTreeMediaDict on <=436) -> caption object (the zero-arg getter
- * guarded by the "caption" string) -> its text accessor. The caption type has many other String
- * getters (status, ids, JSON debug dumps), so the accessor is the one its Pando implementation
- * reads the "text" key with, never a guess.
  */
 public class CaptionCopyHook {
     private static final String TEXT_VIEW = "com.instagram.ui.widget.textview.IgTextLayoutView";
     private static final String LITHO_HOST = "com.facebook.litho.ComponentHost";
     private static final String MEDIA = "com.instagram.feed.media.Media";
+    private static final String USER = "com.instagram.user.model.User";
     private static final int MAX_HOPS = 3, MAX_VISITS = 300;
     private static final String CLAIM = "ie_caption_claim", RESTORE_UP = "ie_caption_restore_up";
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    private static final Map<Class<?>, Method> TEXT_GETTERS = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Field[]> LINK_FIELDS = new ConcurrentHashMap<>();
 
-    private static Method captionGetter; // Media (or LiveTreeMediaDict) -> caption object
+    private static Method captionGetter;
     private static Method captionText;   // caption object -> caption text
 
     // One gesture at a time; touch events arrive on the main thread.
@@ -254,41 +255,23 @@ public class CaptionCopyHook {
         }
 
         try {
-            // The caption getter (0-arg, object-returning, guarded by the "caption" string)
-            // moved from LiveTreeMediaDict (<=436) onto com.instagram.feed.media.Media itself
-            // in the 442+ media-model refactor. Try the current home first, then the legacy
-            // class. Only stable com.instagram.feed.media.* class names are used — never an
-            // obfuscated X.* name (those change every Instagram version).
-            String[] declClassCandidates = {
-                    "com.instagram.feed.media.Media",             // 442+ (447: Media caption getter)
-                    "com.instagram.feed.media.LiveTreeMediaDict"  // 436 and earlier
-            };
-
-            for (String declClass : declClassCandidates) {
-                List<MethodData> results;
+            List<MethodData> results = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                    .matcher(MethodMatcher.create()
+                            .declaredClass(MEDIA)
+                            .paramCount(0)
+                            .usingEqStrings(List.of("caption"))));
+            for (MethodData md : results) {
+                if (md.getName().equals("<clinit>")) continue;
                 try {
-                    results = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                            .matcher(MethodMatcher.create()
-                                    .declaredClass(declClass)
-                                    .paramCount(0)
-                                    .usingEqStrings(List.of("caption"))));
-                } catch (Throwable ignored) {
-                    continue; // class absent on this build
-                }
-
-                for (MethodData md : results) {
-                    if (md.getName().equals("<clinit>")) continue;
-                    try {
-                        Method m = md.getMethodInstance(classLoader);
-                        if (m.getParameterCount() != 0) continue;   // excludes the setter
-                        if (m.getReturnType() == void.class || m.getReturnType().isPrimitive()) continue;
-                        m.setAccessible(true);
-                        captionGetter = m;
-                        DexKitCache.saveMethod("CaptionGetter", m);
-                        ModuleLog.detail("(IE|Caption) captionGetter=" + declClass + "." + m.getName());
-                        return;
-                    } catch (Throwable ignored) {}
-                }
+                    Method m = md.getMethodInstance(classLoader);
+                    if (m.getParameterCount() != 0) continue;
+                    if (m.getReturnType() == void.class || m.getReturnType().isPrimitive()) continue;
+                    m.setAccessible(true);
+                    captionGetter = m;
+                    DexKitCache.saveMethod("CaptionGetter", m);
+                    ModuleLog.detail("(IE|Caption) captionGetter=" + MEDIA + "." + m.getName());
+                    return;
+                } catch (Throwable ignored) {}
             }
             ModuleLog.error("(IE|Caption) Could not turn on caption copy: the caption was not found in this Instagram version");
         } catch (Throwable t) {
@@ -325,31 +308,8 @@ public class CaptionCopyHook {
 
     private static String extractCaptionText(Object media) {
         try {
-            // The receiver depends on where the getter is declared:
-            //   442+ : declared on Media itself      -> invoke on `media` directly
-            //   <=436: declared on LiveTreeMediaDict -> find that dict field on `media`
-            Class<?> owner = captionGetter.getDeclaringClass();
-            Object receiver;
-            if (owner.isInstance(media)) {
-                receiver = media;
-            } else {
-                receiver = null;
-                Class<?> cls = media.getClass();
-                outer:
-                while (cls != null && cls != Object.class) {
-                    for (Field f : cls.getDeclaredFields()) {
-                        if (owner.isAssignableFrom(f.getType())) {
-                            f.setAccessible(true);
-                            Object v = f.get(media);
-                            if (v != null) { receiver = v; break outer; }
-                        }
-                    }
-                    cls = cls.getSuperclass();
-                }
-                if (receiver == null) return null;
-            }
-
-            Object captionObj = captionGetter.invoke(receiver);
+            if (!captionGetter.getDeclaringClass().isInstance(media)) return null;
+            Object captionObj = captionGetter.invoke(media);
             return captionObj == null ? null : (String) captionText.invoke(captionObj);
         } catch (Throwable t) {
             ModuleLog.detail("(IE|Caption) extractCaptionText: " + t);
@@ -447,42 +407,75 @@ public class CaptionCopyHook {
             CharSequence shown = shownText(view, hookedType);
             if (shown == null) return null;
             String visible = shown.toString();
-            int tagged = 0, links = 0;
+            Spanned spanned = shown instanceof Spanned text ? text : null;
             List<Object> media = new ArrayList<>();
-            if (shown instanceof Spanned text) {
-                media.addAll(linkedMedia(text));
-                links = media.size();
-                for (CaptionMedia tag : text.getSpans(0, text.length(), CaptionMedia.class)) {
-                    Object m = tag.media.get();
-                    if (m != null) { media.add(0, m); tagged++; }
-                }
-            }
             // A reel caption's own page knows its reel whatever the text carries (often plain text,
             // with no link back); the caption atop a comment sheet belongs to the sheet's post.
             Object page = reel ? pageMedia(view) : sheet ? CommentSearchHook.sheetPost() : null;
-            if (page != null) media.add(0, page);
-            for (Object m : media) {
-                String caption = extractCaptionText(m);
-                if (caption != null && CaptionTextPolicy.shows(visible, caption)) {
-                    caption = caption.trim();
-                    if (reel) rememberReelCaption(caption);
-                    return caption;
+            if (page != null) media.add(page);
+            if (spanned != null) {
+                for (CaptionMedia tag : spanned.getSpans(0, spanned.length(), CaptionMedia.class)) {
+                    Object m = tag.media.get();
+                    if (m != null) media.add(m);
                 }
             }
+            int tagged = media.size() - (page != null ? 1 : 0);
+            String caption = matching(media, visible, true, reel);
+            if (caption != null) return caption;
+            List<Object> linked = spanned != null ? linkedMedia(spanned) : List.of();
+            caption = matching(linked, visible, litho, reel);
+            if (caption != null) return caption;
             if (reel) {
-                for (String caption : recentReelCaptions) {
-                    if (CaptionTextPolicy.showsWhole(visible, caption)) return caption;
+                for (String remembered : recentReelCaptions) {
+                    if (CaptionTextPolicy.showsWhole(visible, remembered)) return remembered;
                 }
             }
             if (litho) {
-                ModuleLog.detail("(IE|Caption) " + (reel ? "reel" : "sheet") + " caption not matched (spanned=" + (shown instanceof Spanned)
-                        + " page=" + (page != null) + " tagged=" + tagged + " links=" + links
+                ModuleLog.detail("(IE|Caption) " + (reel ? "reel" : "sheet") + " caption not matched (spanned=" + (spanned != null)
+                        + " page=" + (page != null) + " tagged=" + tagged + " links=" + linked.size()
                         + " remembered=" + recentReelCaptions.size() + ")");
             }
         } catch (Throwable t) {
             ModuleLog.detail("(IE|Caption) hold-to-copy: " + t);
         }
         return null;
+    }
+
+    private static String matching(List<Object> media, String visible, boolean shortCaptions, boolean reel) {
+        for (Object m : media) {
+            String caption = extractCaptionText(m);
+            if (caption == null) continue;
+            boolean isShort = CaptionTextPolicy.isShort(caption);
+            if (isShort && !shortCaptions) continue;
+            if (!CaptionTextPolicy.shows(visible, caption, isShort ? authorsOf(m) : null)) continue;
+            caption = caption.trim();
+            if (reel) rememberReelCaption(caption);
+            return caption;
+        }
+        return null;
+    }
+
+    private static final Map<Class<?>, List<Method>> USER_GETTERS = new ConcurrentHashMap<>();
+
+    private static List<String> authorsOf(Object media) {
+        List<String> names = new ArrayList<>();
+        for (Method getter : USER_GETTERS.computeIfAbsent(media.getClass(), CaptionCopyHook::userGetters)) {
+            try {
+                String name = UserUtils.callUsernameGetter(getter.invoke(media));
+                if (name != null && !names.contains(name)) names.add(name);
+            } catch (Throwable ignored) {}
+        }
+        return names;
+    }
+
+    private static List<Method> userGetters(Class<?> media) {
+        List<Method> out = new ArrayList<>();
+        for (Method m : media.getMethods()) {
+            if (Modifier.isStatic(m.getModifiers()) || m.getParameterCount() != 0
+                    || !m.getReturnType().getName().equals(USER)) continue;
+            out.add(m);
+        }
+        return out;
     }
 
     // Page holder class -> its {item field, Media getter} pairs.
@@ -559,17 +552,26 @@ public class CaptionCopyHook {
 
     private static CharSequence shownText(View view, String hookedType) throws Exception {
         if (TEXT_VIEW.equals(hookedType)) {
-            Object layout = view.getClass().getMethod("getTextLayout").invoke(view);
+            Object layout = textGetter(view, "getTextLayout").invoke(view);
             return layout instanceof Layout l ? l.getText() : null;
         }
         CharSequence plain = null;
-        if (view.getClass().getMethod("getTextContentText").invoke(view) instanceof List<?> texts) {
+        if (textGetter(view, "getTextContentText").invoke(view) instanceof List<?> texts) {
             for (Object text : texts) {
                 if (text instanceof Spanned spanned) return spanned;
                 if (plain == null && text instanceof CharSequence cs && cs.length() > 0) plain = cs;
             }
         }
         return plain;
+    }
+
+    private static Method textGetter(View view, String name) throws NoSuchMethodException {
+        Method getter = TEXT_GETTERS.get(view.getClass());
+        if (getter == null) {
+            getter = view.getClass().getMethod(name);
+            TEXT_GETTERS.put(view.getClass(), getter);
+        }
+        return getter;
     }
 
     /**
@@ -632,18 +634,28 @@ public class CaptionCopyHook {
                 continue;
             }
             if (depth == MAX_HOPS || value.getClass().isArray()) continue;
-            for (Class<?> c = value.getClass(); c != null && isInstagram(c.getName()); c = c.getSuperclass()) {
-                for (Field field : c.getDeclaredFields()) {
-                    if (Modifier.isStatic(field.getModifiers()) || field.getType().isPrimitive()) continue;
-                    try {
-                        field.setAccessible(true);
-                        Object child = field.get(value);
-                        if (child != null) queue.add(new Object[]{child, depth + 1});
-                    } catch (Throwable ignored) {}
-                }
+            for (Field field : LINK_FIELDS.computeIfAbsent(value.getClass(), CaptionCopyHook::linkFields)) {
+                try {
+                    Object child = field.get(value);
+                    if (child != null) queue.add(new Object[]{child, depth + 1});
+                } catch (Throwable ignored) {}
             }
         }
         return media;
+    }
+
+    private static Field[] linkFields(Class<?> type) {
+        List<Field> out = new ArrayList<>();
+        for (Class<?> c = type; c != null && isInstagram(c.getName()); c = c.getSuperclass()) {
+            for (Field field : c.getDeclaredFields()) {
+                if (Modifier.isStatic(field.getModifiers()) || field.getType().isPrimitive()) continue;
+                try {
+                    field.setAccessible(true);
+                    out.add(field);
+                } catch (Throwable ignored) {}
+            }
+        }
+        return out.toArray(new Field[0]);
     }
 
     private static boolean isInstagram(String type) {
