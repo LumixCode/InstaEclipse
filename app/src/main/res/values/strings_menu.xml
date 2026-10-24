@@ -9,4 +9,7 @@
     <string name="ie_spoof_last_seen_removed" tools:ignore="MissingTranslation">Spoof last seen was removed: it didn\'t work on Instagram 451. To hide when you\'re active, turn off Activity status in Instagram\'s settings.</string>
     <string name="ig_extreme_active" tools:ignore="MissingTranslation">On · can\'t be turned off</string>
     <string name="ig_quick_toggle_hint" tools:ignore="MissingTranslation">Hold the Messages icon to switch these on or off together.</string>
+    <string name="ig_dialog_restart_message_v2" tools:ignore="MissingTranslation">Instagram closes and opens again. Your settings stay.</string>
+    <string name="ig_dialog_restart_clear_cache" tools:ignore="MissingTranslation">Clear Instagram\'s cache and restart</string>
+    <string name="ig_dialog_auto_clear_cache_size_v2" tools:ignore="MissingTranslation">Clear above: %1$d MB</string>
 </resources>

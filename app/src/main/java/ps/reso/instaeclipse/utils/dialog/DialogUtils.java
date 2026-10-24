@@ -553,55 +553,43 @@ public class DialogUtils {
             Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(packageName);
 
             if (launchIntent != null) {
-                clearAppCache(context);
                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(launchIntent);
-                exit.run();
+                if (clearCache) {
+                    android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+                    ps.reso.instaeclipse.utils.core.CacheAutoClear.clearNow(context,
+                            () -> main.post(() -> relaunch(context, launchIntent)));
+                } else {
+                    relaunch(context, launchIntent);
+                }
             } else {
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_dialog_restart_not_found), Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
-            String packageName = context.getPackageName();
-            ModuleLog.error("(InstaEclipse): Could not restart " + packageName + ": " + e.getClass().getSimpleName() + ": " + e.getMessage());
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_dialog_restart_failed, e.getMessage()), Toast.LENGTH_LONG).show();
+            restartFailed(context, e);
         }
     }
 
-    /**
-     * Clears the cache directory for the current application.
-     *
-     * @param context The application context.
-     */
-    private static void clearAppCache(Context context) {
+    private static void relaunch(Context context, Intent launchIntent) {
         try {
-            File cacheDir = context.getCacheDir();
-            if (cacheDir != null && cacheDir.isDirectory()) {
-                deleteRecursive(cacheDir);
-                ModuleLog.line("(InstaEclipse): Cache cleared for " + context.getPackageName());
-            } else {
-                ModuleLog.detail("(InstaEclipse): Cache directory not found for " + context.getPackageName());
-            }
+            waitForQueuedPreferenceWrites();
+            context.startActivity(launchIntent);
+            exit.run();
         } catch (Exception e) {
-            ModuleLog.error("(InstaEclipse): Could not clear the cache of " + context.getPackageName() + ": " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            restartFailed(context, e);
         }
     }
 
-    /**
-     * Recursively deletes a file or directory.
-     *
-     * @param fileOrDirectory The file or directory to delete.
-     */
-    private static void deleteRecursive(File fileOrDirectory) {
-        if (fileOrDirectory.isDirectory()) {
-            File[] children = fileOrDirectory.listFiles();
-            if (children != null) {
-                for (File child : children) {
-                    deleteRecursive(child);
-                }
-            }
-        }
-        // A direct result for a file or an empty directory
-        fileOrDirectory.delete();
+    private static void waitForQueuedPreferenceWrites() {
+        android.content.SharedPreferences prefs = SettingsManager.prefs();
+        if (prefs == null) return;
+        prefs.edit().apply();
+        prefs.edit().commit();
+    }
+
+    private static void restartFailed(Context context, Exception e) {
+        String packageName = context.getPackageName();
+        ModuleLog.error("(InstaEclipse): Could not restart " + packageName + ": " + e.getClass().getSimpleName() + ": " + e.getMessage());
+        ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_dialog_restart_failed, e.getMessage()), Toast.LENGTH_LONG).show();
     }
 
 
@@ -3077,14 +3065,25 @@ public class DialogUtils {
         layout.setGravity(Gravity.CENTER_HORIZONTAL);
 
         TextView message = new TextView(context);
-        message.setText(I18n.t(context, R.string.ig_dialog_restart_message));
+        message.setText(I18n.t(context, R.string.ig_dialog_restart_message_v2));
         message.setTextColor(Color.WHITE);
         message.setTextSize(18f);
         message.setGravity(Gravity.CENTER);
         message.setPadding(0, 0, 0, dp(context, 10));
 
         layout.addView(message);
-        layout.addView(IeRows.actionRow(context, R.drawable.ic_restart, I18n.t(context, R.string.ig_dialog_restart_now), "#FF453A", v -> restart(context, true)));
+        View restartRow = IeRows.actionRow(context, R.drawable.ic_restart, I18n.t(context, R.string.ig_dialog_restart_now), "#FF453A", v -> restart(context, false));
+        View clearRow = IeRows.actionRow(context, R.drawable.ic_delete,
+                I18n.t(context, R.string.ig_dialog_restart_clear_cache), "#FF9F0A", v -> {
+                    setRowEnabled(restartRow, false);
+                    v.setEnabled(false);
+                    android.widget.ProgressBar busy = new android.widget.ProgressBar(context, null, android.R.attr.progressBarStyleSmall);
+                    busy.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(accent()));
+                    ((LinearLayout) v).addView(busy, new LinearLayout.LayoutParams(dp(context, 24), dp(context, 24)));
+                    restart(context, true);
+                });
+        layout.addView(restartRow);
+        layout.addView(clearRow);
 
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_restart), layout, () -> {
         });
@@ -3107,7 +3106,7 @@ public class DialogUtils {
         layout.addView(message);
         layout.addView(IeRows.actionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_dialog_clear_cache_now), "#FF9F0A", v -> {
             ps.reso.instaeclipse.utils.core.DexKitCache.clearCache();
-            restart(context, true);
+            restart(context, false);
         }));
 
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_clear_cache), layout, () -> {});
@@ -3130,27 +3129,8 @@ public class DialogUtils {
             SettingsManager.saveAllFlags();
         });
 
-        // IG's real cache is small (self-trimmed, typically <150MB) — high thresholds never
-        // fire, so the reachable options are low. The bulk of IG storage is *data*, not cache.
-        final int[] presets = {50, 100, 200, 500};
         final View sizeRow = IeRows.actionRow(context, R.drawable.ic_folder,
-                I18n.t(context, R.string.ig_dialog_auto_clear_cache_size, FeatureFlags.autoClearCacheSizeMb), "#FF9F0A", v -> {});
-        sizeRow.setOnClickListener(v -> {
-            int cur = FeatureFlags.autoClearCacheSizeMb, idx = 0;
-            for (int i = 0; i < presets.length; i++) if (presets[i] == cur) { idx = i; break; }
-            FeatureFlags.autoClearCacheSizeMb = presets[(idx + 1) % presets.length];
-            SettingsManager.saveAllFlags();
-            if (v instanceof android.view.ViewGroup) {
-                android.view.ViewGroup vg = (android.view.ViewGroup) v;
-                for (int i = 0; i < vg.getChildCount(); i++) {
-                    if (vg.getChildAt(i) instanceof TextView) {
-                        ((TextView) vg.getChildAt(i)).setText(
-                                I18n.t(context, R.string.ig_dialog_auto_clear_cache_size, FeatureFlags.autoClearCacheSizeMb));
-                        break;
-                    }
-                }
-            }
-        });
+                autoClearSizeLabel(context), "#FF9F0A", v -> showAutoClearSizeDialog(context, (TextView) findFirstText(v)));
 
         layout.addView(IeRows.divider(context));
         LinearLayout card = IeRows.card(context, 5);
@@ -3159,6 +3139,29 @@ public class DialogUtils {
         layout.addView(card);
 
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_auto_clear_cache), layout, () -> {});
+    }
+
+    private static final int[] AUTO_CLEAR_SIZES_MB = {50, 100, 200, 500};
+
+    private static String autoClearSizeLabel(Context context) {
+        return I18n.t(context, R.string.ig_dialog_auto_clear_cache_size_v2, FeatureFlags.autoClearCacheSizeMb);
+    }
+
+    private static void showAutoClearSizeDialog(Context context, TextView label) {
+        String[] rows = new String[AUTO_CLEAR_SIZES_MB.length];
+        int checked = -1;
+        for (int i = 0; i < rows.length; i++) {
+            rows[i] = AUTO_CLEAR_SIZES_MB[i] + " MB";
+            if (AUTO_CLEAR_SIZES_MB[i] == FeatureFlags.autoClearCacheSizeMb) checked = i;
+        }
+        new IeDialog(context)
+                .title(I18n.t(context, R.string.ig_dialog_section_auto_clear_cache))
+                .choices(rows, checked, which -> {
+                    FeatureFlags.autoClearCacheSizeMb = AUTO_CLEAR_SIZES_MB[which];
+                    SettingsManager.saveAllFlags();
+                    if (label != null) label.setText(autoClearSizeLabel(context));
+                })
+                .show();
     }
 
     // ==== HELPERS ====

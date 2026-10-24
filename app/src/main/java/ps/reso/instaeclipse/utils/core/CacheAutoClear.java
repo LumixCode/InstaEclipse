@@ -46,6 +46,21 @@ public class CacheAutoClear {
         sweep(app, limitMb * MB);
     }
 
+    public static void clearNow(Context app, Runnable onDone) {
+        new Thread(() -> {
+            try {
+                List<File> entries = CacheSweep.select(app.getCacheDir(), app.getExternalCacheDir(), app.getFilesDir());
+                long measured = CacheSweep.size(entries);
+                CacheSweep.delete(entries);
+                ModuleLog.line("(IE|CacheAutoClear) Cleared about " + (measured / MB) + " MB of cache");
+            } catch (Throwable t) {
+                ModuleLog.warn("(IE|CacheAutoClear) Could not clear the cache: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            } finally {
+                if (onDone != null) onDone.run();
+            }
+        }, "ie-cacheclear").start();
+    }
+
     static Thread sweep(Context app, long limit) {
         Thread worker = new Thread(() -> {
             try {
