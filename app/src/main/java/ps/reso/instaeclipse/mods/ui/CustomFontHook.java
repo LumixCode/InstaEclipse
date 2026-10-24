@@ -321,7 +321,7 @@ public class CustomFontHook {
 
     private static Typeface getCombo() {
         String primaryPath = (FeatureFlags.customFontEnabled && FeatureFlags.customFontPath != null
-                && !FeatureFlags.customFontPath.isEmpty()) ? FeatureFlags.customFontPath : systemFontPath();
+                && !FeatureFlags.customFontPath.isEmpty()) ? FeatureFlags.customFontPath : SystemSansFont.path();
         String key = primaryPath + "|" + FeatureFlags.customEmojiPath;
         if (combo != null && key.equals(comboKey)) return combo;
         try {
@@ -350,15 +350,6 @@ public class CustomFontHook {
             combo = getUserFont();
         }
         return combo;
-    }
-
-    /** First available regular system font, used as the text base when no custom font is set. */
-    private static String systemFontPath() {
-        for (String p : new String[]{"/system/fonts/Roboto-Regular.ttf", "/system/fonts/NotoSans-Regular.ttf",
-                "/system/fonts/DroidSans.ttf"}) {
-            if (new File(p).exists()) return p;
-        }
-        return "/system/fonts/Roboto-Regular.ttf";
     }
 
     /** Copies the picked font Uri into a new file in filesDir and records the path. */
