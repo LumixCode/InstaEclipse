@@ -29,7 +29,7 @@ final class RenditionPicker {
             this.excludedByCeiling = excludedByCeiling;
         }
     }
-    static Plan plan(DownloadRequest request) {
+    static Plan plan(DownloadRequest request, int sdk) {
         if (request.options.originalSelection) {
             DownloadRequest.Rendition selected = request.direct.get(0);
             List<Choice> original = new ArrayList<>();

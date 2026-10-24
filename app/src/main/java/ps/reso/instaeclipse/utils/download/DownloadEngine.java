@@ -9,6 +9,7 @@ import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
+import android.os.Build;
 import android.os.Looper;
 import java.io.File;
 import java.io.IOException;
@@ -95,7 +96,7 @@ public final class DownloadEngine {
         if (Looper.myLooper() == Looper.getMainLooper()) throw new Failure("THREAD", "Downloads must run on a worker thread", false);
         Cancellation cancel = cancellation == null ? new Cancellation() : cancellation;
         Progress progress = listener == null ? (phase, done, total) -> { } : listener;
-        RenditionPicker.Plan plan = RenditionPicker.plan(request);
+        RenditionPicker.Plan plan = RenditionPicker.plan(request, Build.VERSION.SDK_INT);
         try {
             return attemptPlan(request, plan, (choice, fallback) -> run(context.getCacheDir(), request, choice,
                     cancel, progress, fallback, selectionSummary(request, plan, choice)));
