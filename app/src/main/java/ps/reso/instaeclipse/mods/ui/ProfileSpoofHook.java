@@ -79,6 +79,7 @@ public final class ProfileSpoofHook {
         hooked += hook(bridge, cl, "is_verified", "ProfileSpoofVerified", log, new String[]{"java.lang.Boolean", "boolean"}, 3);
         boolean session = trackAccount(cl);
         hookHeaderViews();
+        hookMetricWriter(bridge, cl, log);
         hookAvatarView();
         hookBioState(bridge, cl, log);
         if (hooked > 0 && session) FeatureStatusTracker.setHooked("ProfileSpoofer");
@@ -275,6 +276,8 @@ public final class ProfileSpoofHook {
 
     private static int followersId, followingId, titleId, chevronId, nameId, nameAltId, bioTextId, avatarId, tabAvatarId;
     private static final ThreadLocal<Boolean> SETTING = new ThreadLocal<>();
+    private static final String METRIC_WRITER_KEY = "ProfileSpoof_metricWriter_v1";
+    private static volatile boolean metricWriterHooked;
 
     private static void hookHeaderViews() {
         XposedBridge.hookAllMethods(android.widget.TextView.class, "setText", new XC_MethodHook() {
@@ -286,9 +289,57 @@ public final class ProfileSpoofHook {
                 if (followersId == 0) resolveIds(tv);
                 if (id != followersId && id != followingId && id != titleId
                         && id != nameId && id != nameAltId && id != bioTextId) return;
+                if (metricWriterHooked && (id == followersId || id == followingId)) return;
                 tv.post(() -> apply(tv));
             }
         });
+    }
+
+    private static void hookMetricWriter(DexKitBridge bridge, ClassLoader cl, StringBuilder log) {
+        try {
+            Method writer = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(METRIC_WRITER_KEY, cl) : null;
+            if (writer == null) {
+                java.util.List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                        .modifiers(Modifier.STATIC, org.luckypray.dexkit.query.enums.MatchType.Contains)
+                        .usingEqStrings(java.util.List.of("UserMetricsBinderHelper.shrinkVanityMetrics"))));
+                if (found.size() != 1) {
+                    log.append(", count writer=").append(found.isEmpty() ? "not found" : "ambiguous (" + found.size() + ")");
+                    return;
+                }
+                writer = found.get(0).getMethodInstance(cl);
+                DexKitCache.saveMethod(METRIC_WRITER_KEY, writer);
+            }
+            final int count = SpoofMetricArgs.countArg(writer.getParameterTypes());
+            if (count == SpoofMetricArgs.NONE) {
+                log.append(", count writer=no count argument");
+                return;
+            }
+            XposedBridge.hookMethod(writer, new XC_MethodHook() {
+                @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    if (!FeatureFlags.profileSpoofer) return;
+                    Object[] args = param.args;
+                    int[] ids = new int[args.length];
+                    android.widget.TextView any = null;
+                    for (int i = 0; i < args.length; i++) {
+                        if (args[i] instanceof android.widget.TextView t) {
+                            ids[i] = t.getId();
+                            any = t;
+                        }
+                    }
+                    if (any == null) return;
+                    if (followersId == 0) resolveIds(any);
+                    int at = SpoofMetricArgs.metricArg(ids, followersId, followingId);
+                    if (at == SpoofMetricArgs.NONE) return;
+                    android.widget.TextView tv = (android.widget.TextView) args[at];
+                    if (!SpoofMetricArgs.replace(args, count, ids[at] == followersId, ownProfileShown(tv),
+                            FeatureFlags.spoofFollowers, FeatureFlags.spoofFollowing)) tv.post(() -> apply(tv));
+                }
+            });
+            metricWriterHooked = true;
+            log.append(", count writer=").append(writer.getDeclaringClass().getName()).append('.').append(writer.getName());
+        } catch (Throwable t) {
+            log.append(", count writer=").append(t);
+        }
     }
 
     /** The real picture arrives asynchronously (and again on every rebind): put ours back. */
