@@ -107,6 +107,12 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
         return result;
     }
 
+    static Object value(Object receiver, String property) throws Exception {
+        SelectedMediaAdapter adapter = installed;
+        if (adapter == null) throw new IllegalStateException("Media adapter unavailable for this Instagram build");
+        return adapter.read(receiver, property).value;
+    }
+
     static List<Method> getters(String type, String key) {
         SelectedMediaAdapter adapter = installed;
         List<Method> bound = adapter == null ? null : adapter.bindings.get(key);

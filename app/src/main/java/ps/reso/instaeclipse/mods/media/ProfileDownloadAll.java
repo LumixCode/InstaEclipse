@@ -89,7 +89,7 @@ public final class ProfileDownloadAll {
             return;
         }
         busy = true;
-        List<SelectedMediaDownloads.Captured> found = new ArrayList<>();
+        List<Post> found = new ArrayList<>();
         Set<Object> known = Collections.newSetFromMap(new IdentityHashMap<>());
         IeDialog dlg = new IeDialog(a).title(I18n.t(a, R.string.ig_profile_download_all))
                 .message(I18n.t(a, R.string.ig_profile_dl_collecting, 0));
@@ -107,8 +107,7 @@ public final class ProfileDownloadAll {
                 int before = found.size();
                 for (Object media : fresh) {
                     try {
-                        SelectedMediaDownloads.Captured c = SelectedMediaDownloads.capture(a, media, "post");
-                        if (username.equalsIgnoreCase(c.media.owner)) found.add(c);
+                        if (username.equalsIgnoreCase(owner(media))) found.add(new Post(media));
                     } catch (Throwable ignored) { }
                 }
                 if (found.size() != before) lastChange[0] = System.currentTimeMillis();
@@ -130,16 +129,27 @@ public final class ProfileDownloadAll {
         MAIN.post(tick);
     }
 
+    private static final class Post {
+        final Object media;
+        final long id;
+
+        Post(Object media) throws Exception {
+            this.media = media;
+            this.id = SelectedMediaAdapter.value(media, "id") instanceof String raw ? MediaIds.pkLong(raw) : 0;
+        }
+    }
+
+    private static String owner(Object media) throws Exception {
+        Object user = SelectedMediaAdapter.value(media, "user");
+        return user != null && SelectedMediaAdapter.value(user, "username") instanceof String name ? name : null;
+    }
+
     /** Media ids grow with time ("<id>_<owner>"), so sorting by id puts the newest first. */
-    private static void newestFirst(List<SelectedMediaDownloads.Captured> posts) {
-        posts.sort((x, y) -> Long.compare(idOf(y), idOf(x)));
+    private static void newestFirst(List<Post> posts) {
+        posts.sort((x, y) -> Long.compare(y.id, x.id));
     }
 
-    private static long idOf(SelectedMediaDownloads.Captured c) {
-        return MediaIds.pkLong(c.media.id);
-    }
-
-    private static void confirm(Activity a, List<SelectedMediaDownloads.Captured> posts) {
+    private static void confirm(Activity a, List<Post> posts) {
         if (posts.isEmpty()) {
             busy = false;
             toast(a, I18n.t(a, R.string.ig_profile_dl_none));
@@ -160,23 +170,32 @@ public final class ProfileDownloadAll {
     private static boolean downloading;
 
     /** One post every SPACING_MS, so the download queue is never flooded. */
-    private static void download(Activity a, List<SelectedMediaDownloads.Captured> posts) {
+    private static void download(Activity a, List<Post> posts) {
         downloading = true;
         toast(a, I18n.t(a, R.string.ig_profile_dl_started, posts.size()));
+        BatchTally batch = new BatchTally(posts.size());
         for (int i = 0; i < posts.size(); i++) {
-            final SelectedMediaDownloads.Captured c = posts.get(i);
+            final Post post = posts.get(i);
             final boolean last = i == posts.size() - 1;
             MAIN.postDelayed(() -> {
                 try {
-                    if (c.children.isEmpty()) SelectedMediaDownloads.start(a, c, c.video != null, true);
-                    else for (SelectedMediaDownloads.Captured child : c.children)
-                        SelectedMediaDownloads.start(a, child, child.video != null, true);
+                    SelectedMediaDownloads.Captured c = SelectedMediaDownloads.capture(a, post.media, "post");
+                    if (c.children.isEmpty()) start(a, c, batch);
+                    else {
+                        batch.add(c.children.size() - 1);
+                        for (SelectedMediaDownloads.Captured child : c.children) start(a, child, batch);
+                    }
                 } catch (Throwable t) {
                     ModuleLog.warn(TAG + "Skipped one post that could not be downloaded: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+                    SelectedMediaDownloads.reportFailed(a, batch);
                 }
                 if (last) { downloading = false; busy = false; }
             }, i * SPACING_MS);
         }
+    }
+
+    private static void start(Activity a, SelectedMediaDownloads.Captured c, BatchTally batch) {
+        SelectedMediaDownloads.start(a, c, c.batchKind() == DownloadChoices.Choice.VIDEO, batch);
     }
 
     /**

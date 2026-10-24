@@ -5,6 +5,7 @@ import android.app.Dialog;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.os.Build;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.io.File;
 
 import ps.reso.instaeclipse.utils.ipc.CompanionBridge;
@@ -30,7 +32,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 /** All chooser callbacks close over these detached values, never Instagram models or Views. */
 public final class SelectedMediaDownloads {
     private static final ExecutorService WORKER = Executors.newSingleThreadExecutor();
-    enum Choice { PHOTO, VIDEO, FRAME, AUDIO }
 
     static final class Captured {
         final SelectedMediaSnapshot media;
@@ -94,6 +95,9 @@ public final class SelectedMediaDownloads {
         Captured withOriginal(boolean value) { return new Captured(this, value); }
         DownloadRequest selectedVideo() { return original ? originalVideo : video; }
         boolean offersAudio() { return audioAllowed && media.separateAudio != null; }
+        DownloadChoices.Choice batchKind() {
+            return video != null && !media.photoWithMusic ? DownloadChoices.Choice.VIDEO : DownloadChoices.Choice.PHOTO;
+        }
     }
 
     static Captured capture(Context ctx, Object media, String type) throws Exception {
@@ -156,40 +160,32 @@ public final class SelectedMediaDownloads {
     /** Every slide, with one toast for the batch instead of one per item. */
     private static void startAll(Context ctx, Captured captured) {
         toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_all_n_items, captured.children.size()));
-        for (Captured child : captured.children) start(ctx, child, child.video != null, true);
+        BatchTally batch = new BatchTally(captured.children.size());
+        for (Captured child : captured.children)
+            start(ctx, child, child.batchKind() == DownloadChoices.Choice.VIDEO, batch);
     }
 
     private static void showItemChoices(Context ctx, Captured captured) {
-        ArrayList<CharSequence> labels = new ArrayList<>();
-        ArrayList<Choice> choices = new ArrayList<>();
-        if (captured.media.imageUrl != null) {
-            labels.add(I18n.t(ctx, R.string.ig_story_download_photo));
-            choices.add(Choice.PHOTO);
-        }
-        if (captured.video != null) {
-            labels.add(I18n.t(ctx, R.string.ie_download_video));
-            choices.add(Choice.VIDEO);
-            labels.add(I18n.t(ctx, R.string.ie_save_video_frame));
-            choices.add(Choice.FRAME);
-        }
-        if (captured.offersAudio()) {
-            labels.add(I18n.t(ctx, R.string.ig_download_choice_audio));
-            choices.add(Choice.AUDIO);
-        }
-        // Nothing to choose (a photo): download it right away. The quality comes from the
-        // Downloader setting, so the dialog no longer switches it.
+        List<DownloadChoices.Choice> choices = DownloadChoices.order(captured.media.imageUrl != null,
+                captured.video != null, captured.media.photoWithMusic, captured.offersAudio(), Build.VERSION.SDK_INT);
         if (choices.size() == 1) { startChoice(ctx, captured, choices.get(0)); return; }
         if (choices.isEmpty()) { unavailable(ctx, null); return; }
         if (!canShow(ctx)) return;
-        IeDialog dialog = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_dl_title));
-        dialog.choices(labels.toArray(new CharSequence[0]), -1,
-                which -> startChoice(ctx, captured, choices.get(which)));
-        dialog.show();
+        chooser(ctx, choices, choice -> startChoice(ctx, captured, choice)).show();
     }
 
-    static void startChoice(Context ctx, Captured captured, Choice choice) {
+    public static IeDialog chooser(Context ctx, List<DownloadChoices.Choice> choices,
+                                   Consumer<DownloadChoices.Choice> pick) {
+        CharSequence[] labels = new CharSequence[choices.size()];
+        for (int i = 0; i < labels.length; i++) labels[i] = I18n.t(ctx, DownloadChoices.label(choices.get(i)));
+        IeDialog dialog = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_dl_title));
+        dialog.choices(labels, -1, which -> pick.accept(choices.get(which)));
+        return dialog;
+    }
+
+    static void startChoice(Context ctx, Captured captured, DownloadChoices.Choice choice) {
         switch (choice) {
-            case PHOTO -> start(ctx, captured, false);
+            case PHOTO, COVER -> start(ctx, captured, false);
             case VIDEO -> start(ctx, captured, true);
             case FRAME -> startFrame(ctx, frameRequest(captured));
             case AUDIO -> {
@@ -224,11 +220,11 @@ public final class SelectedMediaDownloads {
     }
 
     static void start(Context ctx, Captured captured, boolean video) {
-        start(ctx, captured, video, false);
+        start(ctx, captured, video, null);
     }
 
     /** {@code batch}: part of "Download all", which shows its own toast, so no per-item ones. */
-    static void start(Context ctx, Captured captured, boolean video, boolean batch) {
+    static void start(Context ctx, Captured captured, boolean video, BatchTally batch) {
         start(ctx, captured, video, batch, false);
     }
 
@@ -247,28 +243,30 @@ public final class SelectedMediaDownloads {
             toast(ctx, I18n.t(ctx, R.string.ig_dl_companion_fallback));
     }
 
-    private static void start(Context ctx, Captured captured, boolean video, boolean batch, boolean local) {
+    private static void start(Context ctx, Captured captured, boolean video, BatchTally batch, boolean local) {
         if (captured.original && (video ? captured.media.originalPlan == null : captured.photoUrl == null)) {
             toast(ctx, I18n.t(ctx, R.string.ie_downloader_original_unavailable));
+            reportFailed(ctx, batch);
             return;
         }
-        if (video && captured.original) { startOriginal(ctx, captured); return; }
+        if (video && captured.original) { startOriginal(ctx, captured, batch); return; }
         if (video) { startVideo(ctx, captured.selectedVideo(), batch, local); return; }
-        if (captured.photoUrl == null) { unavailable(ctx, null); return; }
+        if (captured.photoUrl == null) { unavailable(ctx, null); reportFailed(ctx, batch); return; }
         try {
             if (!local && FeedVideoDownloadHook.hasCompanionDestination()) {
                 CompanionBridge.downloadLegacy(ctx, captured.photoUrl, null, captured.photoFilename,
                         "image/jpeg", captured.media.owner, error -> {
                             if (companionUnreachable(error)) { savedLocally(ctx, "image/jpeg"); start(ctx, captured, false, batch, true); }
-                            else if (error != null) companionFailed(ctx, error);
-                            else if (!batch) toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_photo));
+                            else if (error != null) { companionFailed(ctx, error); reportFailed(ctx, batch); }
+                            else if (batch == null) toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_photo));
+                            else reportDelegated(ctx, batch);
                         });
                 return;
             }
-        } catch (Throwable error) { failed(ctx, R.string.ie_download_reason_generic); return; }
+        } catch (Throwable error) { failed(ctx, R.string.ie_download_reason_generic); reportFailed(ctx, batch); return; }
         DownloadEngine.Cancellation cancel = new DownloadEngine.Cancellation();
         Context app = ctx.getApplicationContext();
-        if (!batch) toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_photo));
+        if (batch == null) toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_photo));
         WORKER.submit(() -> {
             File temp = null;
             try {
@@ -276,14 +274,16 @@ public final class SelectedMediaDownloads {
                 String mime = DownloadEngine.fetch(app, captured.photoUrl, temp, "image/jpeg", cancel, NO_PROGRESS);
                 MediaTypeDetector.Result detected = MediaTypeDetector.verified(mime, captured.photoFilename);
                 DownloadPublisher.save(app, temp, detected.filename, detected.mimeType, captured.media.owner, cancel);
-                if (!batch) toast(ctx, I18n.t(ctx, R.string.ig_toast_file_saved, detected.filename));
+                if (batch == null) toast(ctx, I18n.t(ctx, R.string.ig_toast_file_saved, detected.filename));
+                else reportSaved(ctx, batch);
             } catch (Throwable error) {
                 failed(ctx, cancel.isCancelled() ? R.string.ie_download_cancelled : DownloadMessages.reason(error));
+                reportFailed(ctx, batch);
             } finally { if (temp != null) temp.delete(); }
         });
     }
 
-    private static void startOriginal(Context ctx, Captured captured) {
+    private static void startOriginal(Context ctx, Captured captured, BatchTally batch) {
         OriginalMediaSelection.Plan plan = captured.media.originalPlan;
         String filename = captured.originalVideo.filename;
         WORKER.submit(() -> {
@@ -293,47 +293,75 @@ public final class SelectedMediaDownloads {
                 String[] upgrade = plan.fallbackUrl == null ? null : new String[]{plan.url, plan.audioUrl};
                 boolean delegated = FeedVideoDownloadHook.downloadCapturedOriginal(ctx, base,
                         filename, true, captured.media.owner, upgrade);
-                if (!delegated) toast(ctx, I18n.t(ctx, R.string.ig_toast_file_saved, filename));
-            } catch (Throwable failure) { failed(ctx, DownloadMessages.reason(failure)); }
+                if (delegated) reportDelegated(ctx, batch);
+                else if (batch == null) toast(ctx, I18n.t(ctx, R.string.ig_toast_file_saved, filename));
+                else reportSaved(ctx, batch);
+            } catch (Throwable failure) { failed(ctx, DownloadMessages.reason(failure)); reportFailed(ctx, batch); }
         });
     }
 
-    static void startVideo(Context ctx, DownloadRequest request, boolean batch, boolean local) {
-        if (request == null) { unavailable(ctx, null); return; }
+    static void startVideo(Context ctx, DownloadRequest request, BatchTally batch, boolean local) {
+        if (request == null) { unavailable(ctx, null); reportFailed(ctx, batch); return; }
         try {
             if (!local && FeedVideoDownloadHook.hasCompanionDestination()) {
                 CompanionBridge.download(ctx, request, error -> {
                     if (companionUnreachable(error)) { savedLocally(ctx, "video/mp4"); startVideo(ctx, request, batch, true); }
-                    else if (error != null) companionFailed(ctx, error);
-                    else if (!batch) toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_video));
+                    else if (error != null) { companionFailed(ctx, error); reportFailed(ctx, batch); }
+                    else if (batch == null) toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_video));
+                    else reportDelegated(ctx, batch);
                 });
                 return;
             }
-        } catch (Throwable error) { failed(ctx, R.string.ie_download_reason_generic); return; }
+        } catch (Throwable error) { failed(ctx, R.string.ie_download_reason_generic); reportFailed(ctx, batch); return; }
 
         DownloadEngine.Cancellation cancel = new DownloadEngine.Cancellation();
         Context app = ctx.getApplicationContext();
-        if (!batch) toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_video));
+        if (batch == null) toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_video));
         WORKER.submit(() -> {
             try (DownloadEngine.Result result = DownloadEngine.execute(app, request, cancel, NO_PROGRESS)) {
                 DownloadPublisher.save(app, result.file, request.filename, result.mime, request.owner, cancel);
-                if (!batch || result.lowerFallback)
+                if (batch == null || result.lowerFallback)
                     toast(ctx, I18n.t(ctx, DownloadMessages.saved(result.lowerFallback), request.filename,
                             DownloadMessages.quality(result.metadata)));
+                reportSaved(ctx, batch);
                 ModuleLog.line("(IE|Download) Saved " + request.filename);
                 ModuleLog.detail("(IE|Download) published " + result.summary);
             } catch (DownloadEngine.Failure failure) {
-                if (cancel.isCancelled()) failed(ctx, R.string.ie_download_cancelled);
+                if (cancel.isCancelled()) { failed(ctx, R.string.ie_download_cancelled); reportFailed(ctx, batch); }
                 else if (failure.canOfferFallback && !request.options.allowFallback && canShow(ctx)) {
                     // Occupy this serial worker until the prompt is dismissed, so a later item
                     // of a batch cannot cover a decision about this one.
                     if (offerFallbackAndWait(ctx, DownloadMessages.reason(failure), cancel))
                         startVideo(ctx, allowFallback(request, failure), batch, local);
-                } else failed(ctx, DownloadMessages.reason(failure));
+                    else reportFailed(ctx, batch);
+                } else { failed(ctx, DownloadMessages.reason(failure)); reportFailed(ctx, batch); }
             } catch (Throwable error) {
                 failed(ctx, cancel.isCancelled() ? R.string.ie_download_cancelled : DownloadMessages.reason(error));
+                reportFailed(ctx, batch);
             }
         });
+    }
+
+    private static void reportSaved(Context ctx, BatchTally batch) {
+        if (batch != null && batch.saved()) batchDone(ctx, batch);
+    }
+
+    static void reportFailed(Context ctx, BatchTally batch) {
+        if (batch != null && batch.failed()) batchDone(ctx, batch);
+    }
+
+    private static void reportDelegated(Context ctx, BatchTally batch) {
+        if (batch != null && batch.delegated()) batchDone(ctx, batch);
+    }
+
+    private static void batchDone(Context ctx, BatchTally batch) {
+        int total = batch.total();
+        try {
+            toast(ctx, I18n.moduleResources(ctx).getQuantityString(R.plurals.ie_download_batch_done, total,
+                    batch.savedCount(), total));
+        } catch (Throwable error) {
+            ModuleLog.warn("(IE|Download) The batch summary could not be shown: " + error.getClass().getSimpleName());
+        }
     }
 
     private static boolean offerFallbackAndWait(Context ctx, int reason,
