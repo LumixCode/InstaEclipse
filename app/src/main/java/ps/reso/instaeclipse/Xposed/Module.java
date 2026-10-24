@@ -4,11 +4,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 
 import org.luckypray.dexkit.DexKitBridge;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,18 +20,18 @@ import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.xposedcompat.XC_LoadPackage;
 import ps.reso.instaeclipse.utils.log.Logging;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
-import ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine;
-import ps.reso.instaeclipse.mods.ui.theme.IgThemeHook;
-import ps.reso.instaeclipse.mods.ui.theme.ThemeSettingsHelper;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
+import ps.reso.instaeclipse.utils.core.CompanionSync;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitStats;
+import ps.reso.instaeclipse.utils.core.LegacyPaths;
 import ps.reso.instaeclipse.utils.core.ModuleBridge;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureManager;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.log.StartupTrace;
+import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 
 
 /**
@@ -312,69 +315,8 @@ public class Module {
             public void onReceive(Context ctx, Intent intent) {
                 if (intent == null) return;
                 String action = intent.getAction();
-                // Companion writes: mark the key applied first, so a refused write stops counting as
-                // pending and PrefsMerge keeps Instagram's value; then upstream's schema check, then
-                // the local type / Extreme Mode / private-key guard. A refused write pushes Instagram's
-                // values back so the companion's switch snaps back.
-                if (action != null && action.startsWith("ps.reso.instaeclipse.ACTION_UPDATE_PREF")) {
-                    ps.reso.instaeclipse.utils.core.CompanionSync.markApplied(ctx, intent.getStringExtra("key"), intent.getLongExtra("ts", 0));
-                    if (!ps.reso.instaeclipse.utils.ipc.ModuleReplies.isPreferenceUpdate(action,
-                            intent.getStringExtra("key"), intent.getExtras() == null ? null : intent.getExtras().get("value"))) {
-                        ps.reso.instaeclipse.utils.core.CompanionSync.pushAsync(ctx);
-                        return;
-                    }
-                }
-                if ("ps.reso.instaeclipse.ACTION_UPDATE_PREF".equals(action)) {
-                    String key = intent.getStringExtra("key");
-                    boolean value = intent.getBooleanExtra("value", false);
-
-                    android.content.SharedPreferences prefs = ctx.getSharedPreferences("instaeclipse_prefs", Context.MODE_PRIVATE);
-                    if (!SettingsManager.acceptsCompanionWrite(prefs, key, value)) {
-                        ps.reso.instaeclipse.utils.core.CompanionSync.pushAsync(ctx);
-                        return;
-                    }
-                    ModuleLog.line("(InstaEclipse) Sync: Updating " + key + " to " + value);
-                    prefs.edit().putBoolean(key, value).apply();
-
-                    SettingsManager.loadAllFlags(ctx);
-                    afterCompanionWrite(key);
-                    FeatureManager.refreshFeatureStatus();
-
-                } else if ("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING".equals(action)) {
-                    String key = intent.getStringExtra("key");
-                    String value = intent.getStringExtra("value");
-
-                    android.content.SharedPreferences prefs = ctx.getSharedPreferences("instaeclipse_prefs", Context.MODE_PRIVATE);
-                    if (!SettingsManager.acceptsCompanionWrite(prefs, key, value)) {
-                        ps.reso.instaeclipse.utils.core.CompanionSync.pushAsync(ctx);
-                        return;
-                    }
-                    ModuleLog.line("(InstaEclipse) Sync: Updating string pref " + key);
-                    prefs.edit().putString(key, value).apply();
-
-                    SettingsManager.loadAllFlags(ctx);
-                    afterCompanionWrite(key);
-
-                } else if ("ps.reso.instaeclipse.ACTION_UPDATE_PREF_INT".equals(action)) {
-                    String key = intent.getStringExtra("key");
-                    int value = intent.getIntExtra("value", 0);
-
-                    android.content.SharedPreferences prefs = ctx.getSharedPreferences("instaeclipse_prefs", Context.MODE_PRIVATE);
-                    if (!SettingsManager.acceptsCompanionWrite(prefs, key, value)) {
-                        ps.reso.instaeclipse.utils.core.CompanionSync.pushAsync(ctx);
-                        return;
-                    }
-                    if ("storyCacheHours".equals(key)) {
-                        value = ps.reso.instaeclipse.utils.media.StoryCacheRetention.normalize(value);
-                    }
-                    ModuleLog.line("(InstaEclipse) Sync: Updating int pref " + key + " to " + value);
-                    prefs.edit().putInt(key, value).apply();
-
-                    SettingsManager.loadAllFlags(ctx);
-                    afterCompanionWrite(key);
-                    FeatureManager.refreshFeatureStatus();
-
-                } else if (CommonUtils.ACTION_REQUEST_LOGS.equals(action)) {
+                if (applySettingsIntent(ctx, intent)) return;
+                if (CommonUtils.ACTION_REQUEST_LOGS.equals(action)) {
                     // Re-attach/rewrite the companion-side mirror file first (covers the companion
                     // having cleared its data), then reply; the companion re-reads the file on
                     // reply and only uses the inline text as a fallback.
@@ -469,6 +411,7 @@ public class Module {
         filter.addAction("ps.reso.instaeclipse.ACTION_UPDATE_PREF");
         filter.addAction("ps.reso.instaeclipse.ACTION_UPDATE_PREF_STRING");
         filter.addAction("ps.reso.instaeclipse.ACTION_UPDATE_PREF_INT");
+        filter.addAction(CommonUtils.ACTION_APPLY_SETTINGS);
         filter.addAction(CommonUtils.ACTION_REQUEST_LOGS);
         filter.addAction(CommonUtils.ACTION_CLEAR_LOGS);
         filter.addAction("ps.reso.instaeclipse.ACTION_REQUEST_PREFS");
@@ -478,22 +421,59 @@ public class Module {
         ps.reso.instaeclipse.utils.core.IpcSecurity.registerCompanionOnlyReceiver(context, receiver, filter);
     }
 
-    /**
-     * Live side effects once a companion value landed (sync receiver and CompanionSync.pullAsync).
-     * Main thread only. Only theme keys repaint: recreating Instagram for any other setting loses
-     * drafts and playback.
-     */
-    public static void afterCompanionWrite(String key) {
-        if (key == null) return;
-        if ("hideSpecificChats".equals(key) || "showHideChatButton".equals(key)) {
-            ps.reso.instaeclipse.mods.ghost.HideChatsHook.refreshVisibleButtons();
+    public static boolean applySettingsIntent(Context ctx, Intent intent) {
+        String action = intent.getAction();
+        if (CommonUtils.ACTION_APPLY_SETTINGS.equals(action)) {
+            Bundle bundle = intent.getBundleExtra("values");
+            Map<String, Object> values = new LinkedHashMap<>();
+            if (bundle != null) {
+                for (String key : bundle.keySet()) {
+                    Object value = bundle.get(key);
+                    if (value instanceof Boolean || value instanceof Integer || value instanceof String) values.put(key, value);
+                }
+            }
+            SettingsEvents.afterChange(CompanionSync.applyLive(ctx, values, intent.getLongExtra("ts", 0)));
+            return true;
         }
-        if ("storyCacheHours".equals(key)) ps.reso.instaeclipse.utils.media.StoryCache.refresh();
-        if ("airplaneMode".equals(key)) ps.reso.instaeclipse.mods.extras.AirplaneModeHook.apply();
-        if ("likeUndo".equals(key)) ps.reso.instaeclipse.mods.misc.LikeUndoHook.onLikeUndoChanged();
-        if (ThemeSettingsHelper.isThemeKey(key)) {
-            IgThemeEngine.invalidate();
-            IgThemeHook.refreshCurrentActivity();
+        if (action == null || !action.startsWith("ps.reso.instaeclipse.ACTION_UPDATE_PREF")) return false;
+        String key = intent.getStringExtra("key");
+        long ts = intent.getLongExtra("ts", 0);
+        Object value = intent.getExtras() == null ? null : intent.getExtras().get("value");
+        if (!ps.reso.instaeclipse.utils.ipc.ModuleReplies.isPreferenceUpdate(action, key, value)) {
+            CompanionSync.markApplied(ctx, key, ts);
+            CompanionSync.pushAsync(ctx);
+            return true;
         }
+        if (LegacyPaths.has(LegacyPaths.APPLY)) {
+            applyLegacy(ctx, key, value, ts);
+            return true;
+        }
+        SettingsEvents.afterChange(CompanionSync.applyLive(ctx, Collections.singletonMap(key, value), ts));
+        return true;
+    }
+
+    private static void applyLegacy(Context ctx, String key, Object value, long ts) {
+        CompanionSync.markApplied(ctx, key, ts);
+        SharedPreferences prefs = ctx.getSharedPreferences("instaeclipse_prefs", Context.MODE_PRIVATE);
+        if (!SettingsManager.acceptsCompanionWrite(prefs, key, value)) {
+            CompanionSync.pushAsync(ctx);
+            return;
+        }
+        SharedPreferences.Editor editor = prefs.edit();
+        if (value instanceof Boolean) {
+            ModuleLog.line("(InstaEclipse) Sync: Updating " + key + " to " + value);
+            editor.putBoolean(key, (Boolean) value);
+        } else if (value instanceof Integer) {
+            int n = "storyCacheHours".equals(key) ? StoryCacheRetention.normalize((Integer) value) : (Integer) value;
+            ModuleLog.line("(InstaEclipse) Sync: Updating int pref " + key + " to " + n);
+            editor.putInt(key, n);
+        } else {
+            ModuleLog.line("(InstaEclipse) Sync: Updating string pref " + key);
+            editor.putString(key, (String) value);
+        }
+        editor.apply();
+        SettingsManager.loadAllFlags(ctx);
+        SettingsEvents.afterChange(Collections.singletonList(key));
+        if (!(value instanceof String)) FeatureManager.refreshFeatureStatus();
     }
 }

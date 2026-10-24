@@ -33,6 +33,7 @@ public class SettingsManager {
     private static SharedPreferences prefs;
     /** Application context, for pushing in-app changes to the companion (CompanionSync). */
     private static Context appContext;
+    static final Object LOCK = new Object();
 
     public static void init(Context context) {
         if (appContext == null && context != null) {
@@ -52,6 +53,12 @@ public class SettingsManager {
     }
 
     public static void saveAllFlags() {
+        synchronized (LOCK) {
+            save();
+        }
+    }
+
+    private static void save() {
         // Snapshot to stamp the keys this save changes (see CompanionSync).
         java.util.Map<String, ?> before = new java.util.HashMap<>(prefs.getAll());
         SharedPreferences.Editor editor = prefs.edit();
@@ -253,7 +260,7 @@ public class SettingsManager {
         editor.apply();
         stampChangedKeys(before);
         // Instagram -> companion: so the companion app shows what was just changed here.
-        CompanionSync.pushAsync(appContext);
+        CompanionSync.pusher.accept(appContext);
 
         FeatureManager.refreshFeatureStatus();
     }
@@ -273,6 +280,12 @@ public class SettingsManager {
     }
 
     public static void loadAllFlags(Context context) {
+        synchronized (LOCK) {
+            load(context);
+        }
+    }
+
+    private static void load(Context context) {
         if (prefs == null) {
             prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         }

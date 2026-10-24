@@ -12,8 +12,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
-import ps.reso.instaeclipse.utils.feature.FeatureManager;
+import ps.reso.instaeclipse.Xposed.SettingsEvents;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 
@@ -50,6 +51,7 @@ public final class CompanionSync {
 
     private static long lastPull;
     private static boolean emptyLogged;
+    static volatile Consumer<Context> pusher = CompanionSync::pushAsync;
 
     private CompanionSync() {}
 
@@ -62,9 +64,7 @@ public final class CompanionSync {
         WORKER.execute(() -> {
             List<String> applied = applyNewer(app);
             if (applied.isEmpty()) return;
-            new Handler(Looper.getMainLooper()).post(() -> {
-                for (String key : applied) ps.reso.instaeclipse.Xposed.Module.afterCompanionWrite(key);
-            });
+            new Handler(Looper.getMainLooper()).post(() -> SettingsEvents.afterChange(applied));
         });
     }
 
@@ -102,27 +102,52 @@ public final class CompanionSync {
      * Applies the companion values in {@code all} (settings plus their {@code __ts_} stamps) that
      * are newer than anything Instagram applied or changed itself; returns the keys it applied.
      */
-    private static synchronized List<String> applyFrom(Context context, Map<String, ?> all) {
-        List<String> applied = new ArrayList<>();
-        if (all == null || all.isEmpty()) return applied;
+    private static List<String> applyFrom(Context context, Map<String, ?> all) {
+        if (all == null || all.isEmpty()) return new ArrayList<>();
         try {
-            SharedPreferences ig = context.getSharedPreferences("instaeclipse_prefs", Context.MODE_PRIVATE);
-            Plan plan = plan(ig.getAll(), all);
-            for (Map.Entry<String, SettingsManager.Refusal> r : plan.reasons.entrySet()) {
-                SettingsManager.logRefusal(r.getKey(), all.get(r.getKey()), r.getValue());
+            return applyEntries(context, all, false).applied;
+        } catch (Throwable t) {
+            ModuleLog.warn("(InstaEclipse) Sync: could not apply settings changed in the InstaEclipse app: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    public static List<String> applyLive(Context context, Map<String, ?> values, long ts) {
+        try {
+            long stamp = ts > 0 ? ts : System.currentTimeMillis();
+            Map<String, Object> incoming = new LinkedHashMap<>();
+            for (Map.Entry<String, ?> entry : values.entrySet()) {
+                incoming.put(entry.getKey(), entry.getValue());
+                incoming.put(TS + entry.getKey(), stamp);
             }
-            if (plan.appliedStamps.isEmpty()) return applied;
-            SharedPreferences.Editor e = ig.edit();
-            plan.writeTo(e);
-            e.commit();
-            if (plan.applied.isEmpty()) return applied;
-            SettingsManager.loadAllFlags(context);
-            FeatureManager.refreshFeatureStatus();
-            ModuleLog.line("(InstaEclipse) Sync: applied " + plan.applied.size() + " setting(s) changed in the companion app");
+            Plan plan = applyEntries(context, incoming, true);
+            if (!plan.refused.isEmpty() || !plan.igNewer.isEmpty()) pusher.accept(context);
             return plan.applied;
         } catch (Throwable t) {
             ModuleLog.warn("(InstaEclipse) Sync: could not apply settings changed in the InstaEclipse app: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return new ArrayList<>();
+        }
+    }
+
+    static Plan applyEntries(Context context, Map<String, ?> incoming, boolean durable) {
+        synchronized (SettingsManager.LOCK) {
+            SharedPreferences ig = context.getSharedPreferences("instaeclipse_prefs", Context.MODE_PRIVATE);
+            Plan plan = plan(ig.getAll(), incoming);
+            for (Map.Entry<String, SettingsManager.Refusal> r : plan.reasons.entrySet()) {
+                SettingsManager.logRefusal(r.getKey(), incoming.get(r.getKey()), r.getValue());
+            }
+            if (!plan.appliedStamps.isEmpty()) {
+                SharedPreferences.Editor e = ig.edit();
+                plan.writeTo(e);
+                if (durable && Looper.myLooper() != Looper.getMainLooper()) e.commit();
+                else e.apply();
+            }
+            if (!plan.applied.isEmpty()) {
+                SettingsManager.loadAllFlags(context);
+                ModuleLog.line("(InstaEclipse) Sync: applied " + plan.applied.size() + " setting(s) changed in the companion app: "
+                        + String.join(", ", plan.applied));
+            }
+            return plan;
         }
     }
 
@@ -153,7 +178,11 @@ public final class CompanionSync {
             if (!tsKey.startsWith(TS) || !(entry.getValue() instanceof Long)) continue;
             String key = tsKey.substring(TS.length());
             long ts = (Long) entry.getValue();
-            if (ts <= stamp(ig, APPLIED + key) || ts <= stamp(ig, IG_TS + key)) continue;
+            if (ts <= stamp(ig, APPLIED + key)) continue;
+            if (ts <= stamp(ig, IG_TS + key)) {
+                plan.igNewer.add(key);
+                continue;
+            }
             Object v = incoming.get(key);
             if (!(v instanceof Boolean || v instanceof Integer || v instanceof String)) continue;
             plan.appliedStamps.put(key, ts);
@@ -167,8 +196,8 @@ public final class CompanionSync {
                 plan.reasons.put(key, reason);
                 continue;
             }
-            if (v.equals(ig.get(key))) continue;
             if ("storyCacheHours".equals(key)) v = StoryCacheRetention.normalize((Integer) v);
+            if (v.equals(ig.get(key))) continue;
             plan.writes.put(key, v);
             plan.applied.add(key);
         }
@@ -226,9 +255,7 @@ public final class CompanionSync {
             }
             List<String> applied = applyFrom(context, pending);
             if (applied.isEmpty()) return;
-            new Handler(Looper.getMainLooper()).post(() -> {
-                for (String key : applied) ps.reso.instaeclipse.Xposed.Module.afterCompanionWrite(key);
-            });
+            new Handler(Looper.getMainLooper()).post(() -> SettingsEvents.afterChange(applied));
         } catch (Throwable t) {
             // Companion not installed / too old (no provider): the ACTION_REQUEST_PREFS reply
             // still syncs when the companion is opened while Instagram is running.

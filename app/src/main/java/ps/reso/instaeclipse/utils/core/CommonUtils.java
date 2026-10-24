@@ -19,6 +19,8 @@ public class CommonUtils {
     public static final String EXTRA_LOG_SOURCE = "source_package";
     public static final String EXTRA_LOG_ERROR = "error";
 
+    public static final String ACTION_APPLY_SETTINGS = "ps.reso.instaeclipse.ACTION_APPLY_SETTINGS";
+
     /** All Instagram packages this module hooks into. */
     public static final List<String> SUPPORTED_PACKAGES = Arrays.asList(
             "com.instagram.android",
