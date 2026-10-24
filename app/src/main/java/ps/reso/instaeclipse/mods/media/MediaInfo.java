@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
@@ -38,7 +39,7 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
  * downloader uses for video_dash_manifest), resolved lazily and cached. Size = HEAD Content-Length
  * of the URL the downloader would save.
  */
-final class MediaInfo {
+public final class MediaInfo {
 
     private static final String MEDIA = "com.instagram.feed.media.Media";
     private static final Map<String, Method> GETTERS = new ConcurrentHashMap<>();
@@ -48,66 +49,82 @@ final class MediaInfo {
 
     static void show(Context ctx, Object media, Object clickHandler) {
         ModuleLog.detail("(IE|MediaInfo) requested for " + (media == null ? "null" : media.getClass().getName()));
+        int slide = -1, slides = 0;
+        try {
+            List<?> children = FeedVideoDownloadHook.carouselChildren(media);
+            if (children != null && children.size() > 1) {
+                slides = children.size();
+                slide = ReelDownloadHook.findCarouselIndexFromView(ctx, slides);
+                if (slide < 0) slide = PostDownloadContextMenuHook.findCarouselIndex(clickHandler, slides);
+                if (slide < 0 || slide >= slides) slide = 0;
+            }
+        } catch (Throwable t) {
+            ModuleLog.detail("(IE|MediaInfo) slide: " + t);
+        }
+        final int fSlide = slide, fSlides = slides;
+        MediaInfoRows.Texts texts = (id, args) -> I18n.t(ctx, id, args);
         FeedVideoDownloadHook.executor.submit(() -> {
-            String text;
+            List<MediaInfoRows.Row> rows;
             String[] mediaUrl = new String[1];
             try {
-                text = build(ctx, media, clickHandler, mediaUrl);
+                rows = MediaInfoRows.build(facts(ctx, media, fSlide, fSlides, mediaUrl), texts);
             } catch (Throwable t) {
-                text = String.valueOf(t);
+                rows = MediaInfoRows.error(texts);
                 ModuleLog.error("(IE|MediaInfo) Could not read the media info", t);
             }
-            final String body = text;
+            final List<MediaInfoRows.Row> shown = rows;
             FeedVideoDownloadHook.mainHandler.post(() -> {
                 try {
                     // The menu's context may belong to a sheet that has closed by now; show on the
                     // Activity under it (a post opened from a profile has its own, above the main one).
                     Context host = ps.reso.instaeclipse.mods.ui.UIHookManager.dialogHost(ctx);
-                    ModuleLog.detail("(IE|MediaInfo) showing (" + body.length() + " chars) on " + host.getClass().getSimpleName());
-                    ps.reso.instaeclipse.utils.dialog.IeDialog dlg = new ps.reso.instaeclipse.utils.dialog.IeDialog(host)
-                            .title(I18n.t(ctx, R.string.ig_media_info_title));
-                    // one rounded "label · value" card per line
-                    LinearLayout rows = new LinearLayout(dlg.ctx);
-                    rows.setOrientation(LinearLayout.VERTICAL);
-                    rows.setBackground(dlg.cardBg());
-                    rows.setPadding(dlg.dp(14), dlg.dp(6), dlg.dp(14), dlg.dp(6));
-                    for (String ln : body.split("\n")) {
-                        if (ln.trim().isEmpty()) continue;
-                        int c = ln.indexOf(':');
-                        LinearLayout r = new LinearLayout(dlg.ctx);
-                        r.setPadding(0, dlg.dp(7), 0, dlg.dp(7));
-                        TextView k = new TextView(dlg.ctx);
-                        k.setText(c > 0 ? ln.substring(0, c).trim() : ln.trim());
-                        k.setTextColor(dlg.sub);
-                        k.setTextSize(14);
-                        r.addView(k, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-                        if (c > 0) {
-                            TextView v = new TextView(dlg.ctx);
-                            v.setText(ln.substring(c + 1).trim());
-                            v.setTextColor(dlg.text);
-                            v.setTextSize(14);
-                            v.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-                            v.setGravity(android.view.Gravity.END);
-                            v.setTextIsSelectable(true);
-                            r.addView(v, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.3f));
-                        }
-                        rows.addView(r);
-                    }
-                    dlg.view(rows);
+                    ModuleLog.detail("(IE|MediaInfo) showing " + shown.size() + " rows on " + host.getClass().getSimpleName());
+                    IeDialog dlg = dialog(host, shown);
                     // Song + Spotify / YouTube Music / Apple Music, like Story Info.
                     ps.reso.instaeclipse.mods.misc.StoryInfoHook.addMusic(dlg, host, media);
-                    dlg.secondary(I18n.t(ctx, R.string.ig_media_info_copy), () -> {
-                        android.content.ClipboardManager cm = (android.content.ClipboardManager) host.getSystemService(Context.CLIPBOARD_SERVICE);
-                        cm.setPrimaryClip(android.content.ClipData.newPlainText("media info", body));
-                    });
-                    if (mediaUrl[0] != null) dlg.secondary(I18n.t(ctx, R.string.ig_media_open_with), () -> openWith(host, mediaUrl[0]));
-                    dlg.primary(I18n.t(ctx, R.string.ig_dialog_ok), null);
+                    if (mediaUrl[0] != null) dlg.secondary(I18n.t(host, R.string.ig_media_open_with), () -> openWith(host, mediaUrl[0]));
+                    dlg.primary(I18n.t(host, R.string.ig_dialog_ok), null);
                     dlg.show();
                 } catch (Throwable t) {
                     ModuleLog.error("(IE|MediaInfo) Could not show the media info", t);
                 }
             });
         });
+    }
+
+    public static IeDialog dialog(Context host, List<MediaInfoRows.Row> shown) {
+        IeDialog dlg = new IeDialog(host).title(I18n.t(host, R.string.ig_media_info_title));
+        LinearLayout rows = new LinearLayout(dlg.ctx);
+        rows.setOrientation(LinearLayout.VERTICAL);
+        rows.setBackground(dlg.cardBg());
+        rows.setPadding(dlg.dp(14), dlg.dp(6), dlg.dp(14), dlg.dp(6));
+        for (MediaInfoRows.Row row : shown) {
+            LinearLayout r = new LinearLayout(dlg.ctx);
+            r.setPadding(0, dlg.dp(7), 0, dlg.dp(7));
+            TextView k = new TextView(dlg.ctx);
+            k.setText(row.label);
+            k.setTextColor(row.value != null ? dlg.sub : dlg.text);
+            k.setTextSize(14);
+            r.addView(k, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            if (row.value != null) {
+                TextView v = new TextView(dlg.ctx);
+                v.setText(row.value);
+                v.setTextColor(dlg.text);
+                v.setTextSize(14);
+                v.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+                v.setGravity(android.view.Gravity.END);
+                v.setTextIsSelectable(true);
+                r.addView(v, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.3f));
+            }
+            rows.addView(r);
+        }
+        dlg.view(rows);
+        String copy = MediaInfoRows.copy(shown);
+        dlg.secondary(I18n.t(host, R.string.ig_media_info_copy), () -> {
+            android.content.ClipboardManager cm = (android.content.ClipboardManager) host.getSystemService(Context.CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("media info", copy));
+        });
+        return dlg;
     }
 
     /** Hands the media's direct CDN link to any app that can open it (player, browser, editor). */
@@ -126,50 +143,38 @@ final class MediaInfo {
         }
     }
 
-    private static String build(Context ctx, Object media, Object clickHandler, String[] urlOut) {
+    private static MediaInfoRows.Facts facts(Context ctx, Object media, int slide, int slides, String[] urlOut) {
         Object target = media;
-        String slide = "";
-        List<?> children = FeedVideoDownloadHook.carouselChildren(media);
-        if (children != null && children.size() > 1) {
-            int idx = ReelDownloadHook.findCarouselIndexFromView(ctx, children.size());
-            if (idx < 0) idx = PostDownloadContextMenuHook.findCarouselIndex(clickHandler, children.size());
-            if (idx < 0 || idx >= children.size()) idx = 0;
-            target = children.get(idx);
-            slide = " (" + (idx + 1) + "/" + children.size() + ")";
+        MediaInfoRows.Facts facts = new MediaInfoRows.Facts();
+        if (slides > 1) {
+            List<?> children = FeedVideoDownloadHook.carouselChildren(media);
+            if (children != null && children.size() == slides) {
+                target = children.get(slide);
+                facts.slide = slide;
+                facts.slides = slides;
+            }
         }
-
-        StringBuilder sb = new StringBuilder();
-        Integer type = (Integer) get(target, "media_type", Integer.class);
-        String kind = type == null ? "?" : type == 2 ? "Video" : type == 8 ? "Carousel" : "Photo";
-        sb.append(kind).append(slide).append('\n');
-        Integer w = (Integer) get(target, "original_width", Integer.class);
-        Integer h = (Integer) get(target, "original_height", Integer.class);
-        if (w != null && h != null) sb.append("Original: ").append(w).append(" × ").append(h).append('\n');
-        Double dur = (Double) get(target, "video_duration", Double.class);
-        if (dur != null && dur > 0) sb.append(String.format(Locale.US, "Duration: %.1f s", dur)).append('\n');
-        String codec = (String) get(target, "video_codec", String.class);
-        if (codec != null && !codec.isEmpty()) sb.append("Codec: ").append(codec).append('\n');
-        Boolean audio = (Boolean) get(target, "has_audio", Boolean.class);
-        if (audio != null) sb.append("Audio: ").append(audio ? "yes" : "no").append('\n');
-
-        String manifest = FeedVideoDownloadHook.dashManifest(target);
-        List<String> reps = representations(manifest);
-        if (!reps.isEmpty()) {
-            sb.append("\nQualities:\n");
-            for (String r : reps) sb.append("• ").append(r).append('\n');
-        }
-
+        facts.type = (Integer) get(target, "media_type", Integer.class);
+        facts.width = (Integer) get(target, "original_width", Integer.class);
+        facts.height = (Integer) get(target, "original_height", Integer.class);
+        facts.duration = (Double) get(target, "video_duration", Double.class);
+        facts.codec = (String) get(target, "video_codec", String.class);
+        facts.audio = (Boolean) get(target, "has_audio", Boolean.class);
+        facts.qualities = representations(FeedVideoDownloadHook.dashManifest(target), Locale.getDefault());
         List<String> urls = FeedVideoDownloadHook.extractAllUrlsFromMedia(ctx, target);
         if (urls != null && !urls.isEmpty()) {
             urlOut[0] = urls.get(0);
-            long size = headSize(urls.get(0));
-            if (size > 0) sb.append(String.format(Locale.US, "\nFile size: %.2f MB", size / 1048576.0));
+            facts.size = headSize(urls.get(0));
         }
-        return sb.toString().trim();
+        return facts;
     }
 
     /** "1080×1920 · 3.21 Mbps · avc1.64001F" for each video Representation, best first. */
     static List<String> representations(String manifest) {
+        return representations(manifest, Locale.US);
+    }
+
+    static List<String> representations(String manifest, Locale locale) {
         List<String> out = new ArrayList<>();
         if (manifest == null) return out;
         Matcher m = Pattern.compile("<Representation\\b([^>]*)>").matcher(manifest);
@@ -181,7 +186,7 @@ final class MediaInfo {
             if (wid == null || hei == null || (mime != null && !mime.startsWith("video"))) continue;
             String bw = attr(a, "bandwidth"), codecs = attr(a, "codecs");
             long bps = bandwidth(bw);
-            String line = wid + "×" + hei + (bps > 0 ? String.format(Locale.US, " · %.2f Mbps", bps / 1e6) : "")
+            String line = wid + "×" + hei + (bps > 0 ? String.format(locale, " · %.2f Mbps", bps / 1e6) : "")
                     + (codecs != null ? " · " + codecs : "");
             order.add(new long[]{bps, out.size()});
             out.add(line);
