@@ -48,7 +48,10 @@ import com.google.android.material.textfield.TextInputLayout;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -59,10 +62,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.devops.config.DevConfigReply;
 import ps.reso.instaeclipse.utils.backup.CompanionRestorePlan;
+import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
+import ps.reso.instaeclipse.utils.core.SettingsSchema;
+import ps.reso.instaeclipse.utils.ipc.ModuleReplies;
+import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 import ps.reso.instaeclipse.utils.text.SearchText;
 import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
 import ps.reso.instaeclipse.utils.core.CompanionSettings;
@@ -71,6 +82,8 @@ import ps.reso.instaeclipse.ui.theme.ThemeCustomizerActivity;
 public class FeaturesFragment extends Fragment implements TabFragment {
 
     private static final String STATE_MENU = "currentMenu";
+    private static final int MAX_BACKUP_BYTES = 4 * 1024 * 1024;
+    private static final ExecutorService RESTORE_WORKER = restoreWorker();
 
     private SharedPreferences localCache;
     private View fragmentView;
@@ -154,29 +167,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        restoreFileLauncher = registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
-            if (uri == null) return;
-            try (InputStream is = requireContext().getContentResolver().openInputStream(uri);
-                 Scanner scanner = new Scanner(is, "UTF-8").useDelimiter("\\A")) {
-                String json = scanner.hasNext() ? scanner.next() : "";
-                JSONObject root = new JSONObject(json);
-                JSONObject s = root.has("settings") ? root.getJSONObject("settings") : root;
-                Map<String, Object> settings = new LinkedHashMap<>();
-                for (Iterator<String> it = s.keys(); it.hasNext(); ) {
-                    String key = it.next();
-                    Object value = s.get(key);
-                    settings.put(key, value == JSONObject.NULL ? null : value);
-                }
-                CompanionRestorePlan plan = CompanionRestorePlan.build(settings, localCache.getAll());
-                CompanionSettings.putAll(requireContext(), plan.writes);
-                reloadCurrentMenu();
-                ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), plan.skipped == 0
-                        ? getString(R.string.ig_toast_settings_restored)
-                        : getString(R.string.ig_toast_settings_restored_skipped, plan.skipped), Toast.LENGTH_SHORT).show();
-            } catch (Exception e) {
-                ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
+        restoreFileLauncher = registerForActivityResult(new ActivityResultContracts.OpenDocument(), this::restoreFrom);
 
         notifPermLauncher = registerForActivityResult(
                 new ActivityResultContracts.RequestPermission(), granted -> {});
@@ -2529,33 +2520,115 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         try {
             JSONObject settings = new JSONObject();
             Map<String, ?> all = localCache.getAll();
-            for (Map.Entry<String, ?> entry : all.entrySet()) {
-                String key = entry.getKey();
-                // Every switch, number and text setting; not Instagram's private keys, the "__" sync
-                // stamps (PrefsMerge), pre-0.8 leftovers, or the locked collections, which only
-                // Instagram changes (a restore skips them).
-                if (!ps.reso.instaeclipse.utils.core.PrefsMerge.isSharedSetting(key, entry.getValue())
-                        || ps.reso.instaeclipse.utils.core.CommonUtils.STALE_CACHE_KEYS.contains(key)
-                        || "lockedCollections".equals(key)) continue;
-                settings.put(key, entry.getValue());
+            for (String key : SettingsSchema.backupKeys(true)) {
+                Object value = all.get(key);
+                if (!ModuleReplies.isPreferenceValue(key, value)) continue;
+                settings.put(key, "storyCacheHours".equals(key) ? StoryCacheRetention.fromStored(value) : value);
             }
-            settings.put("storyCacheHours", ps.reso.instaeclipse.utils.media.StoryCacheRetention.fromStored(
-                    all.get("storyCacheHours")));
+            String pins = CompanionUiPrefs.get(requireContext()).getString(CompanionUiPrefs.HOME_PINNED_SHORTCUTS, null);
+            if (pins != null) settings.put(CompanionUiPrefs.HOME_PINNED_SHORTCUTS, pins);
             JSONObject root = new JSONObject();
             root.put("version", 1);
             root.put("settings", settings);
             Intent exportIntent = new Intent();
             exportIntent.setComponent(new ComponentName(requireContext(), "ps.reso.instaeclipse.mods.devops.config.JsonExportActivity"));
             exportIntent.putExtra("json_content", root.toString(2));
-            exportIntent.putExtra("file_name", "instaeclipse_settings.json");
+            exportIntent.putExtra("file_name", "instaeclipse_settings_" + java.time.LocalDate.now() + ".json");
             startActivity(exportIntent);
         } catch (JSONException e) {
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
+            ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_dialog_backup_failed,
+                    getString(R.string.feat_backup_unreadable)), Toast.LENGTH_SHORT).show();
         }
     }
 
     private void restoreSettings() {
-        restoreFileLauncher.launch(new String[]{"application/json"});
+        restoreFileLauncher.launch(new String[]{"application/json", "text/plain", "application/octet-stream"});
+    }
+
+    public void restoreFrom(Uri uri) {
+        if (uri == null || !isAdded()) return;
+        Context app = requireContext().getApplicationContext();
+        RESTORE_WORKER.execute(() -> {
+            CompanionRestorePlan plan;
+            try {
+                plan = CompanionRestorePlan.build(readBackup(app, uri),
+                        ps.reso.instaeclipse.utils.core.CommonUtils.companionCache(app).getAll());
+            } catch (Exception e) {
+                plan = null;
+            }
+            CompanionRestorePlan result = plan;
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                if (result == null || result.count() == 0) {
+                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(app, app.getString(R.string.ig_toast_restore_failed,
+                            app.getString(R.string.feat_restore_invalid_file)), Toast.LENGTH_SHORT).show();
+                } else if (isAdded()) {
+                    confirmRestore(app, result);
+                }
+            });
+        });
+    }
+
+    private static Map<String, Object> readBackup(Context app, Uri uri) throws IOException, JSONException {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (InputStream in = app.getContentResolver().openInputStream(uri)) {
+            if (in == null) throw new IOException();
+            byte[] buffer = new byte[8192];
+            for (int n; (n = in.read(buffer)) > 0; ) {
+                bytes.write(buffer, 0, n);
+                if (bytes.size() > MAX_BACKUP_BYTES) throw new IOException();
+            }
+        }
+        JSONObject root = new JSONObject(new String(bytes.toByteArray(), StandardCharsets.UTF_8));
+        JSONObject s = root.has("settings") ? root.getJSONObject("settings") : root;
+        Map<String, Object> settings = new LinkedHashMap<>();
+        for (Iterator<String> it = s.keys(); it.hasNext(); ) {
+            String key = it.next();
+            Object value = s.get(key);
+            settings.put(key, value == JSONObject.NULL ? null : value);
+        }
+        return settings;
+    }
+
+    private void confirmRestore(Context app, CompanionRestorePlan plan) {
+        int count = plan.count();
+        StringBuilder message = new StringBuilder(getResources().getQuantityString(R.plurals.feat_restore_confirm, count, count));
+        if (plan.skipped > 0) {
+            message.append("\n\n").append(getResources().getQuantityString(R.plurals.feat_restore_skipped,
+                    plan.skipped, plan.skipped));
+        }
+        if (plan.turnsLocksOn) message.append("\n\n").append(getString(R.string.feat_restore_needs_passcode));
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.ig_dialog_restore_settings)
+                .setMessage(message)
+                .setPositiveButton(R.string.feat_restore_action, (dialog, which) -> applyRestore(app, plan))
+                .setNegativeButton(R.string.ig_dialog_cancel, null)
+                .show();
+    }
+
+    private void applyRestore(Context app, CompanionRestorePlan plan) {
+        RESTORE_WORKER.execute(() -> {
+            CompanionSettings.putAll(app, plan.writes);
+            if (!plan.uiWrites.isEmpty()) {
+                SharedPreferences.Editor ui = CompanionUiPrefs.get(app).edit();
+                for (Map.Entry<String, Object> entry : plan.uiWrites.entrySet()) {
+                    ui.putString(entry.getKey(), (String) entry.getValue());
+                }
+                ui.apply();
+            }
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                if (isAdded()) reloadCurrentMenu();
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(app, plan.skipped == 0
+                        ? app.getString(R.string.ig_toast_settings_restored)
+                        : app.getString(R.string.ig_toast_settings_restored_skipped, plan.skipped), Toast.LENGTH_SHORT).show();
+            });
+        });
+    }
+
+    private static ExecutorService restoreWorker() {
+        ThreadPoolExecutor worker = new ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+                runnable -> new Thread(runnable, "ie-restore"));
+        worker.allowCoreThreadTimeOut(true);
+        return worker;
     }
 
     private void restartInstagram() {

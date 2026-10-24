@@ -11,4 +11,16 @@
     <string name="feat_tab_move_up" tools:ignore="MissingTranslation">Move %1$s up</string>
     <string name="feat_tab_move_down" tools:ignore="MissingTranslation">Move %1$s down</string>
     <string name="feat_tab_hidden" tools:ignore="MissingTranslation">%1$s · Hidden</string>
+    <plurals name="feat_restore_confirm" tools:ignore="MissingTranslation">
+        <item quantity="one">Restore %d setting from this backup? Settings in the file replace the current ones; locks are only turned on.</item>
+        <item quantity="other">Restore %d settings from this backup? Settings in the file replace the current ones; locks are only turned on.</item>
+    </plurals>
+    <plurals name="feat_restore_skipped" tools:ignore="MissingTranslation">
+        <item quantity="one">%d entry is skipped.</item>
+        <item quantity="other">%d entries are skipped.</item>
+    </plurals>
+    <string name="feat_restore_needs_passcode" tools:ignore="MissingTranslation">Locks need a passcode set in Instagram.</string>
+    <string name="feat_restore_action" tools:ignore="MissingTranslation">Restore</string>
+    <string name="feat_restore_invalid_file" tools:ignore="MissingTranslation">not a valid backup file</string>
+    <string name="feat_backup_unreadable" tools:ignore="MissingTranslation">the settings couldn\'t be read</string>
 </resources>
