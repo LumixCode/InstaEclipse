@@ -24,6 +24,7 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.log.Logging;
 import ps.reso.instaeclipse.utils.download.DownloadEngine;
 import ps.reso.instaeclipse.utils.download.DownloadRequest;
+import ps.reso.instaeclipse.utils.download.TempFiles;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -88,6 +89,7 @@ public class DownloadSaveService extends Service {
         super.onCreate();
         nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         ensureChannel();
+        jobs.submit(() -> TempFiles.sweepOnce(getCacheDir()));
     }
 
     @Override

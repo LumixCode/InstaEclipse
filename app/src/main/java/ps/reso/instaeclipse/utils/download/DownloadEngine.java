@@ -45,11 +45,21 @@ public final class DownloadEngine {
         public final String status;
         /** Fixed diagnostic tags only; never exception messages, URLs, IDs or file paths. */
         public final String diagnostic;
+        public final int tried;
+        public final boolean deterministic;
         Failure(String status, String message, boolean offer) {
             this(status, message, offer, "");
         }
         private Failure(String status, String message, boolean offer, String diagnostic) {
+            this(status, message, offer, diagnostic, 0);
+        }
+        private Failure(String status, String message, boolean offer, String diagnostic, int tried) {
             super(message); this.status = status; this.canOfferFallback = offer; this.diagnostic = diagnostic;
+            this.tried = tried;
+            this.deterministic = switch (status) {
+                case "VERIFY", "JOIN", "UNSUPPORTED", "TOO_LARGE", "CEILING", "MANIFEST" -> true;
+                default -> false;
+            };
         }
     }
     public static final class Result implements AutoCloseable {
@@ -94,6 +104,7 @@ public final class DownloadEngine {
     public static Result execute(Context context, DownloadRequest request, Cancellation cancellation, Progress listener)
             throws Failure {
         if (Looper.myLooper() == Looper.getMainLooper()) throw new Failure("THREAD", "Downloads must run on a worker thread", false);
+        TempFiles.sweepOnce(context.getCacheDir());
         Cancellation cancel = cancellation == null ? new Cancellation() : cancellation;
         Progress progress = listener == null ? (phase, done, total) -> { } : listener;
         RenditionPicker.Plan plan = RenditionPicker.plan(request, Build.VERSION.SDK_INT);
@@ -127,6 +138,7 @@ public final class DownloadEngine {
     private static String fetch(Context context, String url, File destination, String expectedMime,
             Cancellation cancellation, Progress listener, boolean audioSource) throws Failure {
         if (Looper.myLooper() == Looper.getMainLooper()) throw new Failure("THREAD", "Downloads must run on a worker thread", false);
+        TempFiles.sweepOnce(context.getCacheDir());
         Downloader.Kind kind = fetchKind(expectedMime);
         if (destination == null) throw new Failure("STORAGE", "No temporary media destination", false);
         try {
@@ -177,36 +189,44 @@ public final class DownloadEngine {
                 plan.excludedByCeiling > 0 ? "No discovered video fits the selected resolution ceiling"
                         : "No downloadable video candidate was exposed for this item", false);
         Failure first = null;
-        for (int i = 0; i < plan.choices.size(); i++) {
+        for (int i = request.options.skip; i < plan.choices.size(); i++) {
             RenditionPicker.Choice choice = plan.choices.get(i);
             try {
                 if (choice.unsupported != null) throw new Failure("UNSUPPORTED", choice.unsupported, false);
-                return attempt.run(choice, lower(plan, i, invalidManifest));
+                return attempt.run(choice, lower(plan, i));
             } catch (Failure failure) {
                 if (first == null) first = failure;
                 if (terminal(failure)) throw failure;
                 if (!request.options.allowFallback) {
                     boolean offer = i + 1 < plan.choices.size();
                     throw new Failure(failure.status, failure.getMessage() + (offer
-                            ? ". Best selection failed; choose an explicit lower-quality fallback to retry." : ""), offer, failure.diagnostic);
+                            ? ". Best selection failed; choose an explicit lower-quality fallback to retry." : ""), offer,
+                            failure.diagnostic, i + 1);
                 }
             }
         }
+        if (first == null) throw new Failure("NO_MEDIA", "No downloadable video candidate was exposed for this item", false);
         throw new Failure(first.status, first.getMessage() + ". No permitted candidate completed successfully.", false, first.diagnostic);
     }
 
     static boolean terminal(Failure failure) {
-        return failure.status.equals("CANCELLED") || failure.status.equals("STORAGE");
+        return failure.status.equals("CANCELLED") || failure.status.equals("STORAGE") || failure.status.equals("EXPIRED");
     }
 
-    static boolean lower(RenditionPicker.Plan plan, int index, boolean invalidManifest) {
-        return invalidManifest || index > 0;
+    static boolean lower(RenditionPicker.Plan plan, int index) {
+        if (index == 0) return false;
+        DownloadRequest.Rendition best = plan.choices.get(0).video, saved = plan.choices.get(index).video;
+        if (best.shortSide() <= 0 || saved.shortSide() <= 0) return false;
+        if (saved.shortSide() != best.shortSide()) return saved.shortSide() < best.shortSide();
+        return best.frameRate > 0 && saved.frameRate > 0 && saved.frameRate < best.frameRate;
     }
 
     public static DownloadRequest fallback(DownloadRequest request, Failure failure) {
+        int skip = request.options.skip;
+        if (failure != null) skip = Math.max(skip, failure.deterministic ? failure.tried : failure.tried - 1);
         return new DownloadRequest(request.mediaId, request.owner, request.filename, request.manifest, request.direct,
                 new DownloadRequest.Options(request.options.maxShortSide, request.options.compatibility, true,
-                        request.options.originalSelection), request.audio);
+                        request.options.originalSelection, Math.min(skip, DownloadRequest.Options.MAX_SKIP)), request.audio);
     }
 
     private static Result run(File cache, DownloadRequest request, RenditionPicker.Choice choice,

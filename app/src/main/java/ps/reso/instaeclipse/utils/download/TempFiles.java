@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class TempFiles {
+    static final long MAX_AGE_MS = 60L * 60L * 1000L;
     private static final TempFiles PROCESS = new TempFiles();
     private final AtomicBoolean swept = new AtomicBoolean();
 
@@ -17,6 +18,12 @@ public final class TempFiles {
     }
 
     static int sweep(File cacheDir, long now) {
-        return 0;
+        File[] files = cacheDir.listFiles((dir, name) -> name.startsWith("ie_"));
+        if (files == null) return 0;
+        int deleted = 0;
+        for (File file : files) {
+            if (file.isFile() && now - file.lastModified() > MAX_AGE_MS && file.delete()) deleted++;
+        }
+        return deleted;
     }
 }

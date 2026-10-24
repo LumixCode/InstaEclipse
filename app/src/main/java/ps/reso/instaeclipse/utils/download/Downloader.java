@@ -203,7 +203,7 @@ final class Downloader {
      */
     static volatile int readTimeoutMs = READ_TIMEOUT_MS;
     private static final int BUFFER = 64 * 1024;
-    static final long MAX_BYTES = 512L * 1024L * 1024L;
+    static final long MAX_BYTES = 2L * 1024L * 1024L * 1024L;
     static final long SNIFF_BOX_MAX = 512L * 1024L * 1024L;
     private static final int MAX_REDIRECTS = 5;
 

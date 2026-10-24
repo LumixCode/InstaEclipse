@@ -36,7 +36,8 @@ public final class DownloadRequest {
         }
         this.direct = Collections.unmodifiableList(copy);
         this.options = options == null ? new Options(0, false, false)
-                : new Options(options.maxShortSide, options.compatibility, options.allowFallback, options.originalSelection);
+                : new Options(options.maxShortSide, options.compatibility, options.allowFallback, options.originalSelection,
+                        options.skip);
         this.audio = audio == null ? AudioExpectation.UNKNOWN : audio;
         if (this.options.originalSelection && (!this.manifest.isEmpty()
                 || direct == null || direct.size() != 1 || copy.size() != 1 || copy.get(0).url.isEmpty()
@@ -62,19 +63,26 @@ public final class DownloadRequest {
     }
 
     public static final class Options {
-        public final int maxShortSide;
+        public static final int MAX_SKIP = 32;
+        public final int maxShortSide, skip;
         public final boolean compatibility, allowFallback, originalSelection;
         public Options(int maxShortSide, boolean compatibility, boolean allowFallback) {
             this(maxShortSide, compatibility, allowFallback, false);
         }
         public Options(int maxShortSide, boolean compatibility, boolean allowFallback, boolean originalSelection) {
+            this(maxShortSide, compatibility, allowFallback, originalSelection, 0);
+        }
+        public Options(int maxShortSide, boolean compatibility, boolean allowFallback, boolean originalSelection,
+                int skip) {
             if (!originalSelection && (maxShortSide < 0 || maxShortSide > 32768))
                 throw new IllegalArgumentException("Invalid resolution ceiling");
+            if (skip < 0 || skip > MAX_SKIP) throw new IllegalArgumentException("Invalid fallback skip");
             this.originalSelection = originalSelection;
             // Original copies the caller's selected direct file; Custom controls cannot alter it.
             this.maxShortSide = originalSelection ? 0 : maxShortSide;
             this.compatibility = !originalSelection && compatibility;
             this.allowFallback = !originalSelection && allowFallback;
+            this.skip = originalSelection ? 0 : skip;
         }
     }
 
@@ -91,7 +99,7 @@ public final class DownloadRequest {
                     .put("manifest", manifest).put("direct", renditions)
                     .put("options", new JSONObject().put("maxShortSide", options.maxShortSide)
                             .put("compatibility", options.compatibility).put("allowFallback", options.allowFallback)
-                            .put("originalSelection", options.originalSelection))
+                            .put("originalSelection", options.originalSelection).put("skip", options.skip))
                     .put("audio", audio.name()).toString();
         } catch (JSONException e) {
             throw new IllegalArgumentException("Invalid download request");
@@ -135,7 +143,8 @@ public final class DownloadRequest {
         if (!(value instanceof JSONObject)) throw new JSONException("options");
         JSONObject o = (JSONObject) value;
         return new Options((int) whole(o, "maxShortSide", Integer.MIN_VALUE, Integer.MAX_VALUE),
-                bool(o, "compatibility"), bool(o, "allowFallback"), bool(o, "originalSelection"));
+                bool(o, "compatibility"), bool(o, "allowFallback"), bool(o, "originalSelection"),
+                (int) whole(o, "skip", 0, Options.MAX_SKIP));
     }
     private static AudioExpectation audio(JSONObject r) throws JSONException {
         String name = string(r, "audio");
