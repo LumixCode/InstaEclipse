@@ -1,10 +1,11 @@
 package ps.reso.instaeclipse.mods.ghost;
 
 import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.Html;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,36 +35,38 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
-import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
-import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.mods.media.DownloadFiles;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker;
 import ps.reso.instaeclipse.utils.ghost.ThreadNames;
+import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.text.HtmlExport;
+import ps.reso.instaeclipse.utils.text.TimestampFormat;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 
 /**
  * Export a DM chat to an HTML file (#225): header button in the open chat.
  *
- * - Thread message store = class using "getUnseenMessageCount directMessage is null" (X.01eV on
- *   452, X.04r2 on 451); instances are remembered from its constructor. Its synchronized
- *   (boolean) -> ArrayList method returns the loaded messages (confirmed + pending, sorted).
  * - Each message is serialized with IG's own JSON serializer (static void (generator, message)
  *   method using "timestamp_in_micro" + "client_context") into a StringWriter-backed generator
  *   from the factory's (Writer) -> generator method, then read as JSON: text, user_id, timestamp,
@@ -77,11 +80,13 @@ public class ChatExportHook {
     private static final String BTN_TAG = "ie_chat_export_btn";
     private static final String USER = "com.instagram.user.model.User";
     private static final String SESSION = "com.instagram.common.session.UserSession";
-    /** the viewer's user id, found next to the participants (set by {@link #participants}) */
-    private static volatile String selfId;
-    private static final Map<Object, Boolean> STORES = Collections.synchronizedMap(new WeakHashMap<>());
+    private static final String DTK = "com.instagram.model.direct.DirectThreadKey";
+    private static final String PREFS = "instaeclipse_chat_export";
     private static Method messagesMethod, serializer, factoryWriterMethod;
-    private static Class<?> factoryClass;
+    private static Constructor<?> factoryConstructor;
+    private static Class<?> entryClass;
+    private static final Map<Class<?>, Optional<Method>> entryGetters = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Optional<Method>> lazyChecks = new ConcurrentHashMap<>();
 
     public void install(DexKitBridge bridge, ClassLoader cl) {
         try {
@@ -92,15 +97,10 @@ public class ChatExportHook {
                 break;
             }
             if (store == null) { ModuleLog.error(TAG + "Could not turn on chat export: not supported by this Instagram version (message store not found)"); return; }
+            entryClass = store;
             for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(store)) {
                 Class<?>[] p = m.getParameterTypes();
                 if (p.length == 1 && p[0] == boolean.class && m.getReturnType() == java.util.ArrayList.class) messagesMethod = m;
-            }
-            for (Constructor<?> c : ps.reso.instaeclipse.utils.core.SafeReflect.constructors(store)) {
-                XposedBridge.hookMethod(c, new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method); STORES.put(param.thisObject, Boolean.TRUE); }
-                });
             }
             for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("timestamp_in_micro", "client_context").returnType("void").paramCount(2)))) {
@@ -114,19 +114,18 @@ public class ChatExportHook {
                     Method m = md.getMethodInstance(cl);
                     if (Modifier.isStatic(m.getModifiers())) continue;
                     try {
-                        m.getDeclaringClass().getConstructor();
+                        factoryConstructor = m.getDeclaringClass().getConstructor();
                         factoryWriterMethod = m;
-                        factoryClass = m.getDeclaringClass();
                         break;
                     } catch (NoSuchMethodException ignored) {}
                 }
             }
             if (messagesMethod != null) messagesMethod.setAccessible(true);
-            ModuleLog.line(TAG + (messagesMethod != null && serializer != null && factoryClass != null ? "✅ ready"
+            ModuleLog.line(TAG + (ready() ? "✅ ready"
                     : "❌ Could not turn on chat export: not supported by this Instagram version (message reader incomplete)"));
             ModuleLog.detail(TAG + "store " + store.getName() + " messages=" + (messagesMethod != null)
-                    + " serializer=" + (serializer != null) + " factory=" + (factoryClass != null ? factoryClass.getName() : "none"));
-            if (messagesMethod != null && serializer != null && factoryClass != null) FeatureStatusTracker.setHooked("ChatExport");
+                    + " serializer=" + (serializer != null) + " factory=" + (factoryConstructor != null ? factoryConstructor.getDeclaringClass().getName() : "none"));
+            if (ready()) FeatureStatusTracker.setHooked("ChatExport");
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not turn on chat export", t);
         }
@@ -134,64 +133,86 @@ public class ChatExportHook {
 
     /** Adds "Export chat" to the module's thread header menu. */
     static void inject(Activity a) {
-        if (!FeatureFlags.chatExport || ThreadHeaderMenu.has(a, "export")) return;
+        if (!FeatureFlags.chatExport || !ready() || ThreadHeaderMenu.has(a, "export")) return;
         ThreadHeaderMenu.add(a, "export", I18n.t(a, R.string.ig_chat_export), () -> ask(a));
     }
 
-    private static boolean loadAll = true;
-    private static boolean downloadMedia = true;
+    static boolean ready() {
+        return ChatExportLabels.ready(messagesMethod != null, serializer != null, factoryWriterMethod != null);
+    }
+
+    private static SharedPreferences prefs(Context c) {
+        return c.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
 
     /** Export dialog: optionally scroll to the first message first so the whole chat is loaded, and
      *  optionally download photos/videos/voice/GIFs/shared previews into the export's own folder. */
     private static void ask(Activity a) {
+        SharedPreferences prefs = prefs(a);
         ps.reso.instaeclipse.utils.dialog.IeDialog dlg = new ps.reso.instaeclipse.utils.dialog.IeDialog(a)
                 .title(I18n.t(a, R.string.ig_chat_export));
-        android.widget.CheckBox box = dlg.checkBox(I18n.t(a, R.string.ig_chat_export_load_all), loadAll);
-        android.widget.CheckBox mediaBox = dlg.checkBox(I18n.t(a, R.string.ig_chat_export_media), downloadMedia);
+        android.widget.CheckBox box = dlg.checkBox(I18n.t(a, R.string.ig_chat_export_load_all), prefs.getBoolean("loadAll", true));
+        android.widget.CheckBox mediaBox = dlg.checkBox(I18n.t(a, R.string.ig_chat_export_media), prefs.getBoolean("media", false));
         dlg.secondary(I18n.t(a, R.string.ig_dialog_cancel), null);
         dlg.primary(I18n.t(a, R.string.ig_chat_export), () -> {
-            loadAll = box.isChecked();
-            downloadMedia = mediaBox.isChecked();
-            if (loadAll) JumpToFirstMessageHook.run(a, () -> export(a));
-            else export(a);
+            boolean loadAll = box.isChecked();
+            boolean withMedia = mediaBox.isChecked();
+            prefs.edit().putBoolean("loadAll", loadAll).putBoolean("media", withMedia).apply();
+            if (loadAll) JumpToFirstMessageHook.run(a, () -> export(a, withMedia));
+            else export(a, withMedia);
         });
         dlg.show();
     }
 
-    private static void export(Activity a) {
+    private static void export(Activity a, boolean withMedia) {
+        if (!ready()) {
+            ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_unsupported), Toast.LENGTH_LONG).show();
+            return;
+        }
         String tracked = CurrentThreadTracker.currentThreadId();
         if (tracked == null) try { tracked = UnsentThreadButtonHook.openThread.get(); } catch (Throwable ignored) {}
         final String threadId = tracked;
-        Object store = findStore(threadId);
-        ModuleLog.detail(TAG + "export thread=" + threadId + " store=" + (store != null));
-        if (store == null || !ChatExportLabels.ready(messagesMethod != null, serializer != null, factoryWriterMethod != null)) {
+        final Object session = threadId != null ? openChatSession(a) : null;
+        if (session == null) {
+            ModuleLog.detail(TAG + "export thread=" + threadId + " session=false");
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_none), Toast.LENGTH_SHORT).show();
             return;
         }
-        final boolean withMedia = downloadMedia;
-        final ChatExportLabels labels = new ChatExportLabels(null);
+        final ChatExportLabels labels = labels(a);
+        final SimpleDateFormat fmt = TimestampFormat.dialogDateFormat(a);
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_working), Toast.LENGTH_SHORT).show();
         new Thread(() -> {
             try {
-                List<?> msgs = (List<?>) messagesMethod.invoke(store, true);
-                Map<String, String> names = participants(store);
-                String title = threadId != null ? ThreadNames.resolve(threadId) : null;
-                if (title == null || title.isEmpty()) title = "chat";
-                String user = chatUsername(msgs, names);
-                SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
+                Object entry = threadEntry(session, threadId);
+                ModuleLog.detail(TAG + "export thread=" + threadId + " entry=" + (entry != null));
+                if (entry == null) {
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_none), Toast.LENGTH_SHORT).show());
+                    return;
+                }
+                List<?> msgs = (List<?>) messagesMethod.invoke(entry, true);
+                Object factory = factoryConstructor.newInstance();
                 // first pass: JSON per message + item id -> message (for reply quotes)
                 List<Object[]> rows = new ArrayList<>();
                 Map<String, JSONObject> byId = new HashMap<>();
+                Set<String> senderIds = new HashSet<>();
                 for (Object m : msgs) {
-                    JSONObject j = toJson(m);
+                    JSONObject j = toJson(factory, m);
                     if (j == null) continue;
                     rows.add(new Object[]{m, j});
                     String id = j.optString("item_id", "");
                     if (!id.isEmpty()) byId.put(id, j);
+                    String sender = j.optString("user_id", "");
+                    if (!sender.isEmpty()) senderIds.add(sender);
                 }
+                Map<String, String> names = participants(entry, senderIds);
+                String selfId = UnsentIdentity.account(session);
+                String title = ThreadNames.resolve(threadId);
+                if (title == null || title.isEmpty()) title = "chat";
+                String user = chatUsername(rows, names, selfId);
 
                 String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
-                String safe = (user != null ? user : title).replaceAll("[^A-Za-z0-9._-]", "_");
+                String safe = DownloadFiles.safeSegment(user != null ? user : title, threadId);
                 String folder = "chat_" + safe + "_" + stamp;   // the export's own folder
                 String file = folder + ".html";
 
@@ -213,12 +234,6 @@ public class ChatExportHook {
                     }
                 }
 
-                // Who is "me": in a 1:1 chat the title is the other person, so the viewer is the other
-                // sender → their messages align right (self-coloured bubbles).
-                java.util.LinkedHashSet<String> senders = new java.util.LinkedHashSet<>();
-                for (Object[] r : rows) senders.add(names.getOrDefault(((JSONObject) r[1]).optString("user_id", ""), ""));
-                String selfName = selfId != null ? names.get(selfId) : null;
-                if (selfName == null && senders.size() == 2) for (String s : senders) if (!s.isEmpty() && !s.equalsIgnoreCase(title)) selfName = s;
                 SimpleDateFormat daySep = new SimpleDateFormat("EEEE, d MMM yyyy", Locale.getDefault());
 
                 StringBuilder body = new StringBuilder();
@@ -235,23 +250,23 @@ public class ChatExportHook {
                         if (first == 0) first = ts;
                         last = ts;
                         long day = (ts + java.util.TimeZone.getDefault().getOffset(ts)) / 86400000L;
-                        if (day != lastDay) { lastDay = day; body.append("<div class=date-sep><span>").append(esc(daySep.format(new Date(ts)))).append("</span></div>"); }
+                        if (day != lastDay) { lastDay = day; body.append("<div class=date-sep><span>").append(HtmlExport.esc(daySep.format(new Date(ts)))).append("</span></div>"); }
                     }
-                    boolean self = selfName != null && who.equals(selfName);
-                    JSONObject replied = repliedTo(r[0], j.optString("item_id", ""), byId);
+                    boolean self = uid.equals(selfId);
+                    JSONObject replied = repliedTo(r[0], j.optString("item_id", ""), byId, factory);
                     body.append(messageHtml(j, self, who, ts, replied, names, media.get(i), fmt, labels));
                 }
                 int n = rows.size();
                 StringBuilder html = new StringBuilder();
                 html.append("<!doctype html><html><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><title>")
-                        .append(esc(title)).append("</title><style>").append(CHAT_CSS).append("</style></head><body><div class=wrap>")
+                        .append(HtmlExport.esc(title)).append("</title><style>").append(CHAT_CSS).append("</style></head><body><div class=wrap>")
                         .append(ps.reso.instaeclipse.utils.core.ExportBrand.htmlBanner(labels.banner()))
-                        .append("<div class=head><h1>").append(esc(title))
-                        .append(user != null && !user.equalsIgnoreCase(title) ? " <span class=sub>@" + esc(user) + "</span>" : "").append("</h1><div class=sub>").append(labels.messages(n));
+                        .append("<div class=head><h1>").append(HtmlExport.esc(title))
+                        .append(user != null && !user.equalsIgnoreCase(title) ? " <span class=sub>@" + HtmlExport.esc(user) + "</span>" : "").append("</h1><div class=sub>").append(HtmlExport.esc(labels.messages(n)));
                 if (first > 0) html.append(" · ").append(fmt.format(new Date(first))).append(" – ").append(fmt.format(new Date(last)));
                 html.append("</div><div class=chips>");
                 for (Map.Entry<String, Integer> e : perUser.entrySet())
-                    html.append("<span class=chip>").append(esc(e.getKey())).append(" · ").append(e.getValue()).append("</span>");
+                    html.append("<span class=chip>").append(HtmlExport.esc(e.getKey())).append(" · ").append(e.getValue()).append("</span>");
                 html.append("</div></div>").append(body)
                         .append(ps.reso.instaeclipse.utils.core.ExportBrand.htmlFooter()).append("</div></body></html>");
 
@@ -346,8 +361,9 @@ public class ChatExportHook {
 
     private static void exportFailed(Activity a, Throwable t) {
         ModuleLog.error(TAG + "Could not export the chat", t);
+        String reason = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
         new Handler(Looper.getMainLooper()).post(() ->
-                ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_toast_download_failed, String.valueOf(t.getMessage())), Toast.LENGTH_SHORT).show());
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_unsent_export_failed, reason), Toast.LENGTH_SHORT).show());
     }
 
     /** Downloads a URL straight into {@code out}. Returns false (leaving {@code out} to the caller) on any error. */
@@ -505,18 +521,6 @@ public class ChatExportHook {
         }
     }
 
-    private static String esc(String s) { return Html.escapeHtml(s == null ? "" : s); }
-
-    private static final int[] AVATAR = {0xE1306C, 0x833AB4, 0xF77737, 0x0095F6, 0x00A86B, 0xC13584, 0xFD1D1D, 0x5851DB};
-
-    private static String avatarColor(String u) {
-        return String.format(Locale.US, "%06X", AVATAR[((u == null ? 0 : u.hashCode()) & 0x7fffffff) % AVATAR.length]);
-    }
-
-    private static String initial(String u) {
-        return u == null || u.isEmpty() ? "?" : u.substring(0, 1).toUpperCase(Locale.ROOT);
-    }
-
     private static Object payloadOf(JSONObject j, String type) {
         Object payload = j.opt(type);
         if (!(payload instanceof JSONObject) && !"text".equals(type)) { Object m = j.opt("media"); if (m != null) payload = m; }
@@ -537,30 +541,30 @@ public class ChatExportHook {
         if (type.equals("action_log") || type.equals("video_call_event")
                 || type.equals("placeholder") || type.equals("expired_placeholder")) {
             String t = stripBrackets(describe(j));
-            return "<div class=sys><span>" + esc(t) + (ts > 0 ? " · " + esc(fmt.format(new Date(ts))) : "") + "</span></div>";
+            return "<div class=sys><span>" + HtmlExport.esc(t) + (ts > 0 ? " · " + HtmlExport.esc(fmt.format(new Date(ts))) : "") + "</span></div>";
         }
         StringBuilder b = new StringBuilder();
         b.append("<div class=\"row").append(self ? " me" : "").append("\">");
-        if (!self) b.append("<div class=av style=\"background:#").append(avatarColor(who)).append("\">").append(esc(initial(who))).append("</div>");
+        if (!self) b.append("<div class=av style=\"background:#").append(HtmlExport.avatarHex(who)).append("\">").append(HtmlExport.esc(HtmlExport.initial(who))).append("</div>");
         b.append("<div class=bub>");
-        if (!self) b.append("<div class=nm>").append(esc(who)).append("</div>");
+        if (!self) b.append("<div class=nm>").append(HtmlExport.esc(who)).append("</div>");
         if (replied != null) {
             String ru = replied.optString("user_id", "");
-            b.append("<div class=q><b>").append(esc(names.getOrDefault(ru, ru))).append("</b> ")
-             .append(esc(clip(describe(replied), 100))).append("</div>");
+            b.append("<div class=q><b>").append(HtmlExport.esc(names.getOrDefault(ru, ru))).append("</b> ")
+             .append(HtmlExport.esc(clip(describe(replied), 100))).append("</div>");
         }
         b.append(contentHtml(j, type, mrel, self, labels));
         b.append(editHistory(j, fmt));
         b.append("<div class=meta>");
-        if (ts > 0) b.append(esc(fmt.format(new Date(ts))));
-        if (j.optInt("edit_count", 0) > 0 || j.has("edit_history")) b.append("<span class=badge>").append(labels.edited()).append("</span>");
-        if (j.optBoolean("is_pinned", false)) b.append("<span class=badge>").append(labels.pinned()).append("</span>");
-        if (j.optBoolean("show_forward_attribution", false)) b.append("<span class=badge>").append(labels.forwarded()).append("</span>");
+        if (ts > 0) b.append(HtmlExport.esc(fmt.format(new Date(ts))));
+        if (j.optInt("edit_count", 0) > 0 || j.has("edit_history")) b.append("<span class=badge>").append(HtmlExport.esc(labels.edited())).append("</span>");
+        if (j.optBoolean("is_pinned", false)) b.append("<span class=badge>").append(HtmlExport.esc(labels.pinned())).append("</span>");
+        if (j.optBoolean("show_forward_attribution", false)) b.append("<span class=badge>").append(HtmlExport.esc(labels.forwarded())).append("</span>");
         b.append("</div>");
         String react = reactions(j, names);
         if (!react.isEmpty()) {
             b.append("<div class=react>");
-            for (String part : react.split(", ")) b.append("<span class=rx>").append(esc(part)).append("</span>");
+            for (String part : react.split(", ")) b.append("<span class=rx>").append(HtmlExport.esc(part)).append("</span>");
             b.append("</div>");
         }
         return b.append("</div></div>").toString();
@@ -575,8 +579,8 @@ public class ChatExportHook {
             case "media": case "raven_media": case "visual_media": case "animated_media": case "voice_media": {
                 StringBuilder s = new StringBuilder();
                 if (mrel != null) s.append(mediaHtml(mrel[0], mrel[1]));
-                else s.append("<div class=ph>").append(esc(describe(j))).append("</div>");
-                if (!text.isEmpty()) s.append("<div class=txt>").append(esc(text).replace("\n", "<br>")).append("</div>");
+                else s.append("<div class=ph>").append(HtmlExport.esc(describe(j))).append("</div>");
+                if (!text.isEmpty()) s.append("<div class=txt>").append(HtmlExport.esc(text)).append("</div>");
                 return s.toString();
             }
             case "media_share": case "clip": case "felix_share":
@@ -586,21 +590,21 @@ public class ChatExportHook {
             case "reel_share": case "xma_reel_share":
                 return sharedCard(j, type, mrel, text, true, labels);
             case "xma_reel_mention": case "xma_story_mention": {
-                String s = "<div class=card><div class=ci><div class=cl>" + labels.mention(self) + "</div></div></div>";
-                return mrel != null ? "<div class=card><img loading=lazy src=\"" + mrel[0] + "\" onerror=\"this.remove()\"><div class=ci><div class=cl>" + labels.previewMention() + "</div></div></div>" : s;
+                String inner = "<div class=ci><div class=cl>" + HtmlExport.esc(labels.mention(self)) + "</div></div></div>";
+                return mrel != null ? "<div class=card><img loading=lazy src=\"" + mrel[0] + "\" onerror=\"this.remove()\">" + inner : "<div class=card>" + inner;
             }
             case "profile": case "xma_profile": {
                 String u = first(payloadOf(j, type), "username");
-                return "<div class=card><div class=ci><div class=cl>" + labels.profile() + "</div>"
-                        + (u.isEmpty() ? "" : "<div class=cu>@" + esc(u) + "</div>") + "</div></div>";
+                return "<div class=card><div class=ci><div class=cl>" + HtmlExport.esc(labels.profile()) + "</div>"
+                        + (u.isEmpty() ? "" : "<div class=cu>@" + HtmlExport.esc(u) + "</div>") + "</div></div>";
             }
             case "text":
-                return "<div class=txt>" + esc(text).replace("\n", "<br>") + "</div>";
+                return "<div class=txt>" + HtmlExport.esc(text) + "</div>";
             default: {
                 StringBuilder s = new StringBuilder();
                 if (mrel != null) s.append(mediaHtml(mrel[0], mrel[1]));
                 String d = text.isEmpty() ? describe(j) : text;
-                if (!d.isEmpty()) s.append("<div class=txt>").append(esc(d).replace("\n", "<br>")).append("</div>");
+                if (!d.isEmpty()) s.append("<div class=txt>").append(HtmlExport.esc(d)).append("</div>");
                 return s.toString();
             }
         }
@@ -620,12 +624,12 @@ public class ChatExportHook {
         boolean hasPrev = mrel != null && "preview".equals(mrel[1]);
         s.append(link.isEmpty() ? "<div class=card>" : "<a class=card href=\"" + link + "\" target=_blank rel=noopener>");
         if (hasPrev) s.append("<img loading=lazy src=\"").append(mrel[0]).append("\" onerror=\"this.remove()\">");
-        s.append("<div class=ci><div class=cl>").append(label).append("</div>");
-        if (!user.isEmpty()) s.append("<div class=cu>").append(esc(labels.sharedBy(user, storyReply))).append("</div>");
-        if (!caption.isEmpty()) s.append("<div class=cc>").append(esc(clip(caption, 220))).append("</div>");
+        s.append("<div class=ci><div class=cl>").append(HtmlExport.esc(label)).append("</div>");
+        if (!user.isEmpty()) s.append("<div class=cu>").append(HtmlExport.esc(labels.sharedBy(user, storyReply))).append("</div>");
+        if (!caption.isEmpty()) s.append("<div class=cc>").append(HtmlExport.esc(clip(caption, 220))).append("</div>");
         s.append("</div>").append(link.isEmpty() ? "</div>" : "</a>");
         // the reply text / any accompanying caption text sits under the card
-        if (!text.isEmpty()) s.append("<div class=txt>").append(esc(text).replace("\n", "<br>")).append("</div>");
+        if (!text.isEmpty()) s.append("<div class=txt>").append(HtmlExport.esc(text)).append("</div>");
         return s.toString();
     }
 
@@ -744,7 +748,7 @@ public class ChatExportHook {
             JSONObject e = h.optJSONObject(i);
             if (e == null) continue;
             long ts = e.optLong("timestamp", 0);
-            b.append("<div class=e>✎ ").append(Html.escapeHtml(e.optString("body", "")));
+            b.append("<div class=e>✎ ").append(HtmlExport.esc(e.optString("body", "")));
             if (ts > 0) b.append(" <span class=t>").append(fmt.format(new Date(ts))).append("</span>");
             b.append("</div>");
         }
@@ -821,7 +825,7 @@ public class ChatExportHook {
     }
 
     /** The message this one replies to: the model holds the replied message (or its item id). */
-    private static JSONObject repliedTo(Object message, String ownId, Map<String, JSONObject> byId) {
+    private static JSONObject repliedTo(Object message, String ownId, Map<String, JSONObject> byId, Object factory) {
         Class<?> msgClass = serializer.getParameterTypes()[1];
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         seen.add(message);
@@ -837,7 +841,7 @@ public class ChatExportHook {
                 continue;
             }
             if (msgClass.isInstance(o)) {
-                JSONObject j = toJson(o);
+                JSONObject j = toJson(factory, o);
                 if (j != null && !ownId.equals(j.optString("item_id", ""))) return j;
                 continue;
             }
@@ -856,11 +860,10 @@ public class ChatExportHook {
             }
     }
 
-    private static JSONObject toJson(Object message) {
+    private static JSONObject toJson(Object factory, Object message) {
         try {
             if (!serializer.getParameterTypes()[1].isInstance(message)) return null;
             StringWriter sw = new StringWriter();
-            Object factory = factoryClass.getConstructor().newInstance();
             Object gen = factoryWriterMethod.invoke(factory, sw);
             serializer.invoke(null, gen, message);
             if (gen instanceof java.io.Flushable f) f.flush();
@@ -870,79 +873,234 @@ public class ChatExportHook {
         }
     }
 
-    /** The live store for exactly this thread (its graph holds the thread id). Never guesses: stores of
-     *  other chats (inbox prefetch) stay alive too, so without a confirmed match nothing is exported. */
-    private static Object findStore(String threadId) {
-        if (threadId == null) return null;
-        Object[] all;
-        synchronized (STORES) { all = STORES.keySet().toArray(); }
-        for (Object s : all) if (s != null && graphHasString(s, threadId)) return s;
+    private static ChatExportLabels labels(Context c) {
+        return new ChatExportLabels(new ChatExportLabels.Text() {
+            @Override public String get(ChatExportLabels.Label label, Object... args) {
+                return I18n.t(c, resource(label), args);
+            }
+
+            @Override public String count(ChatExportLabels.Label label, int n) {
+                try {
+                    return I18n.moduleResources(c).getQuantityString(resource(label), n, n);
+                } catch (Throwable t) {
+                    return String.valueOf(n);
+                }
+            }
+        });
+    }
+
+    private static int resource(ChatExportLabels.Label label) {
+        return switch (label) {
+            case BANNER -> R.string.ig_chat_export_banner;
+            case MESSAGES -> R.plurals.ig_chat_export_messages;
+            case EDITED -> R.string.ig_chat_export_edited;
+            case PINNED -> R.string.ig_chat_export_pinned;
+            case FORWARDED -> R.string.ig_chat_export_forwarded;
+            case STORY_REPLY -> R.string.ig_chat_export_story_reply;
+            case REPLY_TO -> R.string.ig_chat_export_reply_to;
+            case SHARED_STORY -> R.string.ig_chat_export_shared_story;
+            case SHARED_REEL -> R.string.ig_chat_export_shared_reel;
+            case SHARED_POST -> R.string.ig_chat_export_shared_post;
+            case SHARED_PROFILE -> R.string.ig_chat_export_shared_profile;
+            case MENTION_BY_YOU -> R.string.ig_chat_export_mention_by_you;
+            case MENTION_OF_YOU -> R.string.ig_chat_export_mention_of_you;
+        };
+    }
+
+    private static Object call(Object target, String name) {
+        if (target == null) return null;
+        try {
+            Method method = HideChatsHook.noArgMethod(target.getClass(), name);
+            return method == null ? null : method.invoke(target);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static Object openChatSession(Activity a) {
+        Object manager = call(a, "getSupportFragmentManager");
+        Object session = fragmentSession(manager, true);
+        return session != null ? session : fragmentSession(manager, false);
+    }
+
+    private static Object fragmentSession(Object manager, boolean chatOnly) {
+        if (!(call(manager, "getFragments") instanceof List<?> fragments)) return null;
+        for (int i = fragments.size() - 1; i >= 0; i--) {
+            Object fragment = fragments.get(i);
+            Object nested = fragmentSession(call(fragment, "getChildFragmentManager"), chatOnly);
+            if (nested != null) return nested;
+            if (!Boolean.TRUE.equals(call(fragment, "isResumed"))) continue;
+            if (chatOnly && !"direct_thread".equals(call(fragment, "getModuleName"))) continue;
+            Object session = call(fragment, "getSession");
+            if (session != null && SESSION.equals(session.getClass().getName())) return session;
+        }
         return null;
     }
 
-    private static boolean graphHasString(Object root, String needle) {
-        Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-        ArrayDeque<Object[]> q = new ArrayDeque<>();
-        q.add(new Object[]{root, 0});
-        while (!q.isEmpty() && seen.size() < 400) {
-            Object[] e = q.poll();
-            Object o = e[0];
-            int d = (int) e[1];
-            if (o == null || !seen.add(o)) continue;
-            if (o instanceof String s) { if (s.equals(needle)) return true; continue; }
-            if (d >= 3 || o instanceof List) continue;
-            String n = o.getClass().getName();
-            if (!n.startsWith("X.") && !n.startsWith("com.instagram.")) continue;
-            for (Class<?> k = o.getClass(); k != null && k != Object.class; k = k.getSuperclass())
-                for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
-                    if (Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive()) continue;
-                    try { f.setAccessible(true); q.add(new Object[]{f.get(o), d + 1}); } catch (Throwable ignored) {}
-                }
+    private static Object threadEntry(Object session, String threadId) throws ReflectiveOperationException {
+        Object key = Class.forName(DTK, false, entryClass.getClassLoader())
+                .getConstructor(String.class, String.class, List.class).newInstance(threadId, null, null);
+        List<Map<?, ?>> nested = new ArrayList<>();
+        for (Object value : fieldValues(session)) {
+            if (value instanceof Map<?, ?> scope) {
+                Object entry = entryIn(scope, key);
+                if (entry != null) return entry;
+            } else if (walkable(value)) {
+                for (Object inner : fieldValues(value)) if (inner instanceof Map<?, ?> scope) nested.add(scope);
+            }
         }
-        return false;
+        for (Map<?, ?> scope : nested) {
+            Object entry = entryIn(scope, key);
+            if (entry != null) return entry;
+        }
+        return null;
     }
 
-    /** The username the export is named after: the other person in a 1:1 chat, yourself in a chat
-     *  with yourself, null in a group (the thread title is used then). */
-    private static String chatUsername(List<?> msgs, Map<String, String> names) {
-        String me = selfId;
+    private static Object entryIn(Map<?, ?> scope, Object key) throws ReflectiveOperationException {
+        Object[] values;
+        try {
+            values = scope.values().toArray();
+        } catch (RuntimeException e) {
+            return null;
+        }
+        for (Object value : values) {
+            Object scoped = initialized(value);
+            Method getter = scoped == null ? null : entryGetter(scoped.getClass());
+            if (getter == null) continue;
+            Object entry = getter.invoke(scoped, key);
+            if (entry != null) return entry;
+        }
+        return null;
+    }
+
+    private static Object initialized(Object value) {
+        if (value == null) return null;
+        Method get = HideChatsHook.noArgMethod(value.getClass(), "getValue");
+        if (get == null || get.getReturnType() != Object.class) return value;
+        Method check = lazyCheck(value.getClass());
+        try {
+            return check != null && Boolean.TRUE.equals(check.invoke(value)) ? get.invoke(value) : null;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    private static Method lazyCheck(Class<?> type) {
+        return lazyChecks.computeIfAbsent(type, ignored -> {
+            for (Class<?> k = type; k != null && k != Object.class; k = k.getSuperclass()) {
+                for (Class<?> lazy : k.getInterfaces()) {
+                    Method check = null;
+                    boolean hasValue = false;
+                    int checks = 0;
+                    for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(lazy)) {
+                        if (Modifier.isStatic(m.getModifiers()) || m.getParameterCount() != 0) continue;
+                        if (m.getName().equals("getValue")) hasValue = true;
+                        else if (m.getReturnType() == boolean.class) {
+                            check = m;
+                            checks++;
+                        }
+                    }
+                    if (hasValue && checks == 1) {
+                        check.setAccessible(true);
+                        return Optional.of(check);
+                    }
+                }
+            }
+            return Optional.empty();
+        }).orElse(null);
+    }
+
+    private static Method entryGetter(Class<?> type) {
+        return entryGetters.computeIfAbsent(type, ignored -> {
+            Method found = null;
+            for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(type)) {
+                if (Modifier.isStatic(m.getModifiers()) || m.getReturnType() != entryClass) continue;
+                Class<?>[] p = m.getParameterTypes();
+                if (p.length != 1 || !p[0].getName().equals(DTK)) continue;
+                if (found != null) return Optional.empty();
+                found = m;
+            }
+            if (found != null) found.setAccessible(true);
+            return Optional.ofNullable(found);
+        }).orElse(null);
+    }
+
+    private static boolean walkable(Object o) {
+        if (o == null) return false;
+        String n = o.getClass().getName();
+        return (n.startsWith("X.") || n.startsWith("com.instagram.")) && !n.equals(SESSION);
+    }
+
+    private static List<Object> fieldValues(Object o) {
+        List<Object> out = new ArrayList<>();
+        for (Class<?> k = o.getClass(); k != null && k != Object.class; k = k.getSuperclass())
+            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
+                if (Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive() || f.getType() == String.class) continue;
+                try {
+                    f.setAccessible(true);
+                    Object v = f.get(o);
+                    if (v != null) out.add(v);
+                } catch (Throwable ignored) {}
+            }
+        return out;
+    }
+
+    private static Object[] items(Collection<?> c) {
+        try {
+            return c.toArray();
+        } catch (RuntimeException e) {
+            return new Object[0];
+        }
+    }
+
+    private static String chatUsername(List<Object[]> rows, Map<String, String> names, String me) {
         java.util.LinkedHashSet<String> others = new java.util.LinkedHashSet<>();
         for (String id : names.keySet()) if (!id.equals(me)) others.add(id);
         if (others.size() == 1) return names.get(others.iterator().next());
         if (others.isEmpty()) return me != null ? names.get(me) : null;
-        // more users reachable than the thread's members (e.g. authors of shared posts): go by senders
         java.util.LinkedHashSet<String> senders = new java.util.LinkedHashSet<>();
-        for (Object m : msgs) {
-            JSONObject j = toJson(m);
-            String id = j != null ? j.optString("user_id", "") : "";
+        for (Object[] r : rows) {
+            String id = ((JSONObject) r[1]).optString("user_id", "");
             if (!id.isEmpty() && !id.equals(me) && names.containsKey(id)) senders.add(id);
         }
         return senders.size() == 1 && me != null ? names.get(senders.iterator().next()) : null;
     }
 
-    /** user id → username for every User reachable from the store (also finds {@link #selfId}). */
-    private static Map<String, String> participants(Object store) {
-        Map<String, String> out = new HashMap<>();
-        selfId = null;
+    private static Map<String, String> participants(Object entry, Set<String> senders) {
+        Map<String, String> names = new HashMap<>();
+        for (Object holder : fieldValues(entry)) {
+            if (addUser(holder, names) || !walkable(holder)) continue;
+            for (Object thread : fieldValues(holder)) {
+                if (addUser(thread, names) || !walkable(thread)) continue;
+                for (Object value : fieldValues(thread)) {
+                    if (value instanceof Collection<?> users) for (Object user : items(users)) addUser(user, names);
+                    else addUser(value, names);
+                }
+            }
+        }
+        if (!names.keySet().containsAll(senders)) reachableUsers(entry, names);
+        return names;
+    }
+
+    private static boolean addUser(Object o, Map<String, String> names) {
+        if (o == null || !o.getClass().getName().equals(USER)) return false;
+        String u = UserUtils.callUsernameGetter(o);
+        String id = userId(o);
+        if (u != null && id != null) names.putIfAbsent(id, u);
+        return true;
+    }
+
+    private static void reachableUsers(Object root, Map<String, String> out) {
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         ArrayDeque<Object[]> q = new ArrayDeque<>();
-        q.add(new Object[]{store, 0});
+        q.add(new Object[]{root, 0});
         while (!q.isEmpty() && seen.size() < 3000) {
             Object[] e = q.poll();
             Object o = e[0];
             int d = (int) e[1];
             if (o == null || !seen.add(o)) continue;
-            if (o instanceof List<?> l) { if (d < 4) for (Object it : l) q.add(new Object[]{it, d + 1}); continue; }
-            if (selfId == null && o.getClass().getName().equals(SESSION)) {
-                try { selfId = (String) o.getClass().getMethod("getUserId").invoke(o); } catch (Throwable ignored) {}
-                continue;
-            }
-            if (o.getClass().getName().equals(USER)) {
-                String u = UserUtils.callUsernameGetter(o);
-                String id = userId(o);
-                if (u != null && id != null) out.put(id, u);
-                continue;
-            }
+            if (o instanceof List<?> l) { if (d < 4) for (Object it : items(l)) q.add(new Object[]{it, d + 1}); continue; }
+            if (o.getClass().getName().equals(SESSION) || addUser(o, out)) continue;
             if (d >= 4) continue;
             String n = o.getClass().getName();
             if (!n.startsWith("X.") && !n.startsWith("com.instagram.")) continue;
@@ -952,7 +1110,6 @@ public class ChatExportHook {
                     try { f.setAccessible(true); q.add(new Object[]{f.get(o), d + 1}); } catch (Throwable ignored) {}
                 }
         }
-        return out;
     }
 
     /** The User's id: its only non-static final String field (A06 on 452). */

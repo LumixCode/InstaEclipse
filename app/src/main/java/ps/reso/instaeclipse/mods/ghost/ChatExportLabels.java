@@ -20,47 +20,44 @@ final class ChatExportLabels {
     }
 
     static boolean ready(boolean messages, boolean serializer, boolean writer) {
-        return messages;
+        return messages && serializer && writer;
     }
 
     String banner() {
-        return "Chat export";
+        return text.get(Label.BANNER);
     }
 
     String messages(int n) {
-        return n + " messages";
+        return text.count(Label.MESSAGES, n);
     }
 
     String edited() {
-        return "edited";
+        return text.get(Label.EDITED);
     }
 
     String pinned() {
-        return "📌 pinned";
+        return "📌 " + text.get(Label.PINNED);
     }
 
     String forwarded() {
-        return "↪ forwarded";
+        return "↪ " + text.get(Label.FORWARDED);
     }
 
     String shared(String type, boolean storyReply, boolean reel) {
-        boolean story = type.contains("story");
-        return storyReply ? "↩ Story reply" : story ? "↗ Shared story" : reel ? "↗ Shared reel" : "↗ Shared post";
+        if (storyReply) return "↩ " + text.get(Label.STORY_REPLY);
+        Label label = type.contains("story") ? Label.SHARED_STORY : reel ? Label.SHARED_REEL : Label.SHARED_POST;
+        return "↗ " + text.get(label);
     }
 
     String sharedBy(String user, boolean storyReply) {
-        return (storyReply ? "to @" : "@") + user;
+        return storyReply ? text.get(Label.REPLY_TO, user) : "@" + user;
     }
 
     String profile() {
-        return "👤 Shared profile";
+        return "👤 " + text.get(Label.SHARED_PROFILE);
     }
 
     String mention(boolean self) {
-        return "✨ Mentioned you in a story";
-    }
-
-    String previewMention() {
-        return "✨ Story mention";
+        return "✨ " + text.get(self ? Label.MENTION_BY_YOU : Label.MENTION_OF_YOU);
     }
 }

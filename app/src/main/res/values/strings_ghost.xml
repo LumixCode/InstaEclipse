@@ -4,4 +4,21 @@
     <string name="ig_toast_marked_as_seen">Marked as seen</string>
     <string name="ig_toast_channel_marked_as_seen">Channel marked as seen</string>
     <string name="ig_feature_view_once_badge">View-once icon</string>
+    <string name="ig_chat_export_banner">Chat export</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="one">%1$d message</item>
+        <item quantity="other">%1$d messages</item>
+    </plurals>
+    <string name="ig_chat_export_edited">edited</string>
+    <string name="ig_chat_export_pinned">pinned</string>
+    <string name="ig_chat_export_forwarded">forwarded</string>
+    <string name="ig_chat_export_story_reply">Story reply</string>
+    <string name="ig_chat_export_reply_to">to @%1$s</string>
+    <string name="ig_chat_export_shared_story">Shared story</string>
+    <string name="ig_chat_export_shared_reel">Shared reel</string>
+    <string name="ig_chat_export_shared_post">Shared post</string>
+    <string name="ig_chat_export_shared_profile">Shared profile</string>
+    <string name="ig_chat_export_mention_by_you">You mentioned them in your story</string>
+    <string name="ig_chat_export_mention_of_you">Mentioned you in their story</string>
+    <string name="ig_chat_export_unsupported">Chat export doesn\'t work on this Instagram version</string>
 </resources>
