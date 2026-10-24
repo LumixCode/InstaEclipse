@@ -17,6 +17,7 @@ import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 
 public class SettingsManager {
     private static final String PREF_NAME = "instaeclipse_prefs";
+    public static final String PASSCODE_SET = "lockPasscodeSet";
 
     /** Extreme Mode keeps these on: turning one off from outside the locked menus is refused. */
     private static final Set<String> EXTREME_KEEP_ON = new HashSet<>(Arrays.asList(
@@ -89,6 +90,7 @@ public class SettingsManager {
         editor.putString("lockedDirectThreads", FeatureFlags.lockedDirectThreads);
         editor.putString("lockDirectPasscode", FeatureFlags.lockDirectPasscode);
         editor.putString("lockDirectSalt", FeatureFlags.lockDirectSalt);
+        editor.putBoolean(PASSCODE_SET, passcodeSet(FeatureFlags.lockDirectPasscode));
         editor.putBoolean("lockDirectAlways", FeatureFlags.lockDirectAlways);
         editor.putBoolean("lockWholeApp", FeatureFlags.lockWholeApp);
         editor.putBoolean("hideSpecificChats", FeatureFlags.hideSpecificChats);
@@ -520,7 +522,16 @@ public class SettingsManager {
 
         for (String flag : ExtrasFeatures.flags()) ExtrasFeatures.set(flag, prefs.getBoolean(flag, false));
 
+        boolean passcodeSet = passcodeSet(FeatureFlags.lockDirectPasscode);
+        if (!Boolean.valueOf(passcodeSet).equals(all.get(PASSCODE_SET))) {
+            applyEdits(java.util.Collections.singletonMap(PASSCODE_SET, passcodeSet));
+        }
+
         FeatureManager.refreshFeatureStatus();
+    }
+
+    public static boolean passcodeSet(String hash) {
+        return hash != null && !hash.isEmpty();
     }
 
     private static int clamped(String key, int stored) {
@@ -581,7 +592,8 @@ public class SettingsManager {
      */
     public static boolean acceptsCompanionWrite(SharedPreferences preferences, String key, Object value) {
         if (key == null) return false;
-        Refusal reason = PrefsMerge.isPrivate(key) ? Refusal.PRIVATE : refusalReason(preferences.getAll(), key, value);
+        Refusal reason = PrefsMerge.isPrivate(key) || PrefsMerge.isStatus(key) ? Refusal.PRIVATE
+                : refusalReason(preferences.getAll(), key, value);
         logRefusal(key, value, reason);
         return reason == Refusal.NONE;
     }
@@ -589,7 +601,7 @@ public class SettingsManager {
     enum Refusal { NONE, PRIVATE, TYPE, EXTREME, PASSCODE }
 
     static Refusal refusalReason(java.util.Map<String, ?> stored, String key, Object value) {
-        if (key == null || PrefsMerge.isPrivate(key)) return Refusal.PRIVATE;
+        if (key == null || PrefsMerge.isPrivate(key) || PrefsMerge.isStatus(key)) return Refusal.PRIVATE;
         Object existing = stored.get(key);
         if (existing != null && value != null && !existing.getClass().isInstance(value)) return Refusal.TYPE;
         if (isLockedByExtreme(key, value)) return Refusal.EXTREME;

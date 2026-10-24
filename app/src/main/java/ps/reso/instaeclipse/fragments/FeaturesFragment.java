@@ -74,6 +74,7 @@ import ps.reso.instaeclipse.mods.media.MediaStoreTarget;
 import ps.reso.instaeclipse.utils.backup.CompanionRestorePlan;
 import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
 import ps.reso.instaeclipse.utils.core.PermissionAsk;
+import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.core.SettingsSchema;
 import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
 import ps.reso.instaeclipse.utils.ipc.ModuleReplies;
@@ -356,6 +357,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         public List<String> requiresAnyOf;
         /** Switch is locked (disabled) when this key is currently true. */
         public String disabledWhenTrue;
+        public String subtitleWhenOn;
         /** False when another setting overrides this row (fixed when the menu is built). */
         public boolean enabled = true;
 
@@ -554,6 +556,11 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     itemHolder.tvSubtitle.setVisibility(View.VISIBLE);
                     itemHolder.tvSubtitle.setText(reason);
                     itemHolder.tvSubtitle.setTextColor(MaterialColors.getColor(itemHolder.itemView, com.google.android.material.R.attr.colorOnSurfaceVariant));
+                } else if (item.subtitleWhenOn != null && getCurrentState(item.prefKey)) {
+                    itemHolder.tvSubtitle.setVisibility(View.VISIBLE);
+                    itemHolder.tvSubtitle.setText(item.subtitleWhenOn);
+                    itemHolder.tvSubtitle.setTextColor(MaterialColors.getColor(itemHolder.itemView,
+                            com.google.android.material.R.attr.colorOnSurfaceVariant));
                 } else if (item.subtitle != null) {
                     itemHolder.tvSubtitle.setVisibility(View.VISIBLE);
                     itemHolder.tvSubtitle.setText(item.subtitle);
@@ -689,7 +696,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
             }
             for (int i = 0; i < items.size(); i++) {
                 FeatureItem fi = items.get(i);
-                if (fi.requiresAnyOf != null || fi.disabledWhenTrue != null) {
+                if (fi.requiresAnyOf != null || fi.disabledWhenTrue != null || fi.subtitleWhenOn != null) {
                     notifyItemChanged(i);
                 }
             }
@@ -879,6 +886,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private static final Set<String> FOCUS_LOCKED = focusLocked();
     private static final List<String> LOCK_SWITCHES = Arrays.asList(
             "lockWholeApp", "lockDirectMessages", "lockSpecificMessages", "lockDirectAlways", "lockSavedCollections");
+    private static final List<String> PASSCODE_LOCKS = Arrays.asList(
+            "lockWholeApp", "lockDirectMessages", "lockSpecificMessages", "lockSavedCollections");
     private static final int[] CORNER_NAMES = {R.string.ig_dialog_extras_share_domain_off, R.string.feat_corner_small,
             R.string.feat_corner_medium, R.string.feat_corner_large, R.string.feat_corner_extra_large,
             R.string.feat_corner_round};
@@ -1881,13 +1890,12 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 .show();
     }
 
-    /**
-     * A lock this app can only turn on: Instagram refuses turning it off from here while a passcode
-     * is set (SettingsManager.isLockedByPasscode), so once on the row locks itself and points to
-     * Instagram's Lock menu, which asks for the passcode.
-     */
     private FeatureItem createLockSwitch(int iconRes, String title, String prefKey) {
         FeatureItem item = createSwitch(iconRes, "#5E5CE6", title, prefKey);
+        if (Boolean.FALSE.equals(localCache.getAll().get(SettingsManager.PASSCODE_SET))) {
+            if (PASSCODE_LOCKS.contains(prefKey)) item.subtitleWhenOn = getString(R.string.feat_lock_needs_passcode);
+            return item;
+        }
         item.disabledWhenTrue = prefKey;
         item.disabledReason = getString(R.string.ig_lock_turn_off_in_ig);
         return item;

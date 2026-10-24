@@ -45,6 +45,10 @@ public final class PrefsMerge {
         return key != null && EXCLUDED.contains(key);
     }
 
+    public static boolean isStatus(String key) {
+        return key != null && STATUS.contains(key);
+    }
+
     /** True for a setting Instagram may share with the companion. */
     public static boolean isSharedSetting(String key, Object value) {
         if (key == null || key.startsWith("__") || isPrivate(key)) return false;
