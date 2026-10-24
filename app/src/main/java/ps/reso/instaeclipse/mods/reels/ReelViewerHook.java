@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -35,10 +36,12 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.JitGuard;
+import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.ui.ViewPager2Input;
 
 /**
@@ -48,17 +51,24 @@ import ps.reso.instaeclipse.utils.ui.ViewPager2Input;
 public final class ReelViewerHook {
     private static final String CONFIG = "com.instagram.clips.intf.ClipsViewerConfig";
     private static final String SOURCE = "com.instagram.clips.intf.ClipsViewerSource";
+    private static final String MEDIA = "com.instagram.feed.media.Media";
     private static final String VIEWPAGER2 = "androidx.viewpager2.widget.ViewPager2";
-    private static final String CACHE_PAGER_INPUT = "ReelPagerInput_v1";
+    private static final String PAGER_ID = "clips_viewer_view_pager";
     private static final String CACHE_REGISTRARS = "ReelImpressionRegistrars_v2";
     private static final String MISSING = "missing";
+    private static final FieldCache CONFIG_FIELDS = new FieldCache(CONFIG);
+    private static final FieldCache SOURCE_FIELDS = new FieldCache(SOURCE);
+    private static final FieldCache MEDIA_FIELDS = new FieldCache(MEDIA);
+    private static final FieldCache HANDLER_FIELDS = new FieldCache(null);
+    private static final Map<Class<?>, Method> MEDIA_IDS = new ConcurrentHashMap<>();
     private static final Set<View> blockedRoots = Collections.newSetFromMap(new WeakHashMap<>());
     private final Set<Object> players = Collections.newSetFromMap(new WeakHashMap<>());
-    private final Map<Object, ReelViewerSession> sessions = new WeakHashMap<>();
-    private final Map<Object, ReelViewerSession> impressionSources = new WeakHashMap<>();
-    private final Map<View, ReelViewerSession> viewerRoots = new WeakHashMap<>();
+    private final ReelSessions sessions = new ReelSessions();
     private final Map<View, ReelPagerGate> reelPagers = new WeakHashMap<>();
     private Method pausePlayer;
+    private Class<?> pagerClass;
+    private Method inputSetter;
+    private Field inputField;
     private boolean anyPagerLocked;
     private boolean touchGateInstalled;
 
@@ -112,9 +122,8 @@ public final class ReelViewerHook {
 
             int playbackHooks = 0;
             int itemPlaybackHooks = 0;
-            for (String suffix : new String[]{"maybeResumePlayer", "resumeCurrentPlayer",
-                    "tryToResumeVideoPlayback", "maybeResumeScrolledInPlayer"}) {
-                boolean suppliesItem = suffix.equals("maybeResumePlayer") || suffix.equals("maybeResumeScrolledInPlayer");
+            for (String suffix : new String[]{"maybeResumePlayer", "resumeCurrentPlayer", "tryToResumeVideoPlayback"}) {
+                boolean suppliesItem = suffix.equals("maybeResumePlayer");
                 for (Method method : resolve(bridge, loader, "ReelPlayback_" + suffix,
                         "_ClipsVideoPlayerController_" + suffix)) {
                     if (Modifier.isStatic(method.getModifiers()) || method.getReturnType() != void.class) continue;
@@ -129,7 +138,7 @@ public final class ReelViewerHook {
                                     if (FeatureFlags.disableReels && !FeatureFlags.disableReelsExceptDM) param.setResult(null);
                                     return;
                                 }
-                                ReelViewerSession session = sessionForConfig(fieldOfType(param.thisObject, CONFIG));
+                                ReelViewerSession session = sessionForConfig(CONFIG_FIELDS.value(param.thisObject));
                                 if (session != null && param.args.length > 0) session.select(mediaId(param.args[0]));
                                 if (blockReason(session) != ReelBlockPolicy.Reason.NONE) {
                                     param.setResult(null);
@@ -151,11 +160,15 @@ public final class ReelViewerHook {
                 XposedBridge.hookMethod(method, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) {
                         JitGuard.tick(param.method);
-                        if (!(param.args[0] instanceof ViewGroup)) return;
-                        watch((ViewGroup) param.args[0], param.thisObject);
+                        if (!(param.args[0] instanceof ViewGroup root)) return;
+                        registerPager(root);
+                        watch(root, param.thisObject);
                     }
                 });
                 viewerHooks++;
+            }
+            if (viewerHooks > 0 && pagerClass != null && inputField != null) {
+                FeatureStatusTracker.setHooked("reelsLockScroll");
             }
             boolean blockingAvailable = viewerHooks > 0 && itemPlaybackHooks > 0 && pausePlayer != null;
             if (blockingAvailable) FeatureStatusTracker.setHooked("NightReelBlock");
@@ -195,7 +208,7 @@ public final class ReelViewerHook {
                         @Override protected void beforeHookedMethod(MethodHookParam param) {
                             JitGuard.tick(param.method);
                             if (idle()) return;
-                            if (viewerRoots.containsKey(param.thisObject)) updatePagers();
+                            if (sessions.isRoot(param.thisObject)) updatePagers();
                             if (blockedRoots.contains(param.thisObject)) param.setResult(true);
                         }
                     });
@@ -207,7 +220,7 @@ public final class ReelViewerHook {
     private void watch(ViewGroup root, Object fragment) {
         try {
             ReelViewerSession session = sessionForConfig(viewerConfig(fragment));
-            viewerRoots.put(root, session);
+            sessions.bindRoot(root, session);
             updatePagers();
             TextView cover = new TextView(root.getContext());
             cover.setBackgroundColor(0xFF17171B);
@@ -273,7 +286,7 @@ public final class ReelViewerHook {
         for (Object player : new ArrayList<>(players)) {
             try {
                 if (pausePlayer.getDeclaringClass().isInstance(player)
-                        && blockReason(sessionForConfig(fieldOfType(player, CONFIG)))
+                        && blockReason(sessionForConfig(CONFIG_FIELDS.value(player)))
                         != ReelBlockPolicy.Reason.NONE) {
                     pausePlayer.invoke(player, "instaeclipse_reels_blocked", false, false);
                 }
@@ -285,50 +298,23 @@ public final class ReelViewerHook {
 
     private void installScrollGate(DexKitBridge bridge, ClassLoader loader) {
         try {
-            Class<?> pagerClass = loader.loadClass(VIEWPAGER2);
+            Class<?> pager = loader.loadClass(VIEWPAGER2);
             Method setter = null;
             try {
-                setter = pagerClass.getDeclaredMethod("setUserInputEnabled", boolean.class);
+                setter = pager.getDeclaredMethod("setUserInputEnabled", boolean.class);
             } catch (NoSuchMethodException e) {
                 ModuleLog.detail("(IE|ReelLimit) setUserInputEnabled inlined; writing the pager input field");
             }
-            Field inputField = null;
             if (setter != null) {
                 try {
-                    inputField = setterInputField(bridge, loader, pagerClass, setter);
+                    inputField = ViewPager2Input.setterInputField(bridge, loader, pager, setter);
                 } catch (Throwable t) {
                     ModuleLog.detail("(IE|ReelLimit) pager setter field unresolved; using ViewPager2Input", t);
                 }
-            }
-            final Method enabledSetter = setter;
-            final Field setterField = inputField;
-            XC_MethodHook rememberPager = new XC_MethodHook() {
-                @Override protected void afterHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
-                    Object pager = fieldOfType(param.thisObject, VIEWPAGER2);
-                    if (!(pager instanceof View view)) return;
-                    if (!reelPagers.containsKey(view)) {
-                        // ViewPager2Input needs a live pager, so the fallback resolves here.
-                        Field field = setterField != null ? setterField : ViewPager2Input.field(view);
-                        if (field == null) return;
-                        reelPagers.put(view, new ReelPagerGate(field, enabledSetter));
-                    }
-                    updatePagers();
-                }
-            };
-            Set<Class<?>> owners = new java.util.HashSet<>();
-            for (Method method : resolve(bridge, loader, "ReelPagerView_v1", "ClipsViewPagerImpl_getViewAtIndex")) {
-                if (Modifier.isStatic(method.getModifiers())) continue;
-                XposedBridge.hookMethod(method, rememberPager);
-                if (owners.add(method.getDeclaringClass())) {
-                    XposedBridge.hookAllConstructors(method.getDeclaringClass(), rememberPager);
-                }
-            }
-            if (owners.isEmpty()) throw new NoSuchMethodException("Clips pager owner");
-            if (setter != null) {
                 XposedBridge.hookMethod(setter, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
                         JitGuard.tick(param.method);
+                        if (idle()) return;
                         ReelPagerGate gate = reelPagers.get(param.thisObject);
                         if (gate == null || gate.isUpdating()) return;
                         boolean requested = (boolean) param.args[0];
@@ -341,27 +327,29 @@ public final class ReelViewerHook {
                     }
                 });
             }
+            inputSetter = setter;
             // Input disabling stops swipes/accessibility paging. Also guard explicit page jumps once
             // the opened reel is laid out; initial DM positioning must still be allowed. "Lock Reels
             // scrolling" is not checked here, so IG's own auto-scroll keeps advancing.
-            for (Method method : PagerJumpFilter.jumps(pagerClass)) {
+            for (Method method : PagerJumpFilter.jumps(pager)) {
                 XposedBridge.hookMethod(method, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
                         JitGuard.tick(param.method);
-                        View pager = (View) param.thisObject;
-                        if (!reelPagers.containsKey(pager) || !pager.isLaidOut()) return;
-                        ReelViewerSession session = sessionForView(pager);
+                        if (idle()) return;
+                        View view = (View) param.thisObject;
+                        if (!reelPagers.containsKey(view) || !view.isLaidOut()) return;
+                        ReelViewerSession session = sessionForView(view);
                         if (!ReelBlockPolicy.shouldLockScrolling(session)) return;
                         if (session.currentMediaId != null
-                                && (int) param.args[0] != (int) XposedHelpers.callMethod(pager, "getCurrentItem")) {
+                                && (int) param.args[0] != (int) XposedHelpers.callMethod(view, "getCurrentItem")) {
                             param.setResult(null);
                         }
                     }
                 });
             }
-            FeatureStatusTracker.setHooked("reelsLockScroll");
-            ModuleLog.detail("(IE|ReelLimit) scroll gate pager owners=" + owners.size()
-                    + " setter=" + (setter != null));
+            pagerClass = pager;
+            ModuleLog.detail("(IE|ReelLimit) scroll gate setter=" + (setter != null)
+                    + " input=" + (inputField != null));
         } catch (Throwable t) {
             ModuleLog.error("(IE|ReelLimit) Could not turn on locking the reel scroll (blocked reels are still covered)", t);
         }
@@ -379,6 +367,7 @@ public final class ReelViewerHook {
             XposedBridge.hookMethod(intercept, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam param) {
                     JitGuard.tick(param.method);
+                    if (idle()) return;
                     if (inputLock((View) param.thisObject)) {
                         param.setResult(false);
                     }
@@ -389,31 +378,19 @@ public final class ReelViewerHook {
         }
     }
 
-    /** The getter is obfuscated in Instagram. Resolve the setter's sole boolean write instead. */
-    private static Field setterInputField(DexKitBridge bridge, ClassLoader loader, Class<?> pagerClass,
-                                          Method setter) throws ReflectiveOperationException {
-        String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(CACHE_PAGER_INPUT) : null;
-        if (cached != null) {
-            try {
-                Field field = pagerClass.getDeclaredField(cached);
-                if (field.getType() == boolean.class) {
-                    field.setAccessible(true);
-                    return field;
-                }
-            } catch (NoSuchFieldException ignored) {} // stale cache: rediscover below
+    private void registerPager(ViewGroup root) {
+        if (pagerClass == null) return;
+        try {
+            int id = ResIds.id(root.getContext(), PAGER_ID);
+            View pager = id == 0 ? null : root.findViewById(id);
+            if (!pagerClass.isInstance(pager) || reelPagers.containsKey(pager)) return;
+            Field field = inputField != null ? inputField : ViewPager2Input.field(pager);
+            if (field == null) return;
+            reelPagers.put(pager, new ReelPagerGate(field, inputSetter));
+            FeatureStatusTracker.setHooked("reelsLockScroll");
+        } catch (Throwable t) {
+            ModuleLog.detail("(IE|ReelLimit) cannot register the reel pager", t);
         }
-        Field inputField = null;
-        for (var use : bridge.getMethodData(setter).getUsingFields()) {
-            Field field = use.getField().getFieldInstance(loader);
-            if (!use.getUsingType().isWrite() || field.getType() != boolean.class
-                    || field.getDeclaringClass() != pagerClass || Modifier.isStatic(field.getModifiers())) continue;
-            if (inputField != null) throw new IllegalStateException("Ambiguous pager input flag");
-            inputField = field;
-        }
-        if (inputField == null) throw new NoSuchFieldException("Pager input flag");
-        inputField.setAccessible(true);
-        DexKitCache.saveString(CACHE_PAGER_INPUT, inputField.getName());
-        return inputField;
     }
 
     private void updatePagers() {
@@ -437,16 +414,12 @@ public final class ReelViewerHook {
         return FeatureFlags.reelsLockScroll || ReelBlockPolicy.shouldLockScrolling(sessionForView(view));
     }
 
-    private View viewerRoot(View view) {
+    private ReelViewerSession sessionForView(View view) {
         for (View current = view; current != null;
              current = current.getParent() instanceof View ? (View) current.getParent() : null) {
-            if (viewerRoots.containsKey(current)) return current;
+            if (sessions.isRoot(current)) return sessions.forRoot(current);
         }
         return null;
-    }
-
-    private ReelViewerSession sessionForView(View view) {
-        return viewerRoots.get(viewerRoot(view));
     }
 
     private static ReelBlockPolicy.Reason blockReason(ReelViewerSession session) {
@@ -468,28 +441,29 @@ public final class ReelViewerHook {
     }
 
     private ReelViewerSession sessionForConfig(Object config) {
-        if (config == null) return null;
-        return sessions.computeIfAbsent(config, key -> new ReelViewerSession(isDirectConfig(key)));
+        return sessions.forConfig(config, ReelViewerHook::isDirectConfig);
     }
 
-    private static String mediaId(Object item) {
-        Object media = fieldOfType(item, "com.instagram.feed.media.Media");
+    private static String mediaId(Object item) throws ReflectiveOperationException {
+        Object media = MEDIA_FIELDS.value(item);
         if (media == null) return null;
-        Object id = XposedHelpers.callMethod(media, "getId");
+        Method getId = MEDIA_IDS.get(media.getClass());
+        if (getId == null) {
+            getId = media.getClass().getMethod("getId");
+            getId.setAccessible(true);
+            MEDIA_IDS.put(media.getClass(), getId);
+        }
+        Object id = getId.invoke(media);
         return id instanceof String ? (String) id : null;
     }
 
     private ReelViewerSession sessionForImpression(Object handler) {
         if (handler == null) return null;
-        for (Class<?> c = handler.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
-            for (Field field : c.getDeclaredFields()) {
-                if (Modifier.isStatic(field.getModifiers()) || field.getType().isPrimitive()) continue;
-                try {
-                    field.setAccessible(true);
-                    ReelViewerSession session = impressionSources.get(field.get(handler));
-                    if (session != null) return session;
-                } catch (Throwable ignored) {}
-            }
+        for (Field field : HANDLER_FIELDS.fields(handler.getClass())) {
+            try {
+                ReelViewerSession session = sessions.forSource(field.get(handler));
+                if (session != null) return session;
+            } catch (Throwable ignored) {}
         }
         return null;
     }
@@ -500,23 +474,16 @@ public final class ReelViewerHook {
             // This registrar receives both the viewer config and the logger source forwarded to
             // organic impression handlers. Match their identity, never the currently visible tab.
             for (Constructor<?> constructor : impressionRegistrars(bridge, loader)) {
+                Class<?>[] types = constructor.getParameterTypes();
+                int configIndex = configParam(types);
+                int[] sourceIndexes = ReelSessions.sourceParams(types);
+                if (configIndex < 0 || sourceIndexes.length == 0) continue;
                 XposedBridge.hookMethod(constructor, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) {
                         JitGuard.tick(param.method);
-                        Object config = null;
-                        for (Object arg : param.args) {
-                            if (arg != null && arg.getClass().getName().equals(CONFIG)) { config = arg; break; }
-                        }
-                        ReelViewerSession session = sessionForConfig(config);
+                        ReelViewerSession session = sessionForConfig(param.args[configIndex]);
                         if (session == null) return;
-                        for (Object arg : param.args) {
-                            if (arg == null) continue;
-                            try {
-                                if (arg.getClass().getMethod("getModuleName").getReturnType() == String.class) {
-                                    impressionSources.put(arg, session);
-                                }
-                            } catch (NoSuchMethodException ignored) {}
-                        }
+                        for (int index : sourceIndexes) sessions.bindSource(param.args[index], session);
                     }
                 });
                 bindings++;
@@ -565,10 +532,14 @@ public final class ReelViewerHook {
     }
 
     private static boolean takesConfig(Constructor<?> constructor) {
-        for (Class<?> type : constructor.getParameterTypes()) {
-            if (type.getName().equals(CONFIG)) return true;
+        return configParam(constructor.getParameterTypes()) >= 0;
+    }
+
+    private static int configParam(Class<?>[] types) {
+        for (int i = 0; i < types.length; i++) {
+            if (types[i].getName().equals(CONFIG)) return i;
         }
-        return false;
+        return -1;
     }
 
     private static Object viewerConfig(Object viewer) {
@@ -587,27 +558,11 @@ public final class ReelViewerHook {
     }
 
     private static boolean isDirectConfig(Object config) {
-        Object source = fieldOfType(config, SOURCE);
+        Object source = SOURCE_FIELDS.value(config);
         if (!(source instanceof Enum<?>)) return false;
         String name = ((Enum<?>) source).name();
         return name.equals("DIRECT") || name.equals("DIRECT_SEARCH") || name.equals("DIRECT_ICEBREAKER")
                 || name.equals("DIRECT_CROSS_APP_SAVES") || name.equals("CUTOUT_ATTRIBUTION_ON_DIRECT_MESSAGE");
-    }
-
-    private static Object fieldOfType(Object object, String type) {
-        if (object == null) return null;
-        if (object.getClass().getName().equals(type)) return object;
-        for (Class<?> c = object.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
-            for (Field field : c.getDeclaredFields()) {
-                if (Modifier.isStatic(field.getModifiers()) || !field.getType().getName().equals(type)) continue;
-                try {
-                    field.setAccessible(true);
-                    Object value = field.get(object);
-                    if (value != null) return value;
-                } catch (Throwable ignored) {}
-            }
-        }
-        return null;
     }
 
     private static List<Method> resolve(DexKitBridge bridge, ClassLoader loader, String key, String anchor) {
@@ -629,5 +584,46 @@ public final class ReelViewerHook {
         if (!result.isEmpty()) DexKitCache.saveMethods(key, result);
         else DexKitCache.saveString(key, MISSING);
         return result;
+    }
+
+    private static final class FieldCache {
+        private static final Field[] NONE = new Field[0];
+        private final String type;
+        private final Map<Class<?>, Field[]> byClass = new ConcurrentHashMap<>();
+
+        FieldCache(String type) {
+            this.type = type;
+        }
+
+        Field[] fields(Class<?> owner) {
+            Field[] cached = byClass.get(owner);
+            if (cached != null) return cached;
+            List<Field> found = new ArrayList<>();
+            for (Class<?> c = owner; c != null && c != Object.class; c = c.getSuperclass()) {
+                for (Field field : SafeReflect.fields(c)) {
+                    if (Modifier.isStatic(field.getModifiers()) || field.getType().isPrimitive()
+                            || (type != null && !field.getType().getName().equals(type))) continue;
+                    try {
+                        field.setAccessible(true);
+                        found.add(field);
+                    } catch (Throwable ignored) {}
+                }
+            }
+            Field[] fields = found.toArray(NONE);
+            byClass.put(owner, fields);
+            return fields;
+        }
+
+        Object value(Object object) {
+            if (object == null) return null;
+            if (object.getClass().getName().equals(type)) return object;
+            for (Field field : fields(object.getClass())) {
+                try {
+                    Object value = field.get(object);
+                    if (value != null) return value;
+                } catch (Throwable ignored) {}
+            }
+            return null;
+        }
     }
 }

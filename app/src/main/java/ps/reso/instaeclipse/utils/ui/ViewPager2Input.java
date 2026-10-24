@@ -4,6 +4,8 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -21,6 +23,7 @@ public final class ViewPager2Input {
 
     private static final String VIEWPAGER2 = "androidx.viewpager2.widget.ViewPager2";
     private static final String CACHE_PAGER_INPUT = "ViewPager2_userInputEnabled";
+    private static final String CACHE_SETTER_INPUT = "ReelPagerInput_v1";
 
     private static Field userInputField;
     private static boolean userInputFieldTried;
@@ -77,6 +80,32 @@ public final class ViewPager2Input {
             ModuleLog.warn("(IE|ViewPager2) Swiping between pages cannot be locked: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
         return null;
+    }
+
+    public static Field setterInputField(org.luckypray.dexkit.DexKitBridge bridge, ClassLoader loader,
+                                         Class<?> pagerClass, Method setter) throws ReflectiveOperationException {
+        String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(CACHE_SETTER_INPUT) : null;
+        if (cached != null) {
+            try {
+                Field field = pagerClass.getDeclaredField(cached);
+                if (field.getType() == boolean.class) {
+                    field.setAccessible(true);
+                    return field;
+                }
+            } catch (NoSuchFieldException ignored) {}
+        }
+        Field inputField = null;
+        for (var use : bridge.getMethodData(setter).getUsingFields()) {
+            Field field = use.getField().getFieldInstance(loader);
+            if (!use.getUsingType().isWrite() || field.getType() != boolean.class
+                    || field.getDeclaringClass() != pagerClass || Modifier.isStatic(field.getModifiers())) continue;
+            if (inputField != null) throw new IllegalStateException("Ambiguous pager input flag");
+            inputField = field;
+        }
+        if (inputField == null) throw new NoSuchFieldException("Pager input flag");
+        inputField.setAccessible(true);
+        DexKitCache.saveString(CACHE_SETTER_INPUT, inputField.getName());
+        return inputField;
     }
 
     private static Class<?> viewPager2Class(View pager) {
