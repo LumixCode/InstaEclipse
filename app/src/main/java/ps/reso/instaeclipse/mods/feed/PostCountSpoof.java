@@ -16,7 +16,6 @@ import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
@@ -40,14 +39,14 @@ public final class PostCountSpoof {
     private static final String TAG = "(IE|PostCounts) ";
     private static final String MEDIA = "com.instagram.feed.media.Media";
     public static final String FILE = "ie_post_counts.json";
-    static final String[] FIELDS = {"likes", "comments", "reposts", "shares"};
+    static final String[] FIELDS = PostCountStore.FIELDS;
     private static final String[][] KEYS = {
             {"like_count"},
             {"comment_count"},
             {"media_repost_count", "repost_count", "reposts_count"},
             {"reshare_count", "share_count", "shares_count"},
     };
-    private static final ConcurrentHashMap<String, int[]> COUNTS = new ConcurrentHashMap<>();
+    private static final PostCountStore STORE = new PostCountStore();
     private static volatile boolean loaded;
     private static Method getId;
 
@@ -172,20 +171,18 @@ public final class PostCountSpoof {
 
     private static int[] countsFor(Object media) {
         ensureLoaded();
-        if (getId == null || COUNTS.isEmpty()) return null;
+        if (getId == null || STORE.isEmpty()) return null;
         if (media == null) return null;
         try {
             Object id = getId.invoke(media);
-            return id == null ? null : COUNTS.get(key(id.toString()));
+            return id == null ? null : STORE.counts(key(id.toString()));
         } catch (Throwable t) {
             return null;
         }
     }
 
-    /** "pk_ownerid" and "pk" refer to the same post. */
     private static String key(String id) {
-        int cut = id.indexOf('_');
-        return cut > 0 ? id.substring(0, cut) : id;
+        return PostCountStore.key(id);
     }
 
     // ----- the counts row under a post -----
@@ -206,7 +203,7 @@ public final class PostCountSpoof {
                     ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                     if (!FeatureFlags.postCountSpoof || SETTING.get() == Boolean.TRUE) return;
                     ensureLoaded();
-                    if (COUNTS.isEmpty()) return;
+                    if (STORE.isEmpty()) return;
                     android.view.View v = (android.view.View) param.thisObject;
                     if (BUTTON_IDS[0] == 0) resolveIds(v);
                     // Bound before it is attached: look for its row once it is laid out.
@@ -263,7 +260,7 @@ public final class PostCountSpoof {
             for (int k = 0; k < BUTTON_IDS.length; k++) {
                 if (BUTTON_IDS[k] <= 0 || c[k] < 0 || child.findViewById(BUTTON_IDS[k]) == null) continue;
                 if (!(row.getChildAt(i + 1) instanceof android.widget.TextView label)) continue;
-                String text = c[k] == 0 ? "" : ps.reso.instaeclipse.mods.ui.ProfileSpoofHook.shortCount(c[k]);
+                String text = PostCountStore.label(c[k]);
                 if (label.getVisibility() != android.view.View.VISIBLE) label.setVisibility(android.view.View.VISIBLE);
                 if (!text.contentEquals(label.getText())) {
                     SETTING.set(Boolean.TRUE);
@@ -317,36 +314,12 @@ public final class PostCountSpoof {
                 if (BUTTON_IDS[0] == 0) resolveIds(v);
                 if (v.getId() == BUTTON_IDS[0] && BUTTON_IDS[0] > 0) {
                     android.view.ViewGroup row = rowOf(v);
-                    if (row != null && showsPost(row, id, before)) writeRow(row, after != null ? after : realOf(id));
+                    if (row != null && STORE.showsPost(rowShown(row), id, null, before)) writeRow(row, after != null ? after : STORE.realOf(id));
                     continue;
                 }
                 if (v instanceof android.view.ViewGroup g) for (int i = 0; i < g.getChildCount(); i++) st.push(g.getChildAt(i));
             }
         });
-    }
-
-    /** The real counts recorded for a post (what Instagram's models report), -1 when unknown. */
-    private static int[] realOf(String id) {
-        long[] v = REAL.get(id);
-        int[] out = new int[FIELDS.length];
-        for (int k = 0; k < FIELDS.length; k++) out[k] = v == null ? -1 : (int) v[k];
-        return out;
-    }
-
-    /** The row shows this post: its numbers are the post's previous edited or real numbers. */
-    private static boolean showsPost(android.view.ViewGroup row, String id, int[] before) {
-        long[] real = REAL.get(id);
-        if (real == null) return false;
-        String[] shown = shownIn(row);
-        boolean any = false;
-        for (int k = 0; k < 4; k++) {
-            if (shown[k] == null) continue;
-            String r = real[k] < 0 ? null : real[k] == 0 ? "" : ps.reso.instaeclipse.mods.ui.ProfileSpoofHook.shortCount((int) real[k]);
-            String b = before == null || before[k] < 0 ? null : ps.reso.instaeclipse.mods.ui.ProfileSpoofHook.shortCount(before[k]);
-            if (!(shown[k].equals(r) || shown[k].equals(b) || (real[k] == 0 && shown[k].equals("0")))) return false;
-            any = true;
-        }
-        return any;
     }
 
     private static String[] shownIn(android.view.ViewGroup row) {
@@ -359,47 +332,23 @@ public final class PostCountSpoof {
         return shown;
     }
 
-    /** Real counts of edited posts, as Instagram's models report them: key -> {likes, comments,
-     *  reposts, shares (-1 unknown), last seen}. Used to recognize an edited post's row. */
-    private static final ConcurrentHashMap<String, long[]> REAL = new ConcurrentHashMap<>();
-
     private static void remember(Object media, int which, int real) {
         try {
-            String k = key(String.valueOf(getId.invoke(media)));
-            long[] v = REAL.computeIfAbsent(k, x -> new long[]{-1, -1, -1, -1, 0});
-            v[which] = real;
-            v[4] = System.currentTimeMillis();
+            STORE.remember(key(String.valueOf(getId.invoke(media))), which, real, System.currentTimeMillis());
         } catch (Throwable ignored) { }
     }
 
-    /**
-     * The edited post a row shows, by what it shows: the post's own author is you and its shown
-     * counts are that post's real counts. When several match, the one bound last.
-     */
     private static int[] byContent(android.view.ViewGroup row) {
-        String self = ps.reso.instaeclipse.mods.ui.ProfileSpoofHook.knownUsername();
+        return STORE.byContent(rowShown(row), ps.reso.instaeclipse.mods.ui.ProfileSpoofHook.knownUsername());
+    }
+
+    private static PostCountStore.Row rowShown(android.view.ViewGroup row) {
         android.view.View item = row;
         for (int i = 0; i < 8 && item.getParent() instanceof android.view.View p; i++) item = p;
         int nameId = row.getResources().getIdentifier("row_feed_photo_profile_name", "id", row.getContext().getPackageName());
         android.view.View name = nameId != 0 ? item.findViewById(nameId) : null;
-        if (self != null && name instanceof android.widget.TextView tv && tv.getText() != null
-                && !tv.getText().toString().trim().equalsIgnoreCase(self)) return null;
-        String[] shown = shownIn(row);
-        String best = null;
-        long bestTime = -1;
-        for (java.util.Map.Entry<String, long[]> e : REAL.entrySet()) {
-            if (!COUNTS.containsKey(e.getKey())) continue;
-            long[] v = e.getValue();
-            boolean ok = true;
-            for (int k = 0; k < 4 && ok; k++) {
-                if (shown[k] == null || v[k] < 0) continue;
-                String real = v[k] == 0 ? "" : ps.reso.instaeclipse.mods.ui.ProfileSpoofHook.shortCount((int) v[k]);
-                String ours = COUNTS.get(e.getKey())[k] < 0 ? null : ps.reso.instaeclipse.mods.ui.ProfileSpoofHook.shortCount(COUNTS.get(e.getKey())[k]);
-                ok = shown[k].equals(real) || shown[k].equals(ours) || (v[k] == 0 && shown[k].equals("0"));
-            }
-            if (ok && v[4] > bestTime) { best = e.getKey(); bestTime = v[4]; }
-        }
-        return best == null ? null : COUNTS.get(best);
+        String author = name instanceof android.widget.TextView tv && tv.getText() != null ? tv.getText().toString().trim() : null;
+        return new PostCountStore.Row(shownIn(row), author);
     }
 
     /** The post a feed row shows: a Media held by the row's views (their tags or fields). */
@@ -469,17 +418,10 @@ public final class PostCountSpoof {
             if (loaded && t == fileTime) return;
             loaded = true;
             fileTime = t;
-            COUNTS.clear();
+            STORE.clear();
             if (t == 0) return;
             try {
-                JSONObject o = new JSONObject(new String(new android.util.AtomicFile(f).readFully(), StandardCharsets.UTF_8));
-                for (java.util.Iterator<String> it = o.keys(); it.hasNext(); ) {
-                    String k = it.next();
-                    JSONObject v = o.getJSONObject(k);
-                    int[] c = new int[FIELDS.length];
-                    for (int i = 0; i < FIELDS.length; i++) c[i] = v.optInt(FIELDS[i], -1);
-                    COUNTS.put(k, c);
-                }
+                STORE.read(new JSONObject(new String(new android.util.AtomicFile(f).readFully(), StandardCharsets.UTF_8)));
             } catch (Throwable e) {
                 ModuleLog.warn(TAG + "Could not read your saved post counts: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             }
@@ -492,12 +434,7 @@ public final class PostCountSpoof {
         android.util.AtomicFile atomic = new android.util.AtomicFile(f);
         java.io.FileOutputStream out = null;
         try {
-            JSONObject o = new JSONObject();
-            for (java.util.Map.Entry<String, int[]> e : COUNTS.entrySet()) {
-                JSONObject v = new JSONObject();
-                for (int i = 0; i < FIELDS.length; i++) if (e.getValue()[i] >= 0) v.put(FIELDS[i], e.getValue()[i]);
-                o.put(e.getKey(), v);
-            }
+            JSONObject o = STORE.toJson();
             out = atomic.startWrite();
             out.write(o.toString().getBytes(StandardCharsets.UTF_8));
             atomic.finishWrite(out);
@@ -514,7 +451,7 @@ public final class PostCountSpoof {
         String id;
         try { id = key(String.valueOf(getId.invoke(media))); } catch (Throwable t) { return; }
         ensureLoaded();
-        int[] cur = COUNTS.get(id);
+        int[] cur = STORE.counts(id);
         IeDialog dlg = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_post_counts_title))
                 .message(I18n.t(ctx, R.string.ig_post_counts_hint));
         int[] labels = {R.string.ig_post_counts_likes, R.string.ig_post_counts_comments,
@@ -532,7 +469,7 @@ public final class PostCountSpoof {
             if (cur != null && cur[i] >= 0) inputs[i].setText(String.valueOf(cur[i]));
         }
         final int[] before = cur == null ? null : cur.clone();
-        dlg.secondary(I18n.t(ctx, R.string.ig_post_counts_reset), () -> { COUNTS.remove(id); save(); refreshShown(ctx, id, before, null); });
+        dlg.secondary(I18n.t(ctx, R.string.ig_post_counts_reset), () -> { STORE.remove(id); save(); refreshShown(ctx, id, before, null); });
         dlg.primary(ctx.getString(android.R.string.ok), () -> {
             int[] c = new int[FIELDS.length];
             boolean any = false;
@@ -540,7 +477,7 @@ public final class PostCountSpoof {
                 c[i] = ps.reso.instaeclipse.utils.profile.SpoofCounts.parse(inputs[i].getText().toString());
                 any |= c[i] >= 0;
             }
-            if (any) COUNTS.put(id, c); else COUNTS.remove(id);
+            if (any) STORE.put(id, c, null); else STORE.remove(id);
             save();
             refreshShown(ctx, id, before, any ? c : null);
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_post_counts_saved),
