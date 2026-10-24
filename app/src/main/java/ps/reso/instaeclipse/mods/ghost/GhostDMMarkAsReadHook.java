@@ -11,15 +11,13 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
-import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
-import ps.reso.instaeclipse.xposedcompat.XposedBridge;
-import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.ghost.SeenPause;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.ViewAttachHooks;
 
 public class GhostDMMarkAsReadHook {
 
@@ -34,22 +32,12 @@ public class GhostDMMarkAsReadHook {
 
     public void install(ClassLoader classLoader) {
         try {
-            XposedHelpers.findAndHookMethod(View.class, "onAttachedToWindow", new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    // Bail immediately if the feature is off — this hook fires for every
-                    // view attachment in the entire app, so the fast path must be trivial.
-                    if (!FeatureFlags.isGhostSeen) return;
-
-                    View view = (View) param.thisObject;
-
-                    // Cached, including "not found" (a miss used to be looked up on every attach).
-                    sCachedContainerId = ps.reso.instaeclipse.utils.ui.ResIds.id(view.getContext(), "row_thread_composer_buttons_container");
-
-                    if (sCachedContainerId == 0 || view.getId() != sCachedContainerId) return;
-                    if (!(view.getParent() instanceof ViewGroup parent)) return;
-                    injectIndependentButton(parent, view);
-                }
+            ViewAttachHooks.add("GhostDM", view -> {
+                if (!FeatureFlags.isGhostSeen) return;
+                sCachedContainerId = ps.reso.instaeclipse.utils.ui.ResIds.id(view.getContext(), "row_thread_composer_buttons_container");
+                if (sCachedContainerId == 0 || view.getId() != sCachedContainerId) return;
+                if (!(view.getParent() instanceof ViewGroup parent)) return;
+                injectIndependentButton(parent, view);
             });
         } catch (Throwable t) {
             ModuleLog.error("(InstaEclipse): Could not add the mark-as-read button to chats", t);

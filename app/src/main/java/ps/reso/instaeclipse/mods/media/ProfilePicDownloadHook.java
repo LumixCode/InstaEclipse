@@ -46,6 +46,8 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.ui.ResIds;
+import ps.reso.instaeclipse.utils.ui.ViewAttachHooks;
 
 /**
  * Profile Picture Downloader
@@ -65,11 +67,11 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
  */
 public class ProfilePicDownloadHook {
 
-    private static final Handler mainHandler = new Handler(Looper.getMainLooper());
     private static final String  HOOKED_TAG  = "ie_profile_dl";
 
-    /** Cached resource ID for "expanded_profile_pic"; 0 = not yet resolved. */
-    private static volatile int expandedPicViewId = 0;
+    private static final class Main {
+        static final Handler HANDLER = new Handler(Looper.getMainLooper());
+    }
 
     // ── Install ───────────────────────────────────────────────────────────────
 
@@ -183,32 +185,16 @@ public class ProfilePicDownloadHook {
     }
 
     private static void hookExpandedPicture() {
-        // Hook View.onAttachedToWindow — fires once per view attachment, works for any
-        // window type (Activity, Dialog, BottomSheet) without relying on layout listeners.
-        XposedHelpers.findAndHookMethod(View.class, "onAttachedToWindow", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (!FeatureFlags.enableProfileDownload) return;
-                View v = (View) param.thisObject;
-                int vid = v.getId();
-                // Generated ids (package byte 0) are no resources: a lookup only makes Android log
-                // "Invalid resource ID" for every such view attached.
-                if (vid == View.NO_ID || (vid >>> 24) == 0) return;
-
-                // Fast path: cached int comparison (only resolves resource name once)
-                if (expandedPicViewId != 0) {
-                    if (vid != expandedPicViewId) return;
-                } else {
-                    try {
-                        String name = v.getResources().getResourceEntryName(vid);
-                        if (!"expanded_profile_pic".equals(name)) return;
-                        expandedPicViewId = vid;
-                    } catch (Throwable ignored) { return; }
-                }
-
-                injectLongPress(v);
-            }
+        ViewAttachHooks.add("ProfilePic", v -> {
+            if (!FeatureFlags.enableProfileDownload) return;
+            if (isExpandedPicture(v.getContext(), v.getId())) injectLongPress(v);
         });
+    }
+
+    public static boolean isExpandedPicture(Context ctx, int vid) {
+        if (vid == View.NO_ID || (vid >>> 24) == 0) return false;
+        int id = ResIds.id(ctx, "expanded_profile_pic");
+        return id != 0 && vid == id;
     }
 
     // ── UI injection ──────────────────────────────────────────────────────────
@@ -304,7 +290,7 @@ public class ProfilePicDownloadHook {
                 ModuleLog.error("(IE|ProfileDL) Could not load the profile picture: " + t);
             }
             final Bitmap b = bmp;
-            mainHandler.post(() -> {
+            Main.HANDLER.post(() -> {
                 spinner.setVisibility(View.GONE);
                 if (b == null) {
                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_profile_pic_url_not_found), Toast.LENGTH_SHORT).show();
@@ -323,12 +309,12 @@ public class ProfilePicDownloadHook {
             try {
                 boolean delegated = FeedVideoDownloadHook.downloadAndSave(ctx, url, filename, false, username);
                 if (!delegated) {
-                    mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
+                    Main.HANDLER.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
                             I18n.t(ctx, R.string.ig_toast_profile_pic_saved), Toast.LENGTH_SHORT).show());
                 }
             } catch (Throwable e) {
                 ModuleLog.error("(IE|ProfileDL) Could not save the profile picture: " + e.getClass().getSimpleName() + ": " + e.getMessage());
-                mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
+                Main.HANDLER.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
                         I18n.t(ctx, R.string.ig_toast_download_failed, e.getMessage()), Toast.LENGTH_SHORT).show());
             }
         }).start();
