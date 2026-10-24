@@ -1,9 +1,13 @@
 package ps.reso.instaeclipse;
 
 import android.app.Application;
+import android.os.Process;
 
+import ps.reso.instaeclipse.mods.media.FrameSessionCache;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.core.RemotePrefsMirror;
+import ps.reso.instaeclipse.utils.log.Logging;
+import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 /** Companion app process start: keeps the settings Instagram reads on a cold start in sync. */
 public class InstaEclipseApp extends Application {
@@ -17,5 +21,11 @@ public class InstaEclipseApp extends Application {
         // modern flavor: mirrors "instaeclipse_cache" into Vector's remote preferences (libxposed
         // API 102, read by the hooked app); legacy flavor: no-op (Instagram uses XSharedPreferences)
         RemotePrefsMirror.start(this);
+        new Thread(() -> {
+            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
+            Logging.init(this, "instaeclipse_companion.log");
+            if (!FrameSessionCache.cleanupOrphans(getCacheDir()))
+                ModuleLog.detail("(IE|Frame) Startup cache cleanup incomplete (left-over frame files are removed later)");
+        }, "ie-app-init").start();
     }
 }

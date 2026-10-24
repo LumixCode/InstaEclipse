@@ -26,7 +26,6 @@ import ps.reso.instaeclipse.fragments.HelpFragment;
 import ps.reso.instaeclipse.fragments.HomeFragment;
 import ps.reso.instaeclipse.fragments.LoggingFragment;
 import ps.reso.instaeclipse.fragments.TabFragment;
-import ps.reso.instaeclipse.utils.log.Logging;
 import ps.reso.instaeclipse.utils.version.VersionCheckUtility;
 
 public class MainActivity extends AppCompatActivity {
@@ -50,8 +49,6 @@ public class MainActivity extends AppCompatActivity {
         // NOTE: intentionally NOT applying DynamicColors — 0.7 ships a fixed branded dark palette
         // (see Theme.InstaEclipse); adopting the wallpaper palette here would override the brand.
         super.onCreate(savedInstanceState);
-        Logging.init(this, "instaeclipse_companion.log");
-        ps.reso.instaeclipse.mods.media.FrameSessionCache.cleanupOrphans(getCacheDir());
         if (savedInstanceState == null) VersionCheckUtility.checkForUpdates(this); // not again on rotation
         // Stale companion-cache keys are dropped once per process in InstaEclipseApp.onCreate.
 

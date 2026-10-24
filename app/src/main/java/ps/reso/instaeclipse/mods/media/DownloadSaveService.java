@@ -86,9 +86,6 @@ public class DownloadSaveService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        Logging.init(this, "instaeclipse_companion.log");
-        if (!FrameSessionCache.cleanupOrphans(getCacheDir()))
-            ModuleLog.detail("(IE|Frame) Startup cache cleanup incomplete (left-over frame files are removed later)");
         nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         ensureChannel();
     }

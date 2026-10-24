@@ -60,7 +60,6 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
-        Logging.init(this, "instaeclipse_companion.log");
         buildUi();
         if (state != null) { failMessage(getString(R.string.ie_frame_reopen)); return; }
         try {

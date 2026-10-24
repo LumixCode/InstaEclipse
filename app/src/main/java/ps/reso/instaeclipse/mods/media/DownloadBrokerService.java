@@ -23,10 +23,6 @@ import ps.reso.instaeclipse.utils.ipc.CompanionBridge;
 
 /** Only this broker is exported. Tokens target private components and cannot be filled in. */
 public final class DownloadBrokerService extends Service {
-    @Override public void onCreate() {
-        super.onCreate();
-        FrameSessionCache.cleanupOrphans(getCacheDir());
-    }
     private final Handler expiry = new Handler(Looper.getMainLooper());
     private final IBinder broker = new Binder() {
         @Override protected boolean onTransact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
