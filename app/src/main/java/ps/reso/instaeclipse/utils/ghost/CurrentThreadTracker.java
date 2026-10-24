@@ -10,9 +10,15 @@ import android.view.View;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
@@ -56,6 +62,8 @@ public final class CurrentThreadTracker {
     private static final List<Listener> LISTENERS = new CopyOnWriteArrayList<>();
 
     private static volatile boolean sInstalled;
+    private static volatile Field argumentsField, viewField;
+    private static final Map<Class<?>, Object[][]> CONTROLLERS = new ConcurrentHashMap<>();
 
     /** Resumed fragments that carry a thread key, oldest first (a thread-keyed sheet/viewer can sit
      *  on top of the open thread; when it pauses, the thread underneath is current again). */
@@ -76,15 +84,77 @@ public final class CurrentThreadTracker {
     }
 
     public static String currentThreadId(Activity activity) {
+        Object[] entry = entryOf(activity);
+        if (entry == null) return null;
+        String live = threadIdOf(((WeakReference<?>) entry[0]).get());
+        return live != null ? live : (String) entry[1];
+    }
+
+    public static Object fragment(Activity activity, Predicate<Object> accept) {
+        if (activity == null) return null;
+        List<Object> fragments = new ArrayList<>();
+        synchronized (RESUMED) {
+            prune(null);
+            for (int i = RESUMED.size() - 1; i >= 0; i--) {
+                Object[] entry = RESUMED.get(i);
+                Object fragment = ((WeakReference<?>) entry[0]).get();
+                if (fragment != null && ((WeakReference<?>) entry[2]).get() == activity) fragments.add(fragment);
+            }
+        }
+        for (Object fragment : fragments) if (accept.test(fragment)) return fragment;
+        return null;
+    }
+
+    private static Object[] entryOf(Activity activity) {
         if (activity == null) return null;
         synchronized (RESUMED) {
             prune(null);
             for (int i = RESUMED.size() - 1; i >= 0; i--) {
                 Object[] entry = RESUMED.get(i);
-                if (((WeakReference<?>) entry[2]).get() == activity) return (String) entry[1];
+                if (((WeakReference<?>) entry[2]).get() == activity) return entry;
             }
             return null;
         }
+    }
+
+    public static String threadIdOf(Object fragment) {
+        if (fragment == null) return null;
+        for (Object[] path : controllers(fragment.getClass())) {
+            try {
+                Object controller = ((Field) path[0]).get(fragment);
+                Object key = controller == null ? null : ((Method) path[1]).invoke(controller);
+                String id = key == null ? null : UnsentIdentity.threadId(key.toString());
+                if (id != null) return id;
+            } catch (ReflectiveOperationException | RuntimeException ignored) {
+            }
+        }
+        return null;
+    }
+
+    private static Object[][] controllers(Class<?> type) {
+        return CONTROLLERS.computeIfAbsent(type, ignored -> {
+            List<Object[]> found = new ArrayList<>();
+            for (Class<?> c = type; c != null && c != Object.class; c = c.getSuperclass()) {
+                if (c.getName().startsWith("android")) break;
+                for (Field field : ps.reso.instaeclipse.utils.core.SafeReflect.fields(c)) {
+                    if (Modifier.isStatic(field.getModifiers()) || field.getType().isPrimitive()) continue;
+                    String owner = field.getType().getName();
+                    if (!owner.startsWith("X.") && !owner.startsWith("com.instagram.")) continue;
+                    for (Method method : ps.reso.instaeclipse.utils.core.SafeReflect.methods(field.getType())) {
+                        if (Modifier.isStatic(method.getModifiers()) || method.getParameterCount() != 0
+                                || !DTK.equals(method.getReturnType().getName())) continue;
+                        try {
+                            field.setAccessible(true);
+                            method.setAccessible(true);
+                            found.add(new Object[]{field, method});
+                        } catch (RuntimeException ignoredAccess) {
+                        }
+                        break;
+                    }
+                }
+            }
+            return found.toArray(new Object[0][]);
+        });
     }
 
     private static Object[] prune(Object fragment) {
@@ -109,6 +179,8 @@ public final class CurrentThreadTracker {
         if (sInstalled) return;
         try {
             Class<?> fragment = Class.forName("androidx.fragment.app.Fragment", false, classLoader);
+            argumentsField = field(fragment, "mArguments");
+            viewField = field(fragment, "mView");
             XposedHelpers.findAndHookMethod(fragment, "onResume", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -132,9 +204,23 @@ public final class CurrentThreadTracker {
         }
     }
 
+    private static Field field(Class<?> type, String name) {
+        try {
+            Field field = type.getDeclaredField(name);
+            field.setAccessible(true);
+            return field;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static Object read(Field field, Object owner, String name) throws IllegalAccessException {
+        return field != null ? field.get(owner) : XposedHelpers.getObjectField(owner, name);
+    }
+
     private static void onFragmentResumed(Object fragment) {
         try {
-            Object argsObj = XposedHelpers.getObjectField(fragment, "mArguments");
+            Object argsObj = read(argumentsField, fragment, "mArguments");
             if (!(argsObj instanceof Bundle args)) return;
             String id = threadIdFromBundle(args, fragment.getClass().getClassLoader(), 0);
             if (id == null) return;
@@ -174,7 +260,7 @@ public final class CurrentThreadTracker {
 
     private static Activity activityOf(Object fragment) {
         try {
-            Object view = XposedHelpers.getObjectField(fragment, "mView");
+            Object view = read(viewField, fragment, "mView");
             return view instanceof View v ? findActivity(v.getContext()) : null;
         } catch (Throwable t) {
             return null;
@@ -192,27 +278,32 @@ public final class CurrentThreadTracker {
     static String threadIdFrom(Args args, int depth) {
         if (args == null || depth > 2) return null;
         try {
+            List<Object> values = new ArrayList<>();
             for (String k : args.keys()) {
+                if (!threadName(k)) continue;
                 Object v = args.get(k);
                 if (v == null) continue;
+                values.add(v);
                 if (args.isThreadKey(v)) {
                     String id = UnsentIdentity.threadId(v.toString());
-                    if (id == null) id = firstStringField(v);
                     if (id != null) return id;
                 } else {
                     String id = threadIdFrom(args.nested(v), depth + 1);
                     if (id != null) return id;
                 }
             }
-            for (String k : args.keys()) {
-                Object v = args.get(k);
-                if (v == null || !v.getClass().getName().contains("ThreadTarget")) continue;
+            for (Object v : values) {
+                if (!v.getClass().getName().contains("ThreadTarget")) continue;
                 String id = numericId(v, 0, java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
                 if (id != null) return id;
             }
         } catch (Throwable ignored) {
         }
         return null;
+    }
+
+    static boolean threadName(String key) {
+        return key != null && key.toUpperCase(Locale.ROOT).contains("THREAD");
     }
 
     private record BundleArgs(Bundle bundle, ClassLoader loader) implements Args {

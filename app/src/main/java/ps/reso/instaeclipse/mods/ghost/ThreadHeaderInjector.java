@@ -9,6 +9,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -118,7 +119,7 @@ final class ThreadHeaderInjector {
         final Set<String> done = new HashSet<>();
         final Set<String> ran = new HashSet<>();
         WeakReference<View> header = new WeakReference<>(null);
-        String threadId;
+        String threadId, shownThread;
         long frame = NONE;
         boolean shown;
 
@@ -139,8 +140,11 @@ final class ThreadHeaderInjector {
             ran.clear();
             Activity a = activity.get();
             View current = a == null ? null : ThreadHeaderMenu.shownHeader(a);
-            if (current != header.get()) {
+            String live = current == null ? null : CurrentThreadTracker.currentThreadId(a);
+            String id = live != null ? live : threadId;
+            if (current != header.get() || !Objects.equals(id, shownThread)) {
                 header = new WeakReference<>(current);
+                shownThread = id;
                 done.clear();
             }
             shown = current != null;
@@ -150,7 +154,7 @@ final class ThreadHeaderInjector {
                 if (slot == null || (!slot.everyPass() && done.contains(key))) continue;
                 boolean ok;
                 try {
-                    ok = slot.entry().inject(a, threadId);
+                    ok = slot.entry().inject(a, id);
                 } catch (Throwable t) {
                     ok = false;
                     ModuleLog.detail("(IE|ThreadHeader) \"" + key + "\" entry failed: " + t.getClass().getSimpleName());

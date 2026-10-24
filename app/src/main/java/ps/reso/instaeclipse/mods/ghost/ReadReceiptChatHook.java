@@ -1,6 +1,5 @@
 package ps.reso.instaeclipse.mods.ghost;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -19,6 +18,7 @@ import ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker;
 import ps.reso.instaeclipse.utils.ghost.ReadReceiptWhitelist;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
  * Per-chat read receipts (#227), chosen from inside the chat: with "Send read receipts to specific
@@ -29,7 +29,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
  */
 public class ReadReceiptChatHook {
 
-    private static int threadHeaderId, headerTitleId;
     private static final Set<View> pendingDecors = Collections.newSetFromMap(new WeakHashMap<>());
 
     public void install(ClassLoader classLoader) {
@@ -45,11 +44,8 @@ public class ReadReceiptChatHook {
         }
         CurrentThreadTracker.install(classLoader);
         ThreadHeaderInjector.install(classLoader);
-        ThreadHeaderInjector.register("read", false, (a, threadId) -> {
-            if (!ReadReceiptGate.active(FeatureFlags.isGhostSeen, FeatureFlags.readReceiptChats)) return true;
-            ensureIds(a);
-            return tryInject(a);
-        });
+        ThreadHeaderInjector.register("read", false, (a, threadId) ->
+                !ReadReceiptGate.active(FeatureFlags.isGhostSeen, FeatureFlags.readReceiptChats) || tryInject(a, threadId));
         CurrentThreadTracker.addListener((a, threadId) -> {
             if (ReadReceiptGate.active(FeatureFlags.isGhostSeen, FeatureFlags.readReceiptChats)) register(a);
         });
@@ -57,24 +53,15 @@ public class ReadReceiptChatHook {
         ModuleLog.ok("(IE|ReadReceiptChat) ready");
     }
 
-    @SuppressLint("DiscouragedApi")
-    private static void ensureIds(Activity a) {
-        if (threadHeaderId == 0) {
-            threadHeaderId = a.getResources().getIdentifier("direct_thread_header", "id", a.getPackageName());
-            headerTitleId = a.getResources().getIdentifier("header_title", "id", a.getPackageName());
-        }
-    }
-
     private static void register(Activity a) {
         try {
-            ensureIds(a);
             View decor = a.getWindow().getDecorView();
-            if (tryInject(a)) return;
+            if (tryInject(a, null)) return;
             if (!pendingDecors.add(decor)) return;
             decor.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
                 @Override
                 public void onGlobalLayout() {
-                    if (ThreadHeaderInjector.handled(decor, "read") || tryInject(a)) {
+                    if (ThreadHeaderInjector.handled(decor, "read") || tryInject(a, null)) {
                         pendingDecors.remove(decor);
                         try { decor.getViewTreeObserver().removeOnGlobalLayoutListener(this); } catch (Throwable ignored) {}
                     }
@@ -86,11 +73,11 @@ public class ReadReceiptChatHook {
     }
 
     /** True once the entry is in this thread's menu (the header must be on screen). */
-    private static boolean tryInject(Activity a) {
-        View header = threadHeaderId != 0 ? a.findViewById(threadHeaderId) : null;
+    private static boolean tryInject(Activity a, String openThread) {
+        View header = ThreadHeaderMenu.shownHeader(a);
         if (header == null) return false;
         if (ThreadHeaderMenu.has(a, "read")) return true;
-        String threadId = HideChatsHook.resolveThreadId(a);
+        String threadId = openThread != null ? openThread : HideChatsHook.resolveThreadId(a);
         if (threadId == null) return false;
         return addEntry(a, threadId, header);
     }
@@ -109,7 +96,8 @@ public class ReadReceiptChatHook {
     }
 
     private static String titleOf(View header) {
-        View t = headerTitleId != 0 ? header.findViewById(headerTitleId) : null;
+        int titleId = ResIds.id(header.getContext(), "header_title");
+        View t = titleId != 0 ? header.findViewById(titleId) : null;
         return t instanceof TextView tv && tv.getText() != null ? tv.getText().toString().trim() : "";
     }
 }

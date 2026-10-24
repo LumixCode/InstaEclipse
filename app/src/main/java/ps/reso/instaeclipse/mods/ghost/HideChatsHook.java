@@ -46,6 +46,7 @@ import ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.mods.ui.utils.LifecycleHookUtil;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.LegacyPaths;
 import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -92,6 +93,7 @@ public class HideChatsHook {
     private static final KnownThreads knownThreads = new KnownThreads();
     private static final Map<Object, NativeInbox> nativeInboxes = new WeakHashMap<>();
     private static final Map<Class<?>, List<Field>> threadKeyFields = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Set<Class<?>> chatScreens = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private static volatile Method titleFormatter;
     /** invokeNoArg's lookups by class and name, misses included: the Lock gate resolves the open
      *  screen through them several times a second, and every miss threw NoSuchMethodException. */
@@ -418,12 +420,17 @@ public class HideChatsHook {
         return types;
     }
 
-    /**
-     * Instagram 446 keeps the active DirectThreadKey on the Direct Fragment's controller. Hooking
-     * that Fragment's lifecycle gives the header menu an exact, per-Activity thread identity
-     * before any layout pass tries to add its entry.
-     */
     private void installForegroundTracker(DexKitBridge bridge, ClassLoader classLoader) {
+        if (!LegacyPaths.has(LegacyPaths.HEADER)) {
+            for (Method method : directLifecycle(bridge, classLoader, "DirectThreadController.onResume")) {
+                chatScreens.add(method.getDeclaringClass());
+            }
+            int pauses = directLifecycle(bridge, classLoader, "DirectThreadController.onPause").size();
+            threadsTracked = true;
+            ModuleLog.detail("(IE|HideChats) open chat read from the chat tracker screens=" + chatScreens.size()
+                    + " pause=" + pauses);
+            return;
+        }
         int resumes = hookDirectLifecycle(bridge, classLoader,
                 "DirectThreadController.onResume", new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -460,19 +467,24 @@ public class HideChatsHook {
     private static int hookDirectLifecycle(DexKitBridge bridge, ClassLoader classLoader,
                                            String anchor, XC_MethodHook hook) {
         int count = 0;
-        try {
-            for (Method method : KeepUnsentMessagesHook.cachedMethods("HideChats_" + anchor, classLoader,
-                    () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(
-                            MethodMatcher.create().usingStrings(anchor).paramCount(0).returnType("void"))), classLoader))) {
-                try {
-                    XposedBridge.hookMethod(method, hook);
-                    count++;
-                } catch (Throwable ignored) {}
-            }
-        } catch (Throwable t) {
-            ModuleLog.detail("(IE|HideChats) lifecycle " + anchor + " failed: " + t.getMessage());
+        for (Method method : directLifecycle(bridge, classLoader, anchor)) {
+            try {
+                XposedBridge.hookMethod(method, hook);
+                count++;
+            } catch (Throwable ignored) {}
         }
         return count;
+    }
+
+    private static List<Method> directLifecycle(DexKitBridge bridge, ClassLoader classLoader, String anchor) {
+        try {
+            return KeepUnsentMessagesHook.cachedMethods("HideChats_" + anchor, classLoader,
+                    () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(
+                            MethodMatcher.create().usingStrings(anchor).paramCount(0).returnType("void"))), classLoader));
+        } catch (Throwable t) {
+            ModuleLog.detail("(IE|HideChats) lifecycle " + anchor + " failed: " + t.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     private static void rememberRows(List<?> rows, Object threadStore) {
@@ -596,7 +608,10 @@ public class HideChatsHook {
             return true;
         });
         CurrentThreadTracker.addListener((a, threadId) -> {
-            if (FeatureFlags.hideSpecificChats) registerListener(a);
+            boolean chat = !LegacyPaths.has(LegacyPaths.HEADER)
+                    && CurrentThreadTracker.fragment(a, HideChatsHook::chatScreen) != null;
+            if (chat || FeatureFlags.hideSpecificChats) registerListener(a);
+            if (chat) LockDirectMessagesHook.watchActivity(a);
         });
         ModuleLog.detail("(IE|HideChats) chat menu installed");
     }
@@ -745,7 +760,9 @@ public class HideChatsHook {
 
     private void onHideEntry(Activity activity, String boundId, View boundHeader, boolean hide) {
         ForegroundThread liveForeground = currentForegroundThread(activity);
-        String liveId = liveForeground == null
+        String liveId;
+        if (!LegacyPaths.has(LegacyPaths.HEADER)) liveId = liveForeground == null ? null : liveForeground.threadId;
+        else liveId = liveForeground == null
                 ? resolveVisibleThreadId(activity, boundHeader)
                 : directThreadId(liveForeground.fragment.get());
         if (!boundId.equals(liveId)) {
@@ -958,6 +975,10 @@ public class HideChatsHook {
     }
 
     private static String trackedThreadId(Activity activity) {
+        if (!LegacyPaths.has(LegacyPaths.HEADER)) {
+            ForegroundThread current = currentForegroundThread(activity);
+            return current == null ? null : current.threadId;
+        }
         if (!threadsTracked) return CurrentThreadTracker.currentThreadId();
         synchronized (foregroundThreads) {
             ForegroundThread current = foregroundThreads.get(activity);
@@ -967,6 +988,14 @@ public class HideChatsHook {
 
     /** Returns a binding only while its original Direct Fragment is still resumed in this Activity. */
     private static ForegroundThread currentForegroundThread(Activity activity) {
+        if (!LegacyPaths.has(LegacyPaths.HEADER)) {
+            Object fragment = CurrentThreadTracker.fragment(activity, HideChatsHook::chatScreen);
+            if (fragment == null || !Boolean.TRUE.equals(invokeNoArg(fragment, "isResumed"))
+                    || fragmentActivity(fragment) != activity) return null;
+            String threadId = CurrentThreadTracker.threadIdOf(fragment);
+            if (threadId == null && chatScreens.isEmpty()) threadId = CurrentThreadTracker.currentThreadId(activity);
+            return threadId == null ? null : new ForegroundThread(fragment, threadId);
+        }
         ForegroundThread current;
         synchronized (foregroundThreads) {
             current = foregroundThreads.get(activity);
@@ -981,6 +1010,12 @@ public class HideChatsHook {
             if (foregroundThreads.get(activity) == current) foregroundThreads.remove(activity);
         }
         return null;
+    }
+
+    private static boolean chatScreen(Object fragment) {
+        if (chatScreens.isEmpty()) return true;
+        for (Class<?> screen : chatScreens) if (screen.isInstance(fragment)) return true;
+        return false;
     }
 
     private static String directThreadId(Object fragment) {
@@ -1073,7 +1108,7 @@ public class HideChatsHook {
         ForegroundThread tracked = currentForegroundThread(activity);
         if (tracked != null) return tracked.threadId;
         Object fragment = findVisibleDirectFragment(invokeNoArg(activity, "getSupportFragmentManager"));
-        return directThreadId(fragment);
+        return LegacyPaths.has(LegacyPaths.HEADER) ? directThreadId(fragment) : CurrentThreadTracker.threadIdOf(fragment);
     }
 
     /** The open chat's id for {@code activity} (shared with ReadReceiptChatHook), or null: this

@@ -54,7 +54,6 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.media.DownloadFiles;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
-import ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker;
 import ps.reso.instaeclipse.utils.ghost.ThreadNames;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -169,7 +168,7 @@ public class ChatExportHook {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_unsupported), Toast.LENGTH_LONG).show();
             return;
         }
-        String tracked = CurrentThreadTracker.currentThreadId();
+        String tracked = UnsentThreadButtonHook.openChat(a);
         if (tracked == null) try { tracked = UnsentThreadButtonHook.openThread.get(); } catch (Throwable ignored) {}
         final String threadId = tracked;
         final Object session = threadId != null ? openChatSession(a) : null;

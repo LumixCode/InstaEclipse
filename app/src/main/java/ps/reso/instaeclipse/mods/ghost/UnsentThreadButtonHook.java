@@ -11,6 +11,7 @@ import java.lang.reflect.Modifier;
 import java.util.function.Supplier;
 
 import ps.reso.instaeclipse.mods.ui.utils.LifecycleHookUtil;
+import ps.reso.instaeclipse.utils.core.LegacyPaths;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
@@ -31,7 +32,7 @@ public class UnsentThreadButtonHook {
 
     private static final java.util.Set<View> pendingDecors =
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
-    private static int threadHeaderId, tagKeyId;
+    private static int threadHeaderId;
 
     public void install(ClassLoader classLoader) {
         // InstagramMainActivity declares no onResume on 446+ (IgFragmentActivity does), so a plain
@@ -50,7 +51,7 @@ public class UnsentThreadButtonHook {
         // Thread opened as a fragment inside the main activity fires no activity onResume.
         CurrentThreadTracker.install(classLoader);
         ThreadHeaderInjector.install(classLoader);
-        ThreadHeaderInjector.register("unsent", false, (activity, threadId) -> !enabled() || unsentEntry(activity));
+        ThreadHeaderInjector.register("unsent", false, (activity, threadId) -> !enabled() || unsentEntry(activity, threadId));
         ThreadHeaderInjector.register("export", false, (activity, threadId) -> {
             if (enabled()) ChatExportHook.inject(activity);
             return true;
@@ -74,10 +75,12 @@ public class UnsentThreadButtonHook {
     @SuppressLint("DiscouragedApi")
     private void ensureIds(Activity a) {
         if (threadHeaderId != 0) return;
-        String pkg = a.getPackageName();
-        android.content.res.Resources r = a.getResources();
-        threadHeaderId = r.getIdentifier("direct_thread_header", "id", pkg);
-        tagKeyId       = r.getIdentifier("direct_thread_view_layout_tag_key", "id", pkg);
+        threadHeaderId = a.getResources().getIdentifier("direct_thread_header", "id", a.getPackageName());
+    }
+
+    static String openChat(Activity activity) {
+        return LegacyPaths.has(LegacyPaths.HEADER) ? CurrentThreadTracker.currentThreadId()
+                : CurrentThreadTracker.currentThreadId(activity);
     }
 
     /** Best-effort chat name for the viewer title — prefer the @username (thread subtitle),
@@ -130,7 +133,7 @@ public class UnsentThreadButtonHook {
 
     /** Returns true once the chat header is on screen and its entries are in place (the listener detaches). */
     private boolean tryInject(Activity activity) {
-        if (!unsentEntry(activity)) return false;
+        if (!unsentEntry(activity, null)) return false;
         try {
             if (FeatureFlags.jumpToFirstMessage) JumpToFirstMessageHook.inject(activity);
             ChatExportHook.inject(activity);
@@ -141,7 +144,7 @@ public class UnsentThreadButtonHook {
         }
     }
 
-    private boolean unsentEntry(Activity activity) {
+    private boolean unsentEntry(Activity activity, String shownThread) {
         try {
             ensureIds(activity);
             // Only inside a DM thread: the thread header must be on screen (not a hidden cached chat).
@@ -150,21 +153,13 @@ public class UnsentThreadButtonHook {
 
             // Capture the thread id AT INJECTION (thread just opened, before any refresh churn),
             // bound to THIS header — a stable per-thread fallback if the live read fails.
-            final String bound = CurrentThreadTracker.currentThreadId();
-            // Only sources tied to THIS open chat: the resumed thread fragment, this header's own
-            // tags, the id bound when this header was filled, and the launching intent. No scan of
-            // the whole activity graph and no "last opened thread" global: in the main activity
-            // those return another chat (inbox rows, the previous chat) and leaked its unsent
-            // messages and exports into this one. Unknown stays null; callers never widen it.
+            final String bound = shownThread != null ? shownThread : openChat(activity);
             // Weak: the supplier is also kept in the static openThread, which must not pin a closed chat.
-            final java.lang.ref.WeakReference<View> headerRef = new java.lang.ref.WeakReference<>(header);
             final java.lang.ref.WeakReference<Activity> activityRef = new java.lang.ref.WeakReference<>(activity);
             final Supplier<String> thread = () -> {
-                String threadId = CurrentThreadTracker.currentThreadId();
-                View h = headerRef.get();
-                if (threadId == null && h != null) threadId = resolveThreadId(h);
-                if (threadId == null) threadId = bound;
                 Activity act = activityRef.get();
+                String threadId = act != null ? openChat(act) : null;
+                if (threadId == null) threadId = bound;
                 if (threadId == null && act != null) threadId = resolveFromIntent(act);
                 return threadId;
             };
@@ -235,52 +230,6 @@ public class UnsentThreadButtonHook {
                     if (v.getClass().getName().contains("DirectThreadKey")) return v;
                     Object r = scanForDirectThreadKey(v, depth + 1, seen, maxDepth);
                     if (r != null) return r;
-                }
-            }
-        } catch (Throwable ignored) {}
-        return null;
-    }
-
-    /** PROBE: walk the header + ancestors, read the thread tag key and any DirectThreadKey, log all. */
-    private String resolveThreadId(View header) {
-        String found = null;
-        View v = header;
-        int up = 0;
-        while (v != null && up++ < 8) {
-            try {
-                if (tagKeyId != 0) {
-                    Object t = v.getTag(tagKeyId);
-                    if (t != null) {
-                        ModuleLog.probe("(IE|UnsentBtn|PROBE) tagKey on " + v.getClass().getSimpleName()
-                                + " = " + t.getClass().getName());
-                        String id = threadIdFromAny(t);
-                        if (id != null && found == null) found = id;
-                    }
-                }
-                Object plain = v.getTag();
-                if (plain != null) {
-                    String id = threadIdFromAny(plain);
-                    if (id != null && found == null) found = id;
-                }
-            } catch (Throwable ignored) {}
-            v = (v.getParent() instanceof View) ? (View) v.getParent() : null;
-        }
-        return found;
-    }
-
-    /** If obj is (or contains) a DirectThreadKey, use the same canonical id as the retained log. */
-    private String threadIdFromAny(Object obj) {
-        if (obj == null) return null;
-        String cn = obj.getClass().getName();
-        if (cn.contains("DirectThreadKey")) return UnsentIdentity.thread(obj);
-        // shallow: some tags wrap the key
-        try {
-            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(obj.getClass())) {
-                if (Modifier.isStatic(f.getModifiers())) continue;
-                if (f.getType().getName().contains("DirectThreadKey")) {
-                    f.setAccessible(true);
-                    Object k = f.get(obj);
-                    if (k != null) return UnsentIdentity.thread(k);
                 }
             }
         } catch (Throwable ignored) {}
