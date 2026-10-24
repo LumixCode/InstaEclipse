@@ -296,6 +296,11 @@ public class SettingsManager {
             prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         }
         java.util.Map<String, ?> all = prefs.getAll();
+        java.util.Map<String, Object> edits = SettingsSchema.migrate(all);
+        if (!edits.isEmpty()) {
+            applyEdits(edits);
+            all = prefs.getAll();
+        }
 
         dropDeadKeys(prefs);
         FeatureFlags.isDevEnabled = prefs.getBoolean("isDevEnabled", false);
@@ -425,10 +430,8 @@ public class SettingsManager {
         FeatureFlags.spoofLng = readDoublePref(prefs, "spoofLng", 0.0);
         FeatureFlags.spoofLabel = prefs.getString("spoofLabel", "");
         FeatureFlags.spoofRecent = prefs.getString("spoofRecent", "");
-        migrateLocationPromptKey(prefs, all);
         FeatureFlags.forceReelQuality = readReelQuality(prefs, all);
         FeatureFlags.disableRepost = prefs.getBoolean("disableRepost", false);
-        migrateCreateGroupKey(prefs);
         FeatureFlags.hideShareCreateGroup = prefs.getBoolean("hideShareCreateGroup", false);
         FeatureFlags.exactTimestamps = prefs.getBoolean("exactTimestamps", false);
         FeatureFlags.likeUndo = prefs.getBoolean("likeUndo", false);
@@ -545,27 +548,16 @@ public class SettingsManager {
         if (e != null) e.apply();
     }
 
-    /** The older "hideCreateGroupButton" became upstream's "hideShareCreateGroup" (same sheet row). */
-    private static void migrateCreateGroupKey(SharedPreferences p) {
-        if (!p.contains("hideCreateGroupButton")) return;
-        SharedPreferences.Editor e = p.edit();
-        if (!p.contains("hideShareCreateGroup")) {
-            e.putBoolean("hideShareCreateGroup", p.getBoolean("hideCreateGroupButton", false));
+    private static void applyEdits(java.util.Map<String, Object> edits) {
+        SharedPreferences.Editor e = prefs.edit();
+        for (java.util.Map.Entry<String, Object> edit : edits.entrySet()) {
+            Object value = edit.getValue();
+            if (value == null) e.remove(edit.getKey());
+            else if (value instanceof Boolean) e.putBoolean(edit.getKey(), (Boolean) value);
+            else if (value instanceof Integer) e.putInt(edit.getKey(), (Integer) value);
+            else e.putString(edit.getKey(), String.valueOf(value));
         }
-        e.remove("hideCreateGroupButton").apply();
-    }
-
-    /**
-     * "Block location permission prompts" was folded into Extras "Hide onboarding prompts", which
-     * skips the same "Set up on new device" location page. Runs before the Extras flags load.
-     * getAll() + Boolean.TRUE.equals: a wrong-typed old value must not throw on every start.
-     */
-    private static void migrateLocationPromptKey(SharedPreferences p, java.util.Map<String, ?> all) {
-        Object old = all.get("blockLocationPrompts");
-        if (old == null) return;
-        SharedPreferences.Editor e = p.edit();
-        if (Boolean.TRUE.equals(old)) e.putBoolean("hideOnboardingPrompts", true);
-        e.remove("blockLocationPrompts").apply();
+        e.apply();
     }
 
     /**

@@ -1,5 +1,11 @@
 package ps.reso.instaeclipse.utils.feature;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 // Written from the settings receiver / menus, read from hook threads: volatile for visibility.
 public class FeatureFlags {
     // Upstream selection stays the default; Custom opts into the verified downloader.
@@ -223,4 +229,22 @@ public class FeatureFlags {
     public static volatile String  customEmojiPath = "";        // path to the user-picked EmojiCompat emoji font
     public static volatile String  downloaderCustomPath = "";   // human-readable display path
     public static volatile String  downloaderCustomUri  = "";   // SAF tree URI string for actual writes
+
+    public static final Map<String, Object> DEFAULTS = defaults();
+
+    private static Map<String, Object> defaults() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        for (Field field : FeatureFlags.class.getDeclaredFields()) {
+            int m = field.getModifiers();
+            if (!Modifier.isStatic(m) || Modifier.isFinal(m) || field.isSynthetic()) continue;
+            try {
+                Object value = field.get(null);
+                if (field.getType() == double.class) out.put(field.getName(), String.valueOf(value));
+                else if (value instanceof Boolean || value instanceof Integer || value instanceof String) out.put(field.getName(), value);
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+        return Collections.unmodifiableMap(out);
+    }
 }

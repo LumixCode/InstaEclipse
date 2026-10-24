@@ -7,6 +7,7 @@ import org.json.JSONObject;
 import ps.reso.instaeclipse.mods.reels.DailyReelLimit;
 import ps.reso.instaeclipse.mods.reels.NightReelSchedule;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
+import ps.reso.instaeclipse.utils.core.SettingsSchema;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 
@@ -18,183 +19,14 @@ public class SettingsBackupManager {
 
     private static final int VERSION = 1;
 
-    /** Serialises every known FeatureFlag into a versioned JSON string. */
     public static String toJson() throws JSONException {
         JSONObject s = new JSONObject();
-
-        // Developer
-        s.put("isDevEnabled",            FeatureFlags.isDevEnabled);
-        s.put("removeBuildExpiredPopup", FeatureFlags.removeBuildExpiredPopup);
-
-        // Ghost Mode
-        s.put("isGhostSeen",             FeatureFlags.isGhostSeen);
-        s.put("isGhostTyping",           FeatureFlags.isGhostTyping);
-        s.put("isGhostScreenshot",       FeatureFlags.isGhostScreenshot);
-        s.put("isGhostViewOnce",         FeatureFlags.isGhostViewOnce);
-        s.put("isGhostStory",            FeatureFlags.isGhostStory);
-        s.put("manualStorySeen",         FeatureFlags.manualStorySeen);
-        s.put("isGhostLive",             FeatureFlags.isGhostLive);
-        s.put("allowScreenshots",        FeatureFlags.allowScreenshots);
-        s.put("keepEphemeralMessages",   FeatureFlags.keepEphemeralMessages);
-
-        s.put("permanentViewMode",       FeatureFlags.permanentViewMode);
-        s.put("keepUnsentMessages",      FeatureFlags.keepUnsentMessages);
-        s.put("keepUnsentInChat",        FeatureFlags.keepUnsentInChat);
-        s.put("showUnsentIndicator",     FeatureFlags.showUnsentIndicator);
-        s.put("showUnsentButton",        FeatureFlags.showUnsentButton);
-        s.put("hideSpecificChats",       FeatureFlags.hideSpecificChats);
-        s.put("showHideChatButton",      FeatureFlags.showHideChatButton);
-
-        // Quick Toggles
-        s.put("quickToggleSeen",         FeatureFlags.quickToggleSeen);
-        s.put("quickToggleTyping",       FeatureFlags.quickToggleTyping);
-        s.put("quickToggleScreenshot",   FeatureFlags.quickToggleScreenshot);
-        s.put("quickToggleViewOnce",     FeatureFlags.quickToggleViewOnce);
-        s.put("quickToggleStory",        FeatureFlags.quickToggleStory);
-        s.put("quickToggleLive",         FeatureFlags.quickToggleLive);
-        s.put("quickToggleEphemeral",    FeatureFlags.quickToggleEphemeral);
-        s.put("quickTogglePermanentView",FeatureFlags.quickTogglePermanentView);
-        s.put("quickToggleAllowScreenshots", FeatureFlags.quickToggleAllowScreenshots);
-
-        // Clean Feed
-        s.put("hideSuggestionsInFeed",      FeatureFlags.hideSuggestionsInFeed);
-        s.put("hideThreadsSuggestions",     FeatureFlags.hideThreadsSuggestions);
-        s.put("hideLikedPosts",             FeatureFlags.hideLikedPosts);
-        s.put("confirmFeedRefresh",         FeatureFlags.confirmFeedRefresh);
-        s.put("hideCommunityNotes",         FeatureFlags.hideCommunityNotes);
-        s.put("followingOnlyFeed",         FeatureFlags.followingOnlyFeed);
-        s.put("hidePlusUpsells",            FeatureFlags.hidePlusUpsells);
-        s.put("expandCaptions",             FeatureFlags.expandCaptions);
-        s.put("offerAudioDownload",         FeatureFlags.offerAudioDownload);
-        s.put("enableVoiceDownload",        FeatureFlags.enableVoiceDownload);
-        s.put("enableStickerDownload",      FeatureFlags.enableStickerDownload);
-        s.put("storyTrayScale",             FeatureFlags.storyTrayScale);
-        s.put("feedCornerRadius",           FeatureFlags.feedCornerRadius);
-        s.put("storyRingColor",             FeatureFlags.storyRingColor);
-        s.put("enableDmMediaDownload",      FeatureFlags.enableDmMediaDownload);
-        s.put("offerCopyImage",             FeatureFlags.offerCopyImage);
-        s.put("offerMediaInfo",             FeatureFlags.offerMediaInfo);
-        s.put("offerPlaybackSpeed",         FeatureFlags.offerPlaybackSpeed);
-        s.put("maxUploadQuality",           FeatureFlags.maxUploadQuality);
-        s.put("downloaderUseOriginal",      FeatureFlags.downloaderUseOriginal);
-        s.put("downloaderQualityMaxShortSide", FeatureFlags.downloaderQualityMaxShortSide);
-        s.put("downloaderCompatibility",    FeatureFlags.downloaderCompatibility);
-        s.put("downloaderAllowFallback",    FeatureFlags.downloaderAllowFallback);
-        s.put("forceReelScrubber",          FeatureFlags.forceReelScrubber);
-        s.put("holdLeftSlowMotion",         FeatureFlags.holdLeftSlowMotion);
-        s.put("keepEditHistory",            FeatureFlags.keepEditHistory);
-        s.put("jumpToFirstMessage",         FeatureFlags.jumpToFirstMessage);
-        s.put("hideChatMenuButton",         FeatureFlags.hideChatMenuButton);
-        s.put("translateMessages",          FeatureFlags.translateMessages);
-        s.put("bulkUnsend",                 FeatureFlags.bulkUnsend);
-        s.put("chatExport",                 FeatureFlags.chatExport);
-        s.put("hideTabHome", FeatureFlags.hideTabHome);
-        s.put("hideTabReels", FeatureFlags.hideTabReels);
-        s.put("hideTabCreate", FeatureFlags.hideTabCreate);
-        s.put("hideTabMessages", FeatureFlags.hideTabMessages);
-        s.put("hideTabActivity", FeatureFlags.hideTabActivity);
-        s.put("hideTabProfile", FeatureFlags.hideTabProfile);
-        s.put("backLeavesHome", FeatureFlags.backLeavesHome);
-        s.put("hideNotesTray", FeatureFlags.hideNotesTray);
-        s.put("hideDmSuggestions", FeatureFlags.hideDmSuggestions);
-        s.put("hideInstants", FeatureFlags.hideInstants);
-        s.put("hideDmBlend", FeatureFlags.hideDmBlend);
-        s.put("readReceiptChats", FeatureFlags.readReceiptChats);
-        s.put("hideThreadsButton", FeatureFlags.hideThreadsButton);
-
-        // Ads
-        s.put("isAdBlockEnabled",        FeatureFlags.isAdBlockEnabled);
-        s.put("isAnalyticsBlocked",      FeatureFlags.isAnalyticsBlocked);
-        s.put("disableTrackingLinks",    FeatureFlags.disableTrackingLinks);
-        s.put("openLinksExternally",     FeatureFlags.openLinksExternally);
-
-        // Distraction Free
-        s.put("isExtremeMode",           FeatureFlags.isExtremeMode);
-        s.put("disableStories",          FeatureFlags.disableStories);
-        s.put("disableFeed",             FeatureFlags.disableFeed);
-        s.put("disableReels",            FeatureFlags.disableReels);
-        s.put("disableReelsExceptDM",    FeatureFlags.disableReelsExceptDM);
-        s.put("disableExplore",          FeatureFlags.disableExplore);
-        s.put("disableComments",         FeatureFlags.disableComments);
-        s.put("dailyReelLimitEnabled",   FeatureFlags.dailyReelLimitEnabled);
-        s.put("dailyReelLimitAllowDM",   FeatureFlags.dailyReelLimitAllowDM);
-        s.put("dailyReelLimit",          FeatureFlags.dailyReelLimit);
-        s.put("nightReelBlockEnabled",   FeatureFlags.nightReelBlockEnabled);
-        s.put("nightReelBlockStartMinutes", FeatureFlags.nightReelBlockStartMinutes);
-        s.put("nightReelBlockEndMinutes", FeatureFlags.nightReelBlockEndMinutes);
-        s.put("nightReelBlockAllowDM",   FeatureFlags.nightReelBlockAllowDM);
-        s.put("disableDiscoverPeople",   FeatureFlags.disableDiscoverPeople);
-
-        // Miscellaneous
-        s.put("disableStoryFlipping",    FeatureFlags.disableStoryFlipping);
-        s.put("disableVideoAutoPlay",    FeatureFlags.disableVideoAutoPlay);
-        s.put("spoofLastSeen",           FeatureFlags.spoofLastSeen);
-        s.put("disableSearchHistory",    FeatureFlags.disableSearchHistory);
-        s.put("confirmCalls",            FeatureFlags.confirmCalls);
-        s.put("spoofLocation",           FeatureFlags.spoofLocation);
-        s.put("spoofLat",                String.valueOf(FeatureFlags.spoofLat));
-        s.put("spoofLng",                String.valueOf(FeatureFlags.spoofLng));
-        s.put("forceReelQuality",        FeatureFlags.forceReelQuality);
-        s.put("disableRepost",           FeatureFlags.disableRepost);
-        s.put("hideShareCreateGroup",    FeatureFlags.hideShareCreateGroup);
-        s.put("exactTimestamps",         FeatureFlags.exactTimestamps);
-        s.put("likeUndo",                FeatureFlags.likeUndo);
-        s.put("showFollowStatusLabel",   FeatureFlags.showFollowStatusLabel);
-        s.put("showFollowingFollowStatus", FeatureFlags.showFollowingFollowStatus);
-        s.put("unlockPlusBenefits",      FeatureFlags.unlockPlusBenefits);
-        s.put("removeMetaAI",            FeatureFlags.removeMetaAI);
-        s.put("savedOnProfile",          FeatureFlags.savedOnProfile);
-        s.put("disableDoubleTapLike",    FeatureFlags.disableDoubleTapLike);
-        s.put("enableCopyComment",       FeatureFlags.enableCopyComment);
-        s.put("enableCaptionCopy",       FeatureFlags.enableCaptionCopy);
-        s.put("confirmLikes",            FeatureFlags.confirmLikes);
-        s.put("confirmFollows",          FeatureFlags.confirmFollows);
-        s.put("profileMenuTools",        FeatureFlags.profileMenuTools);
-        s.put("postCountSpoof",          FeatureFlags.postCountSpoof);
-        s.put("profileSpoofer",          FeatureFlags.profileSpoofer);
-        s.put("spoofFollowers",          FeatureFlags.spoofFollowers);
-        s.put("spoofFollowing",          FeatureFlags.spoofFollowing);
-        s.put("spoofPosts",              FeatureFlags.spoofPosts);
-        s.put("spoofVerified",           FeatureFlags.spoofVerified);
-        s.put("spoofName",               FeatureFlags.spoofName);
-        s.put("spoofUsername",           FeatureFlags.spoofUsername);
-        s.put("spoofBio",                FeatureFlags.spoofBio);
-        s.put("spoofAvatar",             FeatureFlags.spoofAvatar);
-        s.put("profileAnalyzer",         FeatureFlags.profileAnalyzer);
-        s.put("fancyBioFont",            FeatureFlags.fancyBioFont);
-        s.put("storyViewerSearch",       FeatureFlags.storyViewerSearch);
-        s.put("storyLinks",              FeatureFlags.storyLinks);
-        s.put("storyInfo",               FeatureFlags.storyInfo);
-        s.put("commentSearch",           FeatureFlags.commentSearch);
-        s.put("followListExport",        FeatureFlags.followListExport);
-        s.put("followersHistory",        FeatureFlags.followersHistory);
-        s.put("showFollowerToast",       FeatureFlags.showFollowerToast);
-        s.put("showFeatureToasts",       FeatureFlags.showFeatureToasts);
-        s.put("enableStoryMentions",     FeatureFlags.enableStoryMentions);
-
-        // Downloader
-        s.put("enablePostDownload",      FeatureFlags.enablePostDownload);
-        s.put("enableStoryDownload",     FeatureFlags.enableStoryDownload);
-        s.put("enableReelDownload",      FeatureFlags.enableReelDownload);
-        s.put("enableProfileDownload",   FeatureFlags.enableProfileDownload);
-        s.put("downloaderUsernameFolder",FeatureFlags.downloaderUsernameFolder);
-        s.put("downloaderAddTimestamp",  FeatureFlags.downloaderAddTimestamp);
-        s.put("copyMediaLink",           FeatureFlags.copyMediaLink);
-        s.put("saveInstants",            FeatureFlags.saveInstants);
-        s.put("uploadInstants",          FeatureFlags.uploadInstants);
-        s.put("cacheStories",            FeatureFlags.cacheStories);
-        s.put("storyCacheHours",         StoryCacheRetention.normalize(FeatureFlags.storyCacheHours));
-
+        for (String key : SettingsSchema.backupKeys(false)) {
+            s.put(key, "storyCacheHours".equals(key)
+                    ? StoryCacheRetention.normalize(FeatureFlags.storyCacheHours) : SettingsSchema.read(key));
+        }
         JSONObject root = new JSONObject();
-        root.put("version",  VERSION);
-        for (String flag : ps.reso.instaeclipse.utils.feature.ExtrasFeatures.flags())
-            s.put(flag, ps.reso.instaeclipse.utils.feature.ExtrasFeatures.get(flag));
-        s.put("customShareDomain", FeatureFlags.customShareDomain);
-        s.put("exactTimestampFormat", FeatureFlags.exactTimestampFormat);
-        s.put("spoofDevice", FeatureFlags.spoofDevice);
-        s.put("spoofLabel", FeatureFlags.spoofLabel);
-        s.put("spoofRecent", FeatureFlags.spoofRecent);
-        s.put("startupTab", FeatureFlags.startupTab);
+        root.put("version", VERSION);
         root.put("settings", s);
         return root.toString(2);
     }
@@ -405,33 +237,11 @@ public class SettingsBackupManager {
         return s.has(key) && !SettingsManager.isLockedByExtreme(key, s.get(key));
     }
 
-    /**
-     * A text setting from a backup, checked as {@link #fromJson} checks it: the value to store, or
-     * null when it isn't valid for {@code key}. Other keys keep their value (Instagram still checks
-     * them against its settings schema, ModuleReplies.isPreferenceValue). Used by the companion's
-     * restore.
-     */
     public static String restorableString(String key, String value) {
         if (key == null || value == null) return null;
-        switch (key) {
-            case "startupTab":
-                return java.util.Arrays.asList(ps.reso.instaeclipse.mods.ui.StartupTabHook.TABS).contains(value) ? value : null;
-            case "customShareDomain":
-                return ShareDomain.normalize(value);
-            case "exactTimestampFormat":
-                return ps.reso.instaeclipse.utils.text.TimestampFormat.isValid(value) ? value : null;
-            case "spoofDevice":
-                return java.util.Arrays.asList(ps.reso.instaeclipse.mods.misc.DeviceSpoofHook.DEVICES).contains(value) ? value : null;
-            case "storyRingColor":
-                return value.isEmpty() || ps.reso.instaeclipse.mods.ui.StoryTrayHook.parseColors(value) != null ? value : null;
-            case "spoofAvatar":
-                return ps.reso.instaeclipse.utils.profile.SpoofAvatar.isValid(value) ? value : null;
-            case "spoofLat":
-            case "spoofLng":
-                return Double.isNaN(parseDouble(value, Double.NaN)) ? null : value;
-            default:
-                return value;
-        }
+        if (SettingsSchema.type(key) != String.class) return value;
+        Object restored = SettingsSchema.restorable(key, value);
+        return restored instanceof String ? (String) restored : null;
     }
 
     /** Older backups stored Force Reel Quality as a toggle; a bad value must not abort the restore. */

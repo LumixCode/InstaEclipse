@@ -11,14 +11,10 @@ import android.os.Looper;
 import android.os.Parcel;
 import android.os.ResultReceiver;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 
 import ps.reso.instaeclipse.BuildConfig;
-import ps.reso.instaeclipse.utils.feature.FeatureFlags;
+import ps.reso.instaeclipse.utils.core.SettingsSchema;
 
 /** Protected commands and request-specific Binder replies; no public reply broadcasts. */
 public final class ModuleReplies {
@@ -26,9 +22,9 @@ public final class ModuleReplies {
     private static final String EXTRA_REPLY = BuildConfig.APPLICATION_ID + ".ipc.REPLY";
     private static final int RESULT = 1;
     private static final long REPLY_LIFETIME_MS = 30_000;
-    static final int MAX_PREFERENCE_STRING_CHARS = 16 * 1024;
+    static final int MAX_PREFERENCE_STRING_CHARS = SettingsSchema.MAX_STRING_CHARS;
     private static final int MAX_REPLY_BYTES = 512 * 1024;
-    private static final Map<String, Class<?>> PREFERENCE_TYPES = preferenceTypes();
+    private static final Map<String, Class<?>> PREFERENCE_TYPES = SettingsSchema.types();
 
     private ModuleReplies() { }
 
@@ -121,22 +117,6 @@ public final class ModuleReplies {
             callback = null;
             main.removeCallbacks(expiry);
         }
-    }
-
-    /** Reflect the existing settings schema instead of maintaining a second list of feature keys. */
-    private static Map<String, Class<?>> preferenceTypes() {
-        Map<String, Class<?>> types = new HashMap<>();
-        for (Field field : ps.reso.instaeclipse.utils.core.SafeReflect.fields(FeatureFlags.class)) {
-            if (!Modifier.isStatic(field.getModifiers()) || Modifier.isFinal(field.getModifiers())) continue;
-            Class<?> type = field.getType();
-            if (type == boolean.class) types.put(field.getName(), Boolean.class);
-            else if (type == int.class) types.put(field.getName(), Integer.class);
-            else if (type == String.class) types.put(field.getName(), String.class);
-        }
-        // SettingsManager persists these double-valued flags as strings.
-        types.put("spoofLat", String.class);
-        types.put("spoofLng", String.class);
-        return Collections.unmodifiableMap(types);
     }
 
     /** Reject mismatched actions before typed Intent getters can supply a default of the wrong type. */
