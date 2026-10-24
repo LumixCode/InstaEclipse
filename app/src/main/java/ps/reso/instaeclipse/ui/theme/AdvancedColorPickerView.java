@@ -1,17 +1,21 @@
 package ps.reso.instaeclipse.ui.theme;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ComposeShader;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewParent;
 
 /** Self-contained HSV color picker: hue strip + saturation/value box + live preview swatch. */
 public class AdvancedColorPickerView extends View {
@@ -19,6 +23,10 @@ public class AdvancedColorPickerView extends View {
     public interface OnColorChangedListener {
         void onColorChanged(int color);
     }
+
+    private static final int TARGET_NONE = 0;
+    private static final int TARGET_HUE = 1;
+    private static final int TARGET_SV = 2;
 
     private final Paint svPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint huePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -28,11 +36,14 @@ public class AdvancedColorPickerView extends View {
     private final RectF svRect = new RectF();
     private final RectF hueRect = new RectF();
     private final RectF previewRect = new RectF();
+    private final Path previewClip = new Path();
 
     private float hue = 0.0f;
     private float saturation = 1.0f;
     private float value = 1.0f;
     private int alpha = 255;
+    private int initialColor = Color.WHITE;
+    private int target = TARGET_NONE;
     private OnColorChangedListener listener;
 
     public AdvancedColorPickerView(Context context) {
@@ -51,16 +62,30 @@ public class AdvancedColorPickerView extends View {
         cursorPaint.setColor(Color.WHITE);
         previewPaint.setStyle(Paint.Style.FILL);
         checkerPaint.setStyle(Paint.Style.FILL);
-        checkerPaint.setColor(-2039584);
+        int cell = Math.max(1, Math.round(dp(6.0f)));
+        Bitmap checker = Bitmap.createBitmap(cell * 2, cell * 2, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(checker);
+        c.drawColor(Color.WHITE);
+        Paint grey = new Paint();
+        grey.setColor(0xFFCCCCCC);
+        c.drawRect(0, 0, cell, cell, grey);
+        c.drawRect(cell, cell, cell * 2, cell * 2, grey);
+        checkerPaint.setShader(new BitmapShader(checker, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT));
     }
 
     public void setColor(int color) {
         alpha = Color.alpha(color);
         float[] hsv = new float[3];
         Color.colorToHSV(color, hsv);
-        hue = hsv[0];
+        if (hsv[1] > 0.0f && hsv[2] > 0.0f) hue = hsv[0];
         saturation = hsv[1];
         value = hsv[2];
+        updateShaders();
+        invalidate();
+    }
+
+    public void setInitialColor(int color) {
+        initialColor = color;
         invalidate();
     }
 
@@ -87,6 +112,8 @@ public class AdvancedColorPickerView extends View {
         previewRect.set(pad, pad, pad + previewSize, pad + previewSize);
         hueRect.set(pad + previewSize + dp(16.0f), dp(8.0f) + pad, w - pad, dp(28.0f) + pad);
         svRect.set(pad, previewRect.bottom + dp(16.0f), w - pad, h - pad);
+        previewClip.reset();
+        previewClip.addRoundRect(previewRect, dp(12.0f), dp(12.0f), Path.Direction.CW);
         updateShaders();
     }
 
@@ -96,16 +123,22 @@ public class AdvancedColorPickerView extends View {
         Shader whiteGrad = new LinearGradient(svRect.left, svRect.top, svRect.right, svRect.top, Color.WHITE, hueColor, Shader.TileMode.CLAMP);
         Shader blackGrad = new LinearGradient(svRect.left, svRect.top, svRect.left, svRect.bottom, 0, Color.BLACK, Shader.TileMode.CLAMP);
         svPaint.setShader(new ComposeShader(whiteGrad, blackGrad, PorterDuff.Mode.MULTIPLY));
-        int[] hueColors = {Color.RED, Color.MAGENTA, Color.GREEN, Color.CYAN, Color.BLUE, Color.YELLOW, Color.RED};
+        int[] hueColors = new int[7];
+        for (int i = 0; i < hueColors.length; i++) hueColors[i] = Color.HSVToColor(new float[]{i * 60.0f, 1.0f, 1.0f});
         huePaint.setShader(new LinearGradient(hueRect.left, 0.0f, hueRect.right, 0.0f, hueColors, null, Shader.TileMode.CLAMP));
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        canvas.drawRoundRect(previewRect, dp(12.0f), dp(12.0f), checkerPaint);
+        canvas.save();
+        canvas.clipPath(previewClip);
+        canvas.drawRect(previewRect, checkerPaint);
+        previewPaint.setColor(initialColor);
+        canvas.drawRect(previewRect.left, previewRect.top, previewRect.centerX(), previewRect.bottom, previewPaint);
         previewPaint.setColor(getColor());
-        canvas.drawRoundRect(previewRect, dp(12.0f), dp(12.0f), previewPaint);
+        canvas.drawRect(previewRect.centerX(), previewRect.top, previewRect.right, previewRect.bottom, previewPaint);
+        canvas.restore();
         canvas.drawRoundRect(svRect, dp(16.0f), dp(16.0f), svPaint);
         canvas.drawRoundRect(hueRect, dp(10.0f), dp(10.0f), huePaint);
         float svX = svRect.left + (saturation * svRect.width());
@@ -114,33 +147,51 @@ public class AdvancedColorPickerView extends View {
         canvas.drawCircle(svX, svY, dp(10.0f), cursorPaint);
         cursorPaint.setColor(Color.BLACK);
         canvas.drawCircle(svX, svY, dp(8.0f), cursorPaint);
-        cursorPaint.setColor(Color.WHITE);
         float hueX = hueRect.left + ((hue / 360.0f) * hueRect.width());
+        cursorPaint.setColor(Color.WHITE);
         canvas.drawCircle(hueX, hueRect.centerY(), dp(10.0f), cursorPaint);
+        cursorPaint.setColor(Color.BLACK);
+        canvas.drawCircle(hueX, hueRect.centerY(), dp(8.0f), cursorPaint);
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (event.getAction() != MotionEvent.ACTION_DOWN && event.getAction() != MotionEvent.ACTION_MOVE) {
-            return super.onTouchEvent(event);
-        }
         float x = event.getX();
         float y = event.getY();
-        if (hueRect.contains(x, y)) {
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                if (hueRect.contains(x, y)) target = TARGET_HUE;
+                else if (svRect.contains(x, y)) target = TARGET_SV;
+                else target = TARGET_NONE;
+                if (target == TARGET_NONE) return super.onTouchEvent(event);
+                ViewParent parent = getParent();
+                if (parent != null) parent.requestDisallowInterceptTouchEvent(true);
+                track(x, y);
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                if (target == TARGET_NONE) return super.onTouchEvent(event);
+                track(x, y);
+                return true;
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                if (target == TARGET_NONE) return super.onTouchEvent(event);
+                target = TARGET_NONE;
+                return true;
+            default:
+                return super.onTouchEvent(event);
+        }
+    }
+
+    private void track(float x, float y) {
+        if (target == TARGET_HUE) {
             hue = clamp01((x - hueRect.left) / hueRect.width()) * 360.0f;
             updateShaders();
-            notifyChanged();
-            invalidate();
-            return true;
-        }
-        if (svRect.contains(x, y)) {
+        } else {
             saturation = clamp01((x - svRect.left) / svRect.width());
             value = 1.0f - clamp01((y - svRect.top) / svRect.height());
-            notifyChanged();
-            invalidate();
-            return true;
         }
-        return super.onTouchEvent(event);
+        notifyChanged();
+        invalidate();
     }
 
     private void notifyChanged() {

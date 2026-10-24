@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="theme_hex_invalid" tools:ignore="MissingTranslation">Enter 6 or 8 hex digits</string>
+    <string name="theme_custom_reset" tools:ignore="MissingTranslation">Custom colours reset</string>
+    <string name="theme_undo" tools:ignore="MissingTranslation">Undo</string>
+    <string name="theme_preset_selected" tools:ignore="MissingTranslation">Selected</string>
+    <string name="theme_custom_dark_only" tools:ignore="MissingTranslation">Custom colours apply to the dark theme</string>
+</resources>

@@ -5,8 +5,13 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="6.0dp"
+    android:checkable="true"
     app:cardCornerRadius="14.0dp"
     app:cardElevation="0.0dp"
+    app:checkedIcon="@drawable/ic_check_circle"
+    app:checkedIconTint="?attr/colorPrimary"
+    app:checkedIconSize="20.0dp"
+    app:checkedIconMargin="6.0dp"
     app:strokeWidth="1.0dp">
 
     <LinearLayout

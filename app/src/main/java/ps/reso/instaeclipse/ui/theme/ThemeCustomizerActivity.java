@@ -13,9 +13,9 @@ import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -25,6 +25,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.snackbar.Snackbar;
 
 import java.io.File;
 import java.util.List;
@@ -54,6 +55,7 @@ public class ThemeCustomizerActivity extends AppCompatActivity implements Advanc
     private static final String STATE_CUSTOM_EXPANDED = "custom_expanded";
 
     private MaterialSwitch enableSwitch;
+    private final CompoundButton.OnCheckedChangeListener enableListener = (buttonView, isChecked) -> persist();
     private View presetsContent;
     private View customContent;
     private ImageView presetsExpandIcon;
@@ -61,7 +63,6 @@ public class ThemeCustomizerActivity extends AppCompatActivity implements Advanc
     private PresetAdapter presetAdapter;
     private ColorSlotAdapter slotAdapter;
     private IgThemePalette workingPalette;
-    private String pendingSlotKey;
     private boolean customMode;
     private boolean presetsExpanded = true;
     private boolean customExpanded = true;
@@ -102,7 +103,8 @@ public class ThemeCustomizerActivity extends AppCompatActivity implements Advanc
         reloadPaletteState();
         boolean enabled = cache().getBoolean(KEY_ENABLED, false);
         enableSwitch.setChecked(enabled);
-        enableSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> persist());
+        enableSwitch.setOnCheckedChangeListener(enableListener);
+        findViewById(R.id.theme_enable_card).setOnClickListener(v -> enableSwitch.toggle());
 
         List<ThemePreset> modePresets = new java.util.ArrayList<>();
         for (ThemePreset p : ThemePresets.all())
@@ -119,16 +121,38 @@ public class ThemeCustomizerActivity extends AppCompatActivity implements Advanc
             // Custom colors edit the dark theme's palette; the light theme is chosen from the set.
             findViewById(R.id.theme_custom_header).setVisibility(View.GONE);
             customContent.setVisibility(View.GONE);
+            findViewById(R.id.theme_light_note).setVisibility(View.VISIBLE);
         }
 
-        resetButton.setOnClickListener(v -> {
-            workingPalette = ThemePresets.getById(1).palette.copy();
-            customMode = true;
-            selectedPresetId = 0;
-            presetAdapter.notifyDataSetChanged();
-            slotAdapter.notifyDataSetChanged();
-            persist();
-        });
+        resetButton.setOnClickListener(v -> resetCustom());
+    }
+
+    private void setEnabledSilently(boolean enabled) {
+        enableSwitch.setOnCheckedChangeListener(null);
+        enableSwitch.setChecked(enabled);
+        enableSwitch.setOnCheckedChangeListener(enableListener);
+    }
+
+    private void resetCustom() {
+        IgThemePalette previousPalette = workingPalette.copy();
+        boolean previousCustom = customMode;
+        int previousPreset = selectedPresetId;
+        workingPalette = ThemePresets.getById(1).palette.copy();
+        customMode = true;
+        selectedPresetId = 0;
+        presetAdapter.notifyDataSetChanged();
+        slotAdapter.notifyDataSetChanged();
+        persist();
+        Snackbar.make(findViewById(R.id.theme_root), R.string.theme_custom_reset, Snackbar.LENGTH_LONG)
+                .setAction(R.string.theme_undo, v -> {
+                    workingPalette = previousPalette;
+                    customMode = previousCustom;
+                    selectedPresetId = previousPreset;
+                    presetAdapter.notifyDataSetChanged();
+                    slotAdapter.notifyDataSetChanged();
+                    persist();
+                })
+                .show();
     }
 
     @Override
@@ -191,6 +215,8 @@ public class ThemeCustomizerActivity extends AppCompatActivity implements Advanc
         content.setVisibility(expanded ? View.VISIBLE : View.GONE);
         icon.setImageResource(expanded ? R.drawable.ic_expand_less : R.drawable.ic_expand_more);
         icon.setContentDescription(getString(expanded ? R.string.theme_collapse_section : R.string.theme_expand_section));
+        ViewCompat.setStateDescription((View) icon.getParent(),
+                getString(expanded ? R.string.help_faq_expanded : R.string.help_faq_collapsed));
     }
 
     private static String formatColorHex(int color) {
@@ -230,8 +256,6 @@ public class ThemeCustomizerActivity extends AppCompatActivity implements Advanc
         paletteIntent.putExtra("key", KEY_PALETTE_JSON);
         paletteIntent.putExtra("value", paletteJson);
         ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(this, paletteIntent);
-
-        ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, R.string.theme_saved, Toast.LENGTH_SHORT).show();
     }
 
     /** Light mode: only the enable switch and the light theme id; the dark theme is left as is. */
@@ -253,7 +277,6 @@ public class ThemeCustomizerActivity extends AppCompatActivity implements Advanc
             presetIntent.putExtra("value", selectedPresetId);
             ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(this, presetIntent);
         }
-        ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, R.string.theme_saved, Toast.LENGTH_SHORT).show();
     }
 
     private void makeCacheWorldReadable() {
@@ -264,31 +287,29 @@ public class ThemeCustomizerActivity extends AppCompatActivity implements Advanc
     }
 
     @Override
-    public void onColorPicked(int color) {
-        if (pendingSlotKey == null) return;
-        workingPalette.set(pendingSlotKey, color);
+    public void onColorPicked(String slot, int color) {
+        if (slot == null) return;
+        workingPalette.set(slot, color);
         customMode = true;
         selectedPresetId = 0;
-        if (!enableSwitch.isChecked()) enableSwitch.setChecked(true);
+        setEnabledSilently(true);
         presetAdapter.notifyDataSetChanged();
         slotAdapter.notifyDataSetChanged();
         persist();
-        pendingSlotKey = null;
     }
 
     private void selectPreset(ThemePreset preset) {
         selectedPresetId = preset.id;
         customMode = false;
         workingPalette = preset.palette.copy();
-        if (!enableSwitch.isChecked()) enableSwitch.setChecked(true);
+        setEnabledSilently(true);
         presetAdapter.notifyDataSetChanged();
         slotAdapter.notifyDataSetChanged();
         persist();
     }
 
     private void openPicker(String slotKey, int color, String label) {
-        pendingSlotKey = slotKey;
-        AdvancedColorPickerDialog.newInstance(label, color).show(getSupportFragmentManager(), "colorPicker");
+        AdvancedColorPickerDialog.newInstance(label, color, slotKey).show(getSupportFragmentManager(), "colorPicker");
     }
 
     private String slotLabel(int position) {
@@ -328,6 +349,8 @@ public class ThemeCustomizerActivity extends AppCompatActivity implements Advanc
                     : MaterialColors.getColor(holder.card, com.google.android.material.R.attr.colorOutline);
             holder.card.setStrokeColor(stroke);
             holder.card.setStrokeWidth(selected ? dp(2) : dp(1));
+            holder.card.setChecked(selected);
+            ViewCompat.setStateDescription(holder.card, selected ? getString(R.string.theme_preset_selected) : null);
             holder.card.setOnClickListener(v -> selectPreset(preset));
         }
 

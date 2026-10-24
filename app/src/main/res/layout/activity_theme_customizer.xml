@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout android:fitsSystemWindows="true" android:layout_width="match_parent" android:layout_height="match_parent"
+<androidx.coordinatorlayout.widget.CoordinatorLayout android:id="@+id/theme_root" android:fitsSystemWindows="true" android:layout_width="match_parent" android:layout_height="match_parent"
   xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <com.google.android.material.appbar.AppBarLayout android:fitsSystemWindows="true" android:layout_width="match_parent" android:layout_height="wrap_content">
@@ -13,7 +13,8 @@
             android:paddingBottom="32.0dp">
 
             <!-- Master enable switch -->
-            <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content"
+            <com.google.android.material.card.MaterialCardView android:id="@+id/theme_enable_card" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:clickable="true" android:focusable="true"
                 android:layout_margin="16.0dp" app:cardCornerRadius="20.0dp" app:cardElevation="0.0dp" app:strokeWidth="0.0dp" app:cardBackgroundColor="?colorSurfaceContainerLow">
                 <LinearLayout android:orientation="horizontal" android:gravity="center_vertical" android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:padding="16.0dp">
@@ -26,7 +27,7 @@
 
             <!-- Presets section -->
             <LinearLayout android:id="@+id/theme_presets_header" android:orientation="horizontal" android:gravity="center_vertical"
-                android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingStart="20.0dp" android:paddingEnd="20.0dp"
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48.0dp" android:paddingStart="20.0dp" android:paddingEnd="20.0dp"
                 android:paddingTop="8.0dp" android:paddingBottom="8.0dp" android:background="?selectableItemBackground" android:clickable="true" android:focusable="true">
                 <TextView android:layout_width="0.0dp" android:layout_height="wrap_content" android:layout_weight="1.0"
                     android:text="@string/theme_section_presets" android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
@@ -39,8 +40,13 @@
             </LinearLayout>
 
             <!-- Custom colors section -->
+            <TextView android:id="@+id/theme_light_note" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:paddingStart="20.0dp" android:paddingEnd="20.0dp" android:paddingTop="16.0dp" android:visibility="gone"
+                android:text="@string/theme_custom_dark_only" android:textColor="?colorOnSurfaceVariant"
+                android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+
             <LinearLayout android:id="@+id/theme_custom_header" android:orientation="horizontal" android:gravity="center_vertical"
-                android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingStart="20.0dp" android:paddingEnd="20.0dp"
+                android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48.0dp" android:paddingStart="20.0dp" android:paddingEnd="20.0dp"
                 android:paddingTop="16.0dp" android:paddingBottom="8.0dp" android:background="?selectableItemBackground" android:clickable="true" android:focusable="true">
                 <TextView android:layout_width="0.0dp" android:layout_height="wrap_content" android:layout_weight="1.0"
                     android:text="@string/theme_section_custom" android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
