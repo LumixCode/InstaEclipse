@@ -7,8 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.net.Uri;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.widget.LinearLayout;
@@ -36,8 +34,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
-import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.ModuleResources;
@@ -70,33 +66,84 @@ public class StoryInfoHook {
             "story_quizs", "story_polls", "story_sliders", "story_prompts", "sponsor_tags", "is_paid_partnership", "coauthor_producers",
     };
     private static final Map<String, Method> getters = new LinkedHashMap<>();
-    private static final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private static String[] pendingKeys;
+    private static ClassLoader pendingLoader;
 
     public void install(DexKitBridge bridge, ClassLoader classLoader) {
-        resolveGetters(bridge, classLoader);
-        if (getters.isEmpty()) {
-            ModuleLog.error("(IE|StoryInfo) Could not turn on story info: the story details were not found in this Instagram version");
+        boolean resolved = resolveGetters(bridge, classLoader);
+        if (!resolved) ModuleLog.error("(IE|StoryInfo) Could not turn on story info: the story details were not found in this Instagram version");
+        boolean menu = StoryMenu.install(bridge, classLoader);
+        if (!menu) ModuleLog.error("(IE|StoryInfo) Could not turn on story info: the story menu was not found in this Instagram version");
+        if (!menu || !resolved) {
+            if (FeatureFlags.storyInfo) FeatureStatusTracker.setBroken("StoryInfo");
             return;
         }
-        ModuleLog.detail("(IE|StoryInfo) getters: " + getters.keySet());
-        installButtonHook(bridge, classLoader);
-        installClickHook(bridge, classLoader);
+        StoryMenu.register(StoryMenu.INFO, new StoryMenu.Row() {
+            @Override
+            public boolean enabled() {
+                return FeatureFlags.storyInfo;
+            }
+
+            @Override
+            public void rows(Object media, List<CharSequence> out) {
+                if (media == null) return;
+                ensureGetters();
+                Context app = AndroidAppHelper.currentApplication();
+                out.add(I18n.t(app, R.string.ig_btn_story_info));
+                if (!list(media, "story_quizs").isEmpty()) out.add(I18n.t(app, R.string.ig_btn_quiz_answer));
+                if (!list(media, "story_polls").isEmpty()) out.add(I18n.t(app, R.string.ig_btn_poll_results));
+                if (!list(media, "story_sliders").isEmpty()) out.add(I18n.t(app, R.string.ig_btn_slider_results));
+            }
+
+            @Override
+            public boolean owns(CharSequence tapped) {
+                return which(tapped) >= 0;
+            }
+
+            @Override
+            public void tap(CharSequence tapped, Object media, Context ctx) {
+                ensureGetters();
+                int which = which(tapped);
+                if (which == 0) showInfo(ctx, media);
+                else if (which == 1) showQuiz(ctx, media);
+                else if (which == 2) showPolls(ctx, media);
+                else if (which == 3) showSliders(ctx, media);
+            }
+        });
         FeatureStatusTracker.setHooked("StoryInfo");
+        ModuleLog.ok("(IE|StoryInfo) Ready");
     }
 
-    // ── DexKit ────────────────────────────────────────────────────────────────
+    private static int which(CharSequence tapped) {
+        Context app = AndroidAppHelper.currentApplication();
+        if (StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_story_info), false)) return 0;
+        if (StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_quiz_answer), false)) return 1;
+        if (StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_poll_results), false)) return 2;
+        if (StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_slider_results), false)) return 3;
+        return -1;
+    }
 
-    private static void resolveGetters(DexKitBridge bridge, ClassLoader classLoader) {
+    private static synchronized void ensureGetters() {
+        String[] keys = pendingKeys;
+        if (keys == null) return;
+        pendingKeys = null;
+        for (String key : keys) {
+            if (key.isEmpty()) continue;
+            Method m = DexKitCache.loadMethod("StoryInfo_" + key, pendingLoader);
+            if (m != null) { m.setAccessible(true); getters.put(key, m); }
+        }
+        pendingLoader = null;
+        if (getters.isEmpty()) ModuleLog.error("(IE|StoryInfo) Could not show the story info: the saved story details no longer match this Instagram version");
+    }
+
+    private static synchronized boolean resolveGetters(DexKitBridge bridge, ClassLoader classLoader) {
         String queried = String.join(",", KEYS);
         if (DexKitCache.isCacheValid() && queried.equals(DexKitCache.loadString("StoryInfoQueried"))) {
             String found = DexKitCache.loadString("StoryInfoKeys");
-            if (found != null) {
-                for (String key : found.split(",")) {
-                    if (key.isEmpty()) continue;
-                    Method m = DexKitCache.loadMethod("StoryInfo_" + key, classLoader);
-                    if (m != null) { m.setAccessible(true); getters.put(key, m); }
-                }
-                if (!getters.isEmpty()) return;
+            if (found != null && !found.replace(",", "").isEmpty()) {
+                pendingKeys = found.split(",");
+                pendingLoader = classLoader;
+                return true;
             }
         }
         StringBuilder keys = new StringBuilder();
@@ -123,117 +170,8 @@ public class StoryInfoHook {
         }
         DexKitCache.saveString("StoryInfoKeys", keys.toString());
         DexKitCache.saveString("StoryInfoQueried", queried);
-    }
-
-    // ── Menu entries ─────────────────────────────────────────────────────────
-
-    private void installButtonHook(DexKitBridge bridge, ClassLoader classLoader) {
-        List<Method> builders = null;
-        if (DexKitCache.isCacheValid()) builders = DexKitCache.loadMethods("MentionButtons", classLoader);
-        if (builders == null || builders.isEmpty()) {
-            try {
-                List<MethodData> methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                        .matcher(MethodMatcher.create().usingStrings("[INTERNAL] Pause Playback")));
-                builders = new ArrayList<>(
-                        ps.reso.instaeclipse.mods.media.StoryDownloadHook.storyOptionBuilders(methods, classLoader));
-            } catch (Throwable t) {
-                ModuleLog.error("(IE|StoryInfo) Could not add the story info entry to the story menu: " + t);
-            }
-        }
-        if (builders == null || builders.isEmpty()) return;
-
-        XC_MethodHook hook = new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                try {
-                    if (!FeatureFlags.storyInfo) return;
-                    CharSequence[] original = (CharSequence[]) param.getResult();
-                    if (original == null) return;
-                    Context app = AndroidAppHelper.currentApplication();
-                    List<CharSequence> add = new ArrayList<>();
-                    add.add(I18n.t(app, R.string.ig_btn_story_info));
-                    Object media = findMedia(param);
-                    if (media != null) {
-                        if (!list(media, "story_quizs").isEmpty()) add.add(I18n.t(app, R.string.ig_btn_quiz_answer));
-                        if (!list(media, "story_polls").isEmpty()) add.add(I18n.t(app, R.string.ig_btn_poll_results));
-                        if (!list(media, "story_sliders").isEmpty()) add.add(I18n.t(app, R.string.ig_btn_slider_results));
-                    }
-                    CharSequence[] extended = StoryMenuRows.append(original, add);
-                    if (extended != original) param.setResult(extended);
-                } catch (Throwable t) {
-                    ModuleLog.warn("(IE|StoryInfo) Could not add the story info entry to this story's menu: " + t);
-                }
-            }
-        };
-        int hooked = 0;
-        for (Method m : builders) {
-            try { XposedBridge.hookMethod(m, hook); hooked++; } catch (Throwable ignored) {}
-        }
-        ModuleLog.detail("(IE|StoryInfo) button hook on " + hooked + " builder(s)");
-    }
-
-    private void installClickHook(DexKitBridge bridge, ClassLoader classLoader) {
-        List<Method> dispatchers = ps.reso.instaeclipse.mods.media.StoryDownloadHook.storyClickDispatchers(bridge, classLoader);
-        if (dispatchers.isEmpty()) {
-            ModuleLog.error("(IE|StoryInfo) Could not turn on story info: the story menu's tap handler was not found in this Instagram version");
-            return;
-        }
-        try {
-            XC_MethodHook clickHook = new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    try {
-                        if (!FeatureFlags.storyInfo) return;
-                        CharSequence tapped = StoryMenuRows.tapped(param.args);
-                        if (tapped == null) return;
-                        Context app = AndroidAppHelper.currentApplication();
-                        int which;
-                        if (StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_story_info), false)) which = 0;
-                        else if (StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_quiz_answer), false)) which = 1;
-                        else if (StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_poll_results), false)) which = 2;
-                        else if (StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_slider_results), false)) which = 3;
-                        else return;
-
-                        param.setResult(null);
-                        Object media = findMedia(param);
-                        Context ctx = StoryMentionHook.findContext(param.thisObject);
-                        for (Object a : param.args) if (ctx == null) ctx = StoryMentionHook.findContext(a);
-                        if (ctx == null) ctx = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
-                        if (media == null || ctx == null) {
-                            ModuleLog.error("(IE|StoryInfo) Could not show the story info: the story was not found");
-                            return;
-                        }
-                        Context c = ctx;
-                        mainHandler.post(() -> {
-                            try {
-                                if (which == 0) showInfo(c, media);
-                                else if (which == 1) showQuiz(c, media);
-                                else if (which == 2) showPolls(c, media);
-                                else showSliders(c, media);
-                            } catch (Throwable e) {
-                                ModuleLog.error("(IE|StoryInfo) Could not show the story info", e);
-                            }
-                        });
-                    } catch (Throwable e) {
-                        ModuleLog.error("(IE|StoryInfo) Could not show the story info", e);
-                    }
-                }
-            };
-            for (Method m : dispatchers) XposedBridge.hookMethod(m, clickHook);
-            ModuleLog.ok("(IE|StoryInfo) Ready");
-        } catch (Throwable t) {
-            ModuleLog.error("(IE|StoryInfo) Could not turn on story info", t);
-        }
-    }
-
-    private static Object findMedia(XC_MethodHook.MethodHookParam param) {
-        Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
-        Object media = param.thisObject != null ? StoryMentionHook.findMediaInGraph(param.thisObject, 0, visited) : null;
-        for (Object a : param.args) {
-            if (media != null) break;
-            if (a != null) media = StoryMentionHook.findMediaInGraph(a, 0, visited);
-        }
-        return media;
+        if (!getters.isEmpty()) ModuleLog.detail("(IE|StoryInfo) getters: " + getters.keySet());
+        return !getters.isEmpty();
     }
 
     // ── Reading values ───────────────────────────────────────────────────────
@@ -494,6 +432,7 @@ public class StoryInfoHook {
     /** Adds the Music row and, for licensed songs, the streaming buttons; for posts and reels
      *  (Media Info) as well as stories. Returns false when the media has no music. */
     public static boolean addMusic(IeDialog dlg, Context ctx, Object media) {
+        ensureGetters();
         String[] song;
         try { song = music(media); } catch (Throwable t) { return false; }
         if (song == null) return false;

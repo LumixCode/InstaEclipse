@@ -6,8 +6,6 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.TypedValue;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,8 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
-import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
@@ -51,17 +47,45 @@ public class StoryLinksHook {
 
     private static final String[] KEYS = {"story_link_stickers", "story_cta"};
     private static final List<Method> getters = new ArrayList<>();
-    private static final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public void install(DexKitBridge bridge, ClassLoader classLoader) {
         resolveGetters(bridge, classLoader);
-        if (getters.isEmpty()) {
-            ModuleLog.error("(IE|StoryLinks) Could not turn on story links: link stickers were not found in this Instagram version");
+        if (getters.isEmpty()) ModuleLog.error("(IE|StoryLinks) Could not turn on story links: link stickers were not found in this Instagram version");
+        boolean menu = StoryMenu.install(bridge, classLoader);
+        if (!menu) ModuleLog.error("(IE|StoryLinks) Could not turn on story links: the story menu was not found in this Instagram version");
+        if (!menu || getters.isEmpty()) {
+            if (FeatureFlags.storyLinks) FeatureStatusTracker.setBroken("StoryLinks");
             return;
         }
-        installButtonHook(bridge, classLoader);
-        installClickHook(bridge, classLoader);
+        StoryMenu.register(StoryMenu.LINKS, new StoryMenu.Row() {
+            @Override
+            public boolean enabled() {
+                return FeatureFlags.storyLinks;
+            }
+
+            @Override
+            public void rows(Object media, List<CharSequence> out) {
+                if (media == null) return;
+                List<String> links = linksOf(media);
+                if (!links.isEmpty()) out.add(label(links.size()));
+            }
+
+            @Override
+            public boolean owns(CharSequence tapped) {
+                Context app = AndroidAppHelper.currentApplication();
+                return StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_copy_story_link), false)
+                        || StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_story_links_title), true);
+            }
+
+            @Override
+            public void tap(CharSequence tapped, Object media, Context ctx) {
+                List<String> links = linksOf(media);
+                if (links.size() == 1) copy(ctx, links.get(0), I18n.t(ctx, R.string.ig_toast_link_copied));
+                else if (!links.isEmpty()) showLinks(ctx, links);
+            }
+        });
         FeatureStatusTracker.setHooked("StoryLinks");
+        ModuleLog.ok("(IE|StoryLinks) Ready");
     }
 
     // ── DexKit ────────────────────────────────────────────────────────────────
@@ -97,109 +121,7 @@ public class StoryLinksHook {
         if (!getters.isEmpty()) DexKitCache.saveMethods("StoryLinkGetters", getters);
     }
 
-    // ── Hook 1: add the menu entry only when the story has links ─────────────
-
-    private void installButtonHook(DexKitBridge bridge, ClassLoader classLoader) {
-        List<Method> builders = null;
-        if (DexKitCache.isCacheValid()) builders = DexKitCache.loadMethods("MentionButtons", classLoader);
-        if (builders == null || builders.isEmpty()) {
-            try {
-                List<MethodData> methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                        .matcher(MethodMatcher.create().usingStrings("[INTERNAL] Pause Playback")));
-                builders = new ArrayList<>(
-                        ps.reso.instaeclipse.mods.media.StoryDownloadHook.storyOptionBuilders(methods, classLoader));
-            } catch (Throwable t) {
-                ModuleLog.detail("(IE|StoryLinks) builder DexKit: " + t);
-            }
-        }
-        if (builders == null || builders.isEmpty()) {
-            ModuleLog.error("(IE|StoryLinks) Could not add the links entry to the story menu: the story menu was not found in this Instagram version");
-            return;
-        }
-
-        XC_MethodHook hook = new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                try {
-                    if (!FeatureFlags.storyLinks) return;
-                    CharSequence[] original = (CharSequence[]) param.getResult();
-                    if (original == null) return;
-                    Object media = findMedia(param);
-                    List<String> links = media != null ? linksOf(media) : Collections.emptyList();
-                    if (links.isEmpty()) return;
-                    CharSequence[] extended = StoryMenuRows.append(original, List.of(label(links.size())));
-                    if (extended != original) param.setResult(extended);
-                } catch (Throwable t) {
-                    ModuleLog.warn("(IE|StoryLinks) Could not add the links entry to this story's menu: " + t);
-                }
-            }
-        };
-        int hooked = 0;
-        for (Method m : builders) {
-            try { XposedBridge.hookMethod(m, hook); hooked++; } catch (Throwable ignored) {}
-        }
-        ModuleLog.detail("(IE|StoryLinks) button hook on " + hooked + " builder(s)");
-    }
-
-    // ── Hook 2: handle the tap ───────────────────────────────────────────────
-
-    private void installClickHook(DexKitBridge bridge, ClassLoader classLoader) {
-        List<Method> dispatchers = ps.reso.instaeclipse.mods.media.StoryDownloadHook.storyClickDispatchers(bridge, classLoader);
-        if (dispatchers.isEmpty()) {
-            ModuleLog.error("(IE|StoryLinks) Could not turn on story links: the story menu's tap handler was not found in this Instagram version");
-            return;
-        }
-        try {
-            XC_MethodHook clickHook = new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    try {
-                        if (!FeatureFlags.storyLinks) return;
-                        CharSequence tapped = StoryMenuRows.tapped(param.args);
-                        if (tapped == null) return;
-                        String t = tapped.toString();
-                        Context app = AndroidAppHelper.currentApplication();
-                        if (!StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_copy_story_link), false)
-                                && !StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_story_links_title), true)) return;
-
-                        Object media = findMedia(param);
-                        Context ctx = StoryMentionHook.findContext(param.thisObject);
-                        for (Object a : param.args) if (ctx == null) ctx = StoryMentionHook.findContext(a);
-                        if (ctx == null) ctx = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
-                        if (media == null || ctx == null) return; // let IG handle it; nothing we can do
-                        List<String> links = linksOf(media);
-                        if (links.isEmpty()) return;
-                        if (!t.equals(label(links.size()))) return;
-
-                        param.setResult(null);
-                        Context c = ctx;
-                        mainHandler.post(() -> {
-                            if (links.size() == 1) copy(c, links.get(0), I18n.t(c, R.string.ig_toast_link_copied));
-                            else showLinks(c, links);
-                        });
-                    } catch (Throwable t) {
-                        ModuleLog.error("(IE|StoryLinks) Could not show the story's links", t);
-                    }
-                }
-            };
-            for (Method m : dispatchers) XposedBridge.hookMethod(m, clickHook);
-            ModuleLog.ok("(IE|StoryLinks) Ready");
-        } catch (Throwable t) {
-            ModuleLog.error("(IE|StoryLinks) Could not turn on story links", t);
-        }
-    }
-
     // ── Link extraction ──────────────────────────────────────────────────────
-
-    private static Object findMedia(XC_MethodHook.MethodHookParam param) {
-        Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
-        Object media = param.thisObject != null ? StoryMentionHook.findMediaInGraph(param.thisObject, 0, visited) : null;
-        for (Object a : param.args) {
-            if (media != null) break;
-            if (a != null) media = StoryMentionHook.findMediaInGraph(a, 0, visited);
-        }
-        return media;
-    }
 
     static List<String> linksOf(Object media) {
         LinkedHashSet<String> out = new LinkedHashSet<>();
