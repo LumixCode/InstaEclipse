@@ -2,6 +2,7 @@ package ps.reso.instaeclipse.mods.ui;
 
 import ps.reso.instaeclipse.xposedcompat.AndroidAppHelper;
 import android.content.Context;
+import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -11,6 +12,7 @@ import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +35,7 @@ public final class MenuIcons {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     // Weak maps rather than view tags: our R.id values could collide with Instagram's tag keys.
     private static final Map<View, Boolean> WATCHED = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
-    private static final Map<ImageView, Integer> APPLIED = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
+    private static final Map<ImageView, Applied> APPLIED = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
     private static volatile long lastStart;
     // apply() results: no menu rows in the window / menu rows but none of ours / ours found.
     private static final int NO_MENU = 0, MENU = 1, OURS = 2;
@@ -163,9 +165,7 @@ public final class MenuIcons {
                 if (!(iv instanceof ImageView img)) continue;
                 int res = ResIds.drawable(c, icon);
                 if (res == 0) res = ResIds.drawable(c, icon.replace("_pano", ""));
-                if (res == 0 || Integer.valueOf(res).equals(APPLIED.get(img))) continue;
-                img.setImageResource(res); // keeps the row's tint
-                APPLIED.put(img, res);
+                if (res != 0) setIcon(img, res);
             } else if (v instanceof ViewGroup g) {
                 for (int i = 0; i < g.getChildCount(); i++) st.push(g.getChildAt(i));
             }
@@ -173,22 +173,65 @@ public final class MenuIcons {
         return any ? OURS : menu ? MENU : NO_MENU;
     }
 
+    static boolean setIcon(ImageView img, int res) {
+        Applied last = APPLIED.get(img);
+        if (last != null && last.res == res && applied(img, last.drawable)) return false;
+        img.setImageResource(res);
+        APPLIED.put(img, new Applied(res, img.getDrawable()));
+        return true;
+    }
+
+    static boolean applied(ImageView img, Drawable ours) {
+        return ours != null && img.getDrawable() == ours;
+    }
+
+    private static final class Applied {
+        final int res;
+        final Drawable drawable;
+
+        Applied(int res, Drawable drawable) {
+            this.res = res;
+            this.drawable = drawable;
+        }
+    }
+
     /** Every window's root view (activity, dialogs, bottom sheets). */
     @SuppressWarnings("unchecked")
     private static List<View> rootViews() {
-        try {
-            Class<?> wmg = Class.forName("android.view.WindowManagerGlobal");
-            Object inst = wmg.getMethod("getInstance").invoke(null);
-            java.lang.reflect.Field f = wmg.getDeclaredField("mViews");
-            f.setAccessible(true);
-            synchronized (inst) {
-                return new java.util.ArrayList<>((List<View>) f.get(inst));
+        if (Windows.VIEWS != null) {
+            try {
+                synchronized (Windows.GLOBAL) {
+                    return new java.util.ArrayList<>((List<View>) Windows.VIEWS.get(Windows.GLOBAL));
+                }
+            } catch (Throwable ignored) {}
+        }
+        List<View> out = new java.util.ArrayList<>();
+        android.app.Activity a = UIHookManager.getCurrentActivity();
+        if (a != null && a.getWindow() != null) out.add(a.getWindow().getDecorView());
+        return out;
+    }
+
+    private static final class Windows {
+        static final Object GLOBAL;
+        static final Field VIEWS;
+
+        static {
+            Object global = null;
+            Field views = null;
+            try {
+                Class<?> wmg = Class.forName("android.view.WindowManagerGlobal");
+                Object instance = wmg.getMethod("getInstance").invoke(null);
+                Field field = wmg.getDeclaredField("mViews");
+                field.setAccessible(true);
+                if (instance != null) {
+                    global = instance;
+                    views = field;
+                }
+            } catch (Throwable t) {
+                ModuleLog.detail("(IE|MenuIcons) window list: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             }
-        } catch (Throwable t) {
-            List<View> out = new java.util.ArrayList<>();
-            android.app.Activity a = UIHookManager.getCurrentActivity();
-            if (a != null && a.getWindow() != null) out.add(a.getWindow().getDecorView());
-            return out;
+            GLOBAL = global;
+            VIEWS = views;
         }
     }
 }
