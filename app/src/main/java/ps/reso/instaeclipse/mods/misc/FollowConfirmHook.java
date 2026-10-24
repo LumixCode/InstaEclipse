@@ -5,11 +5,14 @@ import android.os.Handler;
 import android.os.Looper;
 
 import org.luckypray.dexkit.DexKitBridge;
+import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
+import org.luckypray.dexkit.result.ClassData;
 import org.luckypray.dexkit.result.MethodData;
 
+import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
@@ -17,6 +20,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.Xposed.Module;
@@ -40,19 +44,25 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
  * that queues the request and sends it. A follow (action "create") is held at that sender behind a
  * dialog: Follow sends it unchanged, Cancel puts the user's follow status back with the manager's
  * own setter, so the button returns to "Follow" and nothing was sent. Unfollows pass untouched.
- *
- * <p>Profile headers use the newer follow data source instead (FollowUserDataSourceImpl, a Kotlin
- * suspend function taking the same action enum). A follow there is ended with a
- * CancellationException before it does anything (Kotlin's quiet "cancelled"), and on Follow the
- * call is run again with a stand-in continuation; Cancel asks the manager to reset the profile's
- * status, as Instagram does when a follow fails.
  */
 public class FollowConfirmHook {
 
     private static final String TAG = "(InstaEclipse | FollowConfirm): ";
     private static final String USER = "com.instagram.user.model.User";
-    private static final String SENDER_KEY = "FollowManagerSender";
+    private static final String SENDER_KEY = "FollowConfirm_sender_v1";
     private static final String SETTER_KEY = "FollowManagerSetStatus";
+    private static final String RESET_KEY = "FollowConfirm_reset_v1";
+    private static final String GETTER_KEY = "FollowConfirm_statusGetter_v1";
+    private static final String EVENT_KEY = "FollowConfirm_statusEvent_v1";
+    private static final String BUS_FACTORY_KEY = "FollowConfirm_busFactory_v1";
+    private static final String BUS_POST_KEY = "FollowConfirm_busPost_v1";
+    private static final String SUSPENDED_KEY = "FollowConfirm_suspended_v1";
+    private static final String FAILURE_KEY = "FollowConfirm_failure_v1";
+    private static final String RESUME_KEY = "FollowConfirm_resumeWith_v1";
+    private static final String SUSPENDED = "COROUTINE_SUSPENDED";
+    private static Object suspendedMarker;
+    private static Constructor<?> failureCtor;
+    private static Method resumeWith;
     private static final ThreadLocal<Boolean> REPLAYING = new ThreadLocal<>();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     /** The manager's (FollowStatus, User, boolean) setter, used to undo the flip on Cancel. */
@@ -66,8 +76,9 @@ public class FollowConfirmHook {
     private static final String DATA_SOURCE = "com.instagram.user.follow.mvvm.data.FollowUserDataSourceImpl";
 
     public void install(DexKitBridge bridge) {
+        boolean cached = DexKitCache.isCacheValid();
         Method sender = null;
-        if (DexKitCache.isCacheValid()) {
+        if (cached) {
             sender = DexKitCache.loadMethod(SENDER_KEY, Module.hostClassLoader);
             statusSetter = DexKitCache.loadMethod(SETTER_KEY, Module.hostClassLoader);
         }
@@ -89,7 +100,7 @@ public class FollowConfirmHook {
                 }
                 sender = FollowConfirmPolicy.pickSender(candidates, USER);
                 if (sender == null) {
-                    ModuleLog.error(TAG + "Could not turn on follow confirmation: the follow action was not found in this Instagram version");
+                    ModuleLog.error(TAG + "Could not turn on follow confirmation: no single follow action was found in this Instagram version");
                     return;
                 }
                 DexKitCache.saveMethod(SENDER_KEY, sender);
@@ -111,7 +122,8 @@ public class FollowConfirmHook {
                 MAIN.post(() -> confirm(act, username(args), () -> send(method, args), () -> undo(method, args)));
             }
         });
-        if (statusSetter != null) {
+        resetMethod = statusSetter != null && cached ? DexKitCache.loadMethod(RESET_KEY, Module.hostClassLoader) : null;
+        if (statusSetter != null && resetMethod == null) {
             try {
                 for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(sender.getDeclaringClass().getName()).paramCount(1).returnType("void")
@@ -121,14 +133,16 @@ public class FollowConfirmHook {
                     Method m = md.getMethodInstance(Module.hostClassLoader);
                     if (Modifier.isStatic(m.getModifiers()) || m.getParameterTypes()[0].getName().equals(USER)) continue;
                     resetMethod = m;
+                    DexKitCache.saveMethod(RESET_KEY, m);
                     break;
                 }
             } catch (Throwable t) {
                 ModuleLog.warn(TAG + "After Cancel, a profile's Follow button may show the wrong state until refreshed: " + t);
             }
         }
-        hookDataSource(sender.getDeclaringClass());
-        if (statusSetter != null) {
+        hookDataSource(bridge, sender.getDeclaringClass());
+        statusGetter = statusSetter != null && cached ? DexKitCache.loadMethod(GETTER_KEY, Module.hostClassLoader) : null;
+        if (statusSetter != null && statusGetter == null) {
             try {
                 for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(statusSetter.getDeclaringClass().getName()).name(statusSetter.getName()).paramCount(3)))) {
@@ -138,12 +152,13 @@ public class FollowConfirmHook {
                         if (m.getReturnType() == statusSetter.getParameterTypes()[0]) { statusGetter = m; break; }
                     }
                 }
+                if (statusGetter != null) DexKitCache.saveMethod(GETTER_KEY, statusGetter);
             } catch (Throwable t) {
-                ModuleLog.warn(TAG + "A profile's Following or Requested button may ask for confirmation too: " + t);
+                ModuleLog.warn(TAG + "A profile's Follow button is asked about only when the follow is sent: " + t);
             }
         }
         hookProfileButton();
-        if (statusSetter != null) resolveStatusEvent(bridge, statusSetter.getParameterTypes()[0]);
+        if (statusSetter != null) resolveStatusEvent(bridge, statusSetter.getParameterTypes()[0], cached);
         ModuleLog.ok(TAG + "Ready");
         ModuleLog.detail(TAG + "Hooked " + sender.getDeclaringClass().getName() + "." + sender.getName()
                 + (statusSetter != null ? ", undo " + statusSetter.getName() : ", no undo")
@@ -203,13 +218,15 @@ public class FollowConfirmHook {
     }
 
     /** The profile header's follow: FollowUserDataSourceImpl's suspend method taking the action enum. */
-    private static void hookDataSource(Class<?> managerClass) {
+    private static void hookDataSource(DexKitBridge bridge, Class<?> managerClass) {
         try {
             Class<?> ds = Module.hostClassLoader.loadClass(DATA_SOURCE);
             for (Method m : SafeReflect.methods(ds)) {
                 Class<?>[] p = m.getParameterTypes();
                 if (Modifier.isStatic(m.getModifiers()) || m.getReturnType() != Object.class || p.length < 5) continue;
-                if (FollowConfirmPolicy.continuationIndex(p) < 0 || !FollowConfirmPolicy.hasEnum(p)) continue;
+                int ci = FollowConfirmPolicy.continuationIndex(p);
+                if (ci < 0 || !FollowConfirmPolicy.hasEnum(p)) continue;
+                boolean resumes = resolveCoroutine(bridge, p[ci]);
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -219,7 +236,14 @@ public class FollowConfirmHook {
                         Method method = (Method) param.method;
                         Object self = param.thisObject;
                         Object[] args = param.args.clone();
-                        param.setThrowable(new java.util.concurrent.CancellationException("follow held by InstaEclipse"));
+                        if (resumes) {
+                            FollowConfirmPolicy.HeldCall held = hold(method, self, args, ci);
+                            param.setResult(suspendedMarker);
+                            MAIN.post(() -> confirm(act, ps.reso.instaeclipse.mods.ui.ProfileMenuHook.profileUsername(act), () -> answer(held, true),
+                                    () -> { reset(self, args, managerClass); answer(held, false); }));
+                            return;
+                        }
+                        param.setThrowable(new CancellationException(FollowConfirmPolicy.HELD));
                         MAIN.post(() -> confirm(act, ps.reso.instaeclipse.mods.ui.ProfileMenuHook.profileUsername(act), () -> resend(method, self, args),
                                 () -> reset(self, args, managerClass)));
                     }
@@ -230,6 +254,108 @@ public class FollowConfirmHook {
             ModuleLog.warn(TAG + "Some Follow buttons may follow without asking: the profile follow step was not found in this Instagram version");
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "Some Follow buttons may follow without asking: " + t);
+        }
+    }
+
+    private static boolean resolveCoroutine(DexKitBridge bridge, Class<?> continuationType) {
+        ClassLoader loader = Module.hostClassLoader;
+        boolean cached = DexKitCache.isCacheValid();
+        try {
+            Method resume = cached ? DexKitCache.loadMethod(RESUME_KEY, loader) : null;
+            if (resume == null) {
+                resume = resumeMethod(continuationType);
+                if (resume != null) DexKitCache.saveMethod(RESUME_KEY, resume);
+            }
+            Constructor<?> failure = cached ? DexKitCache.loadConstructor(FAILURE_KEY, loader) : null;
+            if (failure == null) {
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                        .name("toString").usingEqStrings("Failure(")))) {
+                    Constructor<?> c = failureConstructor(Class.forName(md.getClassName(), false, loader));
+                    if (c == null) continue;
+                    if (failure != null) {
+                        failure = null;
+                        break;
+                    }
+                    failure = c;
+                }
+                if (failure != null) DexKitCache.saveConstructor(FAILURE_KEY, failure);
+            }
+            String markerClass = cached ? DexKitCache.loadString(SUSPENDED_KEY) : null;
+            if (markerClass == null) {
+                for (ClassData cd : DexKitQueryCache.findClass(bridge, FindClass.create().matcher(ClassMatcher.create()
+                        .superClass("java.lang.Enum").usingEqStrings(SUSPENDED)))) {
+                    if (marker(Class.forName(cd.getName(), false, loader)) == null) continue;
+                    markerClass = cd.getName();
+                    DexKitCache.saveString(SUSPENDED_KEY, markerClass);
+                    break;
+                }
+            }
+            Object marker = markerClass != null ? marker(Class.forName(markerClass, false, loader)) : null;
+            if (resume == null || failure == null || marker == null) {
+                ModuleLog.warn(TAG + "Confirming a follow on a profile may not always follow (not supported in this Instagram version)");
+                return false;
+            }
+            resume.setAccessible(true);
+            failure.setAccessible(true);
+            resumeWith = resume;
+            failureCtor = failure;
+            suspendedMarker = marker;
+            return true;
+        } catch (Throwable t) {
+            ModuleLog.warn(TAG + "Confirming a follow on a profile may not always follow: " + t);
+            return false;
+        }
+    }
+
+    private static Method resumeMethod(Class<?> continuationType) {
+        Method found = null;
+        for (Method m : SafeReflect.methods(continuationType)) {
+            if (Modifier.isStatic(m.getModifiers()) || m.getParameterCount() != 1 || m.getReturnType() != void.class) continue;
+            if (found != null) return null;
+            found = m;
+        }
+        return found;
+    }
+
+    private static Constructor<?> failureConstructor(Class<?> c) {
+        Constructor<?>[] ctors = SafeReflect.constructors(c);
+        if (!Serializable.class.isAssignableFrom(c) || ctors.length != 1) return null;
+        Class<?>[] p = ctors[0].getParameterTypes();
+        return p.length == 1 && p[0] == Throwable.class ? ctors[0] : null;
+    }
+
+    private static Object marker(Class<?> c) {
+        Object[] constants = c.isEnum() ? c.getEnumConstants() : null;
+        if (constants == null) return null;
+        for (Object e : constants) if (((Enum<?>) e).name().equals(SUSPENDED)) return e;
+        return null;
+    }
+
+    private static FollowConfirmPolicy.HeldCall hold(Method method, Object self, Object[] args, int ci) {
+        Object continuation = args[ci];
+        Method resume = resumeWith;
+        Constructor<?> failure = failureCtor;
+        return new FollowConfirmPolicy.HeldCall(() -> {
+            REPLAYING.set(Boolean.TRUE);
+            try {
+                Object result = XposedBridge.invokeOriginalMethod(method, self, args);
+                ModuleLog.line(TAG + "Profile follow confirmed and sent");
+                return result;
+            } catch (Throwable t) {
+                ModuleLog.error(TAG + "Could not send the follow: " + FollowConfirmPolicy.HeldCall.cause(t));
+                throw t;
+            } finally {
+                REPLAYING.remove();
+            }
+        }, result -> resume.invoke(continuation, result), cause -> failure.newInstance(cause), suspendedMarker);
+    }
+
+    private static void answer(FollowConfirmPolicy.HeldCall held, boolean follow) {
+        try {
+            if (follow) held.follow();
+            else held.cancel();
+        } catch (Throwable t) {
+            ModuleLog.error(TAG + "Could not hand the follow back to Instagram: " + t);
         }
     }
 
@@ -308,14 +434,15 @@ public class FollowConfirmHook {
     private static void confirm(Activity act, String username, Runnable onFollow, Runnable onCancel) {
         try {
             IeDialog dlg = new IeDialog(act)
-                    .title(I18n.t(act, R.string.ig_confirm_follow_title))
-                    .message(username != null ? I18n.t(act, R.string.ig_confirm_follow_message, username)
+                    .title(username != null ? I18n.t(act, R.string.ig_confirm_follow_title_v2, username)
                             : I18n.t(act, R.string.ig_confirm_follow_message_any));
             final boolean[] followed = {false};
             dlg.secondary(act.getString(android.R.string.cancel), () -> { });
             dlg.primary(I18n.t(act, R.string.ig_confirm_follow_yes), () -> { followed[0] = true; onFollow.run(); });
             dlg.onDismiss(() -> { if (!followed[0]) onCancel.run(); });
-            dlg.show();
+            if (dlg.show().isShowing()) return;
+            ModuleLog.warn(TAG + "Could not show the follow confirmation, so the follow was cancelled");
+            onCancel.run();
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not show the follow confirmation, so the follow was cancelled", t);
             onCancel.run();
@@ -360,7 +487,18 @@ public class FollowConfirmHook {
     private static Constructor<?> statusEvent;
     private static Method busFactory, busPost;
 
-    private static void resolveStatusEvent(DexKitBridge bridge, Class<?> statusType) {
+    private static void resolveStatusEvent(DexKitBridge bridge, Class<?> statusType, boolean cached) {
+        if (cached) {
+            Constructor<?> event = DexKitCache.loadConstructor(EVENT_KEY, Module.hostClassLoader);
+            Method factory = DexKitCache.loadMethod(BUS_FACTORY_KEY, Module.hostClassLoader);
+            Method post = DexKitCache.loadMethod(BUS_POST_KEY, Module.hostClassLoader);
+            if (event != null && factory != null && post != null) {
+                statusEvent = event;
+                busFactory = factory;
+                busPost = post;
+                return;
+            }
+        }
         try {
             for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .name("<init>").paramTypes(statusType.getName(), "java.lang.String")))) {
@@ -379,6 +517,9 @@ public class FollowConfirmHook {
                     statusEvent = c.getDeclaredConstructor(statusType, String.class);
                     busFactory = factory;
                     busPost = post.getMethodInstance(Module.hostClassLoader);
+                    DexKitCache.saveConstructor(EVENT_KEY, statusEvent);
+                    DexKitCache.saveMethod(BUS_FACTORY_KEY, busFactory);
+                    DexKitCache.saveMethod(BUS_POST_KEY, busPost);
                     ModuleLog.detail(TAG + "status event " + c.getName() + " on " + bus.getName());
                     return;
                 }
@@ -398,7 +539,7 @@ public class FollowConfirmHook {
                 f.setAccessible(true);
                 session = f.get(manager);
             }
-            String id = userId(user);
+            String id = FollowListLoader.idOf(user);
             if (session == null || id == null) return;
             busFactory.setAccessible(true);
             Object bus = busFactory.invoke(null, session);
@@ -408,17 +549,5 @@ public class FollowConfirmHook {
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "Could not update the Follow buttons in the feed after Cancel: " + t);
         }
-    }
-
-    /** The User's id: its final String field holding only digits. */
-    private static String userId(Object user) {
-        for (Field f : SafeReflect.fields(user.getClass())) {
-            if (f.getType() != String.class || Modifier.isStatic(f.getModifiers()) || !Modifier.isFinal(f.getModifiers())) continue;
-            try {
-                f.setAccessible(true);
-                if (f.get(user) instanceof String s && s.matches("\\d+")) return s;
-            } catch (Throwable ignored) { }
-        }
-        return null;
     }
 }

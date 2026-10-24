@@ -1,32 +1,25 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 
 final class FollowConfirmPolicy {
 
     static final String FOLLOW_PATH = "create";
+    static final String HELD = "follow held by InstaEclipse";
 
     private FollowConfirmPolicy() {}
 
     static boolean isFollow(Object[] args) {
-        for (Object a : args) {
-            if (!(a instanceof Enum<?>)) continue;
-            for (Field f : SafeReflect.fields(a.getClass())) {
-                if (Modifier.isStatic(f.getModifiers()) || f.getType() != String.class) continue;
-                try {
-                    f.setAccessible(true);
-                    if (FOLLOW_PATH.equals(f.get(a))) return true;
-                } catch (Throwable ignored) { }
-            }
-        }
+        for (Object a : args) if (a instanceof Enum<?> && carriesFollowPath(a)) return true;
         return false;
     }
 
@@ -41,18 +34,19 @@ final class FollowConfirmPolicy {
     }
 
     static Method pickSender(List<Method> candidates, String userClass) {
+        Method found = null;
         for (Method m : candidates) {
-            if (!Modifier.isStatic(m.getModifiers())) continue;
+            if (!Modifier.isStatic(m.getModifiers()) || m.getReturnType() != void.class) continue;
             Class<?>[] p = m.getParameterTypes();
-            if (has(p, m.getDeclaringClass()) && hasNamed(p, userClass) && hasEnum(p)) return m;
+            if (!has(p, m.getDeclaringClass()) || !hasNamed(p, userClass) || !hasActionEnum(p)) continue;
+            if (found != null) return null;
+            found = m;
         }
-        return null;
+        return found;
     }
 
     static boolean holdsProfileTap(Object status) {
-        if (!(status instanceof Enum<?> e)) return true;
-        String name = e.name().toUpperCase(Locale.ROOT);
-        return !(name.contains("FOLLOWING") && !name.contains("NOTFOLLOWING") || name.contains("REQUESTED"));
+        return isNotFollowing(status);
     }
 
     static boolean isNotFollowing(Object status) {
@@ -61,6 +55,27 @@ final class FollowConfirmPolicy {
 
     static boolean hasEnum(Class<?>[] types) {
         for (Class<?> t : types) if (t.isEnum()) return true;
+        return false;
+    }
+
+    private static boolean hasActionEnum(Class<?>[] types) {
+        for (Class<?> t : types) {
+            if (!t.isEnum()) continue;
+            Object[] constants = t.getEnumConstants();
+            if (constants == null) continue;
+            for (Object c : constants) if (carriesFollowPath(c)) return true;
+        }
+        return false;
+    }
+
+    private static boolean carriesFollowPath(Object constant) {
+        for (Field f : SafeReflect.fields(constant.getClass())) {
+            if (Modifier.isStatic(f.getModifiers()) || f.getType() != String.class) continue;
+            try {
+                f.setAccessible(true);
+                if (FOLLOW_PATH.equals(f.get(constant))) return true;
+            } catch (Throwable ignored) { }
+        }
         return false;
     }
 
@@ -84,13 +99,17 @@ final class FollowConfirmPolicy {
             void with(Object result) throws Throwable;
         }
 
+        interface Failure {
+            Object of(Throwable cause) throws Throwable;
+        }
+
         private final Call call;
         private final Resume resume;
-        private final Function<Throwable, Object> failure;
+        private final Failure failure;
         private final Object suspended;
         private final AtomicBoolean answered = new AtomicBoolean();
 
-        HeldCall(Call call, Resume resume, Function<Throwable, Object> failure, Object suspended) {
+        HeldCall(Call call, Resume resume, Failure failure, Object suspended) {
             this.call = call;
             this.resume = resume;
             this.failure = failure;
@@ -98,11 +117,24 @@ final class FollowConfirmPolicy {
         }
 
         void follow() throws Throwable {
-            if (answered.compareAndSet(false, true)) call.run();
+            if (!answered.compareAndSet(false, true)) return;
+            Object result;
+            try {
+                result = call.run();
+            } catch (Throwable t) {
+                resume.with(failure.of(cause(t)));
+                return;
+            }
+            if (result != suspended) resume.with(result);
         }
 
         void cancel() throws Throwable {
-            answered.set(true);
+            if (answered.compareAndSet(false, true)) resume.with(failure.of(new CancellationException(HELD)));
+        }
+
+        static Throwable cause(Throwable t) {
+            while (t instanceof InvocationTargetException && t.getCause() != null) t = t.getCause();
+            return t;
         }
     }
 }

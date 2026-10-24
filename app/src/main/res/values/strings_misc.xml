@@ -36,4 +36,5 @@
         <item quantity="one">%1$d reply</item>
         <item quantity="other">%1$d replies</item>
     </plurals>
+    <string name="ig_confirm_follow_title_v2" tools:ignore="MissingTranslation">Follow @%1$s?</string>
 </resources>
