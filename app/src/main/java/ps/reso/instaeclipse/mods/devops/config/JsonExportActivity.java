@@ -20,6 +20,7 @@ public class JsonExportActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         jsonContent = getIntent().getStringExtra("json_content");
+        if (savedInstanceState != null) return;
         if (jsonContent == null || jsonContent.isEmpty()) {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.export_no_config_data), Toast.LENGTH_LONG).show();
             finish();

@@ -24,6 +24,7 @@ public class DataImportActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (savedInstanceState != null) return;
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
@@ -38,7 +39,6 @@ public class DataImportActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode != PICK) { finish(); return; }
         if (resultCode != RESULT_OK || data == null || data.getData() == null) {
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.json_cancelled), Toast.LENGTH_SHORT).show();
             finish();
             return;
         }

@@ -6,6 +6,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Toast;
 
+import androidx.activity.result.PickVisualMediaRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
+
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.profile.SpoofAvatar;
@@ -25,8 +28,10 @@ public class ProfilePhotoPickerActivity extends Activity {
         super.onCreate(savedInstanceState);
         if (savedInstanceState != null) return; // picker already open (recreated)
         try {
-            Intent pick = new Intent(Intent.ACTION_GET_CONTENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE);
-            startActivityForResult(Intent.createChooser(pick, getString(R.string.ig_profile_spoofer_choose_photo)), PICK);
+            startActivityForResult(new ActivityResultContracts.PickVisualMedia().createIntent(this,
+                    new PickVisualMediaRequest.Builder()
+                            .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
+                            .build()), PICK);
         } catch (Throwable t) {
             finish();
         }
@@ -44,15 +49,10 @@ public class ProfilePhotoPickerActivity extends Activity {
         android.content.Context app = getApplicationContext();
         new Thread(() -> {
             String b64 = SpoofAvatar.encode(app.getContentResolver(), uri);
+            if (b64 != null) save(app, b64);
             runOnUiThread(() -> {
-                if (b64 == null) {
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(app,
-                            getString(R.string.ig_profile_spoofer_photo_failed), Toast.LENGTH_SHORT).show();
-                } else {
-                    save(app, b64);
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(app,
-                            getString(R.string.ig_profile_spoofer_photo_saved), Toast.LENGTH_SHORT).show();
-                }
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(app, getString(b64 == null
+                        ? R.string.ig_profile_spoofer_photo_failed : R.string.ig_profile_spoofer_photo_saved), Toast.LENGTH_SHORT).show();
                 finish();
             });
         }, "IE-ProfilePhoto").start();

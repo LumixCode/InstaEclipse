@@ -21,6 +21,7 @@ public class JsonImportActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (savedInstanceState != null) return;
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("application/json");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -63,8 +64,6 @@ public class JsonImportActivity extends Activity {
                 } catch (Exception e) {
                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.json_read_failed, "Cannot read this configuration (maximum 200,000 characters)"), Toast.LENGTH_LONG).show();
                 }
-            } else {
-                ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.json_cancelled), Toast.LENGTH_SHORT).show();
             }
         }
         finish();

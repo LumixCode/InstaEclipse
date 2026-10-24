@@ -7,4 +7,9 @@
     <string name="theme_custom_dark_only" tools:ignore="MissingTranslation">Custom colours apply to the dark theme</string>
     <string name="loc_osm_attribution" translatable="false">© OpenStreetMap contributors</string>
     <string name="loc_picker_clear_search" tools:ignore="MissingTranslation">Clear search</string>
+    <string name="dev_config_open_instagram" tools:ignore="MissingTranslation">Open Instagram first, then try again</string>
+    <string name="dev_config_export_failed" tools:ignore="MissingTranslation">Instagram couldn\'t export its config</string>
+    <string name="ie_frame_previous" tools:ignore="MissingTranslation">Previous frame</string>
+    <string name="ie_frame_next" tools:ignore="MissingTranslation">Next frame</string>
+    <string name="ie_frame_cleanup_pending_open" tools:ignore="MissingTranslation">Temporary cleanup is incomplete. Open InstaEclipse to retry cleanup.</string>
 </resources>

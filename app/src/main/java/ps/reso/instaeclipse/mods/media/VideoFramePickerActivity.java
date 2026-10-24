@@ -205,7 +205,7 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
         b.setColorFilter(tint);
         b.setPadding(dp(10), dp(10), dp(10), dp(10));
         b.setBackground(ripple(true));
-        b.setContentDescription(getString(R.string.ie_frame_position) + (back ? " −" : " +"));
+        b.setContentDescription(getString(back ? R.string.ie_frame_previous : R.string.ie_frame_next));
         b.setEnabled(false);
         b.setAlpha(0.4f);
         b.setOnClickListener(view -> step(back ? -FRAME_US : FRAME_US));
@@ -316,7 +316,7 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
                 Logging.flush();
                 main.post(() -> {
                     if (!alive()) return;
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(cleaned ? R.string.ie_frame_saved : R.string.ie_frame_cleanup_pending,
+                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(cleaned ? R.string.ie_frame_saved : R.string.ie_frame_cleanup_pending_open,
                             saved.width, saved.height), Toast.LENGTH_LONG).show();
                     finish();
                 });
@@ -334,7 +334,7 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
         Logging.flush();
         main.post(() -> {
             if (!alive()) return;
-            String message = getString(cleaned ? R.string.ie_frame_failed : R.string.ie_frame_cleanup_pending);
+            String message = getString(cleaned ? R.string.ie_frame_failed : R.string.ie_frame_cleanup_pending_open);
             if (cleaned && failure instanceof VideoFrameExtractor.FrameFailure)
                 message += "\n" + failure.getMessage(); // Helper-owned fixed text, never a platform exception.
             failMessage(message);

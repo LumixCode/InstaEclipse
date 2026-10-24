@@ -28,19 +28,19 @@
         <activity
             android:name=".mods.devops.config.JsonImportActivity"
             android:exported="false"
-            android:theme="@style/Theme.InstaEclipse">
+            android:theme="@style/Theme.InstaEclipse.Transparent">
         </activity>
 
         <activity
             android:name=".mods.devops.config.DataImportActivity"
             android:exported="false"
-            android:theme="@style/Theme.InstaEclipse">
+            android:theme="@style/Theme.InstaEclipse.Transparent">
         </activity>
 
         <activity
             android:name=".mods.devops.config.JsonExportActivity"
             android:exported="false"
-            android:theme="@style/Theme.InstaEclipse" />
+            android:theme="@style/Theme.InstaEclipse.Transparent" />
 
         <activity
             android:name=".mods.location.LocationPickerActivity"
@@ -92,11 +92,13 @@
             android:authorities="ps.reso.instaeclipse.prefsync"
             android:exported="true" />
 
-        <activity android:name=".mods.media.VideoFramePickerActivity" android:exported="false" android:theme="@style/Theme.InstaEclipse" />
+        <activity android:name=".mods.media.VideoFramePickerActivity" android:exported="false" android:theme="@style/Theme.InstaEclipse"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|uiMode|keyboardHidden" />
         <!-- Profile spoofer: picks your spoofed profile picture for Instagram's in-app menu. -->
         <activity
             android:name=".ui.ProfilePhotoPickerActivity"
             android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|density|uiMode"
             android:excludeFromRecents="true"
             android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />

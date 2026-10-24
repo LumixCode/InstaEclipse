@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
@@ -30,6 +29,7 @@ import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -65,6 +65,7 @@ import java.util.Scanner;
 import java.util.Set;
 
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.mods.devops.config.DevConfigReply;
 import ps.reso.instaeclipse.utils.text.SearchText;
 import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
 import ps.reso.instaeclipse.ui.theme.ThemeCustomizerActivity;
@@ -89,7 +90,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private ActivityResultLauncher<String> notifPermLauncher;
     private ActivityResultLauncher<Intent> locationPickerLauncher;
     private ActivityResultLauncher<Intent> themeCustomizerLauncher;
-    private ActivityResultLauncher<String> profilePhotoLauncher;
+    private ActivityResultLauncher<PickVisualMediaRequest> profilePhotoLauncher;
 
     private String currentMenu = "main";
     private String searchShown;
@@ -107,6 +108,12 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     /** Nonce of the last ACTION_REQUEST_PREFS; replies without it are ignored (IpcSecurity). */
     private String prefsNonce;
     private ps.reso.instaeclipse.utils.ipc.ModuleReplies.Pending prefsReply, configReply;
+    private final android.os.Handler configTimer = new android.os.Handler(android.os.Looper.getMainLooper());
+    private boolean configExport;
+    private final Runnable configTimeout = () -> {
+        if (configReply != null) { configReply.cancel(); configReply = null; }
+        onDevConfigResult(DevConfigReply.Result.NO_REPLY, null);
+    };
 
     private final BroadcastReceiver prefsReceiver = new BroadcastReceiver() {
         @Override
@@ -276,7 +283,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         themeCustomizerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(), result -> reloadCurrentMenu());
 
-        profilePhotoLauncher = registerForActivityResult(new ActivityResultContracts.GetContent(), this::onProfilePhotoPicked);
+        profilePhotoLauncher = registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), this::onProfilePhotoPicked);
 
         dirPickerLauncher = registerForActivityResult(new ActivityResultContracts.OpenDocumentTree(), uri -> {
             if (uri != null) {
@@ -2106,7 +2113,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         int border = com.google.android.material.color.MaterialColors.getColor(c, com.google.android.material.R.attr.colorOutlineVariant, 0x33808080);
         ps.reso.instaeclipse.utils.dialog.ProfileSpoofEditor editor = new ps.reso.instaeclipse.utils.dialog.ProfileSpoofEditor(c, v,
                 new ps.reso.instaeclipse.utils.dialog.ProfileSpoofEditor.Palette(text, sub, field, accent, border),
-                () -> profilePhotoLauncher.launch("image/*"), null, null);
+                () -> profilePhotoLauncher.launch(new PickVisualMediaRequest.Builder()
+                        .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE).build()), null, null);
         profileSpoofEditor = editor;
         android.widget.ScrollView scroll = new android.widget.ScrollView(c);
         int pad = Math.round(20 * getResources().getDisplayMetrics().density);
@@ -2809,36 +2817,48 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     }
 
     private void exportDevConfig() {
+        Intent request = new Intent("ps.reso.instaeclipse.ACTION_EXPORT_CONFIG");
+        request.setPackage("com.instagram.android");
+        requestDevConfig(request, "ps.reso.instaeclipse.ACTION_SEND_CONFIG", true);
+    }
+
+    private void requestDevConfig(Intent request, String replyAction, boolean export) {
         final String nonce = ps.reso.instaeclipse.utils.core.IpcSecurity.newNonce();
         BroadcastReceiver configReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (!ps.reso.instaeclipse.utils.core.IpcSecurity.nonceMatches(nonce, intent)) return;
+                configTimer.removeCallbacks(configTimeout);
                 if (configReply != null) { configReply.cancel(); configReply = null; }
-                Activity activity = getActivity();
-                if (activity == null || activity.isFinishing()) return;
-                String error = intent.getStringExtra("error");
-                if (error != null) {
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(activity, error, Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                String json = intent.getStringExtra("json_content");
-                if (json == null || json.isEmpty()) {
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(activity, getString(R.string.export_no_config_data), Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                Intent exportIntent = new Intent();
-                exportIntent.setComponent(new ComponentName(activity, "ps.reso.instaeclipse.mods.devops.config.JsonExportActivity"));
-                exportIntent.putExtra("json_content", json);
-                startActivity(exportIntent);
+                onDevConfigResult(DevConfigReply.of(true, intent.getStringExtra("error")), intent.getStringExtra("json_content"));
             }
         };
-        IntentFilter filter = new IntentFilter("ps.reso.instaeclipse.ACTION_SEND_CONFIG");
+        configTimer.removeCallbacks(configTimeout);
         if (configReply != null) configReply.cancel();
-        Intent request = new Intent("ps.reso.instaeclipse.ACTION_EXPORT_CONFIG");
+        configExport = export;
         request.putExtra(ps.reso.instaeclipse.utils.core.IpcSecurity.EXTRA_NONCE, nonce);
-        request.setPackage("com.instagram.android");
-        configReply = ps.reso.instaeclipse.utils.core.IpcSecurity.requestReply(requireContext(), request, "ps.reso.instaeclipse.ACTION_SEND_CONFIG", configReceiver);
+        configReply = ps.reso.instaeclipse.utils.core.IpcSecurity.requestReply(requireContext(), request, replyAction, configReceiver);
+        if (configReply == null) onDevConfigResult(DevConfigReply.Result.NO_REPLY, null);
+        else configTimer.postDelayed(configTimeout, DevConfigReply.TIMEOUT_MS);
+    }
+
+    private void onDevConfigResult(DevConfigReply.Result result, String json) {
+        DevConfigReply.report(result);
+        Activity activity = getActivity();
+        if (activity == null || activity.isFinishing()) return;
+        if (configExport && result == DevConfigReply.Result.OK) {
+            if (json == null || json.isEmpty()) {
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(activity, getString(R.string.export_no_config_data), Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Intent exportIntent = new Intent();
+            exportIntent.setComponent(new ComponentName(activity, "ps.reso.instaeclipse.mods.devops.config.JsonExportActivity"));
+            exportIntent.putExtra("json_content", json);
+            startActivity(exportIntent);
+            return;
+        }
+        int message = DevConfigReply.messageFor(result, configExport);
+        if (message != 0) ps.reso.instaeclipse.utils.toast.IeToast.makeText(activity, getString(message), Toast.LENGTH_SHORT).show();
     }
 
     private void restoreDefaultConfig() {
@@ -2856,8 +2876,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                         Intent broadcast = new Intent("ps.reso.instaeclipse.ACTION_IMPORT_CONFIG");
                         broadcast.setPackage("com.instagram.android");
                         broadcast.putExtra("json_content", json);
-                        ps.reso.instaeclipse.utils.core.CommonUtils.broadcastToInstagram(requireContext(), broadcast);
-                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_toast_default_config_restored), Toast.LENGTH_SHORT).show();
+                        requestDevConfig(broadcast, "ps.reso.instaeclipse.ACTION_IMPORT_CONFIG_RESULT", false);
                     } catch (Exception e) {
                         ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
@@ -2956,6 +2975,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         updateBackEnabled();
         if (localCache != null) localCache.unregisterOnSharedPreferenceChangeListener(prefsListener);
         if (prefsReply != null) { prefsReply.cancel(); prefsReply = null; }
+        configTimer.removeCallbacks(configTimeout);
         if (configReply != null) { configReply.cancel(); configReply = null; }
     }
 }
