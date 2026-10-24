@@ -9,8 +9,11 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
@@ -27,7 +30,9 @@ public class HiddenThreads {
     private static final String FILE_NAME = "ie_hidden_threads.json";
     // Insertion-ordered so the unhide manager lists most-recently-hidden sensibly.
     private static final Map<String, String> map = new LinkedHashMap<>();
-    private static boolean loaded = false;
+    private static volatile Set<String> ids = Collections.emptySet();
+    private static volatile long revision;
+    private static volatile boolean loaded = false;
     // The file is there but could not be read: not retried, and never overwritten (loaded stays false).
     private static boolean loadFailed = false;
 
@@ -56,9 +61,11 @@ public class HiddenThreads {
                     map.put(k, o.optString(k, ""));
                 }
             }
+            publish();
             loaded = true;
         } catch (Throwable t) {
             loadFailed = true;
+            publish();
             ModuleLog.error("(IE|HiddenThreads) Could not read the list of hidden chats; changes are not saved until Instagram restarts: "
                     + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
@@ -79,10 +86,23 @@ public class HiddenThreads {
         }
     }
 
-    public static synchronized boolean isHidden(String threadId) {
-        if (threadId == null || threadId.isEmpty()) return false;
-        ensureLoaded();
-        return map.containsKey(threadId);
+    private static void publish() {
+        ids = Collections.unmodifiableSet(new LinkedHashSet<>(map.keySet()));
+        revision++;
+    }
+
+    public static Set<String> ids() {
+        if (!loaded) ensureLoaded();
+        return ids;
+    }
+
+    public static long revision() {
+        if (!loaded) ensureLoaded();
+        return revision;
+    }
+
+    public static boolean isHidden(String threadId) {
+        return threadId != null && !threadId.isEmpty() && ids().contains(threadId);
     }
 
     /** Explicitly hides a thread. Repeated calls update its label without reversing its state. */
@@ -91,7 +111,7 @@ public class HiddenThreads {
         ensureLoaded();
         String value = title == null ? "" : title;
         if (value.equals(map.get(threadId)) && map.containsKey(threadId)) return;
-        map.put(threadId, value);
+        if (map.put(threadId, value) == null) publish();
         persist();
     }
 
@@ -102,7 +122,9 @@ public class HiddenThreads {
 
     public static synchronized void unhide(String threadId) {
         ensureLoaded();
-        if (map.remove(threadId) != null) persist();
+        if (map.remove(threadId) == null) return;
+        publish();
+        persist();
     }
 
     /** Snapshot of hidden threads (id -> title) for the unhide manager. */

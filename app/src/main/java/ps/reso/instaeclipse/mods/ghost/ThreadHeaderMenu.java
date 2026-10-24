@@ -18,6 +18,7 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -80,6 +81,8 @@ final class ThreadHeaderMenu {
     private static Runnable pendingReplay;
     private static boolean tracking, stillTap, replaying;
     private static int headerId, titleBoxId, endButtonsId;
+    private static final Map<Activity, WeakReference<View>> shownHeaders = new WeakHashMap<>();
+    private static final Map<Activity, WeakReference<MenuButton>> shownButtons = new WeakHashMap<>();
 
     private static Map<String, Entry> entriesOf(View btn) {
         return btn instanceof MenuButton b ? b.entries : null;
@@ -93,8 +96,30 @@ final class ThreadHeaderMenu {
      * (the button itself can be GONE, see hideChatMenuButton).
      */
     private static MenuButton shownButton(Activity a) {
+        MenuButton cached = attached(shownButtons.get(a));
+        if (cached != null && cached.getParent() instanceof View parent && parent.isShown()) return cached;
         View decor = a.getWindow().getDecorView();
-        return decor.isShown() ? shownButton(decor) : null;
+        MenuButton found = decor.isShown() ? shownButton(decor) : null;
+        remember(shownButtons, a, found);
+        return found;
+    }
+
+    static View shownHeader(Activity a) {
+        View cached = attached(shownHeaders.get(a));
+        if (cached != null && cached.isShown()) return cached;
+        View found = findShown(a.getWindow().getDecorView(), ResIds.id(a, "direct_thread_header"));
+        remember(shownHeaders, a, found);
+        return found;
+    }
+
+    private static <T extends View> T attached(WeakReference<T> reference) {
+        T view = reference == null ? null : reference.get();
+        return view != null && view.isAttachedToWindow() ? view : null;
+    }
+
+    private static <T extends View> void remember(Map<Activity, WeakReference<T>> cache, Activity a, T view) {
+        if (view == null) cache.remove(a);
+        else cache.put(a, new WeakReference<>(view));
     }
 
     private static MenuButton shownButton(View v) {
@@ -153,7 +178,7 @@ final class ThreadHeaderMenu {
 
     private static View createButton(Activity a) {
         View decor = a.getWindow().getDecorView();
-        View header = findShown(decor, ResIds.id(a, "direct_thread_header"));
+        View header = shownHeader(a);
         if (header == null) return null;
         ViewGroup target;
         int insertAt;
@@ -208,10 +233,16 @@ final class ThreadHeaderMenu {
     /** The view with {@code id} that is actually on screen; a hidden cached chat can hold another. */
     static View findShown(View root, int id) {
         if (root == null || id == 0 || !root.isShown()) return null;
-        if (root.getId() == id) return root;
-        if (root instanceof ViewGroup group) {
+        return findVisible(root, id);
+    }
+
+    private static View findVisible(View view, int id) {
+        if (view.getId() == id) return view;
+        if (view instanceof ViewGroup group) {
             for (int i = 0; i < group.getChildCount(); i++) {
-                View match = findShown(group.getChildAt(i), id);
+                View child = group.getChildAt(i);
+                if (child.getVisibility() != View.VISIBLE) continue;
+                View match = findVisible(child, id);
                 if (match != null) return match;
             }
         }

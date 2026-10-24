@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.MotionEvent;
 import android.view.ViewConfiguration;
+import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -82,6 +83,7 @@ public class HideChatsHook {
     private static final String[] ACCOUNT_NAME_IDS = {"action_bar_title_textview", "action_bar_title"};
 
     private static final Map<View, WeakReference<Activity>> watchedRoots = new WeakHashMap<>();
+    private static final Map<View, ViewTreeObserver.OnGlobalLayoutListener> layoutListeners = new WeakHashMap<>();
     private static final Map<Activity, MenuBinding> menuBindings = new WeakHashMap<>();
     private static final Map<Activity, ForegroundThread> foregroundThreads = new WeakHashMap<>();
     private static final Map<Activity, WeakReference<Object>> foregroundInboxes = new WeakHashMap<>();
@@ -103,11 +105,9 @@ public class HideChatsHook {
     private static volatile String hiddenAccount;
     private static WeakReference<Activity> recentsHidden;
     private static boolean lifecycleRegistered;
-    private static boolean inboxRefreshPending;
     private static boolean threadsTracked, inboxesTracked;
     private static final Set<Activity> startedActivities =
             Collections.newSetFromMap(new WeakHashMap<>());
-    private static int threadHeaderId;
     private static int inboxActionBarId;
 
     /** The chat a header menu's Hide/Unhide entry was added for, and which of the two it offers. */
@@ -115,11 +115,19 @@ public class HideChatsHook {
         final WeakReference<View> header;
         final String threadId;
         final boolean hide;
+        boolean titled;
 
-        MenuBinding(View header, String threadId, boolean hide) {
+        MenuBinding(View header, String threadId, boolean hide, boolean titled) {
             this.header = new WeakReference<>(header);
             this.threadId = threadId;
             this.hide = hide;
+            this.titled = titled;
+        }
+
+        View shownHeader(String liveThreadId) {
+            View view = header.get();
+            return view != null && view.isAttachedToWindow() && view.isShown() && threadId.equals(liveThreadId)
+                    && hide != HiddenThreads.isHidden(threadId) ? view : null;
         }
     }
 
@@ -136,12 +144,20 @@ public class HideChatsHook {
     private static final class NativeInbox {
         final String account;
         final HiddenInboxRows<Object> rows = new HiddenInboxRows<>();
+        final InboxReplayGate gate = new InboxReplayGate();
 
         NativeInbox(Object owner) { account = UnsentIdentity.account(owner); }
 
+        boolean hiddenOnly() {
+            return hiddenOnlyMode && account != null && account.equals(hiddenAccount);
+        }
+
+        long revision() {
+            return InboxReplayGate.revision(HiddenThreads.revision(), FeatureFlags.hideSpecificChats, hiddenOnly());
+        }
+
         List<Object> visible() {
-            return rows.visible(HiddenThreads.all().keySet(), FeatureFlags.hideSpecificChats,
-                    hiddenOnlyMode && account != null && account.equals(hiddenAccount),
+            return rows.visible(HiddenThreads.ids(), FeatureFlags.hideSpecificChats, hiddenOnly(),
                     HideChatsHook::threadIdOfRow);
         }
     }
@@ -168,12 +184,7 @@ public class HideChatsHook {
                 Activity activity = fragmentActivity(param.thisObject);
                 if (activity != null) foregroundInboxes.put(activity, new WeakReference<>(param.thisObject));
                 watchActivity(activity);
-                // The replay runs Instagram's whole inbox diff on the main thread: only when
-                // something is hidden or the shown rows are stale (refreshVisibleButtons).
-                if (activeHook != null && activity != null
-                        && (FeatureFlags.hideSpecificChats || hiddenOnlyMode || inboxRefreshPending)) {
-                    activeHook.refreshInbox(activity);
-                }
+                if (activeHook != null && activity != null) activeHook.refreshInbox(activity);
                 LockDirectMessagesHook.watchActivity(activity);
             }
         });
@@ -288,7 +299,7 @@ public class HideChatsHook {
         String module = visibleModule(activity);
         if (!"direct_inbox".equals(module) && !(module.isEmpty()
                 && ThreadHeaderMenu.findShown(decor, inboxActionBarId) != null
-                && ThreadHeaderMenu.findShown(decor, threadHeaderId) == null)) return null;
+                && ThreadHeaderMenu.shownHeader(activity) == null)) return null;
         View bar = ThreadHeaderMenu.findShown(decor, inboxActionBarId);
         Rect bounds = new Rect();
         if (bar == null || !bar.getGlobalVisibleRect(bounds)) {
@@ -320,7 +331,7 @@ public class HideChatsHook {
                 // exists, filter only the final inbox submission so native caches and pagination
                 // retain every thread.
                 if (inboxPath == null && FeatureFlags.hideSpecificChats) {
-                    param.setResult(HiddenInboxRows.select(rows, HiddenThreads.all().keySet(),
+                    param.setResult(HiddenInboxRows.select(rows, HiddenThreads.ids(),
                             false, HideChatsHook::threadIdOfRow));
                 }
             }
@@ -377,7 +388,9 @@ public class HideChatsHook {
                         state = nativeInboxes.computeIfAbsent(param.thisObject, ignored -> new NativeInbox(owner));
                         state.rows.replace((List<?>) param.args[0]);
                     }
-                    param.args[0] = state.visible();
+                    long revision = state.revision();
+                    if (FeatureFlags.hideSpecificChats || hiddenOnlyMode) param.args[0] = state.visible();
+                    state.gate.applied(revision);
                 }
             });
             inboxPath = path;
@@ -484,11 +497,13 @@ public class HideChatsHook {
         return chats;
     }
 
-    private static void rememberThread(Activity activity, String id, String title) {
-        if (id == null) return;
+    private static boolean rememberThread(Activity activity, String id, String title) {
+        if (id == null) return false;
         String account = knownThreads.has(id) ? null : currentAccount(activity);
         String cleanTitle = knownThreads.opened(account, id, title);
-        if (!cleanTitle.isEmpty()) ThreadNames.put(id, cleanTitle);
+        if (cleanTitle.isEmpty()) return false;
+        ThreadNames.put(id, cleanTitle);
+        return true;
     }
 
     public static String knownThreadTitle(String id) {
@@ -582,11 +597,9 @@ public class HideChatsHook {
 
     @SuppressLint("DiscouragedApi")
     private void ensureIds(Activity activity) {
-        if (threadHeaderId != 0 || inboxActionBarId != 0) return;
-        String packageName = activity.getPackageName();
-        android.content.res.Resources resources = activity.getResources();
-        threadHeaderId = resources.getIdentifier("direct_thread_header", "id", packageName);
-        inboxActionBarId = resources.getIdentifier("direct_inbox_action_bar", "id", packageName);
+        if (inboxActionBarId != 0) return;
+        inboxActionBarId = activity.getResources().getIdentifier("direct_inbox_action_bar", "id",
+                activity.getPackageName());
     }
 
     private void registerListener(Activity activity) {
@@ -595,25 +608,44 @@ public class HideChatsHook {
             registerLifecycle(activity);
             tryInject(activity);
             View decor = activity.getWindow().getDecorView();
-            if (watchedRoots.containsKey(decor)) return;
-            watchedRoots.put(decor, new WeakReference<>(activity));
-            decor.getViewTreeObserver().addOnGlobalLayoutListener(() -> tryInject(activity));
+            if (!watchedRoots.containsKey(decor)) watchedRoots.put(decor, new WeakReference<>(activity));
+            syncLayoutListener(activity);
         } catch (Throwable t) {
             ModuleLog.warn("(IE|HideChats) Could not add the hide option on this screen: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+        }
+    }
+
+    private void syncLayoutListener(Activity activity) {
+        try {
+            View decor = activity.getWindow().getDecorView();
+            ViewTreeObserver.OnGlobalLayoutListener listener = layoutListeners.get(decor);
+            if ((FeatureFlags.hideSpecificChats || hiddenOnlyMode) == (listener != null)) return;
+            if (listener != null) {
+                layoutListeners.remove(decor);
+                decor.getViewTreeObserver().removeOnGlobalLayoutListener(listener);
+                return;
+            }
+            WeakReference<Activity> owner = new WeakReference<>(activity);
+            listener = () -> {
+                Activity live = owner.get();
+                if (live != null) tryInject(live);
+            };
+            decor.getViewTreeObserver().addOnGlobalLayoutListener(listener);
+            layoutListeners.put(decor, listener);
+        } catch (Throwable t) {
+            ModuleLog.detail("(IE|HideChats) layout listener update failed: " + t.getMessage());
         }
     }
 
     public static void refreshVisibleButtons() {
         new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
             if (activeHook == null) return;
-            // The hidden set or the switch changed: an inbox not on screen now replays its rows
-            // once when it resumes (a switched-off filter brings the hidden rows back).
-            inboxRefreshPending = true;
             for (WeakReference<Activity> reference : new ArrayList<>(watchedRoots.values())) {
                 Activity activity = reference.get();
                 if (activity != null && !activity.isDestroyed()) {
                     activeHook.refreshInbox(activity);
                     activeHook.tryInject(activity);
+                    activeHook.syncLayoutListener(activity);
                 }
             }
         });
@@ -633,12 +665,11 @@ public class HideChatsHook {
                 hiddenOnlyMode = false;
                 hiddenAccount = null;
                 syncRecents(stopped);
-                inboxRefreshPending = true;
                 ModuleLog.line("(IE|HideChats) Hidden chats locked again because Instagram went to the background");
             }
 
             @Override public void onActivityResumed(Activity resumed) {
-                if (!inboxRefreshPending || activeHook == null) return;
+                if (activeHook == null || !anyInboxStale()) return;
                 resumed.runOnUiThread(() -> {
                     activeHook.refreshInbox(resumed);
                     activeHook.tryInject(resumed);
@@ -669,19 +700,27 @@ public class HideChatsHook {
                 if (menuBindings.remove(activity) != null) ThreadHeaderMenu.remove(activity, "hide");
                 return false;
             }
+            MenuBinding bound = menuBindings.get(activity);
+            View shown = bound == null ? null : bound.shownHeader(trackedThreadId(activity));
+            if (shown != null && ThreadHeaderMenu.has(activity, "hide")) {
+                if (!bound.titled) bound.titled = rememberThread(activity, bound.threadId, threadTitle(shown));
+                return true;
+            }
             ForegroundThread foreground = currentForegroundThread(activity);
             // Without the 446 lifecycle signal, the shared tracker says whether any chat is open.
             if (foreground == null && (threadsTracked || CurrentThreadTracker.currentThreadId() == null)) return false;
-            View header = ThreadHeaderMenu.findShown(decor, threadHeaderId);
+            View header = ThreadHeaderMenu.shownHeader(activity);
             if (header == null) return false;
             String threadId = foreground != null ? foreground.threadId : resolveVisibleThreadId(activity, header);
             if (threadId == null) return false;
 
-            rememberThread(activity, threadId, threadTitle(header));
+            boolean titled = rememberThread(activity, threadId, threadTitle(header));
             boolean hide = !HiddenThreads.isHidden(threadId);
-            MenuBinding bound = menuBindings.get(activity);
             if (bound != null && bound.header.get() == header && threadId.equals(bound.threadId)
-                    && bound.hide == hide && ThreadHeaderMenu.has(activity, "hide")) return true;
+                    && bound.hide == hide && ThreadHeaderMenu.has(activity, "hide")) {
+                bound.titled = titled;
+                return true;
+            }
 
             // The entry is bound to this chat and to the action its label shows; a click after
             // the screen moved to another chat is rejected instead of hiding or unhiding that one.
@@ -690,7 +729,7 @@ public class HideChatsHook {
             if (!ThreadHeaderMenu.add(activity, "hide",
                     text(activity, hide ? R.string.ig_hide_chat : R.string.ig_unhide_chat),
                     () -> onHideEntry(activity, boundId, boundHeader, hide))) return false;
-            menuBindings.put(activity, new MenuBinding(header, threadId, hide));
+            menuBindings.put(activity, new MenuBinding(header, threadId, hide, titled));
             return true;
         } catch (Throwable t) {
             ModuleLog.detail("(IE|HideChats) inject failed: " + t.getMessage());
@@ -822,7 +861,6 @@ public class HideChatsHook {
         } else hiddenAccount = null;
         hiddenOnlyMode = enabled;
         syncRecents(activity);
-        inboxRefreshPending = true;
         if (activeHook != null) {
             activeHook.refreshInbox(activity);
             activeHook.tryInject(activity);
@@ -878,7 +916,17 @@ public class HideChatsHook {
         }
     }
 
+    private static boolean anyInboxStale() {
+        synchronized (nativeInboxes) {
+            for (NativeInbox state : nativeInboxes.values()) {
+                if (state.gate.stale(state.revision())) return true;
+            }
+        }
+        return false;
+    }
+
     private void refreshInbox(Activity activity) {
+        if (!hiddenOnlyMode && !anyInboxStale()) return;
         Object consumer = findInboxConsumer(activity);
         if (consumer == null) return;
         try {
@@ -890,14 +938,24 @@ public class HideChatsHook {
                 hiddenAccount = null;
                 syncRecents(activity);
             }
+            long revision = state.revision();
+            if (!state.gate.stale(revision)) return;
             List<Object> visible = state.visible();
             // Bypass our capture hook: a filtered replay must never replace the complete source.
             XposedBridge.invokeOriginalMethod(inboxPath.submit, consumer, new Object[]{visible});
-            inboxRefreshPending = false;
+            state.gate.applied(revision);
             ModuleLog.probe("(IE|HideChats) local inbox submitted rows=" + visible.size()
                     + " hiddenOnly=" + hiddenOnlyMode);
         } catch (Throwable t) {
             ModuleLog.warn("(IE|HideChats) Could not update the chat list: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+        }
+    }
+
+    private static String trackedThreadId(Activity activity) {
+        if (!threadsTracked) return CurrentThreadTracker.currentThreadId();
+        synchronized (foregroundThreads) {
+            ForegroundThread current = foregroundThreads.get(activity);
+            return current == null ? null : current.threadId;
         }
     }
 
