@@ -81,8 +81,9 @@ public class VoiceMessageDownloadHook {
     // Bulk unsend row carrier: another staff-only action (never shown to normal users).
     private static final String BULK_CARRIER = "REPORT_BUG_FOR_VISUAL_MEDIA";
 
-    private static volatile Object lastMessage;
-    private static volatile long lastMessageAt;
+    private static final String MESSAGE_ID = "com.instagram.model.direct.messageid.MessageIdentifier";
+    private static final DmMessageMatch MATCH = new DmMessageMatch();
+    private static volatile Class<?> messageIdClass;
     private static Class<?> messageClass;
     private static Class<?> audioInfoClass;
     private static Method audioMapper;
@@ -125,6 +126,7 @@ public class VoiceMessageDownloadHook {
             } catch (Throwable t) {
                 ModuleLog.error(TAG + "Downloading stickers and GIFs from chats will not work: " + t);
             }
+            try { messageIdClass = cl.loadClass(MESSAGE_ID); } catch (Throwable ignored) {}
             for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("audio_src_expiration_timestamp_us", "waveform_sampling_frequency_hz")
                     .returnType("java.util.Map")))) {
@@ -147,8 +149,8 @@ public class VoiceMessageDownloadHook {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                             if (param.getResult() != null) {
-                                lastMessage = param.getResult();
-                                lastMessageAt = System.currentTimeMillis();
+                                MATCH.onLookup(stringArg(param.args, 0), stringArg(param.args, 1),
+                                        param.getResult(), System.currentTimeMillis());
                                 if (param.thisObject == null && param.args.length > 0 && !(param.args[0] instanceof String))
                                     ps.reso.instaeclipse.mods.ghost.BulkUnsend.onLookup(param.args[0]);
                             }
@@ -177,7 +179,7 @@ public class VoiceMessageDownloadHook {
                     protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                         clearPending(); // the pending targets belong to the menu being built
                         if ((!downloadEnabled() && !FeatureFlags.translateMessages && !FeatureFlags.bulkUnsend) || ctor == null) return;
-                        Object msg = recentMessage();
+                        Object msg = MATCH.pressed(messageIds(param.args), System.currentTimeMillis());
                         // The factory gets the message's content type (VOICE_MEDIA / TEXT / LINK);
                         // unlike a field scan it can't mistake a text reply to a voice note for voice.
                         String type = contentType(param.args);
@@ -186,8 +188,7 @@ public class VoiceMessageDownloadHook {
                         // Stickers and GIFs: never on a text, link or voice message, whose reply
                         // preview can hold the quoted sticker.
                         String sticker = FeatureFlags.enableStickerDownload && !voice && msg != null
-                                && !"TEXT".equals(type) && !"LINK".equals(type) && !"VOICE_MEDIA".equals(type)
-                                ? stickerUrl(msg) : null;
+                                && DmMessageMatch.stickerType(type) ? stickerUrl(msg) : null;
                         // Translate (like comments): hand a text message to the user's translator app.
                         String text = FeatureFlags.translateMessages && !voice && sticker == null && msg != null
                                 && (type == null || "TEXT".equals(type) || "LINK".equals(type)) ? messageText(msg) : null;
@@ -672,17 +673,14 @@ public class VoiceMessageDownloadHook {
                         }
                 }
             }
-            String sender = senderUsername(message);
-            if (sender == null) sender = chatUsername();
-            if (sender != null) return sender;
-            String chat = ps.reso.instaeclipse.utils.ghost.ThreadNames.resolve(
-                    ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker.currentThreadId());
-            // keep letters of every script: a chat named in Cyrillic or Arabic stays readable
-            if (chat != null && !chat.isEmpty()) return chat.replaceAll("[^\\p{L}\\p{N}._-]", "_");
+            String person = senderUsername(message);
+            if (person == null) person = chatUsername();
+            return DmMessageMatch.owner(person, person != null ? null : ps.reso.instaeclipse.utils.ghost.ThreadNames.resolve(
+                    ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker.currentThreadId()));
         } catch (Throwable t) {
             ModuleLog.detail(TAG + "username: " + t);
         }
-        return "voice";
+        return DmMessageMatch.owner(null, null);
     }
 
     /**
@@ -1055,7 +1053,29 @@ public class VoiceMessageDownloadHook {
     }
 
     private static Object recentMessage() {
-        return System.currentTimeMillis() - lastMessageAt < 15000 ? lastMessage : null;
+        return MATCH.recent(System.currentTimeMillis());
+    }
+
+    private static String stringArg(Object[] args, int n) {
+        for (Object a : args) if (a instanceof String s && n-- == 0) return s;
+        return null;
+    }
+
+    private static List<String> messageIds(Object[] args) {
+        List<String> ids = new ArrayList<>();
+        Class<?> type = messageIdClass;
+        if (type == null) return ids;
+        for (Object a : args) {
+            if (!type.isInstance(a)) continue;
+            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(type)) {
+                if (Modifier.isStatic(f.getModifiers()) || f.getType() != String.class) continue;
+                try {
+                    f.setAccessible(true);
+                    if (f.get(a) instanceof String s) ids.add(s);
+                } catch (Throwable ignored) {}
+            }
+        }
+        return ids;
     }
 
     /** Our injected row ("Download" / "Translate with app"), styled like an existing row. */
