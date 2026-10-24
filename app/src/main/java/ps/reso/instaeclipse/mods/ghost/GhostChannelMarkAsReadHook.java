@@ -45,8 +45,8 @@ public class GhostChannelMarkAsReadHook {
     }
 
     private void updateChannelSeen(TextView textView) {
-        // Prevent multiple listeners/updates
-        if (textView.getTag() != null && textView.getTag().equals(CHANNEL_TAG)) return;
+        boolean applied = textView.getTag() != null && textView.getTag().equals(CHANNEL_TAG);
+        if (SeenAffordance.onBind(true, applied) != SeenAffordance.Action.APPLY) return;
         textView.setTag(CHANNEL_TAG);
 
         // Make it look interactive

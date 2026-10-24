@@ -37,14 +37,14 @@ public class GhostDMMarkAsReadHook {
                 sCachedContainerId = ps.reso.instaeclipse.utils.ui.ResIds.id(view.getContext(), "row_thread_composer_buttons_container");
                 if (sCachedContainerId == 0 || view.getId() != sCachedContainerId) return;
                 if (!(view.getParent() instanceof ViewGroup parent)) return;
-                injectIndependentButton(parent, view);
+                inject(parent, view);
             });
         } catch (Throwable t) {
             ModuleLog.error("(InstaEclipse): Could not add the mark-as-read button to chats", t);
         }
     }
 
-    private void injectIndependentButton(ViewGroup parent, View originalContainer) {
+    static void inject(ViewGroup parent, View container) {
         if (parent.findViewWithTag(GHOST_BTN_TAG) != null) return;
 
         Context ctx = parent.getContext();
@@ -74,11 +74,11 @@ public class GhostDMMarkAsReadHook {
         ghostBtn.setOnClickListener(v -> triggerSeenLogic(parent));
 
         parent.post(() -> {
-            parent.addView(ghostBtn, 3);
+            parent.addView(ghostBtn, SeenAffordance.composerIndex(parent.getChildCount()));
         });
     }
 
-    private void triggerSeenLogic(View view) {
+    private static void triggerSeenLogic(View view) {
         try {
             Context ctx = view.getContext();
             @SuppressLint("DiscouragedApi")
@@ -104,7 +104,7 @@ public class GhostDMMarkAsReadHook {
         }
     }
 
-    private int dp(Context ctx, int v) {
+    private static int dp(Context ctx, int v) {
         return (int) (v * ctx.getResources().getDisplayMetrics().density);
     }
 }
