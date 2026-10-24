@@ -23,4 +23,5 @@
     <string name="ie_download_reason_generic">Something went wrong. Try again.</string>
     <string name="ie_frame_reason_memory">Not enough memory for this frame.</string>
     <string name="ie_frame_reason_write">The PNG couldn\'t be written. Check your free space.</string>
+    <string name="ie_copy_media_link">Copy media link</string>
 </resources>

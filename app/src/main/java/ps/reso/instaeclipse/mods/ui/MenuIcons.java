@@ -52,6 +52,7 @@ public final class MenuIcons {
         m.put(I18n.t(c, R.string.ig_playback_speed_title), "instagram_circle_play_pano_outline_24");
         m.put(I18n.t(c, R.string.ig_post_counts_title), "instagram_heart_pano_outline_24");
         m.put(I18n.t(c, R.string.ig_download_choice_copy_image), "instagram_photo_pano_outline_24");
+        m.put(I18n.t(c, R.string.ie_copy_media_link), "instagram_link_pano_outline_24");
         iconsByLabel = m;
         return m;
     }

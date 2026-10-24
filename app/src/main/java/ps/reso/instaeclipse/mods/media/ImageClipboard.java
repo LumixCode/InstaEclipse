@@ -1,7 +1,6 @@
 package ps.reso.instaeclipse.mods.media;
 
 import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -14,6 +13,7 @@ import java.io.File;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.text.CopyFeedback;
 
 /**
  * Copy a photo straight to the clipboard (#228) instead of saving it to the gallery.
@@ -51,9 +51,8 @@ final class ImageClipboard {
                         .appendPath("cache").appendPath(DIR).appendPath(out.getName()).build();
                 FeedVideoDownloadHook.mainHandler.post(() -> {
                     try {
-                        ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-                        cm.setPrimaryClip(ClipData.newUri(ctx.getContentResolver(), "Image", uri));
-                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_image_copied), Toast.LENGTH_SHORT).show();
+                        CopyFeedback.copy(ctx, ClipData.newUri(ctx.getContentResolver(), "Image", uri),
+                                I18n.t(ctx, R.string.ig_toast_image_copied));
                     } catch (Throwable t) {
                         fail(ctx, t);
                     }

@@ -44,10 +44,6 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
  * Hook B — options click handler
  *   Found via DexKit: void method with sole param MediaOption$Option (stable, unobfuscated type).
  *   Fires on every option tap; we handle DOWNLOAD and trigger the download.
- *
- * Carousel index: read from the first int field on thisObject whose value fits [0, urlCount).
- *   Tries a known field name first (fast path), then falls back to scanning all int fields
- *   so a rename in a future build doesn't break it.
  */
 public class PostDownloadContextMenuHook {
 
@@ -58,7 +54,7 @@ public class PostDownloadContextMenuHook {
     // com.instagram.feed.media.mediaoption.MediaOption$Option — stable public enum
     private static Class<?> mediaOptionEnumClass;
     private static Object   downloadOptionValue;     // MediaOption$Option.DOWNLOAD
-    private static Object   copyLinkOptionValue;     // MediaOption$Option.COPY_LINK (#117)
+    private static Object   copyLinkOptionValue;
     private static Object   copyImageOptionValue;
     private static Object   mediaInfoOptionValue;
     private static Object   speedOptionValue;
@@ -121,13 +117,11 @@ public class PostDownloadContextMenuHook {
             }
             ps.reso.instaeclipse.mods.ui.ReelMenuLabels.EXTRA_REEL_LABELS.put(PostMenuRowsPolicy.MEDIA_INFO_CARRIER, R.string.ig_media_info_title);
             ps.reso.instaeclipse.mods.ui.ReelMenuLabels.EXTRA_REEL_LABELS.put(PostMenuRowsPolicy.SPEED_CARRIER, R.string.ig_playback_speed_title);
-            for (Object v : values) {
-                if (v == null) continue;
-            }
+            ps.reso.instaeclipse.mods.ui.ReelMenuLabels.EXTRA_REEL_LABELS.put(PostMenuRowsPolicy.COPY_MEDIA_LINK_CARRIER, R.string.ie_copy_media_link);
             if (downloadOptionValue == null)
                 ModuleLog.error("(IE|Post) Download will not appear in the post menu: its menu entry was not found in this Instagram version");
             if (copyLinkOptionValue == null)
-                ModuleLog.error("(IE|Post) Copy link will not appear in the post menu: its menu entry was not found in this Instagram version");
+                ModuleLog.error("(IE|Post) Copy media link will not appear in the post menu: its menu entry was not found in this Instagram version");
         } catch (Throwable t) {
             ModuleLog.detail("(IE|Post) loadMediaOptionEnum: " + t);
         }
@@ -224,14 +218,14 @@ public class PostDownloadContextMenuHook {
                         }
                     }
 
-                    if (oIdx < 0 || lIdx < 0) continue;
+                    if (oIdx < 0 || lIdx < 0 || tIdx < 0 || eIdx < 0 || sIdx < 0) continue;
 
                     addButtonMethod = m;
                     addButtonMethod.setAccessible(true);
-                    idxEnum   = eIdx >= 0 ? eIdx : 0;
+                    idxEnum   = eIdx;
                     idxOption = oIdx;
-                    idxSelf   = sIdx >= 0 ? sIdx : 2;
-                    idxText   = tIdx >= 0 ? tIdx : 3;
+                    idxSelf   = sIdx;
+                    idxText   = tIdx;
                     idxList   = lIdx;
                     break;
                 } catch (Throwable ignored) {}
@@ -298,8 +292,7 @@ public class PostDownloadContextMenuHook {
                     if (row == PostMenuRowsPolicy.Row.COUNTS && !isOwnPost(self)) continue;
                     menu.injected(row, injectRow(param, optionValue(row), label(row)));
                 }
-                if (rows.contains(PostMenuRowsPolicy.Row.COPY_IMAGE) || rows.contains(PostMenuRowsPolicy.Row.MEDIA_INFO)
-                        || rows.contains(PostMenuRowsPolicy.Row.SPEED) || rows.contains(PostMenuRowsPolicy.Row.COUNTS))
+                if (rows.stream().anyMatch(row -> row != PostMenuRowsPolicy.Row.DOWNLOAD))
                     ps.reso.instaeclipse.mods.ui.MenuIcons.fixSoon();
             }
         });
@@ -354,7 +347,7 @@ public class PostDownloadContextMenuHook {
     private static int label(PostMenuRowsPolicy.Row row) {
         return switch (row) {
             case DOWNLOAD -> R.string.ig_dl_title;
-            case COPY_MEDIA_LINK -> R.string.ig_copy_link_title;
+            case COPY_MEDIA_LINK -> R.string.ie_copy_media_link;
             case COPY_IMAGE -> R.string.ig_download_choice_copy_image;
             case MEDIA_INFO -> R.string.ig_media_info_title;
             case SPEED -> R.string.ig_playback_speed_title;
@@ -639,28 +632,11 @@ public class PostDownloadContextMenuHook {
         }
     }
 
-    /** The menu is for one of your own posts: its owner (the Media's User id) is the account in use. */
     private static boolean isOwnPost(Object menuCreator) {
-        try {
-            Object media = findMedia(menuCreator);
-            if (media == null) return true; // can't tell: offer it, the edit is local anyway
-            String self = ps.reso.instaeclipse.mods.ui.ProfileSpoofHook.selfId();
-            if (self == null) return true;
-            for (java.lang.reflect.Method m : media.getClass().getMethods()) {
-                if (m.getParameterCount() != 0 || !m.getReturnType().getName().equals("com.instagram.user.model.User")) continue;
-                Object user = m.invoke(media);
-                if (user == null) continue;
-                for (java.lang.reflect.Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(user.getClass())) {
-                    if (f.getType() != String.class || !java.lang.reflect.Modifier.isFinal(f.getModifiers())
-                            || java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
-                    f.setAccessible(true);
-                    if (f.get(user) instanceof String id && id.matches("\\d+")) return self.equals(id);
-                }
-            }
-            return true;
-        } catch (Throwable t) {
-            return true;
-        }
+        String self = ps.reso.instaeclipse.mods.ui.ProfileSpoofHook.selfId();
+        if (self == null) return true;
+        String owner = SelectedMediaAdapter.ownerId(SelectedMediaAdapter.creatorMedia(menuCreator));
+        return owner == null || self.equals(owner);
     }
 
     // ── Download dispatch ─────────────────────────────────────────────────────
@@ -685,7 +661,17 @@ public class PostDownloadContextMenuHook {
         }
         int viewIdx = urls.size() > 1 ? ReelDownloadHook.findCarouselIndexFromView(ctx, urls.size()) : -1;
         int idx = viewIdx >= 0 ? viewIdx : findCarouselIndex(clickHandler, urls.size());
-        String url = urls.get(idx >= 0 && idx < urls.size() ? idx : 0);
+        if (idx >= 0 && idx < urls.size()) { copyImage(ctx, urls.get(idx)); return; }
+        int n = urls.size();
+        CharSequence[] slides = new CharSequence[n];
+        for (int i = 0; i < n; i++) slides[i] = I18n.t(ctx, R.string.ig_copy_link_slide, i + 1, n);
+        ps.reso.instaeclipse.utils.dialog.IeDialog dialog = new ps.reso.instaeclipse.utils.dialog.IeDialog(ctx)
+                .title(I18n.t(ctx, R.string.ig_download_choice_copy_image));
+        dialog.choices(slides, -1, which -> copyImage(ctx, urls.get(which)));
+        dialog.show();
+    }
+
+    private static void copyImage(Context ctx, String url) {
         if (FeedVideoDownloadHook.isVideoUrl(url)) {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_copy_image_video), Toast.LENGTH_SHORT).show();
             return;
@@ -710,25 +696,19 @@ public class PostDownloadContextMenuHook {
         FeedVideoDownloadHook.mainHandler.post(() -> FeedVideoDownloadHook.showCopyLinkSheet(ctx, urls));
     }
 
-    /**
-     * Finds the current carousel slide index from the click handler object by scanning its int
-     * fields (no obfuscated field name) for the first value in (0, urlCount) — only the index
-     * field will be in that range. Slide 0 is the default when nothing matches.
-     */
     static int findCarouselIndex(Object obj, int urlCount) {
-        if (obj == null || urlCount <= 1) return 0;
-
-        // Scan all int fields for a value that fits as a carousel index
+        if (urlCount <= 1) return 0;
+        if (obj == null) return -1;
+        int index = -1, fitting = 0;
         for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(obj.getClass())) {
-            if (f.getType() != int.class) continue;
-            f.setAccessible(true);
+            if (f.getType() != int.class || Modifier.isStatic(f.getModifiers())) continue;
             try {
+                f.setAccessible(true);
                 int v = f.getInt(obj);
-                if (v > 0 && v < urlCount) return v; // v > 0 skips 0-value flags/uninitialised
+                if (v >= 0 && v < urlCount) { index = v; fitting++; }
             } catch (Throwable ignored) {}
         }
-
-        return 0;
+        return fitting == 1 ? index : -1;
     }
 
     // ── Reflection helpers ────────────────────────────────────────────────────

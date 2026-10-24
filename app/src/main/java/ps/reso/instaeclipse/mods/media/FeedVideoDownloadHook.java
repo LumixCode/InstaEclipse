@@ -2,7 +2,6 @@ package ps.reso.instaeclipse.mods.media;
 
 import android.annotation.SuppressLint;
 import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -41,6 +40,7 @@ import ps.reso.instaeclipse.utils.download.DownloadMessages;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
+import ps.reso.instaeclipse.utils.text.CopyFeedback;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
@@ -1262,9 +1262,7 @@ public class FeedVideoDownloadHook {
         // out of that teardown window. Framework-only; clipboard contents unchanged.
         mainHandler.postDelayed(() -> {
             try {
-                ClipboardManager cb = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-                cb.setPrimaryClip(ClipData.newPlainText("InstaEclipse", url));
-                ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_copy_link_copied), Toast.LENGTH_SHORT).show();
+                CopyFeedback.copy(ctx, ClipData.newPlainText("InstaEclipse", url), I18n.t(ctx, R.string.ig_copy_link_copied));
             } catch (Throwable t) {
                 ModuleLog.error("(IE|Post) Could not copy the link: " + t);
             }
@@ -1284,7 +1282,7 @@ public class FeedVideoDownloadHook {
             CharSequence[] slides = new CharSequence[n];
             for (int i = 0; i < n; i++) slides[i] = I18n.t(ctx, R.string.ig_copy_link_slide, i + 1, n);
             ps.reso.instaeclipse.utils.dialog.IeDialog dlg = new ps.reso.instaeclipse.utils.dialog.IeDialog(ctx)
-                    .title(I18n.t(ctx, R.string.ig_copy_link_title))
+                    .title(I18n.t(ctx, R.string.ie_copy_media_link))
                     .message(I18n.t(ctx, R.string.ig_dl_carousel_subtitle, n))
                     // One row per slide (the dialog body scrolls for long carousels)
                     .choices(slides, -1, idx -> copyLinkToClipboard(ctx, urls.get(idx)));
@@ -1296,9 +1294,8 @@ public class FeedVideoDownloadHook {
                 // carousel realtime-stream teardown window (see that method's note).
                 mainHandler.postDelayed(() -> {
                     try {
-                        ClipboardManager cb = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-                        cb.setPrimaryClip(ClipData.newPlainText("InstaEclipse", allText));
-                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_copy_link_copied_all, n), Toast.LENGTH_SHORT).show();
+                        CopyFeedback.copy(ctx, ClipData.newPlainText("InstaEclipse", allText),
+                                I18n.t(ctx, R.string.ig_copy_link_copied_all, n));
                     } catch (Throwable t) {
                         ModuleLog.error("(IE|Post) Could not copy the links: " + t);
                     }

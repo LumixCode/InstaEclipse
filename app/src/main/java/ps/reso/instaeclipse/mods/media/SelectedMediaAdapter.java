@@ -31,6 +31,7 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
 
     private static final String MEDIA = "com.instagram.feed.media.Media";
     private static volatile SelectedMediaAdapter installed;
+    private static volatile Field userIdField;
     private final Map<String, List<Method>> bindings = new HashMap<>();
     private final Class<?> mediaClass;
     private Class<?> reelItemClass;
@@ -133,6 +134,40 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
         // listener fields can reach other posts and must not affect this selection.
         Object creator = uniqueDirectTypedField(handler, creatorType);
         return creator == null ? null : uniqueDirectTypedField(creator, mediaType);
+    }
+
+    static Object creatorMedia(Object creator) {
+        SelectedMediaAdapter adapter = installed;
+        return adapter == null ? null : uniqueDirectTypedField(creator, adapter.mediaClass);
+    }
+
+    static String ownerId(Object media) {
+        SelectedMediaAdapter adapter = installed;
+        if (adapter == null || media == null) return null;
+        try {
+            Object user = adapter.read(media, "user").value;
+            return user == null ? null : numericId(user);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    static String numericId(Object user) {
+        try {
+            Field cached = userIdField;
+            if (cached != null && cached.getDeclaringClass() == user.getClass())
+                return cached.get(user) instanceof String id && id.matches("\\d+") ? id : null;
+            for (Field field : ps.reso.instaeclipse.utils.core.SafeReflect.fields(user.getClass())) {
+                if (field.getType() != String.class || !Modifier.isFinal(field.getModifiers())
+                        || Modifier.isStatic(field.getModifiers())) continue;
+                field.setAccessible(true);
+                if (field.get(user) instanceof String id && id.matches("\\d+")) {
+                    userIdField = field;
+                    return id;
+                }
+            }
+        } catch (Throwable ignored) { }
+        return null;
     }
 
     static Object findReelMenuMedia(Object handler, Class<?> ownerType) {
