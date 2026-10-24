@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -32,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -67,20 +69,23 @@ public class KeepUnsentMessagesHook {
     private static final String MISSING = "missing";
 
     static final UnsentMessageIndex protectedIds = new UnsentMessageIndex(1000);
+    private static final Set<Key> protectedScopes = ConcurrentHashMap.newKeySet();
     private static Field messageText;
     private static boolean localClearingAvailable;
     private static final ThreadLocal<Boolean> clearingLocally = new ThreadLocal<>();
     private static final Map<Key, NativeThread> nativeThreads = new LinkedHashMap<>();
     private static final Map<Object, String> entryThreads = new WeakHashMap<>();
+    private static final Map<Object, String> ownerAccounts = new WeakHashMap<>();
+    private record ClearedScope(long revision, long clears, boolean any) {}
+    private static final Map<Key, ClearedScope> clearedScopes = new ConcurrentHashMap<>();
+    private static final AtomicLong clears = new AtomicLong();
     /** Messages already described (or found not to need it) this process; see describe(). */
     private static final Set<Key> described = Collections.newSetFromMap(new ConcurrentHashMap<>());
     // Instagram's direct.db message codec; all null when discovery failed (no restart copies).
     private static Method messageTable, encodeMessage, decodeMessage, messageTime;
     private static Field messageThreadKey;
 
-    /** Reconciliation restores objects only into the native thread entry that owned them. */
-    private static final Map<Object, Map<Key, Object>> keptByThread =
-            Collections.synchronizedMap(new IdentityHashMap<>());
+    private static final Map<Key, Map<Key, WeakReference<Object>>> keptByThread = new HashMap<>();
 
     public void install(DexKitBridge bridge, ClassLoader classLoader) {
         resolveTextField(bridge, classLoader);
@@ -388,7 +393,8 @@ public class KeepUnsentMessagesHook {
                                 return;
                             }
                             Object message = cachedMessage(entry, lookups, ids, thread);
-                            if (UnsentIdentity.isFromAccount(message, account)) {
+                            if (passesThrough(UnsentIdentity.isFromAccount(message, account), false, null,
+                                    System.currentTimeMillis())) {
                                 ModuleLog.detail("(IE|KeepUnsent) own removal passed through");
                                 return;
                             }
@@ -397,6 +403,7 @@ public class KeepUnsentMessagesHook {
                             boolean keepInChat = FeatureFlags.keepUnsentInChat;
                             Key key = protectedIds.recordAliases(account, thread, ids);
                             if (key != null) {
+                                protectedScopes.add(scope(key.account, key.thread));
                                 block = keepInChat;
                                 // One encoding in Instagram's own format serves the restart copy and
                                 // the log's description of a message without text (a reel, a voice
@@ -518,6 +525,10 @@ public class KeepUnsentMessagesHook {
         return own ? ids : Collections.emptyList();
     }
 
+    static boolean passesThrough(boolean own, boolean unsent, byte[] copy, long now) {
+        return own;
+    }
+
     /** Drop a bulk-unsent message from what reconcile re-injects, from the removal index and from
      *  the restart copies; Instagram then removes it like any other own unsend. */
     private static void releaseBulkUnsend(Object store, Object threadKey, Method cacheGetter, List<String> ids) {
@@ -531,30 +542,79 @@ public class KeepUnsentMessagesHook {
         Key known = protectedIds.find(account, thread, ids);
         if (known != null) protectedIds.remove(known);
         UnsentMessageStore.removeMessage(account, thread, ids);
-        String owner = account;
+        Key scope = scope(account, thread);
         synchronized (keptByThread) {
-            Iterator<Map<Key, Object>> stores = keptByThread.values().iterator();
-            while (stores.hasNext()) {
-                Map<Key, Object> owned = stores.next();
-                synchronized (owned) {
-                    owned.keySet().removeIf(key -> key.equals(known) || owner.equals(key.account)
-                            && thread.equals(key.thread) && ids.contains(key.message));
-                    if (owned.isEmpty()) stores.remove();
-                }
-            }
+            Map<Key, WeakReference<Object>> owned = keptByThread.get(scope);
+            if (owned == null) return;
+            owned.keySet().removeIf(key -> key.equals(known) || ids.contains(key.message));
+            if (owned.isEmpty()) keptByThread.remove(scope);
         }
     }
 
-    private static void rememberKept(Object owner, Key key, Object message) {
+    private static Key scope(String account, String thread) {
+        return new Key(account, thread, "");
+    }
+
+    private static void rememberKept(Object entry, Key key, Object message) {
         if (UnsentLog.findCleared(key.account, key.thread, List.of(key.message)) != null) return;
-        synchronized (keptByThread) {
-            Map<Key, Object> owned = keptByThread.get(owner);
-            if (owned == null) {
-                owned = Collections.synchronizedMap(new LinkedHashMap<>());
-                keptByThread.put(owner, owned);
-            }
-            owned.put(key, message);
+        if (entry != null) {
+            synchronized (entryThreads) { entryThreads.putIfAbsent(entry, key.thread); }
+            synchronized (ownerAccounts) { ownerAccounts.putIfAbsent(entry, key.account); }
         }
+        synchronized (keptByThread) {
+            keptByThread.computeIfAbsent(scope(key.account, key.thread), ignored -> new LinkedHashMap<>())
+                    .put(key, new WeakReference<>(message));
+        }
+    }
+
+    private static Map<Key, Object> kept(String account, String thread) {
+        if (account == null || thread == null) return Collections.emptyMap();
+        Key scope = scope(account, thread);
+        synchronized (keptByThread) {
+            Map<Key, WeakReference<Object>> owned = keptByThread.get(scope);
+            if (owned == null) return Collections.emptyMap();
+            Map<Key, Object> live = new LinkedHashMap<>();
+            for (Iterator<Map.Entry<Key, WeakReference<Object>>> it = owned.entrySet().iterator(); it.hasNext(); ) {
+                Map.Entry<Key, WeakReference<Object>> item = it.next();
+                Object message = item.getValue().get();
+                if (message == null) it.remove();
+                else live.put(item.getKey(), message);
+            }
+            if (owned.isEmpty()) keptByThread.remove(scope);
+            return live;
+        }
+    }
+
+    private static void forgetKept(Key key) {
+        Key scope = scope(key.account, key.thread);
+        synchronized (keptByThread) {
+            Map<Key, WeakReference<Object>> owned = keptByThread.get(scope);
+            if (owned == null) return;
+            owned.remove(key);
+            if (owned.isEmpty()) keptByThread.remove(scope);
+        }
+    }
+
+    private static String ownerAccount(Object owner) {
+        if (owner == null) return null;
+        synchronized (ownerAccounts) {
+            String known = ownerAccounts.get(owner);
+            if (known != null) return known;
+        }
+        String account = UnsentIdentity.account(owner);
+        if (account != null) synchronized (ownerAccounts) { ownerAccounts.put(owner, account); }
+        return account;
+    }
+
+    private static boolean hasCleared(String account, String thread) {
+        long revision = UnsentLog.revision(), seen = clears.get();
+        Key scope = scope(account, thread);
+        ClearedScope known = clearedScopes.get(scope);
+        if (known != null && known.revision() == revision && known.clears() == seen) return known.any();
+        boolean any = !UnsentLog.getClearedIds(account, thread).isEmpty();
+        if (clearedScopes.size() > 1000) clearedScopes.clear();
+        clearedScopes.put(scope, new ClearedScope(revision, seen, any));
+        return any;
     }
 
     /** Instagram keeps only each thread's ten newest messages on disk and reloads older history from
@@ -639,9 +699,9 @@ public class KeepUnsentMessagesHook {
      *  A later pass drops a restored copy again (the server page lacks it); keep that same object
      *  and withdraw its removal instead of flickering it out and back in. */
     @SuppressWarnings("unchecked")
-    private static void restoreCopies(Object[] args, List<Object> liveList) throws ReflectiveOperationException {
+    private static void restoreCopies(Object[] args, List<Object> liveList, String account, String thread)
+            throws ReflectiveOperationException {
         if (decodeMessage == null || !(args[3] instanceof List)) return;
-        String account = UnsentIdentity.account(args[0]), thread = entryThread(args[0]);
         List<UnsentMessageStore.Saved> copies = UnsentMessageStore.forThread(account, thread);
         if (copies.isEmpty()) return;
         List<Object> live = liveList != null ? liveList : backingList(args);
@@ -661,7 +721,7 @@ public class KeepUnsentMessagesHook {
                 UnsentMessageStore.remove(copy);
                 continue;
             }
-            int index = UnsentRestorePolicy.restoreIndex(times, copy.time);
+            int index = UnsentRestorePolicy.restoreIndex(times, copy.time, null);
             if (index < 0) continue;
             Object message = null;
             for (Iterator<Object> it = removed.iterator(); it.hasNext(); ) {
@@ -699,18 +759,13 @@ public class KeepUnsentMessagesHook {
         if (!localClearingAvailable && UnsentLog.hasRetained(context, thread)) return false;
         String account = thread == null ? UnsentLog.clear(context) : UnsentLog.clearThread(context, thread);
         if (account == null) return false;
+        clears.incrementAndGet();
         protectedIds.clear(account, thread);
+        Predicate<Key> cleared = scope -> account.equals(scope.account) && (thread == null || thread.equals(scope.thread));
+        protectedScopes.removeIf(cleared);
         UnsentMessageStore.clear(account, thread);
         synchronized (keptByThread) {
-            Iterator<Map<Key, Object>> stores = keptByThread.values().iterator();
-            while (stores.hasNext()) {
-                Map<Key, Object> owned = stores.next();
-                synchronized (owned) {
-                    owned.keySet().removeIf(key -> account.equals(key.account)
-                            && (thread == null || thread.equals(key.thread)));
-                    if (owned.isEmpty()) stores.remove();
-                }
-            }
+            keptByThread.keySet().removeIf(cleared);
         }
         synchronized (nativeThreads) {
             for (NativeThread target : nativeThreads.values()) {
@@ -723,9 +778,9 @@ public class KeepUnsentMessagesHook {
 
     private static void rememberNativeThread(Object store, Object threadKey, Method getter,
                                              Method remove, Method serverQuery, List<Method> queries) {
-        String account = UnsentIdentity.account(store), thread = UnsentIdentity.thread(threadKey);
+        String account = ownerAccount(store), thread = UnsentIdentity.thread(threadKey);
         if (account == null || thread == null) return;
-        Key scope = new Key(account, thread, "");
+        Key scope = scope(account, thread);
         synchronized (nativeThreads) {
             NativeThread target = nativeThreads.get(scope);
             if (target == null || target.store.get() != store) {
@@ -753,7 +808,7 @@ public class KeepUnsentMessagesHook {
         }
 
         synchronized void schedule() {
-            if (scheduled || UnsentLog.getClearedIds(account, thread).isEmpty()) return;
+            if (scheduled || !hasCleared(account, thread)) return;
             scheduled = true;
             // Getter/removal can run under native store locks. Wait until those calls return before
             // removing anything, and coalesce repeated cache lookups in the same UI turn.
@@ -802,10 +857,12 @@ public class KeepUnsentMessagesHook {
                 Object[] args = param.args;
                 if (args == null || args.length == 0 || args[0] == null) return;
                 try {
+                    String account = ownerAccount(args[0]), thread = entryThread(args[0]);
+                    if (!mayHoldProtected(account, thread)) return;
                     for (int i = 1; i < args.length; i++) {
                         if (!(args[i] instanceof List)) continue;
                         for (Object msg : (List<Object>) args[i]) {
-                            Key hit = matchProtected(msg, args[0]);
+                            Key hit = matchProtected(msg, account, thread);
                             if (hit == null) continue;
                             rememberKept(args[0], hit, msg);
                             // The entry's session can describe a kept message whose removal was
@@ -825,42 +882,47 @@ public class KeepUnsentMessagesHook {
                 if (!FeatureFlags.keepUnsentMessages || !FeatureFlags.keepUnsentInChat) return;
                 Object[] args = param.args;
                 if (args == null || args.length < 4 || args[0] == null) return;
-                // Only act for THIS thread's own kept messages — never touch other chats.
-                Map<Key, Object> owned = keptByThread.get(args[0]);
-                boolean keeping = owned != null && !owned.isEmpty();
-                if (!keeping && UnsentMessageStore.isEmpty()) return;
+                boolean saved = !UnsentMessageStore.isEmpty();
+                synchronized (keptByThread) {
+                    if (keptByThread.isEmpty() && !saved) return;
+                }
                 try {
+                    String account = ownerAccount(args[0]), thread = entryThread(args[0]);
+                    Map<Key, Object> owned = kept(account, thread);
+                    if (owned.isEmpty() && !saved) return;
                     List<Object> liveList = findLiveList(args);
-                    if (keeping && liveList != null) keepOwned(args, liveList, owned);
+                    if (!owned.isEmpty() && liveList != null) keepOwned(args, liveList, owned, account, thread);
                     // After the kept messages, so the delta scrub cannot drop a restored addition.
-                    restoreCopies(args, liveList);
+                    restoreCopies(args, liveList, account, thread);
                 } catch (Throwable t) {
                     ModuleLog.warn("(IE|KeepUnsent) Kept messages may disappear from this chat until it is reopened", t);
                 }
             }
 
             @SuppressWarnings("unchecked")
-            private void keepOwned(Object[] args, List<Object> liveList, Map<Key, Object> owned) {
+            private void keepOwned(Object[] args, List<Object> liveList, Map<Key, Object> owned,
+                                   String account, String thread) {
                 // Scrub this thread's protected messages out of the non-live (delta) lists.
                 for (int i = 1; i < args.length; i++) {
                     if (!(args[i] instanceof List) || args[i] == liveList) continue;
                     Iterator<Object> it = ((List<Object>) args[i]).iterator();
                     while (it.hasNext()) {
-                        Key hit = matchProtected(it.next(), args[0]);
+                        Key hit = matchProtected(it.next(), account, thread);
                         if (hit != null && owned.containsKey(hit)) it.remove();
                     }
                 }
 
                 // Re-inject this thread's cached protected messages if missing from its live list.
                 int added = 0;
-                synchronized (owned) {
-                    owned.keySet().removeIf(key -> UnsentLog.findCleared(
-                            key.account, key.thread, List.of(key.message)) != null);
-                    for (Object msg : owned.values()) {
-                        boolean present = false;
-                        for (Object cur : liveList) if (cur == msg) { present = true; break; }
-                        if (!present) { liveList.add(msg); added++; }
+                for (Map.Entry<Key, Object> kept : owned.entrySet()) {
+                    Key key = kept.getKey();
+                    if (UnsentLog.findCleared(key.account, key.thread, List.of(key.message)) != null) {
+                        forgetKept(key);
+                        continue;
                     }
+                    boolean present = false;
+                    for (Object cur : liveList) if (cur == kept.getValue()) { present = true; break; }
+                    if (!present) { liveList.add(kept.getValue()); added++; }
                 }
                 if (added > 0) ModuleLog.detail("(IE|KeepUnsent) re-injected " + added + " kept msg(s) into this thread");
             }
@@ -982,10 +1044,15 @@ public class KeepUnsentMessagesHook {
         return detail != null ? detail : UnsentDetail.NO_TEXT;
     }
 
-    private static Key matchProtected(Object message, Object owner) {
-        String account = UnsentIdentity.account(owner), thread = UnsentIdentity.thread(message);
+    private static boolean mayHoldProtected(String account, String thread) {
+        return account != null && (thread == null || protectedScopes.contains(scope(account, thread)));
+    }
+
+    private static Key matchProtected(Object message, String account, String thread) {
+        if (account == null) return null;
+        String inThread = thread != null ? thread : UnsentIdentity.thread(message);
         List<String> ids = UnsentIdentity.messageIds(message);
-        if (UnsentLog.findCleared(account, thread, ids) != null) return null;
-        return protectedIds.find(account, thread, ids);
+        if (UnsentLog.findCleared(account, inThread, ids) != null) return null;
+        return protectedIds.find(account, inThread, ids);
     }
 }

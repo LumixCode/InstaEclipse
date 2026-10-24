@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import ps.reso.instaeclipse.Xposed.Module;
@@ -46,6 +47,7 @@ public final class UnsentIdentity {
     private static final Map<Class<?>, Method[]> identifierGetters = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Field[]> stringFields = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Field[]> boundFields = new ConcurrentHashMap<>();
+    private static final Map<Object, String> threadIds = Collections.synchronizedMap(new WeakHashMap<>());
     private UnsentIdentity() {}
 
     public static String account(Object owner) {
@@ -110,11 +112,16 @@ public final class UnsentIdentity {
         try {
             Class<?> type = named(THREAD, owner.getClass().getClassLoader());
             Object key = type.isInstance(owner) ? owner : directValue(owner, type);
-            if (key == null) return null;
-            // Native keys carry both mThreadId and mThreadV2Id. Their labelled representation
-            // identifies the canonical ID without guessing which obfuscated String field is first.
-            return threadId(key.toString());
+            return key == null ? null : keyThread(key);
         } catch (Throwable ignored) { return null; }
+    }
+
+    private static String keyThread(Object key) {
+        String known = threadIds.get(key);
+        if (known != null) return known;
+        String id = threadId(key.toString());
+        if (id != null) threadIds.put(key, id);
+        return id;
     }
 
     public static String threadId(String description) {
