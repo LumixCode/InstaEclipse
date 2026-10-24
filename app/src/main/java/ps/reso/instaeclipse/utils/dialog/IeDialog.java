@@ -24,6 +24,7 @@ import android.widget.TextView;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.IeColors;
 import ps.reso.instaeclipse.utils.ui.IePalette;
 
 /**
@@ -251,6 +252,18 @@ public class IeDialog {
 
     /** Plain secondary button (e.g. Cancel); {@code action} may be null. */
     public TextView secondary(CharSequence label, Runnable action) { return button(label, action, false, false); }
+
+    public TextView destructive(CharSequence label, Runnable action) { return destructive(label, action, false); }
+
+    public TextView destructiveKeepOpen(CharSequence label, Runnable action) { return destructive(label, action, true); }
+
+    private TextView destructive(CharSequence label, Runnable action, boolean keepOpen) {
+        boolean first = !hasButtons;
+        TextView b = button(label, action, false, keepOpen);
+        b.setTextColor(IeColors.destructive(ctx, bg));
+        if (first) buttons.addView(new View(ctx), new LinearLayout.LayoutParams(0, 0, 1));
+        return b;
+    }
 
     private TextView button(CharSequence label, Runnable action, boolean filled, boolean keepOpen) {
         TextView b = new TextView(ctx);

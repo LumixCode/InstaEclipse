@@ -39,12 +39,15 @@ import java.util.Set;
 import java.util.WeakHashMap;
 
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.IeColors;
+import ps.reso.instaeclipse.utils.ui.IePalette;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.users.WatchlistStore;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -82,6 +85,10 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 public final class ProfileCountDeltaHook {
     private static final String TAG = "(IE|CountDelta) ";
     private static final String KEY = "ProfileCountDelta";
+    private static final String METHODS_KEY = "ProfileCountDelta_methods_v1";
+    private static final String ID_KEY = "ProfileCountDelta_id_v1";
+    private static final String METRICS_KEY = "ProfileCountDelta_metrics_v1";
+    private static final String STATE_KEY = "ProfileCountDelta_state_v1";
     private static final String SESSION = "com.instagram.common.session.UserSession";
     private static final String FOLLOWERS_VALUE = "profile_header_familiar_followers_value";
     private static final String FOLLOWING_VALUE = "profile_header_familiar_following_value";
@@ -113,11 +120,16 @@ public final class ProfileCountDeltaHook {
     public void install(DexKitBridge bridge, ClassLoader loader) {
         try {
             userId = Class.forName(SESSION, false, loader).getMethod("getUserId");
-            MethodData step = single(bridge, "bindUserMetrics");
-            MethodData helper = single(bridge, "UserMetricsBinderHelper.shrinkVanityMetrics");
-            Method stepMethod = step.getMethodInstance(loader);
-            Method cellMethod = helper.getMethodInstance(loader);
-            resolveMetrics(step, stepMethod, loader);
+            List<Method> methods = cached(loader);
+            if (methods == null) {
+                MethodData step = single(bridge, "bindUserMetrics");
+                MethodData helper = single(bridge, "UserMetricsBinderHelper.shrinkVanityMetrics");
+                methods = List.of(step.getMethodInstance(loader), helper.getMethodInstance(loader));
+                resolveMetrics(step, methods.get(0), loader);
+                save(methods);
+            }
+            Method stepMethod = methods.get(0);
+            Method cellMethod = methods.get(1);
             resolveCell(cellMethod);
             XposedBridge.hookMethod(stepMethod, STEP);
             XposedBridge.hookMethod(cellMethod, CELL);
@@ -131,6 +143,43 @@ public final class ProfileCountDeltaHook {
             if (FeatureFlags.profileAnalyzer) FeatureStatusTracker.setBroken(KEY, R.string.ig_pa_count_delta);
             ModuleLog.error(TAG + "Could not turn on follower count changes on profiles", t);
         }
+    }
+
+    private static List<Method> cached(ClassLoader loader) {
+        if (!DexKitCache.isCacheValid()) return null;
+        try {
+            List<Method> methods = DexKitCache.loadMethods(METHODS_KEY, loader);
+            Field id = DexKitCache.loadField(ID_KEY, loader);
+            String state = DexKitCache.loadString(STATE_KEY);
+            if (methods == null || methods.size() != 2 || id == null || state == null) return null;
+            int space = state.indexOf(' ');
+            int arg = Integer.parseInt(state.substring(0, space));
+            Class<?> metrics = Class.forName(state.substring(space + 1), false, loader);
+            Class<?>[] parameters = methods.get(0).getParameterTypes();
+            if (arg < 0 || arg >= parameters.length || !id.getDeclaringClass().isAssignableFrom(metrics)) return null;
+            Field holder = null;
+            if (parameters[arg] != metrics) {
+                holder = DexKitCache.loadField(METRICS_KEY, loader);
+                if (holder == null || holder.getType() != metrics
+                        || !holder.getDeclaringClass().isAssignableFrom(parameters[arg])) return null;
+                holder.setAccessible(true);
+            }
+            id.setAccessible(true);
+            stateArg = arg;
+            metricsField = holder;
+            profileIdField = id;
+            return methods;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static void save(List<Method> methods) {
+        Class<?> metrics = metricsField != null ? metricsField.getType() : methods.get(0).getParameterTypes()[stateArg];
+        DexKitCache.saveMethods(METHODS_KEY, methods);
+        DexKitCache.saveField(ID_KEY, profileIdField);
+        if (metricsField != null) DexKitCache.saveField(METRICS_KEY, metricsField);
+        DexKitCache.saveString(STATE_KEY, stateArg + " " + metrics.getName());
     }
 
     private static MethodData single(DexKitBridge bridge, String trace) {
@@ -394,7 +443,7 @@ public final class ProfileCountDeltaHook {
         // The last comparison: its label is formatted (and logged) once, not on every frame.
         private String keyProfile, keyLabel;
         private boolean keyFollowers;
-        private int keyCount = -1, keyWas = -1;
+        private int keyCount = -1, keyWas = -1, keyColor;
         private final float[] at = new float[2];
 
         Cell(TextView value, Row row) {
@@ -418,6 +467,7 @@ public final class ProfileCountDeltaHook {
                         keyCount = count;
                         keyWas = was;
                         keyLabel = ProfileCountDelta.label(count, was, locale(value));
+                        keyColor = color(value.getContext(), keyLabel);
                         ModuleLog.probe(TAG + profile + (followers ? " followers " : " following ") + count + " vs " + was
                                 + " at the last analysis: " + (keyLabel != null ? keyLabel : "unchanged"));
                     }
@@ -442,8 +492,13 @@ public final class ProfileCountDeltaHook {
             float x = value.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL
                     ? left + layout.getLineLeft(0) - gap - text.width(label, size, normal)
                     : left + layout.getLineRight(0) + gap;
-            return text.show(label, ProfileCountDelta.color(label), size, normal, x, at[1] + value.getBaseline());
+            return text.show(label, keyColor, size, normal, x, at[1] + value.getBaseline());
         }
+    }
+
+    private static int color(Context ctx, String label) {
+        int bg = IePalette.of(ctx).backdrop;
+        return ProfileCountDelta.color(label, IeColors.success(ctx, bg), IeColors.destructive(ctx, bg));
     }
 
     private static Locale locale(View v) {

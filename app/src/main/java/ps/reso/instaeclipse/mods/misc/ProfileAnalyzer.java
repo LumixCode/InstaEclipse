@@ -2,8 +2,6 @@ package ps.reso.instaeclipse.mods.misc;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Typeface;
@@ -15,6 +13,7 @@ import android.text.SpannableStringBuilder;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
@@ -33,8 +32,10 @@ import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.text.CopyFeedback;
 import ps.reso.instaeclipse.utils.text.TimestampFormat;
 import ps.reso.instaeclipse.utils.toast.IeToast;
+import ps.reso.instaeclipse.utils.ui.IeColors;
 import ps.reso.instaeclipse.utils.users.WatchlistStore;
 
 /**
@@ -60,7 +61,7 @@ import ps.reso.instaeclipse.utils.users.WatchlistStore;
 public final class ProfileAnalyzer {
 
     private static final String TAG = "(IE|ProfileAnalyzer) ";
-    private static final int GREEN = 0xFF34C759, RED = 0xFFFF453A;
+    static final int RESULT_ROWS = 300;
     /** how often the driver looks for the profile's list while it isn't loading one */
     private static final long POLL_MS = 300;
     private static final Handler H = new Handler(Looper.getMainLooper());
@@ -300,14 +301,14 @@ public final class ProfileAnalyzer {
                     : "";
             long now = System.currentTimeMillis();
             WatchlistStore.Result r = WatchlistStore.apply(p, s.followers, s.following, s.followersLoad, s.followingLoad, now);
-            String error = null;
+            boolean saveFailed = false;
             try {
                 WatchlistStore.saveProfile(app, self, p);
                 List<WatchlistStore.Entry> index = WatchlistStore.loadIndex(app, self);
                 WatchlistStore.touch(index, p, now);
                 WatchlistStore.saveIndex(app, self, index);
             } catch (Throwable t) {
-                error = t.toString();
+                saveFailed = true;
                 ModuleLog.error(TAG + "Could not save the analysis", t);
             }
             ModuleLog.line(TAG + "@" + s.name() + ": " + r.followers + " followers, " + r.following + " following, "
@@ -318,8 +319,9 @@ public final class ProfileAnalyzer {
                     + before + ", Instagram now " + r.followersList.expected + "/" + r.followingList.expected);
             ModuleLog.detail(TAG + listLine(FollowListExportHook.FOLLOWERS, r.followersList));
             ModuleLog.detail(TAG + listLine(FollowListExportHook.FOLLOWING, r.followingList));
-            final String err = error, me = self;
-            H.post(() -> showResult(ctx, me, p, r, err));
+            final String me = self;
+            final boolean failed = saveFailed;
+            H.post(() -> showResult(ctx, me, p, r, failed));
         }).start();
     }
 
@@ -422,7 +424,7 @@ public final class ProfileAnalyzer {
             ProfileChangelogPolicy.Section.B_UNFOLLOWED, ProfileChangelogPolicy.Section.GAINED,
             ProfileChangelogPolicy.Section.GAINED_MAYBE, ProfileChangelogPolicy.Section.LOST};
 
-    private static void showResult(Context ctx, String self, WatchlistStore.Profile p, WatchlistStore.Result r, String error) {
+    static void showResult(Context ctx, String self, WatchlistStore.Profile p, WatchlistStore.Result r, boolean saveFailed) {
         try {
             DateFormat df = TimestampFormat.dialogDateFormat(ctx);
             String name = p.username != null ? p.username : p.id;
@@ -438,14 +440,19 @@ public final class ProfileAnalyzer {
             // and how many accounts weren't listed this time
             String notes = resultNotes(ctx, r);
             if (!notes.isEmpty()) head += "\n" + notes;
-            if (error != null) head += "\n⚠️ " + error;
+            if (saveFailed) head += "\n" + I18n.t(ctx, R.string.ig_pa_save_failed);
             dlg.message(head);
             if (!r.first && !r.added.isEmpty()) {
+                Runnable changelog = () -> {
+                    dlg.dismiss();
+                    ProfileChangelog.show(ctx, self, p.id, name);
+                };
                 for (ProfileChangelogPolicy.Section s : RESULT_SECTIONS) {
                     List<WatchlistStore.Event> events = new java.util.ArrayList<>();
                     for (WatchlistStore.Event e : r.added) if (ProfileChangelogPolicy.section(e) == s) events.add(e);
                     section(dlg, ctx, I18n.t(ctx, sectionTitle(s), name, events.size()), events,
-                            s.gain() ? GREEN : s.loss() ? RED : dlg.sub);
+                            s.gain() ? IeColors.success(dlg.ctx, dlg.bg) : s.loss() ? IeColors.destructive(dlg.ctx, dlg.bg) : dlg.sub,
+                            changelog);
                 }
                 hint(dlg, ctx);
             }
@@ -470,7 +477,8 @@ public final class ProfileAnalyzer {
         };
     }
 
-    private static void section(IeDialog dlg, Context ctx, String title, List<WatchlistStore.Event> events, int color) {
+    private static void section(IeDialog dlg, Context ctx, String title, List<WatchlistStore.Event> events, int color,
+                                Runnable changelog) {
         if (events.isEmpty()) return;
         TextView h = new TextView(dlg.ctx);
         h.setText(title);
@@ -483,7 +491,7 @@ public final class ProfileAnalyzer {
         rows.setOrientation(LinearLayout.VERTICAL);
         int shown = 0;
         for (WatchlistStore.Event e : events) {
-            if (shown++ >= 300) break;
+            if (shown++ >= RESULT_ROWS) break;
             SpannableStringBuilder sb = new SpannableStringBuilder("@").append(e.username != null ? e.username : e.id);
             sb.setSpan(new StyleSpan(Typeface.BOLD), 0, sb.length(), 0);
             if (e.fullName != null && !e.fullName.isEmpty()) {
@@ -493,7 +501,33 @@ public final class ProfileAnalyzer {
             }
             rows.addView(userRow(dlg, ctx, sb, e.username));
         }
+        if (events.size() > RESULT_ROWS) rows.addView(moreRow(dlg, ctx, events.size() - RESULT_ROWS, changelog));
         dlg.view(rows);
+    }
+
+    private static TextView moreRow(IeDialog dlg, Context ctx, int more, Runnable changelog) {
+        TextView row = new TextView(dlg.ctx);
+        row.setText(more(ctx, more));
+        row.setTextColor(dlg.accent);
+        row.setTextSize(14);
+        row.setTypeface(Typeface.DEFAULT_BOLD);
+        row.setGravity(Gravity.CENTER);
+        row.setPadding(dlg.dp(14), dlg.dp(11), dlg.dp(14), dlg.dp(11));
+        row.setBackground(dlg.cardBg());
+        row.setOnClickListener(v -> changelog.run());
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dlg.dp(8);
+        row.setLayoutParams(lp);
+        return row;
+    }
+
+    private static String more(Context ctx, int more) {
+        try {
+            return I18n.moduleResources(ctx).getQuantityString(R.plurals.ig_list_more, more, more);
+        } catch (Throwable t) {
+            return "+" + more;
+        }
     }
 
     /** A user row: tap opens the profile in Instagram, hold copies the username. */
@@ -505,7 +539,10 @@ public final class ProfileAnalyzer {
         row.setPadding(0, dlg.dp(5), 0, dlg.dp(5));
         if (username != null) {
             row.setOnClickListener(v -> openProfile(ctx, username));
-            row.setOnLongClickListener(v -> { copy(ctx, username); return true; });
+            row.setOnLongClickListener(v -> {
+                CopyFeedback.copy(ctx, "username", username, R.string.ig_toast_comment_copied);
+                return true;
+            });
         }
         return row;
     }
@@ -663,21 +700,14 @@ public final class ProfileAnalyzer {
         return null;
     }
 
-    private static void openProfile(Context ctx, String username) {
+    static void openProfile(Context ctx, String username) {
         try {
-            ctx.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.instagram.com/" + username + "/"))
+            ctx.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.instagram.com/" + Uri.encode(username) + "/"))
                     .setPackage(ctx.getPackageName())
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not open the profile: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
-    }
-
-    private static void copy(Context ctx, String text) {
-        ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-        if (cm == null) return;
-        cm.setPrimaryClip(ClipData.newPlainText("InstaEclipse", text));
-        toast(ctx, I18n.t(ctx, R.string.ig_toast_comment_copied));
     }
 
     private static void toast(Context ctx, String text) {

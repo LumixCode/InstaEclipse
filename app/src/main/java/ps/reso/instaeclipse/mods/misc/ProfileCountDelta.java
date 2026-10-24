@@ -12,7 +12,6 @@ import java.util.Map;
  * never the header text, which is abbreviated ("12,3K").
  */
 final class ProfileCountDelta {
-    static final int GREEN = 0xFF34C759, RED = 0xFFFF453A; // ProfileAnalyzer's colours
     /** Header counts older than this aren't "at the analysis": an analysis starts from the profile
      *  and gives up after 15 minutes. */
     static final long MAX_AGE_MS = 30 * 60_000L;
@@ -34,8 +33,8 @@ final class ProfileCountDelta {
         return (delta > 0 ? "+" : "-") + format.format(Math.abs(delta));
     }
 
-    static int color(String label) {
-        return label != null && label.startsWith("+") ? GREEN : RED;
+    static int color(String label, int success, int destructive) {
+        return label != null && label.startsWith("+") ? success : destructive;
     }
 
     /** Per profile id, the latest follower and following counts a header showed, and when. */

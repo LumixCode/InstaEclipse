@@ -36,6 +36,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.ui.IeColors;
 
 /**
  * Export a followers / following list to CSV (#224).
@@ -438,7 +439,8 @@ public class FollowListExportHook {
                     int start = sb.length();
                     sb.append("\n").append(I18n.t(ctx, lost ? R.string.ig_followers_history_unfollowed : R.string.ig_followers_history_followed))
                             .append(" · ").append(df.format(new Date(e.ts)));
-                    sb.setSpan(new android.text.style.ForegroundColorSpan(lost ? 0xFFFF453A : 0xFF34C759), start, sb.length(), 0);
+                    sb.setSpan(new android.text.style.ForegroundColorSpan(lost ? IeColors.destructive(dlg.ctx, dlg.bg)
+                            : IeColors.success(dlg.ctx, dlg.bg)), start, sb.length(), 0);
                     sb.setSpan(new android.text.style.RelativeSizeSpan(0.85f), start, sb.length(), 0);
                     TextView row = new TextView(dlg.ctx);
                     row.setText(sb);

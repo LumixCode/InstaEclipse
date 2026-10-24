@@ -29,6 +29,8 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.ui.IeColors;
+import ps.reso.instaeclipse.utils.ui.IePalette;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
@@ -193,10 +195,15 @@ public class ProfileFollowsYouHook {
     private static void standalone(TextView tv, boolean followsMe) {
         String text = I18n.t(tv.getContext(), followsMe ? R.string.ig_profile_follows_you : R.string.ig_profile_not_following_you);
         SpannableStringBuilder sb = new SpannableStringBuilder(text);
-        sb.setSpan(new ForegroundColorSpan(followsMe ? 0xFF34C759 : 0xFFFF453A), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        sb.setSpan(new ForegroundColorSpan(color(tv.getContext(), followsMe)), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         sb.setSpan(new RelativeSizeSpan(0.8f), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         tv.setText(sb);
         tv.setVisibility(View.VISIBLE);
+    }
+
+    private static int color(Context ctx, boolean followsMe) {
+        int bg = IePalette.of(ctx).backdrop;
+        return followsMe ? IeColors.success(ctx, bg) : IeColors.destructive(ctx, bg);
     }
 
     private static final long[] RETRY_DELAYS = {500, 1000, 1500, 3000};
@@ -250,7 +257,7 @@ public class ProfileFollowsYouHook {
         SpannableStringBuilder sb = new SpannableStringBuilder(cur);
         int start = sb.length();
         sb.append(text);
-        sb.setSpan(new ForegroundColorSpan(followsMe ? 0xFF34C759 : 0xFFFF453A), start, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        sb.setSpan(new ForegroundColorSpan(color(tv.getContext(), followsMe)), start, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         sb.setSpan(new RelativeSizeSpan(0.8f), start, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         tv.setText(sb);
     }

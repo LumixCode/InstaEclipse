@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import android.content.Context;
-import android.content.Intent;
 import android.graphics.Typeface;
-import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.SpannableStringBuilder;
@@ -27,6 +25,7 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.text.CopyFeedback;
 import ps.reso.instaeclipse.utils.text.TimestampFormat;
 import ps.reso.instaeclipse.utils.toast.IeToast;
+import ps.reso.instaeclipse.utils.ui.IeColors;
 import ps.reso.instaeclipse.utils.users.WatchlistStore;
 
 /**
@@ -53,8 +52,6 @@ import ps.reso.instaeclipse.utils.users.WatchlistStore;
 final class ProfileChangelog {
 
     private static final String TAG = "(IE|Changelog) ";
-    /** as the analyzer's result */
-    private static final int GREEN = 0xFF34C759, RED = 0xFFFF453A;
     private static final Handler H = new Handler(Looper.getMainLooper());
 
     private ProfileChangelog() {}
@@ -104,16 +101,27 @@ final class ProfileChangelog {
                 dlg.view(hint);
             }
             Context app = ctx.getApplicationContext();
-            dlg.secondary(I18n.t(ctx, R.string.ig_pa_remove), () -> new Thread(() -> {
-                WatchlistStore.remove(app, self, p.id);
-                ModuleLog.line(TAG + "Removed " + p.id + " from the watchlist");
-                H.post(() -> toast(ctx, I18n.t(ctx, R.string.ig_pa_removed, name)));
-            }).start());
-            if (p.username != null) dlg.primary(I18n.t(ctx, R.string.ig_pa_open_profile), () -> openProfile(ctx, p.username));
+            dlg.destructiveKeepOpen(I18n.t(ctx, R.string.ig_pa_remove), () -> confirmRemove(ctx, name, groups.size(), () -> {
+                dlg.dismiss();
+                new Thread(() -> {
+                    WatchlistStore.remove(app, self, p.id);
+                    ModuleLog.line(TAG + "Removed " + p.id + " from the watchlist");
+                    H.post(() -> toast(ctx, I18n.t(ctx, R.string.ig_pa_removed, name)));
+                }).start();
+            }).show());
+            if (p.username != null) dlg.primary(I18n.t(ctx, R.string.ig_pa_open_profile), () -> ProfileAnalyzer.openProfile(ctx, p.username));
             dlg.show();
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not show the changelog", t);
         }
+    }
+
+    static IeDialog confirmRemove(Context ctx, String name, int analyses, Runnable remove) {
+        IeDialog confirm = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_pa_remove))
+                .message(I18n.t(ctx, R.string.ig_pa_remove_confirm, name, analyses));
+        confirm.secondary(I18n.t(ctx, R.string.ig_dialog_cancel), null);
+        confirm.destructive(I18n.t(ctx, R.string.ig_pa_remove_confirm_action), remove);
+        return confirm;
     }
 
     /** Adds the rows a page at a time, with "Show more" at the end while rows are left. */
@@ -257,7 +265,7 @@ final class ProfileChangelog {
         View section(ProfileChangelogPolicy.Group g, ProfileChangelogPolicy.Section s) {
             TextView h = new TextView(dlg.ctx);
             h.setText(I18n.t(ctx, ProfileAnalyzer.sectionTitle(s), name, g.of(s).size()));
-            h.setTextColor(s.gain() ? GREEN : s.loss() ? RED : dlg.sub);
+            h.setTextColor(s.gain() ? IeColors.success(dlg.ctx, dlg.bg) : s.loss() ? IeColors.destructive(dlg.ctx, dlg.bg) : dlg.sub);
             h.setTextSize(14);
             h.setTypeface(Typeface.DEFAULT_BOLD);
             h.setPadding(dlg.dp(2), dlg.dp(10), 0, dlg.dp(2));
@@ -288,23 +296,12 @@ final class ProfileChangelog {
             row.setTextSize(14);
             row.setPadding(dlg.dp(2), dlg.dp(5), 0, dlg.dp(5));
             String copy = named ? e.username : e.id;
-            if (named) row.setOnClickListener(v -> openProfile(ctx, e.username));
+            if (named) row.setOnClickListener(v -> ProfileAnalyzer.openProfile(ctx, e.username));
             if (copy != null && !copy.isEmpty()) row.setOnLongClickListener(v -> {
                 CopyFeedback.copy(ctx, "username", copy, R.string.ig_toast_comment_copied);
                 return true;
             });
             return row;
-        }
-    }
-
-    /** Instagram's own profile link, handled by Instagram itself. */
-    private static void openProfile(Context ctx, String username) {
-        try {
-            ctx.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.instagram.com/" + Uri.encode(username) + "/"))
-                    .setPackage(ctx.getPackageName())
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-        } catch (Throwable t) {
-            ModuleLog.error(TAG + "Could not open the profile: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
