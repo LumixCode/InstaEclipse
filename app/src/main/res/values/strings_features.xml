@@ -31,4 +31,14 @@
     <string name="feat_use_default_folder" tools:ignore="MissingTranslation">Use default folder</string>
     <string name="feat_download_folder_default" tools:ignore="MissingTranslation">%1$s (default)</string>
     <string name="feat_reset_folder_confirm" tools:ignore="MissingTranslation">Use the default folder? New downloads go to %1$s.</string>
+    <string name="feat_search_try_another" tools:ignore="MissingTranslation">Try another word</string>
+    <string name="feat_reason_best_only" tools:ignore="MissingTranslation">Only with Best quality</string>
+    <string name="feat_reason_overridden" tools:ignore="MissingTranslation">Off while “%1$s” is on</string>
+    <string name="feat_requires_lock" tools:ignore="MissingTranslation">Turn on a lock first</string>
+    <string name="feat_requires_above" tools:ignore="MissingTranslation">Turn on one option above first</string>
+    <string name="feat_corner_small" tools:ignore="MissingTranslation">Small</string>
+    <string name="feat_corner_medium" tools:ignore="MissingTranslation">Medium</string>
+    <string name="feat_corner_large" tools:ignore="MissingTranslation">Large</string>
+    <string name="feat_corner_extra_large" tools:ignore="MissingTranslation">Extra large</string>
+    <string name="feat_corner_round" tools:ignore="MissingTranslation">Round</string>
 </resources>

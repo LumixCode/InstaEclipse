@@ -5,10 +5,15 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
+import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
 import ps.reso.instaeclipse.utils.ipc.BrokerPayload;
 import ps.reso.instaeclipse.utils.ipc.CompanionBridge;
 
@@ -30,10 +35,12 @@ public final class CompanionSettings {
                 + (value == null ? "null" : value.getClass().getName()));
     }
 
-    public static void put(Context context, String key, Object value) {
+    public static Set<String> put(Context context, String key, Object value) {
         String action = actionFor(value);
         long now = System.currentTimeMillis();
-        SharedPreferences.Editor editor = CommonUtils.companionCache(context).edit();
+        SharedPreferences cache = CommonUtils.companionCache(context);
+        Map<String, Object> before = current(cache, Collections.singleton(key));
+        SharedPreferences.Editor editor = cache.edit();
         write(editor, key, value);
         editor.putLong(PrefsMerge.TS + key, now).apply();
         Intent intent = new Intent(action).putExtra("key", key).putExtra("ts", now);
@@ -41,13 +48,16 @@ public final class CompanionSettings {
         else if (value instanceof Integer) intent.putExtra("value", (int) (Integer) value);
         else intent.putExtra("value", (String) value);
         sendToInstagram(context, intent);
+        return FeatureCatalog.restartKeys(before, Collections.singletonMap(key, value));
     }
 
-    public static void putAll(Context context, LinkedHashMap<String, ?> values) {
+    public static Set<String> putAll(Context context, LinkedHashMap<String, ?> values) {
         for (Object value : values.values()) actionFor(value);
-        if (values.isEmpty()) return;
+        if (values.isEmpty()) return Collections.emptySet();
         long now = System.currentTimeMillis();
-        SharedPreferences.Editor editor = CommonUtils.companionCache(context).edit();
+        SharedPreferences cache = CommonUtils.companionCache(context);
+        Map<String, Object> before = current(cache, values.keySet());
+        SharedPreferences.Editor editor = cache.edit();
         Bundle bundle = new Bundle();
         for (Map.Entry<String, ?> entry : values.entrySet()) {
             write(editor, entry.getKey(), entry.getValue());
@@ -57,6 +67,7 @@ public final class CompanionSettings {
         editor.apply();
         sendToInstagram(context, new Intent(CommonUtils.ACTION_APPLY_SETTINGS)
                 .putExtra("values", bundle).putExtra("ts", now));
+        return FeatureCatalog.restartKeys(before, values);
     }
 
     public static void sendToInstagram(Context context, Intent intent) {
@@ -72,6 +83,13 @@ public final class CompanionSettings {
         try {
             if (CompanionBridge.isTrustedHost(context, BrokerPayload.HOST)) context.sendBroadcast(intent);
         } catch (Throwable ignored) {}
+    }
+
+    private static Map<String, Object> current(SharedPreferences cache, Collection<String> keys) {
+        Map<String, ?> all = cache.getAll();
+        Map<String, Object> out = new HashMap<>();
+        for (String key : keys) out.put(key, all.containsKey(key) ? all.get(key) : SettingsSchema.defaultValue(key));
+        return out;
     }
 
     private static void write(SharedPreferences.Editor editor, String key, Object value) {

@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.IntFunction;
 import java.util.function.Predicate;
 
@@ -756,6 +759,21 @@ public final class FeatureCatalog {
         for (int alias : item.aliases) if (contains(text, alias, q)) return true;
         for (String word : item.words) if (SearchText.fold(word).contains(q)) return true;
         return false;
+    }
+
+    public static Set<String> restartKeys(Map<String, ?> before, Map<String, ?> after) {
+        Set<String> out = new LinkedHashSet<>();
+        for (Map.Entry<String, ?> entry : after.entrySet()) {
+            Item item = ITEMS.get(entry.getKey());
+            if (item == null || item.restartOn == Restart.NONE) continue;
+            Object now = entry.getValue();
+            Object was = before.containsKey(item.key) ? before.get(item.key)
+                    : item.kind == Kind.SWITCH ? (Object) item.defaultOn : null;
+            if (Objects.equals(was, now)) continue;
+            if (item.restartOn == Restart.ON_ONLY && !Boolean.TRUE.equals(now)) continue;
+            out.add(item.key);
+        }
+        return out;
     }
 
     public static Group groupOfStatusKey(String key) {

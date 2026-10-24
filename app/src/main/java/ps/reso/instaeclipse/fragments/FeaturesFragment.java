@@ -53,6 +53,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -65,6 +66,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.devops.config.DevConfigReply;
@@ -73,9 +75,11 @@ import ps.reso.instaeclipse.utils.backup.CompanionRestorePlan;
 import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
 import ps.reso.instaeclipse.utils.core.PermissionAsk;
 import ps.reso.instaeclipse.utils.core.SettingsSchema;
+import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
 import ps.reso.instaeclipse.utils.ipc.ModuleReplies;
 import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 import ps.reso.instaeclipse.utils.text.SearchText;
+import ps.reso.instaeclipse.utils.ui.CompanionRestartHint;
 import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
 import ps.reso.instaeclipse.utils.core.CompanionSettings;
 import ps.reso.instaeclipse.ui.theme.ThemeCustomizerActivity;
@@ -104,7 +108,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
     private String currentMenu = "main";
     private String searchShown;
-    private Map<String, Runnable> menuLoaders;
     private boolean restoringMenu;
     private OnBackPressedCallback backCallback;
     /** True once Instagram answered the current request with today's reel count. */
@@ -198,7 +201,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 LinkedHashMap<String, Object> folder = new LinkedHashMap<>();
                 folder.put("downloaderCustomUri", uriString);
                 folder.put("downloaderCustomPath", path);
-                CompanionSettings.putAll(requireContext(), folder);
+                writeAll(folder);
                 ps.reso.instaeclipse.utils.core.BackgroundAccess.askIfNeeded(requireContext(), true);
                 askDownloadPermission(PermissionAsk.Trigger.FOLDER_PICKED);
 
@@ -330,10 +333,13 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         public static final int TYPE_SPACER = 4;
         public static final int TYPE_NOTICE = 5;
         public static final int TYPE_HINT = 6;
+        public static final int TYPE_EMPTY = 7;
 
         public int type;
         public String title;
         public String disabledReason;
+        public String requiresReason;
+        public String overrideReason;
         public String prefKey;
         public Runnable onClick;
         public boolean destructive;
@@ -364,8 +370,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         public boolean isNav;
         /** Main-menu row: rendered as a standalone rounded card. */
         public boolean isCategory;
-        /** Sub-menu this main-menu row opens (used to recompute its count). */
-        Category category;
     }
 
     static class HeaderViewHolder extends RecyclerView.ViewHolder {
@@ -399,6 +403,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     }
 
     private class NoticeViewHolder extends RecyclerView.ViewHolder {
+        final TextView headline;
         final TextView text;
         final com.google.android.material.button.MaterialButton ok;
 
@@ -417,6 +422,14 @@ public class FeaturesFragment extends Fragment implements TabFragment {
             android.widget.LinearLayout box = new android.widget.LinearLayout(c);
             box.setOrientation(android.widget.LinearLayout.VERTICAL);
             box.setPadding(dp(16), dp(16), dp(16), dp(8));
+            headline = new TextView(c);
+            headline.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            headline.setTypeface(null, android.graphics.Typeface.BOLD);
+            headline.setTextColor(MaterialColors.getColor(parent, com.google.android.material.R.attr.colorOnSecondaryContainer));
+            android.widget.LinearLayout.LayoutParams headlineLp = new android.widget.LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            headlineLp.bottomMargin = dp(4);
+            box.addView(headline, headlineLp);
             text = new TextView(c);
             text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
             text.setTextColor(MaterialColors.getColor(parent, com.google.android.material.R.attr.colorOnSecondaryContainer));
@@ -447,6 +460,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
             if (type == FeatureItem.TYPE_SPACER)  return 2;
             if (type == FeatureItem.TYPE_NOTICE) return 3;
             if (type == FeatureItem.TYPE_HINT) return 4;
+            if (type == FeatureItem.TYPE_EMPTY) return 5;
             return 1;
         }
 
@@ -475,6 +489,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
                 hint.setTextColor(MaterialColors.getColor(parent, com.google.android.material.R.attr.colorOnSurfaceVariant));
                 return new RecyclerView.ViewHolder(hint) {};
+            } else if (viewType == 5) {
+                View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_feature_empty, parent, false);
+                return new RecyclerView.ViewHolder(v) {};
             } else {
                 View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_feature, parent, false);
                 return new ItemViewHolder(v);
@@ -485,11 +502,13 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
             FeatureItem item = items.get(position);
 
-            if (item.type == FeatureItem.TYPE_SPACER) return;
+            if (item.type == FeatureItem.TYPE_SPACER || item.type == FeatureItem.TYPE_EMPTY) return;
 
             if (holder instanceof NoticeViewHolder) {
                 NoticeViewHolder notice = (NoticeViewHolder) holder;
-                notice.text.setText(item.title);
+                notice.headline.setVisibility(item.subtitle != null ? View.VISIBLE : View.GONE);
+                notice.headline.setText(item.subtitle != null ? item.title : null);
+                notice.text.setText(item.subtitle != null ? item.subtitle : item.title);
                 notice.ok.setOnClickListener(v -> {
                     if (item.onClick != null) item.onClick.run();
                 });
@@ -529,7 +548,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 if (item.disabledWhenTrue != null && getCurrentState(item.disabledWhenTrue)) {
                     switchEnabled = false;
                 }
-                String reason = switchEnabled ? null : item.disabledReason;
+                String reason = switchEnabled ? null : reasonFor(item);
 
                 if (reason != null) {
                     itemHolder.tvSubtitle.setVisibility(View.VISIBLE);
@@ -608,7 +627,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                         if (item.isExtreme && checked) {
                             new MaterialAlertDialogBuilder(itemHolder.itemView.getContext())
                                     .setTitle(getString(R.string.ig_dialog_distraction_extreme_title))
-                                    .setMessage(getString(R.string.ig_dialog_distraction_extreme_message))
+                                    .setMessage(getString(R.string.cat_extreme_message))
                                     .setPositiveButton(getString(R.string.ig_dialog_yes), (dialog, which) -> {
                                         stageChange(item.prefKey, true);
                                         updateMasterSwitches();
@@ -662,10 +681,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
         /** Refreshes any item whose enabled state depends on runtime conditions. */
         void refreshConditionalItems() {
-            // Distraction-Free rows appear and lock depending on other switches: rebuild the page.
-            if ("distract".equals(currentMenu)) {
+            if ("focus".equals(currentMenu)) {
                 recyclerFeatures.post(() -> {
-                    if (isAdded() && "distract".equals(currentMenu)) loadDistractionMenu();
+                    if (isAdded() && "focus".equals(currentMenu)) loadFocusMenu();
                 });
                 return;
             }
@@ -709,10 +727,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         }
     }
 
-    // =========================================================
-    // MENU BUILDING HELPERS
-    // =========================================================
-
     private void showMenu(String key, String title, List<Object> definitions) {
         boolean inPlace = key.equals(currentMenu) && searchShown == null && adapter.getItemCount() > 0;
         searchShown = null;
@@ -732,7 +746,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         tvHeaderTitle.setText(title);
         fragmentView.findViewById(R.id.header_layout).setVisibility(isMain ? View.GONE : View.VISIBLE);
         btnBack.setVisibility(isMain ? View.GONE : View.VISIBLE);
-        // Search lives on the main menu only; leaving it (e.g. via a nav row in the results) resets it
         tilSearch.setVisibility(isMain ? View.VISIBLE : View.GONE);
         if (!isMain) clearSearchSilently();
 
@@ -747,13 +760,16 @@ public class FeaturesFragment extends Fragment implements TabFragment {
             } else if (def instanceof List) {
                 @SuppressWarnings("unchecked")
                 List<FeatureItem> group = (List<FeatureItem>) def;
-                for (int i = 0; i < group.size(); i++) {
-                    FeatureItem item = group.get(i);
-                    item.segmentPosition = i;
-                    item.segmentSize = group.size();
+                int cards = 0;
+                for (FeatureItem item : group) if (item.type != FeatureItem.TYPE_HINT) cards++;
+                int position = 0;
+                for (FeatureItem item : group) {
+                    if (item.type != FeatureItem.TYPE_HINT) {
+                        item.segmentPosition = position++;
+                        item.segmentSize = cards;
+                    }
                     displayList.add(item);
                 }
-                // Add a spacer after each group except the last definition
                 if (di < definitions.size() - 1) {
                     FeatureItem spacer = new FeatureItem();
                     spacer.type = FeatureItem.TYPE_SPACER;
@@ -793,39 +809,24 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 .start();
     }
 
-    private FeatureItem createNav(String title, Runnable navAction) {
-        FeatureItem item = new FeatureItem();
-        item.type = FeatureItem.TYPE_CLICKABLE;
-        item.title = title;
-        item.onClick = navAction;
+    private FeatureItem createNav(int iconRes, int accent, String title, Runnable navAction) {
+        FeatureItem item = createClickable(iconRes, accent, title, navAction);
         item.isNav = true;
         return item;
     }
 
-    private FeatureItem createNav(int iconRes, String accentHex, String title, Runnable navAction) {
-        FeatureItem item = createNav(title, navAction);
-        item.iconRes = iconRes;
-        item.accentColor = Color.parseColor(accentHex);
-        return item;
-    }
-
-    private FeatureItem createClickable(String title, Runnable onClick) {
+    private FeatureItem createClickable(int iconRes, int accent, String title, Runnable onClick) {
         FeatureItem item = new FeatureItem();
         item.type = FeatureItem.TYPE_CLICKABLE;
         item.title = title;
         item.onClick = onClick;
-        return item;
-    }
-
-    private FeatureItem createClickable(int iconRes, String accentHex, String title, Runnable onClick) {
-        FeatureItem item = createClickable(title, onClick);
         item.iconRes = iconRes;
-        item.accentColor = Color.parseColor(accentHex);
+        item.accentColor = accent;
         return item;
     }
 
-    private FeatureItem createValueRow(int iconRes, String accentHex, String label, String value, Runnable onClick) {
-        FeatureItem item = createClickable(iconRes, accentHex, label, onClick);
+    private FeatureItem createValueRow(int iconRes, int accent, String label, String value, Runnable onClick) {
+        FeatureItem item = createClickable(iconRes, accent, label, onClick);
         item.subtitle = value;
         return item;
     }
@@ -836,71 +837,24 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return item;
     }
 
-    private FeatureItem createTool(int iconRes, String accentHex, String title, String subtitle, Runnable onClick) {
-        FeatureItem item = createNav(iconRes, accentHex, title, onClick);
-        item.isNav = false;
+    private FeatureItem createTool(int iconRes, int accent, String title, String subtitle, Runnable onClick) {
+        FeatureItem item = createClickable(iconRes, accent, title, onClick);
         item.subtitle = subtitle;
         return item;
     }
 
-    private FeatureItem createSwitch(String title, String prefKey) {
+    private FeatureItem createSwitch(int iconRes, int accent, String title, String prefKey) {
         FeatureItem item = new FeatureItem();
         item.type = FeatureItem.TYPE_SWITCH;
         item.title = title;
         item.prefKey = prefKey;
+        item.iconRes = iconRes;
+        item.accentColor = accent;
         return item;
     }
 
     private FeatureItem createSwitch(int iconRes, String accentHex, String title, String prefKey) {
-        FeatureItem item = createSwitch(title, prefKey);
-        item.iconRes = iconRes;
-        item.accentColor = Color.parseColor(accentHex);
-        return item;
-    }
-
-    /** A switch whose hook Instagram installs only when it is on at its start (Module): says so. */
-    private FeatureItem createRestartSwitch(int iconRes, String accentHex, String title, String prefKey) {
-        FeatureItem item = createSwitch(iconRes, accentHex, title, prefKey);
-        item.subtitle = getString(R.string.ig_restart_to_apply_hint);
-        return item;
-    }
-
-    private FeatureItem createSwitchWithDependency(String title, String prefKey, String dependsOn) {
-        FeatureItem item = createSwitch(title, prefKey);
-        item.dependsOn = dependsOn;
-        return item;
-    }
-
-    private FeatureItem createSwitchWithDependency(int iconRes, String accentHex, String title, String prefKey, String dependsOn) {
-        FeatureItem item = createSwitchWithDependency(title, prefKey, dependsOn);
-        item.iconRes = iconRes;
-        item.accentColor = Color.parseColor(accentHex);
-        return item;
-    }
-
-    private FeatureItem createSwitchWithCascadeOff(String title, String prefKey, String cascadeOffKey) {
-        FeatureItem item = createSwitch(title, prefKey);
-        item.cascadeOffKey = cascadeOffKey;
-        return item;
-    }
-
-    private FeatureItem createSwitchWithCascadeOff(int iconRes, String accentHex, String title, String prefKey, String cascadeOffKey) {
-        FeatureItem item = createSwitchWithCascadeOff(title, prefKey, cascadeOffKey);
-        item.iconRes = iconRes;
-        item.accentColor = Color.parseColor(accentHex);
-        return item;
-    }
-
-    /**
-     * A switch that stays disabled, with a "Requires …" line, until {@code parent} is on. Unlike
-     * {@link #createSwitchWithDependency}, turning it on never turns the parent on.
-     */
-    private FeatureItem createDependentSwitch(int icon, String accent, int label, String key,
-                                              String parent, int requirement) {
-        FeatureItem item = createSwitch(icon, accent, getString(label), key);
-        item.requiresAnyOf = java.util.Collections.singletonList(parent);
-        item.disabledReason = getString(requirement);
-        return item;
+        return createSwitch(iconRes, Color.parseColor(accentHex), title, prefKey);
     }
 
     private FeatureItem createMasterSwitch(String title, List<String> childKeys) {
@@ -911,97 +865,269 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return item;
     }
 
-    // =========================================================
-    // MENUS
-    // =========================================================
-
-    private static final String A_APPEARANCE = "#FF375F", A_PRIVACY = "#5E5CE6", A_MEDIA = "#FF9F0A", A_SOCIAL = "#BF5AF2", A_TOOLS = "#8E8E93";
-    private static final int GROUP_APPEARANCE = 0, GROUP_PRIVACY = 1, GROUP_MEDIA = 2, GROUP_SOCIAL = 3, GROUP_TOOLS = 4;
-    /** Searchable category that is not listed on the main menu (reached from inside another sub-menu). */
-    private static final int GROUP_HIDDEN = -1;
-
-    /** Builds a sub-menu's definitions (section header Strings + List of FeatureItem) without showing it. */
-    private interface DefsBuilder {
-        List<Object> build();
+    private static FeatureItem hintRow(String text) {
+        FeatureItem item = new FeatureItem();
+        item.type = FeatureItem.TYPE_HINT;
+        item.title = text;
+        return item;
     }
 
-    /** One sub-menu: used for the main-menu nav row, its "N on" count, and global search. */
-    static final class Category {
-        final String key;
-        final int group;
-        final int iconRes;
-        final String accentHex;
-        final String title;
-        final DefsBuilder builder;
-        final Runnable loader;
+    public static final String MENU_REORGANISED_SEEN = "menuReorganisedSeen";
+    private static final int DESTRUCTIVE = 0xFFFF453A;
+    private static final Map<String, String> RETIRED_MENUS = retiredMenus();
+    private static final Map<String, FeatureCatalog.Category> CATEGORY_OF_ITEM = categoryOfItem();
+    private static final Set<String> FOCUS_LOCKED = focusLocked();
+    private static final List<String> LOCK_SWITCHES = Arrays.asList(
+            "lockWholeApp", "lockDirectMessages", "lockSpecificMessages", "lockDirectAlways", "lockSavedCollections");
+    private static final int[] CORNER_NAMES = {R.string.ig_dialog_extras_share_domain_off, R.string.feat_corner_small,
+            R.string.feat_corner_medium, R.string.feat_corner_large, R.string.feat_corner_extra_large,
+            R.string.feat_corner_round};
 
-        Category(String key, int group, int iconRes, String accentHex, String title, DefsBuilder builder, Runnable loader) {
-            this.key = key;
-            this.group = group;
-            this.iconRes = iconRes;
-            this.accentHex = accentHex;
-            this.title = title;
-            this.builder = builder;
-            this.loader = loader;
+    private Map<String, Supplier<FeatureItem>> factories;
+
+    private static Map<String, String> retiredMenus() {
+        Map<String, String> out = new HashMap<>();
+        out.put("distract", "focus");
+        out.put("hidechats", "lock");
+        out.put("postmenu", "downloads");
+        out.put("downloader", "downloads");
+        return out;
+    }
+
+    private static Map<String, FeatureCatalog.Category> categoryOfItem() {
+        Map<String, FeatureCatalog.Category> out = new HashMap<>();
+        for (FeatureCatalog.Category c : FeatureCatalog.CATEGORIES) {
+            for (FeatureCatalog.Item i : c.items()) out.put(i.key, c);
         }
+        return out;
     }
 
-    /** All sub-menus, in main-menu order. Grouped to match the in-IG dialog: Appearance / Privacy / Media / Social / Tools. */
-    private List<Category> getCategories() {
-        List<Category> c = new ArrayList<>();
-        c.add(new Category("theme", GROUP_APPEARANCE, R.drawable.ic_palette, A_APPEARANCE, getString(R.string.ig_dialog_menu_theme), this::buildThemeDefs, this::loadThemeMenu));
-        c.add(new Category("feed", GROUP_APPEARANCE, R.drawable.ic_sparkle, A_APPEARANCE, getString(R.string.menu_feed), this::buildFeedDefs, this::loadFeedMenu));
-        c.add(new Category("navigation", GROUP_APPEARANCE, R.drawable.ic_tune, A_APPEARANCE, getString(R.string.menu_navigation), this::buildNavigationDefs, this::loadNavigationMenu));
-        c.add(new Category("reels", GROUP_APPEARANCE, R.drawable.ic_movie, A_APPEARANCE, getString(R.string.menu_reels), this::buildReelsDefs, this::loadReelsMenu));
-        c.add(new Category("stories", GROUP_APPEARANCE, R.drawable.ic_story_ring, A_APPEARANCE, getString(R.string.menu_stories), this::buildStoriesDefs, this::loadStoriesMenu));
+    private static Set<String> focusLocked() {
+        Set<String> out = new HashSet<>();
+        for (FeatureCatalog.Section s : FeatureCatalog.category("focus").sections) {
+            if (s.header != R.string.cat_sec_turn_off && s.header != R.string.cat_sec_reel_limits) continue;
+            for (FeatureCatalog.Item i : s.items) out.add(i.key);
+        }
+        return out;
+    }
 
-        c.add(new Category("ghost", GROUP_PRIVACY, R.drawable.ic_eye, A_PRIVACY, getString(R.string.ig_dialog_menu_ghost_settings), this::buildGhostDefs, this::loadGhostMenu));
-        c.add(new Category("messages", GROUP_PRIVACY, R.drawable.ic_chat, A_PRIVACY, getString(R.string.menu_messages), this::buildMessagesDefs, this::loadMessagesMenu));
-        c.add(new Category("hidechats", GROUP_PRIVACY, R.drawable.ic_eye_off, A_PRIVACY, getString(R.string.ig_hide_chats_title), this::buildHideChatsDefs, this::loadHideChatsMenu));
-        c.add(new Category("lock", GROUP_PRIVACY, R.drawable.ic_shield, A_PRIVACY, getString(R.string.ig_dialog_misc_lock_section), this::buildLockDefs, this::loadLockMenu));
-        c.add(new Category("ads", GROUP_PRIVACY, R.drawable.ic_block, A_PRIVACY, getString(R.string.menu_ads_tracking), this::buildAdsDefs, this::loadAdsMenu));
-        c.add(new Category("location", GROUP_PRIVACY, R.drawable.ic_pin, A_PRIVACY, getString(R.string.ig_dialog_menu_location), this::buildLocationDefs, this::loadLocationMenu));
-        c.add(new Category("distract", GROUP_PRIVACY, R.drawable.ic_notification, A_PRIVACY, getString(R.string.ig_dialog_menu_distraction_free), this::buildDistractionDefs, this::openDistractionMenu));
+    private Map<String, Supplier<FeatureItem>> factories() {
+        if (factories != null) return factories;
+        Map<String, Supplier<FeatureItem>> f = new HashMap<>();
+        f.put("quickToggle", () -> {
+            FeatureItem row = actionRow("quickToggle", () -> loadCategory("qt"));
+            row.isNav = true;
+            return row;
+        });
+        f.put("customShareDomain", () -> valueRow("customShareDomain", shareDomainValue(), this::showShareDomainDialog));
+        f.put("exactTimestampFormat", () -> valueRow("exactTimestampFormat",
+                timestampFormatName(localCache.getString("exactTimestampFormat", "")), this::showTimestampFormatDialog));
+        f.put("feedCornerRadius", () -> valueRow("feedCornerRadius",
+                feedCornerName(localCache.getInt("feedCornerRadius", 0)), this::chooseFeedCorner));
+        f.put("navTabOrder", () -> actionRow("navTabOrder", this::showTabOrderDialog));
+        f.put("startupTab", () -> valueRow("startupTab", startupTabValue(), this::showStartupTabDialog));
+        f.put("storyTrayScale", () -> valueRow("storyTrayScale",
+                localCache.getInt("storyTrayScale", 100) + "%", this::chooseStoryTraySize));
+        f.put("storyRingColor", () -> valueRow("storyRingColor", storyRingColorValue(), this::chooseStoryRingColor));
+        f.put("forceReelQuality", () -> {
+            int current = ps.reso.instaeclipse.utils.core.SettingsManager.readReelQuality(localCache);
+            return valueRow("forceReelQuality", qualityLabel(current), () -> pickQuality(current));
+        });
+        f.put("spoofDevice", () -> valueRow("spoofDevice", spoofDeviceValue(), this::showSpoofDeviceDialog));
+        f.put("downloaderUseOriginal", () -> valueRow("downloaderUseOriginal", downloadModeLabel(), this::chooseDownloadQuality));
+        f.put("downloaderCompatibility", () -> bestOnly("downloaderCompatibility"));
+        f.put("downloaderAllowFallback", () -> bestOnly("downloaderAllowFallback"));
+        f.put("downloadFolder", () -> valueRow("downloadFolder", downloadFolderValue(), this::pickDownloadFolder));
+        f.put("downloadFolderReset", () -> {
+            if (!hasCustomFolder()) return null;
+            FeatureCatalog.Item item = FeatureCatalog.item("downloadFolderReset");
+            return destructive(createClickable(item.icon, DESTRUCTIVE, getString(item.label), this::confirmResetDownloadFolder));
+        });
+        f.put("storyCacheHours", this::storyCacheItem);
+        f.put("locationPlace", this::locationPlaceItem);
+        f.put("themeCustomize", () -> actionRow("themeCustomize", () ->
+                themeCustomizerLauncher.launch(new Intent(requireContext(), ThemeCustomizerActivity.class))));
+        f.put("themePresetId", () -> isNightMode() ? valueRow("themePresetId",
+                darkModeLabel(localCache.getInt("themePresetId", 1)), this::pickDarkModeTheme) : null);
+        f.put("themeLightPresetId", () -> isNightMode() ? null : valueRow("themeLightPresetId",
+                lightModeLabel(localCache.getInt("themeLightPresetId", -1)), this::pickLightModeTheme));
+        f.put("profileSpoofEdit", () -> actionRow("profileSpoofEdit", this::showProfileSpoofDialog));
+        f.put("profilePhoto", () -> actionRow("profilePhoto", () ->
+                startActivity(new Intent(requireContext(), ps.reso.instaeclipse.ui.ProfilePhotoPickerActivity.class))));
+        f.put("autoClearCacheSizeMb", () -> {
+            FeatureCatalog.Item item = FeatureCatalog.item("autoClearCacheSizeMb");
+            FeatureItem row = createClickable(item.icon, accentOf(item), getString(item.label,
+                    localCache.getInt("autoClearCacheSizeMb", 100)), this::pickAutoClearSize);
+            applyRequires(row, item);
+            return row;
+        });
+        f.put("settingsBackup", () -> actionRow("settingsBackup", this::backupSettings));
+        f.put("settingsRestore", () -> actionRow("settingsRestore", this::restoreSettings));
+        f.put("restartNow", () -> actionRow("restartNow", this::restartInstagram));
+        f.put("devImport", () -> actionRow("devImport", this::importDevConfig));
+        f.put("devExport", () -> actionRow("devExport", this::exportDevConfig));
+        f.put("devReset", () -> actionRow("devReset", this::restoreDefaultConfig));
+        f.put("qualityPointer", () -> {
+            FeatureCatalog.Category downloads = FeatureCatalog.category("downloads");
+            return createNav(downloads.icon, downloads.group.accent,
+                    getString(FeatureCatalog.item("qualityPointer").label), () -> loadCategory("downloads"));
+        });
+        for (String lock : LOCK_SWITCHES) {
+            f.put(lock, () -> {
+                FeatureCatalog.Item item = FeatureCatalog.item(lock);
+                FeatureItem row = createLockSwitch(item.icon, getString(item.label), lock);
+                row.subtitle = describe(item);
+                return row;
+            });
+        }
+        factories = f;
+        return f;
+    }
 
-        c.add(new Category("downloader", GROUP_MEDIA, R.drawable.ic_download, A_MEDIA, getString(R.string.ig_dialog_menu_downloader), this::buildDownloaderDefs, this::loadDownloaderMenu));
-        c.add(new Category("postmenu", GROUP_MEDIA, R.drawable.ic_save, A_MEDIA, getString(R.string.menu_post_menu), this::buildPostMenuDefs, this::loadPostMenuMenu));
-        c.add(new Category("quality", GROUP_MEDIA, R.drawable.ic_sparkle, A_MEDIA, getString(R.string.menu_quality), this::buildQualityDefs, this::loadQualityMenu));
-        c.add(new Category("interactions", GROUP_SOCIAL, R.drawable.ic_heart, A_SOCIAL, getString(R.string.menu_likes_comments), this::buildInteractionsDefs, this::loadInteractionsMenu));
-        c.add(new Category("profiles", GROUP_SOCIAL, R.drawable.ic_eye, A_SOCIAL, getString(R.string.menu_profiles), this::buildProfilesDefs, this::loadProfilesMenu));
-
-        c.add(new Category("app", GROUP_TOOLS, R.drawable.ic_settings_gear, A_TOOLS, getString(R.string.menu_app), this::buildAppDefs, this::loadAppMenu));
-        c.add(new Category("dev", GROUP_TOOLS, R.drawable.ic_tune, A_TOOLS, getString(R.string.ig_dialog_menu_dev_options), this::buildDevDefs, this::loadDevMenu));
-
-        // Quick toggles live inside Ghost Mode; searchable, but not a main-menu row.
-        c.add(new Category("qt", GROUP_HIDDEN, R.drawable.ic_tune, A_PRIVACY, getString(R.string.ig_dialog_section_quick_toggle), this::buildQuickTogglesDefs, this::loadQuickTogglesMenu));
-        return c;
+    public Set<String> renderedKeysForTest() {
+        Set<String> out = new HashSet<>();
+        for (FeatureCatalog.Category cat : FeatureCatalog.CATEGORIES) {
+            out.add(cat.key);
+            for (FeatureCatalog.Item item : cat.items()) {
+                boolean generic = item.kind == FeatureCatalog.Kind.SWITCH || item.kind == FeatureCatalog.Kind.MASTER
+                        || item.kind == FeatureCatalog.Kind.INFO
+                        || item.kind == FeatureCatalog.Kind.ACTION && item.side == FeatureCatalog.Side.IG_ONLY;
+                if (generic || "focus".equals(cat.key) || "locationRecent".equals(item.key)
+                        || factories().containsKey(item.key)) {
+                    out.add(item.key);
+                }
+            }
+        }
+        return out;
     }
 
     private void loadMainMenu() {
-        showMenu("main", getString(R.string.features), buildMainDefs());
+        showMenu("main", getString(R.string.features), mainDefs());
+    }
+
+    private List<Object> mainDefs() {
+        List<Object> defs = new ArrayList<>();
+        if (ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.shouldShow(localCache)) {
+            FeatureItem notice = new FeatureItem();
+            notice.type = FeatureItem.TYPE_NOTICE;
+            notice.title = getString(R.string.ie_spoof_last_seen_removed);
+            notice.onClick = this::dismissSpoofLastSeenNotice;
+            defs.add(Collections.singletonList(notice));
+        }
+        if (!CompanionUiPrefs.get(requireContext()).getBoolean(MENU_REORGANISED_SEEN, false)) {
+            FeatureItem card = new FeatureItem();
+            card.type = FeatureItem.TYPE_NOTICE;
+            card.title = getString(R.string.cat_menu_reorganised_title);
+            card.subtitle = getString(R.string.cat_menu_reorganised_body);
+            card.onClick = this::dismissMenuReorganised;
+            defs.add(Collections.singletonList(card));
+        }
+        FeatureCatalog.Values values = cacheValues();
+        for (FeatureCatalog.Group group : FeatureCatalog.Group.values()) {
+            List<FeatureItem> rows = new ArrayList<>();
+            for (FeatureCatalog.Category cat : FeatureCatalog.CATEGORIES) {
+                if (cat.hidden || cat.group != group) continue;
+                FeatureItem row = categoryRow(cat, values);
+                row.isCategory = true;
+                rows.add(row);
+            }
+            addGroup(defs, getString(group.title), rows);
+        }
+        return defs;
+    }
+
+    private FeatureItem categoryRow(FeatureCatalog.Category cat, FeatureCatalog.Values values) {
+        String title = getString(cat.title);
+        int accent = cat.group.accent;
+        if ("restart".equals(cat.key)) {
+            return createTool(cat.icon, accent, title, getString(R.string.tool_restart_sub), this::restartInstagram);
+        }
+        if ("about".equals(cat.key)) {
+            return createTool(cat.icon, accent, title, getString(R.string.tool_about_sub), this::openHelpAbout);
+        }
+        FeatureItem row = createNav(cat.icon, accent, title, () -> openCategory(cat.key));
+        if (countable(cat)) {
+            int on = FeatureCatalog.countOn(cat, values);
+            row.subtitle = on > 0 ? getString(R.string.feat_count_on, on) : getString(R.string.feat_count_off);
+            row.subtitleActive = on > 0;
+        }
+        return row;
+    }
+
+    private static boolean countable(FeatureCatalog.Category cat) {
+        for (FeatureCatalog.Item item : cat.items()) {
+            if (item.kind == FeatureCatalog.Kind.SWITCH && item.counts) return true;
+            if (item.kind == FeatureCatalog.Kind.PICKER && item.countWhen != null) return true;
+        }
+        return false;
+    }
+
+    private FeatureCatalog.Values cacheValues() {
+        Map<String, ?> all = localCache.getAll();
+        return new FeatureCatalog.Values() {
+            @Override public boolean bool(String key, boolean def) {
+                Object v = all.get(key);
+                return v instanceof Boolean ? (Boolean) v : def;
+            }
+
+            @Override public int integer(String key, int def) {
+                Object v = all.get(key);
+                return v instanceof Integer ? (Integer) v : def;
+            }
+
+            @Override public String string(String key, String def) {
+                Object v = all.get(key);
+                return v instanceof String ? (String) v : def;
+            }
+        };
+    }
+
+    private static void addGroup(List<Object> defs, String header, List<FeatureItem> rows) {
+        if (rows.isEmpty()) return;
+        if (header != null) defs.add(header);
+        defs.add(rows);
     }
 
     private void dismissSpoofLastSeenNotice() {
         ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.dismiss(localCache);
-        CompanionSettings.put(requireContext(), ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.KEY, false);
+        write(ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.KEY, false);
         if ("main".equals(currentMenu) && !isSearching()) loadMainMenu();
     }
 
+    private void dismissMenuReorganised() {
+        CompanionUiPrefs.get(requireContext()).edit().putBoolean(MENU_REORGANISED_SEEN, true).apply();
+        if ("main".equals(currentMenu) && !isSearching()) loadMainMenu();
+    }
+
+    private void openCategory(String key) {
+        if ("focus".equals(key)) openFocusMenu();
+        else if ("restart".equals(key)) restartInstagram();
+        else if ("about".equals(key)) openHelpAbout();
+        else loadCategory(key);
+    }
+
+    private void loadCategory(String key) {
+        FeatureCatalog.Category cat = FeatureCatalog.category(key);
+        if (cat == null || "restart".equals(key) || "about".equals(key)) {
+            loadMainMenu();
+        } else if ("focus".equals(key)) {
+            loadFocusMenu();
+        } else {
+            showMenu(key, getString(cat.title), pageDefs(cat));
+        }
+    }
+
     private void loadParentMenu() {
-        if ("qt".equals(currentMenu)) loadGhostMenu();
+        if ("qt".equals(currentMenu)) loadCategory("ghost");
         else loadMainMenu();
     }
 
     private void restoreMenu(String key) {
         restoringMenu = true;
         try {
-            for (Category category : getCategories()) {
-                if (category.key.equals(key)) {
-                    category.loader.run();
-                    return;
-                }
-            }
-            loadMainMenu();
+            String menu = RETIRED_MENUS.containsKey(key) ? RETIRED_MENUS.get(key) : key;
+            if ("main".equals(menu)) loadMainMenu();
+            else loadCategory(menu);
         } finally {
             restoringMenu = false;
         }
@@ -1018,85 +1144,148 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         else loadMainMenu();
     }
 
-    private List<Object> buildMainDefs() {
-        List<Object> defs = new ArrayList<>();
-        if (ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.shouldShow(localCache)) {
-            FeatureItem notice = new FeatureItem();
-            notice.type = FeatureItem.TYPE_NOTICE;
-            notice.title = getString(R.string.ie_spoof_last_seen_removed);
-            notice.onClick = this::dismissSpoofLastSeenNotice;
-            defs.add(Arrays.asList(notice));
+    private void reloadCurrentMenu() {
+        if (adapter == null || localCache == null || !isAdded() || getView() == null) return;
+        if (isSearching()) {
+            runSearch(etSearch.getText().toString());
+        } else if ("main".equals(currentMenu)) {
+            loadMainMenu();
+        } else {
+            loadCategory(currentMenu);
         }
-        int[] groupTitles = {
-                R.string.feat_group_appearance, R.string.feat_group_privacy,
-                R.string.feat_group_media, R.string.feat_group_social, R.string.feat_group_tools
-        };
-        List<Category> categories = getCategories();
+    }
 
-        for (int g = 0; g < groupTitles.length; g++) {
+    private List<Object> pageDefs(FeatureCatalog.Category cat) {
+        List<Object> defs = new ArrayList<>();
+        for (FeatureCatalog.Section section : cat.sections) {
+            String header = section.header != 0 ? getString(section.header) : null;
             List<FeatureItem> rows = new ArrayList<>();
-            for (Category cat : categories) {
-                if (cat.group != g) continue;
-                FeatureItem nav = createNav(cat.iconRes, cat.accentHex, cat.title, cat.loader);
-                nav.category = cat;
-                applyCategorySubtitle(nav);
-                rows.add(nav);
+            for (FeatureCatalog.Item item : section.items) {
+                if ("locationRecent".equals(item.key)) {
+                    addGroup(defs, header, rows);
+                    header = null;
+                    rows = new ArrayList<>();
+                    addGroup(defs, getString(R.string.ig_dialog_location_recent), recentPlaceRows());
+                    continue;
+                }
+                if (!shownOnPage(item)) continue;
+                FeatureItem row = rowFor(item);
+                if (row != null) rows.add(row);
             }
-            if (g == GROUP_TOOLS) {
-                rows.add(createTool(R.drawable.ic_save, "#30D158", getString(R.string.ig_dialog_backup_settings), getString(R.string.tool_backup_sub), this::backupSettings));
-                rows.add(createTool(R.drawable.ic_folder, "#0A84FF", getString(R.string.ig_dialog_restore_settings), getString(R.string.tool_restore_sub), this::restoreSettings));
-                rows.add(createTool(R.drawable.ic_restart, "#FF9F0A", getString(R.string.ig_dialog_menu_restart), getString(R.string.tool_restart_sub), this::restartInstagram));
-                rows.add(createTool(R.drawable.ic_info, "#BF5AF2", getString(R.string.ig_dialog_menu_about), getString(R.string.tool_about_sub), this::openHelpAbout));
-            }
-            for (FeatureItem row : rows) row.isCategory = true;
-            defs.add(getString(groupTitles[g]));
-            defs.add(rows);
+            addGroup(defs, header, rows);
         }
         return defs;
     }
 
-    /** Flattens a builder's definitions into its FeatureItems (section headers dropped). */
-    private static List<FeatureItem> flattenItems(List<Object> defs) {
-        List<FeatureItem> out = new ArrayList<>();
-        for (Object def : defs) {
-            if (def instanceof List) {
-                for (Object o : (List<?>) def) {
-                    if (o instanceof FeatureItem) out.add((FeatureItem) o);
-                }
-            }
+    private boolean shownOnPage(FeatureCatalog.Item item) {
+        if ("downloaderCompatibility".equals(item.key) || "downloaderAllowFallback".equals(item.key)) {
+            return !getCurrentState("downloaderUseOriginal");
         }
-        return out;
+        return item.kind != FeatureCatalog.Kind.INFO || anyOn(item.requires);
     }
 
-    /**
-     * Sets the "N on" / "Off" subtitle of a main-menu category row: the number of plain boolean
-     * switches (master switches excluded, keys de-duplicated) in that sub-menu that are currently on,
-     * including staged-but-unapplied changes. Sub-menus without switches get no subtitle.
-     * A switch whose parent is off or that another setting overrides does not count, so default-on
-     * children (e.g. showUnsentButton) don't inflate the count.
-     */
-    private void applyCategorySubtitle(FeatureItem nav) {
-        Category cat = nav.category;
-        if (cat == null) return;
-        Set<String> seen = new HashSet<>();
-        int on = 0;
-        for (FeatureItem fi : flattenItems(cat.builder.build())) {
-            if (fi.type != FeatureItem.TYPE_SWITCH || fi.prefKey == null || !seen.add(fi.prefKey)) continue;
-            if (getCurrentState(fi.prefKey) && fi.enabled && requirementMet(fi)) on++;
+    private boolean anyOn(String[] keys) {
+        if (keys.length == 0) return true;
+        for (String key : keys) if (getCurrentState(key)) return true;
+        return false;
+    }
+
+    private FeatureItem rowFor(FeatureCatalog.Item item) {
+        FeatureCatalog.Category cat = CATEGORY_OF_ITEM.get(item.key);
+        if (cat != null && "focus".equals(cat.key)) return focusRow(item);
+        Supplier<FeatureItem> factory = factories().get(item.key);
+        if (factory != null) return factory.get();
+        int accent = accentOf(item);
+        switch (item.kind) {
+            case SWITCH:
+                return catalogSwitch(item, accent);
+            case MASTER:
+                return createMasterSwitch(getString(R.string.cat_all), Arrays.asList(item.children));
+            case ACTION:
+                return item.side == FeatureCatalog.Side.IG_ONLY ? pointerRow(item, accent) : null;
+            case INFO:
+                return hintRow(getString(item.label));
+            default:
+                return null;
         }
-        if (seen.isEmpty()) {
-            nav.subtitle = null;
-            nav.subtitleActive = false;
+    }
+
+    private static int accentOf(FeatureCatalog.Item item) {
+        FeatureCatalog.Category cat = CATEGORY_OF_ITEM.get(item.key);
+        return cat != null ? cat.group.accent : FeatureCatalog.Group.TOOLS.accent;
+    }
+
+    private FeatureItem catalogSwitch(FeatureCatalog.Item item, int accent) {
+        FeatureItem row = createSwitch(item.icon, accent, getString(item.label), item.key);
+        row.subtitle = describe(item);
+        applyRequires(row, item);
+        if (item.overriddenBy != null && getCurrentState(item.overriddenBy)) {
+            row.subtitle = lines(row.subtitle, getString(R.string.cat_also_on_with, labelOf(item.overriddenBy)));
+        }
+        return row;
+    }
+
+    private FeatureItem pointerRow(FeatureCatalog.Item item, int accent) {
+        FeatureItem row = createTool(item.icon, accent, getString(item.label), getString(R.string.cat_in_instagram),
+                this::openInstagram);
+        applyRequires(row, item);
+        return row;
+    }
+
+    private FeatureItem valueRow(String key, String value, Runnable onClick) {
+        FeatureCatalog.Item item = FeatureCatalog.item(key);
+        FeatureItem row = createValueRow(item.icon, accentOf(item), getString(item.label), value, onClick);
+        applyRequires(row, item);
+        return row;
+    }
+
+    private FeatureItem actionRow(String key, Runnable onClick) {
+        FeatureCatalog.Item item = FeatureCatalog.item(key);
+        FeatureItem row = createClickable(item.icon, accentOf(item), getString(item.label), onClick);
+        row.subtitle = describe(item);
+        applyRequires(row, item);
+        return row;
+    }
+
+    private FeatureItem bestOnly(String key) {
+        FeatureItem row = catalogSwitch(FeatureCatalog.item(key), accentOf(FeatureCatalog.item(key)));
+        row.enabled = !getCurrentState("downloaderUseOriginal");
+        row.overrideReason = getString(R.string.feat_reason_best_only);
+        return row;
+    }
+
+    private String describe(FeatureCatalog.Item item) {
+        String text = item.desc != 0 ? getString(item.desc) : null;
+        if (item.restartOn != FeatureCatalog.Restart.NONE) text = lines(text, getString(R.string.ig_restart_to_apply_hint));
+        return text;
+    }
+
+    private static String lines(String first, String second) {
+        if (first == null) return second;
+        return second == null ? first : first + "\n" + second;
+    }
+
+    private void applyRequires(FeatureItem row, FeatureCatalog.Item item) {
+        if (item.requires.length == 0) return;
+        row.requiresAnyOf = Arrays.asList(item.requires);
+        if (item.requires.length == 1) {
+            row.requiresReason = getString(R.string.cat_requires, labelOf(item.requires[0]));
         } else {
-            nav.subtitle = on > 0 ? getString(R.string.feat_count_on, on) : getString(R.string.feat_count_off);
-            nav.subtitleActive = on > 0;
+            row.requiresReason = getString(LOCK_SWITCHES.containsAll(Arrays.asList(item.requires))
+                    ? R.string.feat_requires_lock : R.string.feat_requires_above);
         }
-        // Navigation: a changed tab order is a choice, not a switch, so it is noted after the count.
-        if ("navigation".equals(cat.key) && nav.subtitle != null
-                && ps.reso.instaeclipse.mods.ui.DistractionFreeUIHook.isCustomTabOrder(localCache.getString("navTabOrder", ""))) {
-            nav.subtitle = nav.subtitle + " · " + getString(R.string.nav_tab_order_changed);
-            nav.subtitleActive = true;
-        }
+    }
+
+    private String labelOf(String key) {
+        FeatureCatalog.Item item = FeatureCatalog.item(key);
+        return item != null ? getString(item.label) : key;
+    }
+
+    private String reasonFor(FeatureItem item) {
+        if (item.disabledWhenTrue != null && getCurrentState(item.disabledWhenTrue)) return item.disabledReason;
+        if (!item.enabled && item.overrideReason != null) return item.overrideReason;
+        if (!requirementMet(item) && item.requiresReason != null) return item.requiresReason;
+        return item.disabledReason;
     }
 
     /** True when the row has no {@link FeatureItem#requiresAnyOf} or one of those keys is on. */
@@ -1107,27 +1296,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         }
         return false;
     }
-
-    private void reloadCurrentMenu() {
-        if (adapter == null || localCache == null || !isAdded() || getView() == null) return;
-        if (isSearching()) {
-            runSearch(etSearch.getText().toString());
-            return;
-        }
-        if (menuLoaders == null) {
-            menuLoaders = new HashMap<>();
-            menuLoaders.put("main", this::loadMainMenu);
-            for (Category category : getCategories()) menuLoaders.put(category.key, category.loader);
-            menuLoaders.put("distract", this::loadDistractionMenu);
-        }
-        Runnable loader = menuLoaders.get(currentMenu);
-        if (loader != null) loader.run();
-        else loadMainMenu();
-    }
-
-    // =========================================================
-    // SEARCH
-    // =========================================================
 
     private boolean isSearching() {
         return etSearch != null && etSearch.getText() != null && etSearch.getText().toString().trim().length() > 0;
@@ -1153,372 +1321,180 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         if (imm != null) imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
     }
 
-    /**
-     * Searches every switch / clickable row of every sub-menu. Rows come straight from the same
-     * builders the sub-menus use, so toggling here goes through the exact same staging, dependsOn,
-     * cascade-off and locked-by-extreme logic. A query matching a category name lists all its rows.
-     */
     private void runSearch(String raw) {
-        String q = raw == null ? "" : SearchText.fold(raw.trim());
-        if (q.isEmpty()) {
+        String query = raw == null ? "" : raw.trim();
+        String folded = SearchText.fold(query);
+        if (folded.isEmpty()) {
             loadMainMenu();
             return;
         }
         List<Object> defs = new ArrayList<>();
-        for (Category cat : getCategories()) {
-            boolean categoryMatch = SearchText.fold(cat.title).contains(q);
+        for (FeatureCatalog.Category cat : FeatureCatalog.CATEGORIES) {
             List<FeatureItem> hits = new ArrayList<>();
-            for (FeatureItem fi : flattenItems(cat.builder.build())) {
-                if (fi.type != FeatureItem.TYPE_SWITCH && fi.type != FeatureItem.TYPE_CLICKABLE) continue;
-                if (fi.title == null) continue;
-                if (categoryMatch || SearchText.fold(fi.title).contains(q)) hits.add(fi);
+            for (FeatureCatalog.Item item : cat.items()) {
+                if (item.kind == FeatureCatalog.Kind.MASTER || !FeatureCatalog.matches(item, cat, query, this::getString)) {
+                    continue;
+                }
+                if ("locationRecent".equals(item.key)) {
+                    hits.addAll(recentPlaceRows());
+                    continue;
+                }
+                FeatureItem row = rowFor(item);
+                if (row != null) hits.add(row);
             }
-            if (!hits.isEmpty()) {
-                defs.add(cat.title);
-                defs.add(hits);
-            }
+            addGroup(defs, getString(cat.title), hits);
         }
-        if (defs.isEmpty()) defs.add(getString(R.string.feat_search_no_results));
-        boolean inPlace = q.equals(searchShown) && "main".equals(currentMenu);
-        searchShown = q;
+        if (defs.isEmpty()) {
+            FeatureItem empty = new FeatureItem();
+            empty.type = FeatureItem.TYPE_EMPTY;
+            defs.add(Collections.singletonList(empty));
+        }
+        boolean inPlace = folded.equals(searchShown) && "main".equals(currentMenu);
+        searchShown = folded;
         showMenu("main", getString(R.string.features), defs, false, inPlace);
     }
 
-    private void loadDevMenu() {
-        showMenu("dev", getString(R.string.ig_dialog_section_dev_options), buildDevDefs());
-    }
-
-    private List<Object> buildDevDefs() {
-        List<Object> defs = new ArrayList<>();
-
-        defs.add(getString(R.string.feat_features));
-        defs.add(Arrays.asList(createSwitch(R.drawable.ic_tune, "#0A84FF", getString(R.string.ig_dialog_dev_enable), "isDevEnabled")));
-
-        defs.add(getString(R.string.feat_config));
-        defs.add(Arrays.asList(
-                createClickable(R.drawable.ic_download, "#30D158", getString(R.string.ig_dialog_dev_import), this::importDevConfig),
-                createClickable(R.drawable.ic_upload, "#0A84FF", getString(R.string.ig_dialog_dev_export), this::exportDevConfig),
-                createClickable(R.drawable.ic_restart, "#FF9F0A", getString(R.string.ig_dialog_dev_restore_default_config), this::restoreDefaultConfig)
-        ));
-
-        defs.add(getString(R.string.feat_options));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_block, "#FF453A", getString(R.string.ig_dialog_dev_remove_build_expired), "removeBuildExpiredPopup")));
-
-        return defs;
-    }
-
-    private void loadGhostMenu() {
-        showMenu("ghost", getString(R.string.ig_dialog_section_ghost_mode), buildGhostDefs());
-    }
-
-    private List<Object> buildGhostDefs() {
-        List<Object> defs = new ArrayList<>();
-
-        defs.add(getString(R.string.feat_quick_toggle));
-        defs.add(Arrays.asList(createNav(R.drawable.ic_tune, "#5E5CE6", getString(R.string.ig_dialog_customize_quick_toggle), this::loadQuickTogglesMenu)));
-
-        defs.add(getString(R.string.feat_features));
-        defs.add(Arrays.asList(
-                createMasterSwitch(getString(R.string.ig_dialog_enable_disable_all), Arrays.asList(
-                        "isGhostSeen", "isGhostTyping", "isGhostStory", "isGhostLive",
-                        "isGhostScreenshot", "isGhostViewOnce"
-                )),
-                createSwitch(R.drawable.ic_eye_off, "#5E5CE6", getString(R.string.ig_dialog_ghost_hide_dm_seen), "isGhostSeen"),
-                createSwitch(R.drawable.ic_chat, "#5E5CE6", getString(R.string.ig_dialog_ghost_hide_typing), "isGhostTyping"),
-                createSwitch(R.drawable.ic_story_ring, "#5E5CE6", getString(R.string.ig_dialog_ghost_hide_story_views), "isGhostStory"),
-                createSwitch(R.drawable.ic_live, "#5E5CE6", getString(R.string.ig_dialog_ghost_hide_live_presence), "isGhostLive"),
-                createSwitch(R.drawable.ic_camera, "#5E5CE6", getString(R.string.ig_dialog_ghost_bypass_screenshot), "isGhostScreenshot"),
-                createSwitch(R.drawable.ic_eye_off, "#5E5CE6", getString(R.string.ig_dialog_ghost_hide_view_once), "isGhostViewOnce")
-        ));
-
-        // Outside the master switch
-        defs.add(getString(R.string.feat_options));
-        defs.add(Arrays.asList(
-                createDependentSwitch(R.drawable.ic_eye, "#5E5CE6", R.string.ig_feature_manual_story_seen,
-                        "manualStorySeen", "isGhostStory", R.string.ig_feature_manual_story_seen_requires),
-                createSwitch(R.drawable.ic_eye, "#5E5CE6", getString(R.string.ig_dialog_ghost_read_receipt_chats), "readReceiptChats"),
-                createExtrasSwitch("#5E5CE6", "airplaneMode")
-        ));
-
-        FeatureItem activityHint = new FeatureItem();
-        activityHint.type = FeatureItem.TYPE_HINT;
-        activityHint.title = getString(R.string.ie_ghost_activity_status_hint);
-        defs.add(Arrays.asList(activityHint));
-
-        return defs;
-    }
-
-    /** A switch for an {@link ps.reso.instaeclipse.utils.feature.ExtrasFeatures} flag, with its label and icon. */
-    private FeatureItem createExtrasSwitch(String accentHex, String flag) {
-        ps.reso.instaeclipse.utils.feature.ExtrasFeatures.Entry e = ps.reso.instaeclipse.utils.feature.ExtrasFeatures.entry(flag);
-        if (e == null) throw new IllegalArgumentException("Not an Extras flag: " + flag);
-        return createSwitch(e.icon, accentHex, getString(e.label), flag);
-    }
-
-    private void loadMessagesMenu() {
-        showMenu("messages", getString(R.string.menu_messages), buildMessagesDefs());
-    }
-
-    private List<Object> buildMessagesDefs() {
-        List<Object> defs = new ArrayList<>();
-        FeatureItem hideMenuButton = createSwitch(R.drawable.ic_tune, "#5E5CE6", getString(R.string.ig_hide_chat_menu_button), "hideChatMenuButton");
-        hideMenuButton.subtitle = getString(R.string.ig_hide_chat_menu_button_hint);
-
-        defs.add(getString(R.string.feat_features));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_timer, "#5E5CE6", getString(R.string.ig_dialog_ghost_keep_disappearing), "keepEphemeralMessages"),
-                createSwitch(R.drawable.ic_chat, "#5E5CE6", getString(R.string.ig_dialog_ghost_keep_unsent_chat), "keepUnsentMessages"),
-                createDependentSwitch(R.drawable.ic_chat, "#5E5CE6", R.string.ig_feature_keep_unsent_in_chat,
-                        "keepUnsentInChat", "keepUnsentMessages", R.string.ig_feature_unsent_indicator_requires),
-                createDependentSwitch(R.drawable.ic_delete, "#5E5CE6", R.string.ig_feature_show_unsent_button,
-                        "showUnsentButton", "keepUnsentMessages", R.string.ig_feature_unsent_indicator_requires),
-                createDependentSwitch(R.drawable.ic_chat, "#5E5CE6", R.string.ig_feature_unsent_indicator,
-                        "showUnsentIndicator", "keepUnsentMessages", R.string.ig_feature_unsent_indicator_requires),
-                createSwitch(R.drawable.ic_chat, "#5E5CE6", getString(R.string.ig_dialog_ghost_edit_history), "keepEditHistory"),
-                createSwitch(R.drawable.ic_jump_first, "#5E5CE6", getString(R.string.ig_dialog_ghost_jump_first), "jumpToFirstMessage"),
-                hideMenuButton,
-                createRestartSwitch(R.drawable.ic_shield, "#5E5CE6", getString(R.string.ig_call_confirm), "confirmCalls"),
-                createSwitch(R.drawable.ic_camera, "#5E5CE6", getString(R.string.ig_dialog_ghost_allow_screenshots_dms), "allowScreenshots"),
-                createSwitch(R.drawable.ic_eye, "#5E5CE6", getString(R.string.ig_dialog_ghost_permanent_view_once), "permanentViewMode"),
-                createSwitch(R.drawable.ic_chat, "#5E5CE6", getString(R.string.ig_dialog_translate_messages), "translateMessages"),
-                createRestartSwitch(R.drawable.ic_chat, "#5E5CE6", getString(R.string.ig_dialog_bulk_unsend), "bulkUnsend"),
-                createSwitch(R.drawable.ic_download, "#5E5CE6", getString(R.string.ig_dialog_ghost_chat_export), "chatExport"),
-                createSwitch(R.drawable.ic_block, "#5E5CE6", getString(R.string.ig_dialog_distraction_hide_notes_tray), "hideNotesTray"),
-                createSwitch(R.drawable.ic_block, "#5E5CE6", getString(R.string.ig_hide_dm_suggestions), "hideDmSuggestions"),
-                createSwitch(R.drawable.ic_block, "#5E5CE6", getString(R.string.ig_dialog_hide_dm_blend), "hideDmBlend"),
-                createSwitch(R.drawable.ic_block, "#5E5CE6", getString(R.string.ig_dialog_misc_hide_share_create_group), "hideShareCreateGroup")
-        ));
-
-        return defs;
-    }
-
-    private void loadQuickTogglesMenu() {
-        showMenu("qt", getString(R.string.ig_dialog_section_quick_toggle), buildQuickTogglesDefs());
-    }
-
-    private List<Object> buildQuickTogglesDefs() {
-        List<Object> defs = new ArrayList<>();
-
-        defs.add(getString(R.string.feat_features));
-        defs.add(Arrays.asList(
-                createMasterSwitch(getString(R.string.ig_dialog_enable_disable_all), Arrays.asList(
-                        "quickToggleSeen", "quickToggleTyping", "quickToggleScreenshot",
-                        "quickToggleViewOnce", "quickToggleStory", "quickToggleLive",
-                        "quickToggleEphemeral", "quickTogglePermanentView",
-                        "quickToggleAllowScreenshots"
-                )),
-                createSwitch(R.drawable.ic_eye_off, "#5E5CE6", getString(R.string.ig_dialog_quick_hide_seen), "quickToggleSeen"),
-                createSwitch(R.drawable.ic_chat, "#5E5CE6", getString(R.string.ig_dialog_quick_hide_typing), "quickToggleTyping"),
-                createSwitch(R.drawable.ic_camera, "#5E5CE6", getString(R.string.ig_dialog_quick_disable_screenshot), "quickToggleScreenshot"),
-                createSwitch(R.drawable.ic_eye_off, "#5E5CE6", getString(R.string.ig_dialog_quick_hide_view_once), "quickToggleViewOnce"),
-                createSwitch(R.drawable.ic_story_ring, "#5E5CE6", getString(R.string.ig_dialog_quick_hide_story_seen), "quickToggleStory"),
-                createSwitch(R.drawable.ic_live, "#5E5CE6", getString(R.string.ig_dialog_quick_hide_live_seen), "quickToggleLive"),
-                createSwitch(R.drawable.ic_timer, "#5E5CE6", getString(R.string.ig_dialog_quick_keep_ephemeral), "quickToggleEphemeral"),
-                createSwitch(R.drawable.ic_eye, "#5E5CE6", getString(R.string.ig_dialog_quick_permanent_view), "quickTogglePermanentView"),
-                createSwitch(R.drawable.ic_camera, "#5E5CE6", getString(R.string.ig_dialog_quick_allow_screenshots), "quickToggleAllowScreenshots")
-        ));
-
-        return defs;
-    }
-
-    private void loadAdsMenu() {
-        showMenu("ads", getString(R.string.menu_ads_tracking), buildAdsDefs());
-    }
-
-    private List<Object> buildAdsDefs() {
-        List<Object> defs = new ArrayList<>();
-
-        defs.add(getString(R.string.feat_features));
-        defs.add(Arrays.asList(
-                createMasterSwitch(getString(R.string.ig_dialog_enable_disable_all), Arrays.asList("isAdBlockEnabled", "isAnalyticsBlocked", "disableTrackingLinks")),
-                createSwitch(R.drawable.ic_shield, "#FF453A", getString(R.string.ig_dialog_ad_block_ads), "isAdBlockEnabled"),
-                createSwitch(R.drawable.ic_shield, "#FF453A", getString(R.string.ig_dialog_ad_block_analytics), "isAnalyticsBlocked"),
-                createSwitch(R.drawable.ic_link, "#FF453A", getString(R.string.ig_dialog_ad_disable_tracking), "disableTrackingLinks")
-        ));
-        // Outside the master switch: what Instagram keeps about your searches (#280)
-        defs.add(getString(R.string.feat_options));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_search, "#FF453A", getString(R.string.ig_disable_search_history), "disableSearchHistory")
-        ));
-
-        return defs;
-    }
-
-    private void loadFeedMenu() {
-        showMenu("feed", getString(R.string.menu_feed), buildFeedDefs());
-    }
-
-    private List<Object> buildFeedDefs() {
-        List<Object> defs = new ArrayList<>();
-
-        defs.add(getString(R.string.ig_dialog_menu_clean_feed));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_sparkle, "#64D2FF", getString(R.string.ig_dialog_clean_feed_hide_suggested), "hideSuggestionsInFeed"),
-                createSwitch(R.drawable.ic_sparkle, "#64D2FF", getString(R.string.ig_dialog_clean_feed_hide_threads), "hideThreadsSuggestions"),
-                createSwitch(R.drawable.ic_sparkle, "#64D2FF", getString(R.string.ig_dialog_clean_feed_hide_liked), "hideLikedPosts"),
-                createSwitch(R.drawable.ic_sparkle, "#64D2FF", getString(R.string.ig_dialog_clean_feed_hide_community_notes), "hideCommunityNotes"),
-                createSwitch(R.drawable.ic_sparkle, "#64D2FF", getString(R.string.ig_dialog_clean_feed_following_only), "followingOnlyFeed"),
-                createSwitch(R.drawable.ic_block, "#64D2FF", getString(R.string.ig_dialog_misc_disable_discover_people), "disableDiscoverPeople")
-        ));
-
-        defs.add(getString(R.string.feat_options));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_sparkle, "#64D2FF", getString(R.string.ig_dialog_clean_feed_expand_captions), "expandCaptions"),
-                createSwitch(R.drawable.ic_timer, "#64D2FF", getString(R.string.ig_dialog_misc_exact_timestamps), "exactTimestamps"),
-                timestampFormatItem(),
-                createSwitch(R.drawable.ic_search, "#64D2FF", getString(R.string.ig_dialog_misc_photo_zoom), "enablePhotoZoom"),
-                createSwitch(R.drawable.ic_movie, "#64D2FF", getString(R.string.ig_dialog_misc_disable_video_autoplay), "disableVideoAutoPlay"),
-                createSwitch(R.drawable.ic_restart, "#64D2FF", getString(R.string.ig_confirm_refresh), "confirmFeedRefresh"),
-                createValueRow(R.drawable.ic_sparkle, "#64D2FF", getString(R.string.ig_feed_corner_radius), feedCornerValue(), this::chooseFeedCorner)
-        ));
-
-        return defs;
-    }
-
-    private String feedCornerValue() {
-        int dp = localCache.getInt("feedCornerRadius", 0);
-        return dp <= 0 ? getString(R.string.ig_dialog_extras_share_domain_off) : dp + " dp";
-    }
-
-    private void chooseFeedCorner() {
-        int[] radii = ps.reso.instaeclipse.utils.dialog.DialogUtils.FEED_CORNER_RADII;
-        String[] labels = new String[radii.length];
-        int current = localCache.getInt("feedCornerRadius", 0), selected = 0;
-        for (int i = 0; i < radii.length; i++) {
-            labels[i] = radii[i] <= 0 ? getString(R.string.ig_dialog_extras_share_domain_off) : radii[i] + " dp";
-            if (radii[i] == current) selected = i;
-        }
-        new MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.ig_feed_corner_radius)
-                .setSingleChoiceItems(labels, selected, (dialog, which) -> {
-                    CompanionSettings.put(requireContext(), "feedCornerRadius", radii[which]);
-                    dialog.dismiss(); reloadCurrentMenu();
-                }).setNegativeButton(android.R.string.cancel, null).show();
-    }
-
-    /** Main-menu entry: the reel counter waits for a fresh reply from Instagram. */
-    private void openDistractionMenu() {
+    private void openFocusMenu() {
         reelUsageSynced = false;
-        loadDistractionMenu();
+        loadFocusMenu();
         requestPrefs();
     }
 
-    private void loadDistractionMenu() {
-        showMenu("distract", getString(R.string.ig_dialog_section_distraction_free), buildDistractionDefs());
+    private void loadFocusMenu() {
+        FeatureCatalog.Category cat = FeatureCatalog.category("focus");
+        List<Object> defs = new ArrayList<>();
+        for (FeatureCatalog.Section section : cat.sections) {
+            List<FeatureItem> rows = new ArrayList<>();
+            for (FeatureCatalog.Item item : section.items) {
+                if (!focusShown(item.key)) continue;
+                FeatureItem row = focusRow(item);
+                if (row != null) rows.add(row);
+            }
+            addGroup(defs, section.header != 0 ? getString(section.header) : null, rows);
+        }
+        showMenu("focus", getString(cat.title), defs);
     }
 
-    private List<Object> buildDistractionDefs() {
-        List<Object> defs = new ArrayList<>();
-        addDailyReelStatus(defs);
-
-        List<String> distractionKeys = Arrays.asList(
-                "disableStories", "disableFeed", "disableReels",
-                "disableReelsExceptDM", "dailyReelLimitEnabled", "nightReelBlockEnabled",
-                "disableExplore", "disableComments"
-        );
-
-        // Extreme Mode: only enabled once the user has selected at least one feature
-        FeatureItem extreme = destructive(createSwitch(R.drawable.ic_block, "#FF453A", getString(R.string.ig_dialog_distraction_extreme_mode), "isExtremeMode"));
-        extreme.isExtreme = true;
-        extreme.requiresAnyOf = distractionKeys;
-        // Irreversible once on: Instagram refuses turning it off, so the row locks itself.
-        extreme.disabledWhenTrue = "isExtremeMode";
-        if (getCurrentState("isExtremeMode")) extreme.disabledReason = getString(R.string.ig_extreme_active);
-
-        defs.add(getString(R.string.feat_danger_zone));
-        defs.add(Arrays.asList(extreme));
-
-        // Master switch and all feature toggles: locked once extreme mode is active
-        FeatureItem masterSwitch = lockedByExtreme(createMasterSwitch(getString(R.string.ig_dialog_enable_disable_all), distractionKeys));
-
-        FeatureItem disableReels = lockedByExtreme(createSwitchWithCascadeOff(R.drawable.ic_movie, "#30D158", getString(R.string.ig_dialog_distraction_disable_reels), "disableReels", "disableReelsExceptDM"));
-
-        FeatureItem disableReelsExceptDM = lockedByExtreme(createSwitchWithDependency(R.drawable.ic_movie, "#30D158", getString(R.string.ig_dialog_distraction_disable_reels_except_dm), "disableReelsExceptDM", "disableReels"));
-
-        List<FeatureItem> controls = new ArrayList<>(Arrays.asList(
-                masterSwitch,
-                createSwitchLockedByExtreme(R.drawable.ic_story_ring, "#30D158", getString(R.string.ig_dialog_distraction_disable_stories), "disableStories"),
-                createSwitchLockedByExtreme(R.drawable.ic_block, "#30D158", getString(R.string.ig_dialog_distraction_disable_feed), "disableFeed"),
-                disableReels));
-        if (getCurrentState("disableReels")) controls.add(disableReelsExceptDM);
-        // Disable Reels overrides both limits; Extreme Mode locks them.
-        boolean reelsAllowed = !getCurrentState("disableReels");
-        controls.add(reelRow(createSwitchLockedByExtreme(R.drawable.ic_movie, "#30D158", getString(R.string.ig_reel_limit_enable), "dailyReelLimitEnabled"), reelsAllowed));
-        if (getCurrentState("dailyReelLimitEnabled")) {
-            controls.add(reelRow(createSwitchLockedByExtreme(R.drawable.ic_chat, "#30D158", getString(R.string.ig_reel_limit_allow_dm), "dailyReelLimitAllowDM"), reelsAllowed));
-            int limit = ps.reso.instaeclipse.mods.reels.DailyReelLimit.validLimit(localCache.getInt("dailyReelLimit", 100));
-            FeatureItem amount = createValueRow(R.drawable.ic_movie, "#30D158", getString(R.string.ig_reel_limit_allowance), String.valueOf(limit),
-                    () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showDailyReelLimitPicker(requireContext(), limit, value -> {
-                        if (!reelLimitsEditable() || !getCurrentState("dailyReelLimitEnabled")) return;
-                        CompanionSettings.put(requireContext(), "dailyReelLimit", value);
-                        reloadCurrentMenu();
-                    }));
-            controls.add(reelRow(lockedByExtreme(amount), reelsAllowed));
+    private boolean focusShown(String key) {
+        switch (key) {
+            case "disableReelsExceptDM":
+                return getCurrentState("disableReels");
+            case "dailyReelLimit":
+            case "dailyReelLimitAllowDM":
+                return getCurrentState("dailyReelLimitEnabled");
+            case "nightReelBlockStartMinutes":
+            case "nightReelBlockEndMinutes":
+            case "nightReelStatus":
+            case "nightReelBlockAllowDM":
+                return getCurrentState("nightReelBlockEnabled");
+            default:
+                return true;
         }
-        controls.add(reelRow(createSwitchLockedByExtreme(R.drawable.ic_timer, "#30D158",
-                getString(R.string.ig_night_reels_enable), "nightReelBlockEnabled"), reelsAllowed));
-        if (getCurrentState("nightReelBlockEnabled")) {
-            int startMinutes = ps.reso.instaeclipse.mods.reels.NightReelSchedule.validMinutes(
-                    localCache.getInt("nightReelBlockStartMinutes", 22 * 60), 22 * 60);
-            int endMinutes = ps.reso.instaeclipse.mods.reels.NightReelSchedule.validMinutes(
-                    localCache.getInt("nightReelBlockEndMinutes", 7 * 60), 7 * 60);
-            String start = ps.reso.instaeclipse.utils.dialog.DialogUtils.formatNightReelTime(requireContext(), startMinutes);
-            String end = ps.reso.instaeclipse.utils.dialog.DialogUtils.formatNightReelTime(requireContext(), endMinutes);
-            boolean active = ps.reso.instaeclipse.mods.reels.NightReelSchedule.isActiveAt(
-                    ps.reso.instaeclipse.mods.reels.NightReelSchedule.currentMinutes(), startMinutes, endMinutes);
-            String state = getString(active ? R.string.ig_night_reels_status_active
-                    : R.string.ig_night_reels_status_inactive, active ? end : start);
-            String startTitle = getString(R.string.ig_night_reels_start, start);
-            FeatureItem startItem = createValueRow(R.drawable.ic_timer, "#30D158",
-                    startTitle, state.equals(startTitle) ? null : state,
-                    () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showNightReelTimePicker(
-                            requireContext(), startMinutes, selected -> {
-                                if (selected == endMinutes) {
-                                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_night_reels_same_time), Toast.LENGTH_SHORT).show();
-                                    return;
-                                }
-                                updateNightReelTime("nightReelBlockStartMinutes", selected);
-                            }));
-            controls.add(reelRow(lockedByExtreme(startItem), reelsAllowed));
-            FeatureItem endItem = createValueRow(R.drawable.ic_timer, "#30D158",
-                    getString(R.string.ig_night_reels_end, end), null,
-                    () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showNightReelTimePicker(
-                            requireContext(), endMinutes, selected -> {
-                                if (selected == startMinutes) {
-                                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_night_reels_same_time), Toast.LENGTH_SHORT).show();
-                                    return;
-                                }
-                                updateNightReelTime("nightReelBlockEndMinutes", selected);
-                            }));
-            controls.add(reelRow(lockedByExtreme(endItem), reelsAllowed));
-            controls.add(reelRow(createSwitchLockedByExtreme(R.drawable.ic_chat, "#30D158",
-                    getString(R.string.ig_night_reels_allow_dm), "nightReelBlockAllowDM"), reelsAllowed));
-        }
-        controls.add(createSwitchLockedByExtreme(R.drawable.ic_search, "#30D158", getString(R.string.ig_dialog_distraction_disable_explore), "disableExplore"));
-        controls.add(createSwitchLockedByExtreme(R.drawable.ic_chat, "#30D158", getString(R.string.ig_dialog_distraction_disable_comments), "disableComments"));
-        defs.add(getString(R.string.feat_features));
-        defs.add(controls);
+    }
 
-        // Outside extreme mode: parts of the app removed (Meta AI, prompts, upsells)
-        defs.add(getString(R.string.feat_options));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_sparkle, "#30D158", getString(R.string.ig_dialog_misc_remove_meta_ai), "removeMetaAI"),
-                createExtrasSwitch("#30D158", "hideOnboardingPrompts"),
-                createSwitch(R.drawable.ic_sparkle, "#30D158", getString(R.string.ig_dialog_clean_feed_hide_plus), "hidePlusUpsells"),
-                createSwitch(R.drawable.ic_block, "#30D158", getString(R.string.ig_hide_instants), "hideInstants")
-        ));
-        return defs;
+    private FeatureItem focusRow(FeatureCatalog.Item item) {
+        int accent = FeatureCatalog.Group.BROWSE.accent;
+        FeatureItem row;
+        switch (item.key) {
+            case "reelUsage":
+                return reelUsageRow(accent);
+            case "nightReelStatus":
+                return hintRow(nightReelStatus());
+            case "isExtremeMode":
+                return extremeRow(item);
+            case "focusAll":
+                row = createMasterSwitch(getString(R.string.cat_all), Arrays.asList(item.children));
+                break;
+            case "dailyReelLimit":
+                row = reelLimitRow(item, accent);
+                break;
+            case "nightReelBlockStartMinutes":
+            case "nightReelBlockEndMinutes":
+                row = nightTimeRow(item, accent);
+                break;
+            default:
+                row = catalogSwitch(item, accent);
+        }
+        if ("disableReels".equals(item.key)) row.cascadeOffKey = "disableReelsExceptDM";
+        if (item.overriddenBy != null) {
+            row.enabled = !getCurrentState(item.overriddenBy);
+            row.overrideReason = getString(R.string.feat_reason_overridden, labelOf(item.overriddenBy));
+        }
+        if (FOCUS_LOCKED.contains(item.key)) lockedByExtreme(row);
+        return row;
+    }
+
+    private FeatureItem extremeRow(FeatureCatalog.Item item) {
+        FeatureItem row = destructive(createSwitch(item.icon, DESTRUCTIVE, getString(item.label), item.key));
+        row.subtitle = describe(item);
+        row.isExtreme = true;
+        applyRequires(row, item);
+        row.disabledWhenTrue = "isExtremeMode";
+        row.disabledReason = getString(R.string.ig_extreme_active);
+        return row;
+    }
+
+    private FeatureItem reelLimitRow(FeatureCatalog.Item item, int accent) {
+        int limit = ps.reso.instaeclipse.mods.reels.DailyReelLimit.validLimit(localCache.getInt("dailyReelLimit", 100));
+        FeatureItem row = createValueRow(item.icon, accent, getString(item.label), String.valueOf(limit),
+                () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showDailyReelLimitPicker(requireContext(), limit, value -> {
+                    if (!reelLimitsEditable() || !getCurrentState("dailyReelLimitEnabled")) return;
+                    write("dailyReelLimit", value);
+                    reloadCurrentMenu();
+                }));
+        applyRequires(row, item);
+        return row;
+    }
+
+    private int nightMinutes(String key) {
+        int fallback = "nightReelBlockStartMinutes".equals(key) ? 22 * 60 : 7 * 60;
+        return ps.reso.instaeclipse.mods.reels.NightReelSchedule.validMinutes(localCache.getInt(key, fallback), fallback);
+    }
+
+    private FeatureItem nightTimeRow(FeatureCatalog.Item item, int accent) {
+        String other = "nightReelBlockStartMinutes".equals(item.key) ? "nightReelBlockEndMinutes" : "nightReelBlockStartMinutes";
+        int minutes = nightMinutes(item.key);
+        int otherMinutes = nightMinutes(other);
+        FeatureItem row = createValueRow(item.icon, accent, getString(item.label),
+                ps.reso.instaeclipse.utils.dialog.DialogUtils.formatNightReelTime(requireContext(), minutes),
+                () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showNightReelTimePicker(
+                        requireContext(), minutes, selected -> {
+                            if (selected == otherMinutes) {
+                                ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_night_reels_same_time), Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            updateNightReelTime(item.key, selected);
+                        }));
+        applyRequires(row, item);
+        return row;
+    }
+
+    private String nightReelStatus() {
+        int startMinutes = nightMinutes("nightReelBlockStartMinutes");
+        int endMinutes = nightMinutes("nightReelBlockEndMinutes");
+        String start = ps.reso.instaeclipse.utils.dialog.DialogUtils.formatNightReelTime(requireContext(), startMinutes);
+        String end = ps.reso.instaeclipse.utils.dialog.DialogUtils.formatNightReelTime(requireContext(), endMinutes);
+        boolean active = ps.reso.instaeclipse.mods.reels.NightReelSchedule.isActiveAt(
+                ps.reso.instaeclipse.mods.reels.NightReelSchedule.currentMinutes(), startMinutes, endMinutes);
+        return getString(active ? R.string.ig_night_reels_status_active
+                : R.string.ig_night_reels_status_inactive, active ? end : start);
+    }
+
+    private FeatureItem reelUsageRow(int accent) {
+        int limit = ps.reso.instaeclipse.mods.reels.DailyReelLimit.validLimit(localCache.getInt("dailyReelLimit", 100));
+        boolean today = java.time.LocalDate.now().toString().equals(reelUsageDate);
+        String count = getString(R.string.ig_reel_debug_waiting);
+        if (reelUsageSynced && today) {
+            count = getCurrentState("dailyReelLimitEnabled")
+                    ? getString(R.string.ig_reel_limit_usage, reelsWatchedToday, limit)
+                    : getString(R.string.ig_reel_usage_count, reelsWatchedToday);
+        }
+        return createClickable(R.drawable.ic_timer, accent, count, this::openFocusMenu);
     }
 
     private FeatureItem lockedByExtreme(FeatureItem item) {
         item.disabledWhenTrue = "isExtremeMode";
         item.disabledReason = getString(R.string.home_shortcuts_locked_extreme);
-        return item;
-    }
-
-    private FeatureItem reelRow(FeatureItem item, boolean reelsAllowed) {
-        item.enabled = reelsAllowed;
-        if (!reelsAllowed) item.disabledReason = getString(R.string.feat_reason_reels_off);
         return item;
     }
 
@@ -1528,53 +1504,31 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
     private void updateNightReelTime(String key, int value) {
         if (!reelLimitsEditable() || !getCurrentState("nightReelBlockEnabled")) return;
-        CompanionSettings.put(requireContext(), key, value);
+        write(key, value);
         reloadCurrentMenu();
     }
 
-    /** Today's reel count from Instagram; "—" until a reply to the current request arrives. */
-    private void addDailyReelStatus(List<Object> defs) {
-        int limit = ps.reso.instaeclipse.mods.reels.DailyReelLimit.validLimit(localCache.getInt("dailyReelLimit", 100));
-        boolean today = java.time.LocalDate.now().toString().equals(reelUsageDate);
-        String count = getString(R.string.ig_reel_debug_waiting);
-        if (reelUsageSynced && today) {
-            count = getCurrentState("dailyReelLimitEnabled")
-                    ? getString(R.string.ig_reel_limit_usage, reelsWatchedToday, limit)
-                    : getString(R.string.ig_reel_usage_count, reelsWatchedToday);
+    private String feedCornerName(int dp) {
+        int[] radii = ps.reso.instaeclipse.utils.dialog.DialogUtils.FEED_CORNER_RADII;
+        for (int i = 0; i < radii.length && i < CORNER_NAMES.length; i++) {
+            if (radii[i] == dp) return getString(CORNER_NAMES[i]);
         }
-        defs.add(getString(R.string.ig_reel_limit_title));
-        defs.add(Arrays.asList(createClickable(R.drawable.ic_timer, "#30D158", count, this::openDistractionMenu)));
+        return dp <= 0 ? getString(R.string.ig_dialog_extras_share_domain_off) : dp + " dp";
     }
 
-    /** Navigation (#238): hide and reorder the bottom-nav tabs, startup tab and gestures. */
-    private void loadNavigationMenu() {
-        showMenu("navigation", getString(R.string.menu_navigation), buildNavigationDefs());
-    }
-
-    private List<Object> buildNavigationDefs() {
-        List<Object> defs = new ArrayList<>();
-
-        defs.add(getString(R.string.menu_nav_tabs));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_block, "#30D158", getString(R.string.ig_nav_tab_home), "hideTabHome"),
-                createSwitch(R.drawable.ic_block, "#30D158", getString(R.string.ig_nav_tab_reels), "hideTabReels"),
-                createSwitch(R.drawable.ic_block, "#30D158", getString(R.string.ig_nav_tab_create), "hideTabCreate"),
-                createSwitch(R.drawable.ic_block, "#30D158", getString(R.string.ig_nav_tab_messages), "hideTabMessages"),
-                createSwitch(R.drawable.ic_block, "#30D158", getString(R.string.ig_nav_tab_activity), "hideTabActivity"),
-                createSwitch(R.drawable.ic_block, "#30D158", getString(R.string.ig_nav_tab_profile), "hideTabProfile")
-        ));
-
-        defs.add(getString(R.string.menu_nav_order));
-        defs.add(Arrays.asList(
-                createClickable(R.drawable.ic_tune, "#30D158", getString(R.string.ig_nav_tab_order), this::showTabOrderDialog),
-                createValueRow(R.drawable.ic_tune, "#30D158", getString(R.string.ig_dialog_extras_startup_tab), startupTabValue(), this::showStartupTabDialog)
-        ));
-
-        defs.add(getString(R.string.menu_nav_gestures));
-        defs.add(Arrays.asList(createExtrasSwitch("#30D158", "disableSwipeToCamera"),
-                createSwitch(R.drawable.ic_home, "#30D158", getString(R.string.ig_back_leaves_home), "backLeavesHome")));
-
-        return defs;
+    private void chooseFeedCorner() {
+        int[] radii = ps.reso.instaeclipse.utils.dialog.DialogUtils.FEED_CORNER_RADII;
+        String[] labels = new String[radii.length];
+        int current = localCache.getInt("feedCornerRadius", 0), selected = 0;
+        for (int i = 0; i < radii.length; i++) {
+            labels[i] = feedCornerName(radii[i]);
+            if (radii[i] == current) selected = i;
+        }
+        new MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.ig_feed_corner_radius)
+                .setSingleChoiceItems(labels, selected, (dialog, which) -> {
+                    write("feedCornerRadius", radii[which]);
+                    dialog.dismiss(); reloadCurrentMenu();
+                }).setNegativeButton(android.R.string.cancel, null).show();
     }
 
     /** #238: reorder the bottom-nav tabs (saved as the "navTabOrder" string pref). */
@@ -1645,7 +1599,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.ig_nav_tab_order)
                 .setView(box)
-                .setPositiveButton(android.R.string.ok, (d, w) -> saveTabOrder(String.join(",", order)))
+                .setPositiveButton(android.R.string.ok, (d, w) ->
+                        saveTabOrder(order.equals(Arrays.asList(ids)) ? "" : String.join(",", order)))
                 .setNeutralButton(R.string.ig_nav_tab_order_reset, (d, w) -> saveTabOrder(""))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -1678,7 +1633,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                                 android.widget.Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    CompanionSettings.put(requireContext(), "customShareDomain", domain);
+                    write("customShareDomain", domain);
                     reloadCurrentMenu();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -1687,21 +1642,13 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
     private String[] startupTabNames() {
         return new String[]{
-                getString(R.string.ig_dialog_extras_share_domain_off),
+                getString(R.string.ig_story_ring_default),
                 getString(R.string.ig_nav_name_home),
                 getString(R.string.ig_nav_name_reels),
                 getString(R.string.ig_nav_name_messages),
                 getString(R.string.ig_nav_name_search),
                 getString(R.string.ig_nav_name_profile),
                 getString(R.string.ig_nav_name_activity)};
-    }
-
-    /** Date format row: greyed out until "Show exact dates" is on (#265). */
-    private FeatureItem timestampFormatItem() {
-        FeatureItem item = createValueRow(R.drawable.ic_timer, "#64D2FF", getString(R.string.ig_timestamp_format),
-                timestampFormatName(localCache.getString("exactTimestampFormat", "")), this::showTimestampFormatDialog);
-        item.requiresAnyOf = Arrays.asList("exactTimestamps");
-        return item;
     }
 
     private String timestampFormatName(String pattern) {
@@ -1778,7 +1725,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     }
 
     private void saveTimestampFormat(String pattern) {
-        CompanionSettings.put(requireContext(), "exactTimestampFormat", pattern);
+        write("exactTimestampFormat", pattern);
         reloadCurrentMenu();
     }
 
@@ -1787,7 +1734,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         String[] names = new String[ids.length];
         for (int i = 0; i < ids.length; i++) {
             String n = ps.reso.instaeclipse.mods.misc.DeviceSpoofHook.deviceName(ids[i]);
-            names[i] = n != null ? n : getString(R.string.ig_dialog_extras_share_domain_off);
+            names[i] = n != null ? n : getString(R.string.cat_value_this_phone);
         }
         return names;
     }
@@ -1802,9 +1749,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         String[] ids = ps.reso.instaeclipse.mods.misc.DeviceSpoofHook.DEVICES;
         int current = Math.max(Arrays.asList(ids).indexOf(localCache.getString("spoofDevice", "")), 0);
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.ig_spoof_device)
+                .setTitle(R.string.cat_spoofDevice)
                 .setSingleChoiceItems(spoofDeviceNames(), current, (d, which) -> {
-                    CompanionSettings.put(requireContext(), "spoofDevice", ids[which]);
+                    write("spoofDevice", ids[which]);
                     d.dismiss();
                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), R.string.ig_spoof_device_note, Toast.LENGTH_LONG).show();
                     reloadCurrentMenu();
@@ -1825,7 +1772,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.ig_dialog_extras_startup_tab)
                 .setSingleChoiceItems(startupTabNames(), current, (d, which) -> {
-                    CompanionSettings.put(requireContext(), "startupTab", tabs[which]);
+                    write("startupTab", tabs[which]);
                     d.dismiss();
                     reloadCurrentMenu();
                 })
@@ -1834,74 +1781,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     }
 
     private void saveTabOrder(String value) {
-        CompanionSettings.put(requireContext(), "navTabOrder", value);
-    }
-
-    private FeatureItem createSwitchLockedByExtreme(String title, String prefKey) {
-        return lockedByExtreme(createSwitch(title, prefKey));
-    }
-
-    private FeatureItem createSwitchLockedByExtreme(int iconRes, String accentHex, String title, String prefKey) {
-        FeatureItem item = createSwitchLockedByExtreme(title, prefKey);
-        item.iconRes = iconRes;
-        item.accentColor = Color.parseColor(accentHex);
-        return item;
-    }
-
-    private void loadInteractionsMenu() {
-        showMenu("interactions", getString(R.string.menu_likes_comments), buildInteractionsDefs());
-    }
-
-    private List<Object> buildInteractionsDefs() {
-        List<Object> defs = new ArrayList<>();
-
-        defs.add(getString(R.string.feat_features));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_heart, A_SOCIAL, getString(R.string.ig_dialog_misc_disable_double_tap_like), "disableDoubleTapLike"),
-                createSwitch(R.drawable.ic_heart, A_SOCIAL, getString(R.string.ig_dialog_misc_like_undo), "likeUndo"),
-                createRestartSwitch(R.drawable.ic_heart, A_SOCIAL, getString(R.string.ig_confirm_likes), "confirmLikes"),
-                createSwitch(R.drawable.ic_content_copy, A_SOCIAL, getString(R.string.ig_dialog_misc_copy_comment), "enableCopyComment"),
-                createSwitch(R.drawable.ic_search, A_SOCIAL, getString(R.string.ig_dialog_misc_comment_search), "commentSearch"),
-                createSwitch(R.drawable.ic_content_copy, A_SOCIAL, getString(R.string.ig_dialog_misc_copy_caption), "enableCaptionCopy"),
-                createSwitch(R.drawable.ic_block, A_SOCIAL, getString(R.string.ig_dialog_misc_disable_repost), "disableRepost")
-        ));
-
-        return defs;
-    }
-
-    private void loadProfilesMenu() {
-        showMenu("profiles", getString(R.string.menu_profiles), buildProfilesDefs());
-    }
-
-    private List<Object> buildProfilesDefs() {
-        List<Object> defs = new ArrayList<>();
-
-        defs.add(getString(R.string.feat_features));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_content_copy, A_SOCIAL, getString(R.string.ig_profile_menu_tools), "profileMenuTools"),
-                createRestartSwitch(R.drawable.ic_heart, A_SOCIAL, getString(R.string.ig_post_counts_feature), "postCountSpoof"),
-                createRestartSwitch(R.drawable.ic_eye, A_SOCIAL, getString(R.string.ig_profile_spoofer), "profileSpoofer"),
-                profileSpoofItem(),
-                createSwitch(R.drawable.ic_search, A_SOCIAL, getString(R.string.ig_profile_analyzer), "profileAnalyzer"),
-                createRestartSwitch(R.drawable.ic_notification, A_SOCIAL, getString(R.string.ig_confirm_follows), "confirmFollows"),
-                createSwitch(R.drawable.ic_notification, A_SOCIAL, getString(R.string.ig_dialog_misc_profile_follows_label), "showFollowStatusLabel"),
-                createSwitch(R.drawable.ic_at, A_SOCIAL, getString(R.string.ig_feature_following_follow_status), "showFollowingFollowStatus"),
-                createSwitch(R.drawable.ic_notification, A_SOCIAL, getString(R.string.ig_dialog_fancy_bio_font), "fancyBioFont"),
-                createSwitch(R.drawable.ic_block, A_SOCIAL, getString(R.string.ig_dialog_hide_threads_button), "hideThreadsButton"),
-                createSwitch(R.drawable.ic_notification, A_SOCIAL, getString(R.string.ig_dialog_misc_show_follower_toast), "showFollowerToast"),
-                createSwitch(R.drawable.ic_download, A_SOCIAL, getString(R.string.ig_dialog_misc_follow_export), "followListExport"),
-                createSwitch(R.drawable.ic_eye, A_SOCIAL, getString(R.string.ig_feat_followers_history), "followersHistory"),
-                createSwitch(R.drawable.ic_save, A_SOCIAL, getString(R.string.ig_saved_on_profile), "savedOnProfile")
-        ));
-
-        return defs;
-    }
-
-    /** Profile spoofer values row: greyed out until "Profile spoofer" is on. */
-    private FeatureItem profileSpoofItem() {
-        FeatureItem item = createClickable(R.drawable.ic_tune, A_SOCIAL, getString(R.string.ig_profile_spoofer_edit), this::showProfileSpoofDialog);
-        item.requiresAnyOf = Arrays.asList("profileSpoofer");
-        return item;
+        write("navTabOrder", value);
+        reloadCurrentMenu();
     }
 
     /** The open spoofer editor, so a picked photo lands in it. */
@@ -1945,14 +1826,14 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     /** Sends only what changed, so untouched settings keep Instagram's newer values. */
     private void saveProfileSpoof(ps.reso.instaeclipse.utils.dialog.ProfileSpoofEditor.Values old,
                                   ps.reso.instaeclipse.utils.dialog.ProfileSpoofEditor.Values now) {
-        if (!now.username.equals(old.username)) CompanionSettings.put(requireContext(), "spoofUsername", now.username);
-        if (!now.name.equals(old.name)) CompanionSettings.put(requireContext(), "spoofName", now.name);
-        if (!now.bio.equals(old.bio)) CompanionSettings.put(requireContext(), "spoofBio", now.bio);
-        if (!now.avatar.equals(old.avatar)) CompanionSettings.put(requireContext(), "spoofAvatar", now.avatar);
-        if (now.posts != old.posts) CompanionSettings.put(requireContext(), "spoofPosts", now.posts);
-        if (now.followers != old.followers) CompanionSettings.put(requireContext(), "spoofFollowers", now.followers);
-        if (now.following != old.following) CompanionSettings.put(requireContext(), "spoofFollowing", now.following);
-        if (now.verified != old.verified) CompanionSettings.put(requireContext(), "spoofVerified", now.verified);
+        if (!now.username.equals(old.username)) write("spoofUsername", now.username);
+        if (!now.name.equals(old.name)) write("spoofName", now.name);
+        if (!now.bio.equals(old.bio)) write("spoofBio", now.bio);
+        if (!now.avatar.equals(old.avatar)) write("spoofAvatar", now.avatar);
+        if (now.posts != old.posts) write("spoofPosts", now.posts);
+        if (now.followers != old.followers) write("spoofFollowers", now.followers);
+        if (now.following != old.following) write("spoofFollowing", now.following);
+        if (now.verified != old.verified) write("spoofVerified", now.verified);
     }
 
     /** Picked photo: downscaled, JPEG, Base64 (SpoofAvatar), into the open editor; saved with it. */
@@ -1972,34 +1853,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         }, "IE-ProfilePhoto").start();
     }
 
-    private void loadAppMenu() {
-        showMenu("app", getString(R.string.menu_app), buildAppDefs());
-    }
-
-    private List<Object> buildAppDefs() {
-        List<Object> defs = new ArrayList<>();
-
-        defs.add(getString(R.string.feat_features));
-        defs.add(Arrays.asList(
-                createExtrasSwitch("#0A84FF", "unlimitedAccounts"),
-                createExtrasSwitch("#0A84FF", "fixNotificationRegistration"),
-                createSwitch(R.drawable.ic_notification, "#0A84FF", getString(R.string.ig_dialog_misc_show_feature_toasts), "showFeatureToasts"),
-                createSwitch(R.drawable.ic_sparkle, "#0A84FF", getString(R.string.ig_feature_unlock_plus), "unlockPlusBenefits"),
-                createSwitch(R.drawable.ic_link, "#0A84FF", getString(R.string.ig_dialog_open_links_externally), "openLinksExternally"),
-                createValueRow(R.drawable.ic_link, "#0A84FF", getString(R.string.ig_dialog_extras_share_domain), shareDomainValue(), this::showShareDomainDialog)
-        ));
-        // Auto-clear cache (mirrors the in-IG dialog's Tools section).
-        defs.add(getString(R.string.ig_dialog_section_auto_clear_cache));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_timer, "#FF9F0A", getString(R.string.ig_dialog_auto_clear_cache), "autoClearCache"),
-                createValueRow(R.drawable.ic_folder, "#FF9F0A", getString(R.string.feat_cache_size_limit),
-                        getString(R.string.feat_size_mb, localCache.getInt("autoClearCacheSizeMb", 100)),
-                        this::pickAutoClearSize)
-        ));
-
-        return defs;
-    }
-
     private void openInstagram() {
         Intent launch = requireContext().getPackageManager()
                 .getLaunchIntentForPackage(ps.reso.instaeclipse.utils.core.CommonUtils.IG_PACKAGE_NAME);
@@ -2009,7 +1862,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     }
 
     private void pickAutoClearSize() {
-        // Same reachable presets as the in-IG dialog (IG's real cache is small).
         final int[] values = {50, 100, 200, 500};
         int current = localCache.getInt("autoClearCacheSizeMb", 100);
         String[] labels = new String[values.length];
@@ -2021,43 +1873,12 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(getString(R.string.ig_dialog_section_auto_clear_cache))
                 .setSingleChoiceItems(labels, sel, (dialog, which) -> {
-                    CompanionSettings.put(requireContext(), "autoClearCacheSizeMb", values[which]);
+                    write("autoClearCacheSizeMb", values[which]);
                     dialog.dismiss();
                     reloadCurrentMenu();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
-    }
-
-    /** Lock (Privacy). Companion app only toggles the persisted flags — the passcode itself is set
-     *  from inside Instagram (the module has no passcode field here). */
-    private void loadLockMenu() {
-        showMenu("lock", getString(R.string.ig_dialog_misc_lock_section), buildLockDefs());
-    }
-
-    private List<Object> buildLockDefs() {
-        List<Object> defs = new ArrayList<>();
-
-        defs.add(getString(R.string.feat_features));
-        defs.add(Arrays.asList(
-                createLockSwitch(R.drawable.ic_shield, getString(R.string.ig_dialog_misc_lock_dms), "lockDirectMessages"),
-                createLockSwitch(R.drawable.ic_chat, getString(R.string.ig_lock_selected_enable), "lockSpecificMessages"),
-                createLockSwitch(R.drawable.ic_shield, getString(R.string.ig_dialog_misc_lock_dms_always), "lockDirectAlways"),
-                createLockSwitch(R.drawable.ic_shield, getString(R.string.ig_dialog_misc_lock_whole_app), "lockWholeApp"),
-                createLockSwitch(R.drawable.ic_shield, getString(R.string.ig_locked_coll_setting), "lockSavedCollections"),
-                createSwitch(R.drawable.ic_shield, "#5E5CE6", getString(R.string.ig_dialog_misc_lock_fingerprint), "lockUseFingerprint")
-        ));
-
-        // The passcode and the locked chats are set from inside Instagram (stored in IG's own
-        // prefs), so the app only points there; tapping opens Instagram.
-        defs.add(Arrays.asList(
-                createTool(R.drawable.ic_shield, "#5E5CE6", getString(R.string.ig_dialog_misc_lock_dms_set),
-                        getString(R.string.lock_code_set_in_ig), this::openInstagram),
-                createTool(R.drawable.ic_chat, "#5E5CE6", getString(R.string.ig_lock_select_chats),
-                        getString(R.string.ig_lock_selected_companion_hint), this::openInstagram)
-        ));
-
-        return defs;
     }
 
     /**
@@ -2072,37 +1893,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return item;
     }
 
-    /** Hide Specific Chats (Privacy). The companion app toggles the feature; hiding/unhiding a
-     *  specific chat is done from inside Instagram. */
-    private void loadHideChatsMenu() {
-        showMenu("hidechats", getString(R.string.ig_hide_chats_title), buildHideChatsDefs());
-    }
-
-    private List<Object> buildHideChatsDefs() {
-        List<Object> defs = new ArrayList<>();
-
-        defs.add(getString(R.string.feat_features));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_eye_off, "#5E5CE6", getString(R.string.ig_dialog_misc_hide_chats), "hideSpecificChats"),
-                createDependentSwitch(R.drawable.ic_eye, "#5E5CE6", R.string.ig_hide_chats_show_button,
-                        "showHideChatButton", "hideSpecificChats", R.string.ig_hide_chats_show_button_requires)
-        ));
-
-        // Note: hiding/unhiding a specific chat is done from inside Instagram.
-
-        return defs;
-    }
-
-    private void loadLocationMenu() {
-        showMenu("location", getString(R.string.ig_dialog_section_location), buildLocationDefs());
-    }
-
-    private List<Object> buildLocationDefs() {
-        List<Object> defs = new ArrayList<>();
-
-        defs.add(getString(R.string.feat_features));
-        defs.add(Arrays.asList(createSwitch(R.drawable.ic_pin, "#FFD60A", getString(R.string.ig_dialog_location_spoof_enable), "spoofLocation")));
-
+    private FeatureItem locationPlaceItem() {
         double lat = 0.0, lng = 0.0;
         try { lat = Double.parseDouble(localCache.getString("spoofLat", "0")); } catch (Throwable ignored) {}
         try { lng = Double.parseDouble(localCache.getString("spoofLng", "0")); } catch (Throwable ignored) {}
@@ -2110,64 +1901,30 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         String place = !ps.reso.instaeclipse.mods.location.LocationPresets.valid(lat, lng)
                 ? getString(R.string.ig_dialog_location_unset)
                 : !label.isEmpty() ? label : ps.reso.instaeclipse.mods.location.LocationPresets.coords(lat, lng);
-
         final double curLat = lat, curLng = lng;
-        defs.add(getString(R.string.ig_dialog_location_current_title));
-        defs.add(Arrays.asList(createNav(R.drawable.ic_search, "#FFD60A", place, () -> {
+        FeatureCatalog.Item item = FeatureCatalog.item("locationPlace");
+        FeatureItem row = createNav(item.icon, accentOf(item), getString(item.label), () -> {
             Intent i = new Intent(requireContext(), LocationPickerActivity.class);
             i.putExtra(LocationPickerActivity.EXTRA_LAT, curLat);
             i.putExtra(LocationPickerActivity.EXTRA_LNG, curLng);
             locationPickerLauncher.launch(i);
-        })));
+        });
+        row.subtitle = place;
+        return row;
+    }
 
-        List<ps.reso.instaeclipse.mods.location.LocationPresets.Preset> recent =
-                ps.reso.instaeclipse.mods.location.LocationPresets.parse(localCache.getString("spoofRecent", ""));
-        if (!recent.isEmpty()) {
-            List<FeatureItem> rows = new ArrayList<>();
-            for (ps.reso.instaeclipse.mods.location.LocationPresets.Preset p : recent) {
-                rows.add(createNav(R.drawable.ic_timer, "#FFD60A", p.title(), () -> {
-                    ps.reso.instaeclipse.mods.location.LocationPresets.applyFromCompanion(requireContext(), p);
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), R.string.ig_dialog_location_applied, Toast.LENGTH_SHORT).show();
-                    reloadCurrentMenu();
-                }));
-            }
-            defs.add(getString(R.string.ig_dialog_location_recent));
-            defs.add(rows);
+    private List<FeatureItem> recentPlaceRows() {
+        List<FeatureItem> rows = new ArrayList<>();
+        int accent = accentOf(FeatureCatalog.item("locationRecent"));
+        for (ps.reso.instaeclipse.mods.location.LocationPresets.Preset p
+                : ps.reso.instaeclipse.mods.location.LocationPresets.parse(localCache.getString("spoofRecent", ""))) {
+            rows.add(createNav(R.drawable.ic_timer, accent, p.title(), () -> {
+                ps.reso.instaeclipse.mods.location.LocationPresets.applyFromCompanion(requireContext(), p);
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), R.string.ig_dialog_location_applied, Toast.LENGTH_SHORT).show();
+                reloadCurrentMenu();
+            }));
         }
-
-        return defs;
-    }
-
-    private void loadThemeMenu() {
-        showMenu("theme", getString(R.string.theme_title), buildThemeDefs());
-    }
-
-    private List<Object> buildThemeDefs() {
-        List<Object> defs = new ArrayList<>();
-
-        defs.add(getString(R.string.theme_section_colors));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_palette, "#FF375F", getString(R.string.theme_enable), "customThemeEnabled"),
-                createClickable(R.drawable.ic_palette, "#FF375F", getString(R.string.theme_customize), () ->
-                        themeCustomizerLauncher.launch(new Intent(requireContext(), ThemeCustomizerActivity.class))),
-                // Follows the phone's mode, like the customizer and the in-IG dialog.
-                isNightMode()
-                        ? createValueRow(R.drawable.ic_palette, "#FF375F", getString(R.string.theme_dark_mode),
-                                darkModeLabel(localCache.getInt("themePresetId", 1)), this::pickDarkModeTheme)
-                        : createValueRow(R.drawable.ic_palette, "#FF375F", getString(R.string.theme_light_mode),
-                                lightModeLabel(localCache.getInt("themeLightPresetId", -1)), this::pickLightModeTheme)
-        ));
-
-        // Fonts & Emoji now live under Custom Theme (mirrors the in-IG dialog). File pickers run
-        // inside Instagram; here the companion app only toggles the flags.
-        defs.add(getString(R.string.theme_section_fonts));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_palette, "#FF375F", getString(R.string.ig_dialog_misc_custom_font), "customFontEnabled"),
-                createSwitch(R.drawable.ic_palette, "#FF375F", getString(R.string.ig_dialog_misc_custom_emoji), "customEmojiEnabled")
-        ));
-        // Note: font & emoji files are picked from inside Instagram.
-
-        return defs;
+        return rows;
     }
 
     private String lightModeLabel(int value) {
@@ -2206,7 +1963,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(getString(R.string.theme_dark_mode))
                 .setSingleChoiceItems(labels, sel, (dialog, which) -> {
-                    CompanionSettings.put(requireContext(), "themePresetId", values[which]);
+                    write("themePresetId", values[which]);
                     dialog.dismiss();
                     reloadCurrentMenu();
                 })
@@ -2227,7 +1984,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(getString(R.string.theme_light_mode))
                 .setSingleChoiceItems(labels, sel, (dialog, which) -> {
-                    CompanionSettings.put(requireContext(), "themeLightPresetId", values[which]);
+                    write("themeLightPresetId", values[which]);
                     dialog.dismiss();
                     reloadCurrentMenu();
                 })
@@ -2244,47 +2001,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return getString(R.string.ig_dialog_quality_auto);
     }
 
-    private void loadReelsMenu() {
-        showMenu("reels", getString(R.string.menu_reels), buildReelsDefs());
-    }
-
-    private void loadStoriesMenu() {
-        showMenu("stories", getString(R.string.menu_stories), buildStoriesDefs());
-    }
-
-    private List<Object> buildReelsDefs() {
-        List<Object> defs = new ArrayList<>();
-        defs.add(Arrays.asList(
-                createExtrasSwitch("#32D74B", "reelsAutoScroll"),
-                createExtrasSwitch("#32D74B", "reelsLockScroll"),
-                createSwitch(R.drawable.ic_movie, "#32D74B", getString(R.string.ig_dialog_downloader_reel_scrubber), "forceReelScrubber"),
-                createRestartSwitch(R.drawable.ic_movie, "#32D74B", getString(R.string.ig_dialog_reels_hold_left_slow), "holdLeftSlowMotion"),
-                createSwitch(R.drawable.ic_movie, "#32D74B", getString(R.string.ig_dialog_downloader_offer_speed), "offerPlaybackSpeed")
-        ));
-
-        return defs;
-    }
-
-    private List<Object> buildStoriesDefs() {
-        List<Object> defs = new ArrayList<>();
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_story_ring, "#32D74B", getString(R.string.ig_dialog_misc_disable_story_autoswipe), "disableStoryFlipping"),
-                createSwitch(R.drawable.ic_at, "#32D74B", getString(R.string.ig_dialog_misc_view_story_mentions), "enableStoryMentions"),
-                createSwitch(R.drawable.ic_link, "#32D74B", getString(R.string.ig_dialog_misc_story_links), "storyLinks"),
-                createSwitch(R.drawable.ic_info, "#32D74B", getString(R.string.ig_dialog_misc_story_info), "storyInfo"),
-                createSwitch(R.drawable.ic_search, "#32D74B", getString(R.string.ig_dialog_misc_viewer_search), "storyViewerSearch"),
-                createExtrasSwitch("#32D74B", "hideStoriesTray")
-        ));
-        defs.add(Arrays.asList(
-                createValueRow(R.drawable.ic_story_ring, "#32D74B", getString(R.string.ig_story_tray_size),
-                        localCache.getInt("storyTrayScale", 100) + "%", this::chooseStoryTraySize),
-                createValueRow(R.drawable.ic_palette, "#32D74B", getString(R.string.ig_story_ring_color),
-                        storyRingColorValue(), this::chooseStoryRingColor)
-        ));
-
-        return defs;
-    }
-
     private void chooseStoryTraySize() {
         int[] sizes = ps.reso.instaeclipse.utils.dialog.DialogUtils.STORY_TRAY_SIZES;
         String[] labels = new String[sizes.length];
@@ -2295,7 +2011,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         }
         new MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.ig_story_tray_size)
                 .setSingleChoiceItems(labels, selected, (dialog, which) -> {
-                    CompanionSettings.put(requireContext(), "storyTrayScale", sizes[which]);
+                    write("storyTrayScale", sizes[which]);
                     dialog.dismiss(); reloadCurrentMenu();
                 }).setNegativeButton(android.R.string.cancel, null).show();
     }
@@ -2322,7 +2038,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(ctx).setTitle(R.string.ig_story_ring_color)
                 .setView(scroll)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
-                    CompanionSettings.put(requireContext(), "storyRingColor", picked[0]);
+                    write("storyRingColor", picked[0]);
                     reloadCurrentMenu();
                 })
                 .setNegativeButton(android.R.string.cancel, null).show();
@@ -2344,7 +2060,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(getString(R.string.ig_dialog_quality_force_reels))
                 .setSingleChoiceItems(labels, sel, (dialog, which) -> {
-                    CompanionSettings.put(requireContext(), "forceReelQuality", values[which]);
+                    write("forceReelQuality", values[which]);
                     dialog.dismiss();
                     reloadCurrentMenu();
                 })
@@ -2352,75 +2068,27 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 .show();
     }
 
-    private void loadDownloaderMenu() {
-        showMenu("downloader", getString(R.string.ig_dialog_section_downloader), buildDownloaderDefs());
-    }
-
-    private List<Object> buildDownloaderDefs() {
-        List<Object> defs = new ArrayList<>();
-        int cacheHours = ps.reso.instaeclipse.utils.media.StoryCacheRetention.fromStored(
-                localCache.getAll().get("storyCacheHours"));
-        FeatureItem cacheDuration = createValueRow(R.drawable.ic_timer, "#FF9F0A",
-                getString(R.string.ig_story_cache_duration), getString(R.string.ig_story_cache_hours, cacheHours),
+    private FeatureItem storyCacheItem() {
+        int cacheHours = StoryCacheRetention.fromStored(localCache.getAll().get("storyCacheHours"));
+        return valueRow("storyCacheHours", getString(R.string.ig_story_cache_hours, cacheHours),
                 () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showStoryCacheDurationPicker(requireContext(), cacheHours, value -> {
                     if (!getCurrentState("cacheStories")) return;
-                    CompanionSettings.put(requireContext(), "storyCacheHours", ps.reso.instaeclipse.utils.media.StoryCacheRetention.normalize(value));
+                    write("storyCacheHours", StoryCacheRetention.normalize(value));
                     reloadCurrentMenu();
                 }));
-        cacheDuration.requiresAnyOf = Arrays.asList("cacheStories");
+    }
 
-        defs.add(getString(R.string.feat_features));
-        defs.add(Arrays.asList(
-                createMasterSwitch(getString(R.string.ig_dialog_enable_disable_all), Arrays.asList(
-                        "enablePostDownload", "enableStoryDownload", "enableReelDownload", "enableProfileDownload"
-                )),
-                createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_dialog_downloader_posts), "enablePostDownload"),
-                createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_dialog_downloader_stories), "enableStoryDownload"),
-                createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_dialog_downloader_reels), "enableReelDownload"),
-                createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_dialog_downloader_profiles), "enableProfileDownload")
-        ));
+    private boolean hasCustomFolder() {
+        return !localCache.getString("downloaderCustomPath", "").isEmpty()
+                || !localCache.getString("downloaderCustomUri", "").isEmpty();
+    }
 
-        defs.add(getString(R.string.feat_options));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_folder, "#FF9F0A", getString(R.string.ig_dialog_downloader_username_subfolder), "downloaderUsernameFolder"),
-                createSwitch(R.drawable.ic_timer, "#FF9F0A", getString(R.string.ig_dialog_downloader_add_timestamp), "downloaderAddTimestamp"),
-                createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_dialog_downloader_voice), "enableVoiceDownload"),
-                createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_dialog_downloader_stickers), "enableStickerDownload"),
-                createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_dialog_downloader_dm_media), "enableDmMediaDownload"),
-                createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_dialog_downloader_offer_audio), "offerAudioDownload"),
-                createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_dialog_misc_save_instants), "saveInstants"),
-                createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ig_story_cache_enable), "cacheStories"),
-                cacheDuration
-        ));
-
-        defs.add(getString(R.string.menu_quality));
-        List<FeatureItem> quality = new ArrayList<>();
-        quality.add(createTool(R.drawable.ic_download, "#FF9F0A", getString(R.string.ie_download_quality),
-                downloadModeLabel(), this::chooseDownloadQuality));
-        // The two switches only apply to Best.
-        if (!getCurrentState("downloaderUseOriginal")) {
-            quality.add(createSwitch(R.drawable.ic_tune, "#FF9F0A", getString(R.string.ie_download_compatibility), "downloaderCompatibility"));
-            quality.add(createSwitch(R.drawable.ic_download, "#FF9F0A", getString(R.string.ie_download_fallback), "downloaderAllowFallback"));
-        }
-        defs.add(quality);
-
+    private String downloadFolderValue() {
         String customPath = localCache.getString("downloaderCustomPath", "");
         String customUri = localCache.getString("downloaderCustomUri", "");
-        boolean customFolder = !customPath.isEmpty() || !customUri.isEmpty();
-        List<FeatureItem> folderRows = new ArrayList<>();
-        folderRows.add(createValueRow(R.drawable.ic_folder, "#FF9F0A", getString(R.string.ig_dialog_downloader_folder),
-                customFolder ? (customPath.isEmpty() ? customUri : customPath)
-                        : getString(R.string.feat_download_folder_default, MediaStoreTarget.DEFAULT_FOLDER),
-                this::pickDownloadFolder));
-        if (customFolder) {
-            folderRows.add(destructive(createClickable(R.drawable.ic_delete, "#FF453A",
-                    getString(R.string.feat_downloader_reset_folder), this::confirmResetDownloadFolder)));
-        }
-
-        defs.add(getString(R.string.feat_download_folder));
-        defs.add(folderRows);
-
-        return defs;
+        if (!customPath.isEmpty()) return customPath;
+        if (!customUri.isEmpty()) return customUri;
+        return getString(R.string.feat_download_folder_default, MediaStoreTarget.DEFAULT_FOLDER);
     }
 
     /** Standard (the original downloader) or Best, with its resolution cap. */
@@ -2432,7 +2100,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
     /** One choice for both: Standard, or Best with no cap / up to a resolution. */
     private void chooseDownloadQuality() {
-        int[] values = {-1, 0, 2160, 1440, 1080, 720, 480}; // -1 = Standard
+        int[] values = {-1, 0, 2160, 1440, 1080, 720, 480};
         String[] labels = new String[values.length];
         boolean standard = getCurrentState("downloaderUseOriginal");
         int current = localCache.getInt("downloaderQualityMaxShortSide", 0), selected = 0;
@@ -2443,50 +2111,10 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         }
         new MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.ie_download_quality)
                 .setSingleChoiceItems(labels, selected, (dialog, which) -> {
-                    CompanionSettings.put(requireContext(), "downloaderUseOriginal", values[which] < 0);
-                    if (values[which] >= 0) CompanionSettings.put(requireContext(), "downloaderQualityMaxShortSide", values[which]);
+                    write("downloaderUseOriginal", values[which] < 0);
+                    if (values[which] >= 0) write("downloaderQualityMaxShortSide", values[which]);
                     dialog.dismiss(); reloadCurrentMenu();
                 }).setNegativeButton(android.R.string.cancel, null).show();
-    }
-
-    private void loadQualityMenu() {
-        showMenu("quality", getString(R.string.menu_quality), buildQualityDefs());
-    }
-
-    /** Quality: image, reel, upload and HDR video quality in one place. */
-    private List<Object> buildQualityDefs() {
-        List<Object> defs = new ArrayList<>();
-        // Older builds stored a boolean here; getInt would throw ClassCastException.
-        int current = ps.reso.instaeclipse.utils.core.SettingsManager.readReelQuality(localCache);
-        defs.add(Arrays.asList(
-                createValueRow(R.drawable.ic_movie, "#FF9F0A", getString(R.string.ig_dialog_quality_force_reels),
-                        qualityLabel(current), () -> pickQuality(current)),
-                createExtrasSwitch("#FF9F0A", "highResolutionImages"),
-                createSwitch(R.drawable.ic_upload, "#FF9F0A", getString(R.string.ig_dialog_max_upload_quality), "maxUploadQuality"),
-                createValueRow(R.drawable.ic_movie, "#FF9F0A", getString(R.string.ig_spoof_device), spoofDeviceValue(), this::showSpoofDeviceDialog)
-        ));
-        return defs;
-    }
-
-    private void loadPostMenuMenu() {
-        showMenu("postmenu", getString(R.string.menu_post_menu), buildPostMenuDefs());
-    }
-
-    private List<Object> buildPostMenuDefs() {
-        List<Object> defs = new ArrayList<>();
-
-        defs.add(getString(R.string.feat_features));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_link, "#FF9F0A", getString(R.string.ig_dialog_downloader_copy_link), "copyMediaLink"),
-                createSwitch(R.drawable.ic_content_copy, "#FF9F0A", getString(R.string.ig_dialog_downloader_offer_copy_image), "offerCopyImage"),
-                createSwitch(R.drawable.ic_search, "#FF9F0A", getString(R.string.ig_dialog_downloader_offer_media_info), "offerMediaInfo")
-        ));
-        defs.add(getString(R.string.feat_options));
-        defs.add(Arrays.asList(
-                createSwitch(R.drawable.ic_upload, "#FF9F0A", getString(R.string.ig_dialog_misc_upload_instants), "uploadInstants")
-        ));
-
-        return defs;
     }
 
     // =========================================================
@@ -2515,7 +2143,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         LinkedHashMap<String, Object> folder = new LinkedHashMap<>();
         folder.put("downloaderCustomUri", "");
         folder.put("downloaderCustomPath", "");
-        CompanionSettings.putAll(requireContext(), folder);
+        writeAll(folder);
 
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_toast_download_folder_reset), Toast.LENGTH_SHORT).show();
 
@@ -2613,7 +2241,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
     private void applyRestore(Context app, CompanionRestorePlan plan) {
         RESTORE_WORKER.execute(() -> {
-            CompanionSettings.putAll(app, plan.writes);
+            Set<String> restart = CompanionSettings.putAll(app, plan.writes);
             if (!plan.uiWrites.isEmpty()) {
                 SharedPreferences.Editor ui = CompanionUiPrefs.get(app).edit();
                 for (Map.Entry<String, Object> entry : plan.uiWrites.entrySet()) {
@@ -2622,7 +2250,10 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 ui.apply();
             }
             new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-                if (isAdded()) reloadCurrentMenu();
+                if (isAdded()) {
+                    reloadCurrentMenu();
+                    CompanionRestartHint.show(getActivity(), restart);
+                }
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(app, plan.skipped == 0
                         ? app.getString(R.string.ig_toast_settings_restored)
                         : app.getString(R.string.ig_toast_settings_restored_skipped, plan.skipped), Toast.LENGTH_SHORT).show();
@@ -2732,7 +2363,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
      *  live (or picked up by Instagram's sync on its next start / resume). No Save step. */
     private void stageChange(String prefKey, boolean isChecked) {
         if (localCache.getBoolean(prefKey, defaultState(prefKey)) == isChecked) return;
-        CompanionSettings.put(requireContext(), prefKey, isChecked);
+        write(prefKey, isChecked);
         askDownloadPermission(PermissionAsk.forChanges(java.util.Collections.singletonMap(prefKey, isChecked)));
     }
 
@@ -2745,9 +2376,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         }
         if (changed.size() == 1) {
             Map.Entry<String, Object> only = changed.entrySet().iterator().next();
-            CompanionSettings.put(requireContext(), only.getKey(), only.getValue());
+            write(only.getKey(), only.getValue());
         } else if (!changed.isEmpty()) {
-            CompanionSettings.putAll(requireContext(), changed);
+            writeAll(changed);
         }
         askDownloadPermission(PermissionAsk.forChanges(changed));
     }
@@ -2757,12 +2388,17 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return localCache.getBoolean(prefKey, defaultState(prefKey));
     }
 
-    /** Defaults of the settings that are on until the user turns them off (as SettingsManager loads them). */
     private static boolean defaultState(String prefKey) {
-        return "dailyReelLimitAllowDM".equals(prefKey) || "nightReelBlockAllowDM".equals(prefKey)
-                || "showUnsentButton".equals(prefKey) || "showHideChatButton".equals(prefKey)
-                || "keepUnsentInChat".equals(prefKey) || "lockUseFingerprint".equals(prefKey)
-                || "downloaderUseOriginal".equals(prefKey);
+        FeatureCatalog.Item item = FeatureCatalog.item(prefKey);
+        return item != null && item.defaultOn;
+    }
+
+    private void write(String key, Object value) {
+        CompanionRestartHint.show(getActivity(), CompanionSettings.put(requireContext(), key, value));
+    }
+
+    private void writeAll(LinkedHashMap<String, ?> values) {
+        CompanionRestartHint.show(getActivity(), CompanionSettings.putAll(requireContext(), values));
     }
 
     // =========================================================
