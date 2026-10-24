@@ -552,28 +552,40 @@ public class SettingsManager {
      */
     public static boolean acceptsCompanionWrite(SharedPreferences preferences, String key, Object value) {
         if (key == null) return false;
-        // The PIN hash/salt and the locked-chat list are never the companion's to set.
-        if (PrefsMerge.isPrivate(key)) {
-            ModuleLog.detail("(InstaEclipse) Sync: refused private key " + key);
-            return false;
+        Refusal reason = PrefsMerge.isPrivate(key) ? Refusal.PRIVATE : refusalReason(preferences.getAll(), key, value);
+        logRefusal(key, value, reason);
+        return reason == Refusal.NONE;
+    }
+
+    enum Refusal { NONE, PRIVATE, TYPE, EXTREME, PASSCODE }
+
+    static Refusal refusalReason(java.util.Map<String, ?> stored, String key, Object value) {
+        if (key == null || PrefsMerge.isPrivate(key)) return Refusal.PRIVATE;
+        Object existing = stored.get(key);
+        if (existing != null && value != null && !existing.getClass().isInstance(value)) return Refusal.TYPE;
+        if (isLockedByExtreme(key, value)) return Refusal.EXTREME;
+        if (isLockedByPasscode(key, value, stored.get("lockDirectPasscode"))) return Refusal.PASSCODE;
+        return Refusal.NONE;
+    }
+
+    static void logRefusal(String key, Object value, Refusal reason) {
+        switch (reason) {
+            case PRIVATE:
+                ModuleLog.detail("(InstaEclipse) Sync: refused private key " + key);
+                break;
+            case TYPE:
+                ModuleLog.warn("(InstaEclipse) Sync: ignored a change to " + key + " from the InstaEclipse app (wrong value type "
+                        + value.getClass().getSimpleName() + "; update both apps to the same version)");
+                break;
+            case EXTREME:
+                ModuleLog.line("(InstaEclipse) Sync: kept " + key + " unchanged while Extreme Mode is on");
+                break;
+            case PASSCODE:
+                ModuleLog.line("(InstaEclipse) Sync: kept " + key + " unchanged while a lock passcode is set");
+                break;
+            default:
+                break;
         }
-        java.util.Map<String, ?> all = preferences.getAll();
-        Object existing = all.get(key);
-        // A null String value removes the key, which can't leave a wrong type behind.
-        if (existing != null && value != null && !existing.getClass().isInstance(value)) {
-            ModuleLog.warn("(InstaEclipse) Sync: ignored a change to " + key + " from the InstaEclipse app (wrong value type "
-                    + value.getClass().getSimpleName() + "; update both apps to the same version)");
-            return false;
-        }
-        if (isLockedByExtreme(key, value)) {
-            ModuleLog.line("(InstaEclipse) Sync: kept " + key + " unchanged while Extreme Mode is on");
-            return false;
-        }
-        if (isLockedByPasscode(key, value, all.get("lockDirectPasscode"))) {
-            ModuleLog.line("(InstaEclipse) Sync: kept " + key + " unchanged while a lock passcode is set");
-            return false;
-        }
-        return true;
     }
 
     /** True for a lock switch the companion app may turn on but never off (see {@link #isLockedByPasscode}). */

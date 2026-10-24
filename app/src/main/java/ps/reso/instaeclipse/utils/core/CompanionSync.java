@@ -7,6 +7,7 @@ import android.os.Looper;
 import android.os.SystemClock;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -106,47 +107,77 @@ public final class CompanionSync {
         if (all == null || all.isEmpty()) return applied;
         try {
             SharedPreferences ig = context.getSharedPreferences("instaeclipse_prefs", Context.MODE_PRIVATE);
-            Map<String, ?> current = ig.getAll();
-            SharedPreferences.Editor e = ig.edit();
-            int stamped = 0;
-            for (Map.Entry<String, ?> entry : all.entrySet()) {
-                String tsKey = entry.getKey();
-                if (!tsKey.startsWith(TS) || !(entry.getValue() instanceof Long)) continue;
-                String key = tsKey.substring(TS.length());
-                long ts = (Long) entry.getValue();
-                if (ts <= ig.getLong(APPLIED + key, 0) || ts <= ig.getLong(IG_TS + key, 0)) continue;
-                Object v = all.get(key);
-                if (!(v instanceof Boolean || v instanceof Integer || v instanceof String)) continue;
-                // A refused value is still marked applied, as the receiver does: otherwise the
-                // companion keeps it as pending (PrefsMerge) and every resume refuses it again.
-                e.putLong(APPLIED + key, ts);
-                stamped++;
-                // Same schema check as the live receiver: an unknown key or a mistyped value
-                // never reaches Instagram's prefs.
-                if (!ps.reso.instaeclipse.utils.ipc.ModuleReplies.isPreferenceValue(key, v)) continue;
-                if (!SettingsManager.acceptsCompanionWrite(ig, key, v)) continue;
-                // Already Instagram's value (toggled back and forth): stamp only, so a theme key
-                // doesn't repaint the screen for nothing.
-                if (v.equals(current.get(key))) continue;
-                if (v instanceof Boolean) e.putBoolean(key, (Boolean) v);
-                else if (v instanceof Integer) {
-                    int n = (Integer) v;
-                    if ("storyCacheHours".equals(key)) n = StoryCacheRetention.normalize(n);
-                    e.putInt(key, n);
-                } else e.putString(key, (String) v);
-                applied.add(key);
+            Plan plan = plan(ig.getAll(), all);
+            for (Map.Entry<String, SettingsManager.Refusal> r : plan.reasons.entrySet()) {
+                SettingsManager.logRefusal(r.getKey(), all.get(r.getKey()), r.getValue());
             }
-            if (stamped == 0) return applied;
+            if (plan.appliedStamps.isEmpty()) return applied;
+            SharedPreferences.Editor e = ig.edit();
+            plan.writeTo(e);
             e.commit();
-            if (applied.isEmpty()) return applied;
+            if (plan.applied.isEmpty()) return applied;
             SettingsManager.loadAllFlags(context);
             FeatureManager.refreshFeatureStatus();
-            ModuleLog.line("(InstaEclipse) Sync: applied " + applied.size() + " setting(s) changed in the companion app");
-            return applied;
+            ModuleLog.line("(InstaEclipse) Sync: applied " + plan.applied.size() + " setting(s) changed in the companion app");
+            return plan.applied;
         } catch (Throwable t) {
             ModuleLog.warn("(InstaEclipse) Sync: could not apply settings changed in the InstaEclipse app: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return new ArrayList<>();
         }
+    }
+
+    static final class Plan {
+        final Map<String, Object> writes = new LinkedHashMap<>();
+        final Map<String, Long> appliedStamps = new LinkedHashMap<>();
+        final List<String> applied = new ArrayList<>();
+        final List<String> refused = new ArrayList<>();
+        final Map<String, SettingsManager.Refusal> reasons = new LinkedHashMap<>();
+        final List<String> igNewer = new ArrayList<>();
+
+        void writeTo(SharedPreferences.Editor e) {
+            for (Map.Entry<String, Long> stamp : appliedStamps.entrySet()) e.putLong(APPLIED + stamp.getKey(), stamp.getValue());
+            for (Map.Entry<String, Object> write : writes.entrySet()) {
+                Object v = write.getValue();
+                if (v instanceof Boolean) e.putBoolean(write.getKey(), (Boolean) v);
+                else if (v instanceof Integer) e.putInt(write.getKey(), (Integer) v);
+                else e.putString(write.getKey(), (String) v);
+            }
+        }
+    }
+
+    static Plan plan(Map<String, ?> ig, Map<String, ?> incoming) {
+        Plan plan = new Plan();
+        if (incoming == null) return plan;
+        for (Map.Entry<String, ?> entry : incoming.entrySet()) {
+            String tsKey = entry.getKey();
+            if (!tsKey.startsWith(TS) || !(entry.getValue() instanceof Long)) continue;
+            String key = tsKey.substring(TS.length());
+            long ts = (Long) entry.getValue();
+            if (ts <= stamp(ig, APPLIED + key) || ts <= stamp(ig, IG_TS + key)) continue;
+            Object v = incoming.get(key);
+            if (!(v instanceof Boolean || v instanceof Integer || v instanceof String)) continue;
+            plan.appliedStamps.put(key, ts);
+            if (!ps.reso.instaeclipse.utils.ipc.ModuleReplies.isPreferenceValue(key, v)) {
+                plan.refused.add(key);
+                continue;
+            }
+            SettingsManager.Refusal reason = SettingsManager.refusalReason(ig, key, v);
+            if (reason != SettingsManager.Refusal.NONE) {
+                plan.refused.add(key);
+                plan.reasons.put(key, reason);
+                continue;
+            }
+            if (v.equals(ig.get(key))) continue;
+            if ("storyCacheHours".equals(key)) v = StoryCacheRetention.normalize((Integer) v);
+            plan.writes.put(key, v);
+            plan.applied.add(key);
+        }
+        return plan;
+    }
+
+    private static long stamp(Map<String, ?> ig, String key) {
+        Object v = ig.get(key);
+        return v instanceof Long ? (Long) v : 0L;
     }
 
     /**
