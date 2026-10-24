@@ -1,6 +1,8 @@
 package ps.reso.instaeclipse.mods.ui;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Typeface;
 
@@ -8,6 +10,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 
+import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
@@ -96,19 +99,28 @@ public class CustomFontHook {
         return path != null && !path.isEmpty() && new File(path).isFile();
     }
 
+    @SuppressLint("DiscouragedApi")
+    private static int fontId(String name) {
+        Context ctx = Module.appContext();
+        if (ctx == null) return 0;
+        try {
+            return ctx.getResources().getIdentifier(name, "font", ctx.getPackageName());
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
     private void installTypefaceHooks(boolean setTypeface) {
+        IconFontGuard iconFonts = IconFontGuard.resolve(CustomFontHook::fontId);
         XC_MethodHook replace = new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                 if (!(FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled)) return;
                 if (Boolean.TRUE.equals(loading.get())) return; // our own load
-                // Safeguard: don't replace an icon/glyph font.
                 for (Object a : p.args) {
                     if (a instanceof String s) {
-                        String low = s.toLowerCase();
-                        if (low.contains("icon") || low.contains("glyph")) return;
+                        if (IconFontGuard.iconName(s)) return;
                     } else if (a instanceof File f) {
-                        String low = f.getName().toLowerCase();
-                        if (low.contains("icon") || low.contains("glyph")) return;
+                        if (IconFontGuard.iconName(f.getName())) return;
                     }
                 }
                 Typeface tf = getActiveTypeface();
@@ -133,6 +145,7 @@ public class CustomFontHook {
         XC_MethodHook setTf1 = new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                 if (!(FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled) || Boolean.TRUE.equals(loading.get())) return;
+                if (iconFonts.isIcon(p.args[0])) return;
                 Typeface tf = getActiveTypeface();
                 if (tf != null && p.args[0] != tf) p.args[0] = tf;
             }
@@ -140,6 +153,7 @@ public class CustomFontHook {
         XC_MethodHook setTf2 = new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                 if (!(FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled) || Boolean.TRUE.equals(loading.get())) return;
+                if (iconFonts.isIcon(p.args[0])) return;
                 Typeface tf = getActiveTypeface();
                 if (tf != null && p.args[0] != tf) p.args[0] = tf;
             }
@@ -160,10 +174,10 @@ public class CustomFontHook {
         // or a "sans-serif" family resolves to.
         XC_MethodHook built = new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
-                if (Boolean.TRUE.equals(loading.get()) || p.getResult() == null) return;
-                try { // same safeguard as above: leave icon/glyph fonts alone
+                if (Boolean.TRUE.equals(loading.get()) || iconFonts.keep(p.getResult()) || p.getResult() == null) return;
+                try {
                     Object path = XposedHelpers.getObjectField(p.thisObject, "mPath");
-                    if (path != null && (path.toString().toLowerCase().contains("icon") || path.toString().toLowerCase().contains("glyph"))) return;
+                    if (path != null && IconFontGuard.iconName(path.toString())) return;
                 } catch (Throwable ignored) {}
                 Typeface tf = getActiveTypeface();
                 if (tf != null) p.setResult(Typeface.create(tf, weightOf((Typeface) p.getResult()), ((Typeface) p.getResult()).isItalic()));
