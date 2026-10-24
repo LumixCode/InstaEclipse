@@ -67,8 +67,6 @@ public class PlaybackSpeedHook {
     static final float SLOW = 0.5f;
     private static final HoldGate HOLD = new HoldGate();
     private static volatile WeakReference<Activity> touchActivity;
-    private static final java.util.regex.Pattern TWO_X =
-            java.util.regex.Pattern.compile("(?<![\\d.,])2(\\s?[xX×])(?![\\p{L}\\d])");
 
     /**
      * Hold-for-2x from the left half becomes slow motion; IG's 1x reset or the finger lifting
@@ -196,9 +194,8 @@ public class PlaybackSpeedHook {
                     if (!HOLD.slowActive() || !FeatureFlags.holdLeftSlowMotion || param.args.length == 0
                             || !(param.args[0] instanceof CharSequence cs) || cs.length() > 80
                             || param.thisObject instanceof android.widget.EditText) return; // never a typed draft
-                    java.util.regex.Matcher m = TWO_X.matcher(cs);
-                    if (!m.find()) return;
-                    String out = m.replaceAll("½$1"); // same width as "2X": the hint stays on one line
+                    if (!ReelTouchTarget.TWO_X.matcher(cs).find()) return;
+                    CharSequence out = ReelTouchTarget.halfX(cs);
                     // StaticLayout.Builder.obtain(source, start, end, …): keep a whole-text range whole
                     if (param.args.length > 2 && param.args[1] instanceof Integer st && param.args[2] instanceof Integer en) {
                         if (st != 0 || en != cs.length()) return;
@@ -318,9 +315,9 @@ public class PlaybackSpeedHook {
                 downX = ev.getRawX();
                 downY = ev.getRawY();
                 boolean left = downX < dm.widthPixels / 2f;
-                HOLD.down(left && reelOnScreen(a)); // a possible slow-motion hold, until UP/CANCEL
+                HOLD.down(left && ReelTouchTarget.onReel(a, downX, downY));
                 if (!left && downX < dm.widthPixels * 0.82f && downY > dm.heightPixels * 0.15f
-                        && downY < dm.heightPixels * 0.85f && reelOnScreen(a)) {
+                        && downY < dm.heightPixels * 0.85f && ReelTouchTarget.onReel(a, downX, downY)) {
                     rightPending = true;
                     // a bit before IG's own long press (getLongPressTimeout) so IG never pauses
                     FeedVideoDownloadHook.mainHandler.postDelayed(RIGHT_HOLD,
@@ -357,22 +354,12 @@ public class PlaybackSpeedHook {
         FeedVideoDownloadHook.mainHandler.removeCallbacks(RIGHT_HOLD);
     }
 
-    private static int clipsContainerId = -1;
-
-    /** True when a reel is on screen (IG's clips_video_container is shown). */
-    private static boolean reelOnScreen(Activity a) {
-        if (clipsContainerId == -1)
-            clipsContainerId = ps.reso.instaeclipse.utils.ui.ResIds.id(a, "clips_video_container");
-        if (clipsContainerId == 0 || a.getWindow() == null) return false;
-        android.view.View v = a.getWindow().getDecorView().findViewById(clipsContainerId);
-        return v != null && v.isShown();
-    }
-
     private static void relabel() {
         WeakReference<Activity> ref = touchActivity;
         Activity a = ref != null ? ref.get() : null;
         if (!HOLD.slowActive() || !FeatureFlags.holdLeftSlowMotion || a == null || a.getWindow() == null) return;
-        relabel(a.getWindow().getDecorView(), 0);
+        android.view.View page = ReelTouchTarget.page(a.getWindow().getDecorView(), downX, downY, ReelTouchTarget.containerId(a));
+        if (page != null) relabel(page, 0);
     }
 
     private static void relabel(android.view.View v, int depth) {
@@ -380,13 +367,17 @@ public class PlaybackSpeedHook {
         if (v instanceof android.widget.EditText) return; // a typed draft: never rewritten
         if (v instanceof TextView tv) {
             CharSequence cs = tv.getText();
-            if (cs != null && cs.length() <= 80 && TWO_X.matcher(cs).find()) tv.setText(cs.toString());
+            if (cs != null && cs.length() <= 80 && ReelTouchTarget.TWO_X.matcher(cs).find()) tv.setText(ReelTouchTarget.halfX(cs));
         } else if (v instanceof android.view.ViewGroup g) {
             for (int i = 0; i < g.getChildCount(); i++) relabel(g.getChildAt(i), depth + 1);
         }
     }
 
     private static boolean setHero(Object p, float s) {
+        return setHero(HOLD, p, s, android.os.SystemClock.uptimeMillis());
+    }
+
+    static boolean setHero(HoldGate gate, Object p, float s, long now) {
         Method m = heroSet;
         if (m == null) return false;
         try {
