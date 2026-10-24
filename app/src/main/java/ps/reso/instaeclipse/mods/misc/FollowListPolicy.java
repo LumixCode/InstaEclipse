@@ -442,7 +442,28 @@ final class FollowListPolicy {
     }
 
     /** The tools button's actions, in menu order. */
-    enum Action { ANALYZE, EXPORT, HISTORY }
+    enum Action { ANALYZE, CHANGELOG, EXPORT, HISTORY }
+
+    static List<Action> menu(List<Action> actions, boolean changelog) {
+        List<Action> out = new ArrayList<>();
+        for (Action a : actions) {
+            out.add(a);
+            if (a == Action.ANALYZE && changelog) out.add(Action.CHANGELOG);
+        }
+        return out;
+    }
+
+    static boolean isFollowersType(String name) {
+        return "FOLLOWERS".equals(name) || "SELF_FOLLOWERS".equals(name);
+    }
+
+    static boolean isFollowingType(String name) {
+        return "FOLLOWING".equals(name) || "FOLLOWING_SIMPLIFIED".equals(name) || "SELF_FOLLOWING".equals(name);
+    }
+
+    static boolean determinateProgress(int pass, boolean limited, int expected) {
+        return pass == 0 && !limited && expected > 0;
+    }
 
     /**
      * The enabled actions that apply to the tab on screen: Analyze when the profile behind the

@@ -170,7 +170,8 @@ public class FollowListExportHook {
     static void exportList(View root, Object frag) {
         ListInfo info = listInfo(frag);
         String type = info != null && info.type != null ? info.type : FOLLOWERS;
-        FollowListLoader.loadAll(root, frag, I18n.t(root.getContext(), R.string.ig_follow_export), r -> export(root, r, type));
+        FollowListLoader.loadAll(root, frag, I18n.t(root.getContext(), R.string.ig_follow_export),
+                I18n.t(root.getContext(), R.string.ig_follow_export_stop), r -> export(root, r, type));
     }
 
     private static void export(View root, FollowListLoader.Result r, String type) {
@@ -246,8 +247,8 @@ public class FollowListExportHook {
                 Object v = f.get(data);
                 if (v instanceof Enum<?> e) {
                     String n = e.name();
-                    if (n.equals("FOLLOWERS") || n.equals("SELF_FOLLOWERS")) info.type = FOLLOWERS;
-                    else if (n.equals("FOLLOWING") || n.equals("FOLLOWING_SIMPLIFIED") || n.equals("SELF_FOLLOWING")) info.type = FOLLOWING;
+                    if (FollowListPolicy.isFollowersType(n)) info.type = FOLLOWERS;
+                    else if (FollowListPolicy.isFollowingType(n)) info.type = FOLLOWING;
                 } else if (v instanceof String s && s.matches("\\d+") && info.owner == null) info.owner = s;
             }
             return info.owner != null ? info : null;
@@ -299,8 +300,7 @@ public class FollowListExportHook {
             List<?> tabs = (List<?>) t[1];
             for (int i = 0; i < tabs.size(); i++) {
                 String n = ((Enum<?>) tabs.get(i)).name();
-                boolean match = FOLLOWERS.equals(type) ? n.equals("FOLLOWERS") || n.equals("SELF_FOLLOWERS")
-                        : n.equals("FOLLOWING") || n.equals("FOLLOWING_SIMPLIFIED") || n.equals("SELF_FOLLOWING");
+                boolean match = FOLLOWERS.equals(type) ? FollowListPolicy.isFollowersType(n) : FollowListPolicy.isFollowingType(n);
                 if (match) {
                     t[0].getClass().getMethod("setCurrentItem", int.class).invoke(t[0], i);
                     return true;
@@ -337,7 +337,7 @@ public class FollowListExportHook {
                 if (Modifier.isStatic(f.getModifiers())) continue;
                 f.setAccessible(true);
                 Object v = f.get(data);
-                if (v instanceof Enum<?> e && e.name().equals("FOLLOWERS")) followers = true;
+                if (v instanceof Enum<?> e && FollowListPolicy.isFollowersType(e.name())) followers = true;
                 if (self.equals(v)) own = true;
             }
             return followers && own && self.matches("\\d+") ? self : null;
@@ -353,7 +353,8 @@ public class FollowListExportHook {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(root.getContext(), I18n.t(root.getContext(), R.string.ig_followers_history_wrong_tab), Toast.LENGTH_SHORT).show();
             return;
         }
-        FollowListLoader.loadAll(root, frag, I18n.t(root.getContext(), R.string.ig_followers_history), r -> checkHistory(root, self, r));
+        FollowListLoader.loadAll(root, frag, I18n.t(root.getContext(), R.string.ig_followers_history),
+                I18n.t(root.getContext(), R.string.ig_follow_load_stop), r -> checkHistory(root, self, r));
     }
 
     private static void checkHistory(View root, String self, FollowListLoader.Result loaded) {

@@ -8,6 +8,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -15,13 +16,16 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.lang.ref.WeakReference;
+import java.text.NumberFormat;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.function.IntConsumer;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
@@ -33,44 +37,12 @@ import ps.reso.instaeclipse.utils.ui.IgTint;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.users.WatchlistStore;
 
-/**
- * The follow list screen's tools button, in place of the old floating pills: one magnifier at the
- * end of Instagram's action bar, vertically centred with the title (the profile's username).
- *
- * <p>Glyph: Instagram's own instagram_search_outline_24, the unselected icon of its Search /
- * Explore tab (tab_search_drawable), looked up by name. Tint: the bar's back arrow
- * (action_bar_button_back: its tint list or colour filter), else igds_color_primary_icon from the
- * theme, so it follows dark / light mode like Instagram's own action bar icons.
- *
- * <p>Host: the action bar above the list (id action_bar, the view of IG's ActionBarService X.00gD),
- * found from the list's own view upwards. Your own lists already have a right-side button row
- * (action_bar_right_side_buttons, Discover people): the icon goes first in it. Otherwise it goes
- * before the bar's last child, where Instagram puts its own right-side buttons (X.00gD.A0U), and
- * after layout is shifted to the bar's end edge and to the title's vertical centre. When a screen
- * configures the bar, Instagram drops the views before that last child (X.00gD.A18) and clears
- * the buttons' click listeners (X.00gD.A0G), so a layout listener on the bar puts the icon and its
- * listener back while a follow list screen is shown and removes the icon once none is. It is
- * looked up by tag first, so it is never added twice. A follow list screen is a FollowListFragment
- * whose parent fragment holds the tabs' ViewPager2 and tab list (UnifiedFollowFragment), so
- * follow lists in sheets don't get it; with only Followers history on, only your own lists do.
- *
- * <p>Tap: the enabled actions that apply to the tab on screen (FollowListPolicy.actions): Analyze
- * profile, Export CSV, and Followers history on your own Followers tab, plus Changelog after
- * Analyze once the analyzer saved a check of the list's profile (ProfileChangelog; the watchlist
- * index is read off the main thread first). One runs at once; several open a small menu. While
- * loading lists pauses for the account after Instagram blocked a load (rate limit, action block,
- * challenge: FollowListLoader.pause), Analyze, Export CSV and Followers history first show what
- * Instagram said and run only on "Load anyway"; nothing runs by itself when the pause ends.
- */
 final class FollowListToolsIcon {
 
     private static final String TAG = "(IE|FollowTools) ";
     static final String ICON_TAG = "ie_follow_tools";
-    /** bars with our layout listener, and bars with a sync already posted by it */
-    private static final Set<View> watchedBars = Collections.newSetFromMap(new WeakHashMap<>());
+    private static final Map<View, BarWatch> watchedBars = new WeakHashMap<>();
     private static final Set<View> queuedBars = Collections.newSetFromMap(new WeakHashMap<>());
-    /** list fragment → {SCREEN (it sits in the tabbed follow list screen) | KNOWN (whose list it is
-     *  is known) | OWN (one of your own lists), when that was checked} */
     private static final Map<Object, long[]> screens = Collections.synchronizedMap(new WeakHashMap<>());
     private static final int SCREEN = 1, KNOWN = 2, OWN = 4;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -100,22 +72,43 @@ final class FollowListToolsIcon {
                 }
                 return;
             }
-            if (watchedBars.add(bar))
-                bar.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
-                    // fires on every layout of the window: one queued sync per bar
-                    if (queuedBars.add(bar)) bar.post(() -> {
-                        queuedBars.remove(bar);
-                        sync(bar);
-                    });
-                });
+            if (!watchedBars.containsKey(bar)) {
+                BarWatch watch = new BarWatch(bar);
+                watchedBars.put(bar, watch);
+                bar.getViewTreeObserver().addOnGlobalLayoutListener(watch);
+                ModuleLog.detail(TAG + "layout listeners: " + watchedBars.size());
+            }
             sync(bar);
         } catch (Throwable t) {
             ModuleLog.detail(TAG + "attach: " + t);
         }
     }
 
+    private static final class BarWatch implements ViewTreeObserver.OnGlobalLayoutListener {
+        final WeakReference<ViewGroup> bar;
+
+        BarWatch(ViewGroup bar) {
+            this.bar = new WeakReference<>(bar);
+        }
+
+        @Override public void onGlobalLayout() {
+            ViewGroup b = bar.get();
+            if (b != null && queuedBars.add(b)) b.post(() -> {
+                queuedBars.remove(b);
+                sync(b);
+            });
+        }
+    }
+
+    private static void unwatch(ViewGroup bar) {
+        BarWatch watch = watchedBars.remove(bar);
+        if (watch == null) return;
+        bar.getViewTreeObserver().removeOnGlobalLayoutListener(watch);
+        ModuleLog.detail(TAG + "layout listeners: " + watchedBars.size());
+    }
+
     /** The shown action_bar nearest above {@code v} (each tab of Instagram's main screen has its own). */
-    private static ViewGroup barAbove(View v) {
+    static ViewGroup barAbove(View v) {
         int id = ResIds.id(v.getContext(), "action_bar");
         if (id == 0) return null;
         for (View p = v; p != null; p = p.getParent() instanceof View pv ? pv : null) {
@@ -133,6 +126,7 @@ final class FollowListToolsIcon {
             View icon = bar.findViewWithTag(ICON_TAG);
             if (!enabled() || !screenShown(bar)) {
                 if (icon != null && icon.getParent() instanceof ViewGroup p) p.removeView(icon);
+                if (!listLive(bar)) unwatch(bar);
                 return;
             }
             if (icon == null) icon = add(bar);
@@ -144,8 +138,14 @@ final class FollowListToolsIcon {
         }
     }
 
-    /** A follow list tab of the tabbed follow list screen is shown in {@code bar}'s window, below it,
-     *  and one of the enabled actions can apply there (Followers history only on your own lists). */
+    private static boolean listLive(ViewGroup bar) {
+        for (Object[] e : FollowListExportHook.liveLists()) {
+            View root = (View) e[1];
+            if (root.isAttachedToWindow() && root.getRootView() == bar.getRootView()) return true;
+        }
+        return false;
+    }
+
     private static boolean screenShown(ViewGroup bar) {
         if (!bar.isShown()) return false;
         int[] at = new int[2];
@@ -163,7 +163,7 @@ final class FollowListToolsIcon {
             if (s == null || ((s[0] & SCREEN) == 0 && now - s[1] > 2000)) {
                 FollowListExportHook.ListInfo info = FollowListExportHook.listInfo(e[0]);
                 int f = (FollowListExportHook.tabsOf(e[0]) != null ? SCREEN : 0) | (info != null ? KNOWN : 0)
-                        | (info != null && info.owner.equals(info.self) ? OWN : 0);
+                        | (FollowListExportHook.ownFollowersOf(e[0]) != null ? OWN : 0);
                 screens.put(e[0], s = new long[]{f, now});
             }
             long f = s[0];
@@ -254,7 +254,7 @@ final class FollowListToolsIcon {
 
     /** The bar's title (the profile's username on follow list screens): a title id, else the shown
      *  text with the largest font in the bar. */
-    private static TextView title(ViewGroup bar) {
+    static TextView title(ViewGroup bar) {
         for (String name : new String[]{"action_bar_title", "action_bar_textview_title", "action_bar_title_textview"}) {
             int id = ResIds.id(bar.getContext(), name);
             View v = id != 0 ? bar.findViewById(id) : null;
@@ -288,7 +288,8 @@ final class FollowListToolsIcon {
         ImageView icon = new ImageView(ctx);
         icon.setTag(ICON_TAG);
         Drawable glyph = null;
-        for (String name : new String[]{"instagram_search_outline_24", "instagram_search_pano_outline_24", "tab_search_drawable"}) {
+        for (String name : new String[]{"instagram_insights_outline_24", "instagram_more_vertical_outline_24",
+                "instagram_search_outline_24", "instagram_search_pano_outline_24", "tab_search_drawable"}) {
             int id = ResIds.drawable(ctx, name);
             if (id == 0) continue;
             try { glyph = ctx.getDrawable(id); } catch (Throwable ignored) {}
@@ -303,14 +304,7 @@ final class FollowListToolsIcon {
         if (ctx.getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, ripple, true) && ripple.resourceId != 0) {
             try { icon.setBackground(ctx.getDrawable(ripple.resourceId)); } catch (Throwable ignored) {}
         }
-        List<String> labels = new ArrayList<>();
-        if (FeatureFlags.profileAnalyzer) {
-            labels.add(I18n.t(ctx, R.string.ig_pa_analyze));
-            labels.add(I18n.t(ctx, R.string.ig_pa_changelog));
-        }
-        if (FeatureFlags.followListExport) labels.add(I18n.t(ctx, R.string.ig_follow_export));
-        if (FeatureFlags.followersHistory) labels.add(I18n.t(ctx, R.string.ig_followers_history));
-        String label = String.join(" · ", labels);
+        String label = I18n.t(ctx, R.string.ig_follow_tools);
         icon.setContentDescription(label);
         icon.setTooltipText(label);
         icon.setOnClickListener(FollowListToolsIcon::onTap);
@@ -342,6 +336,7 @@ final class FollowListToolsIcon {
                 return;
             }
             String name = info != null && info.username != null ? info.username : ProfileAnalyzer.titleOf(v);
+            String title = title(ctx, name, info, FollowListLoader.expectedCount(frag, info));
             if (actions.contains(FollowListPolicy.Action.ANALYZE)) {
                 // Changelog only for a profile with a saved check: look in the watchlist index (a file) first
                 Context app = ctx.getApplicationContext();
@@ -355,46 +350,59 @@ final class FollowListToolsIcon {
                         ModuleLog.detail(TAG + "watchlist: " + t);
                     }
                     String changelogSelf = ProfileChangelogPolicy.inMenu(FeatureFlags.profileAnalyzer, true, last) ? self : null;
-                    MAIN.post(() -> menu(v, frag, root, info, actions, changelogSelf, name));
+                    MAIN.post(() -> menu(v, frag, root, info, actions, changelogSelf, name, title));
                 }, "ie-follow-tools").start();
                 return;
             }
-            menu(v, frag, root, info, actions, null, name);
+            menu(v, frag, root, info, actions, null, name, title);
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not open the list tools", t);
         }
     }
 
-    /** Runs the only entry, or offers them all in a small menu. {@code changelogSelf}: the account
-     *  whose watchlist has a saved check of the list's profile (Changelog comes after Analyze), or null. */
     private static void menu(View v, Object frag, View root, FollowListExportHook.ListInfo info,
-                             List<FollowListPolicy.Action> actions, String changelogSelf, String name) {
+                             List<FollowListPolicy.Action> actions, String changelogSelf, String name, String title) {
         try {
             Context ctx = v.getContext();
-            List<CharSequence> labels = new ArrayList<>();
-            List<Runnable> runs = new ArrayList<>();
-            for (FollowListPolicy.Action a : actions) {
-                labels.add(I18n.t(ctx, switch (a) {
-                    case ANALYZE -> R.string.ig_pa_analyze;
-                    case EXPORT -> R.string.ig_follow_export;
-                    case HISTORY -> R.string.ig_followers_history;
-                }));
-                runs.add(() -> run(a, v, frag, root, info));
-                if (a == FollowListPolicy.Action.ANALYZE && changelogSelf != null) {
-                    labels.add(I18n.t(ctx, R.string.ig_pa_changelog));
-                    runs.add(() -> ProfileChangelog.show(ctx, changelogSelf, info.owner, name));
-                }
-            }
+            List<FollowListPolicy.Action> rows = FollowListPolicy.menu(actions, changelogSelf != null);
             if (changelogSelf != null) ModuleLog.detail(TAG + "changelog offered for " + info.owner);
-            if (runs.size() == 1) {
-                runs.get(0).run();
-                return;
-            }
-            new IeDialog(ctx).title(name != null ? "@" + name : "")
-                    .choices(labels.toArray(new CharSequence[0]), -1, i -> runs.get(i).run())
-                    .show();
+            actionMenu(ctx, title, rows, i -> {
+                FollowListPolicy.Action a = rows.get(i);
+                if (a == FollowListPolicy.Action.CHANGELOG) ProfileChangelog.show(ctx, changelogSelf, info.owner, name);
+                else run(a, v, frag, root, info);
+            }).show();
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not show the list tools menu", t);
+        }
+    }
+
+    static IeDialog actionMenu(Context ctx, String title, List<FollowListPolicy.Action> rows, IntConsumer pick) {
+        CharSequence[] labels = new CharSequence[rows.size()];
+        for (int i = 0; i < labels.length; i++) labels[i] = I18n.t(ctx, label(rows.get(i)));
+        return new IeDialog(ctx).title(title).choices(labels, -1, pick);
+    }
+
+    private static int label(FollowListPolicy.Action a) {
+        return switch (a) {
+            case ANALYZE -> R.string.ig_pa_analyze;
+            case CHANGELOG -> R.string.ig_pa_changelog;
+            case EXPORT -> R.string.ig_follow_export;
+            case HISTORY -> R.string.ig_followers_history;
+        };
+    }
+
+    static String title(Context ctx, String name, FollowListExportHook.ListInfo info, int count) {
+        if (name == null) return I18n.t(ctx, R.string.ig_follow_tools);
+        if (count < 0 || info == null || info.type == null) return "@" + name;
+        return I18n.t(ctx, R.string.ig_follow_tools_title, name, ProfileAnalyzer.label(ctx, info.type),
+                NumberFormat.getIntegerInstance(locale(ctx)).format(count));
+    }
+
+    private static Locale locale(Context ctx) {
+        try {
+            return ctx.getResources().getConfiguration().getLocales().get(0);
+        } catch (Throwable t) {
+            return Locale.getDefault();
         }
     }
 
@@ -415,6 +423,7 @@ final class FollowListToolsIcon {
             case ANALYZE -> ProfileAnalyzer.startFromList(v, info);
             case EXPORT -> FollowListExportHook.exportList(root, frag);
             case HISTORY -> FollowListExportHook.checkHistory(root, frag);
+            default -> { }
         }
     }
 }

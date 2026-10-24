@@ -8,6 +8,9 @@
     <string name="ig_pa_remove_confirm" tools:ignore="MissingTranslation">Remove @%1$s from the watchlist? Its %2$d saved analyses and changelog are deleted. This can\'t be undone.</string>
     <string name="ig_pa_remove_confirm_action" tools:ignore="MissingTranslation">Remove</string>
     <string name="ig_pa_save_failed" tools:ignore="MissingTranslation">This analysis could not be saved, so the next one is compared with the last saved analysis.</string>
+    <string name="ig_follow_tools" tools:ignore="MissingTranslation">List tools</string>
+    <string name="ig_follow_tools_title" tools:ignore="MissingTranslation">\@%1$s · %2$s: %3$s</string>
+    <string name="ig_follow_load_stop" tools:ignore="MissingTranslation">Stop</string>
     <plurals name="ig_list_more" tools:ignore="MissingTranslation">
         <item quantity="one">+%1$d more · see Changelog</item>
         <item quantity="other">+%1$d more · see Changelog</item>

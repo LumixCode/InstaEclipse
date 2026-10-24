@@ -212,7 +212,7 @@ public final class ProfileAnalyzer {
         s.warmSince = 0;
         s.busy = true;
         String title = I18n.t(s.ctx, R.string.ig_pa_loading_title, s.name(), label(s.ctx, type));
-        if (!FollowListLoader.loadAll(root, frag, title, r -> loaded(s, type, r))) {
+        if (!FollowListLoader.loadAll(root, frag, title, I18n.t(s.ctx, R.string.ig_follow_load_stop), r -> loaded(s, type, r))) {
             s.busy = false; // another list is loading (an export): try again shortly
             H.postDelayed(() -> drive(s), 1000);
         }
@@ -687,12 +687,11 @@ public final class ProfileAnalyzer {
     }
 
     /** The follow list screen's title (the profile's username). */
-    @SuppressLint("DiscouragedApi")
     static String titleOf(View v) {
         try {
-            int id = v.getResources().getIdentifier("action_bar_title", "id", v.getContext().getPackageName());
-            View t = id != 0 ? v.getRootView().findViewById(id) : null;
-            if (t instanceof TextView tv && tv.getText() != null) {
+            ViewGroup bar = FollowListToolsIcon.barAbove(v);
+            TextView tv = bar != null ? FollowListToolsIcon.title(bar) : null;
+            if (tv != null && tv.getText() != null) {
                 String s = tv.getText().toString().trim();
                 if (s.matches("[A-Za-z0-9._]{1,30}")) return s;
             }

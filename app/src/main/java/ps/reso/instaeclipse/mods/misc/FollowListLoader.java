@@ -3,6 +3,7 @@ package ps.reso.instaeclipse.mods.misc;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.database.DataSetObserver;
 import android.os.Handler;
 import android.os.Looper;
@@ -11,6 +12,7 @@ import android.view.View;
 import android.widget.AbsListView;
 import android.widget.Adapter;
 import android.widget.HeaderViewListAdapter;
+import android.widget.ProgressBar;
 
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
@@ -871,7 +873,7 @@ final class FollowListLoader {
      * progress dialog keeps the user here; its Stop button ends early. False when a load is
      * already running.
      */
-    static boolean loadAll(View root, Object frag, CharSequence title, Consumer<Result> done) {
+    static boolean loadAll(View root, Object frag, CharSequence title, CharSequence stopLabel, Consumer<Result> done) {
         if (current != null) return false;
         Object pager = null;
         try { if (pagerField != null) pager = pagerField.get(frag); } catch (Throwable ignored) {}
@@ -885,7 +887,7 @@ final class FollowListLoader {
             l.finish(false, "no pager");
             return true;
         }
-        l.dlg = progressDialog(root.getContext(), title);
+        l.shown = progressDialog(root.getContext(), title, stopLabel);
         l.begin();
         return true;
     }
@@ -1007,7 +1009,7 @@ final class FollowListLoader {
         final int expected;
         final Consumer<Result> done;
         final long started = SystemClock.uptimeMillis();
-        IeDialog dlg;
+        Progress shown;
         AbsListView list;
         Object adapter;
         DataSetObserver observer;
@@ -1646,9 +1648,9 @@ final class FollowListLoader {
         }
 
         private void progress(long now) {
-            if (dlg == null) return;
+            if (shown == null) return;
             try {
-                Context c = dlg.ctx;
+                Context c = shown.dlg.ctx;
                 // in an extra pass: the accounts of the passes so far plus this pass's new ones
                 int fresh = pass > 0 ? listed.fresh(merged.keySet()) : 0;
                 int n = pass > 0 ? merged.size() + fresh : listed.unique();
@@ -1660,7 +1662,7 @@ final class FollowListLoader {
                                 : R.string.ig_follow_export_order_default), fresh);
                 if (retryAt != 0) msg += "\n\n" + I18n.t(c, R.string.ig_follow_export_retry,
                         (int) Math.max(1, (retryAt - now + 999) / 1000));
-                dlg.message(msg);
+                shown.show(msg, n, expected, FollowListPolicy.determinateProgress(pass, limited, expected));
             } catch (Throwable ignored) {}
         }
 
@@ -1679,7 +1681,7 @@ final class FollowListLoader {
             try {
                 if (observer != null && list != null && list.getAdapter() != null) list.getAdapter().unregisterDataSetObserver(observer);
             } catch (Throwable ignored) {}
-            try { if (dlg != null) dlg.dismiss(); } catch (Throwable ignored) {}
+            try { if (shown != null) shown.dlg.dismiss(); } catch (Throwable ignored) {}
             if (adapter == null) {
                 list = FollowListExportHook.findList(root);
                 adapter = adapterOf(list);
@@ -1879,7 +1881,25 @@ final class FollowListLoader {
         return out;
     }
 
-    private static IeDialog progressDialog(Context c, CharSequence title) {
+    static final class Progress {
+        final IeDialog dlg;
+        final ProgressBar bar;
+
+        Progress(IeDialog dlg, ProgressBar bar) {
+            this.dlg = dlg;
+            this.bar = bar;
+        }
+
+        void show(CharSequence message, int loaded, int expected, boolean determinate) {
+            dlg.message(message);
+            if (bar.isIndeterminate() == determinate) bar.setIndeterminate(!determinate);
+            if (!determinate) return;
+            bar.setMax(expected);
+            bar.setProgress(Math.min(loaded, expected));
+        }
+    }
+
+    static Progress progressDialog(Context c, CharSequence title, CharSequence stopLabel) {
         try {
             // the Activity that hosts the list (UIHookManager's current one can be a different, hidden one)
             Context ctx = c;
@@ -1892,14 +1912,16 @@ final class FollowListLoader {
                     .title(title)
                     .message(I18n.t(ctx, R.string.ig_follow_export_loading, 0))
                     .cancelable(false); // leaving the list would stop IG's pager
-            android.widget.ProgressBar bar = new android.widget.ProgressBar(d.ctx, null, android.R.attr.progressBarStyleHorizontal);
+            ProgressBar bar = new ProgressBar(d.ctx, null, android.R.attr.progressBarStyleHorizontal);
             bar.setIndeterminate(true);
-            bar.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(d.accent));
+            ColorStateList accent = ColorStateList.valueOf(d.accent);
+            bar.setIndeterminateTintList(accent);
+            bar.setProgressTintList(accent);
             d.view(bar);
-            d.primary(I18n.t(ctx, R.string.ig_follow_export_stop), FollowListLoader::stop);
+            d.primary(stopLabel, FollowListLoader::stop);
             d.onClose(FollowListLoader::stop);
             d.show();
-            return d;
+            return new Progress(d, bar);
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "Could not show the loading progress; the list still loads", t);
             return null;
