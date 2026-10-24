@@ -2,6 +2,9 @@ package ps.reso.instaeclipse.mods.ui;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.Application;
+import android.content.Context;
+import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -12,14 +15,16 @@ import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 
 import ps.reso.instaeclipse.Xposed.Module;
+import ps.reso.instaeclipse.xposedcompat.AndroidAppHelper;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
-import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.JitGuard;
@@ -55,21 +60,28 @@ public class HideHeaderButtonsHook {
     private static final String CACHE_GATE = "HideThreads_profileGate_v1";
     private static final String USER_SESSION = "com.instagram.common.session.UserSession";
     private static final String PROFILE_ACTION_BAR = "com.instagram.profile.actionbar.ProfileActionBar";
+    private static final int THREADS = 0, OWN_PROFILE = 1, BLEND = 2;
+    private static final int BAR = 0, LEGACY = 1, DM = 2;
     private static final Set<View> watched = Collections.newSetFromMap(new WeakHashMap<>());
+    private static final HiddenViews hidden = new HiddenViews();
     private static int profileBarId, profileBarLeftId, legacyThreadsId, dmHeaderId;
     private static volatile boolean gateHooked, gateLogged, barLogged;
+    static int walks;
 
     public void install(DexKitBridge bridge, ClassLoader cl) {
         try {
-            XposedHelpers.findAndHookMethod(Activity.class, "onResume", new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) { JitGuard.tick(param.method);
-                    if (!scanThreads() && !FeatureFlags.hideDmBlend) return;
-                    View decor = ((Activity) param.thisObject).getWindow().getDecorView();
-                    if (!watched.add(decor)) return;
-                    decor.getViewTreeObserver().addOnGlobalLayoutListener(() -> scan(decor));
-                    scan(decor);
+            Application app = application();
+            if (app == null) throw new IllegalStateException("no Application");
+            app.registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
+                @Override public void onActivityResumed(Activity a) {
+                    if (a.getWindow() != null) watch(a.getWindow().getDecorView());
                 }
+                @Override public void onActivityCreated(Activity a, Bundle b) {}
+                @Override public void onActivityStarted(Activity a) {}
+                @Override public void onActivityPaused(Activity a) {}
+                @Override public void onActivityStopped(Activity a) {}
+                @Override public void onActivitySaveInstanceState(Activity a, Bundle b) {}
+                @Override public void onActivityDestroyed(Activity a) {}
             });
             if (ResIds.id(Module.appContext(), "header_right_buttons") != 0) FeatureStatusTracker.setHooked("HideDmBlend");
             ModuleLog.ok(TAG + "ready");
@@ -79,6 +91,20 @@ public class HideHeaderButtonsHook {
         // Reflection only, so it is in place before the DexKit lookup of the gate.
         hookProfileActionBar(cl);
         hookThreadsGate(bridge, cl);
+    }
+
+    private static Application application() {
+        Context context = Module.appContext();
+        if (context instanceof Application) return (Application) context;
+        Context app = context == null ? null : context.getApplicationContext();
+        if (app instanceof Application) return (Application) app;
+        return AndroidAppHelper.currentApplication();
+    }
+
+    private static void watch(View decor) {
+        if (!watched.add(decor)) return;
+        decor.getViewTreeObserver().addOnGlobalLayoutListener(() -> scan(decor));
+        scan(decor);
     }
 
     private static boolean hideOwnProfileThreads() {
@@ -155,9 +181,9 @@ public class HideHeaderButtonsHook {
                     if (!hideOwnProfileThreads() || !(param.thisObject instanceof View bar)) return;
                     try {
                         resolveIds(bar);
-                        int hidden = (profileBarId != 0 ? hideIn(bar.findViewById(profileBarId), "Threads", false) : 0)
-                                + (profileBarLeftId != 0 ? hideIn(bar.findViewById(profileBarLeftId), "Threads", false) : 0);
-                        if (hidden > 0 && !barLogged) {
+                        int count = (profileBarId != 0 ? hideIn(bar.findViewById(profileBarId), "Threads", false, OWN_PROFILE) : 0)
+                                + (profileBarLeftId != 0 ? hideIn(bar.findViewById(profileBarLeftId), "Threads", false, OWN_PROFILE) : 0);
+                        if (count > 0 && !barLogged) {
                             barLogged = true;
                             ModuleLog.detail(TAG + "hid the Threads button in ProfileActionBar (gate hooked: " + gateHooked + ")");
                         }
@@ -183,31 +209,86 @@ public class HideHeaderButtonsHook {
 
     private static void scan(View decor) {
         try {
+            boolean threads = scanThreads(), blend = FeatureFlags.hideDmBlend;
+            if (!threads && !blend && hidden.isEmpty()) return;
+            if (!threads) hidden.restore(THREADS);
+            if (!hideOwnProfileThreads()) hidden.restore(OWN_PROFILE);
+            if (!blend) hidden.restore(BLEND);
+            if (!threads && !blend) return;
             resolveIds(decor);
-            if (scanThreads()) {
-                if (profileBarId != 0) hideIn(decor.findViewById(profileBarId), "Threads", false);
-                // The older action-bar path's button has an id, and IG sets it VISIBLE again later.
-                View legacy = legacyThreadsId != 0 ? decor.findViewById(legacyThreadsId) : null;
-                if (legacy != null && legacy.getVisibility() != View.GONE) legacy.setVisibility(View.GONE);
-            }
-            if (FeatureFlags.hideDmBlend && dmHeaderId != 0)
-                hideIn(decor.findViewById(dmHeaderId), "Blend", true);
+            View[] found = containers(decor, threads ? profileBarId : 0, threads ? legacyThreadsId : 0, blend ? dmHeaderId : 0);
+            if (found == null) return;
+            hideIn(found[BAR], "Threads", false, THREADS);
+            View legacy = found[LEGACY];
+            if (legacy != null && legacy.getVisibility() != View.GONE) hidden.hide(legacy, THREADS);
+            hideIn(found[DM], "Blend", true, BLEND);
         } catch (Throwable ignored) {}
     }
 
-    private static int hideIn(View container, String word, boolean prefix) {
+    private static View[] containers(View root, int... ids) {
+        int left = 0;
+        for (int id : ids) if (id != 0) left++;
+        if (left == 0) return null;
+        walks++;
+        View[] found = new View[ids.length];
+        find(root, ids, found, left);
+        return found;
+    }
+
+    private static int find(View v, int[] ids, View[] found, int left) {
+        int id = v.getId();
+        if (id != View.NO_ID) {
+            for (int i = 0; i < ids.length; i++) {
+                if (ids[i] == id && found[i] == null) {
+                    found[i] = v;
+                    left--;
+                }
+            }
+        }
+        if (v instanceof ViewGroup g) {
+            for (int i = 0; i < g.getChildCount() && left > 0; i++) left = find(g.getChildAt(i), ids, found, left);
+        }
+        return left;
+    }
+
+    private static int hideIn(View container, String word, boolean prefix, int reason) {
         if (!(container instanceof ViewGroup g)) return 0;
-        int hidden = 0;
+        int count = 0;
         for (int i = 0; i < g.getChildCount(); i++) {
             View c = g.getChildAt(i);
             CharSequence d = c.getContentDescription();
             if (d == null || c.getVisibility() == View.GONE) continue;
             String s = d.toString();
             if (prefix ? s.startsWith(word) : s.contains(word)) {
-                c.setVisibility(View.GONE);
-                hidden++;
+                hidden.hide(c, reason);
+                count++;
             }
         }
-        return hidden;
+        return count;
+    }
+
+    static final class HiddenViews {
+        private final Map<View, int[]> views = new WeakHashMap<>();
+
+        boolean isEmpty() {
+            return views.isEmpty();
+        }
+
+        void hide(View v, int reason) {
+            views.put(v, new int[]{reason, v.getVisibility()});
+            v.setVisibility(View.GONE);
+        }
+
+        void restore(int reason) {
+            if (views.isEmpty()) return;
+            for (Iterator<Map.Entry<View, int[]>> it = views.entrySet().iterator(); it.hasNext(); ) {
+                Map.Entry<View, int[]> e = it.next();
+                int[] saved = e.getValue();
+                if (saved[0] != reason) continue;
+                it.remove();
+                View v = e.getKey();
+                if (v != null && v.getVisibility() == View.GONE) v.setVisibility(saved[1]);
+            }
+        }
     }
 }
