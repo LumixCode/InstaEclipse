@@ -8,7 +8,9 @@ import org.luckypray.dexkit.result.MethodData;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -55,12 +57,17 @@ public class ForceReelQualityHook {
     // the volatile Pando index.
     private static final int HEIGHT_HASH = "height".hashCode();
 
+    private static final String VIDEO_VERSION_INTF = "com.instagram.api.schemas.VideoVersionIntf";
+    private static final Object NO_HEIGHT = new Object();
+    private static final Map<Class<?>, Object> HEIGHT_GETTERS = new ConcurrentHashMap<>();
+
     private static final String CACHE_GETTER_KEY = "ForceReelQuality_VideoVersionsGetter";
     private static final String CACHE_HEIGHT_KEY = "ForceReelQuality_HeightGetterName";
 
     /** Set while a download reads the qualities: it gets the full list, not the forced one. Use {@link #raw}. */
     static final ThreadLocal<Boolean> RAW = new ThreadLocal<>();
     private static volatile String heightGetter;
+    private static volatile Method sharedHeightGetter;
 
     /**
      * Runs {@code read} with RAW set, then restores the caller's value instead of clearing it:
@@ -76,13 +83,44 @@ public class ForceReelQualityHook {
 
     /** A video version's height in pixels, or -1 when unknown. */
     static int heightOf(Object item) {
-        String name = heightGetter;
-        if (item == null || name == null) return -1;
+        Method getter = item == null ? null : heightMethod(item.getClass());
+        if (getter == null) return -1;
         try {
-            Object h = item.getClass().getMethod(name).invoke(item);
+            Object h = getter.invoke(item);
             return h instanceof Integer i ? i : -1;
         } catch (Throwable t) {
             return -1;
+        }
+    }
+
+    static Method heightMethod(Class<?> type) {
+        Method shared = sharedHeightGetter;
+        if (shared != null && shared.getDeclaringClass().isAssignableFrom(type)) return shared;
+        String name = heightGetter;
+        if (name == null) return null;
+        Object cached = HEIGHT_GETTERS.get(type);
+        if (cached == null) {
+            try {
+                cached = type.getMethod(name);
+            } catch (Throwable t) {
+                cached = NO_HEIGHT;
+            }
+            HEIGHT_GETTERS.put(type, cached);
+        }
+        return cached instanceof Method method ? method : null;
+    }
+
+    static void useHeightGetter(String name, Method shared) {
+        HEIGHT_GETTERS.clear();
+        sharedHeightGetter = shared;
+        heightGetter = name;
+    }
+
+    private static Method interfaceHeightGetter(ClassLoader classLoader, String name) {
+        try {
+            return classLoader.loadClass(VIDEO_VERSION_INTF).getMethod(name);
+        } catch (Throwable t) {
+            return null;
         }
     }
 
@@ -114,8 +152,7 @@ public class ForceReelQualityHook {
             }
 
             videoVersionsGetter.setAccessible(true);
-            String finalHeightGetterName = heightGetterName;
-            heightGetter = heightGetterName;
+            useHeightGetter(heightGetterName, interfaceHeightGetter(classLoader, heightGetterName));
 
             XposedBridge.hookMethod(videoVersionsGetter, new XC_MethodHook() {
                 @Override
@@ -127,7 +164,7 @@ public class ForceReelQualityHook {
                         List<?> versions = (List<?>) result;
                         if (versions.size() <= 1) return;
 
-                        Object chosen = pickBestQuality(versions, FeatureFlags.forceReelQuality, finalHeightGetterName);
+                        Object chosen = pickBestQuality(versions, FeatureFlags.forceReelQuality);
                         if (chosen != null) {
                             param.setResult(Collections.singletonList(chosen));
                         }
@@ -192,26 +229,19 @@ public class ForceReelQualityHook {
         return null;
     }
 
-    private static Object pickBestQuality(List<?> items, int desired, String heightGetterName) {
+    static Object pickBestQuality(List<?> items, int desired) {
         Object best = null;
         int bestDelta = Integer.MAX_VALUE;
         int bestHeight = -1;
         for (Object item : items) {
-            if (item == null) continue;
-            try {
-                Method m = item.getClass().getMethod(heightGetterName);
-                Object hObj = m.invoke(item);
-                if (!(hObj instanceof Integer)) continue;
-                int h = (Integer) hObj;
-                if (h <= 0) continue;
-
-                if (desired == Integer.MAX_VALUE) {
-                    if (h > bestHeight) { bestHeight = h; best = item; }
-                } else {
-                    int delta = Math.abs(h - desired);
-                    if (delta < bestDelta) { bestDelta = delta; best = item; }
-                }
-            } catch (Throwable ignored) {}
+            int h = heightOf(item);
+            if (h <= 0) continue;
+            if (desired == Integer.MAX_VALUE) {
+                if (h > bestHeight) { bestHeight = h; best = item; }
+            } else {
+                int delta = Math.abs(h - desired);
+                if (delta < bestDelta) { bestDelta = delta; best = item; }
+            }
         }
         return best;
     }

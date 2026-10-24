@@ -26,8 +26,9 @@ import java.util.Set;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 
-/** Resolved against the loaded APK, rebuilt every process start, with no persisted symbol cache. */
 final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
+    enum Queries { NONE, NUMERIC, BOTH }
+
     private static final String MEDIA = "com.instagram.feed.media.Media";
     private static volatile SelectedMediaAdapter installed;
     private final Map<String, List<Method>> bindings = new HashMap<>();
@@ -45,7 +46,7 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
                     "carousel_media", "user", "has_audio", "media_type", "original_media_type",
                     "is_story_image_with_music"}) adapter.resolve(bridge, loader, MEDIA, key);
             adapter.resolve(bridge, loader, "com.instagram.user.model.User", "username");
-            for (String key : new String[]{"url", "width", "height", "frame_rate", "codecs", "bitrate"})
+            for (String key : new String[]{"url", "width", "height"})
                 adapter.resolve(bridge, loader, "com.instagram.api.schemas.ImmutablePandoVideoVersion", key);
             adapter.resolve(bridge, loader, "com.instagram.model.mediasize.ImmutablePandoImageInfo", "candidates");
             adapter.named(loader, MEDIA, "id", "getId");
@@ -103,6 +104,23 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
                 + (result.manifest != null) + " direct=" + result.renditions.size()
                 + " carousel=" + result.children.size());
         return result;
+    }
+
+    static List<Method> getters(String type, String key) {
+        SelectedMediaAdapter adapter = installed;
+        List<Method> bound = adapter == null ? null : adapter.bindings.get(key);
+        List<Method> out = new ArrayList<>();
+        if (bound != null) for (Method method : bound) if (method.getDeclaringClass().getName().equals(type)) out.add(method);
+        return out;
+    }
+
+    static Queries queries(ClassLoader loader, String type) {
+        try {
+            loader.loadClass(type);
+        } catch (Throwable absent) {
+            return Queries.NONE;
+        }
+        return type.substring(type.lastIndexOf('.') + 1).startsWith("ImmutablePando") ? Queries.NUMERIC : Queries.BOTH;
     }
 
     static Object findPostMenuMedia(Object handler, Class<?> creatorType) {
@@ -195,6 +213,7 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
     private void resolveStoryItem(DexKitBridge bridge, ClassLoader loader) {
         try {
             String type = "com.instagram.model.reels.ReelItem";
+            if (queries(loader, type) == Queries.NONE) return;
             Set<Method> matches = new LinkedHashSet<>();
             for (MethodData data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass(type).paramCount(0).returnType(MEDIA)
@@ -220,8 +239,10 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
     private void resolve(DexKitBridge bridge, ClassLoader loader, String type, String key) {
         // Schema-key tables also match <clinit>()V. Filter its DEX metadata BEFORE trying
         // Java reflection: DexKit cannot turn a class initializer into a java.lang.Method.
+        Queries queries = queries(loader, type);
+        if (queries == Queries.NONE) return;
         Resolution result = new Resolution();
-        collectCandidates(bridge, loader, type, key, false, result);
+        if (queries == Queries.BOTH) collectCandidates(bridge, loader, type, key, false, result);
         collectCandidates(bridge, loader, type, key, true, result);
         if (result.errors != 0 || result.matches.size() != 1) return;
         try {
@@ -266,9 +287,9 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
         Class<?> rt = method.getReturnType();
         return switch (key) {
             case "video_versions", "carousel_media", "candidates" -> List.class.isAssignableFrom(rt);
-            case "video_dash_manifest", "url", "username", "codecs" -> rt == String.class;
+            case "video_dash_manifest", "url", "username" -> rt == String.class;
             case "has_audio", "is_story_image_with_music" -> rt == Boolean.class || rt == boolean.class;
-            case "width", "height", "frame_rate", "bitrate", "media_type", "original_media_type" ->
+            case "width", "height", "media_type", "original_media_type" ->
                     Number.class.isAssignableFrom(rt) || rt == int.class || rt == long.class || rt == float.class || rt == double.class;
             default -> !rt.isPrimitive();
         };

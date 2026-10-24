@@ -27,7 +27,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -48,6 +47,7 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 public class FeedVideoDownloadHook {
 
     // ── Class/method refs resolved once at hook install time ─────────────────
+    private static final String MEDIA = "com.instagram.feed.media.Media";
     private static Class<?> mediaClass;
     private static final List<Method> resolvedVideoVersionsGetters = new ArrayList<>();
     private static Method resolvedMediaTypeMethod;
@@ -62,10 +62,6 @@ public class FeedVideoDownloadHook {
     private static Method   dashManifestGetter;     // "video_dash_manifest" getter: () -> String (Media 447+, LiveTreeMediaDict <= 446)
 
     private static Class<?> userClass;
-    // IG 446+/447.0.0.39+ removed MutableMediaDictIntf/LiveTreeMediaDict — the author getters moved
-    // directly onto com.instagram.feed.media.Media as lazy Pando accessors (e.g. A3P reads the
-    // "user" field via getOptionalTreeValueByHashCode(3599307)). This getter is invoked directly on
-    // the Media object. Resolved via the stable Pando field-id 3599307 (== "user".hashCode()).
     private static Method   mediaAuthorGetter; // () -> UserClass on com.instagram.feed.media.Media
     // userUsernameGetter lives in UserUtils — resolved here and stored there
 
@@ -500,10 +496,15 @@ public class FeedVideoDownloadHook {
 
     public static void installVideoUrlCaptureHook(DexKitBridge bridge, ClassLoader classLoader) {
         SelectedMediaAdapter.install(bridge, classLoader);
-        resolveVideoVersionsGetters(bridge, classLoader);
-        resolveCarouselGetter(bridge, classLoader);
-        resolveDashManifestGetter(bridge, classLoader);
-        resolveHasAudioGetter(bridge, classLoader);
+        resolvedVideoVersionsGetters.clear();
+        resolvedVideoVersionsGetters.addAll(SelectedMediaAdapter.getters(MEDIA, "video_versions"));
+        carouselMediaGetter = adapterGetter("carousel_media");
+        dashManifestGetter = adapterGetter("video_dash_manifest");
+        hasAudioGetter = adapterGetter("has_audio");
+        mediaAuthorGetter = adapterGetter("user");
+        ModuleLog.detail("(IE|DL) media getters: video_versions=" + resolvedVideoVersionsGetters.size()
+                + " carousel=" + (carouselMediaGetter != null) + " manifest=" + (dashManifestGetter != null)
+                + " has_audio=" + (hasAudioGetter != null) + " author=" + (mediaAuthorGetter != null));
         if (hasAudioGetter != null && dashManifestGetter != null) FeatureStatusTracker.setHooked("AudioDownload");
         else if (FeatureFlags.offerAudioDownload) FeatureStatusTracker.setBroken("AudioDownload");
         musicMetadataGetter = resolveMediaGetter(bridge, classLoader, "music_metadata");
@@ -512,107 +513,9 @@ public class FeedVideoDownloadHook {
         resolveUsernameGetter(bridge, classLoader);
     }
 
-    private static void resolveVideoVersionsGetters(DexKitBridge bridge, ClassLoader classLoader) {
-        resolvedVideoVersionsGetters.clear();
-        try {
-            if (DexKitCache.isCacheValid()) {
-                List<Method> cached = DexKitCache.loadMethods(
-                        "MediaDownload_VideoVersionsGetters", classLoader);
-                if (cached != null) resolvedVideoVersionsGetters.addAll(cached);
-                if (resolvedVideoVersionsGetters.isEmpty()) {
-                    Method legacyCached = DexKitCache.loadMethod(
-                            "MediaDownload_VideoVersionsGetter", classLoader);
-                    if (legacyCached != null) resolvedVideoVersionsGetters.add(legacyCached);
-                }
-            }
-
-            if (resolvedVideoVersionsGetters.isEmpty()) {
-                List<MethodData> results = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                        .matcher(MethodMatcher.create()
-                                .paramCount(0)
-                                .usingEqStrings(List.of("video_versions"))));
-                Set<String> seen = new HashSet<>();
-                for (MethodData methodData : results) {
-                    try {
-                        Method method = methodData.getMethodInstance(classLoader);
-                        if (!List.class.isAssignableFrom(method.getReturnType())) continue;
-                        String key = method.getDeclaringClass().getName() + '#' + method.getName();
-                        if (!seen.add(key)) continue;
-                        method.setAccessible(true);
-                        resolvedVideoVersionsGetters.add(method);
-                    } catch (Throwable ignored) {}
-                }
-                if (!resolvedVideoVersionsGetters.isEmpty()) {
-                    DexKitCache.saveMethods("MediaDownload_VideoVersionsGetters",
-                            resolvedVideoVersionsGetters);
-                }
-            }
-
-            ModuleLog.detail("(IE|DL|DexKit) video_versions getters="
-                    + resolvedVideoVersionsGetters.size());
-        } catch (Throwable t) {
-            ModuleLog.detail("(IE|DL|DexKit) video_versions getter resolution failed: " + t);
-        }
-    }
-
-    private static void resolveCarouselGetter(DexKitBridge bridge, ClassLoader classLoader) {
-        try {
-            if (DexKitCache.isCacheValid()) {
-                Method cached = DexKitCache.loadMethod("MediaDownload_CarouselGetter", classLoader);
-                if (cached != null) {
-                    cached.setAccessible(true);
-                    carouselMediaGetter = cached;
-                }
-            }
-            if (carouselMediaGetter == null) {
-                List<MethodData> results = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                        .matcher(MethodMatcher.create()
-                                .paramCount(0)
-                                .returnType("java.util.List")
-                                .usingEqStrings(List.of("carousel_media"))));
-                for (MethodData md : results) {
-                    try {
-                        Method m = md.getMethodInstance(classLoader);
-                        if (!List.class.isAssignableFrom(m.getReturnType())) continue;
-                        m.setAccessible(true);
-                        carouselMediaGetter = m;
-                        DexKitCache.saveMethod("MediaDownload_CarouselGetter", m);
-                        break;
-                    } catch (Throwable ignored) {}
-                }
-            }
-            ModuleLog.detail("(IE|DL|DexKit) carousel getter="
-                    + (carouselMediaGetter == null ? "not found"
-                       : carouselMediaGetter.getDeclaringClass().getName() + "." + carouselMediaGetter.getName()));
-        } catch (Throwable t) {
-            ModuleLog.detail("(IE|DL|DexKit) carousel getter resolution failed: " + t);
-        }
-    }
-
-    /** Audio-only download (#234): the DASH manifest accessor, anchored like has_liked / carousel. */
-    /** Audio-only (#234): Instagram's own "has_audio" flag, so silent videos aren't offered audio. */
-    private static void resolveHasAudioGetter(DexKitBridge bridge, ClassLoader classLoader) {
-        try {
-            if (DexKitCache.isCacheValid()) {
-                Method cached = DexKitCache.loadMethod("MediaDownload_HasAudio", classLoader);
-                if (cached != null) { cached.setAccessible(true); hasAudioGetter = cached; return; }
-            }
-            List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                    .declaredClass("com.instagram.feed.media.Media")
-                    .paramCount(0)
-                    .returnType("java.lang.Boolean")
-                    .usingEqStrings(List.of("has_audio"))));
-            if (found.size() == 1) {
-                Method m = found.get(0).getMethodInstance(classLoader);
-                m.setAccessible(true);
-                hasAudioGetter = m;
-                DexKitCache.saveMethod("MediaDownload_HasAudio", m);
-            }
-            ModuleLog.detail("(IE|DL|DexKit) has_audio getter="
-                    + (hasAudioGetter == null ? "not found" : hasAudioGetter.getName()));
-        } catch (Throwable t) {
-            ModuleLog.detail("(IE|DL|DexKit) has_audio getter failed: " + t);
-        }
+    private static Method adapterGetter(String key) {
+        List<Method> found = SelectedMediaAdapter.getters(MEDIA, key);
+        return found.size() == 1 ? found.get(0) : null;
     }
 
     /** Instagram's has_audio for this media: TRUE / FALSE, or null when unknown. */
@@ -624,37 +527,6 @@ public class FeedVideoDownloadHook {
             return v instanceof Boolean ? (Boolean) v : null;
         } catch (Throwable t) {
             return null;
-        }
-    }
-
-    private static void resolveDashManifestGetter(DexKitBridge bridge, ClassLoader classLoader) {
-        try {
-            if (DexKitCache.isCacheValid()) {
-                Method cached = DexKitCache.loadMethod("MediaDownload_DashManifest", classLoader);
-                if (cached != null) { cached.setAccessible(true); dashManifestGetter = cached; return; }
-            }
-            for (String owner : new String[]{"com.instagram.feed.media.Media",
-                    "com.instagram.feed.media.LiveTreeMediaDict"}) {
-                List<MethodData> found;
-                try {
-                    found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                            .declaredClass(owner)
-                            .paramCount(0)
-                            .returnType("java.lang.String")
-                            .usingEqStrings(List.of("video_dash_manifest"))));
-                } catch (Throwable t) { continue; }
-                if (found.size() != 1) continue;
-                Method m = found.get(0).getMethodInstance(classLoader);
-                m.setAccessible(true);
-                dashManifestGetter = m;
-                DexKitCache.saveMethod("MediaDownload_DashManifest", m);
-                break;
-            }
-            ModuleLog.detail("(IE|DL|DexKit) dash manifest getter="
-                    + (dashManifestGetter == null ? "not found"
-                       : dashManifestGetter.getDeclaringClass().getName() + "." + dashManifestGetter.getName()));
-        } catch (Throwable t) {
-            ModuleLog.detail("(IE|DL|DexKit) dash manifest getter failed: " + t);
         }
     }
 
@@ -962,7 +834,6 @@ public class FeedVideoDownloadHook {
                     if (cachedGetter != null) {
                         UserUtils.userUsernameGetter = cachedGetter;
                     }
-                    resolveMediaAuthorGetter(bridge, classLoader);
                     return;
                 } catch (Throwable ignored) {}
             }
@@ -1032,48 +903,8 @@ public class FeedVideoDownloadHook {
             } catch (Throwable t) {
                 ModuleLog.warn("(IE|DL|Username) Usernames may be missing from download file names: " + t);
             }
-
-            resolveMediaAuthorGetter(bridge, classLoader);
-
         } catch (Throwable t) {
             ModuleLog.warn("(IE|DL|Username) Usernames may be missing from download file names: " + t);
-        }
-    }
-
-    /**
-     * IG 446+/447.0.0.39+ dropped the MutableMediaDictIntf/LiveTreeMediaDict split and moved the
-     * author accessors straight onto com.instagram.feed.media.Media as lazy Pando getters. The post
-     * (and reel) author is the zero-arg User-returning getter that reads the Pando "user" field,
-     * identified by the field-id literal 3599307 (== "user".hashCode(), a JDK-stable constant). We
-     * invoke it directly on the Media object. On older builds that lack such a getter this resolves
-     * to nothing and the existing dict-based path is used unchanged.
-     */
-    private static void resolveMediaAuthorGetter(DexKitBridge bridge, ClassLoader classLoader) {
-        if (mediaAuthorGetter != null || userClass == null) return;
-
-        if (DexKitCache.isCacheValid()) {
-            Method cached = DexKitCache.loadMethod("MediaAuthorGetter", classLoader);
-            if (cached != null) { mediaAuthorGetter = cached; return; }
-        }
-
-        try {
-            List<MethodData> res = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                    .matcher(MethodMatcher.create()
-                            .declaredClass("com.instagram.feed.media.Media")
-                            .paramCount(0)
-                            .returnType(userClass.getName())
-                            .usingNumbers(3599307)));
-            if (!res.isEmpty()) {
-                Method m = res.get(0).getMethodInstance(classLoader);
-                m.setAccessible(true);
-                mediaAuthorGetter = m;
-                DexKitCache.saveMethod("MediaAuthorGetter", m);
-                ModuleLog.detail("(IE|DL|Username) mediaAuthorGetter (Media.\"user\"): " + m.getName());
-            } else {
-                ModuleLog.detail("(IE|DL|Username) mediaAuthorGetter: no Media \"user\" getter (older build)");
-            }
-        } catch (Throwable t) {
-            ModuleLog.detail("(IE|DL|Username) mediaAuthorGetter: " + t);
         }
     }
 
@@ -1481,7 +1312,6 @@ public class FeedVideoDownloadHook {
 
     static String extractUsernameFromMediaObject(Object media) {
         if (media == null) return null;
-        // IG 446+/447.0.0.39+: author getter lives directly on Media (see resolveMediaAuthorGetter).
         if (mediaAuthorGetter != null && mediaClass != null && mediaClass.isInstance(media)) {
             try {
                 Object user = mediaAuthorGetter.invoke(media);
