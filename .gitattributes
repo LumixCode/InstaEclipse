@@ -1,1 +1,2 @@
 *.sh text eol=lf
+app/src/main/assets/dexkit/*.tsv text eol=lf
