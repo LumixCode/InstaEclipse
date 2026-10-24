@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="ig_btn_story_info">Story Info</string>
-    <string name="ig_btn_quiz_answer">Quiz Answer</string>
-    <string name="ig_btn_poll_results">Poll Results</string>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="ig_btn_story_info">Story info</string>
+    <string name="ig_btn_quiz_answer">Quiz answer</string>
+    <string name="ig_btn_poll_results">Poll results</string>
     <string name="ig_story_info_hint">Tap a line to copy it</string>
     <string name="ig_si_posted">Posted</string>
     <string name="ig_si_expires">Expires</string>
@@ -32,6 +32,7 @@
     <string name="ig_si_joined">joined</string>
     <string name="ig_si_paid_partnership">Paid partnership with (hold to open)</string>
     <string name="ig_si_collaborators">Collaborator (hold to open)</string>
-    <string name="ig_btn_slider_results">Slider Results</string>
+    <string name="ig_btn_slider_results">Slider results</string>
     <string name="ig_si_votes">votes</string>
+    <string name="ig_poll_your_vote" tools:ignore="MissingTranslation">your vote</string>
 </resources>

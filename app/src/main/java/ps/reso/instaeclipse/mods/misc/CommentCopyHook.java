@@ -1,12 +1,9 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import android.annotation.SuppressLint;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.widget.PopupWindow;
-import android.widget.Toast;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -28,7 +25,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
-import ps.reso.instaeclipse.utils.toast.IeToast;
+import ps.reso.instaeclipse.utils.text.CopyFeedback;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 
@@ -344,14 +341,7 @@ public class CommentCopyHook {
 
     private static void copyToClipboard(final Context ctx, final String text) {
         try {
-            ClipboardManager cm = (ClipboardManager)
-                    ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-            if (cm != null) {
-                cm.setPrimaryClip(ClipData.newPlainText("comment", text));
-                // Android 13+ confirms every copy itself; a second toast would just repeat it.
-                if (android.os.Build.VERSION.SDK_INT < 33) IeToast.makeText(ctx,
-                        I18n.t(ctx, R.string.ig_toast_comment_copied), Toast.LENGTH_SHORT).show();
-            }
+            CopyFeedback.copy(ctx, "comment", text, R.string.ig_toast_comment_copied);
         } catch (Throwable t) {
             ModuleLog.error("(InstaEclipse | CopyComment): Could not copy the comment: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }

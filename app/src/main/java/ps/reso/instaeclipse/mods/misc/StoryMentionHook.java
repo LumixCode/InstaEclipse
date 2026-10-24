@@ -1,16 +1,12 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import ps.reso.instaeclipse.xposedcompat.AndroidAppHelper;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.TypedValue;
-import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
@@ -31,6 +27,7 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.text.CopyFeedback;
 
 public class StoryMentionHook {
 
@@ -55,12 +52,13 @@ public class StoryMentionHook {
 
             @Override
             public void rows(Object media, List<CharSequence> out) {
-                if (!resolveMentions(media).isEmpty()) out.add(label());
+                int count = resolveMentions(media).size();
+                if (count > 0) out.add(label() + " (" + count + ")");
             }
 
             @Override
             public boolean owns(CharSequence tapped) {
-                return StoryMenuRows.owns(tapped, label(), false);
+                return StoryMenuRows.owns(tapped, label(), true);
             }
 
             @Override
@@ -188,63 +186,50 @@ public class StoryMentionHook {
     private static void showMentionsDialog(Context ctx, List<String> usernames) {
         mainHandler.post(() -> {
             try {
-                IeDialog dlg = new IeDialog(ctx)
-                        .title(I18n.t(ctx, R.string.ig_mention_dialog_title))
-                        .message(usernames.isEmpty()
-                                ? I18n.t(ctx, R.string.ig_mention_no_mentions)
-                                : I18n.t(ctx, R.string.ig_mention_subtitle, usernames.size())
-                                        + "\n" + I18n.t(ctx, R.string.ig_mention_hold_hint));
-
-                // One row per mention; tapping copies that username and keeps the list open.
-                for (String username : usernames) {
-                    TextView row = new TextView(ctx);
-                    row.setText("@" + username);
-                    row.setTextColor(dlg.text);
-                    row.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-                    row.setTypeface(null, Typeface.BOLD);
-                    row.setPadding(dlg.dp(16), dlg.dp(13), dlg.dp(14), dlg.dp(13));
-                    row.setBackground(dlg.cardBg());
-                    row.setOnClickListener(v -> {
-                        ClipboardManager cm = (ClipboardManager)
-                                ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-                        if (cm != null) {
-                            cm.setPrimaryClip(ClipData.newPlainText("username", username));
-                            ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_mention_copied, username), Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                    // Hold opens the profile inside Instagram (its own deep-link handler).
-                    row.setOnLongClickListener(v -> {
-                        try {
-                            ctx.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
-                                    android.net.Uri.parse("https://www.instagram.com/" + username + "/"))
-                                    .setPackage(ctx.getPackageName())
-                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
-                        } catch (Throwable t) {
-                            ModuleLog.error("(IE|Mention) Could not open the profile: " + t.getClass().getSimpleName() + ": " + t.getMessage());
-                        }
-                        return true;
-                    });
-                    dlg.view(row);
-                }
-
-                // Copy all button (only shown when more than one mention)
-                if (usernames.size() > 1) {
-                    dlg.primary(I18n.t(ctx, R.string.ig_mention_copy_all), () -> {
-                        StringBuilder sb = new StringBuilder();
-                        for (String u : usernames) sb.append("@").append(u).append("\n");
-                        ClipboardManager cm = (ClipboardManager)
-                                ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-                        if (cm != null) {
-                            cm.setPrimaryClip(ClipData.newPlainText("mentions", sb.toString().trim()));
-                            ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_all_mentions_copied), Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                }
-                dlg.show();
+                mentionsDialog(ctx, usernames).show();
             } catch (Throwable t) {
                 ModuleLog.error("(IE|Mention) Could not show the mentions", t);
             }
         });
+    }
+
+    static IeDialog mentionsDialog(Context ctx, List<String> usernames) {
+        IeDialog dlg = new IeDialog(ctx)
+                .title(I18n.t(ctx, R.string.ig_mention_dialog_title))
+                .message(usernames.isEmpty()
+                        ? I18n.t(ctx, R.string.ig_mention_no_mentions)
+                        : count(ctx, usernames.size()));
+        for (String username : usernames) {
+            TextView row = new TextView(ctx);
+            row.setText("@" + username);
+            row.setTextColor(dlg.text);
+            row.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+            row.setTypeface(null, Typeface.BOLD);
+            row.setPadding(dlg.dp(16), dlg.dp(13), dlg.dp(14), dlg.dp(13));
+            row.setBackground(dlg.cardBg());
+            row.setOnClickListener(v -> ProfileAnalyzer.openProfile(ctx, username));
+            row.setOnLongClickListener(v -> {
+                CopyFeedback.copy(ctx, "username", username, I18n.t(ctx, R.string.ig_toast_mention_copied, username));
+                return true;
+            });
+            dlg.view(row);
+        }
+        if (usernames.size() > 1) {
+            dlg.primary(I18n.t(ctx, R.string.ig_mention_copy_all), () -> {
+                StringBuilder sb = new StringBuilder();
+                for (String u : usernames) sb.append("@").append(u).append("\n");
+                CopyFeedback.copy(ctx, "mentions", sb.toString().trim(), R.string.ig_toast_all_mentions_copied);
+            });
+        }
+        return dlg;
+    }
+
+    private static String count(Context ctx, int n) {
+        try {
+            return I18n.moduleResources(ctx).getQuantityString(R.plurals.ig_mention_count, n, n);
+        } catch (Throwable t) {
+            return String.valueOf(n);
+        }
     }
 
 }

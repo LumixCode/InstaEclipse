@@ -1,8 +1,6 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import ps.reso.instaeclipse.xposedcompat.AndroidAppHelper;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Typeface;
@@ -11,7 +9,6 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
@@ -40,8 +37,14 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.text.CopyFeedback;
 import ps.reso.instaeclipse.utils.text.TimestampFormat;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+
+import static ps.reso.instaeclipse.mods.misc.StoryInfoPolicy.find;
+import static ps.reso.instaeclipse.mods.misc.StoryInfoPolicy.num;
+import static ps.reso.instaeclipse.mods.misc.StoryInfoPolicy.plain;
+import static ps.reso.instaeclipse.mods.misc.StoryInfoPolicy.str;
 
 /**
  * Story ⋯ menu extras: "Story Info" (exact times, music, location, hashtags, reshare source, app,
@@ -284,37 +287,6 @@ public class StoryInfoHook {
         return out;
     }
 
-    /** First value under {@code key} anywhere in the tree (depth-first). */
-    static Object find(Object tree, String key) {
-        if (tree instanceof Map<?, ?> m) {
-            Object v = m.get(key);
-            if (v != null) return v;
-            for (Object c : m.values()) { Object r = find(c, key); if (r != null) return r; }
-        } else if (tree instanceof List<?> l) {
-            for (Object c : l) { Object r = find(c, key); if (r != null) return r; }
-        }
-        return null;
-    }
-
-    static String str(Object tree, String key) {
-        Object v = find(tree, key);
-        if (v == null || v instanceof Map || v instanceof List) return null;
-        String s = v.toString().trim();
-        return s.isEmpty() ? null : s;
-    }
-
-    private static String plain(Object v) {
-        if (v == null || v instanceof Map || v instanceof List) return null;
-        String s = v.toString().trim();
-        return s.isEmpty() ? null : s;
-    }
-
-    private static Long num(Object v) {
-        if (v instanceof Number n) return n.longValue();
-        if (v instanceof String s) try { return (long) Double.parseDouble(s); } catch (Throwable ignored) {}
-        return null;
-    }
-
     private static String time(Context ctx, Object v) {
         Long secs = num(v);
         if (secs == null || secs <= 0) return null;
@@ -433,36 +405,11 @@ public class StoryInfoHook {
     public static boolean addMusic(IeDialog dlg, Context ctx, Object media) {
         ensureGetters();
         String[] song;
-        try { song = music(media); } catch (Throwable t) { return false; }
+        try { song = StoryInfoPolicy.music(k -> value(media, k)); } catch (Throwable t) { return false; }
         if (song == null) return false;
         row(dlg, ctx, R.string.ig_si_music, song[0], null);
         if (song[1] != null) dlg.view(musicLinks(dlg, ctx, song[1]));
         return true;
-    }
-
-    /** {display line, search query (licensed songs only) or null}. */
-    private static String[] music(Object media) {
-        String[] keys = {"story_music_stickers", "story_music_lyric_stickers", "music_metadata", "clips_metadata"};
-        for (String k : keys) {
-            Object v = value(media, k);
-            if (v == null) continue;
-            Object licensed = find(v, "music_asset_info");
-            if (licensed != null) {
-                String title = str(licensed, "title");
-                String artist = str(licensed, "display_artist");
-                if (title != null) {
-                    String line = artist == null ? title : title + " — " + artist;
-                    return new String[]{line, artist == null ? title : title + " " + artist};
-                }
-            }
-            Object original = find(v, "original_sound_info");
-            if (original != null) {
-                String title = str(original, "original_audio_title");
-                String artist = str(find(original, "ig_artist"), "username");
-                if (title != null) return new String[]{artist == null ? title : title + " — @" + artist, null};
-            }
-        }
-        return null;
     }
 
     /** Spotify / YouTube Music / Apple Music search buttons for a song. */
@@ -526,103 +473,66 @@ public class StoryInfoHook {
 
     // ── Quiz / polls ─────────────────────────────────────────────────────────
 
+    private static List<Object> stickers(Object media, String key, String inner) {
+        List<Object> out = new ArrayList<>();
+        for (Object item : list(media, key)) {
+            Object sticker = find(item, inner);
+            out.add(sticker == null ? item : sticker);
+        }
+        return out;
+    }
+
     private static void showQuiz(Context ctx, Object media) {
         IeDialog dlg = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_btn_quiz_answer));
-        for (Object quizItem : list(media, "story_quizs")) {
-            Object quiz = find(quizItem, "quiz_sticker");
-            if (quiz == null) quiz = quizItem;
+        for (Object quiz : stickers(media, "story_quizs", "quiz_sticker")) {
             String question = str(quiz, "question");
             if (question != null) dlg.view(heading(dlg, ctx, question));
-            Long correct = num(find(quiz, "correct_answer"));
-            Long mine = num(find(quiz, "viewer_answer"));
-            Object tallies = find(quiz, "tallies");
-            if (!(tallies instanceof List<?> opts)) continue;
-            long total = total(opts);
-            for (int i = 0; i < opts.size(); i++) {
-                Object o = opts.get(i);
-                String text = str(o, "text");
-                if (text == null) text = "#" + (i + 1);
-                Long count = num(find(o, "count"));
-                boolean ok = correct != null && correct == i;
-                boolean picked = mine != null && mine == i;
-                int fill = ok ? 0x8C30D158 : picked ? withAlpha(dlg.accent, 0x8C) : withAlpha(dlg.text, 0x22);
-                dlg.view(bar(dlg, ctx, (ok ? "✓  " : "") + text + (picked ? "  •" : ""),
-                        votes(count, total), fraction(count, total), fill, ok, text));
+            List<StoryInfoPolicy.Choice> choices = StoryInfoPolicy.quiz(quiz);
+            for (StoryInfoPolicy.Choice c : choices) {
+                int fill = c.correct ? 0x8C30D158 : c.picked ? withAlpha(dlg.accent, 0x8C) : withAlpha(dlg.text, 0x22);
+                dlg.view(bar(dlg, ctx, c, fill));
             }
-            if (mine != null) dlg.view(note(dlg, ctx, "•  " + I18n.t(ctx, R.string.ig_si_your_answer)));
+            if (StoryInfoPolicy.anyPicked(choices))
+                dlg.view(note(dlg, ctx, "•  " + I18n.t(ctx, R.string.ig_si_your_answer)));
         }
         dlg.show();
     }
 
     private static void showPolls(Context ctx, Object media) {
+        pollDialog(ctx, stickers(media, "story_polls", "poll_sticker")).show();
+    }
+
+    static IeDialog pollDialog(Context ctx, List<Object> polls) {
         IeDialog dlg = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_btn_poll_results));
-        for (Object pollItem : list(media, "story_polls")) {
-            Object poll = find(pollItem, "poll_sticker");
-            if (poll == null) poll = pollItem;
+        for (Object poll : polls) {
             String question = str(poll, "question");
             if (question != null) dlg.view(heading(dlg, ctx, question));
-            Long mine = num(find(poll, "viewer_vote"));
-            Object tallies = find(poll, "tallies");
-            if (!(tallies instanceof List<?> opts)) continue;
-            long total = total(opts);
-            long best = 0;
-            for (Object o : opts) { Long c = num(find(o, "count")); if (c != null && c > best) best = c; }
-            for (int i = 0; i < opts.size(); i++) {
-                Object o = opts.get(i);
-                String text = str(o, "text");
-                if (text == null) text = "#" + (i + 1);
-                Long count = num(find(o, "count"));
-                boolean picked = mine != null && mine == i;
-                boolean leading = count != null && best > 0 && count == best;
-                int fill = picked ? withAlpha(dlg.accent, 0x8C) : withAlpha(dlg.text, leading ? 0x33 : 0x1C);
-                dlg.view(bar(dlg, ctx, (picked ? "✓  " : "") + text, votes(count, total),
-                        fraction(count, total), fill, leading, text));
+            List<StoryInfoPolicy.Choice> choices = StoryInfoPolicy.poll(poll);
+            if (choices.isEmpty()) continue;
+            for (StoryInfoPolicy.Choice c : choices) {
+                int fill = c.picked ? withAlpha(dlg.accent, 0x8C) : withAlpha(dlg.text, c.bold ? 0x33 : 0x1C);
+                dlg.view(bar(dlg, ctx, c, fill));
             }
+            if (StoryInfoPolicy.anyPicked(choices))
+                dlg.view(note(dlg, ctx, "•  " + I18n.t(ctx, R.string.ig_poll_your_vote)));
+            long total = StoryInfoPolicy.totalVotes(poll);
             if (total > 0) dlg.view(note(dlg, ctx, votesLine(ctx, total)));
         }
-        dlg.show();
+        return dlg;
     }
 
     private static void showSliders(Context ctx, Object media) {
         IeDialog dlg = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_btn_slider_results));
-        for (Object sliderItem : list(media, "story_sliders")) {
-            Object slider = find(sliderItem, "slider_sticker");
-            if (slider == null) slider = sliderItem;
-            String question = str(slider, "question");
-            String emoji = str(slider, "emoji");
-            dlg.view(heading(dlg, ctx, (emoji == null ? "" : emoji + "  ") + (question == null ? "" : question)));
-            Object avg = find(slider, "slider_vote_average");
-            Long count = num(find(slider, "slider_vote_count"));
-            Object mine = find(slider, "viewer_vote");
-            String e = emoji == null ? "" : emoji + "  ";
-            if (avg instanceof Number a && (count == null || count > 0)) {
-                int p = (int) Math.round(a.doubleValue() * 100);
-                dlg.view(bar(dlg, ctx, e + I18n.t(ctx, R.string.ig_si_average), p + "%",
-                        a.doubleValue(), withAlpha(dlg.text, 0x33), true, p + "%"));
+        for (Object slider : stickers(media, "story_sliders", "slider_sticker")) {
+            dlg.view(heading(dlg, ctx, StoryInfoPolicy.sliderHeading(slider)));
+            for (StoryInfoPolicy.Choice c : StoryInfoPolicy.slider(slider,
+                    I18n.t(ctx, R.string.ig_si_average), I18n.t(ctx, R.string.ig_si_your_answer))) {
+                dlg.view(bar(dlg, ctx, c, c.picked ? withAlpha(dlg.accent, 0x8C) : withAlpha(dlg.text, 0x33)));
             }
-            if (mine instanceof Number m && m.doubleValue() >= 0) {
-                int p = (int) Math.round(m.doubleValue() * 100);
-                dlg.view(bar(dlg, ctx, e + I18n.t(ctx, R.string.ig_si_your_answer), p + "%",
-                        m.doubleValue(), withAlpha(dlg.accent, 0x8C), false, p + "%"));
-            }
+            Long count = StoryInfoPolicy.sliderVotes(slider);
             if (count != null) dlg.view(note(dlg, ctx, votesLine(ctx, count)));
         }
         dlg.show();
-    }
-
-    private static long total(List<?> opts) {
-        long total = 0;
-        for (Object o : opts) { Long c = num(find(o, "count")); if (c != null) total += c; }
-        return total;
-    }
-
-    private static double fraction(Long count, long total) {
-        return count == null || total <= 0 ? 0 : (double) count / total;
-    }
-
-    private static String votes(Long count, long total) {
-        if (count == null) return "";
-        return total > 0 ? Math.round(count * 100.0 / total) + "%  ·  " + count : String.valueOf(count);
     }
 
     private static String votesLine(Context ctx, long n) {
@@ -634,28 +544,26 @@ public class StoryInfoHook {
         return (color & 0x00FFFFFF) | (alpha << 24);
     }
 
-    /** A result row whose background fills to {@code frac} (0..1), like Instagram's own poll sticker. */
-    private static android.view.View bar(IeDialog dlg, Context ctx, String left, String right,
-                                         double frac, int fill, boolean bold, String copyText) {
+    private static android.view.View bar(IeDialog dlg, Context ctx, StoryInfoPolicy.Choice choice, int fill) {
         LinearLayout row = new LinearLayout(ctx);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dlg.dp(16), dlg.dp(13), dlg.dp(16), dlg.dp(13));
         android.graphics.drawable.ClipDrawable filled = new android.graphics.drawable.ClipDrawable(
                 dlg.round(fill, 14), Gravity.START, android.graphics.drawable.ClipDrawable.HORIZONTAL);
-        filled.setLevel((int) Math.round(Math.max(0, Math.min(1, frac)) * 10000));
+        filled.setLevel((int) Math.round(Math.max(0, Math.min(1, choice.share)) * 10000));
         row.setBackground(new android.graphics.drawable.LayerDrawable(
                 new android.graphics.drawable.Drawable[]{dlg.round(dlg.field, 14), filled}));
 
         TextView l = new TextView(ctx);
-        l.setText(left);
+        l.setText(choice.label);
         l.setTextColor(dlg.text);
         l.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        if (bold) l.setTypeface(null, Typeface.BOLD);
+        if (choice.bold) l.setTypeface(null, Typeface.BOLD);
         row.addView(l, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView r = new TextView(ctx);
-        r.setText(right);
+        r.setText(choice.votes);
         r.setTextColor(dlg.text);
         r.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         r.setTypeface(null, Typeface.BOLD);
@@ -664,7 +572,7 @@ public class StoryInfoHook {
         rp.setMarginStart(dlg.dp(10));
         row.addView(r, rp);
 
-        row.setOnClickListener(v -> copy(ctx, copyText));
+        row.setOnClickListener(v -> copy(ctx, choice.copy));
         return row;
     }
 
@@ -690,10 +598,7 @@ public class StoryInfoHook {
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static void copy(Context ctx, String text) {
-        ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-        if (cm == null) return;
-        cm.setPrimaryClip(ClipData.newPlainText("story", text));
-        ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_si_copied), Toast.LENGTH_SHORT).show();
+        CopyFeedback.copy(ctx, "story", text, R.string.ig_si_copied);
     }
 
     private static void open(Context ctx, String url) {

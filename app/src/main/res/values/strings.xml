@@ -712,7 +712,7 @@ Stay on this screen until it finishes.</string>
     <string name="ig_dialog_misc_photo_zoom">Photo Zoom (Long-Press)</string>
 
     <!-- Comment Copy dialog (runs in IG process) -->
-    <string name="ig_comment_copy_title">Copy Comment</string>
+    <string name="ig_comment_copy_title">Copy comment</string>
     <string name="ig_comment_gif_downloading">Downloading comment media…</string>
     <string name="ig_comment_copy_media_link">Copy GIF / image link</string>
     <string name="ig_comment_copy_full">Copy Full Comment</string>
@@ -850,7 +850,7 @@ Stay on this screen until it finishes.</string>
     <string name="ig_story_download_video_music">Download video with music</string>
 
     <!-- Story mentions -->
-    <string name="ig_btn_view_mentions">View Mentions</string>
+    <string name="ig_btn_view_mentions">View mentions</string>
     <string name="ig_toast_mention_copied">@%1$s copied</string>
     <string name="ig_toast_all_mentions_copied">All mentions copied</string>
 

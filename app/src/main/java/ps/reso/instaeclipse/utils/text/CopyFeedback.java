@@ -31,6 +31,10 @@ public final class CopyFeedback {
         }
     }
 
+    public static void copy(Context ctx, String label, String text, CharSequence toastText) {
+        copy(ctx, ClipData.newPlainText(label, text), toastText);
+    }
+
     public static void copy(Context ctx, ClipData clip, CharSequence toastText) {
         ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm == null) return;
