@@ -6,8 +6,11 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -32,7 +35,7 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
  */
 public class GhostStorySeenHook {
 
-    private static final String CACHE_KEY        = "GhostStorySeen_v2";     // modern: store class name
+    private static final String CACHE_KEY = "GhostStorySeen_v3";
 
     public void handleStorySeenBlock(DexKitBridge bridge) {
         // Fast path: whichever path was resolved+cached last (per IG version).
@@ -42,11 +45,12 @@ public class GhostStorySeenHook {
                 try {
                     Class<?> storeClass = Class.forName(storeName, false, Module.hostClassLoader);
                     int n = hookStoreSendersScopedTo(storeClass);
-                    ModuleLog.line("(InstaEclipse | StoryBlock): " + (n > 0 ? "✅ ready"
-                            : "❌ Could not turn on hiding story views: nothing to block was found (saved lookup)"));
                     ModuleLog.detail("(InstaEclipse | StoryBlock): hooked (cached) " + n + " sender(s) on " + storeName);
-                    FeatureStatusTracker.setHooked("GhostStories");
-                    return;
+                    if (n > 0) {
+                        ModuleLog.ok("(InstaEclipse | StoryBlock): ready");
+                        FeatureStatusTracker.setHooked("GhostStories");
+                        return;
+                    }
                 } catch (Throwable t) {
                     ModuleLog.detail("(InstaEclipse | StoryBlock): cached modern resolve failed: " + t.getMessage());
                 }
@@ -75,12 +79,23 @@ public class GhostStorySeenHook {
             if (builder == null) return false;
 
             String itemClassName = builder.getClassName();
-            String storeClassName = null;
+            Set<String> names = new LinkedHashSet<>();
             for (MethodData caller : DexKitQueryCache.callers(bridge, builder)) {
-                String cn = caller.getClassName();
-                if (cn != null && !cn.equals(itemClassName)) { storeClassName = cn; break; }
+                if (caller.getClassName() != null) names.add(caller.getClassName());
             }
-            if (storeClassName == null) return false;
+            List<StorySeenStorePick.Caller> callers = new ArrayList<>();
+            for (String name : names) {
+                try {
+                    callers.add(StorySeenStorePick.shape(Class.forName(name, false, Module.hostClassLoader)));
+                } catch (Throwable t) {
+                    ModuleLog.detail("(InstaEclipse | StoryBlock): caller " + name + " unreadable: " + t);
+                }
+            }
+            String storeClassName = StorySeenStorePick.pick(itemClassName, callers);
+            if (storeClassName == null) {
+                ModuleLog.detail("(InstaEclipse | StoryBlock): no single store among callers " + names);
+                return false;
+            }
 
             Class<?> storeClass = Class.forName(storeClassName, false, Module.hostClassLoader);
             int n = hookStoreSendersScopedTo(storeClass);

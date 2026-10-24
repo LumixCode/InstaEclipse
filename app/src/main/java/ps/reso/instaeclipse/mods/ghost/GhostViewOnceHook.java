@@ -7,7 +7,6 @@ import org.luckypray.dexkit.result.ClassDataList;
 import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
-import java.util.List;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -23,7 +22,7 @@ public class GhostViewOnceHook {
     public void handleViewOnceBlock(DexKitBridge bridge) {
         if (DexKitCache.isCacheValid()) {
             Method cached = DexKitCache.loadMethod("GhostViewOnce", Module.hostClassLoader);
-            if (cached != null) {
+            if (cached != null && isReporter(cached)) {
                 XposedBridge.hookMethod(cached, buildViewOnceHook());
                 ModuleLog.ok("(InstaEclipse | ViewOnce): ready");
                 ModuleLog.detail("(InstaEclipse | ViewOnce): hooked (cached): "
@@ -44,58 +43,51 @@ public class GhostViewOnceHook {
             return;
         }
 
-        // Legacy fallback (IG 436 and older): the reporter inlined the marker name
-        // "visual_item_seen" rather than the REST path. Same (3-param, void) shape.
-        if (tryHookViewOnce(bridge,
-                FindMethod.create().matcher(MethodMatcher.create()
-                        .usingStrings("visual_item_seen")),
-                "visual_item_seen")) {
-            return;
-        }
-
         ModuleLog.error("(InstaEclipse | ViewOnce): Could not turn on hiding view-once opens: not supported by this Instagram version");
     }
 
-    /**
-     * Finds a (3-param, void) method matching the query and hooks it. Both anchors resolve
-     * to a visual-only "report seen" handler, so unconditional setResult(null) is safe.
-     */
     private boolean tryHookViewOnce(DexKitBridge bridge, FindMethod query, String tag) {
         try {
-            List<MethodData> methods = DexKitQueryCache.findMethod(bridge, query);
-            for (MethodData method : methods) {
-                if (method.getParamTypes().size() != 3) continue;
-                if (!String.valueOf(method.getReturnType()).contains("void")) continue;
-
-                Method reflectMethod;
+            Method reporter = null;
+            for (MethodData method : DexKitQueryCache.findMethod(bridge, query)) {
+                Method candidate;
                 try {
-                    reflectMethod = method.getMethodInstance(Module.hostClassLoader);
+                    candidate = method.getMethodInstance(Module.hostClassLoader);
                 } catch (Throwable e) {
                     continue;
                 }
-
-                DexKitCache.saveMethod("GhostViewOnce", reflectMethod);
-                XposedBridge.hookMethod(reflectMethod, buildViewOnceHook());
-                ModuleLog.ok("(InstaEclipse | ViewOnce): ready");
-                ModuleLog.detail("(InstaEclipse | ViewOnce): hooked (" + tag + "): "
-                        + method.getClassName() + "." + method.getName());
-                FeatureStatusTracker.setHooked("GhostViewOnce");
-                return true;
+                if (!isReporter(candidate) || candidate.equals(reporter)) continue;
+                if (reporter != null) {
+                    ModuleLog.detail("(InstaEclipse | ViewOnce): lookup (" + tag + ") ambiguous");
+                    return false;
+                }
+                reporter = candidate;
             }
+            if (reporter == null) return false;
+            DexKitCache.saveMethod("GhostViewOnce", reporter);
+            XposedBridge.hookMethod(reporter, buildViewOnceHook());
+            ModuleLog.ok("(InstaEclipse | ViewOnce): ready");
+            ModuleLog.detail("(InstaEclipse | ViewOnce): hooked (" + tag + "): "
+                    + reporter.getDeclaringClass().getName() + "." + reporter.getName());
+            FeatureStatusTracker.setHooked("GhostViewOnce");
+            return true;
         } catch (Throwable e) {
             ModuleLog.detail("(InstaEclipse | ViewOnce): lookup (" + tag + ") failed: " + e);
         }
         return false;
     }
 
+    static boolean isReporter(Method method) {
+        Class<?>[] params = method.getParameterTypes();
+        return method.getReturnType() == void.class && params.length == 3
+                && !java.lang.reflect.Modifier.isStatic(method.getModifiers())
+                && completionMethod(params[1]) != null;
+    }
+
     private static XC_MethodHook buildViewOnceHook() {
         return new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                // The hooked method is the visual/view-once seen-reporter only (selected via
-                // "raven_media" on 447 / hardcoded "visual_item_seen" on 436). Skipping it
-                // suppresses just the view-once "seen/opened" report; voice/other sends are
-                // different methods and are untouched.
                 if (FeatureFlags.isGhostViewOnce) skipMutation(param, "ViewOnce");
             }
         };

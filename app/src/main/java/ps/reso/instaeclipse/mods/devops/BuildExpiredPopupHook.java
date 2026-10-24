@@ -19,7 +19,8 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 public class BuildExpiredPopupHook {
 
     private static final String CACHE_SHOW  = "BuildExpiredShow";
-    private static final String CACHE_CHECK = "BuildExpiredCheck";
+    private static final String CACHE_SNOOZE = "BuildExpiredSnooze_v1";
+    private static final String CACHE_SNOOZE_DISABLED = "BuildExpiredSnoozeDisabled_v1";
 
     public void install(DexKitBridge bridge, ClassLoader classLoader) {
 
@@ -56,13 +57,12 @@ public class BuildExpiredPopupHook {
             if (show != null) {
                 XposedBridge.hookMethod(show, noOpHook);
                 FeatureStatusTracker.setHooked("RemoveBuildExpiredPopup");
-                hookedMain = true;
+                for (String key : List.of(CACHE_SNOOZE, CACHE_SNOOZE_DISABLED)) {
+                    Method check = DexKitCache.loadMethod(key, classLoader);
+                    if (check != null) XposedBridge.hookMethod(check, falseHook);
+                }
+                return;
             }
-            Method check = DexKitCache.loadMethod(CACHE_CHECK, classLoader);
-            if (check != null) {
-                XposedBridge.hookMethod(check, falseHook);
-            }
-            if (hookedMain) return;
         }
 
         // ── DexKit path ───────────────────────────────────────────────────────
@@ -96,28 +96,32 @@ public class BuildExpiredPopupHook {
                 ModuleLog.warn("(IE|BuildExpired) The popup itself was not found in this Instagram version; only its expiry check is turned off");
             }
 
-            // Secondary: hook the snooze-expired boolean check
-            List<MethodData> checkMethods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                    .matcher(MethodMatcher.create()
-                            .usingStrings("snooze_expiration_lockout_manager")
-                            .returnType("boolean")));
-
-            for (MethodData md : checkMethods) {
-                Method method;
-                try { method = md.getMethodInstance(classLoader); } catch (Throwable e) { continue; }
-
-                XposedBridge.hookMethod(method, falseHook);
-                DexKitCache.saveMethod(CACHE_CHECK, method);
-                ModuleLog.detail("(IE|BuildExpired) hooked snooze-check → "
-                        + md.getClassName() + "." + md.getName());
-                if (!hookedMain) {
-                    FeatureStatusTracker.setHooked("RemoveBuildExpiredPopup");
-                }
-                break;
-            }
-
+            boolean snooze = hookCheck(bridge, classLoader, "snooze_expiration_lockout_manager", CACHE_SNOOZE, falseHook);
+            hookCheck(bridge, classLoader, "disabled_snooze_expiration_lockout_manager", CACHE_SNOOZE_DISABLED, falseHook);
+            if (!hookedMain && snooze) FeatureStatusTracker.setHooked("RemoveBuildExpiredPopup");
         } catch (Throwable t) {
             ModuleLog.error("(IE|BuildExpired) Could not block the expired-version popup", t);
+        }
+    }
+
+    private static boolean hookCheck(DexKitBridge bridge, ClassLoader classLoader, String key, String cacheKey,
+                                     XC_MethodHook hook) {
+        try {
+            List<MethodData> checks = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                    .matcher(MethodMatcher.create().usingEqStrings(key).returnType("boolean")));
+            if (checks.size() != 1) {
+                ModuleLog.detail("(IE|BuildExpired) " + key + " check: " + checks.size() + " match(es), not hooked");
+                return false;
+            }
+            Method method = checks.get(0).getMethodInstance(classLoader);
+            XposedBridge.hookMethod(method, hook);
+            DexKitCache.saveMethod(cacheKey, method);
+            ModuleLog.detail("(IE|BuildExpired) hooked " + key + " check → "
+                    + method.getDeclaringClass().getName() + "." + method.getName());
+            return true;
+        } catch (Throwable t) {
+            ModuleLog.detail("(IE|BuildExpired) " + key + " check not hooked: " + t);
+            return false;
         }
     }
 }

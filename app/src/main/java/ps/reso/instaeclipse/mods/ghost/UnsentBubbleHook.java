@@ -32,14 +32,14 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 final class UnsentBubbleHook {
     private static final long UNSENT_RED = (long) UnsentMediaMark.COLOR << 32;
     private static final String ITEM = "instagram.features.direct.messagethread.TextMessageComposableHolder.Item (TextMessageComposableHolder.kt:61)";
-    private static final String PROVIDED_VALUES = "instagram.features.direct.messagethread.MessageComposableHolder.getProvidedValues (MessageComposableHolder.kt:174)";
+    private static final String PROVIDED_VALUES = "instagram.features.direct.messagethread.MessageComposableHolder.getProvidedValues (MessageComposableHolder.kt:167)";
     private static final String TEXT = "com.instagram.direct.messagethread.compose.TextMessageInternal (TextMessage.kt:134)";
     // Line-free: the text and media lambdas differ only by a line number that drifts per build.
     private static final String BACKGROUND = "com.instagram.direct.messagethread.compose.background.bubbleBackground.<anonymous> (MessageBubbleBackground.kt:";
     private static final String VOICE = "instagram.features.direct.thread.feature.messagelist.message.voice.ui.VoiceMessage (VoiceMessage.kt:105)";
     private static final String VOICE_CONTENT = "instagram.features.direct.thread.feature.messagelist.message.voice.ui.VoiceMessage.<anonymous> (VoiceMessage.kt:246)";
-    private static final String PORTRAIT = "instagram.features.direct.thread.feature.messagelist.message.portraitxma.ui.PortraitXmaMessage (PortraitXmaMessage.kt:158)";
-    private static final String GENERIC = "instagram.features.direct.thread.feature.messagelist.message.genericxma.ui.GenericXmaMessage (GenericXmaMessage.kt:258)";
+    private static final String PORTRAIT = "instagram.features.direct.thread.feature.messagelist.message.portraitxma.ui.PortraitXmaMessage (PortraitXmaMessage.kt:179)";
+    private static final String GENERIC = "instagram.features.direct.thread.feature.messagelist.message.genericxma.ui.GenericXmaMessage (GenericXmaMessage.kt:267)";
     private static final List<String> PREVIEWS = List.of(PORTRAIT, GENERIC);
     private final Map<View, State> views = Collections.synchronizedMap(new WeakHashMap<>());
     private final ThreadLocal<State> bindingState = new ThreadLocal<>();
