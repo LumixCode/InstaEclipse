@@ -42,8 +42,10 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook;
+import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.mods.ui.utils.LifecycleHookUtil;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker;
@@ -53,6 +55,7 @@ import ps.reso.instaeclipse.utils.ghost.ThreadNames;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.toast.IeToast;
+import ps.reso.instaeclipse.utils.ui.IgTint;
 
 /**
  * Hides explicitly selected Direct threads from Instagram's inbox. An open chat offers
@@ -473,12 +476,18 @@ public class HideChatsHook {
     }
 
     public static Map<String, String> knownThreads() {
-        return knownThreads.list(null);
+        Activity top = UIHookManager.topActivity();
+        Map<String, String> chats = knownThreads.list(top == null ? null : currentAccount(top));
+        for (Map.Entry<String, String> chat : chats.entrySet()) {
+            if (chat.getValue().isEmpty()) chat.setValue(ThreadNames.get(chat.getKey()));
+        }
+        return chats;
     }
 
-    private static void rememberThread(String id, String title) {
+    private static void rememberThread(Activity activity, String id, String title) {
         if (id == null) return;
-        String cleanTitle = knownThreads.opened(null, id, title);
+        String account = knownThreads.has(id) ? null : currentAccount(activity);
+        String cleanTitle = knownThreads.opened(account, id, title);
         if (!cleanTitle.isEmpty()) ThreadNames.put(id, cleanTitle);
     }
 
@@ -668,7 +677,7 @@ public class HideChatsHook {
             String threadId = foreground != null ? foreground.threadId : resolveVisibleThreadId(activity, header);
             if (threadId == null) return false;
 
-            rememberThread(threadId, threadTitle(header));
+            rememberThread(activity, threadId, threadTitle(header));
             boolean hide = !HiddenThreads.isHidden(threadId);
             MenuBinding bound = menuBindings.get(activity);
             if (bound != null && bound.header.get() == header && threadId.equals(bound.threadId)
@@ -704,7 +713,7 @@ public class HideChatsHook {
         String liveTitle = knownThreadTitle(liveId);
         if (liveTitle.isEmpty()) liveTitle = threadTitle(boundHeader);
         HiddenThreads.setHidden(liveId, liveTitle, hide);
-        rememberThread(liveId, liveTitle);
+        rememberThread(activity, liveId, liveTitle);
         // Refreshes the inbox and re-adds this entry with the opposite label.
         refreshVisibleButtons();
         IeToast.makeText(activity, text(activity, hide ? R.string.ig_hide_chat_hidden : R.string.ig_hide_chat_unhidden),
@@ -739,6 +748,8 @@ public class HideChatsHook {
                     Gravity.TOP | Gravity.LEFT));
             inboxControls.put(activity, binding);
         }
+        View accountName = accountName(activity, decor);
+        IgTint.copy(accountName, binding.control);
         int[] contentLocation = new int[2];
         content.getLocationOnScreen(contentLocation);
         ViewGroup.LayoutParams params = binding.control.getLayoutParams();
@@ -747,7 +758,7 @@ public class HideChatsHook {
             params.height = area.height();
             binding.control.setLayoutParams(params);
         }
-        int nameMiddle = accountNameMiddle(activity, decor);
+        int nameMiddle = accountNameMiddle(accountName);
         placeBackArrow(activity, binding.control, area.width(), area.height(),
                 nameMiddle < 0 ? -1 : nameMiddle - area.top);
         binding.control.setX(area.left - contentLocation[0]);
@@ -756,8 +767,7 @@ public class HideChatsHook {
     }
 
     private static void renderInboxControl(Activity activity, ImageView control) {
-        control.setImageDrawable(ps.reso.instaeclipse.utils.dialog.DialogUtils.moduleIcon(
-                activity, R.drawable.ic_arrow_back, Color.WHITE));
+        control.setImageDrawable(ModuleResources.icon(activity, R.drawable.ic_arrow_back));
         control.setContentDescription(text(activity, R.string.ig_hidden_inbox_show_all));
         control.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
     }
@@ -774,19 +784,22 @@ public class HideChatsHook {
         control.setPadding(left, top, Math.max(0, width - left - size), Math.max(0, height - top - size));
     }
 
-    /** The vertical middle of the account name in the inbox header, on screen, or -1. */
-    private static int accountNameMiddle(Activity activity, View decor) {
+    private static View accountName(Activity activity, View decor) {
         View bar = ThreadHeaderMenu.findShown(decor, inboxActionBarId);
-        if (bar == null) return -1;
+        if (bar == null) return null;
         for (String name : ACCOUNT_NAME_IDS) {
             int id = ps.reso.instaeclipse.utils.ui.ResIds.id(activity, name);
             View title = id == 0 ? null : bar.findViewById(id);
-            if (title == null || !title.isShown() || title.getHeight() == 0) continue;
-            int[] at = new int[2];
-            title.getLocationOnScreen(at);
-            return at[1] + title.getHeight() / 2;
+            if (title != null && title.isShown() && title.getHeight() != 0) return title;
         }
-        return -1;
+        return null;
+    }
+
+    private static int accountNameMiddle(View title) {
+        if (title == null) return -1;
+        int[] at = new int[2];
+        title.getLocationOnScreen(at);
+        return at[1] + title.getHeight() / 2;
     }
 
     private static void setHiddenOnlyMode(Activity activity, boolean enabled) {

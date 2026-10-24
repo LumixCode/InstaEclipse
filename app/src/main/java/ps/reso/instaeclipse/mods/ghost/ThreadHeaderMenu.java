@@ -2,7 +2,6 @@ package ps.reso.instaeclipse.mods.ghost;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
@@ -24,12 +23,14 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.JitGuard;
+import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.IgTint;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
@@ -60,8 +61,13 @@ final class ThreadHeaderMenu {
     @SuppressLint({"AppCompatCustomView", "ViewConstructor"}) // runs inside Instagram, built in code
     private static final class MenuButton extends android.widget.ImageView {
         final Map<String, Entry> entries = new LinkedHashMap<>();
+        WeakReference<View> tintFrom;
 
         MenuButton(android.content.Context c) { super(c); }
+
+        void tint() {
+            IgTint.copy(tintFrom != null ? tintFrom.get() : null, this);
+        }
     }
 
     // Header gesture state. Touch dispatch and the replay both run on the main thread.
@@ -116,6 +122,7 @@ final class ThreadHeaderMenu {
             Map<String, Entry> m = entriesOf(btn);
             if (m == null) return false;
             m.put(key, new Entry(label, action));
+            if (btn instanceof MenuButton b) b.tint();
             btn.setVisibility(buttonVisibility()); // the option may have changed since the chat opened
             return true;
         } catch (Throwable t) {
@@ -168,10 +175,22 @@ final class ThreadHeaderMenu {
             insertAt = 0;
         } else return null;
 
+        View btn = button(a, back != null ? back : header);
+        try { target.addView(btn, Math.min(insertAt, target.getChildCount())); }
+        catch (Throwable t) { target.addView(btn); }
+        lastHeader = new WeakReference<>(header);
+        ModuleLog.probe("(IE|ThreadMenu) button injected in " + target.getClass().getSimpleName()
+                + (FeatureFlags.hideChatMenuButton ? " (hidden)" : ""));
+        return btn;
+    }
+
+    static android.widget.ImageView button(Activity a, View tintFrom) {
         MenuButton btn = new MenuButton(a);
         btn.setTag(TAG);
-        Drawable icon = ps.reso.instaeclipse.utils.dialog.DialogUtils.moduleIcon(R.drawable.ic_tune, Color.WHITE);
+        Drawable icon = ModuleResources.icon(a, R.drawable.ic_tune);
         if (icon != null) btn.setImageDrawable(icon);
+        btn.tintFrom = new WeakReference<>(tintFrom);
+        btn.tint();
         btn.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
         float d = a.getResources().getDisplayMetrics().density;
         int pad = (int) (9 * d);
@@ -183,11 +202,6 @@ final class ThreadHeaderMenu {
         btn.setLayoutParams(lp);
         btn.setVisibility(buttonVisibility());
         btn.setOnClickListener(v -> show(v));
-        try { target.addView(btn, Math.min(insertAt, target.getChildCount())); }
-        catch (Throwable t) { target.addView(btn); }
-        lastHeader = new WeakReference<>(header);
-        ModuleLog.probe("(IE|ThreadMenu) button injected in " + target.getClass().getSimpleName()
-                + (FeatureFlags.hideChatMenuButton ? " (hidden)" : ""));
         return btn;
     }
 
