@@ -25,4 +25,11 @@
     <string name="ie_toast_not_working" tools:ignore="MissingTranslation">Not working: %1$s</string>
     <string name="ie_toast_more" tools:ignore="MissingTranslation">+%1$d more</string>
     <string name="ie_toast_starting" tools:ignore="MissingTranslation">%1$d still starting</string>
+    <string name="ig_restart_to_apply_both" tools:ignore="MissingTranslation">Applies after restarting Instagram</string>
+    <string name="ig_restart_bar" tools:ignore="MissingTranslation">Restart Instagram to apply</string>
+    <string name="ig_restart_bar_action" tools:ignore="MissingTranslation">Restart</string>
+    <string name="menu_health_broken" tools:ignore="MissingTranslation">Could not attach to this Instagram version</string>
+    <string name="menu_health_restart" tools:ignore="MissingTranslation">Turned on after Instagram started – restart to apply</string>
+    <string name="menu_health_locks" tools:ignore="MissingTranslation">Locks need a passcode</string>
+    <string name="menu_health_unconfirmed" tools:ignore="MissingTranslation">Not confirmed yet</string>
 </resources>

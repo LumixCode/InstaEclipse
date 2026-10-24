@@ -92,6 +92,12 @@ public final class IeSheet {
     private final FrameLayout slot;
     private final View bottom;
     private final ArrayDeque<Page> stack = new ArrayDeque<>();
+    private final Handler main = new Handler(Looper.getMainLooper());
+    private final Runnable refreshBar = this::refreshBar;
+    private final Runnable onStatus = () -> {
+        main.removeCallbacks(refreshBar);
+        main.post(refreshBar);
+    };
     private Runnable onExit;
 
     private IeSheet(Context context) {
@@ -165,6 +171,7 @@ public final class IeSheet {
 
         slot = new FrameLayout(context);
         slot.setVisibility(View.GONE);
+        slot.addView(restartBar(context, p));
         sheet.addView(slot, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         bottom = new View(context);
@@ -190,7 +197,13 @@ public final class IeSheet {
         dialog.setContentView(root);
         dialog.setCancelable(true);
         dialog.setCanceledOnTouchOutside(true);
+        dialog.setOnShowListener(d -> {
+            ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.addListener(onStatus);
+            refreshBar();
+        });
         dialog.setOnDismissListener(d -> {
+            ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.removeListener(onStatus);
+            main.removeCallbacks(refreshBar);
             if (current == this) current = null;
         });
         Window window = dialog.getWindow();
@@ -266,6 +279,56 @@ public final class IeSheet {
 
     ViewGroup footer() {
         return slot;
+    }
+
+    void refreshBar() {
+        boolean pending;
+        try {
+            pending = !DialogUtils.restartPending().isEmpty();
+        } catch (Throwable t) {
+            pending = false;
+        }
+        slot.setVisibility(pending ? View.VISIBLE : View.GONE);
+    }
+
+    private View restartBar(Context context, IePalette p) {
+        LinearLayout bar = new LinearLayout(context);
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setMinimumHeight(dp(context, 52));
+        bar.setPaddingRelative(dp(context, 16), dp(context, 6), dp(context, 8), dp(context, 6));
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(p.card);
+        background.setCornerRadius(dp(context, 14));
+        background.setStroke(Math.max(1, dp(context, 1)), p.line);
+        bar.setBackground(background);
+
+        TextView message = new TextView(context);
+        message.setText(I18n.t(context, R.string.ig_restart_bar));
+        message.setTextColor(p.text);
+        message.setTextSize(14);
+        bar.addView(message, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView action = new TextView(context);
+        action.setText(I18n.t(context, R.string.ig_restart_bar_action));
+        action.setTextColor(p.onAccent);
+        action.setTextSize(14);
+        action.setTypeface(Typeface.DEFAULT_BOLD);
+        action.setGravity(Gravity.CENTER);
+        action.setMinHeight(dp(context, 40));
+        action.setPadding(dp(context, 16), dp(context, 8), dp(context, 16), dp(context, 8));
+        GradientDrawable pill = new GradientDrawable();
+        pill.setColor(p.accent);
+        pill.setCornerRadius(dp(context, 20));
+        action.setBackground(pill);
+        action.setOnClickListener(v -> DialogUtils.restart(context, false));
+        bar.addView(action, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(dp(context, 8), dp(context, 6), dp(context, 8), 0);
+        bar.setLayoutParams(lp);
+        return bar;
     }
 
     public Page push(Page page) {

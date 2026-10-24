@@ -43,6 +43,7 @@ import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
+import ps.reso.instaeclipse.utils.feature.RestartPending;
 import ps.reso.instaeclipse.utils.ghost.GhostModeUtils;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -250,7 +251,8 @@ public class DialogUtils {
     private static String describe(Context context, FeatureCatalog.Item item) {
         String desc = item.desc != 0 ? I18n.t(context, item.desc) : null;
         if (item.restartOn == FeatureCatalog.Restart.NONE) return desc;
-        return lines(desc, I18n.t(context, R.string.ig_restart_to_apply_hint));
+        return lines(desc, I18n.t(context, item.restartOn == FeatureCatalog.Restart.BOTH
+                ? R.string.ig_restart_to_apply_both : R.string.ig_restart_to_apply_hint));
     }
 
     private static String subtitleOf(Context context, FeatureCatalog.Item item) {
@@ -574,21 +576,18 @@ public class DialogUtils {
     private static TextView healthChip(Context context) {
         IePalette p = IePalette.of(context);
         TextView health = statusChip(context, "", p.sub, v -> {
-            java.util.List<String> inactive = new java.util.ArrayList<>();
-            int[] count = featureCount(context, inactive);
+            Health now = health(context);
             StringBuilder msg = new StringBuilder();
-            if (inactive.isEmpty()) {
-                msg.append(I18n.t(context, R.string.menu_inactive_all_good));
-            } else {
-                msg.append(I18n.t(context, R.string.menu_inactive_hint)).append("\n");
-                java.util.Collections.sort(inactive);
-                for (String label : inactive) msg.append("\n•  ").append(label);
-            }
+            section(msg, I18n.t(context, R.string.menu_health_broken), now.broken);
+            section(msg, I18n.t(context, R.string.menu_health_restart), now.restart);
+            section(msg, I18n.t(context, R.string.menu_health_locks), now.locks);
+            section(msg, I18n.t(context, R.string.menu_health_unconfirmed), now.unconfirmed);
+            if (msg.length() == 0) msg.append(I18n.t(context, R.string.menu_inactive_all_good));
             try {
                 IeDialog dlg = new IeDialog(context)
-                        .title(I18n.t(context, R.string.menu_chip_active, count[0], count[1]))
+                        .title(I18n.t(context, R.string.menu_chip_active, now.active, now.total))
                         .message(msg.toString());
-                if (!inactive.isEmpty()) dlg.secondary(I18n.t(context, R.string.cat_rescan), () -> showRescan(context));
+                if (!now.broken.isEmpty()) dlg.secondary(I18n.t(context, R.string.cat_rescan), () -> showRescan(context));
                 dlg.primary(I18n.t(context, R.string.ig_dialog_ok), null);
                 dlg.show();
             } catch (Exception e) {
@@ -622,27 +621,87 @@ public class DialogUtils {
         return health;
     }
 
-    /** The health chip's count and colour now; hidden while no feature is switched on. */
-    private static void renderHealth(Context context, TextView health) {
-        int[] count = featureCount(context, null);
-        IePalette p = IePalette.of(context);
-        health.setVisibility(count[1] > 0 ? View.VISIBLE : View.GONE);
-        health.setText("●  " + I18n.t(context, R.string.menu_chip_active, count[0], count[1]));
-        health.setTextColor(IePalette.readable(count[0] == count[1] ? p.success : 0xFFFF9F0A, p.card, IePalette.TEXT));
+    private static void section(StringBuilder msg, String title, java.util.List<String> labels) {
+        if (labels.isEmpty()) return;
+        if (msg.length() > 0) msg.append("\n\n");
+        msg.append(title);
+        java.util.Collections.sort(labels);
+        for (String label : labels) msg.append("\n•  ").append(label);
     }
 
-    /** {active, total} of the switched-on features; the labels of the inactive ones go to {@code inactive}. */
-    private static int[] featureCount(Context context, java.util.List<String> inactive) {
+    private static void renderHealth(Context context, TextView health) {
+        Health now = health(context);
+        IePalette p = IePalette.of(context);
+        health.setVisibility(now.total > 0 ? View.VISIBLE : View.GONE);
+        health.setText("●  " + I18n.t(context, R.string.menu_chip_active, now.active, now.total));
+        int color = !now.broken.isEmpty() || !now.locks.isEmpty() ? 0xFFFF9F0A
+                : now.active == now.total ? p.success : p.sub;
+        health.setTextColor(IePalette.readable(color, p.card, IePalette.TEXT));
+    }
+
+    private static final class Health {
+        int active;
+        int total;
+        final java.util.List<String> broken = new java.util.ArrayList<>();
+        final java.util.List<String> restart = new java.util.ArrayList<>();
+        final java.util.List<String> locks = new java.util.ArrayList<>();
+        final java.util.List<String> unconfirmed = new java.util.ArrayList<>();
+    }
+
+    private static Health health(Context context) {
+        Health out = new Health();
         java.util.Map<String, Boolean> status = FeatureStatusTracker.getStatus();
-        int active = 0, total;
-        synchronized (status) {
-            total = status.size();
-            for (java.util.Map.Entry<String, Boolean> e : status.entrySet()) {
-                if (Boolean.TRUE.equals(e.getValue())) active++;
-                else if (inactive != null) inactive.add(FeatureStatusTracker.getLabel(context, e.getKey()));
+        java.util.Set<String> pending = restartPending();
+        boolean noCode = !LockFlows.hasPasscode();
+        out.total = status.size();
+        for (java.util.Map.Entry<String, Boolean> e : status.entrySet()) {
+            if (Boolean.TRUE.equals(e.getValue())) {
+                out.active++;
+                continue;
+            }
+            String label = FeatureStatusTracker.getLabel(context, e.getKey());
+            java.util.List<String> items = itemsWithStatus(e.getKey());
+            if (FeatureStatusTracker.isBroken(e.getKey())) out.broken.add(label);
+            else if (!java.util.Collections.disjoint(items, pending)) out.restart.add(label);
+            else if (noCode && anyLock(items)) out.locks.add(label);
+            else out.unconfirmed.add(label);
+        }
+        return out;
+    }
+
+    private static java.util.List<String> itemsWithStatus(String statusKey) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (FeatureCatalog.Category c : FeatureCatalog.CATEGORIES) {
+            for (FeatureCatalog.Item item : c.items()) {
+                for (String key : item.statusKeys) if (key.equals(statusKey)) out.add(item.key);
             }
         }
-        return new int[]{active, total};
+        return out;
+    }
+
+    private static boolean anyLock(java.util.List<String> keys) {
+        for (String key : keys) if (PasscodeRules.isLock(key)) return true;
+        return false;
+    }
+
+    private static java.util.Map<String, Boolean> restartRules;
+
+    static java.util.Set<String> restartPending() {
+        java.util.Map<String, Boolean> rules = restartRules;
+        if (rules == null) {
+            rules = new java.util.LinkedHashMap<>();
+            for (FeatureCatalog.Category c : FeatureCatalog.CATEGORIES) {
+                for (FeatureCatalog.Item item : c.items()) {
+                    if (item.restartOn != FeatureCatalog.Restart.NONE) {
+                        rules.put(item.key, item.restartOn == FeatureCatalog.Restart.ON_ONLY);
+                    }
+                }
+            }
+            rules.put("customFontPath", false);
+            rules.put("customEmojiPath", false);
+            restartRules = rules;
+        }
+        return RestartPending.pending(rules);
     }
 
     private static TextView statusChip(Context context, String text, int textColor, View.OnClickListener onClick) {
@@ -863,8 +922,6 @@ public class DialogUtils {
                     SettingsManager.saveAllFlags();
                     SettingsEvents.afterChange("spoofDevice");
                     if (label != null) label.setText(spoofDeviceLabel(context));
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(context,
-                            I18n.t(context, R.string.ig_toast_restart_manual), Toast.LENGTH_LONG).show();
                 })
                 .show();
     }
@@ -1864,8 +1921,6 @@ public class DialogUtils {
         SettingsManager.saveAllFlags();
         SettingsEvents.afterChange("storyRingColor");
         if (label != null) label.setText(storyRingColorLabel(context));
-        ps.reso.instaeclipse.utils.toast.IeToast.makeText(context,
-                I18n.t(context, R.string.ig_toast_restart_manual), Toast.LENGTH_SHORT).show();
     }
 
 

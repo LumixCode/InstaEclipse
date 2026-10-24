@@ -101,6 +101,7 @@ public final class DeviceSpoofHook {
 
     /** Called from Application.attach, before Instagram reads anything about the device. */
     public static void apply(ClassLoader classLoader) {
+        ps.reso.instaeclipse.utils.feature.RestartPending.capture("spoofDevice", FeatureFlags.spoofDevice);
         Profile p = profile();
         if (p == null) return;
         try {

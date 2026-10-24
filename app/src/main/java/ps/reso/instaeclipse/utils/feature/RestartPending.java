@@ -20,6 +20,10 @@ public final class RestartPending {
         return key == null ? null : SEEN.get(key);
     }
 
+    public static Set<String> pending(Map<String, Boolean> onOnly) {
+        return pending(onOnly, RestartPending::flag);
+    }
+
     public static Set<String> pending(Map<String, Boolean> onOnly, Function<String, Object> current) {
         Set<String> out = new TreeSet<>();
         for (Map.Entry<String, Boolean> rule : onOnly.entrySet()) {
@@ -31,6 +35,14 @@ public final class RestartPending {
             out.add(rule.getKey());
         }
         return out;
+    }
+
+    private static Object flag(String key) {
+        try {
+            return FeatureFlags.class.getField(key).get(null);
+        } catch (ReflectiveOperationException e) {
+            return null;
+        }
     }
 
     public static void resetForTest() {
