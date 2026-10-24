@@ -1,15 +1,15 @@
 package ps.reso.instaeclipse.mods.reels;
 
+import android.app.Activity;
+import android.content.Context;
+import android.content.ContextWrapper;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.TextUtils;
-import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
-import android.widget.TextView;
 
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
@@ -61,7 +61,8 @@ public final class ReelViewerHook {
     private static final FieldCache MEDIA_FIELDS = new FieldCache(MEDIA);
     private static final FieldCache HANDLER_FIELDS = new FieldCache(null);
     private static final Map<Class<?>, Method> MEDIA_IDS = new ConcurrentHashMap<>();
-    private static final Set<View> blockedRoots = Collections.newSetFromMap(new WeakHashMap<>());
+    private static final Map<View, ReelBlockCard> blockedRoots = new WeakHashMap<>();
+    private static volatile int viewsRecorded;
     private final Set<Object> players = Collections.newSetFromMap(new WeakHashMap<>());
     private final ReelSessions sessions = new ReelSessions();
     private final Map<View, ReelPagerGate> reelPagers = new WeakHashMap<>();
@@ -94,6 +95,7 @@ public final class ReelViewerHook {
                                     && (FeatureFlags.disableReels || FeatureFlags.dailyReelLimitAllowDM
                                     || (NightReelSchedule.isActive() && FeatureFlags.nightReelBlockAllowDM)))) return;
                             int remaining = DailyReelLimit.recordView(id);
+                            viewsRecorded++;
                             if (Looper.myLooper() == Looper.getMainLooper()) updatePagers();
                             else new Handler(Looper.getMainLooper()).post(ReelViewerHook.this::updatePagers);
                             if (remaining > 0) {
@@ -184,6 +186,9 @@ public final class ReelViewerHook {
         } catch (Throwable t) {
             ModuleLog.error("(IE|ReelLimit) Could not set up reel limits", t);
         }
+        if (FeatureFlags.disableReels || FeatureFlags.dailyReelLimitEnabled || FeatureFlags.nightReelBlockEnabled) {
+            ensureTouchGate();
+        }
     }
 
     /** True when no reel restriction is on and no pager lock or cover is left from an earlier one. */
@@ -193,12 +198,6 @@ public final class ReelViewerHook {
                 && !anyPagerLocked && blockedRoots.isEmpty();
     }
 
-    /**
-     * View overlays do not receive touch events. Consume events at blocked viewer roots so covered
-     * like/share controls cannot be triggered, while the app's navigation still works. Every view
-     * level of every touch passes through dispatchTouchEvent, so hook it only once a reel
-     * restriction is first used.
-     */
     private void ensureTouchGate() {
         if (touchGateInstalled) return;
         touchGateInstalled = true;
@@ -209,7 +208,11 @@ public final class ReelViewerHook {
                             JitGuard.tick(param.method);
                             if (idle()) return;
                             if (sessions.isRoot(param.thisObject)) updatePagers();
-                            if (blockedRoots.contains(param.thisObject)) param.setResult(true);
+                            ReelBlockCard card = blockedRoots.get(param.thisObject);
+                            if (card == null) return;
+                            View root = (View) param.thisObject;
+                            card.touch((MotionEvent) param.args[0], () -> goBack(root));
+                            param.setResult(true);
                         }
                     });
         } catch (Throwable t) {
@@ -217,49 +220,52 @@ public final class ReelViewerHook {
         }
     }
 
+    private static void goBack(View root) {
+        for (Context c = root.getContext(); c instanceof ContextWrapper w; c = w.getBaseContext()) {
+            if (c instanceof Activity activity) {
+                root.post(activity::onBackPressed);
+                return;
+            }
+        }
+    }
+
+    private record GateInputs(boolean disabled, boolean disabledAllowsDm, boolean night, int nightStart,
+                              int nightEnd, boolean nightAllowsDm, boolean daily, int limit, boolean dailyAllowsDm,
+                              boolean lockScroll, boolean dmReel, String mediaId, int views) {}
+
+    private static GateInputs inputs(ReelViewerSession session) {
+        return new GateInputs(FeatureFlags.disableReels, FeatureFlags.disableReelsExceptDM,
+                FeatureFlags.nightReelBlockEnabled, FeatureFlags.nightReelBlockStartMinutes,
+                FeatureFlags.nightReelBlockEndMinutes, FeatureFlags.nightReelBlockAllowDM,
+                FeatureFlags.dailyReelLimitEnabled, FeatureFlags.dailyReelLimit, FeatureFlags.dailyReelLimitAllowDM,
+                FeatureFlags.reelsLockScroll, session != null && session.isDmReel(),
+                session == null ? null : session.currentMediaId, viewsRecorded);
+    }
+
     private void watch(ViewGroup root, Object fragment) {
         try {
             ReelViewerSession session = sessionForConfig(viewerConfig(fragment));
             sessions.bindRoot(root, session);
             updatePagers();
-            TextView cover = new TextView(root.getContext());
-            cover.setBackgroundColor(0xFF17171B);
-            cover.setTextColor(0xFFFFFFFF);
-            cover.setTextSize(17);
-            cover.setGravity(Gravity.CENTER);
-            int padding = Math.round(24 * root.getResources().getDisplayMetrics().density);
-            cover.setPadding(padding, padding, padding, padding);
-            // The observer is window-wide: never cancel a draw, and do no work while reels are unrestricted.
+            ReelGateCache cache = new ReelGateCache(System::currentTimeMillis);
             ViewTreeObserver.OnPreDrawListener gate = () -> {
                 if (idle()) return true;
                 try {
                     ensureTouchGate();
-                    updatePagers();
-                    ReelBlockPolicy.Reason reason = blockReason(session);
-                    if (reason != ReelBlockPolicy.Reason.NONE) {
-                        CharSequence message = blockMessage(root.getContext(), reason);
-                        boolean changed = !TextUtils.equals(cover.getText(), message);
-                        if (changed) cover.setText(message);
-                        boolean added = blockedRoots.add(root);
-                        if (added) {
-                            root.getOverlay().add(cover);
-                            pauseBlockedPlayers();
-                        }
-                        if (added || changed || cover.getWidth() != root.getWidth()
-                                || cover.getHeight() != root.getHeight()) {
-                            cover.measure(View.MeasureSpec.makeMeasureSpec(root.getWidth(), View.MeasureSpec.EXACTLY),
-                                    View.MeasureSpec.makeMeasureSpec(root.getHeight(), View.MeasureSpec.EXACTLY));
-                            cover.layout(0, 0, root.getWidth(), root.getHeight());
-                        }
-                    } else if (blockedRoots.remove(root)) {
-                        root.getOverlay().remove(cover);
+                    GateInputs inputs = inputs(session);
+                    if (cache.expired(inputs)) {
+                        ReelBlockPolicy.Reason reason = cache.reason(inputs, () -> blockReason(session));
+                        updatePagers();
+                        if (reason != ReelBlockPolicy.Reason.NONE) block(root, reason);
+                        else unblock(root);
                     }
+                    ReelBlockCard card = blockedRoots.get(root);
+                    if (card != null) card.fit(root.getWidth(), root.getHeight());
                 } catch (Throwable t) {
                     ModuleLog.probe("(IE|ReelLimit) viewer gate failed: " + t.getClass().getSimpleName());
                 }
                 return true;
             };
-            // Scope the listener to the viewer's attachment, or every closed viewer keeps running it.
             View.OnAttachStateChangeListener watcher = new View.OnAttachStateChangeListener() {
                 private ViewTreeObserver observer;
 
@@ -271,7 +277,8 @@ public final class ReelViewerHook {
                 @Override public void onViewDetachedFromWindow(View v) {
                     if (observer != null && observer.isAlive()) observer.removeOnPreDrawListener(gate);
                     observer = null;
-                    if (blockedRoots.remove(root)) root.getOverlay().remove(cover);
+                    unblock(root);
+                    cache.clear();
                 }
             };
             root.addOnAttachStateChangeListener(watcher);
@@ -279,6 +286,23 @@ public final class ReelViewerHook {
         } catch (Throwable t) {
             ModuleLog.warn("(IE|ReelLimit) Could not apply reel limits to this reel viewer", t);
         }
+    }
+
+    private void block(ViewGroup root, ReelBlockPolicy.Reason reason) {
+        ReelBlockCard card = blockedRoots.get(root);
+        boolean added = card == null;
+        if (added) card = new ReelBlockCard(root.getContext());
+        card.show(reason, FeatureFlags.nightReelBlockEndMinutes, DailyReelLimit.watchedToday(),
+                DailyReelLimit.validLimit(FeatureFlags.dailyReelLimit));
+        if (!added) return;
+        blockedRoots.put(root, card);
+        root.getOverlay().add(card.view());
+        pauseBlockedPlayers();
+    }
+
+    private static void unblock(ViewGroup root) {
+        ReelBlockCard card = blockedRoots.remove(root);
+        if (card != null) root.getOverlay().remove(card.view());
     }
 
     private void pauseBlockedPlayers() {
@@ -424,20 +448,6 @@ public final class ReelViewerHook {
 
     private static ReelBlockPolicy.Reason blockReason(ReelViewerSession session) {
         return ReelBlockPolicy.playbackReason(session);
-    }
-
-    private static CharSequence blockMessage(android.content.Context context, ReelBlockPolicy.Reason reason) {
-        if (reason == ReelBlockPolicy.Reason.DISABLE_REELS) {
-            return I18n.t(context, R.string.ig_reels_blocked);
-        }
-        if (reason == ReelBlockPolicy.Reason.NIGHTTIME) {
-            java.util.Calendar end = java.util.Calendar.getInstance();
-            end.set(java.util.Calendar.HOUR_OF_DAY, FeatureFlags.nightReelBlockEndMinutes / 60);
-            end.set(java.util.Calendar.MINUTE, FeatureFlags.nightReelBlockEndMinutes % 60);
-            return I18n.t(context, R.string.ig_night_reels_blocked,
-                    android.text.format.DateFormat.getTimeFormat(context).format(end.getTime()));
-        }
-        return I18n.t(context, R.string.ig_reel_limit_reached);
     }
 
     private ReelViewerSession sessionForConfig(Object config) {

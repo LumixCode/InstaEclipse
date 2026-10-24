@@ -2,4 +2,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="theme_preset_light">%1$s Light</string>
     <string name="theme_preset_dark">%1$s Dark</string>
+    <string name="ig_reel_block_off_title">Reels are turned off</string>
+    <string name="ig_reel_block_off_detail">Turn them on again in InstaEclipse › %1$s</string>
+    <string name="ig_reel_block_night_title">Reels are paused for the night</string>
+    <string name="ig_reel_block_night_detail">Back at %1$s</string>
+    <string name="ig_reel_block_limit_title">You\'ve reached today\'s reel limit</string>
+    <string name="ig_reel_block_limit_detail">%1$d of %2$d reels · resets at midnight</string>
+    <string name="ig_reel_block_go_back">Go back</string>
 </resources>
