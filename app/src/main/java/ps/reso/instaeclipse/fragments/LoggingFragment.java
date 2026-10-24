@@ -9,12 +9,16 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -23,9 +27,12 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.MenuProvider;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.lifecycle.Lifecycle;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -53,6 +60,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.fragments.LogEntries.Entry;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
+import ps.reso.instaeclipse.utils.log.CrashReports;
 import ps.reso.instaeclipse.utils.log.LogMirrorProvider;
 import ps.reso.instaeclipse.utils.log.Logging;
 
@@ -71,6 +79,9 @@ public class LoggingFragment extends Fragment implements TabFragment {
     private static final int MAX_EXPORT_CHARS = 250_000;
 
     private static final int FILTER_ALL = 0;
+
+    private static final int MENU_SHARE_CRASH = 1;
+    private static final int MENU_DELETE_CRASH = 2;
 
     private static final String PREFS = "instaeclipse_logs_ui";
     private static final String PREF_DETAILS = "show_technical_details";
@@ -92,6 +103,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
     private int filterKind = FILTER_ALL;
     private boolean showDetails;
     private boolean loadedOnce;
+    private int crashReports;
 
     private final Map<String, String> liveReplies = new HashMap<>();
     private boolean waitingForInstagram;
@@ -106,6 +118,28 @@ public class LoggingFragment extends Fragment implements TabFragment {
     /** Nonce of the last ACTION_REQUEST_LOGS; replies without it are ignored (IpcSecurity). */
     private String logsNonce;
     private final java.util.List<ps.reso.instaeclipse.utils.ipc.ModuleReplies.Pending> logReplies = new java.util.ArrayList<>();
+
+    private final MenuProvider crashMenu = new MenuProvider() {
+        @Override
+        public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+            if (crashReports == 0) return;
+            menu.add(Menu.NONE, MENU_SHARE_CRASH, Menu.NONE, R.string.logs_crash_share);
+            menu.add(Menu.NONE, MENU_DELETE_CRASH, Menu.NONE, R.string.logs_crash_delete);
+        }
+
+        @Override
+        public boolean onMenuItemSelected(@NonNull MenuItem item) {
+            if (item.getItemId() == MENU_SHARE_CRASH) {
+                shareCrashReport();
+                return true;
+            }
+            if (item.getItemId() == MENU_DELETE_CRASH) {
+                deleteCrashReports();
+                return true;
+            }
+            return false;
+        }
+    };
 
     private final BroadcastReceiver logReplyReceiver = new BroadcastReceiver() {
         @Override
@@ -195,6 +229,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
         view.findViewById(R.id.logs_copy).setOnClickListener(v -> copyLogs());
         view.findViewById(R.id.logs_share).setOnClickListener(v -> shareLogs());
         view.findViewById(R.id.logs_clear).setOnClickListener(v -> clearLogs());
+        requireActivity().addMenuProvider(crashMenu, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
     }
 
     @Override
@@ -297,6 +332,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
         try {
             loadExecutor.execute(() -> {
                 List<Entry> entries = readAllEntries(app, replies, companionTag, clearedAt);
+                int crashes = CrashReports.count(app);
                 mainHandler.post(() -> {
                     if (listView == null || gen != loadGeneration.get()) return;
                     boolean first = !loadedOnce;
@@ -305,6 +341,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
                     if (!waitingForInstagram) setProgress(false);
                     applyFilter(first);
                     updateStatus();
+                    setCrashReports(crashes);
                 });
             });
         } catch (Throwable ignored) {
@@ -553,6 +590,89 @@ public class LoggingFragment extends Fragment implements TabFragment {
         } catch (Throwable ignored) {}
         reload();
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, R.string.logs_cleared, Toast.LENGTH_SHORT).show();
+    }
+
+    private void setCrashReports(int count) {
+        if (count == crashReports) return;
+        crashReports = count;
+        FragmentActivity activity = getActivity();
+        if (activity != null) activity.invalidateOptionsMenu();
+    }
+
+    private void shareCrashReport() {
+        Context ctx = getContext();
+        if (ctx == null) return;
+        new MaterialAlertDialogBuilder(ctx)
+                .setTitle(R.string.logs_crash_share)
+                .setMessage(R.string.logs_crash_share_warning)
+                .setPositiveButton(R.string.logs_crash_share_summary, (d, w) -> sendCrashReport(false))
+                .setNeutralButton(R.string.logs_crash_share_full, (d, w) -> sendCrashReport(true))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void sendCrashReport(boolean full) {
+        Context ctx = getContext();
+        if (ctx == null) return;
+        Context app = ctx.getApplicationContext();
+        setProgress(true);
+        try {
+            loadExecutor.execute(() -> {
+                Uri built = null;
+                try {
+                    built = CrashReports.share(app, full);
+                } catch (Throwable ignored) {}
+                Uri uri = built;
+                mainHandler.post(() -> {
+                    if (!waitingForInstagram) setProgress(false);
+                    Context c = getContext();
+                    if (c == null) return;
+                    if (uri == null) {
+                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(c, R.string.logs_crash_share_failed, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    Intent send = new Intent(Intent.ACTION_SEND);
+                    send.setType("application/zip");
+                    send.putExtra(Intent.EXTRA_STREAM, uri);
+                    send.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.logs_crash_share_subject));
+                    send.setClipData(ClipData.newRawUri("", uri));
+                    send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    try {
+                        startActivity(Intent.createChooser(send, getString(R.string.logs_crash_share)));
+                    } catch (Throwable ignored) {
+                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(c, R.string.logs_share_no_app, Toast.LENGTH_SHORT).show();
+                    }
+                });
+            });
+        } catch (Throwable ignored) {}
+    }
+
+    private void deleteCrashReports() {
+        Context ctx = getContext();
+        if (ctx == null || crashReports == 0) return;
+        new MaterialAlertDialogBuilder(ctx)
+                .setTitle(getResources().getQuantityString(R.plurals.logs_crash_delete_confirm, crashReports, crashReports))
+                .setPositiveButton(R.string.logs_crash_delete_action, (d, w) -> deleteCrashConfirmed())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void deleteCrashConfirmed() {
+        Context ctx = getContext();
+        if (ctx == null) return;
+        Context app = ctx.getApplicationContext();
+        try {
+            loadExecutor.execute(() -> {
+                CrashReports.delete(app);
+                int left = CrashReports.count(app);
+                mainHandler.post(() -> {
+                    Context c = getContext();
+                    if (c == null) return;
+                    setCrashReports(left);
+                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(c, R.string.logs_crash_deleted, Toast.LENGTH_SHORT).show();
+                });
+            });
+        } catch (Throwable ignored) {}
     }
 
     // ---------------------------------------------------------------- adapter
