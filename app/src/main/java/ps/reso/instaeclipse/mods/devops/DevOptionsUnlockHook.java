@@ -96,10 +96,10 @@ public class DevOptionsUnlockHook {
                 protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                     if (FeatureFlags.isDevEnabled) {
                         param.setResult(true);
-                        FeatureStatusTracker.setHooked("DevOptions");
                     }
                 }
             });
+            FeatureStatusTracker.setHooked("DevOptions");
             ModuleLog.ok("(InstaEclipse | DevOptionsEnable): ready");
             ModuleLog.detail("(InstaEclipse | DevOptionsEnable): Hooked: " + m.getDeclaringClass().getName() + "." + m.getName());
         } catch (Throwable e) {

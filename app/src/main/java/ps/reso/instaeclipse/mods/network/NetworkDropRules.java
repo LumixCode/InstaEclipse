@@ -57,7 +57,8 @@ public final class NetworkDropRules {
             shouldDrop |= path.contains("/dynamic_onboarding/get_direct_empty_state/");
         }
         if (FeatureFlags.disableComments) {
-            shouldDrop |= path.contains("/api/v1/media/") && path.contains("comments/");
+            shouldDrop |= path.contains("/api/v1/media/") && path.contains("comments/")
+                    && !path.endsWith("/disable_comments/") && !path.endsWith("/enable_comments/");
         }
         if (FeatureFlags.isAdBlockEnabled) {
             shouldDrop |= isAdRequest(path);
@@ -74,7 +75,6 @@ public final class NetworkDropRules {
 
     static boolean isExploreRequest(String host, String path) {
         return path.contains("/discover/topical_explore")
-                || path.contains("/discover/topical_explore_stream")
                 || (host != null && host.contains("i.instagram.com") && path.contains("/fbsearch/top_serp"));
     }
 

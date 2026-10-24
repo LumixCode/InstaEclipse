@@ -69,7 +69,7 @@ public class IGNetworkInterceptor {
             Class<?> random_param_1 = null;
             Class<?> random_param_2 = null;
             Class<?> random_param_3 = null;
-            String uriFieldName = null;
+            Field uriField = null;
 
             // Analyze methods in TigonServiceLayer
             for (Method method : methods) {
@@ -87,21 +87,22 @@ public class IGNetworkInterceptor {
                 for (Field field : ps.reso.instaeclipse.utils.core.SafeReflect.fields(random_param_1)) {
                     if (field.getType().equals(URI.class)
                             && !java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
-                        uriFieldName = field.getName();
+                        field.setAccessible(true);
+                        uriField = field;
                         break;
                     }
                 }
             }
 
             // If classes and fields are resolved, hook the method
-            if (random_param_1 != null && random_param_2 != null && random_param_3 != null && uriFieldName != null) {
-                String finalUriFieldName = uriFieldName;
+            if (random_param_1 != null && random_param_2 != null && random_param_3 != null && uriField != null) {
+                Field finalUriField = uriField;
                 XC_MethodHook dropHook = new XC_MethodHook() {
                             @Override
                             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                               try {
                                 Object requestObj = param.args[0];
-                                URI uri = (URI) XposedHelpers.getObjectField(requestObj, finalUriFieldName);
+                                URI uri = (URI) finalUriField.get(requestObj);
 
                                 if (uri != null && uri.getPath() != null) {
                                     final String host = uri.getHost(); // null for opaque/relative URIs — guard before use
@@ -124,8 +125,6 @@ public class IGNetworkInterceptor {
                                             shouldDrop |= FeatureFlags.isGhostStory;
                                         }
                                     }
-                                    if (FeatureFlags.isGhostStory) FeatureStatusTracker.setHooked("GhostStories");
-                                    if (FeatureFlags.isGhostLive) FeatureStatusTracker.setHooked("GhostLive");
                                     // Disable Reels, quiet hours and the daily cap share one policy. Its
                                     // DM exception only lets single reel items through and never returns
                                     // early, so the privacy drops above and below still apply.
@@ -137,7 +136,6 @@ public class IGNetworkInterceptor {
                                     // mods.ui.DisableRepostHook — NOT here. Dropping the repost network
                                     // request is ineffective because IG applies the repost optimistically
                                     // client-side, so the repost completes even when the request is dropped.
-                                    if (FeatureFlags.disableDiscoverPeople) FeatureStatusTracker.setHooked("DisableDiscoverPeople");
 
                                     if (shouldDrop) {
                                         NetworkDropRules.neutralize(requestObj, uri, FAKE_URI, FAKE_URL);
@@ -161,7 +159,8 @@ public class IGNetworkInterceptor {
                 hookChainEntry(classLoader, random_param_1, random_param_2, random_param_3, dropHook);
                 // These act on every matching request, so they are in place once the hook is.
                 for (String key : new String[]{"BlockAnalytics", "DisableStoriesSection", "DisableFeedSection",
-                        "DisableReelsSection", "DisableExploreSection", "DisableCommentsSection", "HideDmSuggestions"})
+                        "DisableReelsSection", "DisableExploreSection", "DisableCommentsSection", "HideDmSuggestions",
+                        "GhostStories", "GhostLive", "DisableDiscoverPeople"})
                     FeatureStatusTracker.setHooked(key);
             } else {
                 ModuleLog.error("(InstaEclipse | Interceptor): Network filters (analytics blocking, disabled sections, parts of ghost mode) will not work: Instagram's request classes were not found in this version");
