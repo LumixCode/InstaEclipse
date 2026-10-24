@@ -12,12 +12,7 @@ import java.util.Map;
  */
 public final class FancyText {
 
-    /** Style names, index = style id; 0 turns styled text back to normal. */
-    public static final String[] NAMES = {
-            "Normal", "Bold", "Italic", "Bold italic", "Sans bold", "Sans italic", "Script",
-            "Fraktur", "Double-struck", "Monospace", "Circled", "Fullwidth", "Small caps",
-            "Strikethrough", "Underline"
-    };
+    public static final int STYLE_COUNT = 15;
 
     // {A, a, 0, Greek Α} first code points per style (-1 = keep as is)
     private static final int[][] BASES = {
@@ -47,7 +42,7 @@ public final class FancyText {
     private static final Map<Integer, Integer> PLAIN = new HashMap<>();
 
     static {
-        for (int s = 1; s < NAMES.length; s++) {
+        for (int s = 1; s < STYLE_COUNT; s++) {
             for (int c = '0'; c <= 'z'; c++)
                 if (Character.isLetterOrDigit(c)) addPlain(c, s);
             for (int i = 0; i < GREEK_LEN; i++) {
@@ -81,7 +76,7 @@ public final class FancyText {
     }
 
     private static int map(int c, int style) {
-        if (style <= 0 || style >= NAMES.length) return c;
+        if (style <= 0 || style >= STYLE_COUNT) return c;
         int[] b = BASES[style];
         if (c >= GREEK_CAP && c < GREEK_CAP + GREEK_LEN) return b[3] < 0 ? c : b[3] + (c - GREEK_CAP);
         if (c >= GREEK_SMALL && c < GREEK_SMALL + GREEK_LEN) return b[3] < 0 ? c : b[3] + 26 + (c - GREEK_SMALL);

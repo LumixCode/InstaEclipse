@@ -12,10 +12,12 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
+import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.text.FancyText;
 
 /**
@@ -91,10 +93,11 @@ public final class FancyBioFontHook {
     /** The style new typing gets, per bio field (0 = normal). */
     private static final Map<EditText, Integer> STYLE = Collections.synchronizedMap(new WeakHashMap<>());
 
-    private static void pick(Activity a, EditText input) {
-        CharSequence[] rows = new CharSequence[FancyText.NAMES.length];
+    public static void pick(Activity a, EditText input) {
+        String[] names = names(a);
+        CharSequence[] rows = new CharSequence[FancyText.STYLE_COUNT];
         for (int i = 0; i < rows.length; i++)
-            rows[i] = FancyText.convert("Abc 123", i) + "   ·  " + FancyText.NAMES[i];
+            rows[i] = names != null ? FancyText.convert("Abc 123", i) + "   ·  " + names[i] : FancyText.convert("Abc 123", i);
         Integer current = STYLE.get(input);
         IeDialog dlg = new IeDialog(a).title(I18n.t(a, R.string.ig_fancy_font_title));
         dlg.message(I18n.t(a, R.string.ig_fancy_font_note));
@@ -103,11 +106,22 @@ public final class FancyBioFontHook {
             STYLE.put(input, i);
             View bio = a.getWindow().getDecorView().findViewById(bioId);
             TextView label = bio != null && labelId != 0 ? bio.findViewById(labelId) : null;
-            if (label != null) label.setText(i == 0 ? I18n.t(a, R.string.ig_fancy_font_button)
-                    : I18n.t(a, R.string.ig_fancy_font_button) + ": " + FancyText.NAMES[i]);
+            if (label != null) label.setText(i == 0 || names == null ? I18n.t(a, R.string.ig_fancy_font_button)
+                    : I18n.t(a, R.string.ig_fancy_font_button) + ": " + names[i]);
             input.requestFocus();
         });
         dlg.show();
+    }
+
+    private static String[] names(Activity a) {
+        try {
+            String[] names = ModuleResources.get(a).getStringArray(R.array.ig_fancy_font_names);
+            if (names.length == FancyText.STYLE_COUNT) return names;
+            ModuleLog.warn("(IE|FancyFont) The font style names do not match the styles, so only examples are shown");
+        } catch (Throwable t) {
+            ModuleLog.warn("(IE|FancyFont) The font style names could not be loaded, so only examples are shown", t);
+        }
+        return null;
     }
 
     /**

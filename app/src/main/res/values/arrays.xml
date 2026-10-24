@@ -1,6 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string-array name="target_app">
         <item>com.instagram.android</item>
+    </string-array>
+    <string-array name="ig_fancy_font_names" tools:ignore="MissingTranslation">
+        <item>Normal</item>
+        <item>Bold</item>
+        <item>Italic</item>
+        <item>Bold italic</item>
+        <item>Sans bold</item>
+        <item>Sans italic</item>
+        <item>Script</item>
+        <item>Fraktur</item>
+        <item>Double-struck</item>
+        <item>Monospace</item>
+        <item>Circled</item>
+        <item>Fullwidth</item>
+        <item>Small caps</item>
+        <item>Strikethrough</item>
+        <item>Underline</item>
     </string-array>
 </resources>
