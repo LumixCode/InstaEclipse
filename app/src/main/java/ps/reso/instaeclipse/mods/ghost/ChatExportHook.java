@@ -164,11 +164,12 @@ public class ChatExportHook {
         final String threadId = tracked;
         Object store = findStore(threadId);
         ModuleLog.detail(TAG + "export thread=" + threadId + " store=" + (store != null));
-        if (store == null || messagesMethod == null) {
+        if (store == null || !ChatExportLabels.ready(messagesMethod != null, serializer != null, factoryWriterMethod != null)) {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_none), Toast.LENGTH_SHORT).show();
             return;
         }
         final boolean withMedia = downloadMedia;
+        final ChatExportLabels labels = new ChatExportLabels(null);
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_working), Toast.LENGTH_SHORT).show();
         new Thread(() -> {
             try {
@@ -238,15 +239,15 @@ public class ChatExportHook {
                     }
                     boolean self = selfName != null && who.equals(selfName);
                     JSONObject replied = repliedTo(r[0], j.optString("item_id", ""), byId);
-                    body.append(messageHtml(j, self, who, ts, replied, names, media.get(i), fmt));
+                    body.append(messageHtml(j, self, who, ts, replied, names, media.get(i), fmt, labels));
                 }
                 int n = rows.size();
                 StringBuilder html = new StringBuilder();
                 html.append("<!doctype html><html><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><title>")
                         .append(esc(title)).append("</title><style>").append(CHAT_CSS).append("</style></head><body><div class=wrap>")
-                        .append(ps.reso.instaeclipse.utils.core.ExportBrand.htmlBanner("Chat export"))
+                        .append(ps.reso.instaeclipse.utils.core.ExportBrand.htmlBanner(labels.banner()))
                         .append("<div class=head><h1>").append(esc(title))
-                        .append(user != null && !user.equalsIgnoreCase(title) ? " <span class=sub>@" + esc(user) + "</span>" : "").append("</h1><div class=sub>").append(n).append(" messages");
+                        .append(user != null && !user.equalsIgnoreCase(title) ? " <span class=sub>@" + esc(user) + "</span>" : "").append("</h1><div class=sub>").append(labels.messages(n));
                 if (first > 0) html.append(" · ").append(fmt.format(new Date(first))).append(" – ").append(fmt.format(new Date(last)));
                 html.append("</div><div class=chips>");
                 for (Map.Entry<String, Integer> e : perUser.entrySet())
@@ -530,7 +531,8 @@ public class ChatExportHook {
 
     /** One message as a chat row (bubble), or a centered system line for action/call logs. */
     private static String messageHtml(JSONObject j, boolean self, String who, long ts,
-                                      JSONObject replied, Map<String, String> names, String[] mrel, SimpleDateFormat fmt) {
+                                      JSONObject replied, Map<String, String> names, String[] mrel, SimpleDateFormat fmt,
+                                      ChatExportLabels labels) {
         String type = j.optString("item_type", "");
         if (type.equals("action_log") || type.equals("video_call_event")
                 || type.equals("placeholder") || type.equals("expired_placeholder")) {
@@ -547,13 +549,13 @@ public class ChatExportHook {
             b.append("<div class=q><b>").append(esc(names.getOrDefault(ru, ru))).append("</b> ")
              .append(esc(clip(describe(replied), 100))).append("</div>");
         }
-        b.append(contentHtml(j, type, mrel));
+        b.append(contentHtml(j, type, mrel, self, labels));
         b.append(editHistory(j, fmt));
         b.append("<div class=meta>");
         if (ts > 0) b.append(esc(fmt.format(new Date(ts))));
-        if (j.optInt("edit_count", 0) > 0 || j.has("edit_history")) b.append("<span class=badge>edited</span>");
-        if (j.optBoolean("is_pinned", false)) b.append("<span class=badge>📌 pinned</span>");
-        if (j.optBoolean("show_forward_attribution", false)) b.append("<span class=badge>↪ forwarded</span>");
+        if (j.optInt("edit_count", 0) > 0 || j.has("edit_history")) b.append("<span class=badge>").append(labels.edited()).append("</span>");
+        if (j.optBoolean("is_pinned", false)) b.append("<span class=badge>").append(labels.pinned()).append("</span>");
+        if (j.optBoolean("show_forward_attribution", false)) b.append("<span class=badge>").append(labels.forwarded()).append("</span>");
         b.append("</div>");
         String react = reactions(j, names);
         if (!react.isEmpty()) {
@@ -565,7 +567,7 @@ public class ChatExportHook {
     }
 
     /** The message body HTML, styled per item type (media, shared card, story reply, like, text). */
-    private static String contentHtml(JSONObject j, String type, String[] mrel) {
+    private static String contentHtml(JSONObject j, String type, String[] mrel, boolean self, ChatExportLabels labels) {
         String text = j.optString("text", "");
         switch (type) {
             case "like":
@@ -580,16 +582,16 @@ public class ChatExportHook {
             case "media_share": case "clip": case "felix_share":
             case "xma_media_share": case "xma_clip": case "xma_felix_share":
             case "story_share": case "xma_story_share":
-                return sharedCard(j, type, mrel, text, false);
+                return sharedCard(j, type, mrel, text, false, labels);
             case "reel_share": case "xma_reel_share":
-                return sharedCard(j, type, mrel, text, true);
+                return sharedCard(j, type, mrel, text, true, labels);
             case "xma_reel_mention": case "xma_story_mention": {
-                String s = "<div class=card><div class=ci><div class=cl>✨ Mentioned you in a story</div></div></div>";
-                return mrel != null ? "<div class=card><img loading=lazy src=\"" + mrel[0] + "\" onerror=\"this.remove()\"><div class=ci><div class=cl>✨ Story mention</div></div></div>" : s;
+                String s = "<div class=card><div class=ci><div class=cl>" + labels.mention(self) + "</div></div></div>";
+                return mrel != null ? "<div class=card><img loading=lazy src=\"" + mrel[0] + "\" onerror=\"this.remove()\"><div class=ci><div class=cl>" + labels.previewMention() + "</div></div></div>" : s;
             }
             case "profile": case "xma_profile": {
                 String u = first(payloadOf(j, type), "username");
-                return "<div class=card><div class=ci><div class=cl>👤 Shared profile</div>"
+                return "<div class=card><div class=ci><div class=cl>" + labels.profile() + "</div>"
                         + (u.isEmpty() ? "" : "<div class=cu>@" + esc(u) + "</div>") + "</div></div>";
             }
             case "text":
@@ -605,21 +607,21 @@ public class ChatExportHook {
     }
 
     /** A card for a shared post/reel/story, or a story-reply card (preview + label + @user + caption). */
-    private static String sharedCard(JSONObject j, String type, String[] mrel, String text, boolean storyReply) {
+    private static String sharedCard(JSONObject j, String type, String[] mrel, String text, boolean storyReply,
+                                     ChatExportLabels labels) {
         Object payload = payloadOf(j, type);
         String user = first(payload, "username");
         String caption = first(findObj(payload, "caption", 0), "text");
         String code = first(payload, "code");
-        boolean story = type.contains("story");
         boolean reel = storyReply || "clips".equals(first(payload, "product_type")) || findObj(payload, "clips_metadata", 0) != null;
-        String label = storyReply ? "↩ Story reply" : story ? "↗ Shared story" : reel ? "↗ Shared reel" : "↗ Shared post";
+        String label = labels.shared(type, storyReply, reel);
         String link = code.isEmpty() ? "" : "https://www.instagram.com/" + (reel && !storyReply ? "reel/" : "p/") + code + "/";
         StringBuilder s = new StringBuilder();
         boolean hasPrev = mrel != null && "preview".equals(mrel[1]);
         s.append(link.isEmpty() ? "<div class=card>" : "<a class=card href=\"" + link + "\" target=_blank rel=noopener>");
         if (hasPrev) s.append("<img loading=lazy src=\"").append(mrel[0]).append("\" onerror=\"this.remove()\">");
         s.append("<div class=ci><div class=cl>").append(label).append("</div>");
-        if (!user.isEmpty()) s.append("<div class=cu>").append(storyReply ? "to @" : "@").append(esc(user)).append("</div>");
+        if (!user.isEmpty()) s.append("<div class=cu>").append(esc(labels.sharedBy(user, storyReply))).append("</div>");
         if (!caption.isEmpty()) s.append("<div class=cc>").append(esc(clip(caption, 220))).append("</div>");
         s.append("</div>").append(link.isEmpty() ? "</div>" : "</a>");
         // the reply text / any accompanying caption text sits under the card
