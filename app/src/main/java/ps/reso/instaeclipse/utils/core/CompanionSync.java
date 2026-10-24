@@ -41,7 +41,6 @@ public final class CompanionSync {
     static final String TS = "__ts_";
     static final String APPLIED = "__applied_";
     static final String IG_TS = "__igts_";
-    private static final long MIN_INTERVAL_MS = 1500;
 
     private static final ExecutorService WORKER = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "InstaEclipse-Sync");
@@ -49,9 +48,11 @@ public final class CompanionSync {
         return t;
     });
 
-    private static long lastPull;
+    private static final PullThrottle THROTTLE = new PullThrottle();
     private static boolean emptyLogged;
-    static volatile Consumer<Context> pusher = CompanionSync::pushAsync;
+    private static volatile boolean remoteAvailable;
+    private static volatile int startupApplied;
+    static volatile Consumer<Context> pusher = CompanionSync::queuePush;
 
     private CompanionSync() {}
 
@@ -73,18 +74,35 @@ public final class CompanionSync {
      * side effects: nothing is on screen yet and the hooks install after this.
      */
     public static boolean pull(Context context) {
-        return !applyNewer(context).isEmpty();
+        int applied = applyNewer(context).size();
+        startupApplied += applied;
+        return applied > 0;
+    }
+
+    public static int startupApplied() {
+        return startupApplied;
+    }
+
+    public static boolean remotePrefsAvailable() {
+        return remoteAvailable;
+    }
+
+    public static synchronized void resetForTest() {
+        THROTTLE.reset();
+        emptyLogged = false;
+        remoteAvailable = false;
+        startupApplied = 0;
     }
 
     /** Applies newer companion settings; returns the keys it applied. */
     private static synchronized List<String> applyNewer(Context context) {
-        List<String> applied = new ArrayList<>();
         long now = SystemClock.elapsedRealtime();
-        if (lastPull != 0 && now - lastPull < MIN_INTERVAL_MS) return applied;
-        lastPull = now;
+        if (!THROTTLE.due(now)) return new ArrayList<>();
         try {
             // Small, throttled, off the main thread: always re-read.
             Map<String, ?> all = ps.reso.instaeclipse.xposedcompat.CompanionPrefs.all();
+            THROTTLE.read(now, all.isEmpty());
+            if (!all.isEmpty()) remoteAvailable = true;
             if (all.isEmpty() && !emptyLogged) {
                 // Remote preferences unavailable (LSPatch local mode, companion not bound yet):
                 // only the provider reply in push() brings companion changes back then.
@@ -121,7 +139,7 @@ public final class CompanionSync {
                 incoming.put(TS + entry.getKey(), stamp);
             }
             Plan plan = applyEntries(context, incoming, true);
-            if (!plan.refused.isEmpty() || !plan.igNewer.isEmpty()) pusher.accept(context);
+            if (!plan.refused.isEmpty() || !plan.igNewer.isEmpty()) pushAsync(context);
             return plan.applied;
         } catch (Throwable t) {
             ModuleLog.warn("(InstaEclipse) Sync: could not apply settings changed in the InstaEclipse app: " + t.getClass().getSimpleName() + ": " + t.getMessage());
@@ -217,6 +235,14 @@ public final class CompanionSync {
      * Back-to-back requests are coalesced into one push.
      */
     public static void pushAsync(Context context) {
+        pusher.accept(context);
+    }
+
+    public static void overridePushForTest(Consumer<Context> testPusher) {
+        pusher = testPusher != null ? testPusher : CompanionSync::queuePush;
+    }
+
+    private static void queuePush(Context context) {
         if (context == null) return;
         Context app = context.getApplicationContext() != null ? context.getApplicationContext() : context;
         if (!PUSH_PENDING.compareAndSet(false, true)) return;

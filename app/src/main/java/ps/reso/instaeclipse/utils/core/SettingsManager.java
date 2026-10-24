@@ -34,6 +34,7 @@ public class SettingsManager {
     /** Application context, for pushing in-app changes to the companion (CompanionSync). */
     private static Context appContext;
     static final Object LOCK = new Object();
+    private static final java.util.concurrent.atomic.AtomicInteger LOADS = new java.util.concurrent.atomic.AtomicInteger();
 
     public static void init(Context context) {
         if (appContext == null && context != null) {
@@ -260,7 +261,7 @@ public class SettingsManager {
         editor.apply();
         stampChangedKeys(before);
         // Instagram -> companion: so the companion app shows what was just changed here.
-        CompanionSync.pusher.accept(appContext);
+        CompanionSync.pushAsync(appContext);
 
         FeatureManager.refreshFeatureStatus();
     }
@@ -281,14 +282,20 @@ public class SettingsManager {
 
     public static void loadAllFlags(Context context) {
         synchronized (LOCK) {
+            LOADS.incrementAndGet();
             load(context);
         }
+    }
+
+    public static int loadCount() {
+        return LOADS.get();
     }
 
     private static void load(Context context) {
         if (prefs == null) {
             prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         }
+        java.util.Map<String, ?> all = prefs.getAll();
 
         dropDeadKeys(prefs);
         FeatureFlags.isDevEnabled = prefs.getBoolean("isDevEnabled", false);
@@ -418,8 +425,8 @@ public class SettingsManager {
         FeatureFlags.spoofLng = readDoublePref(prefs, "spoofLng", 0.0);
         FeatureFlags.spoofLabel = prefs.getString("spoofLabel", "");
         FeatureFlags.spoofRecent = prefs.getString("spoofRecent", "");
-        migrateLocationPromptKey(prefs);
-        FeatureFlags.forceReelQuality = readReelQuality(prefs);
+        migrateLocationPromptKey(prefs, all);
+        FeatureFlags.forceReelQuality = readReelQuality(prefs, all);
         FeatureFlags.disableRepost = prefs.getBoolean("disableRepost", false);
         migrateCreateGroupKey(prefs);
         FeatureFlags.hideShareCreateGroup = prefs.getBoolean("hideShareCreateGroup", false);
@@ -472,7 +479,7 @@ public class SettingsManager {
         FeatureFlags.uploadInstants           = prefs.getBoolean("uploadInstants", false);
         FeatureFlags.cacheStories             = prefs.getBoolean("cacheStories", false);
         // Tolerates a wrong-typed value: a bad companion write must not break every later load.
-        FeatureFlags.storyCacheHours          = StoryCacheRetention.fromStored(prefs.getAll().get("storyCacheHours"));
+        FeatureFlags.storyCacheHours          = StoryCacheRetention.fromStored(all.get("storyCacheHours"));
         FeatureFlags.customFontEnabled        = prefs.getBoolean("customFontEnabled", false);
         FeatureFlags.customFontPath           = prefs.getString("customFontPath", "");
         FeatureFlags.navTabOrder              = prefs.getString("navTabOrder", "");
@@ -516,7 +523,11 @@ public class SettingsManager {
     }
 
     public static int readReelQuality(SharedPreferences preferences) {
-        Object stored = preferences.getAll().get("forceReelQuality");
+        return readReelQuality(preferences, preferences.getAll());
+    }
+
+    private static int readReelQuality(SharedPreferences preferences, java.util.Map<String, ?> all) {
+        Object stored = all.get("forceReelQuality");
         if (stored instanceof Integer) return (Integer) stored;
         // Older settings stored a toggle; migrate before loading the remaining flags.
         int quality = Boolean.TRUE.equals(stored) ? 1080 : 0;
@@ -549,8 +560,8 @@ public class SettingsManager {
      * skips the same "Set up on new device" location page. Runs before the Extras flags load.
      * getAll() + Boolean.TRUE.equals: a wrong-typed old value must not throw on every start.
      */
-    private static void migrateLocationPromptKey(SharedPreferences p) {
-        Object old = p.getAll().get("blockLocationPrompts");
+    private static void migrateLocationPromptKey(SharedPreferences p, java.util.Map<String, ?> all) {
+        Object old = all.get("blockLocationPrompts");
         if (old == null) return;
         SharedPreferences.Editor e = p.edit();
         if (Boolean.TRUE.equals(old)) e.putBoolean("hideOnboardingPrompts", true);

@@ -27,7 +27,6 @@ import ps.reso.instaeclipse.utils.core.DexKitStats;
 import ps.reso.instaeclipse.utils.core.LegacyPaths;
 import ps.reso.instaeclipse.utils.core.ModuleBridge;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
-import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureManager;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.log.StartupTrace;
@@ -164,7 +163,7 @@ public class Module {
         if (application instanceof android.app.Application app)
             ps.reso.instaeclipse.xposedcompat.AndroidAppHelper.setCurrentApplication(app);
         SettingsManager.init(context);
-        SettingsManager.loadAllFlags(context);
+        if (!CompanionSync.pull(context)) SettingsManager.loadAllFlags(context);
 
         // Before Instagram reads anything about the device; a change applies on the next start.
         ps.reso.instaeclipse.mods.misc.DeviceSpoofHook.apply(lpparam.classLoader);
@@ -192,8 +191,7 @@ public class Module {
         // Setup context, preferences
         SettingsManager.init(context);
         // Settings changed in the companion while Instagram wasn't running.
-        ps.reso.instaeclipse.utils.core.CompanionSync.pull(context);
-        SettingsManager.loadAllFlags(context);
+        CompanionSync.pull(context);
         // ...and the other way: bring the companion's copy up to date with changes
         // made in this menu (newer side wins per key, see PrefsMerge).
         ps.reso.instaeclipse.utils.core.CompanionSync.pushAsync(context);
@@ -231,18 +229,6 @@ public class Module {
         ps.reso.instaeclipse.utils.ghost.UnsentMessageStore.init(context);
         ps.reso.instaeclipse.mods.reels.DailyReelLimit.init(context);
 
-        // Pull downloader path from companion app's cache so it's available even
-        // when Instagram was started without ever receiving the sync broadcast.
-        try {
-            String path = ps.reso.instaeclipse.xposedcompat.CompanionPrefs.getString("downloaderCustomPath", "");
-            String uri  = ps.reso.instaeclipse.xposedcompat.CompanionPrefs.getString("downloaderCustomUri",  "");
-            if (!path.isEmpty()) FeatureFlags.downloaderCustomPath = path;
-            if (!uri.isEmpty())  FeatureFlags.downloaderCustomUri  = uri;
-        } catch (Throwable ignored) {
-        }
-
-        FeatureManager.refreshFeatureStatus(); // Update internal feature states
-
         // Activate the sync bridge to listen to FeaturesFragment updates
         registerSyncReceiver(context);
 
@@ -257,6 +243,8 @@ public class Module {
         } catch (Throwable e) {
             ModuleLog.error("(InstaEclipse | RestoreReceiver): Restoring settings or a backup from the InstaEclipse app will not work", e);
         }
+        ModuleLog.detail("(InstaEclipse) Settings: " + CompanionSync.startupApplied() + " companion change(s) applied before the hooks; "
+                + "companion remote preferences " + (CompanionSync.remotePrefsAvailable() ? "available" : "empty"));
         StartupTrace.end(span);
         final Runnable installFeatureHooks = () -> installFeatureHooks(context, lpparam);
 
