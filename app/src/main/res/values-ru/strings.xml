@@ -483,10 +483,10 @@
     <string name="feat_categories">Категории:</string>
     <string name="feat_tools">Инструменты:</string>
     <string name="feat_features">Функции:</string>
-    <string name="feat_config">Конфигурация:</string>
+    <string name="feat_config">Конфигурация</string>
     <string name="feat_options">Параметры:</string>
-    <string name="feat_quick_toggle">Быстрое переключение:</string>
-    <string name="feat_danger_zone">Опасная зона:</string>
+    <string name="feat_quick_toggle">Быстрое переключение</string>
+    <string name="feat_danger_zone">Опасная зона</string>
     <string name="feat_download_folder">Папка загрузки:</string>
     <string name="feat_downloader_set_folder">Выбрать папку загрузки</string>
     <string name="feat_downloader_selected">Выбрана: %1$s</string>

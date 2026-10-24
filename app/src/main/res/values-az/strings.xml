@@ -483,10 +483,10 @@
     <string name="feat_categories">Kateqoriyalar:</string>
     <string name="feat_tools">Alətlər:</string>
     <string name="feat_features">Xüsusiyyətlər:</string>
-    <string name="feat_config">Konfiqurasiya:</string>
+    <string name="feat_config">Konfiqurasiya</string>
     <string name="feat_options">Seçimlər:</string>
-    <string name="feat_quick_toggle">Sürətli Keçid:</string>
-    <string name="feat_danger_zone">Təhlükəli Zona:</string>
+    <string name="feat_quick_toggle">Sürətli Keçid</string>
+    <string name="feat_danger_zone">Təhlükəli Zona</string>
     <string name="feat_download_folder">Yükləmə Qovluğu:</string>
     <string name="feat_downloader_set_folder">Yükləmə Qovluğunun Yerini Təyin Et</string>
     <string name="feat_downloader_selected">Seçilmiş: %1$s</string>

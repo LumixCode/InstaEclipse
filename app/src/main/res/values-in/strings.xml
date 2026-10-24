@@ -62,10 +62,10 @@
     <string name="feat_categories">Kategori:</string>
     <string name="feat_tools">Alat:</string>
     <string name="feat_features">Fitur:</string>
-    <string name="feat_config">Konfigurasi:</string>
+    <string name="feat_config">Konfigurasi</string>
     <string name="feat_options">Opsi:</string>
-    <string name="feat_quick_toggle">Sakelar Cepat:</string>
-    <string name="feat_danger_zone">Zona Bahaya:</string>
+    <string name="feat_quick_toggle">Sakelar Cepat</string>
+    <string name="feat_danger_zone">Zona Bahaya</string>
     <string name="feat_download_folder">Folder Unduhan:</string>
     <string name="feat_downloader_set_folder">Atur Lokasi Folder Unduhan</string>
     <string name="feat_downloader_selected">Dipilih: %1$s</string>

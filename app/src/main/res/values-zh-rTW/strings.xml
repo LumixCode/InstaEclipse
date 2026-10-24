@@ -482,10 +482,10 @@
     <string name="feat_categories">分類：</string>
     <string name="feat_tools">工具：</string>
     <string name="feat_features">功能：</string>
-    <string name="feat_config">設定：</string>
+    <string name="feat_config">設定</string>
     <string name="feat_options">選項：</string>
-    <string name="feat_quick_toggle">快速切換：</string>
-    <string name="feat_danger_zone">危險區域：</string>
+    <string name="feat_quick_toggle">快速切換</string>
+    <string name="feat_danger_zone">危險區域</string>
     <string name="feat_download_folder">下載資料夾：</string>
     <string name="feat_downloader_set_folder">設定下載資料夾位置</string>
     <string name="feat_downloader_selected">已選擇：%1$s</string>

@@ -51,10 +51,10 @@
     <string name="feat_group_media">Media</string>
     <string name="feat_group_tools">Strumenti</string>
     <string name="feat_features">Funzionalità:</string>
-    <string name="feat_config">Configurazione:</string>
+    <string name="feat_config">Configurazione</string>
     <string name="feat_options">Opzioni:</string>
-    <string name="feat_quick_toggle">Interruttore rapido:</string>
-    <string name="feat_danger_zone">Zona di pericolo:</string>
+    <string name="feat_quick_toggle">Interruttore rapido</string>
+    <string name="feat_danger_zone">Zona di pericolo</string>
     <string name="feat_download_folder">Cartella di download:</string>
     <string name="feat_downloader_set_folder">Imposta la posizione della cartella di download</string>
     <string name="feat_downloader_selected">Selezionato: %1$s</string>

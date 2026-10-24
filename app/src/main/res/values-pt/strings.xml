@@ -482,10 +482,10 @@
     <string name="feat_categories">Categorias:</string>
     <string name="feat_tools">Ferramentas:</string>
     <string name="feat_features">Funcionalidades:</string>
-    <string name="feat_config">Configuração:</string>
+    <string name="feat_config">Configuração</string>
     <string name="feat_options">Opções:</string>
-    <string name="feat_quick_toggle">Ativação rápida:</string>
-    <string name="feat_danger_zone">Zona de perigo:</string>
+    <string name="feat_quick_toggle">Ativação rápida</string>
+    <string name="feat_danger_zone">Zona de perigo</string>
     <string name="feat_download_folder">Pasta de transferência:</string>
     <string name="feat_downloader_set_folder">Definir pasta de transferência</string>
     <string name="feat_downloader_selected">Selecionada: %1$s</string>

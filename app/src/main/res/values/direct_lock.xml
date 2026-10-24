@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- New optional features use English until localized resources are available. -->
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
-    <string name="ig_lock_selected_enable">Lock specific chats</string>
+    <string name="ig_lock_selected_enable">Lock chosen chats</string>
     <string name="ig_lock_select_chats">Choose chats to lock</string>
-    <string name="ig_lock_selected_companion_hint">Choose conversations inside Instagram → InstaEclipse → Lock → Choose chats to lock. Turn off Lock DMs to keep the inbox unlocked and protect only your selected chats.</string>
-    <string name="ig_lock_relock_hint">Lock DMs stays unlocked while you browse messages and conversations. With Relock every time enabled, it locks again after you leave Direct. Selected chats lock again after you leave that conversation.</string>
+    <string name="ig_lock_selected_companion_hint">Choose conversations inside Instagram → InstaEclipse → Lock → Choose chats to lock. Turn off Lock Messages to keep the inbox unlocked and protect only your chosen chats.</string>
+    <string name="ig_lock_relock_hint">Lock Messages stays unlocked while you browse messages and conversations. With Lock again when you leave on, it locks again after you leave Messages. Chosen chats lock again after you leave that conversation.</string>
     <string name="ig_lock_selected_empty">Open your Direct inbox first to load available chats, then return here.</string>
     <string name="ig_lock_change_locks_prompt">Enter passcode to change chat locks</string>
     <string name="ig_lock_hidden_chats_prompt">Enter passcode to view hidden chats</string>

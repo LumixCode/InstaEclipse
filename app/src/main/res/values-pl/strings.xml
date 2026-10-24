@@ -68,10 +68,10 @@
     <string name="feat_categories">Kategorie:</string>
     <string name="feat_tools">Narzędzia:</string>
     <string name="feat_features">Funkcje:</string>
-    <string name="feat_config">Konfiguracja:</string>
+    <string name="feat_config">Konfiguracja</string>
     <string name="feat_options">Opcje:</string>
-    <string name="feat_quick_toggle">Skrót:</string>
-    <string name="feat_danger_zone">Strefa zagrożenia:</string>
+    <string name="feat_quick_toggle">Skrót</string>
+    <string name="feat_danger_zone">Strefa zagrożenia</string>
     <string name="feat_download_folder">Miejsce zapisywania:</string>
     <string name="feat_downloader_set_folder">Wybierz miejsce zapisywania pobranych plików</string>
     <string name="feat_downloader_selected">Wybrane: %1$s</string>

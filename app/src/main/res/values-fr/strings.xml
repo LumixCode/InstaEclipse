@@ -62,10 +62,10 @@
     <string name="feat_categories">Catégories :</string>
     <string name="feat_tools">Outils :</string>
     <string name="feat_features">Fonctionnalités :</string>
-    <string name="feat_config">Configuration :</string>
+    <string name="feat_config">Configuration</string>
     <string name="feat_options">Options :</string>
-    <string name="feat_quick_toggle">Bascule rapide :</string>
-    <string name="feat_danger_zone">Zone de danger :</string>
+    <string name="feat_quick_toggle">Bascule rapide</string>
+    <string name="feat_danger_zone">Zone de danger</string>
     <string name="feat_download_folder">Dossier de téléchargement :</string>
     <string name="feat_downloader_set_folder">Définir l\'emplacement du dossier de téléchargement</string>
     <string name="feat_downloader_selected">Sélectionné : %1$s</string>

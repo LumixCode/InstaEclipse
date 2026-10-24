@@ -69,10 +69,10 @@
     <string name="feat_group_media">Medya</string>
     <string name="feat_group_tools">Araçlar</string>
     <string name="feat_features">Özellikler:</string>
-    <string name="feat_config">Yapılandırma:</string>
+    <string name="feat_config">Yapılandırma</string>
     <string name="feat_options">Seçenekler:</string>
-    <string name="feat_quick_toggle">Hızlı Geçiş:</string>
-    <string name="feat_danger_zone">Tehlikeli Bölge:</string>
+    <string name="feat_quick_toggle">Hızlı Geçiş</string>
+    <string name="feat_danger_zone">Tehlikeli Bölge</string>
     <string name="feat_download_folder">İndirme Klasörü:</string>
     <string name="feat_downloader_set_folder">İndirme Klasörü Konumunu Ayarla</string>
     <string name="feat_downloader_selected">Seçilen: %1$s</string>

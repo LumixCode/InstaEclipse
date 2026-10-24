@@ -481,10 +481,10 @@
     <string name="feat_categories">الفئات:</string>
     <string name="feat_tools">الأدوات:</string>
     <string name="feat_features">الميزات:</string>
-    <string name="feat_config">الإعدادات:</string>
+    <string name="feat_config">الإعدادات</string>
     <string name="feat_options">الخيارات:</string>
-    <string name="feat_quick_toggle">التبديل السريع:</string>
-    <string name="feat_danger_zone">المنطقة الخطرة:</string>
+    <string name="feat_quick_toggle">التبديل السريع</string>
+    <string name="feat_danger_zone">المنطقة الخطرة</string>
     <string name="feat_download_folder">مجلد التنزيل:</string>
     <string name="feat_downloader_set_folder">تحديد موقع مجلد التنزيل</string>
     <string name="feat_downloader_selected">المحدد: %1$s</string>
