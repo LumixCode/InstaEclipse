@@ -34,7 +34,6 @@ import com.google.android.material.color.MaterialColors;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
@@ -446,15 +445,9 @@ public class LoggingFragment extends Fragment implements TabFragment {
      * report even when they are hidden on screen.
      */
     private String exportText() {
-        List<Entry> items = new ArrayList<>();
-        for (Entry e : allEntries) if (filterKind == FILTER_ALL || e.kind == filterKind) items.add(e);
-        StringBuilder sb = new StringBuilder();
-        for (int i = items.size() - 1; i >= 0; i--) {
-            String s = items.get(i).full;
-            if (sb.length() + s.length() + 1 > MAX_EXPORT_CHARS) break;
-            sb.insert(0, s + "\n");
-        }
-        return sb.toString();
+        List<String> items = new ArrayList<>();
+        for (Entry e : allEntries) if (filterKind == FILTER_ALL || e.kind == filterKind) items.add(e.full);
+        return LogExport.tail(items, MAX_EXPORT_CHARS);
     }
 
     private void copyLogs() {
@@ -502,17 +495,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
         liveReplies.clear();
         Context app = ctx.getApplicationContext();
         try {
-            loadExecutor.execute(() -> {
-                // Truncate (not delete): a running Instagram keeps an O_APPEND fd on these files.
-                File[] files = LogMirrorProvider.mirrorDir(app).listFiles();
-                if (files != null) {
-                    for (File f : files) {
-                        try (FileOutputStream fos = new FileOutputStream(f, false)) {
-                            fos.getFD();
-                        } catch (Throwable ignored) {}
-                    }
-                }
-            });
+            loadExecutor.execute(() -> LogExport.truncate(LogMirrorProvider.mirrorDir(app)));
         } catch (Throwable ignored) {}
         reload();
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, R.string.logs_cleared, Toast.LENGTH_SHORT).show();
