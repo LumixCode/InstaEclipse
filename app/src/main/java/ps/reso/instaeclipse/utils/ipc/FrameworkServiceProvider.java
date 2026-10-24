@@ -13,6 +13,10 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.WeakHashMap;
+
 import io.github.libxposed.service.XposedProvider;
 
 public final class FrameworkServiceProvider extends ContentProvider {
@@ -22,23 +26,14 @@ public final class FrameworkServiceProvider extends ContentProvider {
     private static final String BINDER = "binder";
     public static final int UNKNOWN_UID = -1;
 
-    private static final class Sender {
-        final IBinder binder;
-        final int uid;
-
-        Sender(IBinder binder, int uid) {
-            this.binder = binder;
-            this.uid = uid;
-        }
-    }
-
-    private static volatile Sender lastSender;
+    private static final Map<IBinder, Integer> SENDERS = Collections.synchronizedMap(new WeakHashMap<>());
 
     private volatile XposedProvider delegate;
 
     public static int senderUid(IBinder binder) {
-        Sender sender = lastSender;
-        return sender != null && binder != null && sender.binder == binder ? sender.uid : UNKNOWN_UID;
+        if (binder == null) return UNKNOWN_UID;
+        Integer uid = SENDERS.get(binder);
+        return uid == null ? UNKNOWN_UID : uid;
     }
 
     @Override
@@ -60,7 +55,7 @@ public final class FrameworkServiceProvider extends ContentProvider {
     }
 
     private void record(IBinder binder, int uid) {
-        lastSender = new Sender(binder, uid);
+        SENDERS.put(binder, uid);
         String packages = "?";
         try {
             Context context = getContext();
