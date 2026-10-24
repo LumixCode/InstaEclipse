@@ -6,6 +6,7 @@ import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
@@ -26,6 +27,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BooleanSupplier;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
@@ -258,8 +260,24 @@ public final class ProfileMenuHook {
         if (onScreen(root, header, 0) == null) return null;
         View t = onScreen(root, title, bar);
         if (!(t instanceof TextView tv) || tv.getText() == null) return null;
-        String s = tv.getText().toString().trim();
+        return usernameFromTitle(tv.getText(), FeatureFlags.spoofUsername, ProfileSpoofHook.knownUsername(), () -> ownProfile(tv));
+    }
+
+    static String usernameFromTitle(CharSequence title, String spoofed, String known, BooleanSupplier ownProfile) {
+        String s = title.toString().trim();
         return s.isEmpty() ? null : s;
+    }
+
+    private static boolean ownProfile(View title) {
+        int chevron = ResIds.id(title.getContext(), "action_bar_title_chevron");
+        if (chevron == 0) return false;
+        android.graphics.Rect rect = new android.graphics.Rect();
+        ViewParent p = title.getParent();
+        for (int i = 0; i < 5 && p instanceof ViewGroup g; i++, p = g.getParent()) {
+            View c = g.findViewById(chevron);
+            if (c != null) return c.isShown() && c.getGlobalVisibleRect(rect) && rect.width() > 0 && rect.height() > 0;
+        }
+        return false;
     }
 
     /** A view with {@code id} visible on screen, inside a view with {@code ancestorId} if set. */
@@ -312,7 +330,11 @@ public final class ProfileMenuHook {
             if (v instanceof ViewGroup g) for (int i = 0; i < g.getChildCount(); i++) views.push(g.getChildAt(i));
         }
         roots.add(a);
-        return findUserFrom(roots, a, username, name, new int[1]);
+        return findUserFrom(null, roots, a, username, name, new int[1]);
+    }
+
+    static Object findUserFrom(Object profileFragment, Collection<Object> roots, Object activity, String username, Method usernameGetter, int[] visits) {
+        return findUserFrom(roots, activity, username, usernameGetter, visits);
     }
 
     static Object findUserFrom(Collection<Object> roots, Object activity, String username, Method usernameGetter, int[] visits) {
