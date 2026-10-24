@@ -44,6 +44,7 @@ public final class FollowingFollowStatusHook {
     private static final String RELATIONSHIP = "com.instagram.api.schemas.RelationshipInfoDict";
     private static final String PANDO_RELATIONSHIP = "com.instagram.api.schemas.ImmutablePandoRelationshipInfoDict";
     private static final String SUBTITLE_ID = "follow_list_subtitle";
+    private static final String SUBTITLE_KEY = "FollowingSubtitleId_v1";
     private static final Set<String> diagnostics = Collections.synchronizedSet(new HashSet<>());
     private static volatile Field knownSubtitle;
     private static volatile int subtitleResId;
@@ -53,7 +54,7 @@ public final class FollowingFollowStatusHook {
     @SuppressLint("DiscouragedApi")
     public void install(android.content.Context context, DexKitBridge bridge, ClassLoader loader) {
         try {
-            subtitleResId = context.getResources().getIdentifier(SUBTITLE_ID, "id", context.getPackageName());
+            subtitleResId = subtitleId(context);
             if (subtitleResId == 0) throw new android.content.res.Resources.NotFoundException(SUBTITLE_ID);
             Method binder = resolve(bridge, loader, "FollowingRowBind_v1", MethodMatcher.create()
                     .usingStrings("FollowListFragment.ShouldShowUnfollow", "least_interacted_with_followers")
@@ -121,6 +122,20 @@ public final class FollowingFollowStatusHook {
             }
             ModuleLog.error("(IE|FollowingStatus) Could not turn on follow status in the following list: its rows were not found", error);
         }
+    }
+
+    @SuppressLint("DiscouragedApi")
+    private static int subtitleId(android.content.Context context) {
+        String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(SUBTITLE_KEY) : null;
+        if (cached != null) {
+            try {
+                int id = Integer.parseInt(cached);
+                if (id != 0) return id;
+            } catch (NumberFormatException ignored) {}
+        }
+        int id = context.getResources().getIdentifier(SUBTITLE_ID, "id", context.getPackageName());
+        if (id != 0) DexKitCache.saveString(SUBTITLE_KEY, String.valueOf(id));
+        return id;
     }
 
     /** User.getId() is gone after 446; toString() still delegates to the same id accessor on 446 and 451. */

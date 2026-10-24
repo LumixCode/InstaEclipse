@@ -3,4 +3,6 @@
     <string name="ig_comment_search_maybe_more" tools:ignore="MissingTranslation">%1$d comments loaded · there may be more</string>
     <string name="ig_toast_story_unavailable" tools:ignore="MissingTranslation">Story details are not available</string>
     <string name="ig_toast_like_not_sent" tools:ignore="MissingTranslation">Like not sent</string>
+    <string name="ig_toast_user_follows_you" tools:ignore="MissingTranslation">\@%1$s follows you</string>
+    <string name="ig_toast_user_not_follows_you" tools:ignore="MissingTranslation">\@%1$s doesn\'t follow you</string>
 </resources>

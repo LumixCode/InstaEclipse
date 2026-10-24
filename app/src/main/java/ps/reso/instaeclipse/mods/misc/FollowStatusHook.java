@@ -32,6 +32,7 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.toast.CustomToast;
 import ps.reso.instaeclipse.utils.tracker.FollowIndicatorTracker;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
+import ps.reso.instaeclipse.utils.users.UserUtils;
 
 /**
  * Follower toast: "follows you" / "doesn't follow you" when a profile opens.
@@ -135,7 +136,7 @@ public final class FollowStatusHook {
         if (requestedAt == null || SystemClock.uptimeMillis() - requestedAt > PENDING_MS) return;
         if (!(field.get(status) instanceof Boolean value)) return;
         ps.reso.instaeclipse.mods.ui.ProfileFollowsYouHook.onFollowResult(userId, value);
-        showFollowToast(userId, value);
+        showFollowToast(userId, UserUtils.callUsernameGetter(user), value);
     }
 
     private static Method resolve(DexKitBridge bridge, ClassLoader loader, String key,
@@ -215,19 +216,17 @@ public final class FollowStatusHook {
     }
 
     /** Shows the follow-status toast on the main thread if userId is still pending. */
-    private static void showFollowToast(String userId, boolean followsYou) {
+    private static void showFollowToast(String userId, String username, boolean followsYou) {
         new Handler(Looper.getMainLooper()).post(() -> {
             try {
                 String currentTarget = FollowIndicatorTracker.currentlyViewedUserId;
                 if (currentTarget == null || !userId.equals(currentTarget)) return;
 
                 Context ctx = AndroidAppHelper.currentApplication().getApplicationContext();
-                String statusStr = followsYou
-                        ? I18n.t(ctx, R.string.ig_toast_follows_you)
-                        : I18n.t(ctx, R.string.ig_toast_not_follows_you);
+                String text = FollowToastText.text(username, followsYou,
+                        I18n.t(ctx, R.string.ig_toast_user_follows_you), I18n.t(ctx, R.string.ig_toast_user_not_follows_you));
 
-                if (FeatureFlags.showFollowerToast)
-                    CustomToast.showCustomToast(ctx, "(" + userId + ") " + statusStr);
+                if (FeatureFlags.showFollowerToast && text != null) CustomToast.showCustomToast(ctx, text);
 
                 // Clear tracker so we don't process duplicate callback triggers
                 FollowIndicatorTracker.currentlyViewedUserId = null;

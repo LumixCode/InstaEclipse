@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -42,11 +41,10 @@ import ps.reso.instaeclipse.utils.ui.ResIds;
 public final class ProfileFollowStatusHook {
     private static final String KEY = "FollowStatusLabel";
     private static final String TAG = "ie_profile_follow_status";
-    private static final String USER = "com.instagram.user.model.User";
     private static final String SESSION = "com.instagram.common.session.UserSession";
-    private static final String USER_DICT = "com.instagram.user.model.LiveTreeUserDict";
-    private static final String FRIENDSHIP = "com.instagram.user.model.FriendshipStatus";
     private static final String VIEW_MODEL = "com.instagram.profile.fragment.UserDetailViewModel";
+    private static final String READER_KEY = "ProfileFollowReader_v1";
+    private static final String BOUND_KEY = "ProfileFollowBound_v1_";
     private static final Set<String> diagnostics = Collections.synchronizedSet(new HashSet<>());
     private static final String[] NAME_IDS = {"profile_header_full_name", "profile_header_full_name_above_vanity"};
     /** igds_color_secondary_text attr id; -1 until resolved (0 = Instagram has none). */
@@ -58,7 +56,8 @@ public final class ProfileFollowStatusHook {
             final Method viewerId = Class.forName(SESSION, false, loader).getMethod("getUserId");
             List<Method> binders = resolveBinders(bridge, loader);
             int installed = 0;
-            for (Method binder : binders) {
+            for (int index = 0; index < binders.size(); index++) {
+                Method binder = binders.get(index);
                 if (Modifier.isStatic(binder.getModifiers())) continue;
                 int viewIndex = -1;
                 Class<?>[] parameters = binder.getParameterTypes();
@@ -67,24 +66,27 @@ public final class ProfileFollowStatusHook {
                 }
                 final Field session = uniqueField(binder.getDeclaringClass(), SESSION);
                 if (viewIndex < 0 || session == null) continue;
-                final ProfileReader reader = resolveReader(bridge, loader, binder);
+                final ProfileReader reader = resolveReader(bridge, loader, binder, index);
                 final int rootArg = viewIndex;
                 XposedBridge.hookMethod(binder, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) {
                         JitGuard.tick(param.method);
-                        if (FeatureFlags.showFollowStatusLabel) diagnostic("Native profile binder reached");
                         View root = (View) param.args[rootArg];
-                        if (root == null || findAnchor(root) == null) return;
-                        if (FeatureFlags.showFollowStatusLabel) diagnostic("Native profile metadata row found");
+                        if (root == null) return;
+                        if (!FeatureFlags.showFollowStatusLabel) {
+                            bindLabel(root, ProfileFollowStatus.Status.HIDDEN, null);
+                            return;
+                        }
+                        diagnostic("Native profile binder reached");
+                        if (findAnchor(root) == null) return;
+                        diagnostic("Native profile metadata row found");
                         ProfileFollowStatus.Status status = ProfileFollowStatus.Status.HIDDEN;
                         String profile = null;
                         try {
-                            if (FeatureFlags.showFollowStatusLabel) {
-                                profile = reader.profileId(param.args);
-                                Object account = session.get(param.thisObject);
-                                if (account != null) status = reader.read((String) viewerId.invoke(account), param.args);
-                                if (status == ProfileFollowStatus.Status.HIDDEN) diagnostic("Profile relationship hidden, self, or not available yet");
-                            }
+                            profile = reader.profileId(param.args);
+                            Object account = session.get(param.thisObject);
+                            if (account != null) status = reader.read((String) viewerId.invoke(account), param.args);
+                            if (status == ProfileFollowStatus.Status.HIDDEN) diagnostic("Profile relationship hidden, self, or not available yet");
                         } catch (Throwable error) {
                             // A partial model must clear a recycled profile's old label, not imply "no".
                             diagnostic("Profile relationship read failed: " + error.getClass().getSimpleName());
@@ -124,7 +126,55 @@ public final class ProfileFollowStatusHook {
         String profileId(Object[] arguments) throws Exception;
     }
 
-    private static ProfileReader resolveReader(DexKitBridge bridge, ClassLoader loader, Method binder) throws Exception {
+    private static ProfileReader resolveReader(DexKitBridge bridge, ClassLoader loader, Method binder, int index) throws Exception {
+        String boundKey = BOUND_KEY + index;
+        Schema schema = cachedSchema(loader, boundKey);
+        if (schema == null) {
+            schema = findSchema(bridge, loader, binder);
+            DexKitCache.saveMethods(READER_KEY, List.of(schema.strings, schema.booleans));
+            DexKitCache.saveField(READER_KEY, schema.nested);
+            DexKitCache.saveFields(boundKey, schema.fields);
+        }
+        Method strings = schema.strings, booleans = schema.booleans;
+        Field nested = schema.nested;
+        List<Field> fields = schema.fields;
+        Method children = resolveSchemaChild(bridge, loader, strings.getDeclaringClass());
+        diagnostic("Using bound profile schema projections");
+        return new ProfileReader() {
+            @Override public ProfileFollowStatus.Status read(String viewerId, Object[] args) throws Exception {
+                return ProfileFollowStatus.fromSchemas(viewerId,
+                        ProfileFollowStatus.boundSchemas(fields, nested, args), strings, children, booleans);
+            }
+
+            @Override public String profileId(Object[] args) throws Exception {
+                return ProfileFollowStatus.profileIdOf(ProfileFollowStatus.boundSchemas(fields, nested, args), strings);
+            }
+        };
+    }
+
+    private static final class Schema {
+        final Method strings, booleans;
+        final Field nested;
+        final List<Field> fields;
+
+        Schema(Method strings, Method booleans, Field nested, List<Field> fields) {
+            this.strings = strings;
+            this.booleans = booleans;
+            this.nested = nested;
+            this.fields = fields;
+        }
+    }
+
+    private static Schema cachedSchema(ClassLoader loader, String boundKey) {
+        if (!DexKitCache.isCacheValid()) return null;
+        List<Method> methods = DexKitCache.loadMethods(READER_KEY, loader);
+        Field nested = DexKitCache.loadField(READER_KEY, loader);
+        List<Field> fields = DexKitCache.loadFields(boundKey, loader);
+        if (methods == null || methods.size() != 2 || nested == null || fields == null || fields.isEmpty()) return null;
+        return new Schema(methods.get(0), methods.get(1), nested, fields);
+    }
+
+    private static Schema findSchema(DexKitBridge bridge, ClassLoader loader, Method binder) throws Exception {
         Method username = resolve(bridge, loader, "ProfileFollowUsername_v3", MethodMatcher.create()
                 .declaredClass(VIEW_MODEL).usingStrings("INVALID_USER_NAME").paramCount(0).returnType(String.class));
         for (var invocation : bridge.getMethodData(username).getInvokes()) {
@@ -141,47 +191,11 @@ public final class ProfileFollowStatusHook {
                 nested.setAccessible(true);
                 List<Field> fields = boundFields(bridge, loader, binder, nested.getDeclaringClass());
                 if (fields.isEmpty()) continue;
-                Method children = resolveSchemaChild(bridge, loader, schema);
-                Method booleans = uniqueIntGetter(schema, Boolean.class);
-                diagnostic("Using bound profile schema projections");
-                return new ProfileReader() {
-                    @Override public ProfileFollowStatus.Status read(String viewerId, Object[] args) throws Exception {
-                        return ProfileFollowStatus.fromSchemas(viewerId,
-                                ProfileFollowStatus.boundSchemas(fields, nested, args), strings, children, booleans);
-                    }
-
-                    @Override public String profileId(Object[] args) throws Exception {
-                        return ProfileFollowStatus.profileIdOf(ProfileFollowStatus.boundSchemas(fields, nested, args), strings);
-                    }
-                };
+                strings.setAccessible(true);
+                return new Schema(strings, uniqueIntGetter(schema, Boolean.class), nested, fields);
             }
         }
-
-        // Older Instagram keeps the displayed User directly in the bound header.
-        Class<?> userType = Class.forName(USER, false, loader);
-        List<Field> fields = boundFields(bridge, loader, binder, userType);
-        if (fields.isEmpty()) throw new NoSuchFieldException("Bound profile User missing");
-        Method userId = userType.getMethod("getId");
-        Field dict = uniqueField(userType, USER_DICT);
-        Method friendship = uniqueGetter(dict == null ? userType : dict.getType(), FRIENDSHIP);
-        Method toMap = resolve(bridge, loader, "ProfileFollowMap_v1", MethodMatcher.create()
-                .paramTypes(FRIENDSHIP).returnType(Map.class).usingStrings("followed_by", "following"));
-        if (!Modifier.isStatic(toMap.getModifiers())) throw new IllegalStateException("Friendship mapper is not static");
-        return new ProfileReader() {
-            @Override public ProfileFollowStatus.Status read(String viewerId, Object[] args) throws Exception {
-                Object user = ProfileFollowStatus.boundUser(fields, args);
-                if (user == null) return ProfileFollowStatus.Status.HIDDEN;
-                Object data = dict == null ? user : dict.get(user);
-                Object relationship = data == null ? null : friendship.invoke(data);
-                return ProfileFollowStatus.from(viewerId, (String) userId.invoke(user),
-                        relationship == null ? null : (Map<?, ?>) toMap.invoke(null, relationship));
-            }
-
-            @Override public String profileId(Object[] args) throws Exception {
-                Object user = ProfileFollowStatus.boundUser(fields, args);
-                return user == null ? null : (String) userId.invoke(user);
-            }
-        };
+        throw new NoSuchFieldException("Bound profile schema missing");
     }
 
     private static List<Field> boundFields(DexKitBridge bridge, ClassLoader loader, Method binder, Class<?> type)
@@ -274,19 +288,6 @@ public final class ProfileFollowStatusHook {
         return found;
     }
 
-    private static Method uniqueGetter(Class<?> type, String returnType) throws NoSuchMethodException {
-        Method found = null;
-        for (Method method : type.getMethods()) {
-            if (Modifier.isStatic(method.getModifiers()) || method.getParameterCount() != 0
-                    || !method.getReturnType().getName().equals(returnType)) continue;
-            if (found != null) throw new NoSuchMethodException("Ambiguous friendship getter");
-            found = method;
-        }
-        if (found == null) throw new NoSuchMethodException("Friendship getter missing");
-        found.setAccessible(true);
-        return found;
-    }
-
     static void bindLabel(View root, ProfileFollowStatus.Status status) {
         bindLabel(root, status, null);
     }
@@ -336,8 +337,14 @@ public final class ProfileFollowStatusHook {
             TextView added = label;
             // Registered only while attached: a window-wide listener per visited profile would
             // outlive its header and run on every frame.
+            int[] synced = {-1, -1};
             ViewTreeObserver.OnPreDrawListener sync = () -> {
-                syncLabel(root, added);
+                int width = contentWidth(root), on = FeatureFlags.showFollowStatusLabel ? 1 : 0;
+                if (width != synced[0] || on != synced[1]) {
+                    synced[0] = width;
+                    synced[1] = on;
+                    syncLabel(root, added);
+                }
                 return true;
             };
             label.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
@@ -369,8 +376,12 @@ public final class ProfileFollowStatusHook {
         boolean visible = FeatureFlags.showFollowStatusLabel
                 && label.getTag(R.id.ie_follow_status_state) != ProfileFollowStatus.Status.HIDDEN;
         applyVisibility(label, visible);
-        int width = root.getWidth() - root.getPaddingLeft() - root.getPaddingRight();
+        int width = contentWidth(root);
         if (width > 0 && label.getMaxWidth() != width) label.setMaxWidth(width);
+    }
+
+    private static int contentWidth(View root) {
+        return root.getWidth() - root.getPaddingLeft() - root.getPaddingRight();
     }
 
     private static void applyVisibility(TextView label, boolean visible) {
