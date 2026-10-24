@@ -14,13 +14,8 @@ import android.view.accessibility.AccessibilityNodeProvider;
 import android.widget.TextView;
 
 import org.luckypray.dexkit.DexKitBridge;
-import org.luckypray.dexkit.query.FindMethod;
-import org.luckypray.dexkit.query.enums.StringMatchType;
-import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayDeque;
@@ -34,13 +29,12 @@ import java.util.Map;
 import java.util.Set;
 
 import ps.reso.instaeclipse.R;
-import ps.reso.instaeclipse.utils.core.DexKitCache;
-import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.text.CopyFeedback;
+import ps.reso.instaeclipse.utils.ui.A11yIds;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
@@ -75,13 +69,10 @@ public final class ProfileTextCopyHook {
     private static final String TAG = "(IE|ProfileCopy) ";
     private static final String ACTION_BAR = "com.instagram.profile.actionbar.ProfileActionBar";
     private static final String COMPOSE_VIEW = "androidx.compose.ui.platform.AndroidComposeView";
-    private static final String BIO_COMPOSABLE = "ProfileBioComponent (ProfileBioComponent.kt";
-    private static final String BIO_STATE_KEY = "ProfileTextCopyBioState";
     private static final int MAX_NODES = 400;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
     private static int titleId = -1, containerId, userInfoId = -1;
-    private static Method childIdMethod;
 
     // One hold at a time; touch events arrive on the main thread.
     private static final WeakReference<View> NONE = new WeakReference<>(null);
@@ -102,7 +93,7 @@ public final class ProfileTextCopyHook {
     public void install(DexKitBridge bridge, ClassLoader cl) {
         int title = hookTitle(cl);
         boolean bio = hookBioTouches(cl);
-        String header = hookHeaderBios(bridge, cl);
+        String header = ProfileBioState.installCopy(bridge, cl, ProfileTextCopyHook::remember);
         if (title > 0 || bio) FeatureStatusTracker.setHooked("ProfileMenuTools");
         if (title > 0 && bio) ModuleLog.ok(TAG + "hold to copy ready");
         else if (title > 0) ModuleLog.warn(TAG + "Hold to copy works for the username only; copying the bio is not available in this Instagram version");
@@ -327,7 +318,6 @@ public final class ProfileTextCopyHook {
      * Texts of the accessibility nodes under a screen point, innermost first: Compose draws the
      * bio, so its node tree (what TalkBack reads) is where the text and its bounds are.
      */
-    @SuppressLint("SoonBlockedPrivateApi") // guarded: a failure only means no copy
     private static List<String> heldTexts(View compose, int x, int y) {
         List<Object[]> hits = new ArrayList<>(); // {depth, text}
         try {
@@ -336,10 +326,6 @@ public final class ProfileTextCopyHook {
                 ModuleLog.warn(TAG + "Could not read the bio under your finger, so it was not copied");
                 ModuleLog.detail(TAG + "bio: the user info has no accessibility provider");
                 return new ArrayList<>();
-            }
-            if (childIdMethod == null) {
-                childIdMethod = AccessibilityNodeInfo.class.getDeclaredMethod("getChildId", int.class);
-                childIdMethod.setAccessible(true);
             }
             Rect bounds = new Rect();
             ArrayDeque<int[]> queue = new ArrayDeque<>(); // {virtual view id, depth}
@@ -358,7 +344,7 @@ public final class ProfileTextCopyHook {
                     hits.add(new Object[]{next[1], text.toString()});
                 }
                 for (int i = 0; i < node.getChildCount(); i++) {
-                    queue.add(new int[]{(int) (((long) childIdMethod.invoke(node, i)) >> 32), next[1] + 1});
+                    queue.add(new int[]{A11yIds.childId(node, i), next[1] + 1});
                 }
             }
         } catch (Throwable t) {
@@ -392,68 +378,11 @@ public final class ProfileTextCopyHook {
         return out;
     }
 
-    /**
-     * Remembers the bio each profile header is built with. The header binder (09ZU.A06 on 451)
-     * builds the ProfileBioComponent UI state (0AnT on 451) from the profile's own GraphQL model
-     * (biography_with_entities.raw_text): the type of a ProfileBioComponent parameter whose
-     * constructor's first three String parameters are the id, username and bio, the class and
-     * argument map ProfileSpoofHook uses. Read only.
-     */
-    private static String hookHeaderBios(DexKitBridge bridge, ClassLoader cl) {
-        try {
-            Class<?> state = null;
-            String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(BIO_STATE_KEY) : null;
-            if (cached != null && !cached.isEmpty()) {
-                try { state = Class.forName(cached, false, cl); } catch (Throwable ignored) {}
-            }
-            if (state == null) {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                        .usingStrings(List.of(BIO_COMPOSABLE), StringMatchType.Contains, false)))) {
-                    Method m;
-                    try { m = md.getMethodInstance(cl); } catch (Throwable t) { continue; }
-                    for (Class<?> p : m.getParameterTypes()) {
-                        if (bioConstructor(p) != null) { state = p; break; }
-                    }
-                    if (state != null) break;
-                }
-                if (state != null) DexKitCache.saveString(BIO_STATE_KEY, state.getName());
-            }
-            Constructor<?> ctor = state != null ? bioConstructor(state) : null;
-            if (ctor == null) return "not found";
-            Class<?>[] types = ctor.getParameterTypes();
-            List<Integer> strings = new ArrayList<>();
-            for (int i = 0; i < types.length; i++) if (types[i] == String.class) strings.add(i);
-            final int usernameArg = strings.get(1), bioArg = strings.get(2);
-            XposedBridge.hookMethod(ctor, new XC_MethodHook() {
-                @Override protected void afterHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
-                    if (!FeatureFlags.profileMenuTools) return;
-                    if (param.args[usernameArg] instanceof String user && param.args[bioArg] instanceof String bio
-                            && !bio.trim().isEmpty()) {
-                        synchronized (HEADER_BIOS) {
-                            HEADER_BIOS.remove(user); // re-inserted as the newest
-                            HEADER_BIOS.put(user, bio);
-                        }
-                    }
-                }
-            });
-            return state.getName() + " args " + usernameArg + "/" + bioArg;
-        } catch (Throwable t) {
-            return String.valueOf(t);
+    private static void remember(String user, String bio) {
+        if (!FeatureFlags.profileMenuTools || bio.trim().isEmpty()) return;
+        synchronized (HEADER_BIOS) {
+            HEADER_BIOS.remove(user);
+            HEADER_BIOS.put(user, bio);
         }
-    }
-
-    /** The bio UI state's constructor: at least 4 String and 5 boolean parameters. */
-    private static Constructor<?> bioConstructor(Class<?> c) {
-        if (c.isPrimitive() || c.isInterface() || c.getName().startsWith("java") || c.getName().startsWith("android")) return null;
-        for (Constructor<?> k : c.getDeclaredConstructors()) {
-            int strings = 0, booleans = 0;
-            for (Class<?> p : k.getParameterTypes()) {
-                if (p == String.class) strings++;
-                else if (p == boolean.class) booleans++;
-            }
-            if (strings >= 4 && booleans >= 5) return k;
-        }
-        return null;
     }
 }

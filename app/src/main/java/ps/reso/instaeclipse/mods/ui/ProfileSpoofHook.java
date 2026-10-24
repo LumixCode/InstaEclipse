@@ -73,119 +73,49 @@ public final class ProfileSpoofHook {
         }
         int hooked = 0;
         StringBuilder log = new StringBuilder();
-        hooked += hook(bridge, cl, "follower_count", "ProfileSpoofFollowers", log, new String[]{"java.lang.Integer", "int", "java.lang.Long", "long"}, 0);
-        hooked += hook(bridge, cl, "following_count", "ProfileSpoofFollowing", log, new String[]{"java.lang.Integer", "int", "java.lang.Long", "long"}, 1);
-        hooked += hook(bridge, cl, "media_count", "ProfileSpoofPosts", log, new String[]{"java.lang.Integer", "int", "java.lang.Long", "long"}, 2);
-        hooked += hook(bridge, cl, "is_verified", "ProfileSpoofVerified", log, new String[]{"java.lang.Boolean", "boolean"}, 3);
+        hooked += hook(bridge, cl, "follower_count", "ProfileSpoofFollowers_v2", log, COUNT_TYPES, 0);
+        hooked += hook(bridge, cl, "following_count", "ProfileSpoofFollowing_v2", log, COUNT_TYPES, 1);
+        hooked += hook(bridge, cl, "media_count", "ProfileSpoofPosts_v2", log, COUNT_TYPES, 2);
+        hooked += hook(bridge, cl, "is_verified", "ProfileSpoofVerified_v2", log, FLAG_TYPES, 3);
         boolean session = trackAccount(cl);
         hookHeaderViews();
         hookMetricWriter(bridge, cl, log);
         hookAvatarView();
-        hookBioState(bridge, cl, log);
+        log.append(", bio=").append(ProfileBioState.installSpoof(bridge, cl, ProfileSpoofHook::spoofBio));
         if (hooked > 0 && session) FeatureStatusTracker.setHooked("ProfileSpoofer");
         if (hooked > 0 && session) ModuleLog.ok(TAG + "ready");
         else ModuleLog.error(TAG + "Will not work: profile counts or your account could not be found in this Instagram version");
         ModuleLog.detail(TAG + "getters hooked=" + hooked + log + ", account tracking=" + session);
     }
 
-    // ---- Bio (Compose): the header's bio UI state ----------------------------------------
+    private static final java.util.List<Class<?>> COUNT_TYPES = java.util.List.of(Integer.class, int.class, Long.class, long.class);
+    private static final java.util.List<Class<?>> FLAG_TYPES = java.util.List.of(Boolean.class, boolean.class);
 
-    private static final String BIO_COMPOSABLE = "ProfileBioComponent (ProfileBioComponent.kt";
-    private static final String BIO_STATE_KEY = "ProfileSpoofBioState";
-
-    /** Finds the bio UI state class (see the class doc) and hooks its constructors. */
-    private static void hookBioState(DexKitBridge bridge, ClassLoader cl, StringBuilder log) {
-        try {
-            Class<?> state = null;
-            String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(BIO_STATE_KEY) : null;
-            if (cached != null && !cached.isEmpty()) {
-                try { state = Class.forName(cached, false, cl); } catch (Throwable ignored) {}
-            }
-            if (state == null) {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                        .usingStrings(java.util.List.of(BIO_COMPOSABLE),
-                                org.luckypray.dexkit.query.enums.StringMatchType.Contains, false)))) {
-                    Method m;
-                    try { m = md.getMethodInstance(cl); } catch (Throwable t) { continue; }
-                    for (Class<?> p : m.getParameterTypes()) {
-                        if (bioConstructor(p) != null) { state = p; break; }
-                    }
-                    if (state != null) break;
-                }
-                if (state != null) DexKitCache.saveString(BIO_STATE_KEY, state.getName());
-            }
-            java.lang.reflect.Constructor<?> ctor = state != null ? bioConstructor(state) : null;
-            if (ctor == null) {
-                log.append(", bio=not found");
-                return;
-            }
-            Class<?>[] types = ctor.getParameterTypes();
-            int[] strings = new int[types.length];
-            int n = 0, lastString = -1;
-            for (int i = 0; i < types.length; i++) if (types[i] == String.class) { strings[n++] = i; lastString = i; }
-            final int usernameArg = strings[1];
-            final int bioArg = strings[2];
-            int entities = -1;
-            for (int i = lastString + 1; i < types.length; i++)
-                if (!types[i].isPrimitive() && types[i] != Integer.class) { entities = i; break; }
-            final int entitiesArg = entities;
-            final int[] stringArgs = java.util.Arrays.copyOf(strings, n);
-            XposedBridge.hookMethod(ctor, new XC_MethodHook() {
-                @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (!FeatureFlags.profileSpoofer) return;
-                    String bio = FeatureFlags.spoofBio;
-                    String self = selfId;
-                    if (bio == null || bio.isEmpty() || self == null) return;
-                    boolean own = false;
-                    for (int i : stringArgs) if (self.equals(param.args[i])) { own = true; break; }
-                    // Fallback when the header model's id is not the account id: your username,
-                    // as the action bar shows it, while your own profile is in front.
-                    if (!own) {
-                        String real = realUsername;
-                        own = real != null && real.equals(param.args[usernameArg])
-                                && android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
-                                && ownProfileInFront();
-                    }
-                    if (!own) return;
-                    param.args[bioArg] = bio;
-                    // Mention / hashtag ranges point into the real bio; null = "none" (Instagram
-                    // passes null itself for a bio without entities).
-                    if (entitiesArg >= 0) param.args[entitiesArg] = null;
-                }
-            });
-            log.append(", bio=").append(state.getName()).append(" arg ").append(bioArg);
-        } catch (Throwable t) {
-            log.append(", bio=").append(t);
-        }
-    }
-
-    /** The bio UI state's constructor: at least 4 String and 5 boolean parameters. */
-    private static java.lang.reflect.Constructor<?> bioConstructor(Class<?> c) {
-        if (c.isPrimitive() || c.isInterface() || c.getName().startsWith("java") || c.getName().startsWith("android")) return null;
-        for (java.lang.reflect.Constructor<?> k : c.getDeclaredConstructors()) {
-            int strings = 0, booleans = 0;
-            for (Class<?> p : k.getParameterTypes()) {
-                if (p == String.class) strings++;
-                else if (p == boolean.class) booleans++;
-            }
-            if (strings >= 4 && booleans >= 5) return k;
-        }
-        return null;
+    private static String spoofBio(Object[] args, ProfileBioState.Layout at) {
+        if (!FeatureFlags.profileSpoofer) return null;
+        String bio = FeatureFlags.spoofBio;
+        String self = selfId;
+        if (bio == null || bio.isEmpty() || self == null) return null;
+        if (at.hasString(args, self)) return bio;
+        String real = realUsername;
+        boolean own = real != null && real.equals(at.username(args))
+                && android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
+                && ownProfileInFront();
+        return own ? bio : null;
     }
 
     /** Finds User's zero-arg getter for {@code field} and hooks it; returns how many were hooked. */
     private static int hook(DexKitBridge bridge, ClassLoader cl, String field, String cacheKey,
-                            StringBuilder log, String[] types, int which) {
+                            StringBuilder log, java.util.List<Class<?>> types, int which) {
         try {
             java.util.List<Method> found = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(cacheKey, cl) : null;
             if (found == null || found.isEmpty()) {
                 found = new java.util.ArrayList<>();
-                for (String type : types) {
-                    for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                            .declaredClass(USER).paramCount(0).returnType(type).usingNumbers(field.hashCode())))) {
-                        Method m = md.getMethodInstance(cl);
-                        if (!Modifier.isStatic(m.getModifiers())) found.add(m);
-                    }
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                        .declaredClass(USER).paramCount(0).usingNumbers(field.hashCode())))) {
+                    if (!md.isMethod()) continue;
+                    Method m = md.getMethodInstance(cl);
+                    if (!Modifier.isStatic(m.getModifiers()) && types.contains(m.getReturnType())) found.add(m);
                 }
                 if (!found.isEmpty()) DexKitCache.saveMethods(cacheKey, found);
             }
@@ -382,18 +312,20 @@ public final class ProfileSpoofHook {
 
     /** Your own profile is on screen: the account switcher chevron is shown. */
     private static boolean ownProfileShown(android.view.View v) {
-        if (chevronId == 0) return false;
-        // Your profile stays loaded behind other screens (isShown still true): look for a chevron
-        // that is really on screen.
+        return shownChevron(v) != null;
+    }
+
+    private static android.view.View shownChevron(android.view.View v) {
+        if (chevronId == 0) return null;
         java.util.ArrayDeque<android.view.View> st = new java.util.ArrayDeque<>();
         st.push(v.getRootView());
         while (!st.isEmpty()) {
             android.view.View x = st.pop();
-            if (!x.isShown()) continue;
-            if (x.getId() == chevronId && onScreen(x)) return true;
+            if (x.getVisibility() != android.view.View.VISIBLE) continue;
+            if (x.getId() == chevronId && onScreen(x)) return x;
             if (x instanceof android.view.ViewGroup g) for (int i = 0; i < g.getChildCount(); i++) st.push(g.getChildAt(i));
         }
-        return false;
+        return null;
     }
 
     private static boolean onScreen(android.view.View x) {
@@ -493,11 +425,41 @@ public final class ProfileSpoofHook {
         iv.post(() -> syncTabAvatar(iv));
     }
 
+    private static final long TAB_WALK_MS = 150;
+    private static final java.util.Set<android.widget.ImageView> TAB_PENDING =
+            java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    private static java.lang.ref.WeakReference<android.view.View> tabChevron = new java.lang.ref.WeakReference<>(null);
+    private static long tabWalkAt;
+
+    private static Boolean tabOwnProfile(android.widget.ImageView iv) {
+        android.view.View chevron = tabChevron.get();
+        if (chevron != null && chevron.isAttachedToWindow() && chevron.getRootView() == iv.getRootView()
+                && onScreen(chevron)) return Boolean.TRUE;
+        long now = android.os.SystemClock.uptimeMillis();
+        long wait = tabWalkAt + TAB_WALK_MS - now;
+        if (wait > 0) {
+            if (TAB_PENDING.add(iv)) iv.postDelayed(() -> {
+                TAB_PENDING.remove(iv);
+                syncTabAvatar(iv);
+            }, wait);
+            return null;
+        }
+        tabWalkAt = now;
+        chevron = shownChevron(iv);
+        tabChevron = new java.lang.ref.WeakReference<>(chevron);
+        return chevron != null;
+    }
+
     private static void syncTabAvatar(android.widget.ImageView iv) {
         try {
             if (!iv.isAttachedToWindow()) return;
             String value = FeatureFlags.spoofAvatar;
-            boolean want = FeatureFlags.profileSpoofer && value != null && !value.isEmpty() && ownProfileShown(iv);
+            boolean want = false;
+            if (FeatureFlags.profileSpoofer && value != null && !value.isEmpty()) {
+                Boolean own = tabOwnProfile(iv);
+                if (own == null) return;
+                want = own;
+            }
             boolean ours = iv.getDrawable() instanceof ps.reso.instaeclipse.utils.profile.SpoofAvatar.CircleDrawable;
             if (want && !ours) {
                 android.graphics.Bitmap bitmap = ps.reso.instaeclipse.utils.profile.SpoofAvatar.bitmap(value);
