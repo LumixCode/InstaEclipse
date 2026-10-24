@@ -5,8 +5,6 @@ import android.content.res.Resources;
 import android.util.SparseIntArray;
 import android.view.View;
 
-import androidx.core.view.ViewCompat;
-
 import java.lang.reflect.Field;
 
 import ps.reso.instaeclipse.R;
@@ -294,56 +292,64 @@ public final class IgColorRemapEngine {
         } catch (Throwable ignored) {}
     }
 
+    static final Object[][] CANONICAL = {
+            {0xFF000000, IgThemePalette.SLOT_BACKGROUND},
+            {0xFF0C1014, IgThemePalette.SLOT_BACKGROUND},
+            {0xFF1A1A1A, IgThemePalette.SLOT_SURFACE},
+            {0xFF1E1E1E, IgThemePalette.SLOT_SURFACE},
+            {0xFF262626, IgThemePalette.SLOT_SURFACE},
+            {0xFF363636, IgThemePalette.SLOT_DIVIDER},
+            {0xFF121212, IgThemePalette.SLOT_BACKGROUND},
+            {0xFF141414, IgThemePalette.SLOT_SURFACE},
+            {0xFF212328, IgThemePalette.SLOT_SURFACE},
+            {0xFF32353E, IgThemePalette.SLOT_SURFACE},
+            {0xFFF5F5F5, IgThemePalette.SLOT_PRIMARY_TEXT},
+            {0xFFEFEFEF, IgThemePalette.SLOT_SECONDARY_TEXT},
+            {0xFFDBDBDB, IgThemePalette.SLOT_SECONDARY_TEXT},
+            {0xFFC7C7C7, IgThemePalette.SLOT_SECONDARY_TEXT},
+            {0xFFA8A8A8, IgThemePalette.SLOT_SECONDARY_TEXT},
+            {0xFF737373, IgThemePalette.SLOT_SECONDARY_TEXT},
+            {0xFF555555, IgThemePalette.SLOT_SECONDARY_TEXT},
+            {0xFFBCC0C4, IgThemePalette.SLOT_SECONDARY_TEXT},
+            {0xFFFFFFFF, IgThemePalette.SLOT_PRIMARY_TEXT},
+            {0xFF0095F6, IgThemePalette.SLOT_BUTTON},
+            {0xFF1877F2, IgThemePalette.SLOT_BUTTON},
+            {0xFF4A5DF9, IgThemePalette.SLOT_BUTTON},
+            {0xFFED4956, IgThemePalette.SLOT_DESTRUCTIVE},
+            {0xFFFF3040, IgThemePalette.SLOT_DESTRUCTIVE},
+            {0xFFFCAF17, IgThemePalette.SLOT_ACCENT},
+            {0xFF1C1D22, IgThemePalette.SLOT_SURFACE},
+            {0xFF233038, IgThemePalette.SLOT_SURFACE},
+            {0xFFEBF7FE, IgThemePalette.SLOT_SURFACE},
+            {0xFFF3F5F7, IgThemePalette.SLOT_BACKGROUND},
+            {0xFFFAFAFA, IgThemePalette.SLOT_PRIMARY_TEXT},
+            {0xFFE0E0E0, IgThemePalette.SLOT_SECONDARY_TEXT},
+            {0xFF757575, IgThemePalette.SLOT_SECONDARY_TEXT},
+            {0xFF9E9E9E, IgThemePalette.SLOT_SECONDARY_TEXT},
+            {0xFF424242, IgThemePalette.SLOT_BORDER},
+            {0xFF2C2C2C, IgThemePalette.SLOT_BORDER},
+            {0xFF383838, IgThemePalette.SLOT_BORDER},
+            {0xFF54CEFF, IgThemePalette.SLOT_LINK},
+            {0xFF00376B, IgThemePalette.SLOT_LINK},
+            {0xFF58C322, IgThemePalette.SLOT_ACCENT},
+            {0xFFFFDB70, IgThemePalette.SLOT_ACCENT},
+            {0x80FFFFFF, IgThemePalette.SLOT_PRIMARY_TEXT, 0.5f},
+            {0x80F5F5F5, IgThemePalette.SLOT_PRIMARY_TEXT, 0.5f},
+            {0x80000000, IgThemePalette.SLOT_BACKGROUND, 0.5f},
+            {0xCC000000, IgThemePalette.SLOT_BACKGROUND, 0.8f},
+            {0x33000000, IgThemePalette.SLOT_BACKGROUND, 0.2f},
+            {0x33FFFFFF, IgThemePalette.SLOT_PRIMARY_TEXT, 0.2f},
+            {0xFF8E8E8E, IgThemePalette.SLOT_SECONDARY_TEXT},
+            {0xFF999999, IgThemePalette.SLOT_SECONDARY_TEXT},
+            {0xFF2C2C2C, IgThemePalette.SLOT_SECONDARY_TEXT},
+    };
+
     private static void mapCanonical(SparseIntArray exact, SparseIntArray rgb, IgThemePalette palette) {
-        put(exact, rgb, ViewCompat.MEASURED_STATE_MASK, palette.background);
-        put(exact, rgb, -15986668, palette.background);
-        put(exact, rgb, -15066598, palette.surface);
-        put(exact, rgb, -14803426, palette.surface);
-        put(exact, rgb, -14277082, palette.surface);
-        put(exact, rgb, -13224394, palette.divider);
-        put(exact, rgb, -15592942, palette.background);
-        put(exact, rgb, -15461356, palette.surface);
-        put(exact, rgb, -14605528, palette.surface);
-        put(exact, rgb, -13486786, palette.surface);
-        put(exact, rgb, -657931, palette.primaryText);
-        put(exact, rgb, -1052689, palette.secondaryText);
-        put(exact, rgb, -2368549, palette.secondaryText);
-        put(exact, rgb, -3684409, palette.secondaryText);
-        put(exact, rgb, -5723992, palette.secondaryText);
-        put(exact, rgb, -9211021, palette.secondaryText);
-        put(exact, rgb, -11184811, palette.secondaryText);
-        put(exact, rgb, -4407100, palette.secondaryText);
-        put(exact, rgb, -1, palette.primaryText);
-        put(exact, rgb, -16738826, palette.button);
-        put(exact, rgb, -15173646, palette.button);
-        put(exact, rgb, -11903495, palette.button);
-        put(exact, rgb, -1226410, palette.destructive);
-        put(exact, rgb, -53184, palette.destructive);
-        put(exact, rgb, -217321, palette.accent);
-        put(exact, rgb, -14934750, palette.surface);
-        put(exact, rgb, -14471112, palette.surface);
-        put(exact, rgb, -1312770, palette.surface);
-        put(exact, rgb, -789001, palette.background);
-        put(exact, rgb, -328966, palette.primaryText);
-        put(exact, rgb, -2039584, palette.secondaryText);
-        put(exact, rgb, -9079435, palette.secondaryText);
-        put(exact, rgb, -6381922, palette.secondaryText);
-        put(exact, rgb, -12434878, palette.border);
-        put(exact, rgb, -13882324, palette.border);
-        put(exact, rgb, -13092808, palette.border);
-        put(exact, rgb, -11219201, palette.link);
-        put(exact, rgb, -16763029, palette.link);
-        put(exact, rgb, -10960094, palette.accent);
-        put(exact, rgb, -9360, palette.accent);
-        put(exact, rgb, -2130706433, IgThemePalette.withAlpha(palette.primaryText, 0.5f));
-        put(exact, rgb, -2131364363, IgThemePalette.withAlpha(palette.primaryText, 0.5f));
-        put(exact, rgb, Integer.MIN_VALUE, IgThemePalette.withAlpha(palette.background, 0.5f));
-        put(exact, rgb, -872415232, IgThemePalette.withAlpha(palette.background, 0.8f));
-        put(exact, rgb, 855638016, IgThemePalette.withAlpha(palette.background, 0.2f));
-        put(exact, rgb, 872415231, IgThemePalette.withAlpha(palette.primaryText, 0.2f));
-        put(exact, rgb, -7434610, palette.secondaryText);
-        put(exact, rgb, -6710887, palette.secondaryText);
-        put(exact, rgb, -13882324, palette.secondaryText);
+        for (Object[] row : CANONICAL) {
+            int to = palette.get((String) row[1]);
+            if (row.length > 2) to = IgThemePalette.withAlpha(to, (Float) row[2]);
+            put(exact, rgb, (Integer) row[0], to);
+        }
     }
 
     private static void mapResourceNames(SparseIntArray exact, SparseIntArray rgb, Resources res, String pkg, IgThemePalette palette) {

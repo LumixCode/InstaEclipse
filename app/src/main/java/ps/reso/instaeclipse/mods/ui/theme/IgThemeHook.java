@@ -126,15 +126,10 @@ public class IgThemeHook {
             protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 if (!IgThemeEngine.themeEnabled() || IgColorRemapEngine.isBypassing()
                         || param.getThrowable() != null || !IgColorRemapEngine.isReady()) return;
-                int resId = (Integer) param.args[0];
-                if (!IgThemeEngine.looksLikeDirectColor(resId) && IgThemeEngine.looksLikeResourceId(resId)
-                        && IgThemeEngine.colorForResource(resId) == null) {
-                    Object result = param.getResult();
-                    if (result instanceof Integer) {
-                        int resolved = (Integer) result;
-                        int remapped = IgColorRemapEngine.remap(resolved);
-                        if (remapped != resolved) param.setResult(remapped);
-                    }
+                if (param.getResult() instanceof Integer resolved) {
+                    int themed = IgThemeEngine.themedColor((Integer) param.args[0], resolved,
+                            IgThemeEngine::colorForResource, IgColorRemapEngine::remap);
+                    if (themed != resolved) param.setResult(themed);
                 }
             }
         };
@@ -170,15 +165,10 @@ public class IgThemeHook {
             protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 if (!IgThemeEngine.themeEnabled() || IgColorRemapEngine.isBypassing()
                         || param.getThrowable() != null || !IgColorRemapEngine.isReady()) return;
-                int resId = (Integer) param.args[0];
-                if (!IgThemeEngine.looksLikeDirectColor(resId) && IgThemeEngine.looksLikeResourceId(resId)
-                        && IgThemeEngine.colorForResource(resId) == null) {
-                    Object result = param.getResult();
-                    if (result instanceof Integer) {
-                        int resolved = (Integer) result;
-                        int remapped = IgColorRemapEngine.remap(resolved);
-                        if (remapped != resolved) param.setResult(remapped);
-                    }
+                if (param.getResult() instanceof Integer resolved) {
+                    int themed = IgThemeEngine.themedColor((Integer) param.args[0], resolved,
+                            IgThemeEngine::colorForResource, IgColorRemapEngine::remap);
+                    if (themed != resolved) param.setResult(themed);
                 }
             }
         };

@@ -7,6 +7,8 @@ import android.util.TypedValue;
 
 import java.lang.reflect.Field;
 import java.util.Set;
+import java.util.function.IntFunction;
+import java.util.function.IntUnaryOperator;
 
 import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -173,6 +175,11 @@ public final class IgThemeEngine {
         if (value == 0 || looksLikeResourceId(value)) return false;
         int alpha = value >>> 24;
         return alpha == 255 || alpha == 0 || alpha < 127;
+    }
+
+    static int themedColor(int resId, int resolved, IntFunction<Integer> byResource, IntUnaryOperator byValue) {
+        if (looksLikeDirectColor(resId) || !looksLikeResourceId(resId) || byResource.apply(resId) != null) return resolved;
+        return byValue.applyAsInt(resolved);
     }
 
     public static void applyAttrOverride(int attrId, TypedValue out) {
