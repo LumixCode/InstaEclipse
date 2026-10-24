@@ -33,6 +33,7 @@ import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.text.TimestampFormat;
 import ps.reso.instaeclipse.utils.toast.IeToast;
 import ps.reso.instaeclipse.utils.users.WatchlistStore;
 
@@ -423,7 +424,7 @@ public final class ProfileAnalyzer {
 
     private static void showResult(Context ctx, String self, WatchlistStore.Profile p, WatchlistStore.Result r, String error) {
         try {
-            DateFormat df = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT);
+            DateFormat df = TimestampFormat.dialogDateFormat(ctx);
             String name = p.username != null ? p.username : p.id;
             IeDialog dlg = new IeDialog(ctx).title("@" + name);
             String head;
@@ -529,7 +530,7 @@ public final class ProfileAnalyzer {
 
     private static void showWatchlist(Context ctx, String self, List<WatchlistStore.Entry> index) {
         try {
-            DateFormat df = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT);
+            DateFormat df = TimestampFormat.dialogDateFormat(ctx);
             IeDialog dlg = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_pa_watchlist));
             if (index.isEmpty()) {
                 dlg.message(I18n.t(ctx, R.string.ig_pa_watch_empty));

@@ -21,11 +21,9 @@ import org.luckypray.dexkit.result.MethodData;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,6 +40,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.text.TimestampFormat;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 
 /**
@@ -316,11 +315,11 @@ public class StoryInfoHook {
         return null;
     }
 
-    private static String time(Object v) {
+    private static String time(Context ctx, Object v) {
         Long secs = num(v);
         if (secs == null || secs <= 0) return null;
-        if (secs > 100_000_000_000L) secs /= 1000; // millis
-        return DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.MEDIUM).format(new Date(secs * 1000));
+        if (secs > 100_000_000_000L) secs /= 1000;
+        return TimestampFormat.dialogDateTime(ctx, secs * 1000);
     }
 
     // ── Story Info ───────────────────────────────────────────────────────────
@@ -330,9 +329,9 @@ public class StoryInfoHook {
                 .message(I18n.t(ctx, R.string.ig_story_info_hint));
         int rows = 0;
 
-        rows += row(dlg, ctx, R.string.ig_si_posted, time(value(media, "taken_at")), null);
-        rows += row(dlg, ctx, R.string.ig_si_expires, time(value(media, "expiring_at")), null);
-        String edited = time(value(media, "story_edited_at"));
+        rows += row(dlg, ctx, R.string.ig_si_posted, time(ctx, value(media, "taken_at")), null);
+        rows += row(dlg, ctx, R.string.ig_si_expires, time(ctx, value(media, "expiring_at")), null);
+        String edited = time(ctx, value(media, "story_edited_at"));
         if (edited == null && Boolean.TRUE.equals(value(media, "is_story_edited"))) edited = I18n.t(ctx, R.string.ig_si_yes);
         rows += row(dlg, ctx, R.string.ig_si_edited, edited, null);
 
@@ -398,7 +397,7 @@ public class StoryInfoHook {
             Object c = find(cd, "countdown_sticker");
             if (c == null) c = cd;
             String text = str(c, "text");
-            String end = time(find(c, "end_ts"));
+            String end = time(ctx, find(c, "end_ts"));
             rows += row(dlg, ctx, R.string.ig_si_countdown,
                     text == null ? end : (end == null ? text : text + "\n" + end), null);
         }

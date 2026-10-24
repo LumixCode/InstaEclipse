@@ -25,6 +25,7 @@ import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.text.CopyFeedback;
+import ps.reso.instaeclipse.utils.text.TimestampFormat;
 import ps.reso.instaeclipse.utils.toast.IeToast;
 import ps.reso.instaeclipse.utils.users.WatchlistStore;
 
@@ -124,12 +125,13 @@ final class ProfileChangelog {
         final LinearLayout list;
         final List<ProfileChangelogPolicy.Row> rows;
         final String name;
-        final DateFormat df = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT);
+        final DateFormat df;
 
         Page(IeDialog dlg, Context ctx, String self, WatchlistStore.Profile p, LinearLayout list,
              List<ProfileChangelogPolicy.Row> rows, String name, String fallbackName) {
             this.dlg = dlg;
             this.ctx = ctx;
+            this.df = TimestampFormat.dialogDateFormat(ctx);
             this.self = self;
             this.p = p;
             this.list = list;

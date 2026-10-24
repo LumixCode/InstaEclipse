@@ -1555,7 +1555,7 @@ public class CommentSearchHook {
                 }
                 for (List<String[]> l : kids.values()) l.sort((x, y) -> Long.compare(num(x[6]), num(y[6])));
                 int replies = comments.size() - tops.size();
-                java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat("d MMM yyyy, HH:mm", Locale.getDefault());
+                java.text.SimpleDateFormat fmt = ps.reso.instaeclipse.utils.text.TimestampFormat.dialogDateFormat(ctx);
                 String now = fmt.format(new java.util.Date());
 
                 StringBuilder h = new StringBuilder(64 * 1024);

@@ -1,9 +1,15 @@
 package ps.reso.instaeclipse.utils.text;
 
+import android.content.Context;
+
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.function.BiFunction;
+
+import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 
 /**
  * Date/time format for "Show exact dates" (#265): the device's short date + time, one of the
@@ -24,6 +30,7 @@ public final class TimestampFormat {
     };
 
     private static volatile Checked lastChecked;
+    private static volatile DialogPattern lastDialogPattern;
 
     private TimestampFormat() {}
 
@@ -35,6 +42,46 @@ public final class TimestampFormat {
             this.pattern = pattern;
             this.valid = valid;
         }
+    }
+
+    private static final class DialogPattern {
+        final String custom;
+        final Locale locale;
+        final boolean use24HourClock;
+        final String pattern;
+
+        DialogPattern(String custom, Locale locale, boolean use24HourClock, String pattern) {
+            this.custom = custom;
+            this.locale = locale;
+            this.use24HourClock = use24HourClock;
+            this.pattern = pattern;
+        }
+
+        boolean matches(String custom, Locale locale, boolean use24HourClock) {
+            return this.use24HourClock == use24HourClock && Objects.equals(this.custom, custom) && this.locale.equals(locale);
+        }
+    }
+
+    public static String dialogDateTime(Context ctx, long millis) {
+        return dialogDateFormat(ctx).format(new Date(millis));
+    }
+
+    public static SimpleDateFormat dialogDateFormat(Context ctx) {
+        return dialogFormat(FeatureFlags.exactTimestampFormat, Locale.getDefault(),
+                android.text.format.DateFormat.is24HourFormat(ctx), android.text.format.DateFormat::getBestDateTimePattern);
+    }
+
+    static SimpleDateFormat dialogFormat(String custom, Locale locale, boolean use24HourClock, BiFunction<Locale, String, String> best) {
+        return new SimpleDateFormat(dialogPattern(custom, locale, use24HourClock, best), locale);
+    }
+
+    static String dialogPattern(String custom, Locale locale, boolean use24HourClock, BiFunction<Locale, String, String> best) {
+        DialogPattern memo = lastDialogPattern;
+        if (memo != null && memo.matches(custom, locale, use24HourClock)) return memo.pattern;
+        String pattern = custom != null && !custom.isEmpty() && isValid(custom)
+                ? custom : best.apply(locale, use24HourClock ? "yMMMdHm" : "yMMMdhm");
+        lastDialogPattern = new DialogPattern(custom, locale, use24HourClock, pattern);
+        return pattern;
     }
 
     /** A pattern SimpleDateFormat accepts (empty = the device default, also valid). */

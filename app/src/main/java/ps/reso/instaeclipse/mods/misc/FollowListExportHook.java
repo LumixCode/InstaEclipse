@@ -395,7 +395,7 @@ public class FollowListExportHook {
                                     ps.reso.instaeclipse.utils.users.FollowersHistory.Result r,
                                     boolean compared, String error, FollowListLoader.Result loaded) {
         try {
-            java.text.DateFormat df = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT);
+            java.text.DateFormat df = ps.reso.instaeclipse.utils.text.TimestampFormat.dialogDateFormat(ctx);
             ps.reso.instaeclipse.utils.dialog.IeDialog dlg = new ps.reso.instaeclipse.utils.dialog.IeDialog(ctx)
                     .title(I18n.t(ctx, R.string.ig_followers_history));
             String head;
