@@ -34,7 +34,6 @@ public final class BackLeavesHomeHook {
 
     public void install(ClassLoader cl) {
         hookActivityBack(cl);
-        BackLeavesHomeDispatcher.install(cl);
     }
 
     private static void hookActivityBack(ClassLoader cl) {

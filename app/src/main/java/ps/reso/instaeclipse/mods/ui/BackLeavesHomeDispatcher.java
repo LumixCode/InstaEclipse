@@ -33,7 +33,7 @@ public final class BackLeavesHomeDispatcher {
 
     private BackLeavesHomeDispatcher() {}
 
-    static void install(ClassLoader cl) {
+    public static void install(ClassLoader cl) {
         try {
             Method dispatch = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(CACHE_KEY, cl) : null;
             if (dispatch == null) {

@@ -272,7 +272,7 @@ public class DexKitCache {
     }
 
     public static Method loadMethod(String key, ClassLoader loader) {
-        String val = savedString("m_" + key);
+        String val = savedString(read("m_" + key));
         Method m = val != null ? decode(val, loader) : null;
         if (m != null) savedHit();
         return m;
@@ -292,7 +292,7 @@ public class DexKitCache {
     }
 
     public static Field loadField(String key, ClassLoader loader) {
-        String val = savedString("f_" + key);
+        String val = savedString(read("f_" + key));
         Field f = val != null ? MemberDescriptors.decodeField(val, loader) : null;
         if (f != null) savedHit();
         return f;
@@ -312,7 +312,7 @@ public class DexKitCache {
     }
 
     public static Constructor<?> loadConstructor(String key, ClassLoader loader) {
-        String val = savedString("c_" + key);
+        String val = savedString(read("c_" + key));
         Constructor<?> c = val != null ? MemberDescriptors.decodeConstructor(val, loader) : null;
         if (c != null) savedHit();
         return c;
@@ -339,7 +339,7 @@ public class DexKitCache {
 
     private static <T> List<T> loadAll(String countPrefix, String prefix, String key, ClassLoader loader,
                                        BiFunction<String, ClassLoader, T> decoder) {
-        int count = savedInt(countPrefix + key);
+        int count = savedInt(read(countPrefix + key));
         if (count < 0) return null;
         List<T> result = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
@@ -358,13 +358,30 @@ public class DexKitCache {
     }
 
     public static String loadString(String key) {
-        String val = loadSaved(key);
+        String val = savedString(read("s_" + key));
         if (val != null) savedHit();
         return val;
     }
 
-    static String loadSaved(String key) {
+    public static String loadSaved(String key) {
         return savedString("s_" + key);
+    }
+
+    public static boolean has(String storedKey) {
+        Store store = store(storedKey);
+        if (store == null) return false;
+        Object value = pending(store, storedKey);
+        if (value == REMOVED) return false;
+        return value != null || store.prefs.contains(storedKey);
+    }
+
+    public static void remove(String key) {
+        save("s_" + key, null);
+    }
+
+    private static String read(String storedKey) {
+        DexKitStats.keyRead(storedKey);
+        return storedKey;
     }
 
     private static void savedHit() {

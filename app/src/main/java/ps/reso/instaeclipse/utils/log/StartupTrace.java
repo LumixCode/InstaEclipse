@@ -32,6 +32,8 @@ public final class StartupTrace {
         final long cpuStart;
         final int hooksStart;
         final DexKitStats.Totals statsStart;
+        final Thread thread = Thread.currentThread();
+        volatile boolean traced = true;
         volatile long endNanos = -1;
         long cpuNanos;
         int hooks;
@@ -97,12 +99,19 @@ public final class StartupTrace {
 
     public static void end(Span span) {
         if (span == null || span.ended()) return;
+        boolean sameThread = span.thread == Thread.currentThread();
         long cpu = threadCpuNanos();
-        span.cpuNanos = cpu >= 0 && span.cpuStart >= 0 ? cpu - span.cpuStart : -1L;
+        span.cpuNanos = sameThread && cpu >= 0 && span.cpuStart >= 0 ? cpu - span.cpuStart : -1L;
         span.hooks = XposedBridge.hookCount() - span.hooksStart;
         span.stats = DexKitStats.totals().minus(span.statsStart);
         span.endNanos = System.nanoTime();
         if (INSTALL.equals(span.name)) lastInstall = span;
+        if (sameThread && span.traced) endSection();
+    }
+
+    public static void handOff(Span span) {
+        if (span == null || span.ended() || !span.traced || span.thread != Thread.currentThread()) return;
+        span.traced = false;
         endSection();
     }
 

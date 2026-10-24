@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import ps.reso.instaeclipse.BuildConfig;
+import ps.reso.instaeclipse.utils.core.DexKitStats;
 
 public final class InstallSchedule {
 
@@ -26,8 +26,6 @@ public final class InstallSchedule {
     public static final String MISSING = "missing ";
     public static final String LEGACY = "legacy order";
 
-    private static final String INSTALL_COMPLETE = "InstallComplete";
-    private static final String COMPLETE = String.valueOf(BuildConfig.VERSION_CODE);
     private static final String MARKER_PREFIX = "q_step_";
     private static final String LEARNED_PREFIX = "q_keys_";
 
@@ -122,7 +120,38 @@ public final class InstallSchedule {
     public static Split split(List<InstallStep> steps, Predicate<InstallStep> gateOpen,
                               Function<InstallStep, String> lookupState, Function<String, String> markers,
                               Rows stepKeys, Predicate<String> present) {
-        return legacy(steps, COMPLETE.equals(markers.apply(INSTALL_COMPLETE)));
+        List<InstallStep> inline = new ArrayList<>();
+        List<InstallStep> background = new ArrayList<>();
+        List<String> open = new ArrayList<>();
+        Set<String> unknown = new LinkedHashSet<>();
+        String first = null;
+        String reason = null;
+        for (InstallStep step : steps) {
+            if (step.phaseA) {
+                inline.add(step);
+                continue;
+            }
+            boolean isOpen = gateOpen.test(step);
+            List<String> row = null;
+            String state = null;
+            if (isOpen) {
+                state = lookupState.apply(step);
+                row = stepKeys.keys(step.name, state);
+                if (row == null) unknown.add(step.name);
+            }
+            if (first == null) {
+                String why = isOpen ? invalid(state, row, markers.apply(step.name), present) : null;
+                if (why == null) {
+                    inline.add(step);
+                    continue;
+                }
+                first = step.name;
+                reason = why;
+            }
+            background.add(step);
+            if (isOpen) open.add(step.name);
+        }
+        return new Split(inline, background, open, unknown, first, reason, false);
     }
 
     static String invalid(String state, List<String> row, String marker, Predicate<String> present) {
@@ -216,11 +245,23 @@ public final class InstallSchedule {
 
         @Override
         public boolean wantsKeys(InstallStep step) {
-            return false;
+            return unknown.contains(step.name);
         }
 
         @Override
         public void ran(InstallStep step, String segment, long searches, Collection<String> keys) {
+            if (step.phaseA) return;
+            String marker = markerKey(step.name);
+            if (DexKitStats.INLINE.equals(segment) && searches > 0) {
+                store.put(marker, null);
+                log.accept("(IE|Startup) " + step.name + " searched Instagram's code during the start, so it is set up in the background next time");
+                return;
+            }
+            String state = lookupState.apply(step);
+            if (keys != null && unknown.contains(step.name)) {
+                store.put(learnedKey(step.name, state), learnedValue(build, presentKeys(keys, store::has)));
+            }
+            if (!state.equals(store.get(marker))) store.put(marker, state);
         }
     }
 }

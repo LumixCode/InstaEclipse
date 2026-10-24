@@ -103,6 +103,16 @@ public class VoiceMessageDownloadHook {
     private static volatile String pendingSticker;
     private static volatile Object pendingStickerMessage;
 
+    public static void installUserCacheTracker(ClassLoader cl) throws ClassNotFoundException {
+        XposedBridge.hookAllConstructors(cl.loadClass(USER_CACHE), new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                userCaches.removeIf(r -> r.get() == null);
+                userCaches.add(new java.lang.ref.WeakReference<>(param.thisObject));
+            }
+        });
+    }
+
     public void install(DexKitBridge bridge, ClassLoader cl) {
         try {
             audioInfoClass = cl.loadClass(AUDIO_INFO);
@@ -112,13 +122,6 @@ public class VoiceMessageDownloadHook {
                 storeStickerClass = cl.loadClass(STORE_STICKER);
                 typedImageUrlClass = cl.loadClass(TYPED_IMAGE_URL);
                 imageUrlClass = cl.loadClass(IMAGE_URL);
-                XposedBridge.hookAllConstructors(cl.loadClass(USER_CACHE), new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                        userCaches.removeIf(r -> r.get() == null);
-                        userCaches.add(new java.lang.ref.WeakReference<>(param.thisObject));
-                    }
-                });
             } catch (Throwable t) {
                 ModuleLog.error(TAG + "Downloading stickers and GIFs from chats will not work: " + t);
             }

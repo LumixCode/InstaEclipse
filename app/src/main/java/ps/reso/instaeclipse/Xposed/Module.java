@@ -10,10 +10,17 @@ import android.os.Bundle;
 
 import org.luckypray.dexkit.DexKitBridge;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
@@ -28,6 +35,7 @@ import ps.reso.instaeclipse.utils.core.LegacyPaths;
 import ps.reso.instaeclipse.utils.core.ModuleBridge;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.feature.FeatureManager;
+import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.log.StartupTrace;
 import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
@@ -96,9 +104,33 @@ public class Module {
      *  one too (the old "1" marker predates DexKitQueryCache, whose entries that launch fills). */
     private static final String CACHE_COMPLETE_VALUE = String.valueOf(ps.reso.instaeclipse.BuildConfig.VERSION_CODE);
 
+    private static final String INIT_THREAD = "InstaEclipse-Init";
+    private static final String STEP_KEYS = "assets/dexkit/step-keys.tsv";
+    private static final InstallSchedule.Store CACHE_STORE = new InstallSchedule.Store() {
+        @Override
+        public String get(String key) {
+            return DexKitCache.loadSaved(key);
+        }
+
+        @Override
+        public boolean has(String storedKey) {
+            return DexKitCache.has(storedKey);
+        }
+
+        @Override
+        public void put(String key, String value) {
+            if (value == null) DexKitCache.remove(key);
+            else DexKitCache.saveString(key, value);
+        }
+    };
+
     private static java.util.Set<String> skipped;
 
     private static volatile InstallRunner lastRunner;
+    private static volatile InstallSchedule.Split lastSchedule;
+    private static volatile boolean inlineOnMainThread;
+    private static volatile String backgroundThread;
+    private static volatile Consumer<Runnable> backgroundStarter = Module::startInitThread;
 
     private static volatile Context appContext;
 
@@ -109,6 +141,22 @@ public class Module {
     public static java.util.List<java.util.Map<String, Object>> lastInstallTimings() {
         InstallRunner runner = lastRunner;
         return runner == null ? new java.util.ArrayList<>() : runner.timings();
+    }
+
+    public static InstallSchedule.Split lastSchedule() {
+        return lastSchedule;
+    }
+
+    public static boolean inlineRanOnMainThread() {
+        return inlineOnMainThread;
+    }
+
+    public static String backgroundThread() {
+        return backgroundThread;
+    }
+
+    public static void startBackgroundForTest(Consumer<Runnable> starter) {
+        backgroundStarter = starter == null ? Module::startInitThread : starter;
     }
 
     /** Debug bisect switch: `setprop debug.instaeclipse.skip A,B` skips those hook installs. */
@@ -246,53 +294,102 @@ public class Module {
         ModuleLog.detail("(InstaEclipse) Settings: " + CompanionSync.startupApplied() + " companion change(s) applied before the hooks; "
                 + "companion remote preferences " + (CompanionSync.remotePrefsAvailable() ? "available" : "empty"));
         StartupTrace.end(span);
-        final Runnable installFeatureHooks = () -> installFeatureHooks(context, lpparam);
-
-        if (installedBefore()) {
-            // Warm cache: installing is quick (every DexKit query is answered by
-            // DexKitQueryCache, the rest is reflection), so hooks are in place before
-            // Instagram's own startup code runs.
-            installFeatureHooks.run();
-        } else {
-            // First launch for this Instagram version or module build (or an interrupted one): DexKit has
-            // to scan the APK, which takes many seconds. Inside Application.attach that
-            // risks Android killing the app for not finishing startup, before the cache
-            // is even written. Resolve in the background instead; features turn on a few
-            // seconds after launch, and from the next launch on everything is cached.
-            ModuleLog.line("(InstaEclipse): First start after an Instagram or InstaEclipse update: setting up features in the background, they turn on in a few seconds");
-            Thread t = new Thread(() -> {
-                long start = android.os.SystemClock.elapsedRealtime();
-                installFeatureHooks.run();
-                ModuleLog.ok("(InstaEclipse): Features are ready (background setup took "
-                        + (android.os.SystemClock.elapsedRealtime() - start) + " ms, "
-                        + StartupTrace.newSearches(StartupTrace.lastInstall()) + ")");
-            }, "InstaEclipse-Init");
-            t.setPriority(Thread.NORM_PRIORITY - 1);
-            t.start();
-        }
+        installFeatureHooks(context, lpparam);
     }
 
     private static boolean installedBefore() {
-        return InstallSchedule.split(new InstallPlan().steps(), step -> true, step -> "",
-                name -> DexKitCache.isCacheValid() ? DexKitCache.loadString(name) : null,
-                InstallSchedule.StepKeys.EMPTY, key -> false).background.isEmpty();
+        return DexKitCache.isCacheValid() && CACHE_COMPLETE_VALUE.equals(DexKitCache.loadString(CACHE_COMPLETE_KEY));
     }
 
     public static void installFeatureHooks(Context context, XC_LoadPackage.LoadPackageParam lpparam) {
         appContext = context;
-        boolean warm = installedBefore();
         StartupTrace.Span span = StartupTrace.begin(StartupTrace.INSTALL);
-        InstallRunner runner = new InstallRunner(skipSet(), android.os.SystemClock::elapsedRealtimeNanos,
-                warm ? DexKitStats.INLINE : DexKitStats.BACKGROUND);
+        InstallPlan plan = new InstallPlan();
+        InstallSchedule.Split split = schedule(plan);
+        lastSchedule = split;
+        InstallRunner runner = new InstallRunner(skipSet(), android.os.SystemClock::elapsedRealtimeNanos, DexKitStats.INLINE);
         lastRunner = runner;
-        runner.runAll(new InstallPlan(), new InstallPlan.InstallCtx(context, lpparam, hostClassLoader, ModuleBridge.peek()), InstallRunner.LOG);
+        if (!split.legacy) {
+            runner.setLedger(new InstallSchedule.Book(CACHE_STORE, split,
+                    step -> InstallSchedule.lookupState(step, plan::flag), moduleBuild(), ModuleLog::detail));
+        }
+        InstallPlan.InstallCtx ctx = new InstallPlan.InstallCtx(context, lpparam, hostClassLoader, ModuleBridge.peek());
+        inlineOnMainThread = DexKitStats.onMainThread();
+        runner.run(plan, split.inline, DexKitStats.INLINE, ctx, InstallRunner.LOG);
+        if (split.background.isEmpty()) {
+            finishInstall(context, runner, span, true);
+            return;
+        }
+        runner.mark(null);
+        if (split.legacy) {
+            ModuleLog.line("(InstaEclipse): First start after an Instagram or InstaEclipse update: setting up features in the background, they turn on in a few seconds");
+        } else {
+            ModuleLog.line("(InstaEclipse): Setting up " + split.backgroundOpen.size()
+                    + " features in the background; network filters, locks and the menu are already on");
+            ModuleLog.detail("(IE|Startup) The background setup starts at " + split.firstBackground + ": " + split.reason);
+        }
+        StartupTrace.handOff(span);
+        List<InstallStep> background = split.background;
+        int early = split.legacy ? 0 : InstallPlan.earlyCount(background);
+        backgroundStarter.accept(() -> {
+            long start = android.os.SystemClock.elapsedRealtime();
+            backgroundThread = Thread.currentThread().getName();
+            runner.run(plan, background, DexKitStats.BACKGROUND, ctx, InstallRunner.LOG, early, () -> {
+                if (INIT_THREAD.equals(Thread.currentThread().getName())) {
+                    Thread.currentThread().setPriority(Thread.NORM_PRIORITY - 1);
+                }
+            });
+            finishInstall(context, runner, span, false);
+            ModuleLog.ok("(InstaEclipse): Features are ready (background setup took "
+                    + (android.os.SystemClock.elapsedRealtime() - start) + " ms, "
+                    + StartupTrace.newSearches(StartupTrace.lastInstall()) + ")");
+            UIHookManager.setupCurrentScreen();
+        });
+    }
+
+    private static void finishInstall(Context context, InstallRunner runner, StartupTrace.Span span, boolean warm) {
+        runner.report(InstallRunner.LOG);
         runner.mark("(finish)");
-        // Every lookup is cached now: later launches install inline.
         DexKitCache.saveString(CACHE_COMPLETE_KEY, CACHE_COMPLETE_VALUE);
-        ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.logSummary(context);
+        FeatureStatusTracker.logSummary(context);
         runner.mark(null);
         StartupTrace.end(span);
         StartupTrace.logInstallSummary(span, warm);
+    }
+
+    private static InstallSchedule.Split schedule(InstallPlan plan) {
+        if (LegacyPaths.has(LegacyPaths.PHASES)) return InstallSchedule.legacy(plan.legacySteps(), installedBefore());
+        InstallSchedule.Rows rows = InstallSchedule.withLearned(stepKeys(), DexKitCache::loadSaved, moduleBuild());
+        return InstallSchedule.split(plan.steps(), plan::open, step -> InstallSchedule.lookupState(step, plan::flag),
+                name -> DexKitCache.loadSaved(InstallSchedule.markerKey(name)), rows, DexKitCache::has);
+    }
+
+    static String moduleBuild() {
+        long size = moduleSourceDir == null ? 0L : new File(moduleSourceDir).length();
+        return ps.reso.instaeclipse.BuildConfig.VERSION_CODE + "|" + size;
+    }
+
+    static InstallSchedule.StepKeys stepKeys() {
+        if (moduleSourceDir == null) return InstallSchedule.StepKeys.EMPTY;
+        try (ZipFile zip = new ZipFile(moduleSourceDir)) {
+            ZipEntry entry = zip.getEntry(STEP_KEYS);
+            if (entry == null) return InstallSchedule.StepKeys.EMPTY;
+            try (InputStream in = zip.getInputStream(entry)) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                byte[] buffer = new byte[8192];
+                for (int n; (n = in.read(buffer)) > 0; ) out.write(buffer, 0, n);
+                return InstallSchedule.StepKeys.parse(new String(out.toByteArray(), StandardCharsets.UTF_8));
+            }
+        } catch (Throwable t) {
+            ModuleLog.detail("(IE|Startup) The list of saved lookups could not be read, so features are set up in the background once: " + t);
+            return InstallSchedule.StepKeys.EMPTY;
+        }
+    }
+
+    private static void startInitThread(Runnable task) {
+        Thread thread = new Thread(task, INIT_THREAD);
+        thread.setPriority(Thread.NORM_PRIORITY);
+        thread.start();
     }
 
     /**

@@ -189,6 +189,19 @@ public class UIHookManager {
 
     }
 
+    public static void setupCurrentScreen() {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            Activity activity = currentActivity;
+            if (activity == null || activity.isFinishing()) return;
+            try {
+                setupHooks(activity, true);
+            } catch (Exception e) {
+                ModuleLog.warn("(InstaEclipse) Could not set up InstaEclipse's buttons on this screen: "
+                        + e.getClass().getSimpleName() + ": " + e.getMessage());
+            }
+        });
+    }
+
     public void mainActivity(ClassLoader classLoader) {
         // Hook onCreate / onResume of Instagram Main.
         // IG 448+ no longer declares these overrides on InstagramMainActivity (they live in the

@@ -5,7 +5,6 @@ import java.lang.reflect.Method;
 import java.net.URI;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
-import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.xposedcompat.XC_LoadPackage;
 import ps.reso.instaeclipse.mods.ghost.ManualStorySeenHook;
@@ -15,50 +14,16 @@ import ps.reso.instaeclipse.mods.reels.ReelRequestPolicy;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
-import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
-import ps.reso.instaeclipse.utils.core.ModuleBridge;
 
 public class IGNetworkInterceptor {
 
     private static final URI FAKE_URI = URI.create("https://127.0.0.1/404");
     private static final String FAKE_URL = "https://127.0.0.1/404";
 
-    /**
-     * TigonServiceLayer is the LAST of ~25 decorator layers (RequestCacheServiceLayer,
-     * ZeroRewriteAsyncServiceLayer, ...) that all implement the same startRequest interface. A
-     * layer that answers from cache never reaches TigonServiceLayer, so also apply the same
-     * (idempotent) drop at the chain ENTRY, AsyncHttpService.startRequest — anchored by its stable
-     * systrace string (present in 447 and 451). Rewritten URLs no longer match any drop rule, so a
-     * request passing through both hooks is handled exactly once. Best-effort: on failure the
-     * TigonServiceLayer hook alone still applies, as before.
-     */
-    private static void hookChainEntry(ClassLoader classLoader, Class<?> p1, Class<?> p2, Class<?> p3,
-                                       XC_MethodHook dropHook) {
-        try {
-            org.luckypray.dexkit.DexKitBridge bridge = ModuleBridge.get();
-            if (bridge == null) return;
-            java.util.List<org.luckypray.dexkit.result.MethodData> found =
-                    DexKitQueryCache.findMethod(bridge, 
-                            org.luckypray.dexkit.query.FindMethod.create().matcher(
-                                    org.luckypray.dexkit.query.matchers.MethodMatcher.create()
-                                            .name("startRequest")
-                                            .usingStrings("AsyncHttpService.startRequest")));
-            int n = 0;
-            for (org.luckypray.dexkit.result.MethodData md : found) {
-                Method m = md.getMethodInstance(classLoader);
-                Class<?>[] pt = m.getParameterTypes();
-                if (pt.length != 3 || pt[0] != p1 || pt[1] != p2 || pt[2] != p3) continue;
-                XposedBridge.hookMethod(m, dropHook);
-                n++;
-            }
-            ModuleLog.detail("(InstaEclipse | Interceptor): chain-entry hooks: " + n);
-        } catch (Throwable t) {
-            ModuleLog.warn("(InstaEclipse | Interceptor): Requests Instagram answers from its own cache may not be filtered; all other requests still are: "
-                    + t.getClass().getSimpleName() + ": " + t.getMessage());
-        }
-    }
+    static volatile Class<?>[] startRequestParams;
+    static volatile XC_MethodHook dropHook;
 
-    public void handleInterceptor(XC_LoadPackage.LoadPackageParam lpparam) {
+    public void installTigon(XC_LoadPackage.LoadPackageParam lpparam) {
         try {
             ClassLoader classLoader = lpparam.classLoader;
 
@@ -156,7 +121,8 @@ public class IGNetworkInterceptor {
                         };
                 XposedHelpers.findAndHookMethod("com.instagram.api.tigon.TigonServiceLayer", classLoader, "startRequest",
                         random_param_1, random_param_2, random_param_3, dropHook);
-                hookChainEntry(classLoader, random_param_1, random_param_2, random_param_3, dropHook);
+                IGNetworkInterceptor.dropHook = dropHook;
+                startRequestParams = new Class<?>[]{random_param_1, random_param_2, random_param_3};
                 // These act on every matching request, so they are in place once the hook is.
                 for (String key : new String[]{"BlockAnalytics", "DisableStoriesSection", "DisableFeedSection",
                         "DisableReelsSection", "DisableExploreSection", "DisableCommentsSection", "HideDmSuggestions",

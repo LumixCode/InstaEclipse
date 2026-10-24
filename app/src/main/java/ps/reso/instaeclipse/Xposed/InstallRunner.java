@@ -16,6 +16,7 @@ import org.luckypray.dexkit.DexKitBridge;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitStats;
 import ps.reso.instaeclipse.utils.core.ModuleBridge;
+import ps.reso.instaeclipse.utils.feature.RestartPending;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.log.StartupTrace;
 
@@ -111,6 +112,7 @@ public final class InstallRunner {
         List<String> keys = null;
         long searches = -1;
         try {
+            for (String key : step.restartKeys()) RestartPending.capture(key, plan.flag(key));
             if (step.gateKey != null && !plan.gateOpen(step.gateKey)) return;
             mark(step.name);
             if (step.skippedBy(skipped)) return;
