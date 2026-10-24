@@ -27,6 +27,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
@@ -81,6 +82,13 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 final class LikeHeartTint {
     private static final String TAG = "(InstaEclipse | LikeUndo): ";
     private static final String CACHE_KEY = "LikeHeartRenders";
+    private static final String ANIMATED_KEY = "LikeHeartAnimated_v1";
+    private static final String IMAGES_KEY = "LikeHeartImages_v1";
+    private static final String ICONS_KEY = "LikeHeartIcons_v1";
+    private static final String FILLED_KEY = "LikeHeartFilled_v1";
+    private static final String COMPOSE_ROW_KEY = "LikeHeartComposeRow_v1";
+    private static final String COMPOSE_SPEC_KEY = "LikeHeartComposeSpec_v1";
+    private static final String COMPOSE_COLOR_KEY = "LikeHeartComposeColor_v1";
     /** Instagram's own blue, for a like that is not sent yet. */
     static final int LIKE_BLUE = 0xFF0095F6;
     /** Instagram paints its heart with SRC_ATOP; the blue does the same. */
@@ -209,131 +217,199 @@ final class LikeHeartTint {
             List<Method> renders = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(CACHE_KEY, loader) : null;
             if (renders == null) {
                 renders = likeRenders(bridge, loader);
-                if (renders.isEmpty()) {
-                    ModuleLog.warn(TAG + "The heart will not turn blue while a like is held: like buttons not found in this Instagram version");
-                    return;
-                }
                 DexKitCache.saveMethods(CACHE_KEY, renders);
             }
-            Set<Constructor<?>> animated = new LinkedHashSet<>(), images = new LinkedHashSet<>(), iconMakers = new LinkedHashSet<>();
-            for (Method render : renders) {
-                MethodData data = bridge.getMethodData(render);
-                if (data == null) continue;
-                for (MethodData call : data.getInvokes()) {
-                    if (!call.isConstructor()) continue;
-                    Constructor<?> c = call.getConstructorInstance(loader);
-                    if (animatedHeart(c)) animated.add(c);
-                    else if (paramIndex(c, ImageView.ScaleType.class) >= 0) {
-                        if (paramIndex(c, Drawable.class) >= 0) images.add(c);
-                        else if (lastIsBoolean(c)) iconMakers.add(c);
-                    }
-                }
+            if (renders.isEmpty()) {
+                ModuleLog.warn(TAG + "The heart will not turn blue while a like is held: like buttons not found in this Instagram version");
+            } else {
+                installRenders(bridge, loader, renders);
             }
-            if (!animated.isEmpty()) filled = filledLayer(bridge, animated.iterator().next().getParameterTypes()[1]);
-
-            int hooked = 0;
-            for (Method render : renders) {
-                Field[] path = mediaPath(render.getDeclaringClass());
-                if (path == null) {
-                    ModuleLog.detail(TAG + "no Media in " + render.getDeclaringClass().getName());
-                    continue;
-                }
-                XposedBridge.hookMethod(render, new XC_MethodHook() {
-                    @Override
-                    protected void beforeHookedMethod(MethodHookParam param) {
-                        JitGuard.tick(param.method);
-                        if (FeatureFlags.likeUndo) RENDERING.set(idOf(follow(param.thisObject, path)));
-                    }
-
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) {
-                        RENDERING.remove();
-                    }
-                });
-                hooked++;
-            }
-            for (Constructor<?> c : animated) {
-                XposedBridge.hookMethod(c, new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) {
-                        JitGuard.tick(param.method);
-                        String id = RENDERING.get();
-                        if (id != null && param.args[1] instanceof Drawable heart) built(id, heart, redLayer(heart), ANIMATED);
-                    }
-                });
-            }
-            for (Constructor<?> c : images) {
-                int at = paramIndex(c, Drawable.class);
-                XposedBridge.hookMethod(c, new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) {
-                        JitGuard.tick(param.method);
-                        String id = RENDERING.get();
-                        if (id == null || !(param.args[at] instanceof Drawable heart)) return;
-                        boolean animatedHeart = filled != null && filled.getDeclaringClass().isInstance(heart);
-                        if (!animatedHeart && !(heart instanceof StateListDrawable)) return;
-                        built(id, heart, redLayer(heart), animatedHeart ? ANIMATED : STATE_LIST);
-                    }
-                });
-            }
-            for (Constructor<?> c : iconMakers) {
-                XposedBridge.hookMethod(c, new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) {
-                        JitGuard.tick(param.method);
-                        String id = RENDERING.get();
-                        // One drawable for both looks: the view's selected state picks the red.
-                        if (id == null) return;
-                        synchronized (icons) {
-                            icons.put(param.thisObject, id);
-                        }
-                    }
-                });
-                for (Method make : c.getDeclaringClass().getDeclaredMethods()) {
-                    if (Modifier.isStatic(make.getModifiers()) || make.getParameterTypes().length != 1
-                            || make.getReturnType() == void.class) continue;
-                    XposedBridge.hookMethod(make, new XC_MethodHook() {
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param) {
-                            JitGuard.tick(param.method);
-                            String id;
-                            synchronized (icons) {
-                                id = icons.get(param.thisObject);
-                            }
-                            if (id == null) return;
-                            Drawable heart = drawableIn(param.getResult());
-                            if (heart == null) return;
-                            Drawable inner = drawableIn(heart); // what the icon's wrapper draws
-                            built(id, heart, inner != null ? inner : heart, ICON);
-                        }
-                    });
-                }
-            }
-            ModuleLog.line(TAG + (hooked > 0 ? "✅ Blue heart while a like is held: ready"
-                    : "⚠️ The heart will not turn blue while a like is held: like buttons not supported in this Instagram version"));
-            ModuleLog.detail(TAG + "heart hooked: " + hooked + "/" + renders.size() + " like button(s); animated "
-                    + names(animated) + (filled == null ? " (no filled layer)" : " " + filled.getName())
-                    + ", images " + names(images) + ", icons " + names(iconMakers));
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "The heart will not turn blue while a like is held (undo still works)", t);
         }
         installCompose(bridge);
     }
 
+    private static void installRenders(DexKitBridge bridge, ClassLoader loader, List<Method> renders) throws Throwable {
+        List<Constructor<?>> animated = DexKitCache.isCacheValid() ? DexKitCache.loadConstructors(ANIMATED_KEY, loader) : null;
+        List<Constructor<?>> images = DexKitCache.isCacheValid() ? DexKitCache.loadConstructors(IMAGES_KEY, loader) : null;
+        List<Constructor<?>> iconMakers = DexKitCache.isCacheValid() ? DexKitCache.loadConstructors(ICONS_KEY, loader) : null;
+        if (animated == null || images == null || iconMakers == null) {
+            Set<Constructor<?>> foundAnimated = new LinkedHashSet<>(), foundImages = new LinkedHashSet<>(), foundIcons = new LinkedHashSet<>();
+            for (Method render : renders) {
+                MethodData data = bridge.getMethodData(render);
+                if (data == null) continue;
+                for (MethodData call : data.getInvokes()) {
+                    if (!call.isConstructor()) continue;
+                    Constructor<?> c = call.getConstructorInstance(loader);
+                    if (animatedHeart(c)) foundAnimated.add(c);
+                    else if (paramIndex(c, ImageView.ScaleType.class) >= 0) {
+                        if (paramIndex(c, Drawable.class) >= 0) foundImages.add(c);
+                        else if (lastIsBoolean(c)) foundIcons.add(c);
+                    }
+                }
+            }
+            animated = new ArrayList<>(foundAnimated);
+            images = new ArrayList<>(foundImages);
+            iconMakers = new ArrayList<>(foundIcons);
+            DexKitCache.saveConstructors(ANIMATED_KEY, animated);
+            DexKitCache.saveConstructors(IMAGES_KEY, images);
+            DexKitCache.saveConstructors(ICONS_KEY, iconMakers);
+        }
+        if (!animated.isEmpty()) filled = filledField(bridge, loader, animated.get(0).getParameterTypes()[1]);
+
+        int hooked = 0;
+        for (Method render : renders) {
+            Field[] path = mediaPath(render.getDeclaringClass());
+            if (path == null) {
+                ModuleLog.detail(TAG + "no Media in " + render.getDeclaringClass().getName());
+                continue;
+            }
+            XposedBridge.hookMethod(render, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    JitGuard.tick(param.method);
+                    if (FeatureFlags.likeUndo) RENDERING.set(idOf(follow(param.thisObject, path)));
+                }
+
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    RENDERING.remove();
+                }
+            });
+            hooked++;
+        }
+        for (Constructor<?> c : animated) {
+            XposedBridge.hookMethod(c, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    JitGuard.tick(param.method);
+                    String id = RENDERING.get();
+                    if (id != null && param.args[1] instanceof Drawable heart) built(id, heart, redLayer(heart), ANIMATED);
+                }
+            });
+        }
+        for (Constructor<?> c : images) {
+            int at = paramIndex(c, Drawable.class);
+            XposedBridge.hookMethod(c, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    JitGuard.tick(param.method);
+                    String id = RENDERING.get();
+                    if (id == null || !(param.args[at] instanceof Drawable heart)) return;
+                    boolean animatedHeart = filled != null && filled.getDeclaringClass().isInstance(heart);
+                    if (!animatedHeart && !(heart instanceof StateListDrawable)) return;
+                    built(id, heart, redLayer(heart), animatedHeart ? ANIMATED : STATE_LIST);
+                }
+            });
+        }
+        for (Constructor<?> c : iconMakers) {
+            XposedBridge.hookMethod(c, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    JitGuard.tick(param.method);
+                    String id = RENDERING.get();
+                    // One drawable for both looks: the view's selected state picks the red.
+                    if (id == null) return;
+                    synchronized (icons) {
+                        icons.put(param.thisObject, id);
+                    }
+                }
+            });
+            for (Method make : c.getDeclaringClass().getDeclaredMethods()) {
+                if (Modifier.isStatic(make.getModifiers()) || make.getParameterTypes().length != 1
+                        || make.getReturnType() == void.class) continue;
+                XposedBridge.hookMethod(make, new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) {
+                        JitGuard.tick(param.method);
+                        String id;
+                        synchronized (icons) {
+                            id = icons.get(param.thisObject);
+                        }
+                        if (id == null) return;
+                        Drawable heart = drawableIn(param.getResult());
+                        if (heart == null) return;
+                        Drawable inner = drawableIn(heart); // what the icon's wrapper draws
+                        built(id, heart, inner != null ? inner : heart, ICON);
+                    }
+                });
+            }
+        }
+        ModuleLog.line(TAG + (hooked > 0 ? "✅ Blue heart while a like is held: ready"
+                : "⚠️ The heart will not turn blue while a like is held: like buttons not supported in this Instagram version"));
+        ModuleLog.detail(TAG + "heart hooked: " + hooked + "/" + renders.size() + " like button(s); animated "
+                + names(animated) + (filled == null ? " (no filled layer)" : " " + filled.getName())
+                + ", images " + names(images) + ", icons " + names(iconMakers));
+    }
+
+    private static Field filledField(DexKitBridge bridge, ClassLoader loader, Class<?> heart) throws Throwable {
+        if (DexKitCache.isCacheValid()) {
+            Field cached = DexKitCache.loadField(FILLED_KEY, loader);
+            if (cached != null) return cached;
+            if (AbsentMarker.knownAbsent(true, DexKitCache.loadString(AbsentMarker.key(FILLED_KEY)))) return null;
+        }
+        Field layer = filledLayer(bridge, heart);
+        if (layer != null) DexKitCache.saveField(FILLED_KEY, layer);
+        else DexKitCache.saveString(AbsentMarker.key(FILLED_KEY), AbsentMarker.ABSENT);
+        return layer;
+    }
+
     /** Hooks the feed's Compose like row: the composable, and the icon spec it builds the heart with. */
     private static void installCompose(DexKitBridge bridge) {
         try {
             ClassLoader loader = Module.hostClassLoader;
-            MethodData ufi = null;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                    .usingStrings("row.ufi.ui.Ufi (MediaUfiComposeBinder.kt:")))) {
-                if (md.isMethod()) { ufi = md; break; }
+            Method row = null;
+            Constructor<?> spec = null;
+            int colorAt = -1;
+            if (DexKitCache.isCacheValid()) {
+                if (AbsentMarker.knownAbsent(true, DexKitCache.loadString(AbsentMarker.key(COMPOSE_ROW_KEY)))) {
+                    ModuleLog.detail(TAG + "Compose like row not found");
+                    return;
+                }
+                row = DexKitCache.loadMethod(COMPOSE_ROW_KEY, loader);
+                spec = DexKitCache.loadConstructor(COMPOSE_SPEC_KEY, loader);
+                colorAt = colorIndex(DexKitCache.loadString(COMPOSE_COLOR_KEY), spec);
             }
-            if (ufi == null) {
+            if (row == null || spec == null || colorAt < 0) {
+                row = null;
+                spec = null;
+                colorAt = -1;
+                MethodData ufi = null;
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                        .usingStrings("row.ufi.ui.Ufi (MediaUfiComposeBinder.kt:")))) {
+                    if (md.isMethod()) { ufi = md; break; }
+                }
+                if (ufi != null) {
+                    row = ufi.getMethodInstance(loader);
+                    for (MethodData call : ufi.getInvokes()) {
+                        if (!call.isConstructor()) continue;
+                        Constructor<?> c = call.getConstructorInstance(loader);
+                        Class<?>[] p = c.getParameterTypes();
+                        if (p.length < 10) continue;
+                        for (int j = 0; j < p.length && spec == null; j++) {
+                            if (!p[j].getName().startsWith("X.")) continue;
+                            try {
+                                p[j].getDeclaredConstructor(long.class);
+                                spec = c;
+                                colorAt = j;
+                            } catch (NoSuchMethodException ignored) {}
+                        }
+                        if (spec != null) break;
+                    }
+                }
+                if (row == null || spec == null) {
+                    DexKitCache.saveString(AbsentMarker.key(COMPOSE_ROW_KEY), AbsentMarker.ABSENT);
+                } else {
+                    DexKitCache.saveMethod(COMPOSE_ROW_KEY, row);
+                    DexKitCache.saveConstructor(COMPOSE_SPEC_KEY, spec);
+                    DexKitCache.saveString(COMPOSE_COLOR_KEY, String.valueOf(colorAt));
+                }
+            }
+            if (row == null) {
                 ModuleLog.detail(TAG + "Compose like row not found");
                 return;
             }
-            Method row = ufi.getMethodInstance(loader);
             // The row's UI state holds its Media.
             int stateAt = -1;
             Field media = null;
@@ -348,29 +424,12 @@ final class LikeHeartTint {
                     }
                 }
             }
-            // The icon spec: the constructor the row calls with a Compose colour (a class built from a long).
-            Constructor<?> spec = null, color = null;
-            int colorAt = -1;
-            for (MethodData call : ufi.getInvokes()) {
-                if (!call.isConstructor()) continue;
-                Constructor<?> c = call.getConstructorInstance(loader);
-                Class<?>[] p = c.getParameterTypes();
-                if (p.length < 10) continue;
-                for (int j = 0; j < p.length && spec == null; j++) {
-                    if (!p[j].getName().startsWith("X.")) continue;
-                    try {
-                        color = p[j].getDeclaredConstructor(long.class);
-                        spec = c;
-                        colorAt = j;
-                    } catch (NoSuchMethodException ignored) {}
-                }
-                if (spec != null) break;
-            }
             if (media == null || spec == null) {
                 ModuleLog.warn(TAG + "In the newer feed layout the heart will not turn blue while a like is held (undo still works)");
                 ModuleLog.detail(TAG + "Compose like row: media " + (media != null) + ", icon spec " + (spec != null));
                 return;
             }
+            Constructor<?> color = spec.getParameterTypes()[colorAt].getDeclaredConstructor(long.class);
             color.setAccessible(true);
             blueColor = color.newInstance(((long) LIKE_BLUE) << 32); // an sRGB Compose Color
             Class<?> state = Class.forName("androidx.compose.runtime.ParcelableSnapshotMutableState", false, loader);
@@ -433,6 +492,16 @@ final class LikeHeartTint {
         }
     }
 
+    private static int colorIndex(String saved, Constructor<?> spec) {
+        if (saved == null || spec == null) return -1;
+        try {
+            int at = Integer.parseInt(saved);
+            return at >= 0 && at < spec.getParameterTypes().length ? at : -1;
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
     /** Whether an icon spec's arguments draw the liked (filled) heart. */
     private static boolean filledHeart(Object[] args) {
         if (heartFilled == 0) {
@@ -491,7 +560,7 @@ final class LikeHeartTint {
         return p.length > 0 && p[p.length - 1] == boolean.class;
     }
 
-    private static String names(Set<Constructor<?>> made) {
+    private static String names(Collection<Constructor<?>> made) {
         List<String> names = new ArrayList<>();
         for (Constructor<?> c : made) names.add(c.getDeclaringClass().getName());
         return names.toString();

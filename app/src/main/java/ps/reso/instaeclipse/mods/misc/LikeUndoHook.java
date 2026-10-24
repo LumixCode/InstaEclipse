@@ -1,10 +1,12 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import android.app.Activity;
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
@@ -27,6 +29,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.toast.IeToast;
 
 /**
  * Like undo window (#235): a like is held for {@link #DELAY_MS} and only then sent. Meanwhile its
@@ -121,7 +124,7 @@ public class LikeUndoHook {
                     return;
                 }
                 // A heart tap confirmed a moment ago: Instagram sends it now, unless Undo holds it.
-                boolean confirmed = !FeatureFlags.confirmLikes || System.currentTimeMillis() <= confirmedUntil;
+                boolean confirmed = !FeatureFlags.confirmLikes || confirmedLike(media);
                 if (confirmed && !FeatureFlags.likeUndo) return;
                 // A like confirmed in the dialog came from the touch made before the dialog.
                 LikeHeartTint.Origin confirmedFrom = confirmedOrigin;
@@ -137,13 +140,15 @@ public class LikeUndoHook {
                 if (!confirmed) MAIN.post(() -> confirm(act, () -> {
                     if (FeatureFlags.likeUndo) hold(method, self, args, media);
                     else send(method, self, args);
-                }));
+                }, true));
                 else hold(method, self, args, media);
             }
         });
         ModuleLog.ok(TAG + "Ready");
         ModuleLog.detail(TAG + "Hooked " + sender.getDeclaringClass().getName() + "." + sender.getName());
-        FeatureStatusTracker.setHooked("LikeUndo");
+        boolean ready = HideSuggestedFeedItemsHook.hasLikedReady();
+        if (!ready) ModuleLog.error(TAG + "Like undo and Ask before liking will not work: the like status was not found in this Instagram version");
+        report("LikeUndo", FeatureFlags.likeUndo, ready);
         installed = true;
         onLikeUndoChanged();
         LikeHeartTint.install(bridge);
@@ -153,7 +158,12 @@ public class LikeUndoHook {
         // then the like entry and the sender below still ask).
         if (FeatureFlags.confirmLikes) hookHeartButtons();
         hookLikeEntry(sender);
-        FeatureStatusTracker.setHooked("ConfirmLikes");
+        report("ConfirmLikes", FeatureFlags.confirmLikes, ready);
+    }
+
+    private static void report(String feature, boolean on, boolean ready) {
+        if (ready) FeatureStatusTracker.setHooked(feature);
+        else if (on) FeatureStatusTracker.setBroken(feature);
     }
 
     private static volatile boolean installed;
@@ -174,10 +184,9 @@ public class LikeUndoHook {
         return null;
     }
 
-    /** Post like buttons (feed, carousel slide, reels): their heart shows "selected" once liked. */
-    private static final String[] HEARTS = {"row_feed_button_like", "row_feed_media_per_media_like_button", "clips_ufi_like_button"};
+    private static final String[] HEARTS = {"row_feed_button_like", "row_feed_media_per_media_like_button"};
     private static final java.util.Set<Integer> heartIds = new java.util.HashSet<>();
-    private static volatile long confirmedUntil;
+    private static volatile ConfirmWindow confirmedWindow;
     /** Where the like confirmed last came from, for the blue heart once it reaches the sender. */
     private static volatile LikeHeartTint.Origin confirmedOrigin;
     private static boolean replayingTap;
@@ -212,10 +221,10 @@ public class LikeUndoHook {
                 LikeHeartTint.Origin origin = LikeHeartTint.Origin.capture();
                 MAIN.post(() -> confirm(act, () -> {
                     confirmedOrigin = origin;
-                    confirmedUntil = System.currentTimeMillis() + 3000;
+                    confirmedWindow = ConfirmWindow.forNextLike(System.currentTimeMillis());
                     replayingTap = true;
                     try { v.performClick(); } finally { replayingTap = false; }
-                }));
+                }, false));
             }
         });
     }
@@ -240,10 +249,9 @@ public class LikeUndoHook {
             XposedBridge.hookMethod(m, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (!FeatureFlags.confirmLikes || param.method.equals(REPLAYING.get())
-                            || System.currentTimeMillis() <= confirmedUntil) return;
+                    if (!FeatureFlags.confirmLikes || param.method.equals(REPLAYING.get())) return;
                     Object media = mediaOf(param.args);
-                    if (media == null || HideSuggestedFeedItemsHook.isLiked(media)) return; // already liked: not a new like
+                    if (media == null || HideSuggestedFeedItemsHook.isLiked(media) || confirmedLike(media)) return;
                     LikeHeartTint.Origin origin = LikeHeartTint.Origin.capture();
                     // The entry is given the post's own activity (a post opened from a chat has its own).
                     Activity given = null;
@@ -256,14 +264,21 @@ public class LikeUndoHook {
                     Object[] args = param.args.clone();
                     MAIN.post(() -> confirm(act, () -> {
                         confirmedOrigin = origin;
-                        confirmedUntil = System.currentTimeMillis() + 3000;
+                        confirmedWindow = ConfirmWindow.forMedia(media, System.currentTimeMillis());
                         send(method, self, args);
-                    }));
+                    }, false));
                 }
             });
             hooked++;
         }
         ModuleLog.detail(TAG + "like entry hooks=" + hooked);
+    }
+
+    private static boolean confirmedLike(Object media) {
+        ConfirmWindow window = confirmedWindow;
+        if (window == null || !window.covers(media, System.currentTimeMillis())) return false;
+        confirmedWindow = window.boundTo(media);
+        return true;
     }
 
     private static Activity activityOf(android.content.Context c) {
@@ -301,15 +316,20 @@ public class LikeUndoHook {
     }
 
     /** Ask before liking: the like goes out only on Like; Cancel drops it. */
-    private static void confirm(Activity act, Runnable onLike) {
+    private static void confirm(Activity act, Runnable onLike, boolean sayNotSent) {
         try {
-            ps.reso.instaeclipse.utils.dialog.IeDialog dlg = new ps.reso.instaeclipse.utils.dialog.IeDialog(act)
-                    .title(I18n.t(act, R.string.ig_confirm_like_title))
-                    .message(I18n.t(act, R.string.ig_confirm_like_message));
-            final boolean[] answered = {false};
-            dlg.secondary(act.getString(android.R.string.cancel), () -> answered[0] = true);
-            dlg.primary(I18n.t(act, R.string.ig_confirm_like_yes), () -> { answered[0] = true; onLike.run(); });
-            dlg.onDismiss(() -> { if (!answered[0]) ModuleLog.detail(TAG + "like not confirmed"); });
+            Context host = UIHookManager.dialogHost(act);
+            ps.reso.instaeclipse.utils.dialog.IeDialog dlg = new ps.reso.instaeclipse.utils.dialog.IeDialog(host)
+                    .title(I18n.t(host, R.string.ig_confirm_like_title))
+                    .message(I18n.t(host, R.string.ig_confirm_like_message));
+            final boolean[] liked = {false};
+            dlg.secondary(host.getString(android.R.string.cancel), null);
+            dlg.primary(I18n.t(host, R.string.ig_confirm_like_yes), () -> { liked[0] = true; onLike.run(); });
+            dlg.onDismiss(() -> {
+                if (liked[0]) return;
+                ModuleLog.detail(TAG + "like not confirmed");
+                if (sayNotSent) IeToast.makeText(host, I18n.t(host, R.string.ig_toast_like_not_sent), Toast.LENGTH_SHORT).show();
+            });
             dlg.show();
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not show the like confirmation, so the like was not sent", t);
