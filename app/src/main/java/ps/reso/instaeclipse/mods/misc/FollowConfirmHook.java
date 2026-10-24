@@ -15,6 +15,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.List;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.Xposed.Module;
@@ -71,6 +73,7 @@ public class FollowConfirmHook {
         }
         if (sender == null) {
             try {
+                List<Method> candidates = new ArrayList<>();
                 for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(ClassMatcher.create().usingStrings("follow_unknown", "last_follow_status"))
                         .returnType("void")))) {
@@ -78,12 +81,13 @@ public class FollowConfirmHook {
                     Method m = md.getMethodInstance(Module.hostClassLoader);
                     Class<?>[] p = m.getParameterTypes();
                     if (Modifier.isStatic(m.getModifiers())) {
-                        if (sender == null && has(p, m.getDeclaringClass()) && hasUser(p) && hasEnum(p)) sender = m;
+                        candidates.add(m);
                     } else if (statusSetter == null && p.length == 3 && p[0].isEnum()
                             && p[1].getName().equals(USER) && p[2] == boolean.class) {
                         statusSetter = m;
                     }
                 }
+                sender = FollowConfirmPolicy.pickSender(candidates, USER);
                 if (sender == null) {
                     ModuleLog.error(TAG + "Could not turn on follow confirmation: the follow action was not found in this Instagram version");
                     return;
@@ -98,7 +102,7 @@ public class FollowConfirmHook {
         XposedBridge.hookMethod(sender, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (!FeatureFlags.confirmFollows || REPLAYING.get() == Boolean.TRUE || !isFollow(param.args)) return;
+                if (!FeatureFlags.confirmFollows || REPLAYING.get() == Boolean.TRUE || !FollowConfirmPolicy.isFollow(param.args)) return;
                 Activity act = UIHookManager.getCurrentActivity();
                 if (act == null) return;
                 param.setResult(null);
@@ -167,7 +171,7 @@ public class FollowConfirmHook {
                 if (v.getId() != profileButtonId) return;
                 Activity act = activityOf(v.getContext());
                 String username = ps.reso.instaeclipse.mods.ui.ProfileMenuHook.profileUsername(act);
-                if (act == null || alreadyFollowing(act, username)) return;
+                if (act == null || !FollowConfirmPolicy.holdsProfileTap(profileStatus(act, username))) return;
                 param.setResult(true);
                 MAIN.post(() -> confirm(act, username, () -> {
                     replayingClick = true;
@@ -187,18 +191,14 @@ public class FollowConfirmHook {
         return UIHookManager.getCurrentActivity();
     }
 
-    /** True only when the profile's User says you follow it or asked to; unknown counts as not. */
-    private static boolean alreadyFollowing(Activity act, String username) {
+    private static Object profileStatus(Activity act, String username) {
         Method get = statusGetter;
-        if (get == null || username == null) return false;
+        if (get == null || username == null) return null;
         try {
             Object user = ps.reso.instaeclipse.mods.ui.ProfileMenuHook.findUser(act, username);
-            Object status = user != null ? get.invoke(user) : null;
-            if (!(status instanceof Enum<?> e)) return false;
-            String name = e.name().toUpperCase(java.util.Locale.ROOT);
-            return name.contains("FOLLOWING") && !name.contains("NOTFOLLOWING") || name.contains("REQUESTED");
+            return user != null ? get.invoke(user) : null;
         } catch (Throwable t) {
-            return false;
+            return null;
         }
     }
 
@@ -209,11 +209,11 @@ public class FollowConfirmHook {
             for (Method m : SafeReflect.methods(ds)) {
                 Class<?>[] p = m.getParameterTypes();
                 if (Modifier.isStatic(m.getModifiers()) || m.getReturnType() != Object.class || p.length < 5) continue;
-                if (continuationIndex(p) < 0 || !hasEnum(p)) continue;
+                if (FollowConfirmPolicy.continuationIndex(p) < 0 || !FollowConfirmPolicy.hasEnum(p)) continue;
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                        if (!FeatureFlags.confirmFollows || REPLAYING.get() == Boolean.TRUE || !isFollow(param.args)) return;
+                        if (!FeatureFlags.confirmFollows || REPLAYING.get() == Boolean.TRUE || !FollowConfirmPolicy.isFollow(param.args)) return;
                         Activity act = UIHookManager.getCurrentActivity();
                         if (act == null) return;
                         Method method = (Method) param.method;
@@ -233,21 +233,10 @@ public class FollowConfirmHook {
         }
     }
 
-    /** The continuation: the one interface parameter that isn't a Kotlin function. */
-    private static int continuationIndex(Class<?>[] p) {
-        int found = -1;
-        for (int i = 0; i < p.length; i++) {
-            if (!p[i].isInterface() || p[i].getName().startsWith("kotlin.jvm.functions.")) continue;
-            if (found >= 0) return -1;
-            found = i;
-        }
-        return found;
-    }
-
     /** Runs the held call again; its result goes to a stand-in continuation that borrows the
      *  original's coroutine context. */
     private static void resend(Method method, Object self, Object[] args) {
-        int ci = continuationIndex(method.getParameterTypes());
+        int ci = FollowConfirmPolicy.continuationIndex(method.getParameterTypes());
         Object original = args[ci];
         Class<?> type = method.getParameterTypes()[ci];
         Object standIn = java.lang.reflect.Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type}, (proxy, m, a) -> {
@@ -304,36 +293,6 @@ public class FollowConfirmHook {
         }
     }
 
-    private static boolean has(Class<?>[] types, Class<?> c) {
-        for (Class<?> t : types) if (t == c) return true;
-        return false;
-    }
-
-    private static boolean hasUser(Class<?>[] types) {
-        for (Class<?> t : types) if (t.getName().equals(USER)) return true;
-        return false;
-    }
-
-    private static boolean hasEnum(Class<?>[] types) {
-        for (Class<?> t : types) if (t.isEnum()) return true;
-        return false;
-    }
-
-    /** The action enum carries Instagram's path segment: "create" for a follow. */
-    private static boolean isFollow(Object[] args) {
-        for (Object a : args) {
-            if (!(a instanceof Enum<?>)) continue;
-            for (Field f : SafeReflect.fields(a.getClass())) {
-                if (Modifier.isStatic(f.getModifiers()) || f.getType() != String.class) continue;
-                try {
-                    f.setAccessible(true);
-                    if ("create".equals(f.get(a))) return true;
-                } catch (Throwable ignored) { }
-            }
-        }
-        return false;
-    }
-
     private static Object user(Object[] args) {
         for (Object a : args) if (a != null && a.getClass().getName().equals(USER)) return a;
         return null;
@@ -386,7 +345,7 @@ public class FollowConfirmHook {
         try {
             Object notFollowing = null;
             for (Object c : setter.getParameterTypes()[0].getEnumConstants())
-                if (((Enum<?>) c).name().toUpperCase(java.util.Locale.ROOT).contains("NOTFOLLOWING")) notFollowing = c;
+                if (FollowConfirmPolicy.isNotFollowing(c)) notFollowing = c;
             if (notFollowing == null) return;
             setter.setAccessible(true);
             setter.invoke(manager, notFollowing, user, true);
