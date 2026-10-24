@@ -109,7 +109,9 @@ public final class CompanionSync {
                 emptyLogged = true;
                 ModuleLog.detail("(InstaEclipse) Sync: companion remote preferences empty or unavailable");
             }
-            return applyFrom(context, all);
+            if (all.isEmpty()) return new ArrayList<>();
+            Map<String, ?> instagram = context.getSharedPreferences("instaeclipse_prefs", Context.MODE_PRIVATE).getAll();
+            return applyFrom(context, PrefsMerge.pending(all, instagram));
         } catch (Throwable t) {
             ModuleLog.warn("(InstaEclipse) Sync: could not read settings changed in the InstaEclipse app: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return new ArrayList<>();
@@ -257,6 +259,10 @@ public final class CompanionSync {
 
     private static void push(Context context) {
         try {
+            if (!isCompanionProvider(context)) {
+                ModuleLog.detail("(InstaEclipse) Sync: the InstaEclipse app's settings provider is not available, so nothing was pushed");
+                return;
+            }
             Map<String, ?> all = context.getSharedPreferences("instaeclipse_prefs", Context.MODE_PRIVATE).getAll();
             android.os.Bundle b = new android.os.Bundle();
             for (Map.Entry<String, ?> entry : all.entrySet()) {
@@ -274,7 +280,7 @@ public final class CompanionSync {
             if (n > 0) ModuleLog.line("(InstaEclipse) Sync: updated " + n + " setting(s) in the companion app");
             // The reply carries companion changes made while Instagram wasn't running. The pull
             // can't see them when the framework has no remote preferences (embedded LSPatch).
-            if (r == null || r.size() <= 1 || !isCompanionProvider(context)) return;
+            if (r == null || r.size() <= 1) return;
             Map<String, Object> pending = new java.util.HashMap<>();
             for (String k : r.keySet()) {
                 if (!PrefsSyncProvider.RESULT_UPDATED.equals(k)) pending.put(k, r.get(k));

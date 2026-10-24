@@ -282,7 +282,8 @@ public class SettingsManager {
         for (java.util.Map.Entry<String, ?> entry : after.entrySet()) {
             String k = entry.getKey();
             if (k.startsWith("__")) continue;
-            if (java.util.Objects.equals(before.get(k), entry.getValue())) continue;
+            Object was = before.containsKey(k) ? before.get(k) : defaults.get(k);
+            if (java.util.Objects.equals(was, entry.getValue())) continue;
             out.add(k);
         }
         return out;

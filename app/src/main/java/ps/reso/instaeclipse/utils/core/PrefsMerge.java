@@ -1,6 +1,7 @@
 package ps.reso.instaeclipse.utils.core;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -34,6 +35,9 @@ public final class PrefsMerge {
             "lockDirectPasscode", "lockDirectSalt", "lockedDirectThreads",
             IpcSecurity.EXTRA_NONCE));
 
+    static final Set<String> STATUS = Collections.singleton("lockPasscodeSet");
+    static final Set<String> NOT_SEEDED = new HashSet<>(Arrays.asList("customFontPath", "customEmojiPath"));
+
     private PrefsMerge() {}
 
     /** True for a key that must stay inside Instagram's process. */
@@ -44,7 +48,9 @@ public final class PrefsMerge {
     /** True for a setting Instagram may share with the companion. */
     public static boolean isSharedSetting(String key, Object value) {
         if (key == null || key.startsWith("__") || isPrivate(key)) return false;
-        return value instanceof Boolean || value instanceof Integer || value instanceof String;
+        if (STATUS.contains(key)) return value instanceof Boolean;
+        Class<?> type = SettingsSchema.type(key);
+        return type != null && type.isInstance(value);
     }
 
     /** True for the stamps Instagram sends along with its settings. */
@@ -91,7 +97,7 @@ public final class PrefsMerge {
             if (tsKey == null || !tsKey.startsWith(TS) || !(entry.getValue() instanceof Long)) continue;
             String key = tsKey.substring(TS.length());
             Object value = companion.get(key);
-            if (!isSharedSetting(key, value)) continue;
+            if (!isSharedSetting(key, value) || STATUS.contains(key)) continue;
             long ts = (Long) entry.getValue();
             if (ts <= stamp(instagram, IG_TS + key) || ts <= stamp(instagram, APPLIED + key)) continue;
             out.put(key, value);
@@ -99,15 +105,21 @@ public final class PrefsMerge {
         }
         for (Map.Entry<String, ?> entry : companion.entrySet()) {
             String key = entry.getKey();
-            if (out.containsKey(key) || !isSharedSetting(key, entry.getValue()) || !untouched(instagram, key)) continue;
-            out.put(key, entry.getValue());
+            Object value = entry.getValue();
+            if (out.containsKey(key) || !isSharedSetting(key, value) || STATUS.contains(key) || NOT_SEEDED.contains(key)) continue;
+            if (!untouched(instagram, key) || Objects.equals(value, SettingsSchema.defaultValue(key))) continue;
+            out.put(key, value);
             out.put(TS + key, Math.max(stamp(companion, TS + key), 1L));
         }
         return out;
     }
 
     public static boolean untouched(Map<String, ?> instagram, String key) {
-        return false;
+        if (LegacyPaths.has(LegacyPaths.SEED) || key == null) return false;
+        if (instagram == null) return true;
+        if (instagram.containsKey(IG_TS + key) || instagram.containsKey(APPLIED + key)) return false;
+        Object value = instagram.get(key);
+        return value == null || value.equals(SettingsSchema.defaultValue(key));
     }
 
     private static long stamp(Map<String, ?> map, String key) {

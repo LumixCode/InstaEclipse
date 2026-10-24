@@ -82,7 +82,8 @@ public class CommonUtils {
             "lockDirectPasscode", "lockDirectSalt", "lockedDirectThreads", "hideCreateGroupButton", "blockLocationPrompts",
             "loadedModuleVersion", "dailyReelHooksAvailable", "dailyReelTrackingAvailable",
             "dailyReelBlockingAvailable", "isGhostModeEnabled", "isMiscEnabled", "isDistractionFree",
-            "homePinnedShortcuts", "backgroundAccessAsked", "pathJustSetLocally"));
+            "homePinnedShortcuts", "backgroundAccessAsked", "pathJustSetLocally", "themeLightMigratedV1",
+            "dailyReelsWatchedToday", "dailyReelUsageDate"));
 
     /** Drops {@link #STALE_CACHE_KEYS} from the companion cache; writes nothing when none is there. */
     public static void dropStaleCacheKeys(Context context) {
