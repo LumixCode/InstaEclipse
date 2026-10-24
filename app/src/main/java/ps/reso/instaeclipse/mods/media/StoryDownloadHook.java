@@ -158,6 +158,7 @@ public class StoryDownloadHook {
     }
 
     public void install(DexKitBridge bridge, ClassLoader classLoader) {
+        ps.reso.instaeclipse.utils.media.StoryCache.pruneAfterStart();
         SelectedMediaAdapter.install(bridge, classLoader);
         try {
             for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()

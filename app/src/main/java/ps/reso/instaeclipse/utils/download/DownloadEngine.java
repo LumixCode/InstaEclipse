@@ -128,17 +128,22 @@ public final class DownloadEngine {
     /** Fetches one media file into an empty internal-cache destination; the caller owns publication. */
     public static String fetch(Context context, String url, File destination, String expectedMime,
             Cancellation cancellation, Progress listener) throws Failure {
-        return fetch(context, url, destination, expectedMime, cancellation, listener, false);
+        return fetch(context, url, destination, expectedMime, cancellation, listener, false, true);
+    }
+
+    public static String fetchMedia(Context context, String url, File destination, String expectedMime,
+            Cancellation cancellation) throws Failure {
+        return fetch(context, url, destination, expectedMime, cancellation, null, false, false);
     }
 
     /** A source for upstream audio extraction may contain video, but must contain real audio. */
     public static String fetchAudioSource(Context context, String url, File destination,
             Cancellation cancellation, Progress listener) throws Failure {
-        return fetch(context, url, destination, "audio/mp4", cancellation, listener, true);
+        return fetch(context, url, destination, "audio/mp4", cancellation, listener, true, true);
     }
 
     private static String fetch(Context context, String url, File destination, String expectedMime,
-            Cancellation cancellation, Progress listener, boolean audioSource) throws Failure {
+            Cancellation cancellation, Progress listener, boolean audioSource, boolean tracks) throws Failure {
         if (Looper.myLooper() == Looper.getMainLooper()) throw new Failure("THREAD", "Downloads must run on a worker thread", false);
         TempFiles.sweepOnce(context.getCacheDir());
         Downloader.Kind kind = fetchKind(expectedMime);
@@ -160,8 +165,8 @@ public final class DownloadEngine {
                     new MediaUrlPolicy(MediaUrlPolicy.DNS, hop -> !MediaUrlPolicy.proxied(hop)),
                     capacity(context.getCacheDir().getUsableSpace(), false), progress(cancel, listenerOrSilent, PHASE_DOWNLOAD));
             require(fetched);
-            if (kind == Downloader.Kind.AUDIO) inspect(destination, true, null, cancel, audioSource);
-            else if (kind == Downloader.Kind.VIDEO)
+            if (tracks && kind == Downloader.Kind.AUDIO) inspect(destination, true, null, cancel, audioSource);
+            else if (tracks && kind == Downloader.Kind.VIDEO)
                 inspect(destination, false, new DownloadRequest.Rendition(url, 0, 0, 0, "", 0), cancel);
             checkCancelled(cancel);
             complete = true;

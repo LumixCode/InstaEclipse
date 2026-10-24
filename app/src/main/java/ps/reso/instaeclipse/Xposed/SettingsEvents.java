@@ -59,7 +59,7 @@ public final class SettingsEvents {
         }
         boolean recreating = false;
         if (chats) HideChatsHook.refreshVisibleButtons();
-        if (storyCache) StoryCache.refresh();
+        if (storyCache) StoryCache.refreshAsync();
         if (airplane) AirplaneModeHook.apply();
         if (likeUndo) LikeUndoHook.onLikeUndoChanged();
         if (theme) {

@@ -953,9 +953,11 @@ public class FeedVideoDownloadHook {
             try {
                 File src = new File(localPath);
                 if (!src.exists()) return;
-                String fn = buildFilename(author, "story", id, video);
-                String mime = video ? "video/mp4" : "image/jpeg";
-                saveFileToDestination(ctx, src, fn, mime, author);
+                MediaTypeDetector.Result named = MediaTypeDetector.verified(
+                        ps.reso.instaeclipse.utils.media.StoryCache.mimeOf(localPath, video),
+                        buildFilename(author, "story", id, video));
+                String mime = named.mimeType;
+                saveFileToDestination(ctx, src, named.filename, mime, author);
                 mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, okMsg, android.widget.Toast.LENGTH_SHORT).show());
                 if (hasCompanionDestination() && !DownloadPublisher.reachesChosenFolder(FeatureFlags.downloaderCustomPath, mime))
                     mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
