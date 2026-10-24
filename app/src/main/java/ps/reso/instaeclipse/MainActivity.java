@@ -1,15 +1,21 @@
 package ps.reso.instaeclipse;
 
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -20,12 +26,17 @@ import androidx.lifecycle.Lifecycle;
 
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 import ps.reso.instaeclipse.fragments.FeaturesFragment;
 import ps.reso.instaeclipse.fragments.HelpFragment;
 import ps.reso.instaeclipse.fragments.HomeFragment;
 import ps.reso.instaeclipse.fragments.LoggingFragment;
 import ps.reso.instaeclipse.fragments.TabFragment;
+import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
+import ps.reso.instaeclipse.utils.core.PermissionAsk;
 import ps.reso.instaeclipse.utils.version.VersionCheckUtility;
 
 public class MainActivity extends AppCompatActivity {
@@ -33,8 +44,11 @@ public class MainActivity extends AppCompatActivity {
     private static final String STATE_TAB = "selectedTab";
     private static final int[] TAB_IDS = {R.id.nav_home, R.id.nav_features, R.id.nav_logs, R.id.nav_help};
     private static final int MAX_CONTENT_WIDTH_DP = 640;
+    private static final AtomicInteger PERMISSION_REQUESTS = new AtomicInteger();
+    private static volatile Boolean grantedForTest;
 
     private BottomNavigationView bottomNavigation;
+    private ActivityResultLauncher<String> permissionLauncher;
     private int selectedTab = R.id.nav_home;
 
     private final OnBackPressedCallback backToHome = new OnBackPressedCallback(false) {
@@ -49,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
         // NOTE: intentionally NOT applying DynamicColors — 0.7 ships a fixed branded dark palette
         // (see Theme.InstaEclipse); adopting the wallpaper palette here would override the brand.
         super.onCreate(savedInstanceState);
+        permissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {});
         if (savedInstanceState == null) VersionCheckUtility.checkForUpdates(this); // not again on rotation
         // Stale companion-cache keys are dropped once per process in InstaEclipseApp.onCreate.
 
@@ -125,6 +140,33 @@ public class MainActivity extends AppCompatActivity {
         bottomNavigation.setSelectedItemId(R.id.nav_help);
         Fragment help = getSupportFragmentManager().findFragmentByTag(tagOf(R.id.nav_help));
         if (help instanceof HelpFragment) ((HelpFragment) help).scrollToAbout();
+    }
+
+    public void requestDownloadPermissionsIfNeeded(PermissionAsk.Trigger trigger) {
+        String permission = PermissionAsk.permission(Build.VERSION.SDK_INT);
+        boolean granted = permission == null || (grantedForTest != null ? grantedForTest
+                : ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED);
+        SharedPreferences ui = CompanionUiPrefs.get(this);
+        if (isFinishing() || !PermissionAsk.shouldAsk(granted, ui.getBoolean(PermissionAsk.ASKED, false), trigger)) return;
+        ui.edit().putBoolean(PermissionAsk.ASKED, true).apply();
+        boolean storage = android.Manifest.permission.WRITE_EXTERNAL_STORAGE.equals(permission);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(storage ? R.string.feat_storage_rationale_title : R.string.feat_notification_rationale_title)
+                .setMessage(storage ? R.string.feat_storage_rationale_message : R.string.feat_notification_rationale_message)
+                .setPositiveButton(R.string.background_access_allow, (d, w) -> {
+                    PERMISSION_REQUESTS.incrementAndGet();
+                    permissionLauncher.launch(permission);
+                })
+                .setNegativeButton(R.string.feat_permission_not_now, null)
+                .show();
+    }
+
+    public static int permissionRequestsForTest() {
+        return PERMISSION_REQUESTS.get();
+    }
+
+    public static void overrideGrantedForTest(Boolean granted) {
+        grantedForTest = granted;
     }
 
     private void showTab(int id) {

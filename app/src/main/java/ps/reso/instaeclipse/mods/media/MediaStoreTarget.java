@@ -4,10 +4,10 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-final class MediaStoreTarget {
+public final class MediaStoreTarget {
     enum Collection { DOWNLOADS, IMAGES, VIDEO, AUDIO }
 
-    static final String DEFAULT_FOLDER = "Download/InstaEclipse";
+    public static final String DEFAULT_FOLDER = "Download/InstaEclipse";
 
     private static final Set<String> IMAGE_ROOTS = new HashSet<>(Arrays.asList("Pictures", "DCIM"));
     private static final Set<String> VIDEO_ROOTS = new HashSet<>(Arrays.asList("Movies", "DCIM", "Pictures"));

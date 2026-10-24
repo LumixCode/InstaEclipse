@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
-import android.os.Build;
 import android.os.PowerManager;
 import android.provider.Settings;
 
@@ -20,6 +19,8 @@ import ps.reso.instaeclipse.R;
  * unrestricted: when a folder is chosen, and on opening while a folder is set.
  */
 public final class BackgroundAccess {
+
+    public static final String FOLDER_LOST_DISMISSED_FOR = "folderLostDismissedFor";
 
     private BackgroundAccess() {}
 
@@ -66,17 +67,16 @@ public final class BackgroundAccess {
     }
 
     /** Asks to choose the folder again; {@code choose} opens the folder picker. */
-    public static void askToRechooseFolder(Context ctx, Runnable choose) {
+    public static void askToRechooseFolder(Context ctx, String uri, Runnable choose, Runnable useDefault) {
+        SharedPreferences ui = CompanionUiPrefs.get(ctx);
+        if (uri.equals(ui.getString(FOLDER_LOST_DISMISSED_FOR, null))) return;
         new MaterialAlertDialogBuilder(ctx)
                 .setTitle(R.string.folder_access_lost_title)
                 .setMessage(R.string.folder_access_lost_message)
                 .setPositiveButton(R.string.folder_access_lost_choose, (d, w) -> choose.run())
-                .setNegativeButton(R.string.background_access_later, null)
+                .setNeutralButton(R.string.feat_use_default_folder, (d, w) -> useDefault.run())
+                .setNegativeButton(R.string.background_access_later,
+                        (d, w) -> ui.edit().putString(FOLDER_LOST_DISMISSED_FOR, uri).apply())
                 .show();
-    }
-
-    /** Android 9 and older save to shared storage with the storage permission. */
-    public static boolean needsStoragePermission() {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.Q;
     }
 }

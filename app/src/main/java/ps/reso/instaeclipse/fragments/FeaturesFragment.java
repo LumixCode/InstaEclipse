@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.transition.AutoTransition;
 import android.transition.TransitionManager;
@@ -69,8 +68,10 @@ import java.util.concurrent.TimeUnit;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.devops.config.DevConfigReply;
+import ps.reso.instaeclipse.mods.media.MediaStoreTarget;
 import ps.reso.instaeclipse.utils.backup.CompanionRestorePlan;
 import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
+import ps.reso.instaeclipse.utils.core.PermissionAsk;
 import ps.reso.instaeclipse.utils.core.SettingsSchema;
 import ps.reso.instaeclipse.utils.ipc.ModuleReplies;
 import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
@@ -97,7 +98,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private boolean suppressSearchWatcher = false;
     private ActivityResultLauncher<Uri> dirPickerLauncher;
     private ActivityResultLauncher<String[]> restoreFileLauncher;
-    private ActivityResultLauncher<String> notifPermLauncher;
     private ActivityResultLauncher<Intent> locationPickerLauncher;
     private ActivityResultLauncher<Intent> themeCustomizerLauncher;
     private ActivityResultLauncher<PickVisualMediaRequest> profilePhotoLauncher;
@@ -169,9 +169,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         super.onCreate(savedInstanceState);
         restoreFileLauncher = registerForActivityResult(new ActivityResultContracts.OpenDocument(), this::restoreFrom);
 
-        notifPermLauncher = registerForActivityResult(
-                new ActivityResultContracts.RequestPermission(), granted -> {});
-
         locationPickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(), result -> {
                     if (result == null || result.getData() == null) return;
@@ -203,6 +200,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 folder.put("downloaderCustomPath", path);
                 CompanionSettings.putAll(requireContext(), folder);
                 ps.reso.instaeclipse.utils.core.BackgroundAccess.askIfNeeded(requireContext(), true);
+                askDownloadPermission(PermissionAsk.Trigger.FOLDER_PICKED);
 
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getString(R.string.ig_toast_download_folder_updated), Toast.LENGTH_SHORT).show();
 
@@ -217,25 +215,14 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         fragmentView = inflater.inflate(R.layout.fragment_features, container, false);
         localCache = ps.reso.instaeclipse.utils.core.CommonUtils.companionCache(requireContext());
 
-        // Request POST_NOTIFICATIONS permission (required API 33+ for download progress notifications)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(requireContext(),
-                    android.Manifest.permission.POST_NOTIFICATIONS)
-                    != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                notifPermLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS);
-            }
-        }
-        if (ps.reso.instaeclipse.utils.core.BackgroundAccess.needsStoragePermission()
-                && ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0x5E);
-        }
         // Downloads to a chosen folder need this app to start from Instagram, and the folder's grant.
         String folder = localCache.getString("downloaderCustomUri", "");
         if (ps.reso.instaeclipse.utils.core.BackgroundAccess.folderGrantLost(requireContext(), folder))
-            ps.reso.instaeclipse.utils.core.BackgroundAccess.askToRechooseFolder(requireContext(), () -> dirPickerLauncher.launch(null));
+            ps.reso.instaeclipse.utils.core.BackgroundAccess.askToRechooseFolder(requireContext(), folder,
+                    () -> dirPickerLauncher.launch(null), this::resetDownloadFolder);
         else if (!folder.isEmpty())
             ps.reso.instaeclipse.utils.core.BackgroundAccess.askIfNeeded(requireContext(), false);
+        askDownloadPermission(PermissionAsk.forOpening(this::getCurrentState));
 
         recyclerFeatures = fragmentView.findViewById(R.id.recycler_features);
         recyclerFeatures.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -2418,15 +2405,20 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         defs.add(quality);
 
         String customPath = localCache.getString("downloaderCustomPath", "");
-        String folderTitle = customPath.isEmpty()
-                ? getString(R.string.feat_downloader_set_folder)
-                : getString(R.string.feat_downloader_selected, customPath);
+        String customUri = localCache.getString("downloaderCustomUri", "");
+        boolean customFolder = !customPath.isEmpty() || !customUri.isEmpty();
+        List<FeatureItem> folderRows = new ArrayList<>();
+        folderRows.add(createValueRow(R.drawable.ic_folder, "#FF9F0A", getString(R.string.ig_dialog_downloader_folder),
+                customFolder ? (customPath.isEmpty() ? customUri : customPath)
+                        : getString(R.string.feat_download_folder_default, MediaStoreTarget.DEFAULT_FOLDER),
+                this::pickDownloadFolder));
+        if (customFolder) {
+            folderRows.add(destructive(createClickable(R.drawable.ic_delete, "#FF453A",
+                    getString(R.string.feat_downloader_reset_folder), this::confirmResetDownloadFolder)));
+        }
 
         defs.add(getString(R.string.feat_download_folder));
-        defs.add(Arrays.asList(
-                createClickable(R.drawable.ic_folder, "#FF9F0A", folderTitle, this::pickDownloadFolder),
-                destructive(createClickable(R.drawable.ic_delete, "#FF453A", getString(R.string.feat_downloader_reset_folder), this::resetDownloadFolder))
-        ));
+        defs.add(folderRows);
 
         return defs;
     }
@@ -2503,6 +2495,20 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
     private void pickDownloadFolder() {
         dirPickerLauncher.launch(null);
+    }
+
+    private void confirmResetDownloadFolder() {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setMessage(getString(R.string.feat_reset_folder_confirm, MediaStoreTarget.DEFAULT_FOLDER))
+                .setPositiveButton(R.string.feat_use_default_folder, (dialog, which) -> resetDownloadFolder())
+                .setNegativeButton(R.string.ig_dialog_cancel, null)
+                .show();
+    }
+
+    private void askDownloadPermission(PermissionAsk.Trigger trigger) {
+        if (trigger != PermissionAsk.Trigger.NONE && getActivity() instanceof ps.reso.instaeclipse.MainActivity) {
+            ((ps.reso.instaeclipse.MainActivity) getActivity()).requestDownloadPermissionsIfNeeded(trigger);
+        }
     }
 
     private void resetDownloadFolder() {
@@ -2727,6 +2733,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private void stageChange(String prefKey, boolean isChecked) {
         if (localCache.getBoolean(prefKey, defaultState(prefKey)) == isChecked) return;
         CompanionSettings.put(requireContext(), prefKey, isChecked);
+        askDownloadPermission(PermissionAsk.forChanges(java.util.Collections.singletonMap(prefKey, isChecked)));
     }
 
     private void stageChanges(LinkedHashMap<String, Boolean> wanted) {
@@ -2742,6 +2749,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         } else if (!changed.isEmpty()) {
             CompanionSettings.putAll(requireContext(), changed);
         }
+        askDownloadPermission(PermissionAsk.forChanges(changed));
     }
 
     private boolean getCurrentState(String prefKey) {

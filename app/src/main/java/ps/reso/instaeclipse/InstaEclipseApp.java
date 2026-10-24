@@ -4,10 +4,13 @@ import android.app.Application;
 import android.content.SharedPreferences;
 import android.os.Process;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import ps.reso.instaeclipse.mods.media.FrameSessionCache;
+import ps.reso.instaeclipse.utils.core.BackgroundAccess;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
+import ps.reso.instaeclipse.utils.core.CompanionSettings;
 import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
 import ps.reso.instaeclipse.utils.core.RemotePrefsMirror;
 import ps.reso.instaeclipse.utils.core.SettingsSchema;
@@ -25,6 +28,7 @@ public class InstaEclipseApp extends Application {
         // before the mirror copies the cache: the old lock hash/salt/locked list must never reach
         // the remote preferences Instagram reads
         CommonUtils.dropStaleCacheKeys(this);
+        clearLostFolder();
         // modern flavor: mirrors "instaeclipse_cache" into Vector's remote preferences (libxposed
         // API 102, read by the hooked app); legacy flavor: no-op (Instagram uses XSharedPreferences)
         RemotePrefsMirror.start(this);
@@ -47,6 +51,17 @@ public class InstaEclipseApp extends Application {
                 else editor.remove(edit.getKey());
             }
             editor.apply();
+        } catch (Throwable ignored) {}
+    }
+
+    private void clearLostFolder() {
+        try {
+            String uri = CommonUtils.companionCache(this).getString("downloaderCustomUri", "");
+            if (!BackgroundAccess.folderGrantLost(this, uri)) return;
+            LinkedHashMap<String, Object> folder = new LinkedHashMap<>();
+            folder.put("downloaderCustomUri", "");
+            folder.put("downloaderCustomPath", "");
+            CompanionSettings.putAll(this, folder);
         } catch (Throwable ignored) {}
     }
 }

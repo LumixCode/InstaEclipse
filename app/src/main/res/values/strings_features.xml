@@ -23,4 +23,12 @@
     <string name="feat_restore_action" tools:ignore="MissingTranslation">Restore</string>
     <string name="feat_restore_invalid_file" tools:ignore="MissingTranslation">not a valid backup file</string>
     <string name="feat_backup_unreadable" tools:ignore="MissingTranslation">the settings couldn\'t be read</string>
+    <string name="feat_notification_rationale_title" tools:ignore="MissingTranslation">Show download progress?</string>
+    <string name="feat_notification_rationale_message" tools:ignore="MissingTranslation">InstaEclipse shows a notification while it saves your downloads.</string>
+    <string name="feat_storage_rationale_title" tools:ignore="MissingTranslation">Allow saving downloads?</string>
+    <string name="feat_storage_rationale_message" tools:ignore="MissingTranslation">On this Android version InstaEclipse needs storage access to save your downloads.</string>
+    <string name="feat_permission_not_now" tools:ignore="MissingTranslation">Not now</string>
+    <string name="feat_use_default_folder" tools:ignore="MissingTranslation">Use default folder</string>
+    <string name="feat_download_folder_default" tools:ignore="MissingTranslation">%1$s (default)</string>
+    <string name="feat_reset_folder_confirm" tools:ignore="MissingTranslation">Use the default folder? New downloads go to %1$s.</string>
 </resources>

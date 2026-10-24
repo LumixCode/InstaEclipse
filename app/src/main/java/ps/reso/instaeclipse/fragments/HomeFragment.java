@@ -48,6 +48,7 @@ import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
 import ps.reso.instaeclipse.utils.core.ExportBrand;
 import ps.reso.instaeclipse.utils.core.InstagramCompat;
 import ps.reso.instaeclipse.utils.core.InstagramRestarter;
+import ps.reso.instaeclipse.utils.core.PermissionAsk;
 import ps.reso.instaeclipse.utils.core.RestartDecision;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.log.LogMirrorProvider;
@@ -611,6 +612,10 @@ public class HomeFragment extends Fragment implements TabFragment {
             CompanionSettings.putAll(requireContext(), values);
         } else {
             CompanionSettings.put(requireContext(), key, value);
+        }
+        PermissionAsk.Trigger trigger = PermissionAsk.forChanges(java.util.Collections.singletonMap(key, value));
+        if (trigger != PermissionAsk.Trigger.NONE && getActivity() instanceof ps.reso.instaeclipse.MainActivity) {
+            ((ps.reso.instaeclipse.MainActivity) getActivity()).requestDownloadPermissionsIfNeeded(trigger);
         }
     }
 
