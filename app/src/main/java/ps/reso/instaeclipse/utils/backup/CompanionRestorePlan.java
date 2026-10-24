@@ -55,7 +55,7 @@ public final class CompanionRestorePlan {
         for (String key : keys) {
             Object raw = values.get(key);
             if (key.startsWith("__") || PrefsMerge.isPrivate(key) || DEVICE_LOCAL.contains(key)
-                    || SettingsSchema.LEGACY_IGNORED.contains(key)) {
+                    || SettingsSchema.LEGACY_IGNORED.contains(key) || SettingsSchema.PATHS.contains(key)) {
                 continue;
             }
             if (CompanionUiPrefs.HOME_PINNED_SHORTCUTS.equals(key)) {
