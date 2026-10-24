@@ -25,6 +25,8 @@ public final class DownloadEngine {
     }
     private DownloadEngine() { }
     private static final long RESERVE_BYTES = 16L * 1024 * 1024;
+    public static final String PHASE_DOWNLOAD = "download", PHASE_DOWNLOAD_AUDIO = "download_audio",
+            PHASE_VERIFY = "verify", PHASE_JOIN = "join";
     public interface Progress { void onProgress(String phase, long done, long total); }
     public static final class Cancellation {
         private volatile boolean cancelled;
@@ -156,7 +158,7 @@ public final class DownloadEngine {
             checkCancelled(cancel);
             Downloader.Result fetched = Downloader.fetch(url, kind, destination,
                     new MediaUrlPolicy(MediaUrlPolicy.DNS, hop -> !MediaUrlPolicy.proxied(hop)),
-                    capacity(context.getCacheDir().getUsableSpace(), false), progress(cancel, listenerOrSilent, "Downloading media"));
+                    capacity(context.getCacheDir().getUsableSpace(), false), progress(cancel, listenerOrSilent, PHASE_DOWNLOAD));
             require(fetched);
             if (kind == Downloader.Kind.AUDIO) inspect(destination, true, null, cancel, audioSource);
             else if (kind == Downloader.Kind.VIDEO)
@@ -238,7 +240,7 @@ public final class DownloadEngine {
             checkCancelled(cancellation);
             long cap = capacity(cache.getUsableSpace(), choice.dash);
             File video = temp(cache, files), audio = null;
-            Downloader.Progress reporting = progress(cancellation, progress, "Downloading video");
+            Downloader.Progress reporting = progress(cancellation, progress, PHASE_DOWNLOAD);
             MediaUrlPolicy policy = new MediaUrlPolicy(MediaUrlPolicy.DNS, url -> !MediaUrlPolicy.proxied(url));
             Downloader.Result fetched = Downloader.fetch(choice.video.url, Downloader.Kind.VIDEO, video,
                     policy, cap, reporting);
@@ -251,7 +253,7 @@ public final class DownloadEngine {
                     audio = temp(cache, files);
                     require(Downloader.fetch(choice.audio.url, Downloader.Kind.AUDIO, audio, policy,
                             Math.min(Downloader.MAX_BYTES - video.length(), Math.min(cap, capacity(cache.getUsableSpace(), true))),
-                            progress(cancellation, progress, "Downloading audio")));
+                            progress(cancellation, progress, PHASE_DOWNLOAD_AUDIO)));
                 }
                 checkCancelled(cancellation);
                 if (cache.getUsableSpace() < video.length() + (audio == null ? 0 : audio.length()) + RESERVE_BYTES)
@@ -275,7 +277,7 @@ public final class DownloadEngine {
                 mime = "video/mp4";
             }
             phase = DownloadDiagnostics.Phase.INSPECT_OUTPUT;
-            progress.onProgress("Verifying saved tracks", 0, -1);
+            progress.onProgress(PHASE_VERIFY, 0, -1);
             Metadata verified = inspect(video, choice.expectAudio, choice.video, cancellation);
             phase = DownloadDiagnostics.Phase.VERIFY_OUTPUT;
             if (before != null) verifyJoined(before, beforeAudio, verified);
@@ -334,7 +336,7 @@ public final class DownloadEngine {
             @Override public void transferred(long done, long total) { progress.onProgress(phase, done, total); }
             @Override public void reading(Runnable closer) { cancel.reading(closer); }
             @Override public boolean cancelled() { return cancel.isCancelled(); }
-            @Override public void joining() { progress.onProgress("Joining tracks without re-encoding", 0, -1); }
+            @Override public void joining() { progress.onProgress(PHASE_JOIN, 0, -1); }
         };
     }
     private static void checkCancelled(Cancellation cancel) throws Failure {
@@ -501,7 +503,7 @@ public final class DownloadEngine {
             Cancellation cancellation, Progress listener) throws IOException {
         checkCancelled(cancellation);
         return usesPortableJoin(sourceVideo, sourceAudio)
-                ? Mp4Join.join(video, audio, out, progress(cancellation, listener, "Joining tracks without re-encoding"))
+                ? Mp4Join.join(video, audio, out, progress(cancellation, listener, PHASE_JOIN))
                 : nativeJoin(video, audio, out, cancellation);
     }
 

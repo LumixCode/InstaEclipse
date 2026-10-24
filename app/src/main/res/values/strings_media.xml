@@ -25,4 +25,25 @@
     <string name="ie_frame_reason_write">The PNG couldn\'t be written. Check your free space.</string>
     <string name="ie_copy_media_link">Copy media link</string>
     <string name="ig_profile_pic_load_failed">Couldn\'t load this picture</string>
+    <string name="ie_download_starting">Starting…</string>
+    <string name="ie_download_verifying">Checking the file…</string>
+    <string name="ie_download_saving">Saving…</string>
+    <string name="ie_download_extracting_audio">Extracting audio…</string>
+    <string name="ie_download_reason_invalid">This download request is damaged. Try again.</string>
+    <plurals name="ie_download_waiting">
+        <item quantity="one">%1$s · %2$d waiting</item>
+        <item quantity="other">%1$s · %2$d waiting</item>
+    </plurals>
+    <plurals name="ie_download_files_saved">
+        <item quantity="one">%1$d file saved</item>
+        <item quantity="other">%1$d files saved</item>
+    </plurals>
+    <plurals name="ie_download_files_failed">
+        <item quantity="one">%1$d failed</item>
+        <item quantity="other">%1$d failed</item>
+    </plurals>
+    <string name="ie_download_saved_and_failed">%1$s, %2$s</string>
+    <string name="ie_export_saving">Saving chat export…</string>
+    <string name="ie_export_saving_media">Saving media %1$d of %2$d</string>
+    <string name="ie_export_failed">Couldn\'t save the chat export</string>
 </resources>
