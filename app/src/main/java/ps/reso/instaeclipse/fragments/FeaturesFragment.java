@@ -1767,7 +1767,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 .setSingleChoiceItems(spoofDeviceNames(), current, (d, which) -> {
                     write("spoofDevice", ids[which]);
                     d.dismiss();
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), R.string.ig_spoof_device_note, Toast.LENGTH_LONG).show();
                     reloadCurrentMenu();
                 })
                 .setNegativeButton(android.R.string.cancel, null)

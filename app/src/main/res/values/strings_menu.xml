@@ -32,4 +32,8 @@
     <string name="menu_health_restart" tools:ignore="MissingTranslation">Turned on after Instagram started – restart to apply</string>
     <string name="menu_health_locks" tools:ignore="MissingTranslation">Locks need a passcode</string>
     <string name="menu_health_unconfirmed" tools:ignore="MissingTranslation">Not confirmed yet</string>
+    <string name="ie_font_saved" tools:ignore="MissingTranslation">Font saved. Restart Instagram to use it</string>
+    <string name="ie_emoji_saved" tools:ignore="MissingTranslation">Emoji font saved. Restart Instagram to use it</string>
+    <string name="ie_font_load_failed" tools:ignore="MissingTranslation">Couldn\'t load that font file</string>
+    <string name="ie_picker_unavailable" tools:ignore="MissingTranslation">Can\'t open the file picker here</string>
 </resources>

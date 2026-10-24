@@ -10,12 +10,14 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 
+import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
+import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 
@@ -265,10 +267,10 @@ public class CustomFontHook {
                                         FeatureFlags.customEmojiEnabled = true;
                                         SettingsManager.saveAllFlags();
                                         ps.reso.instaeclipse.utils.toast.IeToast.makeText(act,
-                                                "Emoji font saved — restart Instagram to apply", android.widget.Toast.LENGTH_LONG).show();
+                                                I18n.t(act, R.string.ie_emoji_saved), android.widget.Toast.LENGTH_LONG).show();
                                     } else {
                                         ps.reso.instaeclipse.utils.toast.IeToast.makeText(act,
-                                                "Couldn't load that font file", android.widget.Toast.LENGTH_SHORT).show();
+                                                I18n.t(act, R.string.ie_font_load_failed), android.widget.Toast.LENGTH_SHORT).show();
                                     }
                                     return;
                                 }
@@ -276,10 +278,10 @@ public class CustomFontHook {
                                     FeatureFlags.customFontEnabled = true;
                                     SettingsManager.saveAllFlags();
                                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(act,
-                                            "Font saved — restart Instagram to apply", android.widget.Toast.LENGTH_LONG).show();
+                                            I18n.t(act, R.string.ie_font_saved), android.widget.Toast.LENGTH_LONG).show();
                                 } else {
                                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(act,
-                                            "Couldn't load that font file", android.widget.Toast.LENGTH_SHORT).show();
+                                            I18n.t(act, R.string.ie_font_load_failed), android.widget.Toast.LENGTH_SHORT).show();
                                 }
                             } catch (Throwable t) { ModuleLog.error("(IE|Font) Could not use the picked file", t); }
                         }
@@ -431,12 +433,12 @@ public class CustomFontHook {
 
     /** Launches the system font-file picker from the given Activity. */
     public static void launchPicker(Activity act) {
-        launchPickerFor(act, FONT_PICK_REQUEST, "Pick a font (.ttf / .otf)");
+        launchPickerFor(act, FONT_PICK_REQUEST, I18n.t(act, R.string.ig_custom_font_pick));
     }
 
     /** Launches the picker for the emoji font. */
     public static void launchEmojiPicker(Activity act) {
-        launchPickerFor(act, EMOJI_PICK_REQUEST, "Pick an EmojiCompat emoji font (.ttf)");
+        launchPickerFor(act, EMOJI_PICK_REQUEST, I18n.t(act, R.string.ig_custom_emoji_pick));
     }
 
     private static void launchPickerFor(Activity act, int req, String title) {
@@ -446,7 +448,8 @@ public class CustomFontHook {
             i.addCategory(Intent.CATEGORY_OPENABLE);
             act.startActivityForResult(Intent.createChooser(i, title), req);
         } catch (Throwable t) {
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(act, "Can't open file picker here", android.widget.Toast.LENGTH_SHORT).show();
+            ps.reso.instaeclipse.utils.toast.IeToast.makeText(act, I18n.t(act, R.string.ie_picker_unavailable),
+                    android.widget.Toast.LENGTH_SHORT).show();
         }
     }
 
