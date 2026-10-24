@@ -10,7 +10,9 @@ final class UnsentRestorePolicy {
      * show it next to newer messages before the ones in between have loaded.
      */
     static int restoreIndex(long[] loaded, long time, Boolean learned) {
-        Boolean newestFirst = direction(loaded);
+        if (loaded.length == 0) return 0;
+        Boolean own = direction(loaded);
+        Boolean newestFirst = own != null ? own : learned;
         if (newestFirst == null) return -1;
         long oldest = newestFirst ? loaded[loaded.length - 1] : loaded[0];
         if (time < oldest) return -1;

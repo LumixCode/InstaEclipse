@@ -10,6 +10,7 @@ import org.luckypray.dexkit.result.UsingFieldData;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,6 +35,7 @@ public final class UnsentIdentity {
     public static final String USER = "com.instagram.user.model.User";
     private static final String SENDER_KEY = "KeepUnsent_senderField_v1";
     private static final String STRING_TYPE = ":Ljava/lang/String;";
+    private static final String EXPIRY = "message_expiration_timestamp_ms";
     private static volatile Field sender;
     private static volatile boolean senderLooked;
     // Cached lookups: the Lock gate reads the open screen's account several times a second, and
@@ -293,6 +295,16 @@ public final class UnsentIdentity {
             picked = field;
         }
         return picked;
+    }
+
+    public static Long expiry(byte[] copy) {
+        if (copy == null || copy.length == 0) return null;
+        try {
+            return UnsentJson.parse(new String(copy, StandardCharsets.UTF_8)) instanceof Map<?, ?> message
+                    && message.get(EXPIRY) instanceof Number expiry ? expiry.longValue() : null;
+        } catch (RuntimeException unreadable) {
+            return null;
+        }
     }
 
     public static String messageText(Object message, Field field) {

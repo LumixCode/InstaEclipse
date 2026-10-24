@@ -20,8 +20,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -67,6 +69,7 @@ public class KeepUnsentMessagesHook {
             " is not in cache, may need to double check if this message is deleted locally or not";
     private static final String DTK = "com.instagram.model.direct.DirectThreadKey";
     private static final String MISSING = "missing";
+    private static final long EXPIRY_MARGIN_MS = 60_000;
 
     static final UnsentMessageIndex protectedIds = new UnsentMessageIndex(1000);
     private static final Set<Key> protectedScopes = ConcurrentHashMap.newKeySet();
@@ -79,6 +82,7 @@ public class KeepUnsentMessagesHook {
     private record ClearedScope(long revision, long clears, boolean any) {}
     private static final Map<Key, ClearedScope> clearedScopes = new ConcurrentHashMap<>();
     private static final AtomicLong clears = new AtomicLong();
+    private static volatile Boolean listNewestFirst;
     /** Messages already described (or found not to need it) this process; see describe(). */
     private static final Set<Key> described = Collections.newSetFromMap(new ConcurrentHashMap<>());
     // Instagram's direct.db message codec; all null when discovery failed (no restart copies).
@@ -393,23 +397,23 @@ public class KeepUnsentMessagesHook {
                                 return;
                             }
                             Object message = cachedMessage(entry, lookups, ids, thread);
-                            if (passesThrough(UnsentIdentity.isFromAccount(message, account), false, null,
+                            boolean own = UnsentIdentity.isFromAccount(message, account);
+                            byte[] copy = own || message == null ? null : encodeCopy(entry, message, param.args[0]);
+                            if (message != null) ids.addAll(UnsentIdentity.messageIds(message));
+                            if (passesThrough(own, !own && alreadyUnsent(account, thread, ids), copy,
                                     System.currentTimeMillis())) {
-                                ModuleLog.detail("(IE|KeepUnsent) own removal passed through");
+                                block = !own && FeatureFlags.keepEphemeralMessages;
+                                ModuleLog.detail("(IE|KeepUnsent) " + (own ? "own removal passed through"
+                                        : block ? "expired message kept for Keep disappearing messages"
+                                        : "expired removal passed through"));
                                 return;
                             }
-                            if (message != null) ids.addAll(UnsentIdentity.messageIds(message));
                             if (UnsentLog.findCleared(account, thread, ids) != null) return;
                             boolean keepInChat = FeatureFlags.keepUnsentInChat;
                             Key key = protectedIds.recordAliases(account, thread, ids);
                             if (key != null) {
                                 protectedScopes.add(scope(key.account, key.thread));
                                 block = keepInChat;
-                                // One encoding in Instagram's own format serves the restart copy and
-                                // the log's description of a message without text (a reel, a voice
-                                // message…); a text message in log-only mode needs neither.
-                                byte[] copy = message != null && (keepInChat || !hasMessageText(message))
-                                        ? encodeCopy(entry, message, param.args[0]) : null;
                                 // Log-only mode leaves nothing to re-inject or restore.
                                 if (keepInChat && message != null) {
                                     rememberKept(entry, key, message);
@@ -525,8 +529,15 @@ public class KeepUnsentMessagesHook {
         return own ? ids : Collections.emptyList();
     }
 
+    private static boolean alreadyUnsent(String account, String thread, List<String> ids) {
+        return protectedIds.find(account, thread, ids) != null || UnsentLog.findUnsent(account, thread, ids) != null;
+    }
+
     static boolean passesThrough(boolean own, boolean unsent, byte[] copy, long now) {
-        return own;
+        if (own) return true;
+        if (unsent) return false;
+        Long expiry = UnsentIdentity.expiry(copy);
+        return expiry != null && now - expiry > EXPIRY_MARGIN_MS;
     }
 
     /** Drop a bulk-unsent message from what reconcile re-injects, from the removal index and from
@@ -704,9 +715,10 @@ public class KeepUnsentMessagesHook {
         if (decodeMessage == null || !(args[3] instanceof List)) return;
         List<UnsentMessageStore.Saved> copies = UnsentMessageStore.forThread(account, thread);
         if (copies.isEmpty()) return;
+        copies.sort(Comparator.comparingLong(copy -> copy.time));
         List<Object> live = liveList != null ? liveList : backingList(args);
         Object table = messageTable(args[0]);
-        if (live == null || live.size() < 2 || table == null) return;
+        if (live == null || table == null) return;
         List<Object> removed = args[4] instanceof List ? (List<Object>) args[4] : Collections.emptyList();
         Set<String> loadedIds = new HashSet<>();
         long[] times = new long[live.size()];
@@ -721,7 +733,7 @@ public class KeepUnsentMessagesHook {
                 UnsentMessageStore.remove(copy);
                 continue;
             }
-            int index = UnsentRestorePolicy.restoreIndex(times, copy.time, null);
+            int index = UnsentRestorePolicy.restoreIndex(times, copy.time, listNewestFirst);
             if (index < 0) continue;
             Object message = null;
             for (Iterator<Object> it = removed.iterator(); it.hasNext(); ) {
@@ -742,6 +754,19 @@ public class KeepUnsentMessagesHook {
             times = inserted(times, index, copy.time);
         }
         if (restored > 0) ModuleLog.detail("(IE|KeepUnsent) restored " + restored + " saved unsent message(s)");
+    }
+
+    private static void learnOrder(List<Object> live, Collection<Object> kept) throws ReflectiveOperationException {
+        if (listNewestFirst != null || live == null || messageTime == null) return;
+        Set<Object> ours = Collections.newSetFromMap(new IdentityHashMap<>());
+        ours.addAll(kept);
+        long[] times = new long[Math.min(live.size(), 8)];
+        int n = 0;
+        for (Object message : live) {
+            if (n == times.length) break;
+            if (!ours.contains(message)) times[n++] = (long) messageTime.invoke(message);
+        }
+        listNewestFirst = UnsentRestorePolicy.learn(Arrays.copyOf(times, n));
     }
 
     private static long[] inserted(long[] values, int index, long value) {
@@ -892,6 +917,7 @@ public class KeepUnsentMessagesHook {
                     if (owned.isEmpty() && !saved) return;
                     List<Object> liveList = findLiveList(args);
                     if (!owned.isEmpty() && liveList != null) keepOwned(args, liveList, owned, account, thread);
+                    if (saved) learnOrder(liveList, owned.values());
                     // After the kept messages, so the delta scrub cannot drop a restored addition.
                     restoreCopies(args, liveList, account, thread);
                 } catch (Throwable t) {
