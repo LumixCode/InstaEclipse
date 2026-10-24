@@ -199,13 +199,8 @@ public class StoryMentionHook {
                     CharSequence[] original = (CharSequence[]) param.getResult();
                     if (original == null) return;
                     String mentionLabel = I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_btn_view_mentions);
-                    for (CharSequence cs : original) {
-                        if (mentionLabel.contentEquals(cs)) return;
-                    }
-                    CharSequence[] extended = new CharSequence[original.length + 1];
-                    System.arraycopy(original, 0, extended, 0, original.length);
-                    extended[original.length] = mentionLabel;
-                    param.setResult(extended);
+                    CharSequence[] extended = StoryMenuRows.append(original, List.of(mentionLabel));
+                    if (extended != original) param.setResult(extended);
                 }
             };
         int hooked = 0;
@@ -234,12 +229,9 @@ public class StoryMentionHook {
                     try {
                         if (!FeatureFlags.enableStoryMentions) return;
 
-                        CharSequence tapped = null;
-                        for (Object a : param.args) {
-                            if (a instanceof CharSequence cs && tapped == null) tapped = cs;
-                        }
+                        CharSequence tapped = StoryMenuRows.tapped(param.args);
                         String mentionLabel = I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_btn_view_mentions);
-                        if (tapped == null || !mentionLabel.contentEquals(tapped)) return;
+                        if (!StoryMenuRows.owns(tapped, mentionLabel, false)) return;
 
                         param.setResult(null); // consume event
 

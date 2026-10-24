@@ -127,12 +127,8 @@ public class StoryLinksHook {
                     Object media = findMedia(param);
                     List<String> links = media != null ? linksOf(media) : Collections.emptyList();
                     if (links.isEmpty()) return;
-                    String label = label(links.size());
-                    for (CharSequence cs : original) if (label.contentEquals(cs)) return;
-                    CharSequence[] extended = new CharSequence[original.length + 1];
-                    System.arraycopy(original, 0, extended, 0, original.length);
-                    extended[original.length] = label;
-                    param.setResult(extended);
+                    CharSequence[] extended = StoryMenuRows.append(original, List.of(label(links.size())));
+                    if (extended != original) param.setResult(extended);
                 } catch (Throwable t) {
                     ModuleLog.warn("(IE|StoryLinks) Could not add the links entry to this story's menu: " + t);
                 }
@@ -159,13 +155,12 @@ public class StoryLinksHook {
                 protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                     try {
                         if (!FeatureFlags.storyLinks) return;
-                        CharSequence tapped = null;
-                        for (Object a : param.args) if (a instanceof CharSequence cs) { tapped = cs; break; }
+                        CharSequence tapped = StoryMenuRows.tapped(param.args);
                         if (tapped == null) return;
                         String t = tapped.toString();
                         Context app = AndroidAppHelper.currentApplication();
-                        if (!t.equals(I18n.t(app, R.string.ig_btn_copy_story_link))
-                                && !t.startsWith(I18n.t(app, R.string.ig_story_links_title))) return;
+                        if (!StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_copy_story_link), false)
+                                && !StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_story_links_title), true)) return;
 
                         Object media = findMedia(param);
                         Context ctx = StoryMentionHook.findContext(param.thisObject);

@@ -150,21 +150,16 @@ public class StoryInfoHook {
                     CharSequence[] original = (CharSequence[]) param.getResult();
                     if (original == null) return;
                     Context app = AndroidAppHelper.currentApplication();
-                    String info = I18n.t(app, R.string.ig_btn_story_info);
-                    for (CharSequence cs : original) if (info.contentEquals(cs)) return;
-
                     List<CharSequence> add = new ArrayList<>();
-                    add.add(info);
+                    add.add(I18n.t(app, R.string.ig_btn_story_info));
                     Object media = findMedia(param);
                     if (media != null) {
                         if (!list(media, "story_quizs").isEmpty()) add.add(I18n.t(app, R.string.ig_btn_quiz_answer));
                         if (!list(media, "story_polls").isEmpty()) add.add(I18n.t(app, R.string.ig_btn_poll_results));
                         if (!list(media, "story_sliders").isEmpty()) add.add(I18n.t(app, R.string.ig_btn_slider_results));
                     }
-                    CharSequence[] extended = new CharSequence[original.length + add.size()];
-                    System.arraycopy(original, 0, extended, 0, original.length);
-                    for (int i = 0; i < add.size(); i++) extended[original.length + i] = add.get(i);
-                    param.setResult(extended);
+                    CharSequence[] extended = StoryMenuRows.append(original, add);
+                    if (extended != original) param.setResult(extended);
                 } catch (Throwable t) {
                     ModuleLog.warn("(IE|StoryInfo) Could not add the story info entry to this story's menu: " + t);
                 }
@@ -189,16 +184,14 @@ public class StoryInfoHook {
                 protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                     try {
                         if (!FeatureFlags.storyInfo) return;
-                        CharSequence tapped = null;
-                        for (Object a : param.args) if (a instanceof CharSequence cs) { tapped = cs; break; }
+                        CharSequence tapped = StoryMenuRows.tapped(param.args);
                         if (tapped == null) return;
                         Context app = AndroidAppHelper.currentApplication();
-                        String t = tapped.toString();
                         int which;
-                        if (t.equals(I18n.t(app, R.string.ig_btn_story_info))) which = 0;
-                        else if (t.equals(I18n.t(app, R.string.ig_btn_quiz_answer))) which = 1;
-                        else if (t.equals(I18n.t(app, R.string.ig_btn_poll_results))) which = 2;
-                        else if (t.equals(I18n.t(app, R.string.ig_btn_slider_results))) which = 3;
+                        if (StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_story_info), false)) which = 0;
+                        else if (StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_quiz_answer), false)) which = 1;
+                        else if (StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_poll_results), false)) which = 2;
+                        else if (StoryMenuRows.owns(tapped, I18n.t(app, R.string.ig_btn_slider_results), false)) which = 3;
                         else return;
 
                         param.setResult(null);
