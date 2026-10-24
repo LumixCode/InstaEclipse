@@ -208,7 +208,7 @@ public final class InstallSchedule {
         if (value == null) return null;
         int newline = value.indexOf('\n');
         if (newline < 0 || !value.substring(0, newline).equals(build)) return null;
-        return split(value.substring(newline + 1));
+        return split(value.substring(newline + 1).trim());
     }
 
     static String learnedValue(String build, Collection<String> keys) {
