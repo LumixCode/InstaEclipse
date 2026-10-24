@@ -45,7 +45,8 @@ public final class BrokerPayload {
             if (text.length() + count > MAX_CONFIG_CHARS) throw new TooLarge("Configuration too large");
             text.append(buffer, 0, count);
         }
-        String json = text.toString().trim();
+        int start = text.length() > 0 && text.charAt(0) == '\uFEFF' ? 1 : 0;
+        String json = text.substring(start).trim();
         jsonObject(json, MAX_CONFIG_CHARS);
         return json;
     }

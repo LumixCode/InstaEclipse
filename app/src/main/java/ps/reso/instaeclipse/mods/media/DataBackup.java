@@ -132,6 +132,7 @@ public final class DataBackup {
     // ----- restore -----
 
     private static final Map<String, String[]> PENDING = new HashMap<>();
+    private static final Map<String, Intent> LAST_PIECE = new HashMap<>();
 
     public static void registerRestoreReceiver(Context context) {
         BroadcastReceiver receiver = new BroadcastReceiver() {
@@ -141,21 +142,25 @@ public final class DataBackup {
                 int index = intent.getIntExtra("index", -1), total = intent.getIntExtra("total", 0);
                 if (id == null || piece == null || total <= 0 || total > 2000 || index < 0 || index >= total) return;
                 String[] parts;
+                Intent request;
                 synchronized (PENDING) {
                     parts = PENDING.get(id);
                     if (parts == null) {
                         PENDING.clear(); // one restore at a time
+                        LAST_PIECE.clear();
                         parts = new String[total];
                         PENDING.put(id, parts);
                     }
                     if (parts.length != total) return;
                     parts[index] = piece;
+                    if (index == total - 1) LAST_PIECE.put(id, intent);
                     for (String p : parts) if (p == null) return;
                     PENDING.remove(id);
+                    request = LAST_PIECE.remove(id);
                 }
                 final String[] all = parts;
                 Context app = ctx.getApplicationContext();
-                new Thread(() -> restore(app, all), "IE-DataRestore").start();
+                new Thread(() -> restore(app, all, request), "IE-DataRestore").start();
             }
         };
         try {
@@ -165,7 +170,7 @@ public final class DataBackup {
         }
     }
 
-    private static void restore(Context app, String[] parts) {
+    private static void restore(Context app, String[] parts, Intent request) {
         try {
             StringBuilder b64 = new StringBuilder();
             for (String p : parts) b64.append(p);
@@ -190,13 +195,23 @@ public final class DataBackup {
                 restored++;
             }
             ModuleLog.line(TAG + "Backup restored (" + restored + " files); restarting Instagram");
+            confirm(request, null);
             toast(app, I18n.t(app, R.string.ig_data_restore_done, restored), false);
             // Every store keeps a copy in memory: restart so they all read the restored files.
             new Handler(Looper.getMainLooper()).postDelayed(() -> restart(app), 1800);
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not restore the backup: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            confirm(request, "Backup could not be restored");
             toast(app, I18n.t(app, R.string.ig_data_restore_failed), true);
         }
+    }
+
+    private static void confirm(Intent request, String error) {
+        if (request == null) return;
+        Intent reply = new Intent();
+        ps.reso.instaeclipse.utils.core.IpcSecurity.echoNonce(request, reply);
+        if (error != null) reply.putExtra("error", error);
+        ps.reso.instaeclipse.utils.ipc.ModuleReplies.reply(request, reply.getExtras());
     }
 
     private static Map<String, byte[]> unzip(byte[] zip) throws Exception {
@@ -451,7 +466,7 @@ public final class DataBackup {
         long total = 0;
         while ((n = in.read(buf)) > 0) {
             total += n;
-            if (total > MAX_BYTES) throw new IllegalArgumentException("backup too large");
+            if (total > MAX_BYTES) throw new ps.reso.instaeclipse.utils.ipc.BrokerPayload.TooLarge("backup too large");
             bytes.write(buf, 0, n);
         }
         String b64 = Base64.encodeToString(bytes.toByteArray(), Base64.NO_WRAP);

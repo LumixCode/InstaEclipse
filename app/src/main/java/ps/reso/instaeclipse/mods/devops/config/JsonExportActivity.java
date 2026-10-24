@@ -45,10 +45,13 @@ public class JsonExportActivity extends Activity {
                     return;
                 }
                 try (OutputStream out = getContentResolver().openOutputStream(uri)) {
-                    assert out != null;
-                    out.write(jsonContent.getBytes(StandardCharsets.UTF_8));
-                    out.flush();
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.export_config_success), Toast.LENGTH_LONG).show();
+                    if (out == null) {
+                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.export_invalid_uri), Toast.LENGTH_SHORT).show();
+                    } else {
+                        out.write(jsonContent.getBytes(StandardCharsets.UTF_8));
+                        out.flush();
+                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.export_config_success), Toast.LENGTH_LONG).show();
+                    }
                 } catch (Exception e) {
                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.export_config_failed, e.getMessage()), Toast.LENGTH_LONG).show();
                 }

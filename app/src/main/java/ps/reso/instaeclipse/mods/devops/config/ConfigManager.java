@@ -6,14 +6,13 @@ import android.os.Looper;
 import android.widget.Toast;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
+import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -42,16 +41,18 @@ public class ConfigManager {
         }).start();
     }
 
-    public static void importConfigFromJson(Context context, String json) {
+    public static void importConfigFromJson(Context context, String json, Consumer<String> done) {
         new Thread(() -> {
             try {
                 writeConfigJson(context, json);
+                done.accept(null);
                 new Handler(Looper.getMainLooper()).post(() -> {
                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(context.getApplicationContext(), I18n.t(context, R.string.ig_toast_config_imported), Toast.LENGTH_LONG).show();
                     ModuleLog.line("(IE|Config) Developer config imported (mc_overrides.json)");
                 });
             } catch (Exception e) {
                 ModuleLog.error("(IE|Config) Could not import the developer config: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                done.accept("Configuration could not be imported");
                 new Handler(Looper.getMainLooper()).post(() ->
                         ps.reso.instaeclipse.utils.toast.IeToast.makeText(context.getApplicationContext(), I18n.t(context, R.string.ig_toast_config_import_failed), Toast.LENGTH_LONG).show()
                 );

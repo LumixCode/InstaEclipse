@@ -366,10 +366,11 @@ public class UIHookManager {
                 try { ps.reso.instaeclipse.utils.ipc.BrokerPayload.validateConfig(json); }
                 catch (IllegalArgumentException malformed) {
                     ModuleLog.error("(IE|Config) Settings import rejected: the file is invalid or too large");
+                    confirm(intent, "Configuration is invalid or too large");
                     return;
                 }
                 if (json != null && !json.isEmpty()) {
-                    ConfigManager.importConfigFromJson(ctx, json);
+                    ConfigManager.importConfigFromJson(ctx, json, error -> confirm(intent, error));
                 }
             }
         };
@@ -386,6 +387,7 @@ public class UIHookManager {
                 try { ps.reso.instaeclipse.utils.ipc.BrokerPayload.validateConfig(json); }
                 catch (IllegalArgumentException malformed) {
                     ModuleLog.error("(IE|Config) Settings restore rejected: the backup is invalid or too large");
+                    confirm(intent, "Backup is invalid or too large");
                     return;
                 }
                 if (json == null || json.isEmpty()) return;
@@ -394,6 +396,7 @@ public class UIHookManager {
                         ps.reso.instaeclipse.utils.backup.SettingsBackupManager.Result result =
                                 ps.reso.instaeclipse.utils.backup.SettingsBackupManager.restore(json);
                         SettingsManager.saveAllFlags();
+                        confirm(intent, null);
                         Handler mainHandler = new Handler(Looper.getMainLooper());
                         mainHandler.post(() -> {
                             ps.reso.instaeclipse.Xposed.SettingsEvents.afterChange(result.changedKeys);
@@ -407,6 +410,7 @@ public class UIHookManager {
                             }
                         });
                     } catch (Exception e) {
+                        confirm(intent, "Backup could not be restored");
                         Handler mainHandler = new Handler(Looper.getMainLooper());
                         mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx.getApplicationContext(),
                                 "❌ " + I18n.t(ctx, R.string.ig_toast_restore_failed, e.getMessage()), Toast.LENGTH_LONG).show());
@@ -421,6 +425,13 @@ public class UIHookManager {
             ModuleLog.error("(InstaEclipse | RestoreReceiver): Restoring a settings backup into Instagram will not work: "
                     + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
+    }
+
+    private static void confirm(Intent request, String error) {
+        Intent reply = new Intent();
+        ps.reso.instaeclipse.utils.core.IpcSecurity.echoNonce(request, reply);
+        if (error != null) reply.putExtra("error", error);
+        ps.reso.instaeclipse.utils.ipc.ModuleReplies.reply(request, reply.getExtras());
     }
 
 }
