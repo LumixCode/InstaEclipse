@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Features tab: search + per-category counts -->
     <string name="feat_search_hint">Search features</string>
     <string name="feat_search_no_results">No matching features</string>
     <string name="feat_count_on">%1$d on</string>
     <string name="feat_count_off">Off</string>
+    <string name="feat_cache_size_limit" tools:ignore="MissingTranslation">Cache size limit</string>
+    <string name="feat_size_mb" tools:ignore="MissingTranslation">%1$d MB</string>
+    <string name="feat_reason_reels_off" tools:ignore="MissingTranslation">Off while Disable Reels is on</string>
+    <string name="feat_tab_move_up" tools:ignore="MissingTranslation">Move %1$s up</string>
+    <string name="feat_tab_move_down" tools:ignore="MissingTranslation">Move %1$s down</string>
+    <string name="feat_tab_hidden" tools:ignore="MissingTranslation">%1$s · Hidden</string>
 </resources>

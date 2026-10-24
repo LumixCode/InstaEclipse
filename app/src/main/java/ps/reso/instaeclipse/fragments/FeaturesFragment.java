@@ -17,6 +17,7 @@ import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.accessibility.AccessibilityEvent;
 import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
@@ -33,6 +34,9 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.AccessibilityDelegateCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -456,10 +460,10 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
         public int type;
         public String title;
-        /** Title shown while the row is disabled, e.g. with the "Requires …" line. */
-        public String disabledTitle;
+        public String disabledReason;
         public String prefKey;
         public Runnable onClick;
+        public boolean destructive;
         public int textColor;
         public int iconRes;
         public int accentColor;
@@ -506,6 +510,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         ImageView ivChevron;
         MaterialSwitch swToggle;
         MaterialCardView cardView;
+        boolean toggle;
+        boolean rowEnabled = true;
         ItemViewHolder(View v) {
             super(v);
             tvTitle = v.findViewById(R.id.tv_title);
@@ -514,6 +520,24 @@ public class FeaturesFragment extends Fragment implements TabFragment {
             ivIcon = v.findViewById(R.id.iv_icon);
             swToggle = v.findViewById(R.id.sw_toggle);
             cardView = (MaterialCardView) v;
+            ViewCompat.setAccessibilityDelegate(cardView, new AccessibilityDelegateCompat() {
+                @Override
+                public void onInitializeAccessibilityNodeInfo(@NonNull View host, @NonNull AccessibilityNodeInfoCompat info) {
+                    super.onInitializeAccessibilityNodeInfo(host, info);
+                    info.setClassName((toggle ? android.widget.Switch.class : android.widget.Button.class).getName());
+                    info.setCheckable(toggle);
+                    info.setChecked(toggle && swToggle.isChecked());
+                    info.setEnabled(rowEnabled);
+                }
+
+                @Override
+                public void onInitializeAccessibilityEvent(@NonNull View host, @NonNull AccessibilityEvent event) {
+                    super.onInitializeAccessibilityEvent(host, event);
+                    if (!toggle) return;
+                    event.setClassName(android.widget.Switch.class.getName());
+                    event.setChecked(swToggle.isChecked());
+                }
+            });
         }
     }
 
@@ -639,7 +663,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                             : com.google.android.material.R.attr.colorSurfaceContainerLow);
                     int defaultTextColor = MaterialColors.getColor(itemHolder.itemView, com.google.android.material.R.attr.colorOnSurface);
                     itemHolder.cardView.setCardBackgroundColor(bg);
-                    itemHolder.tvTitle.setTextColor(item.textColor != 0 ? item.textColor : defaultTextColor);
+                    itemHolder.tvTitle.setTextColor(item.destructive && item.textColor != 0 ? item.textColor : defaultTextColor);
                     itemHolder.tvTitle.setTypeface(null, android.graphics.Typeface.NORMAL);
                 }
 
@@ -648,8 +672,17 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
                 ShapeAppearanceModel.Builder shapeBuilder = itemHolder.cardView.getShapeAppearanceModel().toBuilder();
 
-                // Subtitle (category counts) + trailing chevron for rows that open a sub-menu
-                if (item.subtitle != null) {
+                boolean switchEnabled = item.enabled && requirementMet(item);
+                if (item.disabledWhenTrue != null && getCurrentState(item.disabledWhenTrue)) {
+                    switchEnabled = false;
+                }
+                String reason = switchEnabled ? null : item.disabledReason;
+
+                if (reason != null) {
+                    itemHolder.tvSubtitle.setVisibility(View.VISIBLE);
+                    itemHolder.tvSubtitle.setText(reason);
+                    itemHolder.tvSubtitle.setTextColor(MaterialColors.getColor(itemHolder.itemView, com.google.android.material.R.attr.colorOnSurfaceVariant));
+                } else if (item.subtitle != null) {
                     itemHolder.tvSubtitle.setVisibility(View.VISIBLE);
                     itemHolder.tvSubtitle.setText(item.subtitle);
                     itemHolder.tvSubtitle.setTextColor(MaterialColors.getColor(itemHolder.itemView, item.subtitleActive
@@ -682,15 +715,16 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 }
                 itemHolder.cardView.setShapeAppearanceModel(shapeBuilder.build());
 
-                // Compute enabled state from conditions
-                boolean switchEnabled = item.enabled && requirementMet(item);
-                if (item.disabledWhenTrue != null && getCurrentState(item.disabledWhenTrue)) {
-                    switchEnabled = false;
-                }
-                itemHolder.tvTitle.setText(!switchEnabled && item.disabledTitle != null ? item.disabledTitle : item.title);
+                itemHolder.tvTitle.setText(item.title);
                 itemHolder.itemView.setEnabled(switchEnabled);
                 itemHolder.swToggle.setEnabled(switchEnabled);
-                itemHolder.itemView.setAlpha(switchEnabled ? 1f : 0.4f);
+                float faded = switchEnabled ? 1f : 0.38f;
+                itemHolder.ivIcon.setAlpha(faded);
+                itemHolder.tvTitle.setAlpha(faded);
+                itemHolder.swToggle.setAlpha(faded);
+                itemHolder.tvSubtitle.setAlpha(reason != null ? 1f : faded);
+                itemHolder.toggle = item.type != FeatureItem.TYPE_CLICKABLE;
+                itemHolder.rowEnabled = switchEnabled;
 
                 itemHolder.swToggle.setOnCheckedChangeListener(null);
                 itemHolder.itemView.setOnClickListener(null);
@@ -926,19 +960,30 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return item;
     }
 
-    private FeatureItem createClickable(String title, int color, Runnable onClick) {
+    private FeatureItem createClickable(String title, Runnable onClick) {
         FeatureItem item = new FeatureItem();
         item.type = FeatureItem.TYPE_CLICKABLE;
         item.title = title;
-        item.textColor = color;
         item.onClick = onClick;
         return item;
     }
 
     private FeatureItem createClickable(int iconRes, String accentHex, String title, Runnable onClick) {
-        FeatureItem item = createClickable(title, Color.parseColor(accentHex), onClick);
+        FeatureItem item = createClickable(title, onClick);
         item.iconRes = iconRes;
         item.accentColor = Color.parseColor(accentHex);
+        return item;
+    }
+
+    private FeatureItem createValueRow(int iconRes, String accentHex, String label, String value, Runnable onClick) {
+        FeatureItem item = createClickable(iconRes, accentHex, label, onClick);
+        item.subtitle = value;
+        return item;
+    }
+
+    private static FeatureItem destructive(FeatureItem item) {
+        item.destructive = true;
+        item.textColor = item.accentColor;
         return item;
     }
 
@@ -1005,7 +1050,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                                               String parent, int requirement) {
         FeatureItem item = createSwitch(icon, accent, getString(label), key);
         item.requiresAnyOf = java.util.Collections.singletonList(parent);
-        item.disabledTitle = getString(label) + "\n" + getString(requirement);
+        item.disabledReason = getString(requirement);
         return item;
     }
 
@@ -1479,16 +1524,15 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 createSwitch(R.drawable.ic_search, "#64D2FF", getString(R.string.ig_dialog_misc_photo_zoom), "enablePhotoZoom"),
                 createSwitch(R.drawable.ic_movie, "#64D2FF", getString(R.string.ig_dialog_misc_disable_video_autoplay), "disableVideoAutoPlay"),
                 createSwitch(R.drawable.ic_restart, "#64D2FF", getString(R.string.ig_confirm_refresh), "confirmFeedRefresh"),
-                createClickable(R.drawable.ic_sparkle, "#64D2FF", feedCornerText(), this::chooseFeedCorner)
+                createValueRow(R.drawable.ic_sparkle, "#64D2FF", getString(R.string.ig_feed_corner_radius), feedCornerValue(), this::chooseFeedCorner)
         ));
 
         return defs;
     }
 
-    private String feedCornerText() {
+    private String feedCornerValue() {
         int dp = localCache.getInt("feedCornerRadius", 0);
-        return getString(R.string.ig_feed_corner_radius) + "  ·  "
-                + (dp <= 0 ? getString(R.string.ig_dialog_extras_share_domain_off) : dp + " dp");
+        return dp <= 0 ? getString(R.string.ig_dialog_extras_share_domain_off) : dp + " dp";
     }
 
     private void chooseFeedCorner() {
@@ -1528,25 +1572,22 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         );
 
         // Extreme Mode: only enabled once the user has selected at least one feature
-        FeatureItem extreme = createSwitch(R.drawable.ic_block, "#FF453A", getString(R.string.ig_dialog_distraction_extreme_mode), "isExtremeMode");
-        extreme.textColor = 0xFFFF453A;
+        FeatureItem extreme = destructive(createSwitch(R.drawable.ic_block, "#FF453A", getString(R.string.ig_dialog_distraction_extreme_mode), "isExtremeMode"));
         extreme.isExtreme = true;
         extreme.requiresAnyOf = distractionKeys;
         // Irreversible once on: Instagram refuses turning it off, so the row locks itself.
         extreme.disabledWhenTrue = "isExtremeMode";
+        if (getCurrentState("isExtremeMode")) extreme.disabledReason = getString(R.string.ig_extreme_active);
 
         defs.add(getString(R.string.feat_danger_zone));
         defs.add(Arrays.asList(extreme));
 
         // Master switch and all feature toggles: locked once extreme mode is active
-        FeatureItem masterSwitch = createMasterSwitch(getString(R.string.ig_dialog_enable_disable_all), distractionKeys);
-        masterSwitch.disabledWhenTrue = "isExtremeMode";
+        FeatureItem masterSwitch = lockedByExtreme(createMasterSwitch(getString(R.string.ig_dialog_enable_disable_all), distractionKeys));
 
-        FeatureItem disableReels = createSwitchWithCascadeOff(R.drawable.ic_movie, "#30D158", getString(R.string.ig_dialog_distraction_disable_reels), "disableReels", "disableReelsExceptDM");
-        disableReels.disabledWhenTrue = "isExtremeMode";
+        FeatureItem disableReels = lockedByExtreme(createSwitchWithCascadeOff(R.drawable.ic_movie, "#30D158", getString(R.string.ig_dialog_distraction_disable_reels), "disableReels", "disableReelsExceptDM"));
 
-        FeatureItem disableReelsExceptDM = createSwitchWithDependency(R.drawable.ic_movie, "#30D158", getString(R.string.ig_dialog_distraction_disable_reels_except_dm), "disableReelsExceptDM", "disableReels");
-        disableReelsExceptDM.disabledWhenTrue = "isExtremeMode";
+        FeatureItem disableReelsExceptDM = lockedByExtreme(createSwitchWithDependency(R.drawable.ic_movie, "#30D158", getString(R.string.ig_dialog_distraction_disable_reels_except_dm), "disableReelsExceptDM", "disableReels"));
 
         List<FeatureItem> controls = new ArrayList<>(Arrays.asList(
                 masterSwitch,
@@ -1556,28 +1597,20 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         if (getCurrentState("disableReels")) controls.add(disableReelsExceptDM);
         // Disable Reels overrides both limits; Extreme Mode locks them.
         boolean reelsAllowed = !getCurrentState("disableReels");
-        FeatureItem daily = createSwitchLockedByExtreme(R.drawable.ic_movie, "#30D158", getString(R.string.ig_reel_limit_enable), "dailyReelLimitEnabled");
-        daily.enabled = reelsAllowed;
-        controls.add(daily);
+        controls.add(reelRow(createSwitchLockedByExtreme(R.drawable.ic_movie, "#30D158", getString(R.string.ig_reel_limit_enable), "dailyReelLimitEnabled"), reelsAllowed));
         if (getCurrentState("dailyReelLimitEnabled")) {
-            FeatureItem dailyDM = createSwitchLockedByExtreme(R.drawable.ic_chat, "#30D158", getString(R.string.ig_reel_limit_allow_dm), "dailyReelLimitAllowDM");
-            dailyDM.enabled = reelsAllowed;
-            controls.add(dailyDM);
+            controls.add(reelRow(createSwitchLockedByExtreme(R.drawable.ic_chat, "#30D158", getString(R.string.ig_reel_limit_allow_dm), "dailyReelLimitAllowDM"), reelsAllowed));
             int limit = ps.reso.instaeclipse.mods.reels.DailyReelLimit.validLimit(localCache.getInt("dailyReelLimit", 100));
-            FeatureItem amount = createClickable(R.drawable.ic_movie, "#30D158", getString(R.string.ig_reel_limit_allowance) + ": " + limit,
+            FeatureItem amount = createValueRow(R.drawable.ic_movie, "#30D158", getString(R.string.ig_reel_limit_allowance), String.valueOf(limit),
                     () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showDailyReelLimitPicker(requireContext(), limit, value -> {
                         if (!reelLimitsEditable() || !getCurrentState("dailyReelLimitEnabled")) return;
                         putIntPref("dailyReelLimit", value);
                         reloadCurrentMenu();
                     }));
-            amount.enabled = reelsAllowed;
-            amount.disabledWhenTrue = "isExtremeMode";
-            controls.add(amount);
+            controls.add(reelRow(lockedByExtreme(amount), reelsAllowed));
         }
-        FeatureItem night = createSwitchLockedByExtreme(R.drawable.ic_timer, "#30D158",
-                getString(R.string.ig_night_reels_enable), "nightReelBlockEnabled");
-        night.enabled = reelsAllowed;
-        controls.add(night);
+        controls.add(reelRow(createSwitchLockedByExtreme(R.drawable.ic_timer, "#30D158",
+                getString(R.string.ig_night_reels_enable), "nightReelBlockEnabled"), reelsAllowed));
         if (getCurrentState("nightReelBlockEnabled")) {
             int startMinutes = ps.reso.instaeclipse.mods.reels.NightReelSchedule.validMinutes(
                     localCache.getInt("nightReelBlockStartMinutes", 22 * 60), 22 * 60);
@@ -1589,8 +1622,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     ps.reso.instaeclipse.mods.reels.NightReelSchedule.currentMinutes(), startMinutes, endMinutes);
             String state = getString(active ? R.string.ig_night_reels_status_active
                     : R.string.ig_night_reels_status_inactive, active ? end : start);
-            FeatureItem startItem = createClickable(R.drawable.ic_timer, "#30D158",
-                    getString(R.string.ig_night_reels_start, start) + "\n" + state,
+            String startTitle = getString(R.string.ig_night_reels_start, start);
+            FeatureItem startItem = createValueRow(R.drawable.ic_timer, "#30D158",
+                    startTitle, state.equals(startTitle) ? null : state,
                     () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showNightReelTimePicker(
                             requireContext(), startMinutes, selected -> {
                                 if (selected == endMinutes) {
@@ -1599,11 +1633,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                                 }
                                 updateNightReelTime("nightReelBlockStartMinutes", selected);
                             }));
-            startItem.enabled = reelsAllowed;
-            startItem.disabledWhenTrue = "isExtremeMode";
-            controls.add(startItem);
-            FeatureItem endItem = createClickable(R.drawable.ic_timer, "#30D158",
-                    getString(R.string.ig_night_reels_end, end),
+            controls.add(reelRow(lockedByExtreme(startItem), reelsAllowed));
+            FeatureItem endItem = createValueRow(R.drawable.ic_timer, "#30D158",
+                    getString(R.string.ig_night_reels_end, end), null,
                     () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showNightReelTimePicker(
                             requireContext(), endMinutes, selected -> {
                                 if (selected == startMinutes) {
@@ -1612,13 +1644,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                                 }
                                 updateNightReelTime("nightReelBlockEndMinutes", selected);
                             }));
-            endItem.enabled = reelsAllowed;
-            endItem.disabledWhenTrue = "isExtremeMode";
-            controls.add(endItem);
-            FeatureItem nightDM = createSwitchLockedByExtreme(R.drawable.ic_chat, "#30D158",
-                    getString(R.string.ig_night_reels_allow_dm), "nightReelBlockAllowDM");
-            nightDM.enabled = reelsAllowed;
-            controls.add(nightDM);
+            controls.add(reelRow(lockedByExtreme(endItem), reelsAllowed));
+            controls.add(reelRow(createSwitchLockedByExtreme(R.drawable.ic_chat, "#30D158",
+                    getString(R.string.ig_night_reels_allow_dm), "nightReelBlockAllowDM"), reelsAllowed));
         }
         controls.add(createSwitchLockedByExtreme(R.drawable.ic_search, "#30D158", getString(R.string.ig_dialog_distraction_disable_explore), "disableExplore"));
         controls.add(createSwitchLockedByExtreme(R.drawable.ic_chat, "#30D158", getString(R.string.ig_dialog_distraction_disable_comments), "disableComments"));
@@ -1634,6 +1662,18 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 createSwitch(R.drawable.ic_block, "#30D158", getString(R.string.ig_hide_instants), "hideInstants")
         ));
         return defs;
+    }
+
+    private FeatureItem lockedByExtreme(FeatureItem item) {
+        item.disabledWhenTrue = "isExtremeMode";
+        item.disabledReason = getString(R.string.home_shortcuts_locked_extreme);
+        return item;
+    }
+
+    private FeatureItem reelRow(FeatureItem item, boolean reelsAllowed) {
+        item.enabled = reelsAllowed;
+        if (!reelsAllowed) item.disabledReason = getString(R.string.feat_reason_reels_off);
+        return item;
     }
 
     private boolean reelLimitsEditable() {
@@ -1681,7 +1721,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         defs.add(getString(R.string.menu_nav_order));
         defs.add(Arrays.asList(
                 createClickable(R.drawable.ic_tune, "#30D158", getString(R.string.ig_nav_tab_order), this::showTabOrderDialog),
-                createClickable(R.drawable.ic_tune, "#30D158", startupTabLabel(), this::showStartupTabDialog)
+                createValueRow(R.drawable.ic_tune, "#30D158", getString(R.string.ig_dialog_extras_startup_tab), startupTabValue(), this::showStartupTabDialog)
         ));
 
         defs.add(getString(R.string.menu_nav_gestures));
@@ -1702,6 +1742,13 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         labels.put("direct_tab", getString(R.string.ig_nav_name_messages));
         labels.put("news_tab", getString(R.string.ig_nav_name_activity));
         labels.put("profile_tab", getString(R.string.ig_nav_name_profile));
+        final java.util.Map<String, String> hideKeys = new java.util.HashMap<>();
+        hideKeys.put("feed_tab", "hideTabHome");
+        hideKeys.put("clips_tab", "hideTabReels");
+        hideKeys.put("creation_tab", "hideTabCreate");
+        hideKeys.put("direct_tab", "hideTabMessages");
+        hideKeys.put("news_tab", "hideTabActivity");
+        hideKeys.put("profile_tab", "hideTabProfile");
         final java.util.List<String> order = new java.util.ArrayList<>();
         for (String n : localCache.getString("navTabOrder", "").split(","))
             if (java.util.Arrays.asList(ids).contains(n.trim()) && !order.contains(n.trim())) order.add(n.trim());
@@ -1719,12 +1766,16 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 android.widget.LinearLayout row = new android.widget.LinearLayout(requireContext());
                 row.setGravity(android.view.Gravity.CENTER_VERTICAL);
                 android.widget.TextView name = new android.widget.TextView(requireContext());
-                name.setText((i + 1) + ".  " + labels.get(order.get(i)));
+                String label = labels.get(order.get(i));
+                String hideKey = hideKeys.get(order.get(i));
+                name.setText((i + 1) + ".  " + (hideKey != null && getCurrentState(hideKey)
+                        ? getString(R.string.feat_tab_hidden, label) : label));
                 name.setTextSize(16);
                 row.addView(name, new android.widget.LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
                 for (final int dir : new int[]{-1, 1}) {
                     android.widget.Button b = new android.widget.Button(requireContext(), null, android.R.attr.borderlessButtonStyle);
                     b.setText(dir < 0 ? "↑" : "↓");
+                    b.setContentDescription(getString(dir < 0 ? R.string.feat_tab_move_up : R.string.feat_tab_move_down, label));
                     b.setEnabled(dir < 0 ? idx > 0 : idx < order.size() - 1);
                     b.setOnClickListener(v -> {
                         java.util.Collections.swap(order, idx, idx + dir);
@@ -1754,10 +1805,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 .show();
     }
 
-    private String shareDomainLabel() {
+    private String shareDomainValue() {
         String d = localCache.getString("customShareDomain", "");
-        return getString(R.string.ig_dialog_extras_share_domain) + "  ·  "
-                + (d.isEmpty() ? getString(R.string.ig_dialog_extras_share_domain_off) : d);
+        return d.isEmpty() ? getString(R.string.ig_dialog_extras_share_domain_off) : d;
     }
 
     /** Custom share domain (saved as the "customShareDomain" string pref). */
@@ -1807,9 +1857,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
     /** Date format row: greyed out until "Show exact dates" is on (#265). */
     private FeatureItem timestampFormatItem() {
-        FeatureItem item = createClickable(R.drawable.ic_timer, "#64D2FF",
-                getString(R.string.ig_timestamp_format) + "  ·  " + timestampFormatName(localCache.getString("exactTimestampFormat", "")),
-                this::showTimestampFormatDialog);
+        FeatureItem item = createValueRow(R.drawable.ic_timer, "#64D2FF", getString(R.string.ig_timestamp_format),
+                timestampFormatName(localCache.getString("exactTimestampFormat", "")), this::showTimestampFormatDialog);
         item.requiresAnyOf = Arrays.asList("exactTimestamps");
         return item;
     }
@@ -1907,9 +1956,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return names;
     }
 
-    private String spoofDeviceLabel() {
+    private String spoofDeviceValue() {
         int i = Arrays.asList(ps.reso.instaeclipse.mods.misc.DeviceSpoofHook.DEVICES).indexOf(localCache.getString("spoofDevice", ""));
-        return getString(R.string.ig_spoof_device) + "  ·  " + spoofDeviceNames()[Math.max(i, 0)];
+        return spoofDeviceNames()[Math.max(i, 0)];
     }
 
     /** Which device Instagram sees (saved as the "spoofDevice" string pref). */
@@ -1933,9 +1982,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 .show();
     }
 
-    private String startupTabLabel() {
+    private String startupTabValue() {
         int i = Arrays.asList(ps.reso.instaeclipse.mods.ui.StartupTabHook.TABS).indexOf(localCache.getString("startupTab", ""));
-        return getString(R.string.ig_dialog_extras_startup_tab) + "  ·  " + startupTabNames()[Math.max(i, 0)];
+        return startupTabNames()[Math.max(i, 0)];
     }
 
     /** Which tab Instagram opens on (saved as the "startupTab" string pref). */
@@ -1968,9 +2017,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     }
 
     private FeatureItem createSwitchLockedByExtreme(String title, String prefKey) {
-        FeatureItem item = createSwitch(title, prefKey);
-        item.disabledWhenTrue = "isExtremeMode";
-        return item;
+        return lockedByExtreme(createSwitch(title, prefKey));
     }
 
     private FeatureItem createSwitchLockedByExtreme(int iconRes, String accentHex, String title, String prefKey) {
@@ -2117,14 +2164,14 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 createSwitch(R.drawable.ic_notification, "#0A84FF", getString(R.string.ig_dialog_misc_show_feature_toasts), "showFeatureToasts"),
                 createSwitch(R.drawable.ic_sparkle, "#0A84FF", getString(R.string.ig_feature_unlock_plus), "unlockPlusBenefits"),
                 createSwitch(R.drawable.ic_link, "#0A84FF", getString(R.string.ig_dialog_open_links_externally), "openLinksExternally"),
-                createClickable(R.drawable.ic_link, "#0A84FF", shareDomainLabel(), this::showShareDomainDialog)
+                createValueRow(R.drawable.ic_link, "#0A84FF", getString(R.string.ig_dialog_extras_share_domain), shareDomainValue(), this::showShareDomainDialog)
         ));
         // Auto-clear cache (mirrors the in-IG dialog's Tools section).
         defs.add(getString(R.string.ig_dialog_section_auto_clear_cache));
         defs.add(Arrays.asList(
                 createSwitch(R.drawable.ic_timer, "#FF9F0A", getString(R.string.ig_dialog_auto_clear_cache), "autoClearCache"),
-                createClickable(R.drawable.ic_folder, "#FF9F0A",
-                        getString(R.string.ig_dialog_auto_clear_cache_size, localCache.getInt("autoClearCacheSizeMb", 100)),
+                createValueRow(R.drawable.ic_folder, "#FF9F0A", getString(R.string.feat_cache_size_limit),
+                        getString(R.string.feat_size_mb, localCache.getInt("autoClearCacheSizeMb", 100)),
                         this::pickAutoClearSize)
         ));
 
@@ -2209,7 +2256,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private FeatureItem createLockSwitch(int iconRes, String title, String prefKey) {
         FeatureItem item = createSwitch(iconRes, "#5E5CE6", title, prefKey);
         item.disabledWhenTrue = prefKey;
-        item.disabledTitle = title + "\n" + getString(R.string.ig_lock_turn_off_in_ig);
+        item.disabledReason = getString(R.string.ig_lock_turn_off_in_ig);
         return item;
     }
 
@@ -2293,12 +2340,10 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                         themeCustomizerLauncher.launch(new Intent(requireContext(), ThemeCustomizerActivity.class))),
                 // Follows the phone's mode, like the customizer and the in-IG dialog.
                 isNightMode()
-                        ? createClickable(R.drawable.ic_palette, "#FF375F",
-                                getString(R.string.theme_dark_mode) + ": " + darkModeLabel(localCache.getInt("themePresetId", 1)),
-                                this::pickDarkModeTheme)
-                        : createClickable(R.drawable.ic_palette, "#FF375F",
-                                getString(R.string.theme_light_mode) + ": " + lightModeLabel(localCache.getInt("themeLightPresetId", -1)),
-                                this::pickLightModeTheme)
+                        ? createValueRow(R.drawable.ic_palette, "#FF375F", getString(R.string.theme_dark_mode),
+                                darkModeLabel(localCache.getInt("themePresetId", 1)), this::pickDarkModeTheme)
+                        : createValueRow(R.drawable.ic_palette, "#FF375F", getString(R.string.theme_light_mode),
+                                lightModeLabel(localCache.getInt("themeLightPresetId", -1)), this::pickLightModeTheme)
         ));
 
         // Fonts & Emoji now live under Custom Theme (mirrors the in-IG dialog). File pickers run
@@ -2429,10 +2474,10 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 createExtrasSwitch("#32D74B", "hideStoriesTray")
         ));
         defs.add(Arrays.asList(
-                createClickable(R.drawable.ic_story_ring, "#32D74B",
-                        getString(R.string.ig_story_tray_size) + "  ·  " + localCache.getInt("storyTrayScale", 100) + "%",
-                        this::chooseStoryTraySize),
-                createClickable(R.drawable.ic_palette, "#32D74B", storyRingColorText(), this::chooseStoryRingColor)
+                createValueRow(R.drawable.ic_story_ring, "#32D74B", getString(R.string.ig_story_tray_size),
+                        localCache.getInt("storyTrayScale", 100) + "%", this::chooseStoryTraySize),
+                createValueRow(R.drawable.ic_palette, "#32D74B", getString(R.string.ig_story_ring_color),
+                        storyRingColorValue(), this::chooseStoryRingColor)
         ));
 
         return defs;
@@ -2453,10 +2498,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 }).setNegativeButton(android.R.string.cancel, null).show();
     }
 
-    private String storyRingColorText() {
+    private String storyRingColorValue() {
         String v = localCache.getString("storyRingColor", "");
-        return getString(R.string.ig_story_ring_color) + "  ·  "
-                + (v.isEmpty() ? getString(R.string.ig_story_ring_default) : v.replace(",", " → "));
+        return v.isEmpty() ? getString(R.string.ig_story_ring_default) : v.replace(",", " → ");
     }
 
     /** Same picker as inside Instagram: live preview, one color or a gradient of up to 4. */
@@ -2533,8 +2577,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         List<Object> defs = new ArrayList<>();
         int cacheHours = ps.reso.instaeclipse.utils.media.StoryCacheRetention.fromStored(
                 localCache.getAll().get("storyCacheHours"));
-        FeatureItem cacheDuration = createClickable(R.drawable.ic_timer, "#FF9F0A",
-                getString(R.string.ig_story_cache_duration) + ": " + getString(R.string.ig_story_cache_hours, cacheHours),
+        FeatureItem cacheDuration = createValueRow(R.drawable.ic_timer, "#FF9F0A",
+                getString(R.string.ig_story_cache_duration), getString(R.string.ig_story_cache_hours, cacheHours),
                 () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showStoryCacheDurationPicker(requireContext(), cacheHours, value -> {
                     if (!getCurrentState("cacheStories")) return;
                     putIntPref("storyCacheHours", ps.reso.instaeclipse.utils.media.StoryCacheRetention.normalize(value));
@@ -2585,7 +2629,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         defs.add(getString(R.string.feat_download_folder));
         defs.add(Arrays.asList(
                 createClickable(R.drawable.ic_folder, "#FF9F0A", folderTitle, this::pickDownloadFolder),
-                createClickable(R.drawable.ic_delete, "#FF453A", getString(R.string.feat_downloader_reset_folder), this::resetDownloadFolder)
+                destructive(createClickable(R.drawable.ic_delete, "#FF453A", getString(R.string.feat_downloader_reset_folder), this::resetDownloadFolder))
         ));
 
         return defs;
@@ -2637,11 +2681,11 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         // Older builds stored a boolean here; getInt would throw ClassCastException.
         int current = ps.reso.instaeclipse.utils.core.SettingsManager.readReelQuality(localCache);
         defs.add(Arrays.asList(
-                createClickable(R.drawable.ic_movie, "#FF9F0A",
-                        getString(R.string.ig_dialog_quality_force_reels) + ": " + qualityLabel(current), () -> pickQuality(current)),
+                createValueRow(R.drawable.ic_movie, "#FF9F0A", getString(R.string.ig_dialog_quality_force_reels),
+                        qualityLabel(current), () -> pickQuality(current)),
                 createExtrasSwitch("#FF9F0A", "highResolutionImages"),
                 createSwitch(R.drawable.ic_upload, "#FF9F0A", getString(R.string.ig_dialog_max_upload_quality), "maxUploadQuality"),
-                createClickable(R.drawable.ic_movie, "#FF9F0A", spoofDeviceLabel(), this::showSpoofDeviceDialog)
+                createValueRow(R.drawable.ic_movie, "#FF9F0A", getString(R.string.ig_spoof_device), spoofDeviceValue(), this::showSpoofDeviceDialog)
         ));
         return defs;
     }
