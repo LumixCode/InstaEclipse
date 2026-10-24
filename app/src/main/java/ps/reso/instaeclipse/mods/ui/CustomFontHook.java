@@ -165,6 +165,16 @@ public class CustomFontHook {
             try {
                 XposedHelpers.findAndHookMethod(android.widget.TextView.class, "setTypeface", Typeface.class, int.class, setTf2);
             } catch (Throwable ignored) {}
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                try {
+                    XposedHelpers.findAndHookConstructor(android.graphics.fonts.Font.Builder.class,
+                            android.content.res.Resources.class, int.class, new XC_MethodHook() {
+                                @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+                                    iconFonts.fontResource((int) p.args[1]);
+                                }
+                            });
+                } catch (Throwable ignored) {}
+            }
         }
 
         // Litho/Compose text (DM chats, captions) is drawn via a Paint, not a TextView. Hooking

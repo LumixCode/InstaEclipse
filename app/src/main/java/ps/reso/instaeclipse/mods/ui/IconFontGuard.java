@@ -8,7 +8,7 @@ import java.util.function.ToIntFunction;
 
 final class IconFontGuard {
 
-    static final String[] FONTS = {};
+    static final String[] FONTS = {"bcn_icon_font", "ig_logo_font", "instagram_signature"};
 
     private final int[] ids;
     private final ThreadLocal<Boolean> pending = ThreadLocal.withInitial(() -> Boolean.FALSE);
