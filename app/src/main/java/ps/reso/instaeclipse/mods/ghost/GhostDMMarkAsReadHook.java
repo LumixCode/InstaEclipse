@@ -1,8 +1,6 @@
 package ps.reso.instaeclipse.mods.ghost;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.view.Gravity;
 import android.view.View;
@@ -12,16 +10,17 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 
 import ps.reso.instaeclipse.R;
-import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.ghost.SeenPause;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.IgTint;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.ui.ViewAttachHooks;
 
 public class GhostDMMarkAsReadHook {
 
-    private static final String GHOST_BTN_TAG = "ie_ghost_seen_btn";
+    static final String GHOST_BTN_TAG = "ie_ghost_seen_btn";
 
     /** {@code moduleSourceDir} is unused now that icons come from ModuleResources; kept for Module's call. */
     public GhostDMMarkAsReadHook(String moduleSourceDir) {
@@ -51,15 +50,15 @@ public class GhostDMMarkAsReadHook {
         ImageButton ghostBtn = new ImageButton(ctx);
         ghostBtn.setTag(GHOST_BTN_TAG);
 
-        // The cached loaded-APK table: XModuleResources gave blank icons under embedded LSPatch.
-        Drawable icon = ModuleResources.drawable(ctx, R.drawable.ic_eye);
+        Drawable icon = SeenAffordance.eye(ctx);
         if (icon != null) {
             ghostBtn.setImageDrawable(icon);
         } else {
             ghostBtn.setImageResource(android.R.drawable.ic_menu_view);
-            ghostBtn.setColorFilter(Color.WHITE);
         }
+        IgTint.copy(container, ghostBtn);
         ghostBtn.setBackground(null);
+        ghostBtn.setContentDescription(I18n.t(ctx, R.string.ig_story_mark_seen));
 
         int size = dp(ctx, 35);
 
@@ -68,24 +67,25 @@ public class GhostDMMarkAsReadHook {
 
         // POSITION: Left side, slightly elevated so it doesn't block the text input or mic
         lp.gravity = Gravity.CENTER_VERTICAL | Gravity.START;
-        lp.setMargins(dp(ctx, 5), 25, 0, 0);
+        lp.setMargins(dp(ctx, 5), dp(ctx, 8), 0, 0);
 
         ghostBtn.setLayoutParams(lp);
         ghostBtn.setOnClickListener(v -> triggerSeenLogic(parent));
 
         parent.post(() -> {
-            parent.addView(ghostBtn, SeenAffordance.composerIndex(parent.getChildCount()));
+            try {
+                if (parent.findViewWithTag(GHOST_BTN_TAG) != null) return;
+                parent.addView(ghostBtn, SeenAffordance.composerIndex(parent.getChildCount()));
+            } catch (Throwable t) {
+                ModuleLog.detail("(IE|MarkAsRead) The eye button could not be added to the chat: " + t);
+            }
         });
     }
 
     private static void triggerSeenLogic(View view) {
         try {
             Context ctx = view.getContext();
-            @SuppressLint("DiscouragedApi")
-            int messageListId = ctx.getResources().getIdentifier("message_list", "id", ctx.getPackageName());
-
-            View root = view.getRootView();
-            View messageList = root.findViewById(messageListId);
+            View messageList = ThreadHeaderMenu.findShown(view.getRootView(), ResIds.id(ctx, "message_list"));
 
             if (messageList instanceof ViewGroup group) {
                 // scrollBy with a large value is capped synchronously by RecyclerView's
