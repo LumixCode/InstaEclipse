@@ -14,18 +14,15 @@ import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
 
-import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -170,11 +167,13 @@ public class FollowListExportHook {
     static void exportList(View root, Object frag) {
         ListInfo info = listInfo(frag);
         String type = info != null && info.type != null ? info.type : FOLLOWERS;
+        String named = info != null && info.username != null ? info.username : ProfileAnalyzer.titleOf(root);
+        String owner = named != null ? named : info != null ? info.owner : null;
         FollowListLoader.loadAll(root, frag, I18n.t(root.getContext(), R.string.ig_follow_export),
-                I18n.t(root.getContext(), R.string.ig_follow_export_stop), r -> export(root, r, type));
+                I18n.t(root.getContext(), R.string.ig_follow_export_stop), r -> export(root, r, type, owner));
     }
 
-    private static void export(View root, FollowListLoader.Result r, String type) {
+    private static void export(View root, FollowListLoader.Result r, String type, String owner) {
         Activity act = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
         android.content.Context ctx = act != null ? act : root.getContext();
         // Instagram refused the load (rate limit, challenge, action block): say so, save nothing
@@ -187,7 +186,7 @@ public class FollowListExportHook {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(root.getContext(), I18n.t(root.getContext(), R.string.ig_follow_export_none), Toast.LENGTH_SHORT).show();
             return;
         }
-        String file = "follow_list_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date()) + ".csv";
+        String file = CsvCells.fileName(owner, type, System.currentTimeMillis());
         // a list Instagram flagged as limited: the toast says so
         String note = r.limited ? I18n.t(ctx, R.string.ig_pa_limited_note, ProfileAnalyzer.label(ctx, type)) : null;
         new Thread(() -> writeCsv(ctx, r.users, file, note)).start();
@@ -195,22 +194,40 @@ public class FollowListExportHook {
 
     /** {@code users}: id → {username, full name}; {@code note}: a line added to the done toast, or null. */
     private static void writeCsv(android.content.Context ctx, Map<String, String[]> users, String file, String note) {
-        try {
-            StringBuilder csv = new StringBuilder("username,full_name,id\n");
-            for (Map.Entry<String, String[]> e : users.entrySet())
-                csv.append(q(e.getValue()[0])).append(',').append(q(e.getValue()[1])).append(',').append(q(e.getKey())).append('\n');
-            csv.append(ps.reso.instaeclipse.utils.core.ExportBrand.csvFooter());
-            try (OutputStream out = ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook.openExport(ctx, file, "text/csv")) {
-                out.write(new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF}); // UTF-8 BOM for Excel
-                out.write(csv.toString().getBytes(StandardCharsets.UTF_8));
-            }
-            ModuleLog.line(TAG + "Exported " + users.size() + " accounts to " + file);
-            new Handler(Looper.getMainLooper()).post(() ->
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_follow_export_done, users.size(), file)
-                            + (note != null ? "\n" + note : ""), Toast.LENGTH_LONG).show());
-        } catch (Throwable t) {
+        Handler main = new Handler(Looper.getMainLooper());
+        java.util.function.Consumer<Throwable> failed = t -> {
             ModuleLog.error(TAG + "Could not save the exported list", t);
+            main.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
+                    I18n.t(ctx, R.string.ig_follow_export_failed, CsvCells.reason(t)), Toast.LENGTH_LONG).show());
+        };
+        byte[] bytes;
+        try {
+            bytes = csv(users);
+        } catch (Throwable t) {
+            failed.accept(t);
+            return;
         }
+        if (!CsvCells.write(() -> ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook.openExport(ctx, file, "text/csv"),
+                bytes, failed)) return;
+        ModuleLog.line(TAG + "Exported " + users.size() + " accounts to " + file);
+        main.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_follow_export_done,
+                users.size(), "exports/" + file) + (note != null ? "\n" + note : ""), Toast.LENGTH_LONG).show());
+    }
+
+    private static byte[] csv(Map<String, String[]> users) {
+        StringBuilder csv = new StringBuilder(CsvCells.cell("username")).append(',').append(CsvCells.cell("full_name"))
+                .append(',').append(CsvCells.cell("id")).append('\n');
+        for (Map.Entry<String, String[]> e : users.entrySet())
+            csv.append(CsvCells.cell(e.getValue()[0])).append(',').append(CsvCells.cell(e.getValue()[1])).append(',')
+                    .append(CsvCells.cell(e.getKey())).append('\n');
+        csv.append(ps.reso.instaeclipse.utils.core.ExportBrand.csvFooter());
+        byte[] text = csv.toString().getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = new byte[text.length + 3];
+        bytes[0] = (byte) 0xEF;
+        bytes[1] = (byte) 0xBB;
+        bytes[2] = (byte) 0xBF;
+        System.arraycopy(text, 0, bytes, 3, text.length);
+        return bytes;
     }
 
     // ---- Whose list, which tab (Profile analyzer) ----
@@ -466,11 +483,6 @@ public class FollowListExportHook {
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not show the followers history", t);
         }
-    }
-
-    private static String q(String s) {
-        if (s == null) return "";
-        return s.contains(",") || s.contains("\"") || s.contains("\n") ? "\"" + s.replace("\"", "\"\"") + "\"" : s;
     }
 
     static AbsListView findList(View root) {
