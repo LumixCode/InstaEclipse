@@ -18,7 +18,9 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 
@@ -57,19 +59,9 @@ public class PostDownloadContextMenuHook {
     private static Class<?> mediaOptionEnumClass;
     private static Object   downloadOptionValue;     // MediaOption$Option.DOWNLOAD
     private static Object   copyLinkOptionValue;     // MediaOption$Option.COPY_LINK (#117)
-    // "Copy image" row (#228). IG has no such option, so the row borrows an internal debug-only
-    // value that never appears in a normal user's menu (present 436 → 452) and gets our label;
-    // its taps are consumed below before IG's handler sees them.
-    private static final String COPY_IMAGE_CARRIER = "EXPLORE_INTERNAL_DEBUG_LOGS";
     private static Object   copyImageOptionValue;
-    // "Media info" (#231) and "Playback speed" (#247) rows: two more internal debug-only values
-    // (present 436 → 452) carry our labels the same way.
-    static final String MEDIA_INFO_CARRIER = "DEBUG_SHOPS_AD";
-    static final String SPEED_CARRIER = "PROMOTE_DEBUG";
     private static Object   mediaInfoOptionValue;
     private static Object   speedOptionValue;
-    // "Edit counts" (likes / comments / reposts / shares on your own posts, this phone only).
-    static final String COUNTS_CARRIER = "DEBUG_STICKER_TRANSLATION";
     private static Object   countsOptionValue;
 
     // Obfuscated creator class found via "MediaOptionsOverflowMenuCreator" string
@@ -91,8 +83,8 @@ public class PostDownloadContextMenuHook {
     private static final ThreadLocal<Boolean> sAddingDownload =
             ThreadLocal.withInitial(() -> Boolean.FALSE);
 
-    private static final Set<Object> processedCreators =
-            Collections.newSetFromMap(new WeakHashMap<>());
+    private static final Map<Object, PostMenuRowsPolicy> menus =
+            Collections.synchronizedMap(new WeakHashMap<>());
 
     // ── Entry point ──────────────────────────────────────────────────────────
 
@@ -113,22 +105,22 @@ public class PostDownloadContextMenuHook {
             Object[] values = (Object[]) mediaOptionEnumClass.getMethod("values").invoke(null);
             for (Object v : values) {
                 String name = v.toString();
-                if (downloadOptionValue == null && name.equals("DOWNLOAD")) {
+                if (downloadOptionValue == null && name.equals(PostMenuRowsPolicy.DOWNLOAD)) {
                     downloadOptionValue = v;
-                } else if (copyLinkOptionValue == null && name.equals("COPY_LINK")) {
+                } else if (copyLinkOptionValue == null && name.equals(PostMenuRowsPolicy.COPY_MEDIA_LINK_CARRIER)) {
                     copyLinkOptionValue = v;
-                } else if (copyImageOptionValue == null && name.equals(COPY_IMAGE_CARRIER)) {
+                } else if (copyImageOptionValue == null && name.equals(PostMenuRowsPolicy.COPY_IMAGE_CARRIER)) {
                     copyImageOptionValue = v;
-                } else if (mediaInfoOptionValue == null && name.equals(MEDIA_INFO_CARRIER)) {
+                } else if (mediaInfoOptionValue == null && name.equals(PostMenuRowsPolicy.MEDIA_INFO_CARRIER)) {
                     mediaInfoOptionValue = v;
-                } else if (speedOptionValue == null && name.equals(SPEED_CARRIER)) {
+                } else if (speedOptionValue == null && name.equals(PostMenuRowsPolicy.SPEED_CARRIER)) {
                     speedOptionValue = v;
-                } else if (countsOptionValue == null && name.equals(COUNTS_CARRIER)) {
+                } else if (countsOptionValue == null && name.equals(PostMenuRowsPolicy.COUNTS_CARRIER)) {
                     countsOptionValue = v;
                 }
             }
-            ps.reso.instaeclipse.mods.ui.ReelMenuLabels.EXTRA_REEL_LABELS.put(MEDIA_INFO_CARRIER, R.string.ig_media_info_title);
-            ps.reso.instaeclipse.mods.ui.ReelMenuLabels.EXTRA_REEL_LABELS.put(SPEED_CARRIER, R.string.ig_playback_speed_title);
+            ps.reso.instaeclipse.mods.ui.ReelMenuLabels.EXTRA_REEL_LABELS.put(PostMenuRowsPolicy.MEDIA_INFO_CARRIER, R.string.ig_media_info_title);
+            ps.reso.instaeclipse.mods.ui.ReelMenuLabels.EXTRA_REEL_LABELS.put(PostMenuRowsPolicy.SPEED_CARRIER, R.string.ig_playback_speed_title);
             for (Object v : values) {
                 if (v == null) continue;
             }
@@ -289,58 +281,26 @@ public class PostDownloadContextMenuHook {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 if (Boolean.TRUE.equals(sAddingDownload.get())) return;
-                Object opt = param.args[idxOption];
-                // Suppress IG's own native rows — we inject our own versions instead
-                if (FeatureFlags.enablePostDownload && opt == downloadOptionValue) {
-                    param.setResult(null);
-                } else if (FeatureFlags.copyMediaLink && opt == copyLinkOptionValue) {
-                    param.setResult(null);
-                } else if (FeatureFlags.offerCopyImage && opt == copyImageOptionValue) {
-                    param.setResult(null);
-                } else if (FeatureFlags.offerMediaInfo && opt == mediaInfoOptionValue) {
-                    param.setResult(null);
-                } else if (FeatureFlags.offerPlaybackSpeed && opt == speedOptionValue) {
-                    param.setResult(null);
-                } else if (FeatureFlags.postCountSpoof && opt == countsOptionValue) {
-                    param.setResult(null);
-                }
+                PostMenuRowsPolicy.Row row = rowOf(param.args[idxOption]);
+                if (row != null && menu(param.args[idxSelf]).suppressNative(row, enabledRows())) param.setResult(null);
             }
 
             @Override
             protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 if (Boolean.TRUE.equals(sAddingDownload.get())) return;
-
-                boolean wantDownload = FeatureFlags.enablePostDownload && downloadOptionValue != null;
-                boolean wantCopyLink = FeatureFlags.copyMediaLink && copyLinkOptionValue != null;
-                boolean wantCopyImage = FeatureFlags.offerCopyImage && copyImageOptionValue != null;
-                boolean wantInfo = FeatureFlags.offerMediaInfo && mediaInfoOptionValue != null;
-                boolean wantSpeed = FeatureFlags.offerPlaybackSpeed && speedOptionValue != null;
-                boolean wantCounts = FeatureFlags.postCountSpoof && countsOptionValue != null
-                        && ps.reso.instaeclipse.Xposed.InstallRunner.ran("PostCountSpoof");
-                if (!wantDownload && !wantCopyLink && !wantCopyImage && !wantInfo && !wantSpeed && !wantCounts) return;
-
-                // Don't react to our own target option types (suppressed in beforeHook)
-                Object opt = param.args[idxOption];
-                if (opt == downloadOptionValue || opt == copyLinkOptionValue
-                        || (opt != null && (opt == copyImageOptionValue || opt == mediaInfoOptionValue
-                                || opt == speedOptionValue || opt == countsOptionValue))) return;
-
+                Set<PostMenuRowsPolicy.Row> wanted = wantedRows();
+                if (wanted.isEmpty()) return;
                 Object self = param.args[idxSelf];
-                boolean alreadyProcessed;
-                synchronized (processedCreators) {
-                    alreadyProcessed = processedCreators.contains(self);
-                    if (!alreadyProcessed) processedCreators.add(self);
+                PostMenuRowsPolicy menu = menu(self);
+                List<PostMenuRowsPolicy.Row> rows = menu.rowsToInject(rowOf(param.args[idxOption]), wanted);
+                if (rows.isEmpty()) return;
+                for (PostMenuRowsPolicy.Row row : rows) {
+                    if (row == PostMenuRowsPolicy.Row.COUNTS && !isOwnPost(self)) continue;
+                    menu.injected(row, injectRow(param, optionValue(row), label(row)));
                 }
-                if (alreadyProcessed) return;
-
-                if (wantDownload) injectRow(param, downloadOptionValue, R.string.ig_dl_title);
-                if (wantCopyLink) injectRow(param, copyLinkOptionValue, R.string.ig_copy_link_title);
-                if (wantCopyImage) injectRow(param, copyImageOptionValue, R.string.ig_download_choice_copy_image);
-                if (wantInfo) injectRow(param, mediaInfoOptionValue, R.string.ig_media_info_title);
-                if (wantSpeed) injectRow(param, speedOptionValue, R.string.ig_playback_speed_title);
-                if (wantCounts && isOwnPost(self)) injectRow(param, countsOptionValue, R.string.ig_post_counts_title);
-                // Our carriers are debug options Instagram draws with the Meta logo; give them real icons.
-                if (wantCopyImage || wantInfo || wantSpeed || wantCounts) ps.reso.instaeclipse.mods.ui.MenuIcons.fixSoon();
+                if (rows.contains(PostMenuRowsPolicy.Row.COPY_IMAGE) || rows.contains(PostMenuRowsPolicy.Row.MEDIA_INFO)
+                        || rows.contains(PostMenuRowsPolicy.Row.SPEED) || rows.contains(PostMenuRowsPolicy.Row.COUNTS))
+                    ps.reso.instaeclipse.mods.ui.MenuIcons.fixSoon();
             }
         });
 
@@ -351,8 +311,58 @@ public class PostDownloadContextMenuHook {
         ModuleLog.ok("(IE|Post) ready");
     }
 
-    /** Adds one button (Download / Copy Media Link) to the menu currently being built. */
-    private static void injectRow(XC_MethodHook.MethodHookParam param, Object optionValue, int labelResId) {
+    private static PostMenuRowsPolicy menu(Object creator) {
+        synchronized (menus) {
+            return menus.computeIfAbsent(creator, ignored -> new PostMenuRowsPolicy());
+        }
+    }
+
+    private static PostMenuRowsPolicy.Row rowOf(Object option) {
+        return option == null ? null : PostMenuRowsPolicy.row(option.toString());
+    }
+
+    private static Set<PostMenuRowsPolicy.Row> enabledRows() {
+        Set<PostMenuRowsPolicy.Row> rows = EnumSet.noneOf(PostMenuRowsPolicy.Row.class);
+        if (FeatureFlags.enablePostDownload) rows.add(PostMenuRowsPolicy.Row.DOWNLOAD);
+        if (FeatureFlags.copyMediaLink) rows.add(PostMenuRowsPolicy.Row.COPY_MEDIA_LINK);
+        if (FeatureFlags.offerCopyImage) rows.add(PostMenuRowsPolicy.Row.COPY_IMAGE);
+        if (FeatureFlags.offerMediaInfo) rows.add(PostMenuRowsPolicy.Row.MEDIA_INFO);
+        if (FeatureFlags.offerPlaybackSpeed) rows.add(PostMenuRowsPolicy.Row.SPEED);
+        if (FeatureFlags.postCountSpoof) rows.add(PostMenuRowsPolicy.Row.COUNTS);
+        return rows;
+    }
+
+    private static Set<PostMenuRowsPolicy.Row> wantedRows() {
+        Set<PostMenuRowsPolicy.Row> rows = enabledRows();
+        rows.removeIf(row -> optionValue(row) == null);
+        if (rows.contains(PostMenuRowsPolicy.Row.COUNTS) && !ps.reso.instaeclipse.Xposed.InstallRunner.ran("PostCountSpoof"))
+            rows.remove(PostMenuRowsPolicy.Row.COUNTS);
+        return rows;
+    }
+
+    private static Object optionValue(PostMenuRowsPolicy.Row row) {
+        return switch (row) {
+            case DOWNLOAD -> downloadOptionValue;
+            case COPY_MEDIA_LINK -> copyLinkOptionValue;
+            case COPY_IMAGE -> copyImageOptionValue;
+            case MEDIA_INFO -> mediaInfoOptionValue;
+            case SPEED -> speedOptionValue;
+            case COUNTS -> countsOptionValue;
+        };
+    }
+
+    private static int label(PostMenuRowsPolicy.Row row) {
+        return switch (row) {
+            case DOWNLOAD -> R.string.ig_dl_title;
+            case COPY_MEDIA_LINK -> R.string.ig_copy_link_title;
+            case COPY_IMAGE -> R.string.ig_download_choice_copy_image;
+            case MEDIA_INFO -> R.string.ig_media_info_title;
+            case SPEED -> R.string.ig_playback_speed_title;
+            case COUNTS -> R.string.ig_post_counts_title;
+        };
+    }
+
+    private static boolean injectRow(XC_MethodHook.MethodHookParam param, Object optionValue, int labelResId) {
         Object[] callArgs = new Object[addButtonMethod.getParameterCount()];
         System.arraycopy(param.args, 0, callArgs, 0, callArgs.length);
         callArgs[idxEnum]   = enumNormalValue;
@@ -362,8 +372,10 @@ public class PostDownloadContextMenuHook {
         sAddingDownload.set(true);
         try {
             addButtonMethod.invoke(null, callArgs);
+            return true;
         } catch (Throwable t) {
             ModuleLog.warn("(IE|Post) Could not add a row to this menu: " + t);
+            return false;
         } finally {
             sAddingDownload.set(false);
         }
@@ -399,9 +411,7 @@ public class PostDownloadContextMenuHook {
         XC_MethodHook clickHook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (!FeatureFlags.enablePostDownload && !FeatureFlags.enableReelDownload
-                        && !FeatureFlags.copyMediaLink && !FeatureFlags.offerCopyImage
-                        && !FeatureFlags.offerMediaInfo && !FeatureFlags.offerPlaybackSpeed) return;
+                if (!PostMenuRowsPolicy.handlesTaps(enabledRows(), FeatureFlags.enableReelDownload)) return;
                 onOptionClicked(param);
             }
         };
@@ -583,13 +593,14 @@ public class PostDownloadContextMenuHook {
             // only Reel download enabled fell through to Instagram's own save flow, which burns in
             // a watermark (#256). Route it to the module's clean downloader for either toggle.
             boolean reelMenu = reelClickDispatcher != null && param.method.equals(reelClickDispatcher);
-            boolean isDownload = option.equals("DOWNLOAD")
+            PostMenuRowsPolicy.Row row = PostMenuRowsPolicy.row(option);
+            boolean isDownload = row == PostMenuRowsPolicy.Row.DOWNLOAD
                     && (reelMenu ? FeatureFlags.enableReelDownload : FeatureFlags.enablePostDownload);
-            boolean isCopyLink = option.equals("COPY_LINK") && FeatureFlags.copyMediaLink;
-            boolean isCopyImage = option.equals(COPY_IMAGE_CARRIER) && FeatureFlags.offerCopyImage;
-            boolean isInfo = option.equals(MEDIA_INFO_CARRIER) && FeatureFlags.offerMediaInfo;
-            boolean isSpeed = option.equals(SPEED_CARRIER) && FeatureFlags.offerPlaybackSpeed;
-            boolean isCounts = option.equals(COUNTS_CARRIER) && FeatureFlags.postCountSpoof;
+            boolean isCopyLink = row == PostMenuRowsPolicy.Row.COPY_MEDIA_LINK && FeatureFlags.copyMediaLink;
+            boolean isCopyImage = row == PostMenuRowsPolicy.Row.COPY_IMAGE && FeatureFlags.offerCopyImage;
+            boolean isInfo = row == PostMenuRowsPolicy.Row.MEDIA_INFO && FeatureFlags.offerMediaInfo;
+            boolean isSpeed = row == PostMenuRowsPolicy.Row.SPEED && FeatureFlags.offerPlaybackSpeed;
+            boolean isCounts = row == PostMenuRowsPolicy.Row.COUNTS && FeatureFlags.postCountSpoof;
             if (!isDownload && !isCopyLink && !isCopyImage && !isInfo && !isSpeed && !isCounts) return;
 
             param.setResult(null); // consume the event
@@ -622,7 +633,7 @@ public class PostDownloadContextMenuHook {
             if (isCounts) { ps.reso.instaeclipse.mods.feed.PostCountSpoof.edit(ctx, media); return; }
             if (isCopyLink)       triggerCopyLink(ctx, media, thisObj);
             else if (isCopyImage) triggerCopyImage(ctx, media, thisObj);
-            else                  triggerDownload(ctx, media, thisObj);
+            else                  triggerDownload(ctx, media, thisObj, PostMenuRowsPolicy.downloadType(reelMenu));
         } catch (Throwable t) {
             ModuleLog.error("(IE|Post) Could not handle the menu tap", t);
         }
@@ -654,9 +665,8 @@ public class PostDownloadContextMenuHook {
 
     // ── Download dispatch ─────────────────────────────────────────────────────
 
-    private static void triggerDownload(Context ctx, Object media, Object clickHandler) {
-        // The visible slide, found the same way as Copy image (#289)
-        SelectedMediaDownloads.captureAndShowPost(ctx, media, "post", n -> {
+    private static void triggerDownload(Context ctx, Object media, Object clickHandler, String type) {
+        SelectedMediaDownloads.captureAndShowPost(ctx, media, type, n -> {
             int viewIdx = ReelDownloadHook.findCarouselIndexFromView(ctx, n);
             return viewIdx >= 0 ? viewIdx : findCarouselIndex(clickHandler, n);
         });

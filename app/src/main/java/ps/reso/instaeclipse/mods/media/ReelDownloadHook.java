@@ -157,10 +157,10 @@ public class ReelDownloadHook {
             Class<?> optionClass = classLoader.loadClass("com.instagram.feed.media.mediaoption.MediaOption$Option");
             for (Object v : (Object[]) optionClass.getMethod("values").invoke(null)) {
                 String n = v.toString();
-                if (n.equals("DOWNLOAD")) downloadOption = v;
-                else if (n.equals("COPY_LINK")) copyLinkOption = v;
-                else if (n.equals(PostDownloadContextMenuHook.MEDIA_INFO_CARRIER)) infoOption = v;
-                else if (n.equals(PostDownloadContextMenuHook.SPEED_CARRIER)) speedOption = v;
+                if (n.equals(PostMenuRowsPolicy.DOWNLOAD)) downloadOption = v;
+                else if (n.equals(PostMenuRowsPolicy.COPY_MEDIA_LINK_CARRIER)) copyLinkOption = v;
+                else if (n.equals(PostMenuRowsPolicy.MEDIA_INFO_CARRIER)) infoOption = v;
+                else if (n.equals(PostMenuRowsPolicy.SPEED_CARRIER)) speedOption = v;
             }
             if (downloadOption == null && copyLinkOption == null) {
                 ModuleLog.error("(IE|Reel) Download and copy link will not appear in the reel menu: their menu entries were not found in this Instagram version");
