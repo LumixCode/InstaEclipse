@@ -7,6 +7,7 @@ import android.app.Application;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Rect;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -47,6 +48,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker;
 import ps.reso.instaeclipse.utils.ghost.HiddenThreads;
+import ps.reso.instaeclipse.utils.ghost.LockedThreads;
 import ps.reso.instaeclipse.utils.ghost.ThreadNames;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -62,7 +64,6 @@ public class HideChatsHook {
     private static final String INBOX_CONTROL_TAG = "ie_hidden_chats_inbox_control";
     private static final String INBOX_ANCHOR = "DirectThreadStoreImpl.getSortedCopyOfThreadSummaries";
     private static final String GENERATOR_ANCHOR = "InboxViewModelGenerator.calculateAndApplyDiffUpdate";
-    private static final int MAX_KNOWN_THREADS = 500;
     /** The corner runs from the window's left edge (the old 8 dp inset only dropped taps). */
     private static final int INBOX_GESTURE_WIDTH_DP = 108;
     /**
@@ -83,7 +84,7 @@ public class HideChatsHook {
     private static final Map<Activity, WeakReference<Object>> foregroundInboxes = new WeakHashMap<>();
     private static final Map<Activity, InboxControlBinding> inboxControls = new WeakHashMap<>();
     private static final Map<Activity, InboxTapGesture> tapGestures = new WeakHashMap<>();
-    private static final LinkedHashMap<String, String> knownThreads = new LinkedHashMap<>();
+    private static final KnownThreads knownThreads = new KnownThreads();
     private static final Map<Object, NativeInbox> nativeInboxes = new WeakHashMap<>();
     private static final Map<Class<?>, List<Field>> threadKeyFields = new java.util.concurrent.ConcurrentHashMap<>();
     private static volatile Method titleFormatter;
@@ -97,6 +98,7 @@ public class HideChatsHook {
     private static HideChatsHook activeHook;
     private static volatile boolean hiddenOnlyMode;
     private static volatile String hiddenAccount;
+    private static WeakReference<Activity> recentsHidden;
     private static boolean lifecycleRegistered;
     private static boolean inboxRefreshPending;
     private static boolean threadsTracked, inboxesTracked;
@@ -458,46 +460,30 @@ public class HideChatsHook {
     }
 
     private static void rememberRows(List<?> rows, Object threadStore) {
-        synchronized (knownThreads) {
-            for (Object row : rows) {
-                String id = threadIdOfRow(row);
-                if (id == null) continue;
-                String title = threadTitleOfRow(row, threadStore);
-                if (title.isEmpty()) title = knownThreads.get(id);
-                knownThreads.put(id, title == null ? "" : title);
-            }
-            while (knownThreads.size() > MAX_KNOWN_THREADS) {
-                String oldest = knownThreads.keySet().iterator().next();
-                knownThreads.remove(oldest);
-            }
+        Map<String, String> titles = new LinkedHashMap<>();
+        for (Object row : rows) {
+            String id = threadIdOfRow(row);
+            if (id != null) titles.merge(id, threadTitleOfRow(row, threadStore), (was, now) -> now.isEmpty() ? was : now);
         }
+        knownThreads.rows(UnsentIdentity.account(threadStore), titles, HideChatsHook::selected);
     }
 
-    /** Current local inbox snapshot for the settings picker. */
+    private static boolean selected(String id) {
+        return HiddenThreads.isHidden(id) || LockedThreads.contains(id);
+    }
+
     public static Map<String, String> knownThreads() {
-        synchronized (knownThreads) {
-            return new LinkedHashMap<>(knownThreads);
-        }
+        return knownThreads.list(null);
     }
 
     private static void rememberThread(String id, String title) {
         if (id == null) return;
-        String cleanTitle = title == null ? "" : title.trim();
-        synchronized (knownThreads) {
-            // Header text must not replace the inbox formatter's display name.
-            String knownTitle = knownThreads.get(id);
-            if (knownTitle != null && !knownTitle.isEmpty()) cleanTitle = knownTitle;
-            else knownThreads.put(id, cleanTitle);
-        }
+        String cleanTitle = knownThreads.opened(null, id, title);
         if (!cleanTitle.isEmpty()) ThreadNames.put(id, cleanTitle);
     }
 
-    /** The chat's display name from Instagram's own inbox formatter, or "" before the inbox loaded it. */
     public static String knownThreadTitle(String id) {
-        synchronized (knownThreads) {
-            String title = knownThreads.get(id);
-            return title == null ? "" : title;
-        }
+        return knownThreads.title(id);
     }
 
     /** Finds the DirectThreadKey on an inbox row and returns its canonical native thread ID. */
@@ -637,6 +623,7 @@ public class HideChatsHook {
                 if (!startedActivities.isEmpty() || stopped.isChangingConfigurations() || !hiddenOnlyMode) return;
                 hiddenOnlyMode = false;
                 hiddenAccount = null;
+                syncRecents(stopped);
                 inboxRefreshPending = true;
                 ModuleLog.line("(IE|HideChats) Hidden chats locked again because Instagram went to the background");
             }
@@ -821,12 +808,27 @@ public class HideChatsHook {
             hiddenAccount = state.account;
         } else hiddenAccount = null;
         hiddenOnlyMode = enabled;
+        syncRecents(activity);
         inboxRefreshPending = true;
         if (activeHook != null) {
             activeHook.refreshInbox(activity);
             activeHook.tryInject(activity);
         }
         ModuleLog.line("(IE|HideChats) " + (enabled ? "Hidden chats opened" : "Hidden chats closed"));
+    }
+
+    private static void syncRecents(Activity activity) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
+        Activity hidden = recentsHidden == null ? null : recentsHidden.get();
+        if (HiddenOnlyRecents.hideFromRecents(Build.VERSION.SDK_INT, hiddenOnlyMode)) {
+            if (hidden == activity) return;
+            if (hidden != null) hidden.setRecentsScreenshotEnabled(true);
+            activity.setRecentsScreenshotEnabled(false);
+            recentsHidden = new WeakReference<>(activity);
+        } else if (hidden != null) {
+            hidden.setRecentsScreenshotEnabled(true);
+            recentsHidden = null;
+        }
     }
 
     /** The foreground inbox's row consumer once it has delivered rows; null otherwise. */
@@ -873,6 +875,7 @@ public class HideChatsHook {
             if (hiddenOnlyMode && !java.util.Objects.equals(hiddenAccount, state.account)) {
                 hiddenOnlyMode = false;
                 hiddenAccount = null;
+                syncRecents(activity);
             }
             List<Object> visible = state.visible();
             // Bypass our capture hook: a filtered replay must never replace the complete source.
