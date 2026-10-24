@@ -1,8 +1,8 @@
 package ps.reso.instaeclipse.utils.toast;
 
+import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
-import android.content.res.Configuration;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
@@ -18,8 +18,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.IePalette;
 
 /**
  * The module's toast: a rounded card in the IeDialog palette (dark / light) with the InstaEclipse
@@ -68,12 +70,12 @@ public final class IeToast {
     private void showNow() {
         Context app = ctx.getApplicationContext() != null ? ctx.getApplicationContext() : ctx;
         float d = app.getResources().getDisplayMetrics().density;
-        boolean dark = (app.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
-                == Configuration.UI_MODE_NIGHT_YES;
-        int bg = dark ? 0xF21C1C1E : 0xF7FFFFFF;
-        int fg = dark ? 0xFFF5F5F5 : 0xFF111111;
-        int stroke = dark ? 0x1FFFFFFF : 0x1A000000;
-        int accent = ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine.accentOr(0xFF0095F6);
+        Activity top = UIHookManager.topActivity();
+        IePalette palette = IePalette.of(top != null ? top : ctx);
+        int bg = IePalette.withAlpha(palette.dialog, palette.dark ? 0xF2 : 0xF7);
+        int fg = palette.text;
+        int stroke = palette.line;
+        int accent = palette.accent;
 
         LinearLayout card = new LinearLayout(app);
         card.setOrientation(LinearLayout.HORIZONTAL);

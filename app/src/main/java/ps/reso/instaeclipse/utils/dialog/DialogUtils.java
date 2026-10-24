@@ -44,19 +44,11 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.GhostModeUtils;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.IePalette;
 import ps.reso.instaeclipse.utils.dialog.IeRows.RadioRow;
 import ps.reso.instaeclipse.utils.dialog.IeRows.ToggleRow;
 
-import static ps.reso.instaeclipse.utils.dialog.IeRows.C_CARD;
-import static ps.reso.instaeclipse.utils.dialog.IeRows.C_DANGER;
-import static ps.reso.instaeclipse.utils.dialog.IeRows.C_HAIRLINE;
-import static ps.reso.instaeclipse.utils.dialog.IeRows.C_HANDLE;
-import static ps.reso.instaeclipse.utils.dialog.IeRows.C_PRESSED;
-import static ps.reso.instaeclipse.utils.dialog.IeRows.C_SHEET;
-import static ps.reso.instaeclipse.utils.dialog.IeRows.C_TEXT;
-import static ps.reso.instaeclipse.utils.dialog.IeRows.C_TEXT2;
 import static ps.reso.instaeclipse.utils.dialog.IeRows.R_CARD;
-import static ps.reso.instaeclipse.utils.dialog.IeRows.accent;
 import static ps.reso.instaeclipse.utils.dialog.IeRows.dp;
 import static ps.reso.instaeclipse.utils.dialog.IeRows.hairline;
 
@@ -75,12 +67,13 @@ public class DialogUtils {
     public static void showEclipseOptionsDialog(Context context) {
         SettingsManager.init(context);
         clearSectionStack();
+        IePalette p = IePalette.of(context);
 
         LinearLayout outer = new LinearLayout(context);
         outer.setOrientation(LinearLayout.VERTICAL);
 
         GradientDrawable background = new GradientDrawable();
-        background.setColor(C_SHEET);
+        background.setColor(p.sheet);
         float corner = dp(context, 16);
         background.setCornerRadii(new float[]{corner, corner, corner, corner, 0, 0, 0, 0});
         outer.setBackground(background);
@@ -89,7 +82,7 @@ public class DialogUtils {
         outer.addView(createDragHandle(context));
         TextView title = new TextView(context);
         title.setText(I18n.t(context, R.string.ig_dialog_title));
-        title.setTextColor(C_TEXT);
+        title.setTextColor(p.text);
         title.setTextSize(24);
         title.setTypeface(null, Typeface.BOLD);
         title.setLetterSpacing(0.01f);
@@ -99,7 +92,7 @@ public class DialogUtils {
 
         TextView subtitle = new TextView(context);
         subtitle.setText(I18n.t(context, R.string.ig_dialog_subtitle));
-        subtitle.setTextColor(C_TEXT2);
+        subtitle.setTextColor(p.sub);
         subtitle.setTextSize(13);
         subtitle.setGravity(Gravity.CENTER);
         subtitle.setPadding(dp(context, 13), 0, dp(context, 13), dp(context, 4));
@@ -115,13 +108,13 @@ public class DialogUtils {
         // Pinned footer: Close button (always reachable without scrolling)
         TextView closeButton = new TextView(context);
         closeButton.setText(I18n.t(context, R.string.ig_dialog_close));
-        closeButton.setTextColor(C_DANGER);
+        closeButton.setTextColor(IePalette.readable(p.danger, p.sheet, IePalette.TEXT));
         closeButton.setTextSize(16);
         closeButton.setPadding(dp(context, 13), dp(context, 7), dp(context, 13), dp(context, 13));
         closeButton.setGravity(Gravity.CENTER);
         closeButton.setTypeface(null, Typeface.BOLD);
         StateListDrawable closeStates = new StateListDrawable();
-        closeStates.addState(new int[]{android.R.attr.state_pressed}, new ColorDrawable((C_DANGER & 0x00FFFFFF) | 0x20000000));
+        closeStates.addState(new int[]{android.R.attr.state_pressed}, new ColorDrawable(IePalette.withAlpha(p.danger, 0x20)));
         closeStates.addState(new int[]{}, new ColorDrawable(Color.TRANSPARENT));
         closeButton.setBackground(closeStates);
         closeButton.setOnClickListener(v -> {
@@ -216,7 +209,7 @@ public class DialogUtils {
         // Footer Credit
         TextView footer = new TextView(context);
         footer.setText("@reso7200  ·  " + moduleVersion(context));
-        footer.setTextColor(C_TEXT2);
+        footer.setTextColor(IePalette.of(context).sub);
         footer.setTextSize(13);
         footer.setPadding(dp(context, 5), dp(context, 9), dp(context, 5), dp(context, 3));
         footer.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -229,7 +222,7 @@ public class DialogUtils {
         LinearLayout box = IeRows.card(context, 5);
         TextView message = new TextView(context);
         message.setText(I18n.t(context, R.string.ie_spoof_last_seen_removed));
-        message.setTextColor(C_TEXT);
+        message.setTextColor(IePalette.of(context).text);
         message.setTextSize(14);
         message.setPadding(dp(context, 14), dp(context, 12), dp(context, 14), dp(context, 4));
         box.addView(message);
@@ -371,6 +364,7 @@ public class DialogUtils {
      * the ones that did not, which is what to check after Instagram updates itself.
      */
     private static View buildStatusChips(Context context) {
+        IePalette p = IePalette.of(context);
         LinearLayout box = new LinearLayout(context);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -379,11 +373,11 @@ public class DialogUtils {
         LinearLayout versions = new LinearLayout(context);
         versions.setOrientation(LinearLayout.HORIZONTAL);
         versions.setGravity(Gravity.CENTER);
-        versions.addView(statusChip(context, "InstaEclipse " + moduleVersion(context), C_TEXT2, null));
-        versions.addView(statusChip(context, I18n.t(context, R.string.menu_chip_instagram, hostVersion(context)), C_TEXT2, null));
+        versions.addView(statusChip(context, "InstaEclipse " + moduleVersion(context), p.sub, null));
+        versions.addView(statusChip(context, I18n.t(context, R.string.menu_chip_instagram, hostVersion(context)), p.sub, null));
         box.addView(versions);
 
-        TextView health = statusChip(context, "", C_TEXT2, v -> {
+        TextView health = statusChip(context, "", p.sub, v -> {
             java.util.List<String> inactive = new java.util.ArrayList<>();
             int[] count = featureCount(context, inactive);
             StringBuilder msg = new StringBuilder();
@@ -433,9 +427,10 @@ public class DialogUtils {
     /** The health chip's count and colour now; hidden while no feature is switched on. */
     private static void renderHealth(Context context, TextView health) {
         int[] count = featureCount(context, null);
+        IePalette p = IePalette.of(context);
         health.setVisibility(count[1] > 0 ? View.VISIBLE : View.GONE);
         health.setText("●  " + I18n.t(context, R.string.menu_chip_active, count[0], count[1]));
-        health.setTextColor(count[0] == count[1] ? 0xFF30D158 : 0xFFFF9F0A);
+        health.setTextColor(IePalette.readable(count[0] == count[1] ? p.success : 0xFFFF9F0A, p.card, IePalette.TEXT));
     }
 
     /** {active, total} of the switched-on features; the labels of the inactive ones go to {@code inactive}. */
@@ -453,6 +448,7 @@ public class DialogUtils {
     }
 
     private static TextView statusChip(Context context, String text, int textColor, View.OnClickListener onClick) {
+        IePalette p = IePalette.of(context);
         TextView chip = new TextView(context);
         chip.setText(text);
         chip.setTextColor(textColor);
@@ -460,9 +456,9 @@ public class DialogUtils {
         chip.setSingleLine(true);
         chip.setPadding(dp(context, 12), dp(context, 5), dp(context, 12), dp(context, 5));
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(C_CARD);
+        bg.setColor(p.card);
         bg.setCornerRadius(dp(context, 14));
-        bg.setStroke(hairline(context), C_HAIRLINE);
+        bg.setStroke(hairline(context), p.line);
         chip.setBackground(bg);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -478,6 +474,7 @@ public class DialogUtils {
 
     private static View createMenuRow(Context context, int iconRes, String label, String accentHex,
                                       Runnable onClick, String subtitleText) {
+        IePalette p = IePalette.of(context);
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -490,7 +487,7 @@ public class DialogUtils {
         TextView labelView = new TextView(context);
         labelView.setText(label);
         labelView.setTextSize(16);
-        labelView.setTextColor(C_TEXT);
+        labelView.setTextColor(p.text);
         View labelBlock = labelView;
         if (subtitleText != null) {
             LinearLayout texts = new LinearLayout(context);
@@ -500,14 +497,14 @@ public class DialogUtils {
             sub.setText(subtitleText);
             sub.setTextSize(12);
             boolean off = subtitleText.equals(I18n.t(context, R.string.feat_count_off));
-            sub.setTextColor(off ? C_TEXT2 : Color.parseColor(accentHex));
+            sub.setTextColor(off ? p.sub : IePalette.readable(Color.parseColor(accentHex), p.card, IePalette.TEXT));
             texts.addView(sub);
             labelBlock = texts;
         }
         labelBlock.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
         android.widget.ImageView chevron = new android.widget.ImageView(context);
-        Drawable chev = IeRows.icon(context, R.drawable.ic_chevron_right, C_TEXT2);
+        Drawable chev = IeRows.icon(context, R.drawable.ic_chevron_right, p.sub);
         if (chev != null) chevron.setImageDrawable(chev);
         LinearLayout.LayoutParams chevLp = new LinearLayout.LayoutParams(dp(context, 20), dp(context, 20));
         chevLp.rightMargin = dp(context, 4);
@@ -713,6 +710,7 @@ public class DialogUtils {
     public static void showThreadUnsent(Context context, String threadId, String chatName, Runnable onBack) {
         pendingBackTarget = onBack;
         LinearLayout layout = createSwitchLayout(context);
+        IePalette p = IePalette.of(context);
 
         // Never widen to every chat: an unknown thread (null) shows only the entries that were
         // logged without a chat, so one chat's unsent messages can't appear inside another.
@@ -762,9 +760,9 @@ public class DialogUtils {
                 int pad = dp(context, 14);
                 row.setPadding(pad, dp(context, 11), pad, dp(context, 12));
                 android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-                bg.setColor(C_CARD);
+                bg.setColor(p.card);
                 bg.setCornerRadius(dp(context, R_CARD));
-                bg.setStroke(Math.max(1, dp(context, 1)), 0x33FFFFFF);
+                bg.setStroke(Math.max(1, dp(context, 1)), p.line);
                 row.setBackground(bg);
 
                 LinearLayout meta = new LinearLayout(context);
@@ -775,7 +773,7 @@ public class DialogUtils {
                 TextView sender = new TextView(context);
                 sender.setText(tag);
                 if (tag.isEmpty()) sender.setVisibility(View.GONE);
-                sender.setTextColor(accent());
+                sender.setTextColor(IePalette.readable(p.accent, p.card, IePalette.TEXT));
                 sender.setTextSize(13);
                 sender.setTypeface(Typeface.DEFAULT_BOLD);
                 sender.setSingleLine(true);
@@ -783,7 +781,7 @@ public class DialogUtils {
                 meta.addView(sender, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
                 TextView when = new TextView(context);
                 when.setText(fmt.format(new java.util.Date(e.time)));
-                when.setTextColor(C_TEXT2);
+                when.setTextColor(p.sub);
                 when.setTextSize(12);
                 when.setPadding(tag.isEmpty() ? 0 : dp(context, 8), 0, 0, 0);
                 meta.addView(when);
@@ -793,7 +791,7 @@ public class DialogUtils {
                 // in italics so it never reads as words the sender wrote.
                 body.setText(ps.reso.instaeclipse.utils.ghost.UnsentDetailText.body(context, e));
                 if (ps.reso.instaeclipse.utils.ghost.UnsentDetailText.isDescription(e)) body.setTypeface(null, Typeface.ITALIC);
-                body.setTextColor(C_TEXT);
+                body.setTextColor(p.text);
                 body.setTextSize(15);
                 body.setPadding(0, dp(context, 5), 0, 0);
                 body.setTextIsSelectable(true);
@@ -985,7 +983,7 @@ public class DialogUtils {
         TextView activityHint = new TextView(context);
         activityHint.setText(I18n.t(context, R.string.ie_ghost_activity_status_hint));
         activityHint.setTextSize(13);
-        activityHint.setTextColor(C_TEXT2);
+        activityHint.setTextColor(IePalette.of(context).sub);
         activityHint.setPadding(dp(context, 13), dp(context, 5), dp(context, 11), dp(context, 3));
         layout.addView(activityHint);
         refreshManualSeen.run();
@@ -1066,6 +1064,8 @@ public class DialogUtils {
 
     private static void showDistractionOptions(Context context) {
         LinearLayout layout = createSwitchLayout(context);
+        IePalette p = IePalette.of(context);
+        int accentText = IePalette.readable(p.accent, p.card, IePalette.TEXT);
         Runnable refreshUsage = addDailyReelStatus(context, layout);
         ToggleRow extreme = createSwitch(context, R.drawable.ic_block, "#FF453A", I18n.t(context, R.string.ig_dialog_distraction_extreme_mode), FeatureFlags.isExtremeMode);
         ToggleRow stories = createSwitch(context, R.drawable.ic_story_ring, "#30D158", I18n.t(context, R.string.ig_dialog_distraction_disable_stories), FeatureFlags.disableStories);
@@ -1084,7 +1084,7 @@ public class DialogUtils {
         LinearLayout amount = (LinearLayout) IeRows.valueRow(context,
                 I18n.t(context, R.string.ig_reel_limit_allowance), String.valueOf(FeatureFlags.dailyReelLimit));
         TextView value = (TextView) amount.getChildAt(1);
-        value.setTextColor(accent());
+        value.setTextColor(accentText);
         amount.setMinimumHeight(dp(context, 48));
         amount.setFocusable(true);
         amount.setOnClickListener(v -> showDailyReelLimitPicker(context, FeatureFlags.dailyReelLimit, limit -> {
@@ -1103,8 +1103,8 @@ public class DialogUtils {
                 formatNightReelTime(context, FeatureFlags.nightReelBlockEndMinutes));
         TextView nightStartValue = (TextView) nightStart.getChildAt(1);
         TextView nightEndValue = (TextView) nightEnd.getChildAt(1);
-        nightStartValue.setTextColor(accent());
-        nightEndValue.setTextColor(accent());
+        nightStartValue.setTextColor(accentText);
+        nightEndValue.setTextColor(accentText);
         nightStartValue.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
         nightEndValue.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
         nightStart.setMinimumHeight(dp(context, 48));
@@ -1114,7 +1114,7 @@ public class DialogUtils {
         nightStart.setBackground(IeRows.ripple(context, 5));
         nightEnd.setBackground(IeRows.ripple(context, 5));
         TextView nightStatus = new TextView(context);
-        nightStatus.setTextColor(C_TEXT2);
+        nightStatus.setTextColor(p.sub);
         nightStatus.setTextSize(13);
         nightStatus.setFontFeatureSettings("tnum");
         nightStatus.setPadding(dp(context, 13), 0, dp(context, 11), dp(context, 7));
@@ -1270,7 +1270,7 @@ public class DialogUtils {
         layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.ig_reel_limit_title)));
         LinearLayout group = IeRows.card(context, 5);
         TextView usage = new TextView(context);
-        usage.setTextColor(C_TEXT);
+        usage.setTextColor(IePalette.of(context).text);
         usage.setTextSize(18);
         usage.setTypeface(null, Typeface.BOLD);
         usage.setFontFeatureSettings("tnum");
@@ -1308,6 +1308,7 @@ public class DialogUtils {
         final int maximum = durationHours ? ps.reso.instaeclipse.utils.media.StoryCacheRetention.MAX_HOURS : 10_000;
         final int step = durationHours ? 1 : 5;
         final int initial = Math.max(minimum, Math.min(maximum, current));
+        IePalette p = IePalette.of(context);
 
         LinearLayout content = new LinearLayout(context);
         content.setOrientation(LinearLayout.VERTICAL);
@@ -1315,18 +1316,18 @@ public class DialogUtils {
         content.requestFocus();
         int outerPadding = dp(context, 24);
         content.setPadding(outerPadding, dp(context, 22), outerPadding, dp(context, 18));
-        content.setBackground(roundedColor(C_SHEET, dp(context, 28)));
+        content.setBackground(roundedColor(p.dialog, dp(context, 28)));
 
         TextView title = new TextView(context);
         title.setText(I18n.t(context, durationHours ? R.string.ig_story_cache_duration : R.string.ig_reel_limit_allowance));
-        title.setTextColor(C_TEXT);
+        title.setTextColor(p.text);
         title.setTextSize(21);
         title.setTypeface(null, Typeface.BOLD);
         content.addView(title);
 
         TextView help = new TextView(context);
         help.setText(I18n.t(context, durationHours ? R.string.ig_story_cache_picker_help : R.string.ig_reel_limit_picker_help));
-        help.setTextColor(C_TEXT2);
+        help.setTextColor(p.sub);
         help.setTextSize(14);
         help.setPadding(0, dp(context, 4), 0, dp(context, 20));
         content.addView(help);
@@ -1335,8 +1336,8 @@ public class DialogUtils {
         allowanceCard.setOrientation(LinearLayout.VERTICAL);
         allowanceCard.setGravity(Gravity.CENTER);
         allowanceCard.setPadding(dp(context, 16), dp(context, 18), dp(context, 16), dp(context, 16));
-        GradientDrawable allowanceBackground = roundedColor(C_CARD, dp(context, 20));
-        allowanceBackground.setStroke(dp(context, 1), C_HAIRLINE);
+        GradientDrawable allowanceBackground = roundedColor(p.field, dp(context, 20));
+        allowanceBackground.setStroke(dp(context, 1), p.line);
         allowanceCard.setBackground(allowanceBackground);
 
         LinearLayout stepper = new LinearLayout(context);
@@ -1350,7 +1351,7 @@ public class DialogUtils {
         input.setSelectAllOnFocus(true);
         input.setContentDescription(title.getText());
         input.setText(String.valueOf(initial));
-        input.setTextColor(C_TEXT);
+        input.setTextColor(p.text);
         input.setTextSize(32);
         input.setTypeface(null, Typeface.BOLD);
         input.setFontFeatureSettings("tnum");
@@ -1370,7 +1371,7 @@ public class DialogUtils {
 
         TextView unit = new TextView(context);
         unit.setText(I18n.t(context, durationHours ? R.string.ig_story_cache_picker_unit : R.string.ig_reel_limit_picker_unit));
-        unit.setTextColor(C_TEXT2);
+        unit.setTextColor(p.sub);
         unit.setTextSize(12);
         unit.setGravity(Gravity.CENTER);
         unit.setPadding(0, dp(context, 8), 0, 0);
@@ -1379,7 +1380,7 @@ public class DialogUtils {
 
         TextView quickLabel = new TextView(context);
         quickLabel.setText(I18n.t(context, R.string.ig_reel_limit_picker_quick));
-        quickLabel.setTextColor(C_TEXT2);
+        quickLabel.setTextColor(p.sub);
         quickLabel.setTextSize(12);
         quickLabel.setTypeface(null, Typeface.BOLD);
         quickLabel.setLetterSpacing(0.06f);
@@ -1412,7 +1413,7 @@ public class DialogUtils {
             int selected = parseReelLimit(input.getText().toString(), -1);
             for (int i = 0; i < presetViews.length; i++) {
                 boolean active = selected == presetValues[i];
-                presetViews[i].setTextColor(active ? C_TEXT : C_TEXT2);
+                presetViews[i].setTextColor(active ? p.text : p.sub);
                 presetViews[i].setBackground(reelLimitPresetBackground(context, active));
                 presetViews[i].setSelected(active);
             }
@@ -1474,37 +1475,40 @@ public class DialogUtils {
     }
 
     private static GradientDrawable reelLimitInputBackground(Context context) {
-        GradientDrawable background = roundedColor(C_PRESSED, dp(context, 14));
-        background.setStroke(dp(context, 1), C_HAIRLINE);
+        IePalette p = IePalette.of(context);
+        GradientDrawable background = roundedColor(p.pressed, dp(context, 14));
+        background.setStroke(dp(context, 1), p.line);
         return background;
     }
 
     private static StateListDrawable reelLimitPresetBackground(Context context, boolean active) {
-        int accent = accent();
+        IePalette p = IePalette.of(context);
+        int accent = p.accent;
         GradientDrawable normal = roundedColor(active
-                ? ((accent & 0x00FFFFFF) | 0x46000000) : C_CARD, dp(context, 12));
-        normal.setStroke(dp(context, 1), active ? accent : C_HAIRLINE);
+                ? ((accent & 0x00FFFFFF) | 0x46000000) : p.field, dp(context, 12));
+        normal.setStroke(dp(context, 1), active ? accent : p.line);
         StateListDrawable background = new StateListDrawable();
-        background.addState(new int[]{android.R.attr.state_pressed}, roundedColor(C_PRESSED, dp(context, 12)));
+        background.addState(new int[]{android.R.attr.state_pressed}, roundedColor(p.pressed, dp(context, 12)));
         background.addState(new int[]{}, normal);
         return background;
     }
 
     private static TextView reelLimitAction(Context context, String label, boolean primary) {
+        IePalette p = IePalette.of(context);
         TextView button = new TextView(context);
         button.setText(label);
         button.setTextSize(14);
         button.setTypeface(null, Typeface.BOLD);
         button.setGravity(Gravity.CENTER);
-        button.setTextColor(primary ? C_TEXT : accent());
+        button.setTextColor(primary ? p.onAccent : IePalette.readable(p.accent, p.field, IePalette.TEXT));
         button.setClickable(true);
         button.setFocusable(true);
         button.setMinWidth(dp(context, 72));
         button.setMinimumHeight(dp(context, 48));
         button.setPadding(dp(context, 16), 0, dp(context, 16), 0);
         StateListDrawable background = new StateListDrawable();
-        background.addState(new int[]{android.R.attr.state_pressed}, roundedColor(C_PRESSED, dp(context, 14)));
-        background.addState(new int[]{}, roundedColor(primary ? accent() : C_CARD, dp(context, 14)));
+        background.addState(new int[]{android.R.attr.state_pressed}, roundedColor(p.pressed, dp(context, 14)));
+        background.addState(new int[]{}, roundedColor(primary ? p.accent : p.field, dp(context, 14)));
         button.setBackground(background);
         button.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, dp(context, 48)));
@@ -2623,6 +2627,7 @@ public class DialogUtils {
 
     private static void showDownloaderOptions(Context context) {
         LinearLayout layout = createSwitchLayout(context);
+        IePalette p = IePalette.of(context);
 
         ToggleRow compatibility = createSwitch(context, R.drawable.ic_tune, "#FF9F0A",
                 I18n.t(context, R.string.ie_download_compatibility), FeatureFlags.downloaderCompatibility);
@@ -2659,7 +2664,7 @@ public class DialogUtils {
         LinearLayout duration = (LinearLayout) IeRows.valueRow(context, I18n.t(context, R.string.ig_story_cache_duration),
                 I18n.t(context, R.string.ig_story_cache_hours, FeatureFlags.storyCacheHours));
         TextView hours = (TextView) duration.getChildAt(1);
-        hours.setTextColor(accent());
+        hours.setTextColor(IePalette.readable(p.accent, p.card, IePalette.TEXT));
         duration.setMinimumHeight(dp(context, 48));
         duration.setFocusable(true);
         duration.setOnClickListener(v -> showStoryCacheDurationPicker(context, FeatureFlags.storyCacheHours, value -> {
@@ -2700,7 +2705,7 @@ public class DialogUtils {
         TextView folderHint = new TextView(context);
         folderHint.setText(I18n.t(context, R.string.ig_downloader_folder_hint));
         folderHint.setTextSize(13);
-        folderHint.setTextColor(C_TEXT2);
+        folderHint.setTextColor(p.sub);
         folderHint.setPadding(dp(context, 13), 0, dp(context, 11), dp(context, 7));
         LinearLayout folderBlock = new LinearLayout(context);
         folderBlock.setOrientation(LinearLayout.VERTICAL);
@@ -2832,6 +2837,7 @@ public class DialogUtils {
     /** Opens one cached story full-screen: ImageView for photos, VideoView for videos. */
     private static void openCachedStory(Context context, ps.reso.instaeclipse.utils.media.StoryCache.Entry e) {
         try {
+            IePalette p = IePalette.of(context);
             android.app.Dialog dialog = new android.app.Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
             android.widget.FrameLayout root = new android.widget.FrameLayout(context);
             root.setBackgroundColor(Color.BLACK);
@@ -2889,7 +2895,7 @@ public class DialogUtils {
             badge.setTypeface(null, android.graphics.Typeface.BOLD);
             badge.setPadding(Math.round(10 * d), Math.round(4 * d), Math.round(10 * d), Math.round(4 * d));
             android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-            bg.setColor(expired ? Color.parseColor("#FF453A") : accent());
+            bg.setColor(expired ? p.danger : p.accent);
             bg.setCornerRadius(Math.round(10 * d));
             badge.setBackground(bg);
             header.addView(badge);
@@ -2903,7 +2909,7 @@ public class DialogUtils {
             save.setTypeface(null, android.graphics.Typeface.BOLD);
             save.setPadding(Math.round(18 * d), Math.round(10 * d), Math.round(18 * d), Math.round(10 * d));
             android.graphics.drawable.GradientDrawable sbg = new android.graphics.drawable.GradientDrawable();
-            sbg.setColor(Color.parseColor("#CC0A84FF"));
+            sbg.setColor(IePalette.withAlpha(p.accent, 0xCC));
             sbg.setCornerRadius(Math.round(22 * d));
             save.setBackground(sbg);
             android.widget.FrameLayout.LayoutParams sLp = new android.widget.FrameLayout.LayoutParams(-2, -2);
@@ -2967,6 +2973,7 @@ public class DialogUtils {
     }
 
     private static void showAboutDialog(Context context) {
+        IePalette p = IePalette.of(context);
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -2975,7 +2982,7 @@ public class DialogUtils {
         // App icon on a soft accent halo (pops in when the page opens).
         android.widget.FrameLayout halo = new android.widget.FrameLayout(context);
         GradientDrawable glow = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{(accent() & 0x00FFFFFF) | 0x55000000, 0x33BF5AF2});
+                new int[]{IePalette.withAlpha(p.accent, 0x55), 0x33BF5AF2});
         glow.setShape(GradientDrawable.OVAL);
         halo.setBackground(glow);
         ImageView icon = new ImageView(context);
@@ -2990,7 +2997,7 @@ public class DialogUtils {
 
         TextView title = new TextView(context);
         title.setText(I18n.t(context, R.string.ig_dialog_title));
-        title.setTextColor(C_TEXT);
+        title.setTextColor(p.text);
         title.setTextSize(24f);
         title.setTypeface(null, Typeface.BOLD);
         title.setGravity(Gravity.CENTER);
@@ -2999,7 +3006,7 @@ public class DialogUtils {
 
         TextView tagline = new TextView(context);
         tagline.setText(I18n.t(context, R.string.about_tagline));
-        tagline.setTextColor(C_TEXT2);
+        tagline.setTextColor(p.sub);
         tagline.setTextSize(14f);
         tagline.setGravity(Gravity.CENTER);
         tagline.setPadding(0, dp(context, 2), 0, dp(context, 10));
@@ -3020,7 +3027,7 @@ public class DialogUtils {
 
         TextView footer = new TextView(context);
         footer.setText(I18n.t(context, R.string.about_footer));
-        footer.setTextColor(C_TEXT2);
+        footer.setTextColor(p.sub);
         footer.setTextSize(12f);
         footer.setGravity(Gravity.CENTER);
         footer.setPadding(0, dp(context, 14), 0, 0);
@@ -3059,6 +3066,7 @@ public class DialogUtils {
 
     @SuppressLint("SetTextI18n")
     private static void showRestartSection(Context context) {
+        IePalette p = IePalette.of(context);
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(dp(context, 20), dp(context, 13), dp(context, 20), dp(context, 13));
@@ -3066,7 +3074,7 @@ public class DialogUtils {
 
         TextView message = new TextView(context);
         message.setText(I18n.t(context, R.string.ig_dialog_restart_message_v2));
-        message.setTextColor(Color.WHITE);
+        message.setTextColor(p.text);
         message.setTextSize(18f);
         message.setGravity(Gravity.CENTER);
         message.setPadding(0, 0, 0, dp(context, 10));
@@ -3078,7 +3086,7 @@ public class DialogUtils {
                     setRowEnabled(restartRow, false);
                     v.setEnabled(false);
                     android.widget.ProgressBar busy = new android.widget.ProgressBar(context, null, android.R.attr.progressBarStyleSmall);
-                    busy.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(accent()));
+                    busy.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(p.accent));
                     ((LinearLayout) v).addView(busy, new LinearLayout.LayoutParams(dp(context, 24), dp(context, 24)));
                     restart(context, true);
                 });
@@ -3098,7 +3106,7 @@ public class DialogUtils {
 
         TextView message = new TextView(context);
         message.setText(I18n.t(context, R.string.ig_dialog_clear_cache_message));
-        message.setTextColor(Color.WHITE);
+        message.setTextColor(IePalette.of(context).text);
         message.setTextSize(16f);
         message.setGravity(Gravity.CENTER);
         message.setPadding(0, 0, 0, dp(context, 10));
@@ -3186,6 +3194,7 @@ public class DialogUtils {
     private static void showSectionDialog(Context context, String title, LinearLayout contentLayout, Runnable onSave) {
         final Runnable backTarget = pendingBackTarget;
         pendingBackTarget = null;
+        IePalette p = IePalette.of(context);
         if (currentDialog != null) {
             if (currentSectionTitle != null && !currentSectionTitle.equals(title) && currentDialog.isShowing()) {
                 currentDialog.hide(); // opened from another section: keep it to come back to
@@ -3201,7 +3210,7 @@ public class DialogUtils {
         container.setPadding(0, 0, 0, 0);
 
         GradientDrawable background = new GradientDrawable();
-        background.setColor(C_SHEET);
+        background.setColor(p.sheet);
         float corner = dp(context, 16);
         background.setCornerRadii(new float[]{corner, corner, corner, corner, 0, 0, 0, 0});
         container.setBackground(background);
@@ -3216,7 +3225,7 @@ public class DialogUtils {
 
         TextView backBtn = new TextView(context);
         backBtn.setText("‹");
-        backBtn.setTextColor(accent());
+        backBtn.setTextColor(IePalette.readable(p.accent, p.sheet, IePalette.TEXT));
         backBtn.setTextSize(34);
         backBtn.setIncludeFontPadding(false);
         backBtn.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
@@ -3226,7 +3235,7 @@ public class DialogUtils {
         int bp = dp(context, 6);
         backBtn.setPaddingRelative(dp(context, 13), bp, bp, bp);
         StateListDrawable backBtnBg = new StateListDrawable();
-        backBtnBg.addState(new int[]{android.R.attr.state_pressed}, roundedColor(C_PRESSED, dp(context, 10)));
+        backBtnBg.addState(new int[]{android.R.attr.state_pressed}, roundedColor(p.pressed, dp(context, 10)));
         backBtnBg.addState(new int[]{}, new ColorDrawable(Color.TRANSPARENT));
         backBtn.setBackground(backBtnBg);
         backBtn.setClickable(true);
@@ -3252,7 +3261,7 @@ public class DialogUtils {
 
         TextView titleView = new TextView(context);
         titleView.setText(title);
-        titleView.setTextColor(C_TEXT);
+        titleView.setTextColor(p.text);
         titleView.setTextSize(21);
         titleView.setTypeface(null, Typeface.BOLD);
         titleView.setLetterSpacing(0.01f);
@@ -3329,7 +3338,7 @@ public class DialogUtils {
         lp.gravity = Gravity.CENTER_HORIZONTAL;
         handle.setLayoutParams(lp);
         GradientDrawable handleBg = new GradientDrawable();
-        handleBg.setColor(C_HANDLE);
+        handleBg.setColor(IePalette.of(context).sub);
         handleBg.setCornerRadius(dp(context, 1));
         handle.setBackground(handleBg);
 

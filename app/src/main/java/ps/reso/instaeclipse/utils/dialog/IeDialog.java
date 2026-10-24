@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.res.ColorStateList;
-import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
@@ -13,6 +12,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.EditText;
@@ -23,6 +23,8 @@ import android.widget.TextView;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.i18n.I18n;
+import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.IePalette;
 
 /**
  * The module's in-Instagram dialog look (same as Search comments): rounded card that follows
@@ -39,6 +41,7 @@ public class IeDialog {
     public final float d;
     public final boolean dark;
     public final int bg, field, text, sub, accent, border;
+    private final int onAccent, accentText;
 
     private final Dialog dialog;
     private final LinearLayout card, content, buttons;
@@ -54,13 +57,16 @@ public class IeDialog {
             a = w.getBaseContext();
         ctx = a instanceof Activity ? a : c;
         d = ctx.getResources().getDisplayMetrics().density;
-        dark = (ctx.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-        bg = dark ? 0xFF1C1C1E : 0xFFFFFFFF;
-        field = dark ? 0xFF2C2C2E : 0xFFEFEFF2;
-        text = dark ? 0xFFF5F5F5 : 0xFF111111;
-        sub = dark ? 0xFF9A9AA0 : 0xFF6B6B70;
-        accent = ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine.accentOr(0xFF0095F6);
-        border = dark ? 0x33FFFFFF : 0x1F000000;
+        IePalette palette = IePalette.of(ctx);
+        dark = palette.dark;
+        bg = palette.dialog;
+        field = palette.field;
+        text = palette.text;
+        sub = palette.sub;
+        accent = palette.accent;
+        border = palette.line;
+        onAccent = palette.onAccent;
+        accentText = IePalette.readable(accent, field, IePalette.TEXT);
 
         dialog = new Dialog(ctx);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -105,7 +111,7 @@ public class IeDialog {
         buttons.setVisibility(View.GONE);
     }
 
-    public int dp(float v) { return (int) (v * d); }
+    public int dp(float v) { return Math.round(v * d); }
 
     public GradientDrawable round(int color, float radiusDp) {
         GradientDrawable g = new GradientDrawable();
@@ -157,14 +163,14 @@ public class IeDialog {
             row.setBackground(g);
             TextView t = new TextView(ctx);
             t.setText(labels[i]);
-            t.setTextColor(on ? accent : text);
+            t.setTextColor(on ? accentText : text);
             t.setTextSize(15);
             if (on) t.setTypeface(Typeface.DEFAULT_BOLD);
             row.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
             if (on) {
                 TextView tick = new TextView(ctx);
                 tick.setText("✓");
-                tick.setTextColor(accent);
+                tick.setTextColor(accentText);
                 tick.setTextSize(16);
                 tick.setTypeface(Typeface.DEFAULT_BOLD);
                 tick.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -253,7 +259,7 @@ public class IeDialog {
         b.setTypeface(Typeface.DEFAULT_BOLD);
         b.setGravity(Gravity.CENTER);
         b.setPadding(dp(18), dp(10), dp(18), dp(10));
-        b.setTextColor(filled ? Color.WHITE : sub);
+        b.setTextColor(filled ? onAccent : sub);
         if (filled) b.setBackground(round(accent, 20));
         b.setOnClickListener(v -> {
             if (!keepOpen) dismiss();
@@ -279,10 +285,16 @@ public class IeDialog {
     public IeDialog onClose(Runnable r) { onClose = r; return this; }
 
     public Dialog show() {
+        if (ctx instanceof Activity a && (a.isFinishing() || a.isDestroyed())) return dialog;
         dialog.setContentView(card);
         dialog.setOnCancelListener(x -> { if (onClose != null) onClose.run(); });
         dialog.setOnDismissListener(x -> { if (onDismiss != null) onDismiss.run(); });
-        dialog.show();
+        try {
+            dialog.show();
+        } catch (WindowManager.BadTokenException e) {
+            ModuleLog.warn("(IE|Dialog) The window to show a dialog on is gone", e);
+            return dialog;
+        }
         Window w = dialog.getWindow();
         if (w != null) {
             w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
