@@ -3,6 +3,7 @@ package ps.reso.instaeclipse.fragments;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -14,12 +15,16 @@ final class LogExport {
     private LogExport() {}
 
     static String tail(List<String> full, int maxChars) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = full.size() - 1; i >= 0; i--) {
-            String s = full.get(i);
-            if (sb.length() + s.length() + 1 > maxChars) break;
-            sb.insert(0, s + "\n");
+        int start = full.size();
+        long length = 0;
+        while (start > 0) {
+            int next = full.get(start - 1).length() + 1;
+            if (length + next > maxChars) break;
+            length += next;
+            start--;
         }
+        StringBuilder sb = new StringBuilder((int) length);
+        for (int i = start; i < full.size(); i++) sb.append(full.get(i)).append('\n');
         return sb.toString();
     }
 
@@ -28,7 +33,10 @@ final class LogExport {
     }
 
     static List<Entry> sinceClear(List<Entry> entries, String clearedAt) {
-        return entries;
+        if (clearedAt == null || clearedAt.isEmpty()) return entries;
+        List<Entry> out = new ArrayList<>(entries.size());
+        for (Entry e : entries) if (e.ts.compareTo(clearedAt) > 0) out.add(e);
+        return out;
     }
 
     static void truncate(File dir) {

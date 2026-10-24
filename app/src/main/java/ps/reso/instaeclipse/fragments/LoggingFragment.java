@@ -23,6 +23,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -30,6 +32,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.color.MaterialColors;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -70,6 +74,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
 
     private static final String PREFS = "instaeclipse_logs_ui";
     private static final String PREF_DETAILS = "show_technical_details";
+    private static final String PREF_CLEARED_AT = "cleared_at";
 
     private RecyclerView listView;
     private View emptyView;
@@ -79,6 +84,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
     private TextView countView;
     private TextView statusView;
     private View progressView;
+    private ExtendedFloatingActionButton latestButton;
     private Chip chipAll, chipHooked, chipErrors, chipWarnings;
 
     private final LogAdapter adapter = new LogAdapter();
@@ -90,6 +96,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
     private final Map<String, String> liveReplies = new HashMap<>();
     private boolean waitingForInstagram;
     private boolean noTargetInstalled;
+    private boolean liveSyncUnavailable;
     private Runnable pendingTimeout;
 
     private final ExecutorService loadExecutor = Executors.newSingleThreadExecutor();
@@ -132,10 +139,14 @@ public class LoggingFragment extends Fragment implements TabFragment {
         countView = view.findViewById(R.id.logs_count);
         statusView = view.findViewById(R.id.logs_status);
         progressView = view.findViewById(R.id.logs_progress);
+        latestButton = view.findViewById(R.id.logs_latest);
         chipAll = view.findViewById(R.id.logs_chip_all);
         chipHooked = view.findViewById(R.id.logs_chip_hooked);
         chipErrors = view.findViewById(R.id.logs_chip_errors);
         chipWarnings = view.findViewById(R.id.logs_chip_warnings);
+        for (Chip chip : new Chip[]{chipHooked, chipErrors, chipWarnings}) {
+            chip.setOnCheckedChangeListener((button, checked) -> chip.setChipIconVisible(!checked));
+        }
 
         adapter.colorInfo = MaterialColors.getColor(view, com.google.android.material.R.attr.colorOnSurfaceVariant);
         adapter.colorError = MaterialColors.getColor(view, androidx.appcompat.R.attr.colorError);
@@ -151,13 +162,23 @@ public class LoggingFragment extends Fragment implements TabFragment {
             showDetails = checked;
             requireContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
                     .putBoolean(PREF_DETAILS, checked).apply();
-            applyFilter();
+            applyFilter(true);
         });
 
         LinearLayoutManager lm = new LinearLayoutManager(requireContext());
         listView.setLayoutManager(lm);
         listView.setAdapter(adapter);
         listView.setItemAnimator(null);
+        listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                if (!recyclerView.canScrollVertically(1)) latestButton.hide();
+            }
+        });
+        latestButton.setOnClickListener(v -> {
+            if (adapter.getItemCount() > 0) listView.scrollToPosition(adapter.getItemCount() - 1);
+            latestButton.hide();
+        });
 
         ChipGroup group = view.findViewById(R.id.logs_filter_group);
         group.setOnCheckedStateChangeListener((g, ids) -> {
@@ -166,7 +187,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
             else if (id == R.id.logs_chip_errors) filterKind = LogEntries.KIND_ERROR;
             else if (id == R.id.logs_chip_warnings) filterKind = LogEntries.KIND_WARN;
             else filterKind = FILTER_ALL;
-            applyFilter();
+            applyFilter(true);
         });
 
         view.findViewById(R.id.logs_refresh).setOnClickListener(v -> loadLogs());
@@ -210,6 +231,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
         countView = null;
         statusView = null;
         progressView = null;
+        latestButton = null;
     }
 
     @Override
@@ -225,6 +247,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
         Context ctx = getContext();
         if (ctx == null || listView == null) return;
         liveReplies.clear();
+        liveSyncUnavailable = false;
         reload();
 
         List<String> targets = findInstalledTargets(ctx);
@@ -239,6 +262,11 @@ public class LoggingFragment extends Fragment implements TabFragment {
             ps.reso.instaeclipse.utils.ipc.ModuleReplies.Pending pending =
                     ps.reso.instaeclipse.utils.core.IpcSecurity.requestReply(ctx, request, CommonUtils.ACTION_LOGS_REPLY, logReplyReceiver);
             if (pending != null) logReplies.add(pending);
+        }
+        if (logReplies.isEmpty()) {
+            liveSyncUnavailable = true;
+            updateStatus();
+            return;
         }
         waitingForInstagram = true;
         setProgress(true);
@@ -264,16 +292,18 @@ public class LoggingFragment extends Fragment implements TabFragment {
         int gen = loadGeneration.incrementAndGet();
         Map<String, String> replies = new HashMap<>(liveReplies);
         String companionTag = getString(R.string.logs_source_companion);
+        String clearedAt = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(PREF_CLEARED_AT, null);
         if (!loadedOnce) setProgress(true);
         try {
             loadExecutor.execute(() -> {
-                List<Entry> entries = readAllEntries(app, replies, companionTag);
+                List<Entry> entries = readAllEntries(app, replies, companionTag, clearedAt);
                 mainHandler.post(() -> {
                     if (listView == null || gen != loadGeneration.get()) return;
+                    boolean first = !loadedOnce;
                     loadedOnce = true;
                     allEntries = entries;
                     if (!waitingForInstagram) setProgress(false);
-                    applyFilter();
+                    applyFilter(first);
                     updateStatus();
                 });
             });
@@ -282,7 +312,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
         }
     }
 
-    private static List<Entry> readAllEntries(Context ctx, Map<String, String> replies, String companionTag) {
+    private static List<Entry> readAllEntries(Context ctx, Map<String, String> replies, String companionTag, String clearedAt) {
         List<Entry> out = new ArrayList<>();
         Map<String, Boolean> seen = new HashMap<>();
 
@@ -305,6 +335,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
             LogEntries.parseInto(out, splitLines(r.getValue()), sourcePrefix(r.getKey()));
         }
         LogEntries.parseInto(out, splitLines(Logging.getSnapshot()), companionTag + " ");
+        out = LogExport.sinceClear(out, clearedAt);
 
         // Stable merge by timestamp so app + Instagram entries interleave correctly.
         Collections.sort(out, (a, b) -> a.ts.compareTo(b.ts));
@@ -355,7 +386,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
 
     // ---------------------------------------------------------------- rendering
 
-    private void applyFilter() {
+    private void applyFilter(boolean jump) {
         if (listView == null) return;
         // Technical details are hidden unless asked for; counts follow what can be shown.
         List<Entry> visible;
@@ -383,6 +414,8 @@ public class LoggingFragment extends Fragment implements TabFragment {
         chipErrors.setText(getString(R.string.logs_filter_count, getString(R.string.logs_filter_errors), err));
         chipWarnings.setText(getString(R.string.logs_filter_count, getString(R.string.logs_filter_warnings), warn));
 
+        boolean atBottom = !listView.canScrollVertically(1);
+        Entry newestBefore = adapter.items.isEmpty() ? null : adapter.items.get(adapter.items.size() - 1);
         adapter.technical = showDetails;
         adapter.setItems(shown);
         countView.setText(getString(R.string.logs_count_format, shown.size(), visible.size()));
@@ -395,8 +428,15 @@ public class LoggingFragment extends Fragment implements TabFragment {
             emptyTitle.setText(filtered ? R.string.logs_empty_filter_title : R.string.logs_empty_title);
             emptyBody.setText(filtered ? R.string.logs_empty_filter_body : R.string.logs_empty_body);
             emptyRefresh.setVisibility(filtered ? View.GONE : View.VISIBLE);
-        } else {
+            latestButton.hide();
+        } else if (jump || atBottom) {
             listView.scrollToPosition(shown.size() - 1);
+            latestButton.hide();
+        } else {
+            Entry newest = shown.get(shown.size() - 1);
+            if (newestBefore == null || !newest.ts.equals(newestBefore.ts) || !newest.full.equals(newestBefore.full)) {
+                latestButton.show();
+            }
         }
     }
 
@@ -405,6 +445,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
         int res;
         if (noTargetInstalled) res = R.string.logs_status_none;
         else if (!liveReplies.isEmpty()) res = R.string.logs_status_live;
+        else if (liveSyncUnavailable) res = R.string.logs_status_unsynced;
         else if (!waitingForInstagram) res = R.string.logs_status_saved;
         else {
             statusView.setVisibility(View.GONE);
@@ -478,14 +519,27 @@ public class LoggingFragment extends Fragment implements TabFragment {
         send.putExtra(Intent.EXTRA_TEXT, text);
         try {
             startActivity(Intent.createChooser(send, getString(R.string.logs_share_title)));
-        } catch (Throwable t) {
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, String.valueOf(t.getMessage()), Toast.LENGTH_SHORT).show();
+        } catch (Throwable ignored) {
+            ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, R.string.logs_share_no_app, Toast.LENGTH_SHORT).show();
         }
     }
 
     private void clearLogs() {
         Context ctx = getContext();
         if (ctx == null) return;
+        new MaterialAlertDialogBuilder(ctx)
+                .setTitle(R.string.logs_clear_confirm_title)
+                .setMessage(R.string.logs_clear_confirm_body)
+                .setPositiveButton(R.string.logs_clear, (d, w) -> clearConfirmed())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void clearConfirmed() {
+        Context ctx = getContext();
+        if (ctx == null) return;
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putString(PREF_CLEARED_AT, LogExport.stamp(System.currentTimeMillis())).apply();
         for (String pkg : findInstalledTargets(ctx)) {
             Intent clear = new Intent(CommonUtils.ACTION_CLEAR_LOGS);
             clear.setPackage(pkg);
@@ -522,6 +576,8 @@ public class LoggingFragment extends Fragment implements TabFragment {
             int pad = Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 3, parent.getResources().getDisplayMetrics()));
             tv.setPadding(0, pad, 0, pad);
             tv.setLineSpacing(0, 1.1f);
+            ViewCompat.replaceAccessibilityAction(tv, AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_LONG_CLICK,
+                    parent.getContext().getString(R.string.logs_copy_entry), null);
             return new VH(tv);
         }
 
@@ -530,7 +586,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
             Entry e = items.get(position);
             // Technical: the raw entry in monospace. Simple: readable text, one line per entry.
             holder.text.setTypeface(technical ? Typeface.MONOSPACE : Typeface.DEFAULT);
-            holder.text.setTextSize(TypedValue.COMPLEX_UNIT_SP, technical ? 11 : 13);
+            holder.text.setTextSize(TypedValue.COMPLEX_UNIT_SP, technical ? 12 : 13);
             holder.text.setText(technical ? e.display : e.friendly);
             int c;
             switch (e.kind) {

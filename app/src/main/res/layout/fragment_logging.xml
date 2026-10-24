@@ -61,21 +61,30 @@
                         style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/logs_filter_hooked" />
+                        android:text="@string/logs_filter_hooked"
+                        app:chipIcon="@drawable/ic_check_circle"
+                        app:chipIconTint="?attr/colorOnSurfaceVariant"
+                        app:chipIconVisible="true" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/logs_chip_errors"
                         style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/logs_filter_errors" />
+                        android:text="@string/logs_filter_errors"
+                        app:chipIcon="@drawable/ic_cancel"
+                        app:chipIconTint="?attr/colorOnSurfaceVariant"
+                        app:chipIconVisible="true" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/logs_chip_warnings"
                         style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/logs_filter_warnings" />
+                        android:text="@string/logs_filter_warnings"
+                        app:chipIcon="@drawable/ic_warning"
+                        app:chipIconTint="?attr/colorOnSurfaceVariant"
+                        app:chipIconVisible="true" />
                 </com.google.android.material.chip.ChipGroup>
 
                 <!-- Not part of the single-choice filters: shows the technical lines (caller,
@@ -252,6 +261,19 @@
                 android:indeterminate="true"
                 android:visibility="gone"
                 app:trackCornerRadius="2dp" />
+
+            <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+                android:id="@+id/logs_latest"
+                style="@style/Widget.Material3.ExtendedFloatingActionButton.Icon.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_margin="12dp"
+                android:minHeight="40dp"
+                android:text="@string/logs_latest"
+                android:visibility="gone"
+                app:icon="@drawable/ic_expand_more"
+                app:iconSize="18dp" />
         </FrameLayout>
     </com.google.android.material.card.MaterialCardView>
 </LinearLayout>
