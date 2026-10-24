@@ -15,4 +15,5 @@
     <string name="ig_ring_stop_desc" tools:ignore="MissingTranslation">Colour %1$d of %2$d, %3$s</string>
     <string name="ig_ring_add_colour" tools:ignore="MissingTranslation">Add colour</string>
     <string name="ig_ring_reverse" tools:ignore="MissingTranslation">Reverse colours</string>
+    <string name="about_report_issue" tools:ignore="MissingTranslation">Report an issue</string>
 </resources>

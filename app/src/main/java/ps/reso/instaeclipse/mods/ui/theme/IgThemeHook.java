@@ -286,7 +286,7 @@ public class IgThemeHook {
      * waiting for the user to navigate away and back (which is the only other time the
      * Activity onResume/onCreate hooks would naturally re-run). Main thread only.
      */
-    public static void refreshCurrentActivity() {
+    public static boolean refreshCurrentActivity() {
         boolean wasShown = themeShown;
         themeShown = FeatureFlags.customThemeEnabled;
         // Theme was off at startup, so install() skipped the hooks: add them now. Only once, since
@@ -296,9 +296,9 @@ public class IgThemeHook {
             new IgThemeHook().install(hostLoader);
         }
         Activity activity = UIHookManager.getCurrentActivity();
-        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return false;
         // Off before and after (a restore or reset re-sending the keys): nothing on screen changes.
-        if (!wasShown && !themeShown) return;
+        if (!wasShown && !themeShown) return false;
         IgThemeEngine.ensureInitialized(activity);
         if (themeShown) {
             IgColorRemapEngine.ensureBuilt(activity);
@@ -312,6 +312,7 @@ public class IgThemeHook {
             if (!activity.isFinishing() && !activity.isDestroyed()) activity.recreate();
         };
         MAIN.postDelayed(pendingRecreate, 300);
+        return true;
     }
 
     static void applyWindowColors(Activity activity) {
