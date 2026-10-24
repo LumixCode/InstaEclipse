@@ -37,6 +37,8 @@ import ps.reso.instaeclipse.mods.reels.NightReelSchedule;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.core.ModuleActivityLauncher;
 import ps.reso.instaeclipse.utils.core.ModuleResources;
+import ps.reso.instaeclipse.utils.core.PasscodeRules;
+import ps.reso.instaeclipse.utils.core.SettingsGuard;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -280,12 +282,12 @@ public class DialogUtils {
 
     private static ToggleRow flagSwitch(Context context, int iconRes, String accentHex, int labelRes, String flag, Runnable after) {
         ToggleRow row = createSwitch(context, iconRes, accentHex, I18n.t(context, labelRes), ExtrasFeatures.get(flag));
-        row.setOnCheckedChangeListener((b, checked) -> {
+        row.setOnCheckedChangeListener((b, checked) -> SettingsGuard.request(context, flag, checked, () -> {
             ExtrasFeatures.set(flag, checked);
             SAVES.request();
             SettingsEvents.afterChange(flag);
             if (after != null) after.run();
-        });
+        }));
         return row;
     }
 
@@ -1872,10 +1874,10 @@ public class DialogUtils {
         passcodeCard.addView(passcodeRow);
 
         ToggleRow useFp = catalogRow(context, "lockUseFingerprint", accent, FeatureFlags.lockUseFingerprint);
-        useFp.setOnCheckedChangeListener((b, checked) -> {
+        useFp.setOnCheckedChangeListener((b, checked) -> SettingsGuard.request(context, "lockUseFingerprint", checked, () -> {
             FeatureFlags.lockUseFingerprint = checked;
             SettingsManager.saveAllFlags();
-        });
+        }));
         passcodeCard.addView(useFp);
         layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.cat_sec_passcode)));
         layout.addView(passcodeCard);
@@ -1890,8 +1892,10 @@ public class DialogUtils {
                 suppressLockToggle = false;
                 promptDisableLock(context, lockApp, () -> FeatureFlags.lockWholeApp = false);
             } else {
-                FeatureFlags.lockWholeApp = checked;
-                SettingsManager.saveAllFlags();
+                SettingsGuard.request(context, "lockWholeApp", checked, () -> {
+                    FeatureFlags.lockWholeApp = checked;
+                    SettingsManager.saveAllFlags();
+                });
             }
         });
         cardView.addView(lockApp);
@@ -1905,8 +1909,10 @@ public class DialogUtils {
                 suppressLockToggle = false;
                 promptDisableLock(context, lockDms, () -> FeatureFlags.lockDirectMessages = false);
             } else {
-                FeatureFlags.lockDirectMessages = checked;
-                SettingsManager.saveAllFlags();
+                SettingsGuard.request(context, "lockDirectMessages", checked, () -> {
+                    FeatureFlags.lockDirectMessages = checked;
+                    SettingsManager.saveAllFlags();
+                });
             }
         });
         cardView.addView(lockDms);
@@ -1927,8 +1933,10 @@ public class DialogUtils {
                             SettingsManager.saveAllFlags();
                         });
             } else {
-                FeatureFlags.lockSpecificMessages = checked;
-                SettingsManager.saveAllFlags();
+                SettingsGuard.request(context, "lockSpecificMessages", checked, () -> {
+                    FeatureFlags.lockSpecificMessages = checked;
+                    SettingsManager.saveAllFlags();
+                });
             }
         });
         cardView.addView(selected);
@@ -1941,10 +1949,10 @@ public class DialogUtils {
         cardView.addView(chooseRow);
 
         ToggleRow alwaysAsk = catalogRow(context, "lockDirectAlways", accent, FeatureFlags.lockDirectAlways);
-        alwaysAsk.setOnCheckedChangeListener((b, checked) -> {
+        alwaysAsk.setOnCheckedChangeListener((b, checked) -> SettingsGuard.request(context, "lockDirectAlways", checked, () -> {
             FeatureFlags.lockDirectAlways = checked;
             SettingsManager.saveAllFlags();
-        });
+        }));
         cardView.addView(alwaysAsk);
 
         ToggleRow lockColl = catalogRow(context, "lockSavedCollections", accent, FeatureFlags.lockSavedCollections);
@@ -1956,8 +1964,10 @@ public class DialogUtils {
                 suppressLockToggle = false;
                 promptDisableLock(context, lockColl, () -> FeatureFlags.lockSavedCollections = false);
             } else {
-                FeatureFlags.lockSavedCollections = checked;
-                SettingsManager.saveAllFlags();
+                SettingsGuard.request(context, "lockSavedCollections", checked, () -> {
+                    FeatureFlags.lockSavedCollections = checked;
+                    SettingsManager.saveAllFlags();
+                });
             }
         });
         cardView.addView(lockColl);
@@ -2291,9 +2301,8 @@ public class DialogUtils {
             dlg.secondary(context.getString(android.R.string.cancel), null);
             dlg.primary(context.getString(android.R.string.ok), () -> {
                 String pass = input.getText().toString();
-                if (pass.isEmpty()) {
-                    FeatureFlags.lockDirectPasscode = "";
-                    FeatureFlags.lockDirectSalt = "";
+                if (PasscodeRules.checkNew(pass, pass) == PasscodeRules.Result.EMPTY) {
+                    PasscodeRules.removePasscode();
                     ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_dialog_misc_lock_dms_cleared), Toast.LENGTH_SHORT).show();
                 } else {
                     ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.newSalt(); // fresh salt per set
