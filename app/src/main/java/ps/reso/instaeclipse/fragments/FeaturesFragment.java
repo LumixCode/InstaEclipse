@@ -16,7 +16,6 @@ import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.accessibility.AccessibilityEvent;
 import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
@@ -34,9 +33,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.AccessibilityDelegateCompat;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -516,9 +512,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         ImageView ivIcon;
         ImageView ivChevron;
         MaterialSwitch swToggle;
-        MaterialCardView cardView;
-        boolean toggle;
-        boolean rowEnabled = true;
+        FeatureRowCard cardView;
         ItemViewHolder(View v) {
             super(v);
             tvTitle = v.findViewById(R.id.tv_title);
@@ -526,25 +520,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
             ivChevron = v.findViewById(R.id.iv_chevron);
             ivIcon = v.findViewById(R.id.iv_icon);
             swToggle = v.findViewById(R.id.sw_toggle);
-            cardView = (MaterialCardView) v;
-            ViewCompat.setAccessibilityDelegate(cardView, new AccessibilityDelegateCompat() {
-                @Override
-                public void onInitializeAccessibilityNodeInfo(@NonNull View host, @NonNull AccessibilityNodeInfoCompat info) {
-                    super.onInitializeAccessibilityNodeInfo(host, info);
-                    info.setClassName((toggle ? android.widget.Switch.class : android.widget.Button.class).getName());
-                    info.setCheckable(toggle);
-                    info.setChecked(toggle && swToggle.isChecked());
-                    info.setEnabled(rowEnabled);
-                }
-
-                @Override
-                public void onInitializeAccessibilityEvent(@NonNull View host, @NonNull AccessibilityEvent event) {
-                    super.onInitializeAccessibilityEvent(host, event);
-                    if (!toggle) return;
-                    event.setClassName(android.widget.Switch.class.getName());
-                    event.setChecked(swToggle.isChecked());
-                }
-            });
+            cardView = (FeatureRowCard) v;
         }
     }
 
@@ -730,8 +706,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 itemHolder.tvTitle.setAlpha(faded);
                 itemHolder.swToggle.setAlpha(faded);
                 itemHolder.tvSubtitle.setAlpha(reason != null ? 1f : faded);
-                itemHolder.toggle = item.type != FeatureItem.TYPE_CLICKABLE;
-                itemHolder.rowEnabled = switchEnabled;
+                itemHolder.cardView.setToggle(item.type != FeatureItem.TYPE_CLICKABLE ? itemHolder.swToggle : null);
 
                 itemHolder.swToggle.setOnCheckedChangeListener(null);
                 itemHolder.itemView.setOnClickListener(null);
