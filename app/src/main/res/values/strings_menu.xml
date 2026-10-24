@@ -22,4 +22,7 @@
     <string name="ig_story_cache_open_failed" tools:ignore="MissingTranslation">Couldn\'t open this story</string>
     <string name="ig_story_cache_save" tools:ignore="MissingTranslation">Save</string>
     <string name="ie_rescan_restart" tools:ignore="MissingTranslation">Rescan and restart</string>
+    <string name="ie_toast_not_working" tools:ignore="MissingTranslation">Not working: %1$s</string>
+    <string name="ie_toast_more" tools:ignore="MissingTranslation">+%1$d more</string>
+    <string name="ie_toast_starting" tools:ignore="MissingTranslation">%1$d still starting</string>
 </resources>

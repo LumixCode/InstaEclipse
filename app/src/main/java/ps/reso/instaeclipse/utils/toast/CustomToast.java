@@ -1,17 +1,39 @@
 package ps.reso.instaeclipse.utils.toast;
 
+import android.app.Activity;
 import android.content.Context;
-import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.TextUtils;
+import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.View;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.mods.ui.UIHookManager;
+import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
+import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.IePalette;
 
 public class CustomToast {
 
     public static boolean toastShown = false;
+
+    private static final int AMBER = 0xFFFF9F0A;
+    private static final int MAX_NAMES = 3;
+    private static final int MAX_LINES = 3;
+    private static final int MARGIN_DP = 8;
 
     public static void showCustomToast(Context context, String message) {
         if (context == null) {
@@ -22,173 +44,111 @@ public class CustomToast {
         IeToast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show();
     }
 
-    // Category order + accent (mirrors the in-IG dialog's 4 groups).
-    private static final String[] CAT_ORDER = {"Appearance", "Privacy", "Media", "Tools"};
-    private static int catAccent(String cat) {
-        switch (cat) {
-            case "Appearance": return Color.parseColor("#FF375F");
-            case "Privacy":    return Color.parseColor("#5E5CE6");
-            case "Media":      return Color.parseColor("#FF9F0A");
-            default:           return Color.parseColor("#8E8E93");
-        }
-    }
-
-    /** Map a FeatureStatusTracker key to one of the 4 categories (matches the dialog grouping). */
-    private static String categoryOf(String key) {
-        switch (key) {
-            case "CustomTheme": case "CustomFont": case "CustomEmoji": case "ForceReelQuality":
-            case "HideSuggestionsInFeed": case "HideThreadsSuggestions": case "HideLikedPosts":
-            case "HideNotesTray": case "DisableDiscoverPeople": case "ExactTimestamps":
-            case "FollowStatusLabel": case "FollowingFollowStatus":
-            case "HideDmSuggestions": case "HideInstants": case "StoryRingColor": case "StoryTraySize": case "RoundedFeedPosts":
-            case "HidePlusUpsells": case "HideNavTabs": case "SpoofDevice":
-                return "Appearance";
-            case "GhostSeen": case "GhostTyping": case "GhostStories": case "GhostLive":
-            case "GhostViewOnce": case "GhostScreenshot": case "AllowScreenshots":
-            case "KeepEphemeralMessages": case "KeepUnsentMessages": case "PermanentViewMode": case "ViewOnceBadge":
-            case "UnsentIndicator": case "ManualStorySeen":
-            case "LockDirectMessages": case "HideSpecificChats": case "AdBlocker":
-            case "DisableTrackingLinks": case "OpenLinksExternally": case "RemoveMetaAI": case "SpoofLastSeen":
-            case "hideOnboardingPrompts": case "ChatExport": case "EditHistory":
-            case "LockSavedCollections": case "DisableRepost": case "BlockAnalytics": case "LockWholeApp":
-            case "DisableSearchHistory": case "ConfirmCalls": case "ChatMenuTripleTap": case "NightReelBlock":
-            case "DailyReelLimit":
-                return "Privacy";
-            case "PostDownload": case "ReelDownload": case "StoryDownload": case "ProfileDownload":
-            case "CopyMediaLink": case "SaveInstants": case "UploadInstants": case "CacheStories":
-            case "SpoofLocation": case "StoryMentions": case "CaptionCopy": case "CopyComment":
-            case "PhotoZoom": case "PlaybackSpeed": case "VoiceDownload": case "StickerDownload": case "MaxUploadQuality":
-            case "AudioDownload": case "CopyImage": case "MediaInfo": case "ForceReelScrubber": case "DmMediaDownload":
-            case "DisableVideoAutoPlay": case "DisableStoryFlipping":
-                return "Media";
-            default:
-                return "Tools"; // DevOptions, RemoveBuildExpiredPopup, FollowerToast, DisableDoubleTapLike…
-        }
-    }
-
-    /**
-     * Feature-status toast: a rounded card grouping active features by category (Appearance /
-     * Privacy / Media / Tools), each section under an accent header, laid out in a dense 3-column
-     * checklist grid — green ✓ = hook confirmed installed, muted ○ = enabled-but-pending.
-     * {@code status} maps FeatureStatusTracker KEY -> hooked. Labels are resolved per key.
-     */
     public static void showFeatureGrid(Context context, String title,
                                        java.util.LinkedHashMap<String, Boolean> status) {
         if (context == null || status == null || status.isEmpty()) return;
 
         new Handler(Looper.getMainLooper()).post(() -> {
             try {
-                final float d = context.getResources().getDisplayMetrics().density;
-                final int on  = Color.parseColor("#30D158");
-                final int off = Color.parseColor("#8E8E93");
-                final int txt = Color.parseColor("#F2F2F7");
-
-                // Bucket keys by category (preserving the 4-group order).
-                java.util.LinkedHashMap<String, java.util.List<String>> byCat = new java.util.LinkedHashMap<>();
-                for (String c : CAT_ORDER) byCat.put(c, new java.util.ArrayList<>());
-                int active = 0;
-                for (java.util.Map.Entry<String, Boolean> e : status.entrySet()) {
-                    byCat.get(categoryOf(e.getKey())).add(e.getKey());
-                    if (Boolean.TRUE.equals(e.getValue())) active++;
-                }
-
-                android.widget.LinearLayout card = new android.widget.LinearLayout(context);
-                card.setOrientation(android.widget.LinearLayout.VERTICAL);
-                android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-                bg.setColor(Color.parseColor("#F214141A"));
-                bg.setCornerRadius(26 * d);
-                bg.setStroke(Math.max(1, (int) d), Color.parseColor("#33FFFFFF"));
-                card.setBackground(bg);
-                int p = (int) (18 * d);
-                card.setPadding(p, (int) (15 * d), p, (int) (17 * d));
-
-                android.widget.TextView header = new android.widget.TextView(context);
-                header.setText(title + "   " + active + "/" + status.size());
-                header.setTextColor(Color.WHITE);
-                header.setTextSize(15);
-                header.setTypeface(null, android.graphics.Typeface.BOLD);
-                header.setLetterSpacing(0.01f);
-                header.setPadding(0, 0, 0, (int) (6 * d));
-                card.addView(header);
-
-                for (String cat : CAT_ORDER) {
-                    java.util.List<String> keys = byCat.get(cat);
-                    if (keys == null || keys.isEmpty()) continue;
-
-                    android.widget.TextView catHeader = new android.widget.TextView(context);
-                    catHeader.setText(cat.toUpperCase(java.util.Locale.getDefault()));
-                    catHeader.setTextColor(catAccent(cat));
-                    catHeader.setTextSize(11);
-                    catHeader.setTypeface(null, android.graphics.Typeface.BOLD);
-                    catHeader.setLetterSpacing(0.08f);
-                    catHeader.setPadding(0, (int) (10 * d), 0, (int) (5 * d));
-                    card.addView(catHeader);
-
-                    android.widget.GridLayout grid = new android.widget.GridLayout(context);
-                    // 3 columns so the (now ~50) features still fit in one toast-height card; a
-                    // long label ellipsizes rather than pushing the card past the screen.
-                    grid.setColumnCount(3);
-                    for (String key : keys) {
-                        boolean hooked = Boolean.TRUE.equals(status.get(key));
-                        boolean brokenState = !hooked
-                                && ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.isBroken(key);
-
-                        android.widget.LinearLayout cell = new android.widget.LinearLayout(context);
-                        cell.setOrientation(android.widget.LinearLayout.HORIZONTAL);
-                        cell.setGravity(Gravity.CENTER_VERTICAL);
-                        int cp = (int) (3 * d);
-                        cell.setPadding(0, cp, (int) (8 * d), cp);
-
-                        android.widget.TextView mark = new android.widget.TextView(context);
-                        // ✓ hook confirmed, ✗ enabled but hook failed (broken), ○ enabled/pending.
-                        mark.setText(hooked ? "✓" : brokenState ? "✗" : "○");
-                        mark.setTextColor(hooked ? on : brokenState ? Color.parseColor("#FF453A") : off);
-                        mark.setTextSize(12);
-                        mark.setTypeface(null, android.graphics.Typeface.BOLD);
-                        mark.setPadding(0, 0, (int) (5 * d), 0);
-
-                        android.widget.TextView lbl = new android.widget.TextView(context);
-                        lbl.setText(ps.reso.instaeclipse.utils.feature.FeatureStatusTracker.getLabel(context, key));
-                        lbl.setTextColor(hooked ? txt : brokenState ? Color.parseColor("#FF453A") : off);
-                        lbl.setTextSize(11);
-                        lbl.setMaxLines(1);
-                        lbl.setEllipsize(android.text.TextUtils.TruncateAt.END);
-
-                        cell.addView(mark);
-                        cell.addView(lbl);
-
-                        android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams();
-                        lp.width = 0;
-                        lp.columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f);
-                        lp.setGravity(Gravity.FILL_HORIZONTAL);
-                        cell.setLayoutParams(lp);
-                        grid.addView(cell);
-                    }
-                    card.addView(grid);
-                }
-
-                android.widget.FrameLayout wrap = new android.widget.FrameLayout(context);
-                int m = (int) (8 * d);
-                wrap.setPadding(m, 0, m, 0);
-                // Pin the card to (screen width - margins) so the weighted grid columns get real
-                // width — otherwise the Toast wraps to content and every label ellipsizes to ~6 chars.
-                int screenW = context.getResources().getDisplayMetrics().widthPixels;
-                card.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
-                        screenW - 2 * m, android.widget.FrameLayout.LayoutParams.WRAP_CONTENT));
+                Context app = context.getApplicationContext() != null ? context.getApplicationContext() : context;
+                float d = app.getResources().getDisplayMetrics().density;
+                Activity top = UIHookManager.topActivity();
+                View card = buildCard(app, IePalette.of(top != null ? top : context), title, status);
+                FrameLayout wrap = new FrameLayout(app);
+                int m = (int) (MARGIN_DP * d);
+                wrap.setPadding(m, m, m, m);
                 wrap.addView(card);
 
-                android.widget.Toast toast = new android.widget.Toast(context);
+                Toast toast = new Toast(app);
                 toast.setView(wrap);
-                toast.setDuration(android.widget.Toast.LENGTH_LONG);
+                toast.setDuration(Toast.LENGTH_LONG);
                 toast.setGravity(Gravity.BOTTOM, 0, (int) (80 * d));
                 toast.show();
-                // Re-show so a full grid stays readable ~6s (a single LENGTH_LONG is ~3.5s).
-                new Handler(Looper.getMainLooper()).postDelayed(toast::show, 3200);
-                new Handler(Looper.getMainLooper()).postDelayed(toast::cancel, 6500);
             } catch (Throwable t) {
                 ModuleLog.warn("(IE|Toast) Could not show the list of active features", t);
             }
         });
     }
 
+    public static View buildCard(Context context, Map<String, Boolean> status) {
+        return buildCard(context, IePalette.of(context), I18n.t(context, R.string.ig_toast_features_loaded), status);
+    }
+
+    private static View buildCard(Context context, IePalette p, String title, Map<String, Boolean> status) {
+        float d = context.getResources().getDisplayMetrics().density;
+        int active = 0;
+        int pending = 0;
+        List<String> broken = new ArrayList<>();
+        for (Map.Entry<String, Boolean> e : status.entrySet()) {
+            if (Boolean.TRUE.equals(e.getValue())) active++;
+            else if (FeatureStatusTracker.isBroken(e.getKey())) broken.add(FeatureStatusTracker.getLabel(context, e.getKey()));
+            else pending++;
+        }
+        Collections.sort(broken);
+
+        LinearLayout card = new LinearLayout(context);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding((int) (12 * d), (int) (10 * d), (int) (16 * d), (int) (12 * d));
+        card.setBackground(IeToast.cardShape(p, d));
+        card.setElevation(6 * d);
+
+        LinearLayout head = new LinearLayout(context);
+        head.setOrientation(LinearLayout.HORIZONTAL);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        int size = (int) (IeToast.BADGE_DP * d);
+        LinearLayout.LayoutParams badgeLp = new LinearLayout.LayoutParams(size, size);
+        badgeLp.setMarginEnd((int) (IeToast.BADGE_GAP_DP * d));
+        head.addView(IeToast.badge(context, p, d), badgeLp);
+        TextView titleView = text(context, title, p.text, 15, true);
+        head.addView(titleView, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        int chipColor = active == status.size() ? p.success : AMBER;
+        TextView chip = text(context, I18n.t(context, R.string.menu_chip_active, active, status.size()),
+                IePalette.readable(chipColor, p.dialog, IePalette.TEXT), 13, true);
+        chip.setPaddingRelative((int) (8 * d), 0, 0, 0);
+        head.addView(chip);
+        card.addView(head);
+
+        int indent = (int) ((IeToast.BADGE_DP + IeToast.BADGE_GAP_DP) * d);
+        int muted = IePalette.readable(p.sub, p.dialog, IePalette.TEXT);
+        if (!broken.isEmpty()) {
+            card.addView(line(context, notWorking(context, broken), IePalette.readable(p.danger, p.dialog, IePalette.TEXT), indent));
+        }
+        if (pending > 0) card.addView(line(context, I18n.t(context, R.string.ie_toast_starting, pending), muted, indent));
+        if (broken.isEmpty() && pending == 0) {
+            card.addView(line(context, I18n.t(context, R.string.menu_inactive_all_good), muted, indent));
+        }
+
+        int width = context.getResources().getDisplayMetrics().widthPixels - (int) (2 * MARGIN_DP * d);
+        card.setLayoutParams(new FrameLayout.LayoutParams(width, FrameLayout.LayoutParams.WRAP_CONTENT));
+        return card;
+    }
+
+    private static String notWorking(Context context, List<String> labels) {
+        List<String> shown = labels.subList(0, Math.min(MAX_NAMES, labels.size()));
+        String names = String.join(", ", shown);
+        int more = labels.size() - shown.size();
+        if (more > 0) names += " " + I18n.t(context, R.string.ie_toast_more, more);
+        return I18n.t(context, R.string.ie_toast_not_working, names);
+    }
+
+    private static TextView line(Context context, String value, int color, int indent) {
+        TextView view = text(context, value, color, 13, false);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.setMarginStart(indent);
+        lp.topMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
+        view.setLayoutParams(lp);
+        return view;
+    }
+
+    private static TextView text(Context context, String value, int color, int sp, boolean bold) {
+        TextView view = new TextView(context);
+        view.setText(value);
+        view.setTextColor(color);
+        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
+        if (bold) view.setTypeface(null, Typeface.BOLD);
+        view.setMaxLines(MAX_LINES);
+        view.setEllipsize(TextUtils.TruncateAt.END);
+        return view;
+    }
 }

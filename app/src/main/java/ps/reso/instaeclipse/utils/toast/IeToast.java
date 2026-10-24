@@ -30,6 +30,9 @@ import ps.reso.instaeclipse.utils.ui.IePalette;
  */
 public final class IeToast {
 
+    static final int BADGE_DP = 28;
+    static final int BADGE_GAP_DP = 10;
+
     private final Context ctx;
     private final CharSequence text;
     private final int duration;
@@ -72,36 +75,19 @@ public final class IeToast {
         float d = app.getResources().getDisplayMetrics().density;
         Activity top = UIHookManager.topActivity();
         IePalette palette = IePalette.of(top != null ? top : ctx);
-        int bg = IePalette.withAlpha(palette.dialog, palette.dark ? 0xF2 : 0xF7);
         int fg = palette.text;
-        int stroke = palette.line;
-        int accent = palette.accent;
 
         LinearLayout card = new LinearLayout(app);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
         card.setPadding((int) (12 * d), (int) (10 * d), (int) (18 * d), (int) (10 * d));
-        GradientDrawable shape = new GradientDrawable();
-        shape.setColor(bg);
-        shape.setCornerRadius(22 * d);
-        shape.setStroke(Math.max(1, (int) d), stroke);
-        card.setBackground(shape);
+        card.setBackground(cardShape(palette, d));
         card.setElevation(6 * d);
 
-        // Accent badge with the InstaEclipse mark.
-        ImageView mark = new ImageView(app);
-        GradientDrawable badge = new GradientDrawable();
-        badge.setShape(GradientDrawable.OVAL);
-        badge.setColor(accent);
-        mark.setBackground(badge);
-        Drawable logo = ModuleResources.drawable(app, R.drawable.ic_logo);
-        if (logo != null) mark.setImageDrawable(logo);
-        int pad = (int) (5 * d);
-        mark.setPadding(pad, pad, pad, pad);
-        int size = (int) (28 * d);
+        int size = (int) (BADGE_DP * d);
         LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(size, size);
-        mlp.setMarginEnd((int) (10 * d));
-        card.addView(mark, mlp);
+        mlp.setMarginEnd((int) (BADGE_GAP_DP * d));
+        card.addView(badge(app, palette, d), mlp);
 
         TextView tv = new TextView(app);
         tv.setText(text);
@@ -127,6 +113,27 @@ public final class IeToast {
         card.setTranslationY(14 * d);
         card.animate().alpha(1f).translationY(0f).setDuration(220).start();
         toast.show();
+    }
+
+    static GradientDrawable cardShape(IePalette palette, float d) {
+        GradientDrawable shape = new GradientDrawable();
+        shape.setColor(IePalette.withAlpha(palette.dialog, palette.dark ? 0xF2 : 0xF7));
+        shape.setCornerRadius(22 * d);
+        shape.setStroke(Math.max(1, (int) d), palette.line);
+        return shape;
+    }
+
+    static ImageView badge(Context app, IePalette palette, float d) {
+        ImageView mark = new ImageView(app);
+        GradientDrawable badge = new GradientDrawable();
+        badge.setShape(GradientDrawable.OVAL);
+        badge.setColor(palette.accent);
+        mark.setBackground(badge);
+        Drawable logo = ModuleResources.drawable(app, R.drawable.ic_logo);
+        if (logo != null) mark.setImageDrawable(logo);
+        int pad = (int) (5 * d);
+        mark.setPadding(pad, pad, pad, pad);
+        return mark;
     }
 
     /**
