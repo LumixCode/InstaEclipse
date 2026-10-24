@@ -52,12 +52,11 @@ final class MediaTypeDetector {
 
     static Result resolve(File file, String responseContentType, String requestedMime,
                           String requestedFilename) throws IOException {
-        if (isGif(file)) { // animated comment GIFs etc.: keep the format, a .jpg name would show a still
-            String fn = withCorrectExtension(requestedFilename, Kind.IMAGE);
-            if (fn != null && fn.toLowerCase(Locale.US).endsWith(".jpg")) fn = fn.substring(0, fn.length() - 4) + ".gif";
-            return new Result(Kind.IMAGE, "image/gif", fn);
+        String sniffed = sniff(file);
+        Kind kind = fromContentType(sniffed);
+        if (kind == Kind.IMAGE) {
+            return requestedFilename == null ? new Result(kind, sniffed, null) : verified(sniffed, requestedFilename);
         }
-        Kind kind = sniff(file);
         // Voice messages use the same MP4 container as videos. The caller knows
         // this is an audio message even when the CDN labels it video/mp4.
         if (kind == Kind.VIDEO && fromContentType(requestedMime) == Kind.AUDIO) {
@@ -106,14 +105,7 @@ final class MediaTypeDetector {
         return filename + wanted;
     }
 
-    static boolean isGif(File file) throws IOException {
-        try (InputStream in = new FileInputStream(file)) {
-            byte[] h = new byte[4];
-            return in.read(h) == 4 && h[0] == 'G' && h[1] == 'I' && h[2] == 'F' && h[3] == '8';
-        }
-    }
-
-    static Kind sniff(File file) throws IOException {
+    static String sniff(File file) throws IOException {
         try (InputStream in = new FileInputStream(file)) {
             byte[] header = new byte[16];
             int read = 0;
@@ -126,29 +118,30 @@ final class MediaTypeDetector {
         }
     }
 
-    static Kind sniff(byte[] header, int length) {
-        if (header == null || length < 3) return Kind.UNKNOWN;
+    static String sniff(byte[] header, int length) {
+        if (header == null || length < 3) return null;
 
         if (u(header[0]) == 0xff && u(header[1]) == 0xd8 && u(header[2]) == 0xff) {
-            return Kind.IMAGE;
+            return "image/jpeg";
         }
         if (length >= 8
                 && u(header[0]) == 0x89 && header[1] == 'P' && header[2] == 'N'
                 && header[3] == 'G' && u(header[4]) == 0x0d && u(header[5]) == 0x0a
                 && u(header[6]) == 0x1a && u(header[7]) == 0x0a) {
-            return Kind.IMAGE;
+            return "image/png";
         }
         if (length >= 6 && header[0] == 'G' && header[1] == 'I' && header[2] == 'F'
                 && header[3] == '8' && (header[4] == '7' || header[4] == '9')
                 && header[5] == 'a') {
-            return Kind.IMAGE;
+            return "image/gif";
         }
         if (length >= 12 && header[0] == 'R' && header[1] == 'I' && header[2] == 'F'
                 && header[3] == 'F' && header[8] == 'W' && header[9] == 'E'
                 && header[10] == 'B' && header[11] == 'P') {
-            return Kind.IMAGE;
+            return "image/webp";
         }
-        if (audioSignature(header, length) != null) return Kind.AUDIO;
+        String audio = audioSignature(header, length);
+        if (audio != null) return audio;
 
         // MP4 and HEIF/AVIF share ISO-BMFF's ftyp box. Inspect the major brand so
         // still images are not mislabeled as video.
@@ -157,14 +150,15 @@ final class MediaTypeDetector {
             String brand = new String(header, 8, 4, java.nio.charset.StandardCharsets.US_ASCII)
                     .toLowerCase(Locale.US);
             if (brand.equals("heic") || brand.equals("heix") || brand.equals("hevc")
-                    || brand.equals("hevx") || brand.equals("mif1") || brand.equals("msf1")
-                    || brand.equals("avif") || brand.equals("avis")) {
-                return Kind.IMAGE;
+                    || brand.equals("hevx")) {
+                return "image/heic";
             }
-            if (brand.equals("m4a ") || brand.equals("m4b ")) return Kind.AUDIO;
-            return Kind.VIDEO;
+            if (brand.equals("avif") || brand.equals("avis")) return "image/avif";
+            if (brand.equals("mif1") || brand.equals("msf1")) return "image/heif";
+            if (brand.equals("m4a ") || brand.equals("m4b ")) return "audio/mp4";
+            return "video/mp4";
         }
-        return Kind.UNKNOWN;
+        return null;
     }
 
     private static String audioMime(File file, String responseType, String requestedType)

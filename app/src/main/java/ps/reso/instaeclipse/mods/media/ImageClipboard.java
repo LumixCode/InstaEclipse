@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.IOException;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -45,8 +46,11 @@ final class ImageClipboard {
                 File[] old = dir.listFiles();
                 if (old != null) for (File f : old) //noinspection ResultOfMethodCallIgnored
                     f.delete();
-                File out = new File(dir, "image_" + System.currentTimeMillis() + ".jpg");
-                FeedVideoDownloadHook.downloadToFileAndGetType(imageUrl, out);
+                File temp = new File(dir, "image_" + System.currentTimeMillis() + ".bin");
+                String responseType = FeedVideoDownloadHook.downloadToFileAndGetType(imageUrl, temp);
+                MediaTypeDetector.Result detected = MediaTypeDetector.resolve(temp, responseType, "image/jpeg", temp.getName());
+                File out = new File(dir, detected.filename);
+                if (!temp.renameTo(out)) throw new IOException("The copied image could not be named");
                 Uri uri = new Uri.Builder().scheme("content").authority(auth)
                         .appendPath("cache").appendPath(DIR).appendPath(out.getName()).build();
                 FeedVideoDownloadHook.mainHandler.post(() -> {
