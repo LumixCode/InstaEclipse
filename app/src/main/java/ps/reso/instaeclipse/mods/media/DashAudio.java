@@ -18,6 +18,8 @@ public final class DashAudio {
             "<BaseURL[^>]*>\\s*([^<]+?)\\s*</BaseURL>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
     private static final Pattern BANDWIDTH = Pattern.compile("\\bbandwidth\\s*=\\s*\"(\\d+)\"");
 
+    static final long MUSIC_CLIP_MS = 30_000;
+
     private DashAudio() {}
 
     /** Highest-bandwidth audio BaseURL in the manifest, or null when there is no audio track. */
@@ -68,13 +70,20 @@ public final class DashAudio {
                 if (!u.find() || !h.find()) continue;
                 long height = Long.parseLong(h.group(1)), bw = bandwidth(ra);
                 Matcher c = CODECS.matcher(ra);
-                if (skipAv1 && c.find() && c.group(1).toLowerCase(java.util.Locale.ROOT).startsWith("av01")) continue;
+                String codec = c.find() ? c.group(1).toLowerCase(java.util.Locale.ROOT) : "";
+                if (codec.startsWith("vp09") || (skipAv1 && codec.startsWith("av01"))) continue;
                 if (height > bestH || (height == bestH && bw > bestBw)) {
                     best = u.group(1); bestH = height; bestBw = bw;
                 }
             }
         }
         return best == null ? null : new String[]{unescape(best.trim()), String.valueOf(bestH)};
+    }
+
+    static long musicClipMs(java.util.Map<?, ?> consumption) {
+        Object overlap = consumption == null ? null : consumption.get("overlap_duration_in_ms");
+        long ms = overlap instanceof Number ? ((Number) overlap).longValue() : 0;
+        return ms > 0 ? ms : MUSIC_CLIP_MS;
     }
 
     private static boolean isAudio(String attrs) {

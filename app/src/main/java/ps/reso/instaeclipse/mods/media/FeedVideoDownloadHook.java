@@ -68,7 +68,6 @@ public class FeedVideoDownloadHook {
     // Posts with Instagram music: the video is silent and the song is a separate file.
     private static Method   musicMetadataGetter;    // "music_metadata" getter (feed posts)
     private static Method   clipsMetadataGetter;    // "clips_metadata" getter (reels)
-    static final long       MUSIC_CLIP_MS = 30_000; // length of a post's music clip
     private static Method   dashManifestGetter;     // "video_dash_manifest" getter: () -> String (Media 447+, LiveTreeMediaDict <= 446)
 
     private static Class<?> userClass;
@@ -769,7 +768,6 @@ public class FeedVideoDownloadHook {
         return music;
     }
 
-    /** The song attached to a post (Instagram music) as {url, true, startMs, MUSIC_CLIP_MS, true}, or null. */
     static Object[] musicSource(Object media) {
         if (media == null) return null;
         for (Method getter : new Method[]{musicMetadataGetter, clipsMetadataGetter}) {
@@ -788,9 +786,10 @@ public class FeedVideoDownloadHook {
                 if (cm != null && cm.get("audio_asset_start_time_in_ms") instanceof Number) {
                     start = ((Number) cm.get("audio_asset_start_time_in_ms")).longValue();
                 }
+                long length = DashAudio.musicClipMs(cm);
                 ModuleLog.detail("(IE|DL|Music) song=\"" + tm.get("title") + "\" by " + tm.get("display_artist")
-                        + " start=" + start + "ms");
-                return new Object[]{url, true, start, MUSIC_CLIP_MS, true};
+                        + " start=" + start + "ms length=" + length + "ms");
+                return new Object[]{url, true, start, length, true};
             } catch (Throwable t) {
                 ModuleLog.detail("(IE|DL|Music) lookup: " + t);
             }

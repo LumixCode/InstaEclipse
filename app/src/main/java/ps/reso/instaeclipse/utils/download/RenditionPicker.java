@@ -34,7 +34,7 @@ final class RenditionPicker {
             DownloadRequest.Rendition selected = request.direct.get(0);
             List<Choice> original = new ArrayList<>();
             if (MediaUrlPolicy.shapeRefusal(selected.url) == null)
-                original.add(new Choice(selected, null, false, false, null));
+                original.add(new Choice(selected, null, false, false, unreadable(selected.codecs, sdk)));
             return new Plan(DashManifest.parse(""), original, 0);
         }
         DashManifest manifest = DashManifest.parse(request.manifest);
@@ -44,12 +44,12 @@ final class RenditionPicker {
         Set<String> seen = new HashSet<>();
         for (DownloadRequest.Rendition direct : request.direct) {
             if (MediaUrlPolicy.shapeRefusal(direct.url) == null && seen.add(direct.url))
-                choices.add(new Choice(direct, null, false, expectAudio, null));
+                choices.add(new Choice(direct, null, false, expectAudio, unreadable(direct.codecs, sdk)));
         }
         DashManifest.Track audio = pickAudio(manifest.tracks);
         for (DashManifest.Track track : manifest.tracks) {
             if (!track.video()) continue;
-            String refusal = supportedVideo(track.codecs) ? null : "Selected DASH video codec is unsupported";
+            String refusal = supportedVideo(track.codecs) ? unreadable(track.codecs, sdk) : "Selected DASH video codec is unsupported";
             if (expectAudio && audio == null) refusal = "Selected DASH video has no supported corresponding audio";
             DownloadRequest.Rendition video = new DownloadRequest.Rendition(track.url, track.width, track.height,
                     track.frameRate, track.codecs, track.bandwidth);
@@ -75,6 +75,7 @@ final class RenditionPicker {
         // Bitrate only resolves a tie within the exact same known codec/profile and frame rate.
         if (!a.codecs.isEmpty() && a.codecs.equals(b.codecs) && a.bitrate > 0 && b.bitrate > 0
                 && (order = Long.compare(b.bitrate, a.bitrate)) != 0) return order;
+        if ((order = Integer.compare(playability(b.codecs), playability(a.codecs))) != 0) return order;
         if ((order = a.codecs.compareTo(b.codecs)) != 0) return order;
         // Stable neutral tie-break. Neither direct/DASH nor URL labels get a quality bonus.
         return a.url.compareTo(b.url);
@@ -84,6 +85,16 @@ final class RenditionPicker {
     }
     private static int compatibility(String codecs) {
         return codecs.startsWith("avc1") || codecs.startsWith("avc3") ? 2 : codecs.isEmpty() ? 1 : 0;
+    }
+    private static int playability(String codecs) {
+        if (codecs.startsWith("avc1") || codecs.startsWith("avc3")) return 4;
+        if (codecs.startsWith("hvc1") || codecs.startsWith("hev1")) return 3;
+        if (codecs.startsWith("vp09")) return 2;
+        return codecs.startsWith("av01") ? 1 : 0;
+    }
+    private static String unreadable(String codecs, int sdk) {
+        return sdk < 29 && (codecs.startsWith("vp09") || codecs.startsWith("av01"))
+                ? "Android 9 can't read this codec back" : null;
     }
     static boolean supportedVideo(String codecs) {
         return codecs.startsWith("avc1") || codecs.startsWith("avc3") || codecs.startsWith("hvc1")
