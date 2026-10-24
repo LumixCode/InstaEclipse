@@ -104,9 +104,10 @@ public final class InstallSchedule {
         public final String firstBackground;
         public final String reason;
         public final boolean legacy;
+        final Rows rows;
 
         Split(List<InstallStep> inline, List<InstallStep> background, List<String> backgroundOpen,
-              Set<String> unknown, String firstBackground, String reason, boolean legacy) {
+              Set<String> unknown, String firstBackground, String reason, boolean legacy, Rows rows) {
             this.inline = Collections.unmodifiableList(inline);
             this.background = Collections.unmodifiableList(background);
             this.backgroundOpen = Collections.unmodifiableList(backgroundOpen);
@@ -114,6 +115,11 @@ public final class InstallSchedule {
             this.firstBackground = firstBackground;
             this.reason = reason;
             this.legacy = legacy;
+            this.rows = rows;
+        }
+
+        boolean rowMayBeStale() {
+            return reason != null && reason.startsWith(MISSING);
         }
     }
 
@@ -151,7 +157,7 @@ public final class InstallSchedule {
             background.add(step);
             if (isOpen) open.add(step.name);
         }
-        return new Split(inline, background, open, unknown, first, reason, false);
+        return new Split(inline, background, open, unknown, first, reason, false, stepKeys);
     }
 
     static String invalid(String state, List<String> row, String marker, Predicate<String> present) {
@@ -165,11 +171,11 @@ public final class InstallSchedule {
     public static Split legacy(List<InstallStep> steps, boolean installedBefore) {
         List<InstallStep> all = new ArrayList<>(steps);
         if (installedBefore || all.isEmpty()) {
-            return new Split(all, new ArrayList<>(), new ArrayList<>(), new LinkedHashSet<>(), null, null, true);
+            return new Split(all, new ArrayList<>(), new ArrayList<>(), new LinkedHashSet<>(), null, null, true, null);
         }
         List<String> names = new ArrayList<>();
         for (InstallStep step : all) names.add(step.name);
-        return new Split(new ArrayList<>(), all, names, new LinkedHashSet<>(), all.get(0).name, LEGACY, true);
+        return new Split(new ArrayList<>(), all, names, new LinkedHashSet<>(), all.get(0).name, LEGACY, true, null);
     }
 
     public static String lookupState(InstallStep step, Function<String, Object> flags) {
@@ -199,8 +205,8 @@ public final class InstallSchedule {
 
     public static Rows withLearned(Rows asset, Function<String, String> stored, String build) {
         return (step, state) -> {
-            List<String> keys = asset.keys(step, state);
-            return keys != null ? keys : learned(stored.apply(learnedKey(step, state)), build);
+            List<String> keys = learned(stored.apply(learnedKey(step, state)), build);
+            return keys != null ? keys : asset.keys(step, state);
         };
     }
 
@@ -232,6 +238,8 @@ public final class InstallSchedule {
         private final Store store;
         private final Function<InstallStep, String> lookupState;
         private final Set<String> unknown;
+        private final Rows rows;
+        private final boolean checkRows;
         private final String build;
         private final Consumer<String> log;
 
@@ -239,13 +247,15 @@ public final class InstallSchedule {
             this.store = store;
             this.lookupState = lookupState;
             this.unknown = split.unknown;
+            this.rows = split.rows;
+            this.checkRows = split.rowMayBeStale() && split.rows != null;
             this.build = build;
             this.log = log;
         }
 
         @Override
         public boolean wantsKeys(InstallStep step) {
-            return unknown.contains(step.name);
+            return unknown.contains(step.name) || (checkRows && !step.phaseA);
         }
 
         @Override
@@ -258,8 +268,17 @@ public final class InstallSchedule {
                 return;
             }
             String state = lookupState.apply(step);
-            if (keys != null && unknown.contains(step.name)) {
-                store.put(learnedKey(step.name, state), learnedValue(build, presentKeys(keys, store::has)));
+            if (keys != null) {
+                List<String> read = presentKeys(keys, store::has);
+                if (unknown.contains(step.name)) {
+                    store.put(learnedKey(step.name, state), learnedValue(build, read));
+                } else {
+                    List<String> row = rows.keys(step.name, state);
+                    if (row != null && !row.equals(read)) {
+                        store.put(learnedKey(step.name, state), learnedValue(build, read));
+                        log.accept("(IE|Startup) " + step.name + " read other saved lookups than its list, so this build uses the ones it read from now on");
+                    }
+                }
             }
             if (!state.equals(store.get(marker))) store.put(marker, state);
         }
