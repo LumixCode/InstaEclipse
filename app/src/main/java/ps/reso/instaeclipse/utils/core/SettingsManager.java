@@ -269,14 +269,23 @@ public class SettingsManager {
     private static void stampChangedKeys(java.util.Map<String, ?> before) {
         long now = System.currentTimeMillis();
         SharedPreferences.Editor e = null;
-        for (java.util.Map.Entry<String, ?> entry : prefs.getAll().entrySet()) {
-            String k = entry.getKey();
-            if (k.startsWith("__")) continue;
-            if (java.util.Objects.equals(before.get(k), entry.getValue())) continue;
+        for (String k : changedKeys(before, prefs.getAll(), FeatureFlags.DEFAULTS)) {
             if (e == null) e = prefs.edit();
             e.putLong("__igts_" + k, now);
         }
         if (e != null) e.apply();
+    }
+
+    static java.util.List<String> changedKeys(java.util.Map<String, ?> before, java.util.Map<String, ?> after,
+                                              java.util.Map<String, ?> defaults) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (java.util.Map.Entry<String, ?> entry : after.entrySet()) {
+            String k = entry.getKey();
+            if (k.startsWith("__")) continue;
+            if (java.util.Objects.equals(before.get(k), entry.getValue())) continue;
+            out.add(k);
+        }
+        return out;
     }
 
     public static void loadAllFlags(Context context) {

@@ -66,6 +66,7 @@ public final class PrefsMerge {
             if (!isSharedSetting(key, value)) continue;
             Object current = companion != null ? companion.get(key) : null;
             if (Objects.equals(current, value)) continue;
+            if (current != null && untouched(instagram, key)) continue;
             long companionTs = stamp(companion, TS + key);
             if (companionTs > stamp(instagram, IG_TS + key)
                     && companionTs > stamp(instagram, APPLIED + key)) {
@@ -96,7 +97,17 @@ public final class PrefsMerge {
             out.put(key, value);
             out.put(tsKey, ts);
         }
+        for (Map.Entry<String, ?> entry : companion.entrySet()) {
+            String key = entry.getKey();
+            if (out.containsKey(key) || !isSharedSetting(key, entry.getValue()) || !untouched(instagram, key)) continue;
+            out.put(key, entry.getValue());
+            out.put(TS + key, Math.max(stamp(companion, TS + key), 1L));
+        }
         return out;
+    }
+
+    public static boolean untouched(Map<String, ?> instagram, String key) {
+        return false;
     }
 
     private static long stamp(Map<String, ?> map, String key) {
