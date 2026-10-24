@@ -24,4 +24,5 @@
     <string name="ie_frame_reason_memory">Not enough memory for this frame.</string>
     <string name="ie_frame_reason_write">The PNG couldn\'t be written. Check your free space.</string>
     <string name="ie_copy_media_link">Copy media link</string>
+    <string name="ig_profile_pic_load_failed">Couldn\'t load this picture</string>
 </resources>

@@ -26,14 +26,13 @@ import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
 
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.File;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -41,6 +40,8 @@ import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.feed.ZoomableImageView;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.download.DownloadEngine;
+import ps.reso.instaeclipse.utils.download.DownloadMessages;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -66,8 +67,6 @@ import ps.reso.instaeclipse.utils.ui.ViewAttachHooks;
  * Gated by FeatureFlags.enableProfileDownload.
  */
 public class ProfilePicDownloadHook {
-
-    private static final String  HOOKED_TAG  = "ie_profile_dl";
 
     private static final class Main {
         static final Handler HANDLER = new Handler(Looper.getMainLooper());
@@ -201,7 +200,6 @@ public class ProfilePicDownloadHook {
 
     private static void injectLongPress(View view) {
         try {
-            view.setTag(HOOKED_TAG);
             view.setOnLongClickListener(v -> {
                 // Resolve activity lazily at tap time — context is valid at this point
                 Context ctx = v.getContext();
@@ -227,8 +225,7 @@ public class ProfilePicDownloadHook {
 
     // ── Viewer ────────────────────────────────────────────────────────────────
 
-    /** Full-screen square picture (pinch / double-tap to zoom, tap to close) with a Download pill. */
-    private static void showViewer(Context ctx, String url, String username) {
+    public static android.app.Dialog showViewer(Context ctx, String url, String username) {
         android.app.Dialog dialog = new android.app.Dialog(ctx, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         FrameLayout root = new FrameLayout(ctx);
@@ -266,9 +263,33 @@ public class ProfilePicDownloadHook {
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         dlLp.bottomMargin = (int) (56 * dp);
         root.addView(download, dlLp);
+
+        AtomicReference<File> temp = new AtomicReference<>();
+        AtomicReference<String> type = new AtomicReference<>();
+        AtomicBoolean closed = new AtomicBoolean();
+        AtomicBoolean finished = new AtomicBoolean();
+        DownloadEngine.Cancellation cancel = new DownloadEngine.Cancellation();
         download.setOnClickListener(v -> {
-            dialog.dismiss();
-            save(ctx, url, username);
+            switch (ProfilePicSave.decide(FeedVideoDownloadHook.hasCompanionDestination(), temp.get() != null)) {
+                case COMPANION -> {
+                    dialog.dismiss();
+                    save(ctx, url, username);
+                }
+                case PUBLISH -> {
+                    File file = temp.getAndSet(null);
+                    dialog.dismiss();
+                    publish(ctx, file, type.get(), username);
+                }
+                case NOTHING -> {
+                    if (finished.get()) ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
+                            I18n.t(ctx, R.string.ig_profile_pic_load_failed), Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        dialog.setOnDismissListener(d -> {
+            closed.set(true);
+            cancel.cancel();
+            delete(temp.getAndSet(null));
         });
 
         dialog.setContentView(root);
@@ -279,45 +300,82 @@ public class ProfilePicDownloadHook {
         }
         dialog.show();
 
-        new Thread(() -> {
+        FeedVideoDownloadHook.executor.submit(() -> {
+            File file = null;
+            String mime = null;
             Bitmap bmp = null;
             try {
-                java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
-                downloadToStream(url, buf);
-                byte[] bytes = buf.toByteArray();
-                bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                file = File.createTempFile("ie_pp_", ".bin", ctx.getCacheDir());
+                mime = DownloadEngine.fetch(ctx, url, file, "image/jpeg", cancel, null);
+                bmp = BitmapFactory.decodeFile(file.getPath());
             } catch (Throwable t) {
-                ModuleLog.error("(IE|ProfileDL) Could not load the profile picture: " + t);
+                ModuleLog.error("(IE|ProfileDL) Could not load the profile picture: " + t.getClass().getSimpleName()
+                        + (t instanceof DownloadEngine.Failure f ? " " + f.status : ""));
+            }
+            if (mime != null) {
+                type.set(mime);
+                temp.set(file);
+                if (closed.get()) delete(temp.getAndSet(null));
+            } else {
+                delete(file);
             }
             final Bitmap b = bmp;
             Main.HANDLER.post(() -> {
+                finished.set(true);
                 spinner.setVisibility(View.GONE);
                 if (b == null) {
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_profile_pic_url_not_found), Toast.LENGTH_SHORT).show();
+                    size.setText(I18n.t(ctx, R.string.ig_profile_pic_load_failed));
                     return;
                 }
                 image.setImageBitmap(b);
                 size.setText(b.getWidth() + " × " + b.getHeight());
             });
-        }).start();
+        });
+        return dialog;
+    }
+
+    private static void delete(File file) {
+        if (file != null) file.delete();
     }
 
     private static void save(Context ctx, String url, String username) {
         String filename = FeedVideoDownloadHook.buildFilename(username, "profile", null, false);
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_downloading_profile_pic), Toast.LENGTH_SHORT).show();
-        new Thread(() -> {
+        FeedVideoDownloadHook.executor.submit(() -> {
             try {
                 boolean delegated = FeedVideoDownloadHook.downloadAndSave(ctx, url, filename, false, username);
-                if (!delegated) {
-                    Main.HANDLER.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
-                            I18n.t(ctx, R.string.ig_toast_profile_pic_saved), Toast.LENGTH_SHORT).show());
-                }
+                if (!delegated) saved(ctx);
             } catch (Throwable e) {
-                ModuleLog.error("(IE|ProfileDL) Could not save the profile picture: " + e.getClass().getSimpleName() + ": " + e.getMessage());
-                Main.HANDLER.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
-                        I18n.t(ctx, R.string.ig_toast_download_failed, e.getMessage()), Toast.LENGTH_SHORT).show());
+                failed(ctx, e);
             }
-        }).start();
+        });
+    }
+
+    private static void publish(Context ctx, File file, String mime, String username) {
+        String filename = FeedVideoDownloadHook.buildFilename(username, "profile", null, false);
+        FeedVideoDownloadHook.executor.submit(() -> {
+            try {
+                MediaTypeDetector.Result detected = MediaTypeDetector.verified(mime, filename);
+                DownloadPublisher.save(ctx, file, detected.filename, detected.mimeType, username,
+                        new DownloadEngine.Cancellation());
+                saved(ctx);
+            } catch (Throwable e) {
+                failed(ctx, e);
+            } finally {
+                delete(file);
+            }
+        });
+    }
+
+    private static void saved(Context ctx) {
+        Main.HANDLER.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
+                I18n.t(ctx, R.string.ig_toast_profile_pic_saved), Toast.LENGTH_SHORT).show());
+    }
+
+    private static void failed(Context ctx, Throwable e) {
+        ModuleLog.error("(IE|ProfileDL) Could not save the profile picture: " + e.getClass().getSimpleName());
+        Main.HANDLER.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
+                DownloadMessages.failure(ctx, e), Toast.LENGTH_SHORT).show());
     }
 
     // ── URL extraction ────────────────────────────────────────────────────────
@@ -439,22 +497,5 @@ public class ProfilePicDownloadHook {
             ctx = ((ContextWrapper) ctx).getBaseContext();
         }
         return null;
-    }
-
-    // ── Download ──────────────────────────────────────────────────────────────
-
-    private static void downloadToStream(String url, OutputStream out) throws Exception {
-        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-        MediaHttp.applyTimeouts(conn);
-        conn.setRequestProperty("User-Agent",
-                "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36");
-        conn.connect();
-        try (InputStream in = conn.getInputStream()) {
-            byte[] buf = new byte[32768];
-            int n;
-            while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-        } finally {
-            conn.disconnect();
-        }
     }
 }
