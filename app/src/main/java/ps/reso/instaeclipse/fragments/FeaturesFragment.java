@@ -62,6 +62,7 @@ import java.util.Set;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.devops.config.DevConfigReply;
+import ps.reso.instaeclipse.utils.backup.CompanionRestorePlan;
 import ps.reso.instaeclipse.utils.text.SearchText;
 import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
 import ps.reso.instaeclipse.utils.core.CompanionSettings;
@@ -160,66 +161,18 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 String json = scanner.hasNext() ? scanner.next() : "";
                 JSONObject root = new JSONObject(json);
                 JSONObject s = root.has("settings") ? root.getJSONObject("settings") : root;
-                // "Block location permission prompts" was folded into "Hide onboarding prompts":
-                // either switch on keeps it on, as in Instagram's prefs migration. The old key
-                // itself is skipped below (CommonUtils.STALE_CACHE_KEYS).
-                if (Boolean.TRUE.equals(s.opt("blockLocationPrompts"))) s.put("hideOnboardingPrompts", true);
-                Map<String, ?> current = localCache.getAll();
-                List<String> keys = new ArrayList<>();
-                for (Iterator<String> it = s.keys(); it.hasNext(); ) keys.add(it.next());
-                // Restored restrictions must reach Instagram before Extreme Mode locks them.
-                keys.sort(java.util.Comparator.comparing(key -> "isExtremeMode".equals(key)));
-                // Settings in the file that are not restored, so the toast doesn't claim them.
-                int skipped = 0;
-                LinkedHashMap<String, Object> writes = new LinkedHashMap<>();
-                for (String key : keys) {
-                    String target = key;
-                    if ("hideCreateGroupButton".equals(key)) {
-                        // Pre-0.8 backups: the same share-sheet switch under its old name.
-                        if (s.has("hideShareCreateGroup")) continue;
-                        target = "hideShareCreateGroup";
-                    } else if (ps.reso.instaeclipse.utils.core.CommonUtils.STALE_CACHE_KEYS.contains(key)) {
-                        continue; // never settings (see CommonUtils.STALE_CACHE_KEYS)
-                    }
-                    // Sync stamps and Instagram's private keys are never settings (PrefsMerge).
-                    if (target.startsWith("__") || ps.reso.instaeclipse.utils.core.PrefsMerge.isPrivate(target)) continue;
-                    Object val = s.get(key);
-                    // A restore only turns locks on: turning one off, or changing the locked
-                    // collections, is done inside Instagram, which asks for the passcode
-                    // (Instagram refuses it from here, SettingsManager.isLockedByPasscode).
-                    if (ps.reso.instaeclipse.utils.core.SettingsManager.isPasscodeLock(target) && !Boolean.TRUE.equals(val)) {
-                        if (Boolean.TRUE.equals(current.get(target))) skipped++;
-                        continue;
-                    }
-                    if ("lockedCollections".equals(target)) {
-                        skipped++;
-                        continue;
-                    }
-                    if ("storyCacheHours".equals(key)) {
-                        val = ps.reso.instaeclipse.utils.media.StoryCacheRetention.normalize(
-                                s.optInt(key, ps.reso.instaeclipse.utils.media.StoryCacheRetention.DEFAULT_HOURS));
-                    }
-                    if (val instanceof Boolean) {
-                        writes.put(target, val);
-                    } else if (val instanceof Number) {
-                        writes.put(target, ((Number) val).intValue());
-                    } else if (val instanceof String) {
-                        // Checked as Instagram's own restore checks it (SettingsBackupManager.fromJson).
-                        String value = ps.reso.instaeclipse.utils.backup.SettingsBackupManager.restorableString(target, (String) val);
-                        if (value == null) {
-                            skipped++;
-                            continue;
-                        }
-                        writes.put(target, value);
-                    } else {
-                        skipped++; // null, a list or an object: no setting has that type
-                    }
+                Map<String, Object> settings = new LinkedHashMap<>();
+                for (Iterator<String> it = s.keys(); it.hasNext(); ) {
+                    String key = it.next();
+                    Object value = s.get(key);
+                    settings.put(key, value == JSONObject.NULL ? null : value);
                 }
-                CompanionSettings.putAll(requireContext(), writes);
+                CompanionRestorePlan plan = CompanionRestorePlan.build(settings, localCache.getAll());
+                CompanionSettings.putAll(requireContext(), plan.writes);
                 reloadCurrentMenu();
-                ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), skipped == 0
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), plan.skipped == 0
                         ? getString(R.string.ig_toast_settings_restored)
-                        : getString(R.string.ig_toast_settings_restored_skipped, skipped), Toast.LENGTH_SHORT).show();
+                        : getString(R.string.ig_toast_settings_restored_skipped, plan.skipped), Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
             }
