@@ -3,11 +3,7 @@ package ps.reso.instaeclipse.mods.ui.theme;
 import android.content.Context;
 import android.content.res.Resources;
 import android.util.SparseIntArray;
-import android.view.View;
 
-import java.lang.reflect.Field;
-
-import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 /**
@@ -29,7 +25,6 @@ public final class IgColorRemapEngine {
     // Light theme in light mode: resource id -> corrected color for name-mapped resources whose slot
     // would flip ink/paper (see keepLightPolarity). Null when not in that mode.
     private static volatile SparseIntArray resPolarityFix;
-    private static volatile int moduleUiDepth;
 
     private static volatile int fuzzyBg, fuzzySurface, fuzzyPrimary, fuzzySecondary, fuzzyButton, fuzzyLink, fuzzyDestructive;
     private static volatile boolean fuzzyDarkTheme;
@@ -37,53 +32,7 @@ public final class IgColorRemapEngine {
     private IgColorRemapEngine() {}
 
     public static boolean isBypassing() {
-        return BYPASS_DEPTH.get() > 0 || moduleUiDepth > 0;
-    }
-
-    public static int getModuleUiDepth() {
-        return moduleUiDepth;
-    }
-
-    public static boolean shouldSkipRemap(Object hookTarget) {
-        return isBypassing() || isModuleUiTarget(hookTarget);
-    }
-
-    public static boolean isModuleUiTarget(Object target) {
-        return target instanceof View && isModuleUiView((View) target);
-    }
-
-    public static boolean isModuleUiView(View view) {
-        for (View current = view; current != null; current = parentView(current)) {
-            if (Boolean.TRUE.equals(current.getTag(R.id.tag_module_dialog_root))) return true;
-        }
-        return false;
-    }
-
-    public static void markModuleDialogView(View view) {
-        if (view != null) view.setTag(R.id.tag_module_dialog_root, Boolean.TRUE);
-    }
-
-    private static View parentView(View view) {
-        Object parent = view.getParent();
-        return parent instanceof View ? (View) parent : null;
-    }
-
-    public static void enterModuleUi() {
-        moduleUiDepth++;
-    }
-
-    public static void leaveModuleUi() {
-        if (moduleUiDepth > 0) moduleUiDepth--;
-    }
-
-    public static void withBypass(Runnable action) {
-        int depth = BYPASS_DEPTH.get() + 1;
-        BYPASS_DEPTH.set(depth);
-        try {
-            action.run();
-        } finally {
-            BYPASS_DEPTH.set(depth - 1);
-        }
+        return BYPASS_DEPTH.get() > 0;
     }
 
     private static void enterBypass() {
@@ -168,24 +117,6 @@ public final class IgColorRemapEngine {
         return result;
     }
 
-    public static int remapIfChanged(int color) {
-        int remapped = remap(color);
-        return remapped == color ? color : remapped;
-    }
-
-    public static void applyRemapArg(Object[] args, int index) {
-        if (!IgThemeEngine.isActive() || isBypassing()) return;
-        int original = (Integer) args[index];
-        int remapped = remap(original);
-        if (remapped != original) args[index] = remapped;
-    }
-
-    public static int remapResourceColor(Resources res, int resId, int resolved) {
-        if (!IgThemeEngine.isActive() || isBypassing()) return resolved;
-        Integer override = IgThemeEngine.colorForResource(resId);
-        return override != null ? override : remap(resolved);
-    }
-
     private static int remapFuzzy(int color) {
         int alpha = (color >>> 24) & 0xFF;
         if (alpha == 0) return color;
@@ -242,12 +173,8 @@ public final class IgColorRemapEngine {
         IgThemePalette palette = IgThemeEngine.getActivePalette();
         cacheFuzzyPalette(palette);
         Resources res = context.getResources();
-        // Instagram's own color names: android.R.color.black's package is "android", where none exist.
-        String pkg = ps.reso.instaeclipse.utils.core.CommonUtils.IG_PACKAGE_NAME;
         mapCanonical(exact, rgb, palette);
-        mapResourceNames(exact, rgb, res, pkg, palette);
-        mapFromSlots(exact, rgb, res, pkg, palette);
-        mapAllResourceColors(exact, rgb, res, context.getClassLoader(), palette);
+        mapFromSlots(exact, rgb, res, palette);
         // The canonical table assumes Instagram's dark resources (black = background, white = text).
         // When a light theme runs while Instagram is in light mode, IG draws its text and icons in
         // black, so that assumption would paint them in the light background color and hide them.
@@ -273,23 +200,6 @@ public final class IgColorRemapEngine {
         exactTable = exact;
         rgbTable = rgb;
         fuzzyCache = new SparseIntArray(256);
-    }
-
-    private static void mapAllResourceColors(SparseIntArray exact, SparseIntArray rgb, Resources res, ClassLoader cl, IgThemePalette palette) {
-        if (cl == null) return;
-        try {
-            Class<?> cls = cl.loadClass("com.instagram.android.R$color");
-            for (Field field : ps.reso.instaeclipse.utils.core.SafeReflect.fields(cls)) {
-                if (field.getType() != int.class || (field.getModifiers() & java.lang.reflect.Modifier.STATIC) == 0) continue;
-                int slot = IgThemeEngine.slotForColorName(field.getName());
-                if (slot < 0) continue;
-                try {
-                    int resId = field.getInt(null);
-                    int original = sampleColor(res, resId);
-                    if (original != 0) put(exact, rgb, original, palette.get(IgThemePalette.SLOT_KEYS[slot]));
-                } catch (Throwable ignored) {}
-            }
-        } catch (Throwable ignored) {}
     }
 
     static final Object[][] CANONICAL = {
@@ -341,7 +251,6 @@ public final class IgColorRemapEngine {
             {0x33FFFFFF, IgThemePalette.SLOT_PRIMARY_TEXT, 0.2f},
             {0xFF8E8E8E, IgThemePalette.SLOT_SECONDARY_TEXT},
             {0xFF999999, IgThemePalette.SLOT_SECONDARY_TEXT},
-            {0xFF2C2C2C, IgThemePalette.SLOT_SECONDARY_TEXT},
     };
 
     private static void mapCanonical(SparseIntArray exact, SparseIntArray rgb, IgThemePalette palette) {
@@ -352,23 +261,7 @@ public final class IgColorRemapEngine {
         }
     }
 
-    private static void mapResourceNames(SparseIntArray exact, SparseIntArray rgb, Resources res, String pkg, IgThemePalette palette) {
-        String[] colorNames = {"bds_black", "igds_prism_black", "bds_white", "igds_prism_gray_00", "bds_grey_0", "bds_grey_1",
-                "bds_grey_2", "bds_grey_3", "bds_grey_4", "bds_grey_6", "bds_grey_7", "bds_grey_8", "bds_grey_9", "bds_grey_10",
-                "bds_grey_11", "bds_grey_12", "bds_grey_16", "bds_grey_18", "bds_grey_21", "bds_grey_22", "bds_grey_24",
-                "igds_prism_gray_08", "igds_prism_gray_10", "emphasized_action_color", "badge_color", "igds_prism_indigo_1000",
-                "bds_blue_1", "bds_blue_2", "bds_red_5", "bds_red_6", "igds_primary_background", "bottom_sheet_undo_redo_color"};
-        for (String name : colorNames) {
-            int id = res.getIdentifier(name, "color", pkg);
-            if (id == 0) continue;
-            int slot = IgThemeEngine.slotForColorName(name);
-            if (slot < 0) continue;
-            int original = sampleColor(res, id);
-            if (original != 0) put(exact, rgb, original, palette.get(IgThemePalette.SLOT_KEYS[slot]));
-        }
-    }
-
-    private static void mapFromSlots(SparseIntArray exact, SparseIntArray rgb, Resources res, String pkg, IgThemePalette palette) {
+    private static void mapFromSlots(SparseIntArray exact, SparseIntArray rgb, Resources res, IgThemePalette palette) {
         SparseIntArray colorResToSlot = IgThemeEngine.getColorResToSlot();
         if (colorResToSlot == null) return;
         for (int i = 0; i < colorResToSlot.size(); i++) {

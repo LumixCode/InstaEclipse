@@ -1,7 +1,6 @@
 package ps.reso.instaeclipse.mods.ui.theme;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Color;
@@ -55,12 +54,11 @@ public class IgThemeHook {
         }
         try {
             hookResolveAttribute(classLoader);
-            hookGetColor(classLoader);
-            hookContextGetColor();
-            hookTypedArrayGetColor(classLoader);
+            hookGetColor();
+            hookTypedArrayGetColor();
             IgThemeColorSourceHooks.install(classLoader);
             hookActivityLifecycle();
-            hookPhoneWindowColors(classLoader);
+            if (Build.VERSION.SDK_INT < 35) hookPhoneWindowColors(classLoader);
             installed = true;
             FeatureStatusTracker.setHooked("CustomTheme");
             ModuleLog.ok("(InstaEclipse | Theme): ready");
@@ -80,10 +78,7 @@ public class IgThemeHook {
                         TypedValue out = (TypedValue) param.args[1];
                         if (out == null) return;
                         if (!IgThemeEngine.isInitialized()) {
-                            try {
-                                Resources res = (Resources) XposedHelpers.getObjectField(param.thisObject, "mResources");
-                                if (res != null) IgThemeEngine.ensureInitialized(res, cl);
-                            } catch (Throwable ignored) {}
+                            IgThemeEngine.ensureInitialized(((Resources.Theme) param.thisObject).getResources());
                         }
                         Integer override = IgThemeEngine.colorForAttr(attrId);
                         if (override != null) {
@@ -102,24 +97,14 @@ public class IgThemeHook {
                 });
     }
 
-    private void hookGetColor(final ClassLoader cl) {
+    private void hookGetColor() {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 if (!IgThemeEngine.themeEnabled() || IgColorRemapEngine.isBypassing()) return;
-                int resId = (Integer) param.args[0];
-                if (IgThemeEngine.looksLikeDirectColor(resId)) {
-                    param.setResult(IgColorRemapEngine.remap(resId));
-                    return;
-                }
-                if (IgThemeEngine.looksLikeResourceId(resId)) {
-                    if (!IgThemeEngine.isInitialized()) {
-                        Resources res = (Resources) param.thisObject;
-                        IgThemeEngine.ensureInitialized(res, cl);
-                    }
-                    Integer override = IgThemeEngine.colorForResource(resId);
-                    if (override != null) param.setResult(override);
-                }
+                if (!IgThemeEngine.isInitialized()) IgThemeEngine.ensureInitialized((Resources) param.thisObject);
+                Integer override = IgThemeEngine.colorForResource((Integer) param.args[0]);
+                if (override != null) param.setResult(override);
             }
 
             @Override
@@ -136,48 +121,9 @@ public class IgThemeHook {
         try {
             XposedHelpers.findAndHookMethod(Resources.class, "getColor", int.class, Resources.Theme.class, hook);
         } catch (Throwable ignored) {}
-        try {
-            XposedHelpers.findAndHookMethod(Resources.class, "getColor", int.class, hook);
-        } catch (Throwable ignored) {}
     }
 
-    private void hookContextGetColor() {
-        XC_MethodHook hook = new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (!IgThemeEngine.themeEnabled() || IgColorRemapEngine.isBypassing()) return;
-                int resId = (Integer) param.args[0];
-                if (IgThemeEngine.looksLikeDirectColor(resId)) {
-                    param.setResult(IgColorRemapEngine.remap(resId));
-                    return;
-                }
-                if (IgThemeEngine.looksLikeResourceId(resId)) {
-                    if (!IgThemeEngine.isInitialized()) {
-                        Context ctx = (Context) param.thisObject;
-                        IgThemeEngine.ensureInitialized(ctx);
-                    }
-                    Integer override = IgThemeEngine.colorForResource(resId);
-                    if (override != null) param.setResult(override);
-                }
-            }
-
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (!IgThemeEngine.themeEnabled() || IgColorRemapEngine.isBypassing()
-                        || param.getThrowable() != null || !IgColorRemapEngine.isReady()) return;
-                if (param.getResult() instanceof Integer resolved) {
-                    int themed = IgThemeEngine.themedColor((Integer) param.args[0], resolved,
-                            IgThemeEngine::colorForResource, IgColorRemapEngine::remap);
-                    if (themed != resolved) param.setResult(themed);
-                }
-            }
-        };
-        try {
-            XposedHelpers.findAndHookMethod(Context.class, "getColor", int.class, hook);
-        } catch (Throwable ignored) {}
-    }
-
-    private void hookTypedArrayGetColor(final ClassLoader cl) {
+    private void hookTypedArrayGetColor() {
         XposedHelpers.findAndHookMethod(TypedArray.class, "getColor", int.class, int.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -188,7 +134,7 @@ public class IgThemeHook {
                     int index = (Integer) param.args[0];
                     if (!IgThemeEngine.isInitialized()) {
                         Resources res = typedArrayResources(ta);
-                        if (res != null) IgThemeEngine.ensureInitialized(res, cl);
+                        IgThemeEngine.ensureInitialized(res);
                     }
                     // A TypedArray keeps no attribute ids, only the color resource each value came
                     // from: theme by that resource's name as Resources.getColor does, else by value.

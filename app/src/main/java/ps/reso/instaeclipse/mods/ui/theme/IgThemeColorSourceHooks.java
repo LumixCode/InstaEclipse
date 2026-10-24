@@ -8,7 +8,6 @@ import android.graphics.BlendModeColorFilter;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 
@@ -222,9 +221,6 @@ final class IgThemeColorSourceHooks {
         }
     }
 
-    // Drawables already checked: true = belongs to the module's own UI (left alone).
-    private static final Map<Drawable, Boolean> DRAW_SEEN = Collections.synchronizedMap(new WeakHashMap<>());
-
     /**
      * The constructor/setColor hooks miss call sites where ART inlined those tiny methods into
      * precompiled framework code (e.g. a header's plain white background). draw() is a virtual
@@ -238,13 +234,6 @@ final class IgThemeColorSourceHooks {
                     JitGuard.tick(p.method);
                     if (!active()) return;
                     ColorDrawable d = (ColorDrawable) p.thisObject;
-                    Boolean moduleUi = DRAW_SEEN.get(d);
-                    if (moduleUi == null) {
-                        Object cb = d.getCallback();
-                        moduleUi = cb instanceof android.view.View && IgColorRemapEngine.isModuleUiView((android.view.View) cb);
-                        DRAW_SEEN.put(d, moduleUi);
-                    }
-                    if (moduleUi) return;
                     int c = d.getColor();
                     int r = IgColorRemapEngine.remap(c);
                     if (r != c) {
