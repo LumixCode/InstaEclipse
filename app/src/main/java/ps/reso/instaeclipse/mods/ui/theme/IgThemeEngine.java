@@ -22,6 +22,8 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 public final class IgThemeEngine {
 
     private static volatile IgThemePalette activePalette;
+    private static volatile int[] activeSlots;
+    private static volatile int night = -1;
     private static volatile SparseIntArray attrToSlot;
     private static volatile SparseIntArray colorResToSlot;
     private static volatile boolean initialized;
@@ -55,14 +57,31 @@ public final class IgThemeEngine {
      */
     public static boolean themeEnabled() {
         if (!FeatureFlags.customThemeEnabled) return false;
-        return FeatureFlags.themeLightPresetId != -1 || isNightNow();
+        return FeatureFlags.themeLightPresetId != -1 || nightCached();
     }
 
     /** Dark mode as Instagram sees it: the foreground activity's configuration (IG's own in-app
      *  dark-mode setting overrides the system one per activity), else the app's, else the system's. */
     public static boolean isNightNow() {
+        return isNight(null);
+    }
+
+    static boolean nightCached() {
+        int n = night;
+        if (n < 0) {
+            refreshNight(null);
+            n = night;
+        }
+        return n == 1;
+    }
+
+    static void refreshNight(Context context) {
+        night = isNight(context) ? 1 : 0;
+    }
+
+    private static boolean isNight(Context context) {
         try {
-            android.content.Context c = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
+            android.content.Context c = context != null ? context : ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
             if (c == null) c = ps.reso.instaeclipse.xposedcompat.AndroidAppHelper.currentApplication();
             android.content.res.Configuration cfg = c != null
                     ? c.getResources().getConfiguration()
@@ -81,14 +100,14 @@ public final class IgThemeEngine {
     public static IgThemePalette getActivePalette() {
         if (FeatureFlags.themeLightPresetId > 0) {
             // A different preset is used in light mode: re-resolve when the mode flips.
-            int night = isNightNow() ? 1 : 0;
+            int night = nightCached() ? 1 : 0;
             if (night != paletteNight) {
                 synchronized (IgThemeEngine.class) {
                     if (night != paletteNight) {
                         boolean flipped = paletteNight != -1;
-                        activePalette = night == 1
+                        use(night == 1
                                 ? resolvePalette()
-                                : ThemePresets.getById(FeatureFlags.themeLightPresetId).palette.copy();
+                                : ThemePresets.getById(FeatureFlags.themeLightPresetId).palette.copy());
                         paletteNight = night;
                         if (flipped) IgColorRemapEngine.invalidate();
                     }
@@ -98,13 +117,25 @@ public final class IgThemeEngine {
         }
         if (activePalette == null) {
             synchronized (IgThemeEngine.class) {
-                if (activePalette == null) activePalette = resolvePalette();
+                if (activePalette == null) use(resolvePalette());
             }
         }
         return activePalette;
     }
 
+    private static void use(IgThemePalette palette) {
+        activeSlots = palette.slots();
+        activePalette = palette;
+    }
+
+    static int slotColor(int slot) {
+        IgThemePalette palette = getActivePalette();
+        int[] slots = activeSlots;
+        return slots != null ? slots[slot] : palette.slots()[slot];
+    }
+
     public static void invalidate() {
+        activeSlots = null;
         activePalette = null;
         paletteNight = -1;
         initialized = false;
@@ -142,7 +173,7 @@ public final class IgThemeEngine {
         if (map == null) return null;
         int slotIndex = map.get(attrId, -1);
         if (slotIndex < 0) return null;
-        return getActivePalette().get(IgThemePalette.SLOT_KEYS[slotIndex]);
+        return slotColor(slotIndex);
     }
 
     public static Integer colorForResource(int resId) {
@@ -153,7 +184,7 @@ public final class IgThemeEngine {
         if (slotIndex < 0) return null;
         Integer fix = IgColorRemapEngine.polarityFix(resId);
         if (fix != null) return fix;
-        return getActivePalette().get(IgThemePalette.SLOT_KEYS[slotIndex]);
+        return slotColor(slotIndex);
     }
 
     static int themedColor(int resId, int resolved, IntFunction<Integer> byResource, IntUnaryOperator byValue) {

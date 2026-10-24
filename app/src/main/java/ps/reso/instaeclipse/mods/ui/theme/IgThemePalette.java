@@ -81,6 +81,11 @@ public class IgThemePalette {
                 icon, glyph, divider, border, statusBar, navigation, link, error, destructive);
     }
 
+    public int[] slots() {
+        return new int[]{background, surface, primaryText, secondaryText, accent, button, icon, glyph,
+                divider, border, statusBar, navigation, link, error, destructive};
+    }
+
     public int get(String key) {
         switch (key) {
             case SLOT_BACKGROUND: return background;

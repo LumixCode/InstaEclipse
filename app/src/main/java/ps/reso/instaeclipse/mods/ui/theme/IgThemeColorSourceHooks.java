@@ -10,10 +10,11 @@ import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
+import android.os.Looper;
 
+import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
 import java.util.WeakHashMap;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -32,8 +33,8 @@ final class IgThemeColorSourceHooks {
     // Source list -> its themed copy, and every themed copy we produced (so it is never re-themed).
     private static final Map<ColorStateList, ColorStateList> CSL_CACHE =
             Collections.synchronizedMap(new WeakHashMap<>());
-    private static final Set<ColorStateList> THEMED =
-            Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
+    private static final Map<ColorStateList, WeakReference<ColorStateList>> THEMED =
+            Collections.synchronizedMap(new WeakHashMap<>());
     private static volatile int cacheGeneration = -1;
 
     private IgThemeColorSourceHooks() {}
@@ -62,11 +63,17 @@ final class IgThemeColorSourceHooks {
 
     /** The themed copy of {@code in} (same states, every color remapped), cached per source list. */
     static ColorStateList theme(ColorStateList in) {
-        if (in == null || !active() || THEMED.contains(in)) return in;
+        if (in == null || !active()) return in;
         int gen = IgColorRemapEngine.generation();
         if (gen != cacheGeneration) {
             CSL_CACHE.clear();
             cacheGeneration = gen;
+        }
+        WeakReference<ColorStateList> origin = THEMED.get(in);
+        if (origin != null) {
+            ColorStateList source = origin.get();
+            if (source == null || CSL_CACHE.get(source) == in) return in;
+            in = source;
         }
         ColorStateList cached = CSL_CACHE.get(in);
         if (cached != null) return cached;
@@ -83,7 +90,7 @@ final class IgThemeColorSourceHooks {
                 }
                 if (changed) {
                     out = new ColorStateList(states, mapped);
-                    THEMED.add(out);
+                    THEMED.put(out, new WeakReference<>(in));
                 }
             }
         } catch (Throwable ignored) {}
@@ -165,6 +172,7 @@ final class IgThemeColorSourceHooks {
     // touch resources, so their colors are themed at Paint.setColor — but only while a Compose view
     // is recording its drawing (UI thread), leaving ordinary views and the module's own UI alone.
     private static int composeDrawDepth;
+    private static final Thread MAIN_THREAD = Looper.getMainLooper().getThread();
     // Paint.setColor runs on every frame long before the first Compose draw: each member ticks once
     // up front, so JitGuard marks its stub before the JIT can compile it (Android 13 crash).
     private static boolean setColorIntTicked, setColorLongTicked;
@@ -188,7 +196,7 @@ final class IgThemeColorSourceHooks {
                         setColorIntTicked = true;
                         JitGuard.tick(p.method);
                     }
-                    if (composeDrawDepth == 0) return;
+                    if (composeDrawDepth == 0 || Thread.currentThread() != MAIN_THREAD) return;
                     JitGuard.tick(p.method);
                     if (!active()) return;
                     int c = (Integer) p.args[0];
@@ -203,7 +211,7 @@ final class IgThemeColorSourceHooks {
                             setColorLongTicked = true;
                             JitGuard.tick(p.method);
                         }
-                        if (composeDrawDepth == 0) return;
+                        if (composeDrawDepth == 0 || Thread.currentThread() != MAIN_THREAD) return;
                         JitGuard.tick(p.method);
                         long c = (Long) p.args[0];
                         if (!active() || !android.graphics.Color.isSrgb(c)) return;

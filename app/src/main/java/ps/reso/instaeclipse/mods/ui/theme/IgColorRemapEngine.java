@@ -21,7 +21,7 @@ public final class IgColorRemapEngine {
     private static volatile boolean built;
     private static volatile SparseIntArray exactTable;
     private static volatile SparseIntArray rgbTable;
-    private static volatile SparseIntArray fuzzyCache;
+    private static volatile FuzzyCache fuzzyCache;
     // Light theme in light mode: resource id -> corrected color for name-mapped resources whose slot
     // would flip ink/paper (see keepLightPolarity). Null when not in that mode.
     private static volatile SparseIntArray resPolarityFix;
@@ -107,17 +107,20 @@ public final class IgColorRemapEngine {
         if (mappedRgb != CACHE_MISS) {
             return (0xFF000000 & color) | (0x00FFFFFF & mappedRgb);
         }
-        SparseIntArray fuzzy = fuzzyCache;
+        return cachedFuzzy(fuzzyCache, color);
+    }
+
+    static int cachedFuzzy(FuzzyCache fuzzy, int color) {
         if (fuzzy != null) {
             int cached = fuzzy.get(color, CACHE_MISS);
             if (cached != CACHE_MISS) return cached;
         }
         int result = remapFuzzy(color);
-        if (fuzzy != null && fuzzy.size() < FUZZY_CACHE_LIMIT) fuzzy.put(color, result);
+        if (fuzzy != null) fuzzy.put(color, result);
         return result;
     }
 
-    private static int remapFuzzy(int color) {
+    static int remapFuzzy(int color) {
         int alpha = (color >>> 24) & 0xFF;
         if (alpha == 0) return color;
         int r = (color >> 16) & 0xFF;
@@ -140,7 +143,7 @@ public final class IgColorRemapEngine {
         return (alpha << 24) | (0x00FFFFFF & target);
     }
 
-    private static void cacheFuzzyPalette(IgThemePalette palette) {
+    static void cacheFuzzyPalette(IgThemePalette palette) {
         fuzzyBg = palette.background;
         fuzzySurface = palette.surface;
         fuzzyPrimary = palette.primaryText;
@@ -178,7 +181,7 @@ public final class IgColorRemapEngine {
         // The canonical table assumes Instagram's dark resources (black = background, white = text).
         // When a light theme runs while Instagram is in light mode, IG draws its text and icons in
         // black, so that assumption would paint them in the light background color and hide them.
-        if (!fuzzyDarkTheme && !IgThemeEngine.isNightNow()) {
+        if (!fuzzyDarkTheme && !IgThemeEngine.nightCached()) {
             keepLightPolarity(exact, palette);
             keepLightPolarity(rgb, palette);
             resPolarityFix = buildResourcePolarityFix(res, palette);
@@ -199,7 +202,59 @@ public final class IgColorRemapEngine {
         }
         exactTable = exact;
         rgbTable = rgb;
-        fuzzyCache = new SparseIntArray(256);
+        fuzzyCache = new FuzzyCache(FUZZY_CACHE_LIMIT);
+    }
+
+    static final class FuzzyCache {
+        private final int[] keys;
+        private final int[] values;
+        private final int mask;
+        private final int limit;
+        private int size;
+
+        FuzzyCache(int limit) {
+            this.limit = limit;
+            int capacity = Integer.highestOneBit(Math.max(1, limit) * 2 - 1) << 1;
+            keys = new int[capacity];
+            values = new int[capacity];
+            mask = capacity - 1;
+        }
+
+        synchronized int get(int key, int miss) {
+            if (key == 0) return miss;
+            for (int i = index(key); ; i = (i + 1) & mask) {
+                int k = keys[i];
+                if (k == key) return values[i];
+                if (k == 0) return miss;
+            }
+        }
+
+        synchronized void put(int key, int value) {
+            if (key == 0) return;
+            for (int i = index(key); ; i = (i + 1) & mask) {
+                int k = keys[i];
+                if (k == key) {
+                    values[i] = value;
+                    return;
+                }
+                if (k == 0) {
+                    if (size >= limit) return;
+                    keys[i] = key;
+                    values[i] = value;
+                    size++;
+                    return;
+                }
+            }
+        }
+
+        synchronized int size() {
+            return size;
+        }
+
+        private int index(int key) {
+            int h = key * 0x9E3779B9;
+            return (h ^ (h >>> 16)) & mask;
+        }
     }
 
     static final Object[][] CANONICAL = {

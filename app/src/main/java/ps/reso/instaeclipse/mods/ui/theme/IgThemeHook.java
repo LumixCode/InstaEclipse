@@ -160,8 +160,9 @@ public class IgThemeHook {
         XposedHelpers.findAndHookMethod(Activity.class, "onResume", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (!IgThemeEngine.isActive()) return;
                 Activity activity = (Activity) param.thisObject;
+                IgThemeEngine.refreshNight(activity);
+                if (!IgThemeEngine.isActive()) return;
                 IgThemeEngine.ensureInitialized(activity);
                 IgColorRemapEngine.ensureBuilt(activity);
                 applyWindowColors(activity);
@@ -173,8 +174,9 @@ public class IgThemeHook {
                 // Build the remap table before the activity inflates its layout (setContentView runs
                 // inside onCreate); otherwise the first header/feed backgrounds are created unthemed
                 // and then reused from Android's drawable cache.
-                if (!IgThemeEngine.isActive()) return;
                 Activity activity = (Activity) param.thisObject;
+                IgThemeEngine.refreshNight(activity);
+                if (!IgThemeEngine.isActive()) return;
                 IgThemeEngine.ensureInitialized(activity);
                 IgColorRemapEngine.ensureBuilt(activity);
             }
@@ -233,6 +235,7 @@ public class IgThemeHook {
         }
         Activity activity = UIHookManager.getCurrentActivity();
         if (activity == null || activity.isFinishing() || activity.isDestroyed()) return false;
+        IgThemeEngine.refreshNight(activity);
         // Off before and after (a restore or reset re-sending the keys): nothing on screen changes.
         if (!wasShown && !themeShown) return false;
         IgThemeEngine.ensureInitialized(activity);
