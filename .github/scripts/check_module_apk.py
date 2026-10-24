@@ -21,9 +21,7 @@ REQUIRED_CLASSES = (
 )
 REQUIRED_METHODS = (
     ("Lps/reso/instaeclipse/Xposed/ModernEntry;->", "<init>()V", True),
-    ("Lorg/luckypray/dexkit/query/base/BaseQuery;->", "innerBuild(Lcom/google/flatbuffers/FlatBufferBuilder;)I", False),
-    ("Lcom/google/flatbuffers/FlatBufferBuilder;->", "<init>()V", False),
-    ("Lcom/google/flatbuffers/FlatBufferBuilder;->", "sizedByteArray()[B", False),
+    ("Lorg/luckypray/dexkit/query/base/BaseFinder;->", "hashKey()Ljava/lang/String;", True),
 )
 COMPONENT_TAGS = ("application", "activity", "activity-alias", "service", "receiver", "provider")
 
