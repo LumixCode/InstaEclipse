@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
@@ -51,6 +52,7 @@ import ps.reso.instaeclipse.utils.core.InstagramRestarter;
 import ps.reso.instaeclipse.utils.core.PermissionAsk;
 import ps.reso.instaeclipse.utils.core.RestartDecision;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
+import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
 import ps.reso.instaeclipse.utils.log.LogMirrorProvider;
 
 public class HomeFragment extends Fragment implements TabFragment {
@@ -62,49 +64,6 @@ public class HomeFragment extends Fragment implements TabFragment {
     private static final int COLOR_WARN = 0xFFFF9F0A;
     private static final int COLOR_ERROR = 0xFFFF453A;
     private static final int COLOR_INSTAGRAM = 0xFFFF375F;
-
-    /**
-     * Boolean pref keys that represent user-facing features (mirrors the switches in
-     * FeaturesFragment). Quick-toggle menu config (quickToggle*), Extreme Mode and derived flags
-     * are deliberately excluded so the hero count reflects actual enabled features.
-     */
-    private static final String[] FEATURE_KEYS = {
-            // Ghost mode
-            "isGhostSeen", "isGhostTyping", "isGhostStory", "isGhostLive", "allowScreenshots",
-            "isGhostScreenshot", "isGhostViewOnce", "permanentViewMode", "keepEphemeralMessages",
-            "keepUnsentMessages", "keepEditHistory", "jumpToFirstMessage", "hideChatMenuButton", "translateMessages", "bulkUnsend", "chatExport",
-            "manualStorySeen", "showUnsentIndicator",
-            // Ads & analytics
-            "isAdBlockEnabled", "isAnalyticsBlocked", "disableTrackingLinks", "openLinksExternally",
-            // Clean feed
-            "hideSuggestionsInFeed", "hideThreadsSuggestions", "hideLikedPosts", "confirmFeedRefresh", "hideCommunityNotes", "followingOnlyFeed",
-            "hidePlusUpsells", "expandCaptions",
-            // Distraction-free
-            "disableStories", "disableFeed", "disableReels", "disableReelsExceptDM", "disableExplore",
-            "disableComments", "hideNotesTray", "hideDmSuggestions", "hideInstants", "hideDmBlend", "hideThreadsButton", "readReceiptChats",
-            "dailyReelLimitEnabled", "nightReelBlockEnabled",
-            // Navigation bar
-            "hideTabHome", "hideTabReels", "hideTabCreate", "hideTabMessages", "hideTabActivity", "hideTabProfile", "backLeavesHome",
-            // Misc
-            "disableStoryFlipping", "disableVideoAutoPlay", "spoofLastSeen", "disableSearchHistory", "confirmCalls", "disableRepost", "showFollowerToast",
-            "showFeatureToasts", "enableStoryMentions", "disableDiscoverPeople", "enableCopyComment",
-            "disableDoubleTapLike", "enableCaptionCopy", "enablePhotoZoom", "removeMetaAI",
-            "hideShareCreateGroup", "exactTimestamps", "likeUndo", "confirmLikes", "confirmFollows", "profileMenuTools", "postCountSpoof", "profileSpoofer", "profileAnalyzer", "fancyBioFont", "showFollowStatusLabel", "savedOnProfile",
-            "storyViewerSearch", "storyLinks", "storyInfo", "commentSearch", "followListExport", "followersHistory",
-            "showFollowingFollowStatus", "unlockPlusBenefits",
-            // Lock / hide chats
-            "lockDirectMessages", "lockWholeApp", "lockSavedCollections", "lockUseFingerprint",
-            "lockSpecificMessages", "hideSpecificChats",
-            // Location / theme
-            "spoofLocation", "customThemeEnabled", "customFontEnabled", "customEmojiEnabled",
-            // Downloader
-            "enablePostDownload", "enableStoryDownload", "enableReelDownload", "enableProfileDownload",
-            "downloaderUsernameFolder", "downloaderAddTimestamp", "copyMediaLink", "offerAudioDownload",
-            "enableVoiceDownload", "enableStickerDownload", "enableDmMediaDownload", "offerCopyImage", "offerMediaInfo", "offerPlaybackSpeed",
-            "forceReelScrubber", "holdLeftSlowMotion", "maxUploadQuality", "saveInstants", "uploadInstants", "cacheStories",
-            // Developer
-            "isDevEnabled", "removeBuildExpiredPopup"
-    };
 
     /** Distraction keys FeaturesFragment locks while Extreme Mode is on. */
     private static final List<String> EXTREME_LOCKED = Arrays.asList(
@@ -456,14 +415,27 @@ public class HomeFragment extends Fragment implements TabFragment {
 
     private void updateFeatureCount() {
         if (featuresCountText == null) return;
-        int count = 0;
-        for (String key : FEATURE_KEYS) {
-            if (localCache.getBoolean(key, false)) count++;
-        }
-        for (String key : ps.reso.instaeclipse.utils.feature.ExtrasFeatures.flags()) {
-            if (localCache.getBoolean(key, false)) count++;
-        }
+        int count = FeatureCatalog.countAll(cacheValues(localCache.getAll()));
         featuresCountText.setText(getResources().getQuantityString(R.plurals.home_features_enabled, count, count));
+    }
+
+    private static FeatureCatalog.Values cacheValues(Map<String, ?> all) {
+        return new FeatureCatalog.Values() {
+            @Override public boolean bool(String key, boolean def) {
+                Object v = all.get(key);
+                return v instanceof Boolean ? (Boolean) v : def;
+            }
+
+            @Override public int integer(String key, int def) {
+                Object v = all.get(key);
+                return v instanceof Integer ? (Integer) v : def;
+            }
+
+            @Override public String string(String key, String def) {
+                Object v = all.get(key);
+                return v instanceof String ? (String) v : def;
+            }
+        };
     }
 
     private void pingModule() {

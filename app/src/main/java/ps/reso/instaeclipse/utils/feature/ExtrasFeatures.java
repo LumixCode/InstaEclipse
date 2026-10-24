@@ -15,25 +15,23 @@ public final class ExtrasFeatures {
     public static final class Entry {
         public final String flag;
         public final int label;
-        public final int icon;
 
-        Entry(String flag, int label, int icon) {
+        Entry(String flag, int label) {
             this.flag = flag;
             this.label = label;
-            this.icon = icon;
         }
     }
 
     public static final Entry[] ALL = {
-            new Entry("disableSwipeToCamera", R.string.ig_dialog_extras_no_swipe_camera, R.drawable.ic_camera),
-            new Entry("reelsAutoScroll", R.string.ig_dialog_extras_reels_auto_scroll, R.drawable.ic_movie),
-            new Entry("reelsLockScroll", R.string.ig_dialog_extras_reels_lock_scroll, R.drawable.ic_movie),
-            new Entry("unlimitedAccounts", R.string.ig_dialog_extras_unlimited_accounts, R.drawable.ic_settings_gear),
-            new Entry("airplaneMode", R.string.ig_dialog_extras_airplane_mode, R.drawable.ic_eye_off),
-            new Entry("highResolutionImages", R.string.ig_dialog_extras_high_res_images, R.drawable.ic_gallery),
-            new Entry("hideOnboardingPrompts", R.string.ig_dialog_extras_hide_onboarding, R.drawable.ic_block),
-            new Entry("fixNotificationRegistration", R.string.ig_dialog_extras_fix_notifications, R.drawable.ic_notification),
-            new Entry("hideStoriesTray", R.string.ig_dialog_extras_hide_stories_tray, R.drawable.ic_story_ring),
+            new Entry("disableSwipeToCamera", R.string.ig_dialog_extras_no_swipe_camera),
+            new Entry("reelsAutoScroll", R.string.ig_dialog_extras_reels_auto_scroll),
+            new Entry("reelsLockScroll", R.string.ig_dialog_extras_reels_lock_scroll),
+            new Entry("unlimitedAccounts", R.string.ig_dialog_extras_unlimited_accounts),
+            new Entry("airplaneMode", R.string.cat_airplaneMode),
+            new Entry("highResolutionImages", R.string.ig_dialog_extras_high_res_images),
+            new Entry("hideOnboardingPrompts", R.string.ig_dialog_extras_hide_onboarding),
+            new Entry("fixNotificationRegistration", R.string.cat_fixNotificationRegistration),
+            new Entry("hideStoriesTray", R.string.ig_dialog_extras_hide_stories_tray),
     };
 
     private ExtrasFeatures() {}

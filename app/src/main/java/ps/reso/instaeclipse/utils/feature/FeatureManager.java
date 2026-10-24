@@ -7,7 +7,7 @@ public class FeatureManager {
     public static void refreshFeatureStatus() {
         // Developer Options
         if (FeatureFlags.isDevEnabled) {
-            FeatureStatusTracker.setEnabled("DevOptions", R.string.ig_dialog_section_dev_options);
+            FeatureStatusTracker.setEnabled("DevOptions", R.string.ig_dialog_dev_enable);
         } else {
             FeatureStatusTracker.setDisabled("DevOptions");
         }
@@ -51,7 +51,7 @@ public class FeatureManager {
         }
 
         if (FeatureFlags.allowScreenshots) {
-            FeatureStatusTracker.setEnabled("AllowScreenshots", R.string.ig_dialog_ghost_allow_screenshots_dms);
+            FeatureStatusTracker.setEnabled("AllowScreenshots", R.string.cat_allowScreenshots);
         } else {
             FeatureStatusTracker.setDisabled("AllowScreenshots");
         }
@@ -63,8 +63,8 @@ public class FeatureManager {
         }
 
         if (FeatureFlags.permanentViewMode) {
-            FeatureStatusTracker.setEnabled("PermanentViewMode", R.string.ig_dialog_ghost_permanent_view_once);
-            FeatureStatusTracker.setEnabled("ViewOnceBadge", R.string.ig_feature_view_once_badge);
+            FeatureStatusTracker.setEnabled("PermanentViewMode", R.string.cat_permanentViewMode);
+            FeatureStatusTracker.setEnabled("ViewOnceBadge", R.string.cat_permanentViewMode);
         } else {
             FeatureStatusTracker.setDisabled("PermanentViewMode");
             FeatureStatusTracker.setDisabled("ViewOnceBadge");
@@ -93,7 +93,7 @@ public class FeatureManager {
         }
 
         if (FeatureFlags.hideSpecificChats) {
-            FeatureStatusTracker.setEnabled("HideSpecificChats", R.string.ig_hide_chats_title);
+            FeatureStatusTracker.setEnabled("HideSpecificChats", R.string.ig_dialog_misc_hide_chats);
         } else {
             FeatureStatusTracker.setDisabled("HideSpecificChats");
         }
@@ -112,7 +112,7 @@ public class FeatureManager {
         }
 
         if (FeatureFlags.expandCaptions) {
-            FeatureStatusTracker.setEnabled("ExpandCaptions", R.string.ig_dialog_clean_feed_expand_captions);
+            FeatureStatusTracker.setEnabled("ExpandCaptions", R.string.cat_expandCaptions);
         } else {
             FeatureStatusTracker.setDisabled("ExpandCaptions");
         }
@@ -151,13 +151,13 @@ public class FeatureManager {
 
         // Both profile-label hooks (ProfileFollowStatusHook, ProfileFollowsYouHook) report this key.
         if (FeatureFlags.showFollowStatusLabel) {
-            FeatureStatusTracker.setEnabled("FollowStatusLabel", R.string.ig_dialog_misc_profile_follows_label);
+            FeatureStatusTracker.setEnabled("FollowStatusLabel", R.string.cat_showFollowStatusLabel);
         } else {
             FeatureStatusTracker.setDisabled("FollowStatusLabel");
         }
 
         if (FeatureFlags.likeUndo) {
-            FeatureStatusTracker.setEnabled("LikeUndo", R.string.ig_dialog_misc_like_undo);
+            FeatureStatusTracker.setEnabled("LikeUndo", R.string.cat_likeUndo);
         } else {
             FeatureStatusTracker.setDisabled("LikeUndo");
         }
@@ -211,13 +211,13 @@ public class FeatureManager {
         }
 
         if (FeatureFlags.customThemeEnabled) {
-            FeatureStatusTracker.setEnabled("CustomTheme", R.string.theme_title);
+            FeatureStatusTracker.setEnabled("CustomTheme", R.string.theme_enable);
         } else {
             FeatureStatusTracker.setDisabled("CustomTheme");
         }
 
         if (FeatureFlags.removeBuildExpiredPopup) {
-            FeatureStatusTracker.setEnabled("RemoveBuildExpiredPopup", R.string.ig_dialog_dev_remove_build_expired);
+            FeatureStatusTracker.setEnabled("RemoveBuildExpiredPopup", R.string.cat_removeBuildExpiredPopup);
         } else {
             FeatureStatusTracker.setDisabled("RemoveBuildExpiredPopup");
         }
@@ -229,19 +229,19 @@ public class FeatureManager {
         }
 
         if (FeatureFlags.copyMediaLink) {
-            FeatureStatusTracker.setEnabled("CopyMediaLink", R.string.ig_copy_link_title);
+            FeatureStatusTracker.setEnabled("CopyMediaLink", R.string.ig_dialog_downloader_copy_link);
         } else {
             FeatureStatusTracker.setDisabled("CopyMediaLink");
         }
 
         if (FeatureFlags.saveInstants) {
-            FeatureStatusTracker.setEnabled("SaveInstants", R.string.ig_instant_save_title);
+            FeatureStatusTracker.setEnabled("SaveInstants", R.string.cat_saveInstants);
         } else {
             FeatureStatusTracker.setDisabled("SaveInstants");
         }
 
         if (FeatureFlags.uploadInstants) {
-            FeatureStatusTracker.setEnabled("UploadInstants", R.string.ig_instant_upload_title);
+            FeatureStatusTracker.setEnabled("UploadInstants", R.string.ig_dialog_misc_upload_instants);
         } else {
             FeatureStatusTracker.setDisabled("UploadInstants");
         }
@@ -253,13 +253,13 @@ public class FeatureManager {
         }
 
         if (FeatureFlags.customFontEnabled) {
-            FeatureStatusTracker.setEnabled("CustomFont", R.string.ig_custom_font_title);
+            FeatureStatusTracker.setEnabled("CustomFont", R.string.ig_dialog_misc_custom_font);
         } else {
             FeatureStatusTracker.setDisabled("CustomFont");
         }
 
         if (FeatureFlags.customEmojiEnabled) {
-            FeatureStatusTracker.setEnabled("CustomEmoji", R.string.ig_custom_emoji_title);
+            FeatureStatusTracker.setEnabled("CustomEmoji", R.string.ig_dialog_misc_custom_emoji);
         } else {
             FeatureStatusTracker.setDisabled("CustomEmoji");
         }
@@ -289,48 +289,47 @@ public class FeatureManager {
         }
 
         // ── Newer features (concise labels for the load toast's dense grid) ───
-        reg(FeatureFlags.chatExport,           "ChatExport",           R.string.ig_chat_export);
+        reg(FeatureFlags.chatExport,           "ChatExport",           R.string.cat_chatExport);
         reg(FeatureFlags.fancyBioFont,         "FancyBioFont",         R.string.ig_dialog_fancy_bio_font);
-        reg(FeatureFlags.keepEditHistory,      "EditHistory",          R.string.ig_feat_edit_history);
-        reg(FeatureFlags.jumpToFirstMessage,   "JumpToFirstMessage",   R.string.ig_jump_first_message);
-        reg(FeatureFlags.translateMessages,    "ChatTranslate",        R.string.ig_dialog_translate_messages);
+        reg(FeatureFlags.keepEditHistory,      "EditHistory",          R.string.ig_dialog_ghost_edit_history);
+        reg(FeatureFlags.jumpToFirstMessage,   "JumpToFirstMessage",   R.string.cat_jumpToFirstMessage);
+        reg(FeatureFlags.translateMessages,    "ChatTranslate",        R.string.cat_translateMessages);
         reg(FeatureFlags.bulkUnsend,           "BulkUnsend",           R.string.ig_dialog_bulk_unsend);
-        reg(FeatureFlags.lockSavedCollections, "LockSavedCollections", R.string.ig_feat_lock_collections);
+        reg(FeatureFlags.lockSavedCollections, "LockSavedCollections", R.string.cat_lockSavedCollections);
         reg(FeatureFlags.disableRepost,        "DisableRepost",        R.string.ig_dialog_misc_disable_repost);
-        reg(FeatureFlags.commentSearch,        "CommentSearch",        R.string.ig_feat_comment_search);
-        reg(FeatureFlags.storyViewerSearch,    "StoryViewerSearch",    R.string.ig_feat_viewer_search);
-        reg(FeatureFlags.storyLinks,           "StoryLinks",           R.string.ig_feat_story_links);
-        reg(FeatureFlags.storyInfo,            "StoryInfo",            R.string.ig_feat_story_info);
-        reg(FeatureFlags.followListExport,     "FollowListExport",     R.string.ig_feat_follow_export);
-        reg(FeatureFlags.followersHistory,     "FollowersHistory",     R.string.ig_feat_followers_history);
-        reg(FeatureFlags.savedOnProfile,       "SavedOnProfile",       R.string.ig_feat_saved_on_profile);
-        reg(FeatureFlags.hideNotesTray,        "HideNotesTray",        R.string.ig_feat_hide_notes);
+        reg(FeatureFlags.commentSearch,        "CommentSearch",        R.string.ig_dialog_misc_comment_search);
+        reg(FeatureFlags.storyViewerSearch,    "StoryViewerSearch",    R.string.ig_dialog_misc_viewer_search);
+        reg(FeatureFlags.storyLinks,           "StoryLinks",           R.string.ig_dialog_misc_story_links);
+        reg(FeatureFlags.storyInfo,            "StoryInfo",            R.string.ig_dialog_misc_story_info);
+        reg(FeatureFlags.followListExport,     "FollowListExport",     R.string.ig_dialog_misc_follow_export);
+        reg(FeatureFlags.savedOnProfile,       "SavedOnProfile",       R.string.ig_saved_on_profile);
+        reg(FeatureFlags.hideNotesTray,        "HideNotesTray",        R.string.ig_dialog_distraction_hide_notes_tray);
         reg(FeatureFlags.hideDmSuggestions,    "HideDmSuggestions",    R.string.ig_hide_dm_suggestions);
         reg(FeatureFlags.confirmLikes,         "ConfirmLikes",         R.string.ig_confirm_likes);
         reg(FeatureFlags.confirmFollows,       "ConfirmFollows",       R.string.ig_confirm_follows);
-        reg(FeatureFlags.profileMenuTools,     "ProfileMenuTools",     R.string.ig_profile_menu_tools);
-        reg(FeatureFlags.postCountSpoof,       "PostCountSpoof",       R.string.ig_post_counts_feature);
-        reg(FeatureFlags.profileSpoofer,       "ProfileSpoofer",       R.string.ig_profile_spoofer);
-        reg(FeatureFlags.profileAnalyzer,      "ProfileAnalyzer",      R.string.ig_profile_analyzer);
+        reg(FeatureFlags.profileMenuTools,     "ProfileMenuTools",     R.string.cat_profileMenuTools);
+        reg(FeatureFlags.postCountSpoof,       "PostCountSpoof",       R.string.cat_postCountSpoof);
+        reg(FeatureFlags.profileSpoofer,       "ProfileSpoofer",       R.string.cat_profileSpoofer);
+        reg(FeatureFlags.profileAnalyzer,      "ProfileAnalyzer",      R.string.cat_profileAnalyzer);
         reg(FeatureFlags.hideInstants,         "HideInstants",         R.string.ig_hide_instants);
         reg(FeatureFlags.backLeavesHome,       "BackLeavesHome",       R.string.ig_back_leaves_home);
-        reg(FeatureFlags.hideDmBlend,          "HideDmBlend",          R.string.ig_feat_hide_blend);
-        reg(FeatureFlags.readReceiptChats,     "ReadReceiptChats",     R.string.ig_feat_read_receipt_chats);
-        reg(FeatureFlags.hideThreadsButton,    "HideThreadsButton",    R.string.ig_feat_hide_threads);
-        reg(FeatureFlags.offerPlaybackSpeed,   "PlaybackSpeed",        R.string.ig_playback_speed_title);
-        reg(FeatureFlags.holdLeftSlowMotion,   "HoldSlowMotion",       R.string.ig_dialog_reels_hold_left_slow);
-        reg(FeatureFlags.enableVoiceDownload,  "VoiceDownload",        R.string.ig_feat_voice_download);
-        reg(FeatureFlags.enableStickerDownload, "StickerDownload",     R.string.ig_feat_sticker_download);
+        reg(FeatureFlags.hideDmBlend,          "HideDmBlend",          R.string.ig_dialog_hide_dm_blend);
+        reg(FeatureFlags.readReceiptChats,     "ReadReceiptChats",     R.string.ig_dialog_ghost_read_receipt_chats);
+        reg(FeatureFlags.hideThreadsButton,    "HideThreadsButton",    R.string.ig_dialog_hide_threads_button);
+        reg(FeatureFlags.offerPlaybackSpeed,   "PlaybackSpeed",        R.string.cat_offerPlaybackSpeed);
+        reg(FeatureFlags.holdLeftSlowMotion,   "HoldSlowMotion",       R.string.cat_holdLeftSlowMotion);
+        reg(FeatureFlags.enableVoiceDownload,  "VoiceDownload",        R.string.cat_enableVoiceDownload);
+        reg(FeatureFlags.enableStickerDownload, "StickerDownload",     R.string.cat_enableStickerDownload);
         reg(!FeatureFlags.storyRingColor.isEmpty(), "StoryRingColor",  R.string.ig_story_ring_color);
         reg(FeatureFlags.feedCornerRadius > 0, "RoundedFeedPosts",     R.string.ig_feed_corner_radius);
         reg(FeatureFlags.disableSearchHistory, "DisableSearchHistory", R.string.ig_disable_search_history);
         reg(FeatureFlags.confirmCalls,         "ConfirmCalls",         R.string.ig_call_confirm);
-        reg(FeatureFlags.enableDmMediaDownload, "DmMediaDownload",     R.string.ig_dialog_downloader_dm_media);
-        reg(FeatureFlags.maxUploadQuality,     "MaxUploadQuality",     R.string.ig_feat_max_upload_quality);
+        reg(FeatureFlags.enableDmMediaDownload, "DmMediaDownload",     R.string.cat_enableDmMediaDownload);
+        reg(FeatureFlags.maxUploadQuality,     "MaxUploadQuality",     R.string.ig_dialog_max_upload_quality);
         reg(FeatureFlags.enableCaptionCopy,    "CaptionCopy",          R.string.ig_dialog_misc_copy_caption);
         reg(FeatureFlags.enableCopyComment,    "CopyComment",          R.string.ig_dialog_misc_copy_comment);
-        reg(FeatureFlags.enablePhotoZoom,      "PhotoZoom",            R.string.ig_feat_photo_zoom);
-        reg(FeatureFlags.unlockPlusBenefits,   "UnlockPlusBenefits",   R.string.ig_feature_unlock_plus);
+        reg(FeatureFlags.enablePhotoZoom,      "PhotoZoom",            R.string.cat_enablePhotoZoom);
+        reg(FeatureFlags.unlockPlusBenefits,   "UnlockPlusBenefits",   R.string.cat_unlockPlusBenefits);
         reg(FeatureFlags.nightReelBlockEnabled, "NightReelBlock",      R.string.ig_night_reels_enable);
         reg(FeatureFlags.dailyReelLimitEnabled, "DailyReelLimit",      R.string.ig_reel_limit_enable);
         // Child rows count only while their parent feature is on; the child preference is kept.
@@ -350,7 +349,7 @@ public class FeatureManager {
         reg(FeatureFlags.offerAudioDownload,   "AudioDownload",        R.string.ig_dialog_downloader_offer_audio);
         reg(FeatureFlags.offerCopyImage,       "CopyImage",            R.string.ig_dialog_downloader_offer_copy_image);
         reg(FeatureFlags.offerMediaInfo,       "MediaInfo",            R.string.ig_dialog_downloader_offer_media_info);
-        reg(!FeatureFlags.spoofDevice.isEmpty(), "SpoofDevice",        R.string.ig_spoof_device);
+        reg(!FeatureFlags.spoofDevice.isEmpty(), "SpoofDevice",        R.string.cat_spoofDevice);
         reg(FeatureFlags.storyTrayScale < 100, "StoryTraySize",        R.string.ig_story_tray_size);
         reg(FeatureFlags.autoClearCache,       "AutoClearCache",       R.string.ig_dialog_auto_clear_cache);
         reg(FeatureFlags.hideTabHome || FeatureFlags.hideTabReels || FeatureFlags.hideTabCreate

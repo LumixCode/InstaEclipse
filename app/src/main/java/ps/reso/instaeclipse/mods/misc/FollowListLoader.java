@@ -436,7 +436,7 @@ final class FollowListLoader {
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {
             ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-            if (!FeatureFlags.followListExport && !FeatureFlags.followersHistory && !FeatureFlags.profileAnalyzer) return;
+            if (!FeatureFlags.followListExport && !FeatureFlags.profileAnalyzer) return;
             Load l = current;
             try {
                 if (l != null) l.page(param.thisObject);

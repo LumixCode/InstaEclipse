@@ -63,7 +63,7 @@ public class FollowListExportHook {
             XposedBridge.hookMethod(ovc, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if ((!FeatureFlags.followListExport && !FeatureFlags.followersHistory && !FeatureFlags.profileAnalyzer)
+                    if ((!FeatureFlags.followListExport && !FeatureFlags.profileAnalyzer)
                             || !fragClass.isInstance(param.thisObject)) return;
                     if (param.args[0] instanceof View root) {
                         live.put(param.thisObject, new java.lang.ref.WeakReference<>(root));
@@ -97,7 +97,6 @@ public class FollowListExportHook {
 
     private static void broken() {
         if (FeatureFlags.followListExport) FeatureStatusTracker.setBroken("FollowListExport");
-        if (FeatureFlags.followersHistory) FeatureStatusTracker.setBroken("FollowersHistory");
         if (FeatureFlags.profileAnalyzer) FeatureStatusTracker.setBroken("ProfileAnalyzer");
     }
 
