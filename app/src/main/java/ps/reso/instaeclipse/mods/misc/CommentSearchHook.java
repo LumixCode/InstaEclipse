@@ -1,8 +1,6 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import android.app.Activity;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
@@ -39,12 +37,18 @@ import java.util.Set;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.mods.media.DownloadFiles;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
+import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.text.CopyFeedback;
+import ps.reso.instaeclipse.utils.text.HtmlExport;
 import ps.reso.instaeclipse.utils.text.MediaIds;
+import ps.reso.instaeclipse.utils.ui.A11yIds;
+import ps.reso.instaeclipse.utils.ui.IePalette;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
@@ -369,54 +373,15 @@ public class CommentSearchHook {
             String[] row = {user, j.optString("text", ""), id, parent,
                     j.optString("comment_like_count", ""), j.optString("child_comment_count", ""), j.optString("created_at", ""),
                     j.optString("media_id", ""), "", ""};
-            String[] media = commentMedia(j);
+            String[] media = CommentSearchPolicy.commentMedia(j);
             row[8] = media[0];
             row[9] = media[1];
-            if (row[1].isEmpty() && !media[0].isEmpty()) row[1] = "gif".equals(media[1]) ? "🖼 GIF" : "🖼 Image";
             ROW_CACHE.put(c, row);
             return row;
         } catch (Throwable t) {
             if (!rowLogged) { rowLogged = true; ModuleLog.warn(TAG + "Some comment details (likes, dates, replies) could not be read; search and export still use the text: " + (t.getCause() != null ? t.getCause() : t)); }
             return null;
         }
-    }
-
-    /** {url, "gif" | "image"} of a GIF / image comment ("" when it has none). */
-    private static String[] commentMedia(org.json.JSONObject j) {
-        org.json.JSONObject gif = j.optJSONObject("giphy_media_info");
-        if (gif != null) {
-            String u = firstUrl(gif, 0);
-            if (!u.isEmpty()) return new String[]{u, "gif"};
-        }
-        for (String k : new String[]{"media_info", "media_comment_info", "media"}) {
-            Object o = j.opt(k);
-            if (o instanceof org.json.JSONObject || o instanceof org.json.JSONArray) {
-                String u = firstUrl(o, 0);
-                if (!u.isEmpty()) return new String[]{u, u.contains(".gif") || u.contains("giphy") ? "gif" : "image"};
-            }
-        }
-        return new String[]{"", ""};
-    }
-
-    /** First image-looking https URL in a JSON tree (keys named url / uri first). */
-    private static String firstUrl(Object o, int depth) {
-        if (o == null || depth > 6) return "";
-        if (o instanceof org.json.JSONObject jo) {
-            for (String k : new String[]{"url", "uri", "image_url"}) {
-                String v = jo.optString(k, "");
-                if (v.startsWith("https://")) return v;
-            }
-            for (java.util.Iterator<String> it = jo.keys(); it.hasNext(); ) {
-                String r = firstUrl(jo.opt(it.next()), depth + 1);
-                if (!r.isEmpty()) return r;
-            }
-        } else if (o instanceof org.json.JSONArray ja) {
-            for (int i = 0; i < ja.length() && i < 10; i++) {
-                String r = firstUrl(ja.opt(i), depth + 1);
-                if (!r.isEmpty()) return r;
-            }
-        }
-        return "";
     }
 
     private static boolean rowLogged;
@@ -1023,7 +988,7 @@ public class CommentSearchHook {
                     int lead = rtl ? listLoc[0] + l.getWidth() - bounds.right : bounds.left - listLoc[0];
                     if (!bounds.isEmpty() && lead < edge) return id;
                 }
-                for (int i = n.getChildCount() - 1; i >= 0; i--) stack.push((int) (((long) childIdMethod().invoke(n, i)) >> 32));
+                for (int i = n.getChildCount() - 1; i >= 0; i--) stack.push(A11yIds.childId(n, i));
             }
             return NONE;
         }
@@ -1044,7 +1009,7 @@ public class CommentSearchHook {
             try {
                 android.view.accessibility.AccessibilityNodeInfo cur = n;
                 for (int up = 0; up < 8 && cur != null; up++) {
-                    int parent = (int) (((long) parentIdMethod().invoke(cur)) >> 32);
+                    int parent = A11yIds.parentId(cur);
                     cur = p.createAccessibilityNodeInfo(parent);
                     if (cur != null && cur.isScrollable()) {
                         cur.getBoundsInScreen(r);
@@ -1122,27 +1087,36 @@ public class CommentSearchHook {
     }
 
     private static void showSearch(Context c) {
-        // The icon's own activity: the "current" one can be a different, hidden activity (e.g. the
-        // main activity behind UrlHandlerActivity when the post was opened from a link).
         Activity act = null;
         for (Context k = c; k != null; k = k instanceof android.content.ContextWrapper w ? w.getBaseContext() : null)
             if (k instanceof Activity a) { act = a; break; }
-        if (act == null) act = UIHookManager.getCurrentActivity();
-        final Context ctx = act != null ? act : c;
-        final float d = ctx.getResources().getDisplayMetrics().density;
-        final boolean dark = (ctx.getResources().getConfiguration().uiMode
-                & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
-        final int cBg = dark ? 0xFF1C1C1E : 0xFFFFFFFF;
-        final int cField = dark ? 0xFF2C2C2E : 0xFFEFEFF2;
-        final int cText = dark ? 0xFFF5F5F5 : 0xFF111111;
-        final int cSub = dark ? 0xFF9A9AA0 : 0xFF6B6B70;
-        final int cDivider = dark ? 0x22FFFFFF : 0x14000000;
-        final int cAccent = ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine.accentOr(0xFF0095F6);
-        final int cHighlight = dark ? 0x660095F6 : 0x400095F6;
-
+        if (act == null) act = UIHookManager.topActivity();
         Object state = lastState.get();
         if (state != null) latest = collect(state);
-        final List<String[]> all = new ArrayList<>(latest);
+        searchDialog(act != null ? act : c, new ArrayList<>(latest));
+    }
+
+    static android.app.Dialog searchDialog(Context ctx, List<String[]> all) {
+        final float d = ctx.getResources().getDisplayMetrics().density;
+        final IePalette palette = IePalette.of(ctx);
+        final int cBg = palette.dialog;
+        final int cField = palette.field;
+        final int cText = palette.text;
+        final int cSub = palette.sub;
+        final int cAccent = palette.accent;
+        final int cAccentText = IePalette.readable(cAccent, cBg, IePalette.TEXT);
+        final int cHighlight = IePalette.withAlpha(cAccent, palette.dark ? 0x66 : 0x40);
+        final float metaSp = 12;
+        final android.graphics.drawable.Drawable heart = IeDialog.igIcon(ctx, "instagram_heart_outline_24", cSub);
+        if (heart != null) {
+            int size = Math.round(android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP,
+                    metaSp, ctx.getResources().getDisplayMetrics()));
+            heart.setBounds(0, 0, size, size);
+        }
+        final java.text.NumberFormat counts = java.text.NumberFormat.getIntegerInstance();
+        final String gifLabel = "🖼 " + I18n.t(ctx, R.string.ig_comment_media_gif);
+        final String imageLabel = "🖼 " + I18n.t(ctx, R.string.ig_comment_media_image);
+
         final String[][] head = {header(all, sheetPost.get(), postRow)};
         final boolean[] more = {false};
         final List<Object[]> shown = new ArrayList<>();
@@ -1156,10 +1130,9 @@ public class CommentSearchHook {
         LinearLayout card = new LinearLayout(ctx);
         card.setOrientation(LinearLayout.VERTICAL);
         int pad = (int) (18 * d);
-        card.setPadding(pad, pad, pad, (int) (10 * d));
+        card.setPadding(pad, (int) (9 * d), pad, (int) (10 * d));
         card.setBackground(round(cBg, 22 * d));
 
-        // header: title + close
         LinearLayout header = new LinearLayout(ctx);
         header.setGravity(Gravity.CENTER_VERTICAL);
         TextView title = new TextView(ctx);
@@ -1168,24 +1141,19 @@ public class CommentSearchHook {
         title.setTextSize(19);
         title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         header.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        TextView close = new TextView(ctx);
-        close.setText("✕");
-        close.setTextSize(18);
-        close.setTextColor(cSub);
-        close.setPadding((int) (10 * d), (int) (4 * d), (int) (4 * d), (int) (4 * d));
+        View close = IeDialog.icon(ctx, "instagram_x_outline_24", "✕", 18, cSub);
+        close.setContentDescription(I18n.t(ctx, R.string.ig_dialog_close));
         close.setOnClickListener(v -> dlg.dismiss());
-        header.addView(close);
-        card.addView(header);
+        header.addView(close, new LinearLayout.LayoutParams((int) (48 * d), (int) (48 * d)));
+        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        hlp.setMarginEnd(-(int) (13 * d));
+        card.addView(header, hlp);
 
-        // search field with clear button
         LinearLayout field = new LinearLayout(ctx);
         field.setGravity(Gravity.CENTER_VERTICAL);
         field.setBackground(round(cField, 14 * d));
-        field.setPadding((int) (12 * d), 0, (int) (6 * d), 0);
-        TextView glass = new TextView(ctx);
-        glass.setText("🔍");
-        glass.setTextSize(15);
-        field.addView(glass);
+        field.setPadding((int) (12 * d), 0, (int) (4 * d), 0);
+        field.addView(glyph(ctx, "instagram_search_outline_24", "🔍", 15, cSub, (int) (22 * d), 0));
         EditText et = new EditText(ctx);
         et.setSingleLine(true);
         et.setBackground(null);
@@ -1195,19 +1163,15 @@ public class CommentSearchHook {
         et.setHint(I18n.t(ctx, R.string.ig_comment_search_field_hint));
         et.setPadding((int) (8 * d), (int) (12 * d), (int) (8 * d), (int) (12 * d));
         field.addView(et, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        TextView clear = new TextView(ctx);
-        clear.setText("✕");
-        clear.setTextColor(cSub);
-        clear.setTextSize(14);
-        clear.setPadding((int) (10 * d), (int) (8 * d), (int) (10 * d), (int) (8 * d));
+        View clear = glyph(ctx, "instagram_x_outline_24", "✕", 14, cSub, (int) (36 * d), (int) (9 * d));
+        clear.setContentDescription(I18n.t(ctx, R.string.ig_comment_search_clear));
         clear.setVisibility(View.GONE);
         clear.setOnClickListener(v -> et.setText(""));
         field.addView(clear);
         LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        flp.topMargin = (int) (14 * d);
+        flp.topMargin = (int) (8 * d);
         card.addView(field, flp);
 
-        // status row: counts + Load all pill
         LinearLayout status = new LinearLayout(ctx);
         status.setGravity(Gravity.CENTER_VERTICAL);
         TextView count = new TextView(ctx);
@@ -1216,14 +1180,14 @@ public class CommentSearchHook {
         status.addView(count, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         TextView loadBtn = new TextView(ctx);
         loadBtn.setText(I18n.t(ctx, R.string.ig_comment_search_load_all));
-        loadBtn.setTextColor(Color.WHITE);
+        loadBtn.setTextColor(palette.onAccent);
         loadBtn.setTextSize(13);
         loadBtn.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         loadBtn.setPadding((int) (14 * d), (int) (7 * d), (int) (14 * d), (int) (7 * d));
         loadBtn.setBackground(round(cAccent, 16 * d));
         TextView exportBtn = new TextView(ctx);
         exportBtn.setText(I18n.t(ctx, R.string.ig_comment_export));
-        exportBtn.setTextColor(cAccent);
+        exportBtn.setTextColor(cAccentText);
         exportBtn.setTextSize(13);
         exportBtn.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         exportBtn.setPadding((int) (14 * d), (int) (6 * d), (int) (14 * d), (int) (6 * d));
@@ -1231,12 +1195,14 @@ public class CommentSearchHook {
         outline.setStroke(Math.max(1, (int) (1.5f * d)), cAccent);
         exportBtn.setBackground(outline);
         exportBtn.setOnClickListener(v -> {
-            if (all.isEmpty()) return;
+            if (!CommentSearchPolicy.exportable(all)) {
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_comment_export_none), Toast.LENGTH_SHORT).show();
+                return;
+            }
             List<String[]> rows = new ArrayList<>(all);
             String[] rowsHead = head[0];
             Object post = sheetPost.get();
-            ps.reso.instaeclipse.utils.dialog.IeDialog exDlg = new ps.reso.instaeclipse.utils.dialog.IeDialog(ctx)
-                    .title(I18n.t(ctx, R.string.ig_comment_export));
+            IeDialog exDlg = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_comment_export));
             android.widget.CheckBox postBox = exDlg.checkBox(I18n.t(ctx, R.string.ig_comment_export_post_media), exportPostMedia);
             exDlg.secondary(I18n.t(ctx, R.string.ig_dialog_cancel), null);
             exDlg.primary(I18n.t(ctx, R.string.ig_comment_export), () -> {
@@ -1260,9 +1226,8 @@ public class CommentSearchHook {
         bar.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(cAccent));
         card.addView(bar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (int) (6 * d)));
 
-        // results
         ListView lv = new ListView(ctx);
-        lv.setDivider(new android.graphics.drawable.ColorDrawable(cDivider));
+        lv.setDivider(new android.graphics.drawable.ColorDrawable(palette.line));
         lv.setDividerHeight(Math.max(1, (int) d / 2));
         lv.setSelector(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
         lv.setVerticalScrollBarEnabled(false);
@@ -1276,69 +1241,15 @@ public class CommentSearchHook {
             public View getView(int i, View conv, ViewGroup parent) {
                 Object[] e = shown.get(i);
                 String[] r = (String[]) e[1];
-                boolean reply = (boolean) e[2];
-                int indent = reply ? (int) (46 * d) : 0;
-                if ((int) e[0] == 1) { // "View N replies" / "Hide replies"
-                    LinearLayout t = new LinearLayout(ctx);
-                    t.setGravity(Gravity.CENTER_VERTICAL);
-                    t.setPadding((int) (48 * d), (int) (2 * d), 0, (int) (10 * d));
-                    View line = new View(ctx);
-                    line.setBackgroundColor(cSub);
-                    t.addView(line, new LinearLayout.LayoutParams((int) (24 * d), Math.max(1, (int) d)));
-                    TextView tv = new TextView(ctx);
-                    tv.setText((String) e[3]);
-                    tv.setTextColor(cSub);
-                    tv.setTextSize(13);
-                    tv.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-                    tv.setPadding((int) (10 * d), 0, 0, 0);
-                    t.addView(tv);
-                    return t;
+                if ((int) e[0] == 1) {
+                    RepliesRow t = conv != null && conv.getTag() instanceof RepliesRow tag ? tag : new RepliesRow(ctx, d, cSub);
+                    t.label.setText((String) e[3]);
+                    return t.row;
                 }
-                LinearLayout row = new LinearLayout(ctx);
-                row.setPadding(indent, (int) ((reply ? 7 : 11) * d), 0, (int) ((reply ? 7 : 11) * d));
-                TextView av = new TextView(ctx);
-                av.setText(r[0].isEmpty() ? "?" : r[0].substring(0, 1).toUpperCase(Locale.ROOT));
-                av.setGravity(Gravity.CENTER);
-                av.setTextColor(Color.WHITE);
-                av.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-                av.setTextSize(reply ? 12 : 14);
-                GradientDrawable circle = new GradientDrawable();
-                circle.setShape(GradientDrawable.OVAL);
-                circle.setColor(avatarColor(r[0]));
-                av.setBackground(circle);
-                int sz = (int) ((reply ? 28 : 36) * d);
-                row.addView(av, new LinearLayout.LayoutParams(sz, sz));
-                LinearLayout col = new LinearLayout(ctx);
-                col.setOrientation(LinearLayout.VERTICAL);
-                col.setPadding((int) (12 * d), 0, 0, 0);
-                LinearLayout top = new LinearLayout(ctx);
-                top.setGravity(Gravity.CENTER_VERTICAL);
-                TextView user = new TextView(ctx);
-                user.setText(highlight(r[0], query[0], cHighlight));
-                user.setTextColor(cText);
-                user.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-                user.setTextSize(13.5f);
-                user.setSingleLine(true);
-                top.addView(user);
-                String meta = meta(r);
-                if (!meta.isEmpty()) {
-                    TextView m = new TextView(ctx);
-                    m.setText("  " + meta);
-                    m.setTextColor(cSub);
-                    m.setTextSize(12);
-                    m.setSingleLine(true);
-                    top.addView(m);
-                }
-                col.addView(top);
-                TextView text = new TextView(ctx);
-                text.setText(highlight(r[1], query[0], cHighlight));
-                text.setTextColor(cText);
-                text.setTextSize(14);
-                text.setLineSpacing(2 * d, 1f);
-                text.setPadding(0, (int) (2 * d), 0, 0);
-                col.addView(text);
-                row.addView(col, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-                return row;
+                ResultRow row = conv != null && conv.getTag() instanceof ResultRow tag ? tag : new ResultRow(ctx, d, cText, cSub, metaSp);
+                CharSequence placeholder = CommentSearchPolicy.mediaOnly(r) ? (CommentSearchPolicy.gif(r) ? gifLabel : imageLabel) : null;
+                row.bind(r, (boolean) e[2], query[0], cHighlight, meta(r, heart, counts), placeholder);
+                return row.row;
             }
         };
         lv.setAdapter(ad);
@@ -1365,8 +1276,6 @@ public class CommentSearchHook {
         Runnable refresh = () -> {
             query[0] = et.getText().toString().trim();
             String q = query[0].toLowerCase(Locale.ROOT);
-            // tree: top-level comments in IG's order, their loaded replies (oldest first) under them;
-            // a reply whose parent isn't loaded stays top level
             Map<String, String[]> byId = new java.util.HashMap<>();
             for (String[] r : all) if (!r[2].isEmpty()) byId.put(r[2], r);
             Map<String, List<String[]>> kids = new java.util.HashMap<>();
@@ -1400,17 +1309,17 @@ public class CommentSearchHook {
                 if (!topHit && hits.isEmpty()) continue;
                 if (topHit && countedRows.contains(t)) matches[0]++;
                 for (String[] kid : hits) if (countedRows.contains(kid)) matches[0]++;
-                shown.add(new Object[]{0, t, false, null}); // parent shown for context
+                shown.add(new Object[]{0, t, false, null});
                 for (String[] kid : hits) shown.add(new Object[]{0, kid, true, null});
             }
             ad.notifyDataSetChanged();
             empty.setVisibility(shown.isEmpty() ? View.VISIBLE : View.GONE);
             clear.setVisibility(q.isEmpty() ? View.GONE : View.VISIBLE);
+            exportBtn.setAlpha(CommentSearchPolicy.exportable(all) ? 1f : 0.4f);
             int total = counted.size();
             count.setText(q.isEmpty() ? I18n.t(ctx, more[0] ? R.string.ig_comment_search_maybe_more : R.string.ig_comment_search_count, total)
                     : I18n.t(ctx, R.string.ig_comment_search_matches, total, matches[0]));
         };
-        // take in whatever has loaded so far (live while loading, and when stopped or finished)
         Runnable pull = () -> {
             all.clear();
             all.addAll(latest);
@@ -1433,7 +1342,6 @@ public class CommentSearchHook {
             more[0] = false;
             bar.setVisibility(View.VISIBLE);
             loadBtn.setText(I18n.t(ctx, R.string.ig_comment_search_stop));
-            // IG only fetches the next page while its own window has focus
             focusable(dlg, false);
             loadAll(n -> {
                 if (n != all.size()) pull.run();
@@ -1445,14 +1353,15 @@ public class CommentSearchHook {
         lv.setOnItemClickListener((p, v, i, id) -> {
             Object[] e = shown.get(i);
             String[] r = (String[]) e[1];
-            if ((int) e[0] == 1) { // expand / collapse replies
+            if ((int) e[0] == 1) {
                 if (!expanded.remove(r[2])) expanded.add(r[2]);
                 refresh.run();
                 return;
             }
-            ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-            cm.setPrimaryClip(ClipData.newPlainText("comment", r[1]));
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_comment_copied), Toast.LENGTH_SHORT).show();
+            String text = CommentSearchPolicy.copyText(r);
+            if (text.isEmpty()) return;
+            CopyFeedback.copy(ctx, "comment", text,
+                    CommentSearchPolicy.mediaOnly(r) ? R.string.ig_toast_link_copied : R.string.ig_toast_comment_copied);
         });
         refresh.run();
 
@@ -1464,6 +1373,104 @@ public class CommentSearchHook {
             w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
             w.setLayout((int) (ctx.getResources().getDisplayMetrics().widthPixels * 0.92f), ViewGroup.LayoutParams.WRAP_CONTENT);
             w.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        }
+        return dlg;
+    }
+
+    private static View glyph(Context ctx, String name, String fallback, float sp, int tint, int box, int pad) {
+        View v = IeDialog.icon(ctx, name, fallback, sp, tint);
+        if (v instanceof android.widget.ImageView iv) {
+            iv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+            iv.setPadding(pad, pad, pad, pad);
+        }
+        v.setLayoutParams(new LinearLayout.LayoutParams(box, box));
+        return v;
+    }
+
+    private static final class RepliesRow {
+        final LinearLayout row;
+        final TextView label;
+
+        RepliesRow(Context ctx, float d, int cSub) {
+            row = new LinearLayout(ctx);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding((int) (48 * d), (int) (2 * d), 0, (int) (10 * d));
+            View line = new View(ctx);
+            line.setBackgroundColor(cSub);
+            row.addView(line, new LinearLayout.LayoutParams((int) (24 * d), Math.max(1, (int) d)));
+            label = new TextView(ctx);
+            label.setTextColor(cSub);
+            label.setTextSize(13);
+            label.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            label.setPadding((int) (10 * d), 0, 0, 0);
+            row.addView(label);
+            row.setTag(this);
+        }
+    }
+
+    private static final class ResultRow {
+        final LinearLayout row;
+        final TextView avatar, user, meta, text;
+        final GradientDrawable circle = new GradientDrawable();
+        final float d;
+        final int cText, cSub;
+
+        ResultRow(Context ctx, float d, int cText, int cSub, float metaSp) {
+            this.d = d;
+            this.cText = cText;
+            this.cSub = cSub;
+            row = new LinearLayout(ctx);
+            avatar = new TextView(ctx);
+            avatar.setGravity(Gravity.CENTER);
+            avatar.setTextColor(Color.WHITE);
+            avatar.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            circle.setShape(GradientDrawable.OVAL);
+            avatar.setBackground(circle);
+            row.addView(avatar, new LinearLayout.LayoutParams(0, 0));
+            LinearLayout col = new LinearLayout(ctx);
+            col.setOrientation(LinearLayout.VERTICAL);
+            col.setPadding((int) (12 * d), 0, 0, 0);
+            LinearLayout top = new LinearLayout(ctx);
+            top.setGravity(Gravity.CENTER_VERTICAL);
+            user = new TextView(ctx);
+            user.setTextColor(cText);
+            user.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            user.setTextSize(13.5f);
+            user.setSingleLine(true);
+            top.addView(user);
+            meta = new TextView(ctx);
+            meta.setTextColor(cSub);
+            meta.setTextSize(metaSp);
+            meta.setSingleLine(true);
+            top.addView(meta);
+            col.addView(top);
+            text = new TextView(ctx);
+            text.setTextSize(14);
+            text.setLineSpacing(2 * d, 1f);
+            text.setPadding(0, (int) (2 * d), 0, 0);
+            col.addView(text);
+            row.addView(col, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            row.setTag(this);
+        }
+
+        void bind(String[] r, boolean reply, String query, int highlight, CharSequence metaText, CharSequence placeholder) {
+            int vertical = (int) ((reply ? 7 : 11) * d);
+            row.setPadding(reply ? (int) (46 * d) : 0, vertical, 0, vertical);
+            avatar.setText(HtmlExport.initial(r[0]));
+            avatar.setTextSize(reply ? 12 : 14);
+            circle.setColor(HtmlExport.avatarColor(r[0]));
+            int size = (int) ((reply ? 28 : 36) * d);
+            ViewGroup.LayoutParams lp = avatar.getLayoutParams();
+            if (lp.width != size) {
+                lp.width = size;
+                lp.height = size;
+                avatar.setLayoutParams(lp);
+            }
+            user.setText(highlight(r[0], query, highlight));
+            meta.setVisibility(metaText.length() == 0 ? View.GONE : View.VISIBLE);
+            meta.setText(metaText.length() == 0 ? metaText : new android.text.SpannableStringBuilder("  ").append(metaText));
+            text.setTextColor(placeholder != null ? cSub : cText);
+            text.setText(placeholder != null ? placeholder : highlight(r[1], query, highlight));
         }
     }
 
@@ -1492,27 +1499,35 @@ public class CommentSearchHook {
         try { return Long.parseLong(s); } catch (Throwable t) { return 0; }
     }
 
-    /** "1,615 ♥ · 12h" from the row's likes and creation time. */
-    private static String meta(String[] r) {
-        StringBuilder b = new StringBuilder();
+    private static CharSequence meta(String[] r, android.graphics.drawable.Drawable heart, java.text.NumberFormat counts) {
+        android.text.SpannableStringBuilder b = new android.text.SpannableStringBuilder();
         long likes = num(r[4]);
-        if (likes > 0) b.append(String.format(Locale.getDefault(), "%,d ♥", likes));
+        if (likes > 0) {
+            b.append(counts.format(likes)).append(' ');
+            int at = b.length();
+            b.append('♥');
+            if (heart != null) {
+                int align = android.os.Build.VERSION.SDK_INT >= 29
+                        ? android.text.style.DynamicDrawableSpan.ALIGN_CENTER : android.text.style.DynamicDrawableSpan.ALIGN_BASELINE;
+                b.setSpan(new android.text.style.ImageSpan(heart, align), at, at + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+        }
         long created = num(r[6]);
         if (created > 0) {
-            long s = Math.max(0, System.currentTimeMillis() / 1000 - created);
-            String age = s < 60 ? s + "s" : s < 3600 ? s / 60 + "m" : s < 86400 ? s / 3600 + "h"
-                    : s < 604800 ? s / 86400 + "d" : s / 604800 + "w";
             if (b.length() > 0) b.append(" · ");
-            b.append(age);
+            b.append(CommentSearchPolicy.age(System.currentTimeMillis() / 1000 - created, Locale.getDefault()));
         }
-        return b.toString();
+        return b;
     }
 
-    private static String esc(String s) {
-        return android.text.Html.escapeHtml(s == null ? "" : s).replace("\n", "<br>");
+    private static String plural(Context ctx, int id, int n) {
+        try {
+            return I18n.moduleResources(ctx).getQuantityString(id, n, n);
+        } catch (Throwable t) {
+            return String.valueOf(n);
+        }
     }
 
-    /** Saves the loaded comments as a self-contained HTML page (tree of replies, search box). */
     private static void exportComments(Context ctx, List<String[]> rows, boolean includePostMedia, String[] head, Object post) {
         new Thread(() -> {
             try {
@@ -1522,11 +1537,8 @@ public class CommentSearchHook {
                 String code = MediaIds.shortcode(mediaId);
                 String link = code.isEmpty() ? "" : "https://www.instagram.com/p/" + code + "/";
 
-                // Media the companion service will download + embed: {url, local name, mime}.
                 List<String[]> media = new ArrayList<>();
                 int[] ctr = {0};
-                // The post's own photos/videos (carousel-aware) via the downloader's extractor, shown
-                // in the hero. Downloaded + embedded so they stay on device and never expire.
                 StringBuilder postGallery = new StringBuilder();
                 if (includePostMedia && !mediaId.isEmpty()) {
                     try {
@@ -1535,9 +1547,9 @@ public class CommentSearchHook {
                         for (String u : purls) {
                             if (u == null || !u.startsWith("http")) continue;
                             boolean vid = u.contains(".mp4");
-                            String ext = vid ? ".mp4" : mediaExt(u, "image");
+                            String ext = vid ? ".mp4" : CommentSearchPolicy.mediaExt(u, "image");
                             String name = String.format(Locale.US, "post_%02d%s", ++pi, ext);
-                            media.add(new String[]{u, name, vid ? "video/mp4" : mediaMime(ext)});
+                            media.add(new String[]{u, name, vid ? "video/mp4" : CommentSearchPolicy.mediaMime(ext)});
                             postGallery.append(vid
                                     ? "<video class=media controls preload=none src=\"" + name + "\" onerror=\"this.remove()\"></video>"
                                     : "<img class=media loading=lazy src=\"" + name + "\" onerror=\"this.remove()\">");
@@ -1556,12 +1568,18 @@ public class CommentSearchHook {
                 for (List<String[]> l : kids.values()) l.sort((x, y) -> Long.compare(num(x[6]), num(y[6])));
                 int replies = comments.size() - tops.size();
                 java.text.SimpleDateFormat fmt = ps.reso.instaeclipse.utils.text.TimestampFormat.dialogDateFormat(ctx);
+                java.text.NumberFormat counts = java.text.NumberFormat.getIntegerInstance();
                 String now = fmt.format(new java.util.Date());
+                String title = author.isEmpty() ? I18n.t(ctx, R.string.ig_comment_export_title)
+                        : I18n.t(ctx, R.string.ig_comment_export_on_post, author);
+                String[] labels = {I18n.t(ctx, R.string.ig_comment_media_gif), I18n.t(ctx, R.string.ig_comment_media_image)};
+                String[] gone = {I18n.t(ctx, R.string.ig_comment_media_unavailable, labels[0]),
+                        I18n.t(ctx, R.string.ig_comment_media_unavailable, labels[1])};
 
                 StringBuilder h = new StringBuilder(64 * 1024);
                 h.append("<!doctype html><html><head><meta charset=utf-8>")
                  .append("<meta name=viewport content=\"width=device-width,initial-scale=1\">")
-                 .append("<title>Comments").append(author.isEmpty() ? "" : " · @" + esc(author)).append("</title><style>")
+                 .append("<title>").append(HtmlExport.esc(title)).append("</title><style>")
                  .append(":root{--bg:#fafafa;--card:#fff;--text:#111;--sub:#737373;--line:#ececec;--accent:#0095f6;--mark:#cfe8fd}")
                  .append("@media(prefers-color-scheme:dark){:root{--bg:#0b0b0c;--card:#18181a;--text:#f2f2f2;--sub:#9a9aa0;--line:#2a2a2d;--accent:#3aa8ff;--mark:#0b4a7a}}")
                  .append("*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,system-ui,Segoe UI,Roboto,sans-serif}")
@@ -1585,42 +1603,30 @@ public class CommentSearchHook {
                  .append(".postmedia{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.postmedia .media{margin-top:0;max-width:min(200px,46%)}")
                  .append(".tag{display:inline-block;margin-top:6px;padding:2px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--sub);font-size:12px}")
                  .append("</style></head><body><div class=wrap>");
-                h.append(ps.reso.instaeclipse.utils.core.ExportBrand.htmlBanner("Comments export"));
-                h.append("<div class=hero><div class=heroin><h1>💬 Comments")
-                 .append(author.isEmpty() ? "" : " on @" + esc(author) + "'s post").append("</h1>");
+                h.append(ps.reso.instaeclipse.utils.core.ExportBrand.htmlBanner(I18n.t(ctx, R.string.ig_comment_export_banner)));
+                h.append("<div class=hero><div class=heroin><h1>💬 ").append(HtmlExport.esc(title)).append("</h1>");
                 if (!link.isEmpty()) h.append("<a href=\"").append(link).append("\">").append(link).append("</a>");
-                if (!caption.isEmpty()) h.append("<div class=cap>").append(esc(caption)).append("</div>");
+                if (!caption.isEmpty()) h.append("<div class=cap>").append(HtmlExport.esc(caption)).append("</div>");
                 if (postGallery.length() > 0) h.append("<div class=postmedia>").append(postGallery).append("</div>");
-                h.append("<div class=stats><span class=chip>").append(tops.size()).append(" comments</span><span class=chip>")
-                 .append(replies).append(" replies</span><span class=chip>Exported ").append(esc(now)).append("</span></div></div></div>");
-                h.append("<div class=search><input id=q placeholder=\"Search names or words…\" autocomplete=off></div><div id=list>");
+                h.append("<div class=stats><span class=chip>")
+                 .append(HtmlExport.esc(plural(ctx, R.plurals.ig_comment_export_comments, tops.size())))
+                 .append("</span><span class=chip>").append(HtmlExport.esc(plural(ctx, R.plurals.ig_comment_export_replies, replies)))
+                 .append("</span><span class=chip>").append(HtmlExport.esc(I18n.t(ctx, R.string.ig_comment_export_exported, now)))
+                 .append("</span></div></div></div>");
+                h.append(HtmlExport.searchBox(I18n.t(ctx, R.string.ig_comment_search_field_hint))).append("<div id=list>");
                 for (String[] t : tops) {
-                    h.append("<div class=thread>");
-                    commentHtml(h, t, fmt, media, ctr);
-                    List<String[]> ch = kids.get(t[2]);
-                    if (ch != null && !ch.isEmpty()) {
-                        h.append("<details><summary>").append(ch.size()).append(ch.size() == 1 ? " reply" : " replies")
-                         .append("</summary><div class=replies>");
-                        for (String[] r : ch) commentHtml(h, r, fmt, media, ctr);
-                        h.append("</div></details>");
-                    }
-                    h.append("</div>");
+                    String top = commentHtml(t, fmt, counts, media, ctr, labels, gone);
+                    List<String[]> ch = kids.getOrDefault(t[2], Collections.emptyList());
+                    List<String> replyHtml = new ArrayList<>();
+                    for (String[] r : ch) replyHtml.add(commentHtml(r, fmt, counts, media, ctr, labels, gone));
+                    h.append(HtmlExport.thread(top, plural(ctx, R.plurals.ig_comment_export_replies, ch.size()), replyHtml));
                 }
-                h.append("</div><div class=foot>Only comments loaded in the app are included</div>")
+                h.append("</div><div class=foot>").append(HtmlExport.esc(I18n.t(ctx, R.string.ig_comment_export_loaded_only))).append("</div>")
                  .append(ps.reso.instaeclipse.utils.core.ExportBrand.htmlFooter()).append("</div>")
-                 .append("<script>const q=document.getElementById('q');const th=[...document.querySelectorAll('.thread')];")
-                 .append("th.forEach(t=>t.querySelectorAll('.u,.t').forEach(e=>e.dataset.o=e.innerHTML));")
-                 .append("function mk(e,s){const o=e.dataset.o;if(!s){e.innerHTML=o;return false;}const i=e.textContent.toLowerCase().indexOf(s);")
-                 .append("if(i<0){e.innerHTML=o;return false;}const re=new RegExp('('+s.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&')+')','gi');")
-                 .append("e.innerHTML=o.replace(/(^|>)([^<]+)/g,(m,a,b)=>a+b.replace(re,'<mark>$1</mark>'));return true;}")
-                 .append("q.addEventListener('input',()=>{const s=q.value.trim().toLowerCase();th.forEach(t=>{")
-                 .append("const cs=[...t.querySelectorAll('.c')];let any=false;cs.forEach((c,i)=>{let h=false;")
-                 .append("c.querySelectorAll('.u,.t').forEach(e=>{if(mk(e,s))h=true;});c.dataset.h=h?1:0;if(h)any=true;")
-                 .append("if(i>0)c.classList.toggle('hide',!!s&&!h);});t.classList.toggle('hide',!!s&&!any);")
-                 .append("const d=t.querySelector('details');if(d)d.open=!!s&&cs.slice(1).some(c=>c.dataset.h==1);});});</script>")
+                 .append("<script>").append(HtmlExport.SEARCH_SCRIPT).append("</script>")
                  .append("</body></html>");
 
-                String safe = (author.isEmpty() ? "post" : author).replaceAll("[^A-Za-z0-9._-]", "_");
+                String safe = DownloadFiles.safeSegment(author, "post");
                 String stamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new java.util.Date());
                 String folder = "comments_" + safe + (code.isEmpty() ? "" : "_" + code) + "_" + stamp;
                 String file = folder + ".html";
@@ -1628,9 +1634,6 @@ public class CommentSearchHook {
 
                 String page = h.toString();
 
-                // Preferred path: hand the HTML + comment media to the companion service, which saves
-                // everything into <SAF folder>/comments/<folder>/ and inlines the media as base64 data
-                // URIs — so GIF/image comments are kept on device and never expire.
                 String saf = FeatureFlags.downloaderCustomUri;
                 boolean delegated = false;
                 if (saf != null && !saf.isEmpty()) {
@@ -1650,8 +1653,6 @@ public class CommentSearchHook {
                             it.putExtra("mediaNames", ns);
                             it.putExtra("mediaMimes", ms);
                         }
-                        // A long export the broker would refuse takes the in-process write below
-                        // instead of ending with an error toast (see ExportDelegate).
                         delegated = ps.reso.instaeclipse.utils.ipc.ExportDelegate.delegate(ctx, it, TAG,
                                 () -> writeExportInProcess(ctx, page, media, file, cCount));
                         if (!delegated) {
@@ -1674,15 +1675,11 @@ public class CommentSearchHook {
         }).start();
     }
 
-    /**
-     * The single-file export written inside Instagram, with the media still pointing at the
-     * Instagram CDN links (which work only until they expire). Used when no SAF folder is set, or
-     * when the companion refuses or fails the export. Call it off the main thread.
-     */
     private static void writeExportInProcess(Context ctx, String page, List<String[]> media, String file, int count) {
         try {
-            String html = page;
-            for (String[] m : media) html = html.replace("src=\"" + m[1] + "\"", "src=\"" + esc(m[0]) + "\"");
+            Map<String, String> urls = new java.util.HashMap<>();
+            for (String[] m : media) urls.put(m[1], m[0]);
+            String html = HtmlExport.embed(page, urls);
             try (java.io.OutputStream out = ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook.openCommentsExport(ctx, file)) {
                 out.write(html.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             }
@@ -1694,49 +1691,24 @@ public class CommentSearchHook {
         }
     }
 
-    private static void commentHtml(StringBuilder h, String[] r, java.text.SimpleDateFormat fmt,
-                                    List<String[]> media, int[] ctr) {
-        String initial = r[0].isEmpty() ? "?" : r[0].substring(0, 1).toUpperCase(Locale.ROOT);
-        h.append("<div class=c><div class=av style=\"background:#")
-         .append(String.format(Locale.US, "%06X", avatarColor(r[0]) & 0xFFFFFF)).append("\">").append(esc(initial))
-         .append("</div><div class=body><span class=u>").append(esc(r[0])).append("</span><span class=m>");
+    private static String commentHtml(String[] r, java.text.SimpleDateFormat fmt, java.text.NumberFormat counts,
+                                      List<String[]> media, int[] ctr, String[] labels, String[] gone) {
+        StringBuilder meta = new StringBuilder();
         long likes = num(r[4]), created = num(r[6]);
-        if (likes > 0) h.append(String.format(Locale.getDefault(), "%,d ♥", likes));
-        if (created > 0) h.append(likes > 0 ? " · " : "").append(esc(fmt.format(new java.util.Date(created * 1000))));
-        h.append("</span><div class=t>").append(esc(r[1])).append("</div>");
+        if (likes > 0) meta.append(HtmlExport.esc(counts.format(likes))).append(" ♥");
+        if (created > 0) meta.append(likes > 0 ? " · " : "").append(HtmlExport.esc(fmt.format(new java.util.Date(created * 1000))));
+        String extra = "";
         if (r.length > 9 && !r[8].isEmpty()) {
-            String label = "gif".equals(r[9]) ? "GIF" : "Image";
-            // Reference the media by a local name; the companion service downloads it into the export
-            // folder and inlines it as a base64 data URI, so it no longer expires with the CDN link.
+            int which = CommentSearchPolicy.gif(r) ? 0 : 1;
             String kind = r[9].isEmpty() ? "image" : r[9];
-            String ext = mediaExt(r[8], kind);
+            String ext = CommentSearchPolicy.mediaExt(r[8], kind);
             String name = String.format(Locale.US, "c%04d_%s%s", ++ctr[0], kind, ext);
-            media.add(new String[]{r[8], name, mediaMime(ext)});
-            h.append("<img class=media loading=lazy referrerpolicy=no-referrer alt=\"").append(label).append("\" src=\"")
-             .append(name).append("\" onerror=\"this.outerHTML='<span class=tag>🖼 ").append(label)
-             .append(" (unavailable)</span>'\">");
+            media.add(new String[]{r[8], name, CommentSearchPolicy.mediaMime(ext)});
+            extra = "<img class=media loading=lazy referrerpolicy=no-referrer alt=\"" + HtmlExport.esc(labels[which])
+                    + "\" data-gone=\"" + HtmlExport.esc("🖼 " + gone[which]) + "\" src=\"" + name
+                    + "\" onerror=\"const s=document.createElement('span');s.className='tag';s.textContent=this.dataset.gone;this.replaceWith(s)\">";
         }
-        h.append("</div></div>");
-    }
-
-    /** File extension for a comment-media URL (".gif"/".webp"/".mp4"/".jpg"). */
-    private static String mediaExt(String url, String kind) {
-        try {
-            String p = url.split("\\?")[0];
-            int dot = p.lastIndexOf('.'), slash = p.lastIndexOf('/');
-            if (dot > slash && dot >= 0 && p.length() - dot <= 5) return p.substring(dot).toLowerCase(Locale.ROOT);
-        } catch (Throwable ignored) {}
-        return "gif".equals(kind) ? ".gif" : ".jpg";
-    }
-
-    private static String mediaMime(String ext) {
-        switch (ext) {
-            case ".gif":  return "image/gif";
-            case ".webp": return "image/webp";
-            case ".png":  return "image/png";
-            case ".mp4":  return "video/mp4";
-            default:       return "image/jpeg";
-        }
+        return HtmlExport.comment(r[0], meta.toString(), r[1], extra);
     }
 
     /** The post's own media URLs (photos/videos, carousel-aware): finds the post Media object in the
@@ -1812,12 +1784,6 @@ public class CommentSearchHook {
         g.setColor(color);
         g.setCornerRadius(radius);
         return g;
-    }
-
-    private static final int[] AVATAR_COLORS = {0xFFE1306C, 0xFF833AB4, 0xFFF77737, 0xFF0095F6, 0xFF00A86B, 0xFFC13584, 0xFFFD1D1D, 0xFF5851DB};
-
-    private static int avatarColor(String user) {
-        return AVATAR_COLORS[(user.hashCode() & 0x7fffffff) % AVATAR_COLORS.length];
     }
 
     /** The text with every case-insensitive occurrence of the query given a tinted background. */
@@ -2001,12 +1967,10 @@ public class CommentSearchHook {
 
     private static volatile List<java.util.regex.Pattern> replyLinks = CommentSearchPolicy.replyMatchers(Collections.emptyList());
     private static volatile boolean replyLinksBuilt;
-    private static Method childIdMethod;
     private static boolean a11yLogged;
 
     /** Clicks the "View N (more) replies" links currently on screen through the list's accessibility
      *  tree (Compose draws them, so there are no Views to click). Returns how many were clicked. */
-    @android.annotation.SuppressLint("SoonBlockedPrivateApi") // guarded; falls back when blocked
     private static int expandReplies(View list) {
         try {
             android.view.accessibility.AccessibilityNodeProvider p = list.getAccessibilityNodeProvider();
@@ -2028,8 +1992,7 @@ public class CommentSearchHook {
                     int target = id;
                     android.view.accessibility.AccessibilityNodeInfo cur = n;
                     for (int up = 0; up < 5 && cur != null && !cur.isClickable(); up++) {
-                        long parent = (long) parentIdMethod().invoke(cur);
-                        target = (int) (parent >> 32);
+                        target = A11yIds.parentId(cur);
                         cur = p.createAccessibilityNodeInfo(target);
                     }
                     boolean ok = cur != null && cur.isClickable()
@@ -2037,7 +2000,7 @@ public class CommentSearchHook {
                     logA11y("click '" + t + "' via " + (target == id ? "itself" : "parent " + target) + " -> " + ok);
                     if (ok) clicked++;
                 }
-                for (int i = 0; i < n.getChildCount(); i++) q.add((int) (((long) childIdMethod().invoke(n, i)) >> 32));
+                for (int i = 0; i < n.getChildCount(); i++) q.add(A11yIds.childId(n, i));
             }
             if (!a11yLogged) { a11yLogged = true; logA11y("nodes=" + nodes + " clicked=" + clicked); }
             if (clicked > 0) ModuleLog.probe(TAG + "load all: opened " + clicked + " reply thread(s)");
@@ -2046,26 +2009,6 @@ public class CommentSearchHook {
             logA11y(String.valueOf(t.getCause() != null ? t.getCause() : t));
             return 0;
         }
-    }
-
-    private static Method parentIdMethod;
-
-    @android.annotation.SuppressLint("SoonBlockedPrivateApi") // guarded; callers fall back when blocked
-    private static Method childIdMethod() throws NoSuchMethodException {
-        if (childIdMethod == null) {
-            childIdMethod = android.view.accessibility.AccessibilityNodeInfo.class.getDeclaredMethod("getChildId", int.class);
-            childIdMethod.setAccessible(true);
-        }
-        return childIdMethod;
-    }
-
-    @android.annotation.SuppressLint("SoonBlockedPrivateApi") // guarded; callers fall back when blocked
-    private static Method parentIdMethod() throws NoSuchMethodException {
-        if (parentIdMethod == null) {
-            parentIdMethod = android.view.accessibility.AccessibilityNodeInfo.class.getDeclaredMethod("getParentNodeId");
-            parentIdMethod.setAccessible(true);
-        }
-        return parentIdMethod;
     }
 
     private static void logA11y(String msg) {

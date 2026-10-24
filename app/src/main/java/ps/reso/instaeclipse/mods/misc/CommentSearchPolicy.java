@@ -1,9 +1,19 @@
 package ps.reso.instaeclipse.mods.misc;
 
+import android.icu.text.MeasureFormat;
+import android.icu.util.Measure;
+import android.icu.util.MeasureUnit;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,7 +31,20 @@ final class CommentSearchPolicy {
     private static final Pattern SPACE = Pattern.compile(GAP);
     private static final Pattern LETTER = Pattern.compile("\\p{L}");
 
+    private static Locale ageLocale;
+    private static MeasureFormat ageFormat;
+
     private CommentSearchPolicy() {}
+
+    static final class Age {
+        final long value;
+        final ChronoUnit unit;
+
+        Age(long value, ChronoUnit unit) {
+            this.value = value;
+            this.unit = unit;
+        }
+    }
 
     static List<Pattern> replyMatchers(Collection<String> templates) {
         Map<String, Pattern> out = new LinkedHashMap<>();
@@ -104,5 +127,105 @@ final class CommentSearchPolicy {
     static Load loadState(boolean recycler, long idleMs, boolean atEnd, boolean grew) {
         if (recycler) return idleMs > 3000 && atEnd ? Load.DONE : Load.GOING;
         return idleMs > (grew ? 6000 : 4000) ? Load.MAYBE_MORE : Load.GOING;
+    }
+
+    static boolean exportable(List<String[]> rows) {
+        for (String[] r : rows) if (!r[2].isEmpty()) return true;
+        return false;
+    }
+
+    static boolean mediaOnly(String[] r) {
+        return r[1].isEmpty() && r.length > 8 && !r[8].isEmpty();
+    }
+
+    static boolean gif(String[] r) {
+        return r.length > 9 && "gif".equals(r[9]);
+    }
+
+    static String copyText(String[] r) {
+        return mediaOnly(r) ? r[8] : r[1];
+    }
+
+    static Age age(long seconds) {
+        long s = Math.max(0, seconds);
+        if (s < 60) return new Age(s, ChronoUnit.SECONDS);
+        if (s < 3600) return new Age(s / 60, ChronoUnit.MINUTES);
+        if (s < 86400) return new Age(s / 3600, ChronoUnit.HOURS);
+        if (s < 604800) return new Age(s / 86400, ChronoUnit.DAYS);
+        return new Age(s / 604800, ChronoUnit.WEEKS);
+    }
+
+    static synchronized String age(long seconds, Locale locale) {
+        if (ageFormat == null || !locale.equals(ageLocale)) {
+            ageFormat = MeasureFormat.getInstance(locale, MeasureFormat.FormatWidth.NARROW);
+            ageLocale = locale;
+        }
+        Age a = age(seconds);
+        return ageFormat.format(new Measure(a.value, unit(a.unit)));
+    }
+
+    private static MeasureUnit unit(ChronoUnit unit) {
+        switch (unit) {
+            case SECONDS: return MeasureUnit.SECOND;
+            case MINUTES: return MeasureUnit.MINUTE;
+            case HOURS: return MeasureUnit.HOUR;
+            case DAYS: return MeasureUnit.DAY;
+            default: return MeasureUnit.WEEK;
+        }
+    }
+
+    static String mediaExt(String url, String kind) {
+        try {
+            String p = url.split("\\?")[0];
+            int dot = p.lastIndexOf('.'), slash = p.lastIndexOf('/');
+            if (dot > slash && dot >= 0 && p.length() - dot <= 5) return p.substring(dot).toLowerCase(Locale.ROOT);
+        } catch (Throwable ignored) {}
+        return "gif".equals(kind) ? ".gif" : ".jpg";
+    }
+
+    static String mediaMime(String ext) {
+        switch (ext) {
+            case ".gif":  return "image/gif";
+            case ".webp": return "image/webp";
+            case ".png":  return "image/png";
+            case ".mp4":  return "video/mp4";
+            default:       return "image/jpeg";
+        }
+    }
+
+    static String[] commentMedia(JSONObject j) {
+        JSONObject gif = j.optJSONObject("giphy_media_info");
+        if (gif != null) {
+            String u = firstUrl(gif, 0);
+            if (!u.isEmpty()) return new String[]{u, "gif"};
+        }
+        for (String k : new String[]{"media_info", "media_comment_info", "media"}) {
+            Object o = j.opt(k);
+            if (o instanceof JSONObject || o instanceof JSONArray) {
+                String u = firstUrl(o, 0);
+                if (!u.isEmpty()) return new String[]{u, u.contains(".gif") || u.contains("giphy") ? "gif" : "image"};
+            }
+        }
+        return new String[]{"", ""};
+    }
+
+    static String firstUrl(Object o, int depth) {
+        if (o == null || depth > 6) return "";
+        if (o instanceof JSONObject jo) {
+            for (String k : new String[]{"url", "uri", "image_url"}) {
+                String v = jo.optString(k, "");
+                if (v.startsWith("https://")) return v;
+            }
+            for (Iterator<String> it = jo.keys(); it.hasNext(); ) {
+                String r = firstUrl(jo.opt(it.next()), depth + 1);
+                if (!r.isEmpty()) return r;
+            }
+        } else if (o instanceof JSONArray ja) {
+            for (int i = 0; i < ja.length() && i < 10; i++) {
+                String r = firstUrl(ja.opt(i), depth + 1);
+                if (!r.isEmpty()) return r;
+            }
+        }
+        return "";
     }
 }

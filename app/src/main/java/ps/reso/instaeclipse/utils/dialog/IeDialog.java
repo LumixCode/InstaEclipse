@@ -1,5 +1,6 @@
 package ps.reso.instaeclipse.utils.dialog;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
@@ -7,6 +8,7 @@ import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.View;
@@ -16,6 +18,7 @@ import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.ScrollView;
@@ -26,6 +29,7 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.IeColors;
 import ps.reso.instaeclipse.utils.ui.IePalette;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
  * The module's in-Instagram dialog look (same as Search comments): rounded card that follows
@@ -86,11 +90,7 @@ public class IeDialog {
         titleView.setTextSize(19);
         titleView.setTypeface(Typeface.DEFAULT_BOLD);
         header.addView(titleView, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        TextView close = new TextView(ctx);
-        close.setText("✕");
-        close.setTextSize(18);
-        close.setTextColor(sub);
-        close.setGravity(Gravity.CENTER);
+        View close = icon(ctx, "instagram_x_outline_24", "✕", 18, sub);
         close.setContentDescription(I18n.t(ctx, R.string.ig_dialog_close));
         close.setOnClickListener(v -> { dismiss(); if (onClose != null) onClose.run(); });
         header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(48)));
@@ -113,6 +113,37 @@ public class IeDialog {
     }
 
     public int dp(float v) { return Math.round(v * d); }
+
+    @SuppressLint("UseCompatLoadingForDrawables")
+    public static Drawable igIcon(Context ctx, String name, int tint) {
+        int id = ResIds.drawable(ctx, name);
+        if (id == 0) return null;
+        try {
+            Drawable icon = ctx.getDrawable(id);
+            if (icon == null) return null;
+            icon = icon.mutate();
+            icon.setTint(tint);
+            return icon;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    public static View icon(Context ctx, String name, String fallback, float fallbackSp, int tint) {
+        Drawable icon = igIcon(ctx, name, tint);
+        if (icon != null) {
+            ImageView image = new ImageView(ctx);
+            image.setImageDrawable(icon);
+            image.setScaleType(ImageView.ScaleType.CENTER);
+            return image;
+        }
+        TextView glyph = new TextView(ctx);
+        glyph.setText(fallback);
+        glyph.setTextSize(fallbackSp);
+        glyph.setTextColor(tint);
+        glyph.setGravity(Gravity.CENTER);
+        return glyph;
+    }
 
     public GradientDrawable round(int color, float radiusDp) {
         GradientDrawable g = new GradientDrawable();

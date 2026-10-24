@@ -18,4 +18,22 @@
         <item quantity="one">+%1$d more · see Changelog</item>
         <item quantity="other">+%1$d more · see Changelog</item>
     </plurals>
+    <string name="ig_comment_search_clear" tools:ignore="MissingTranslation">Clear search</string>
+    <string name="ig_comment_export_none" tools:ignore="MissingTranslation">No comments loaded yet</string>
+    <string name="ig_comment_export_title" tools:ignore="MissingTranslation">Comments</string>
+    <string name="ig_comment_export_on_post" tools:ignore="MissingTranslation">Comments on @%1$s\'s post</string>
+    <string name="ig_comment_export_banner" tools:ignore="MissingTranslation">Comments export</string>
+    <string name="ig_comment_export_exported" tools:ignore="MissingTranslation">Exported %1$s</string>
+    <string name="ig_comment_export_loaded_only" tools:ignore="MissingTranslation">Only comments loaded in the app are included</string>
+    <string name="ig_comment_media_gif" tools:ignore="MissingTranslation">GIF</string>
+    <string name="ig_comment_media_image" tools:ignore="MissingTranslation">Image</string>
+    <string name="ig_comment_media_unavailable" tools:ignore="MissingTranslation">%1$s (unavailable)</string>
+    <plurals name="ig_comment_export_comments" tools:ignore="MissingTranslation">
+        <item quantity="one">%1$d comment</item>
+        <item quantity="other">%1$d comments</item>
+    </plurals>
+    <plurals name="ig_comment_export_replies" tools:ignore="MissingTranslation">
+        <item quantity="one">%1$d reply</item>
+        <item quantity="other">%1$d replies</item>
+    </plurals>
 </resources>
