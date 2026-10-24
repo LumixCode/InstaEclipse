@@ -4,7 +4,8 @@ import android.app.Activity;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import ps.reso.instaeclipse.mods.extras.AirplaneModeHook;
@@ -20,13 +21,27 @@ import ps.reso.instaeclipse.utils.media.StoryCache;
 
 public final class SettingsEvents {
 
-    private static final Set<String> GHOST_SWITCHES = new HashSet<>(Arrays.asList(
-            "keepEphemeralMessages", "permanentViewMode", "allowScreenshots"));
+    private static final Set<String> GHOST_KEYS = keys(
+            "isGhostSeen", "isGhostTyping", "isGhostStory", "isGhostLive", "isGhostScreenshot", "isGhostViewOnce",
+            "quickToggleSeen", "quickToggleTyping", "quickToggleScreenshot", "quickToggleViewOnce",
+            "quickToggleStory", "quickToggleLive", "quickToggleEphemeral", "quickTogglePermanentView",
+            "quickToggleAllowScreenshots", "keepEphemeralMessages", "permanentViewMode", "allowScreenshots");
+    private static final Set<String> CHAT_KEYS = keys("hideSpecificChats", "showHideChatButton");
+    private static final Set<String> STORY_CACHE_KEYS = keys("cacheStories", "storyCacheHours");
+    private static final Set<String> THEME_KEYS =
+            keys("customThemeEnabled", "themePresetId", "themePaletteJson", "themeLightPresetId");
+
+    public static final Set<String> SIDE_EFFECT_KEYS = union(GHOST_KEYS, CHAT_KEYS, STORY_CACHE_KEYS, THEME_KEYS,
+            keys("airplaneMode", "likeUndo"));
 
     private SettingsEvents() {}
 
-    public static void afterChange(Collection<String> keys) {
-        if (keys == null || keys.isEmpty()) return;
+    public static boolean afterChange(String key) {
+        return afterChange(Collections.singletonList(key));
+    }
+
+    public static boolean afterChange(Collection<String> keys) {
+        if (keys == null || keys.isEmpty()) return false;
         boolean chats = false;
         boolean storyCache = false;
         boolean airplane = false;
@@ -35,28 +50,37 @@ public final class SettingsEvents {
         boolean ghost = false;
         for (String key : keys) {
             if (key == null) continue;
-            chats |= "hideSpecificChats".equals(key) || "showHideChatButton".equals(key);
-            storyCache |= "storyCacheHours".equals(key);
+            chats |= CHAT_KEYS.contains(key);
+            storyCache |= STORY_CACHE_KEYS.contains(key);
             airplane |= "airplaneMode".equals(key);
             likeUndo |= "likeUndo".equals(key);
             theme |= ThemeSettingsHelper.isThemeKey(key);
-            ghost |= isGhostKey(key);
+            ghost |= GHOST_KEYS.contains(key);
         }
+        boolean recreating = false;
         if (chats) HideChatsHook.refreshVisibleButtons();
         if (storyCache) StoryCache.refresh();
         if (airplane) AirplaneModeHook.apply();
         if (likeUndo) LikeUndoHook.onLikeUndoChanged();
         if (theme) {
             IgThemeEngine.invalidate();
-            IgThemeHook.refreshCurrentActivity();
+            recreating = IgThemeHook.refreshCurrentActivity();
         }
         if (ghost) {
             Activity activity = UIHookManager.getCurrentActivity();
             if (activity != null) GhostEmojiManager.addGhostEmojiNextToInbox(activity, GhostModeUtils.isGhostModeActive());
         }
+        return recreating;
     }
 
-    static boolean isGhostKey(String key) {
-        return key.startsWith("isGhost") || key.startsWith("quickToggle") || GHOST_SWITCHES.contains(key);
+    private static Set<String> keys(String... keys) {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(keys)));
+    }
+
+    @SafeVarargs
+    private static Set<String> union(Set<String>... sets) {
+        Set<String> out = new LinkedHashSet<>();
+        for (Set<String> s : sets) out.addAll(s);
+        return Collections.unmodifiableSet(out);
     }
 }

@@ -21,4 +21,5 @@
     <string name="ig_story_cache_expired" tools:ignore="MissingTranslation">Expired</string>
     <string name="ig_story_cache_open_failed" tools:ignore="MissingTranslation">Couldn\'t open this story</string>
     <string name="ig_story_cache_save" tools:ignore="MissingTranslation">Save</string>
+    <string name="ie_rescan_restart" tools:ignore="MissingTranslation">Rescan and restart</string>
 </resources>
