@@ -147,7 +147,9 @@ public class CustomFontHook {
                 if (!(FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled) || Boolean.TRUE.equals(loading.get())) return;
                 if (iconFonts.isIcon(p.args[0])) return;
                 Typeface tf = getActiveTypeface();
-                if (tf != null && p.args[0] != tf) p.args[0] = tf;
+                if (tf == null) return;
+                Typeface swap = styledLike(tf, (Typeface) p.args[0]);
+                if (p.args[0] != swap) p.args[0] = swap;
             }
         };
         XC_MethodHook setTf2 = new XC_MethodHook() {
@@ -155,7 +157,9 @@ public class CustomFontHook {
                 if (!(FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled) || Boolean.TRUE.equals(loading.get())) return;
                 if (iconFonts.isIcon(p.args[0])) return;
                 Typeface tf = getActiveTypeface();
-                if (tf != null && p.args[0] != tf) p.args[0] = tf;
+                if (tf == null) return;
+                Typeface swap = styledLike(tf, (Typeface) p.args[0]);
+                if (p.args[0] != swap) p.args[0] = swap;
             }
         };
         if (setTypeface) {
@@ -302,7 +306,17 @@ public class CustomFontHook {
 
     // ── Combined text+emoji typeface (font-fallback method) ────────────────────
     private static Typeface combo;
-    private static String comboKey;
+    private static String comboPrimary, comboEmoji;
+    private static volatile Styled styled;
+
+    private static final class Styled {
+        final Typeface base;
+        final Typeface[] byStyle = new Typeface[2 * 1001];
+
+        Styled(Typeface base) {
+            this.base = base;
+        }
+    }
 
     /**
      * The typeface to force on text. When custom emoji is on, this is a CustomFallbackBuilder
@@ -322,8 +336,8 @@ public class CustomFontHook {
     private static Typeface getCombo() {
         String primaryPath = (FeatureFlags.customFontEnabled && FeatureFlags.customFontPath != null
                 && !FeatureFlags.customFontPath.isEmpty()) ? FeatureFlags.customFontPath : SystemSansFont.path();
-        String key = primaryPath + "|" + FeatureFlags.customEmojiPath;
-        if (combo != null && key.equals(comboKey)) return combo;
+        String emojiPath = FeatureFlags.customEmojiPath;
+        if (combo != null && primaryPath.equals(comboPrimary) && emojiPath.equals(comboEmoji)) return combo;
         try {
             if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
                 // Pre-29: no CustomFallbackBuilder — fall back to just the text font.
@@ -332,7 +346,7 @@ public class CustomFontHook {
                 android.graphics.fonts.Font primary = new android.graphics.fonts.Font.Builder(
                         new File(primaryPath)).build();
                 android.graphics.fonts.Font emoji = new android.graphics.fonts.Font.Builder(
-                        new File(FeatureFlags.customEmojiPath)).build();
+                        new File(emojiPath)).build();
                 android.graphics.fonts.FontFamily primFam = new android.graphics.fonts.FontFamily.Builder(primary).build();
                 android.graphics.fonts.FontFamily emojiFam = new android.graphics.fonts.FontFamily.Builder(emoji).build();
                 loading.set(Boolean.TRUE); // our own build: skip the Builder hooks
@@ -344,7 +358,8 @@ public class CustomFontHook {
                     loading.set(Boolean.FALSE);
                 }
             }
-            comboKey = key;
+            comboPrimary = primaryPath;
+            comboEmoji = emojiPath;
         } catch (Throwable t) {
             ModuleLog.warn("(IE|Emoji) Could not combine the emoji font with the text font; using the text font only: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             combo = getUserFont();
@@ -537,6 +552,18 @@ public class CustomFontHook {
             ModuleLog.error("(IE|Emoji) Could not save the picked emoji font: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return false;
         }
+    }
+
+    private static Typeface styledLike(Typeface active, Typeface like) {
+        if (like == null) return active;
+        int weight = weightOf(like);
+        boolean italic = like.isItalic();
+        Styled s = styled;
+        if (s == null || s.base != active) styled = s = new Styled(active);
+        int i = weight * 2 + (italic ? 1 : 0);
+        Typeface t = s.byStyle[i];
+        if (t == null) s.byStyle[i] = t = Typeface.create(active, weight, italic);
+        return t;
     }
 
     /** Typeface.create(…, weight, …) only accepts 1..1000; getWeight() can report 0. */
