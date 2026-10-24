@@ -44,7 +44,7 @@ import ps.reso.instaeclipse.utils.ui.ResIds;
  */
 final class ThreadHeaderMenu {
     static final String TAG = "ie_thread_menu";
-    private static final String[] ORDER = {"unsent", "export", "jump", "read", "hide"};
+    static final String[] ORDER = {"unsent", "export", "jump", "read", "hide"};
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     /**
      * How long a held header tap waits for the next one before it reaches Instagram. Half of

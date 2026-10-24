@@ -38,17 +38,32 @@ public final class CurrentThreadTracker {
 
     public interface Listener {
         void onThreadResumed(Activity activity, String threadId);
+
+        default void onThreadPaused(Activity activity, String threadId) {}
+    }
+
+    interface Args {
+        Iterable<String> keys();
+
+        Object get(String key);
+
+        Args nested(Object value);
+
+        boolean isThreadKey(Object value);
     }
 
     private static final String DTK = "com.instagram.model.direct.DirectThreadKey";
-    private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final List<Listener> LISTENERS = new CopyOnWriteArrayList<>();
 
     private static volatile boolean sInstalled;
 
     /** Resumed fragments that carry a thread key, oldest first (a thread-keyed sheet/viewer can sit
      *  on top of the open thread; when it pauses, the thread underneath is current again). */
-    private static final java.util.ArrayList<Object[]> RESUMED = new java.util.ArrayList<>(); // {WeakReference, id}
+    private static final java.util.ArrayList<Object[]> RESUMED = new java.util.ArrayList<>();
+
+    private static final class Main {
+        static final Handler HANDLER = new Handler(Looper.getMainLooper());
+    }
 
     private CurrentThreadTracker() {}
 
@@ -60,13 +75,30 @@ public final class CurrentThreadTracker {
         }
     }
 
-    /** Drops cleared references and (if non-null) the entry for {@code fragment}. */
-    private static void prune(Object fragment) {
+    public static String currentThreadId(Activity activity) {
+        if (activity == null) return null;
+        synchronized (RESUMED) {
+            prune(null);
+            for (int i = RESUMED.size() - 1; i >= 0; i--) {
+                Object[] entry = RESUMED.get(i);
+                if (((WeakReference<?>) entry[2]).get() == activity) return (String) entry[1];
+            }
+            return null;
+        }
+    }
+
+    private static Object[] prune(Object fragment) {
+        Object[] removed = null;
         java.util.Iterator<Object[]> it = RESUMED.iterator();
         while (it.hasNext()) {
-            Object f = ((WeakReference<?>) it.next()[0]).get();
-            if (f == null || f == fragment) it.remove();
+            Object[] entry = it.next();
+            Object f = ((WeakReference<?>) entry[0]).get();
+            if (f == null || f == fragment) {
+                it.remove();
+                if (f != null) removed = entry;
+            }
         }
+        return removed;
     }
 
     public static void addListener(Listener l) {
@@ -86,9 +118,11 @@ public final class CurrentThreadTracker {
             XposedHelpers.findAndHookMethod(fragment, "onPause", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    Object[] paused;
                     synchronized (RESUMED) {
-                        prune(param.thisObject);
+                        paused = prune(param.thisObject);
                     }
+                    if (paused != null) notifyPaused(paused);
                 }
             });
             sInstalled = true;
@@ -104,17 +138,15 @@ public final class CurrentThreadTracker {
             if (!(argsObj instanceof Bundle args)) return;
             String id = threadIdFromBundle(args, fragment.getClass().getClassLoader(), 0);
             if (id == null) return;
+            Activity activity = activityOf(fragment);
             synchronized (RESUMED) {
                 prune(fragment);
-                RESUMED.add(new Object[]{new WeakReference<>(fragment), id});
+                RESUMED.add(new Object[]{new WeakReference<>(fragment), id, new WeakReference<>(activity)});
             }
-            if (LISTENERS.isEmpty()) return;
-            Object view = XposedHelpers.getObjectField(fragment, "mView");
-            Activity activity = view instanceof View v ? findActivity(v.getContext()) : null;
-            if (activity == null) return;
+            if (LISTENERS.isEmpty() || activity == null) return;
             final Activity a = activity;
-            MAIN.post(() -> {
-                if (!id.equals(currentThreadId())) return; // already left the thread
+            Main.HANDLER.post(() -> {
+                if (!id.equals(currentThreadId())) return;
                 for (Listener l : LISTENERS) {
                     try {
                         l.onThreadResumed(a, id);
@@ -126,30 +158,54 @@ public final class CurrentThreadTracker {
         }
     }
 
-    private static String threadIdFromBundle(Bundle b, ClassLoader cl, int depth) {
-        if (depth > 2) return null;
+    private static void notifyPaused(Object[] entry) {
+        Activity activity = (Activity) ((WeakReference<?>) entry[2]).get();
+        if (activity == null || LISTENERS.isEmpty()) return;
+        String id = (String) entry[1];
+        Main.HANDLER.post(() -> {
+            for (Listener l : LISTENERS) {
+                try {
+                    l.onThreadPaused(activity, id);
+                } catch (Throwable ignored) {
+                }
+            }
+        });
+    }
+
+    private static Activity activityOf(Object fragment) {
         try {
-            if (cl != null) b.setClassLoader(cl);
-            for (String k : b.keySet()) {
-                Object v = b.get(k);
+            Object view = XposedHelpers.getObjectField(fragment, "mView");
+            return view instanceof View v ? findActivity(v.getContext()) : null;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static String threadIdFromBundle(Bundle b, ClassLoader cl, int depth) {
+        try {
+            return threadIdFrom(new BundleArgs(b, cl), depth);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    static String threadIdFrom(Args args, int depth) {
+        if (args == null || depth > 2) return null;
+        try {
+            for (String k : args.keys()) {
+                Object v = args.get(k);
                 if (v == null) continue;
-                if (DTK.equals(v.getClass().getName())) {
-                    // Same canonical id (mThreadId) as the hidden/locked/unsent stores; the first
-                    // String field is only a fallback, its order can change between builds.
+                if (args.isThreadKey(v)) {
                     String id = UnsentIdentity.threadId(v.toString());
                     if (id == null) id = firstStringField(v);
                     if (id != null) return id;
-                } else if (v instanceof Bundle nested) {
-                    String id = threadIdFromBundle(nested, cl, depth + 1);
+                } else {
+                    String id = threadIdFrom(args.nested(v), depth + 1);
                     if (id != null) return id;
                 }
             }
-            // A chat opened from the inbox carries its key inside the fragment's thread target
-            // (DIRECT_FRAGMENT_ARGUMENT_THREAD_TARGET: a ThreadTargetParcelable wrapping an
-            // obfuscated key class on 451), not as a bare DirectThreadKey. Take the numeric id
-            // from inside that target, from THIS fragment's own arguments only.
-            for (String k : b.keySet()) {
-                Object v = b.get(k);
+            for (String k : args.keys()) {
+                Object v = args.get(k);
                 if (v == null || !v.getClass().getName().contains("ThreadTarget")) continue;
                 String id = numericId(v, 0, java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
                 if (id != null) return id;
@@ -157,6 +213,28 @@ public final class CurrentThreadTracker {
         } catch (Throwable ignored) {
         }
         return null;
+    }
+
+    private record BundleArgs(Bundle bundle, ClassLoader loader) implements Args {
+        BundleArgs {
+            if (loader != null) bundle.setClassLoader(loader);
+        }
+
+        @Override public Iterable<String> keys() {
+            return bundle.keySet();
+        }
+
+        @Override public Object get(String key) {
+            return bundle.get(key);
+        }
+
+        @Override public Args nested(Object value) {
+            return value instanceof Bundle inner ? new BundleArgs(inner, loader) : null;
+        }
+
+        @Override public boolean isThreadKey(Object value) {
+            return DTK.equals(value.getClass().getName());
+        }
     }
 
     /** The first all-digit id (a thread id) in {@code o}'s fields, IG classes only, depth-limited. */

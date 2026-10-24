@@ -589,6 +589,12 @@ public class HideChatsHook {
         // A chat opened inside the main activity is a fragment transaction (no activity onResume);
         // also the fallback signal when the DirectThreadController anchor is gone.
         CurrentThreadTracker.install(classLoader);
+        ThreadHeaderInjector.install(classLoader);
+        ThreadHeaderInjector.register("hide", true, (a, threadId) -> {
+            if (FeatureFlags.hideSpecificChats || hiddenOnlyMode
+                    || layoutListeners.containsKey(a.getWindow().getDecorView())) tryInject(a);
+            return true;
+        });
         CurrentThreadTracker.addListener((a, threadId) -> {
             if (FeatureFlags.hideSpecificChats) registerListener(a);
         });
@@ -628,7 +634,7 @@ public class HideChatsHook {
             WeakReference<Activity> owner = new WeakReference<>(activity);
             listener = () -> {
                 Activity live = owner.get();
-                if (live != null) tryInject(live);
+                if (live != null && !ThreadHeaderInjector.handled(live.getWindow().getDecorView(), "hide")) tryInject(live);
             };
             decor.getViewTreeObserver().addOnGlobalLayoutListener(listener);
             layoutListeners.put(decor, listener);

@@ -44,6 +44,12 @@ public class ReadReceiptChatHook {
             }
         }
         CurrentThreadTracker.install(classLoader);
+        ThreadHeaderInjector.install(classLoader);
+        ThreadHeaderInjector.register("read", false, (a, threadId) -> {
+            if (!ReadReceiptGate.active(FeatureFlags.isGhostSeen, FeatureFlags.readReceiptChats)) return true;
+            ensureIds(a);
+            return tryInject(a);
+        });
         CurrentThreadTracker.addListener((a, threadId) -> {
             if (ReadReceiptGate.active(FeatureFlags.isGhostSeen, FeatureFlags.readReceiptChats)) register(a);
         });
@@ -52,19 +58,23 @@ public class ReadReceiptChatHook {
     }
 
     @SuppressLint("DiscouragedApi")
+    private static void ensureIds(Activity a) {
+        if (threadHeaderId == 0) {
+            threadHeaderId = a.getResources().getIdentifier("direct_thread_header", "id", a.getPackageName());
+            headerTitleId = a.getResources().getIdentifier("header_title", "id", a.getPackageName());
+        }
+    }
+
     private static void register(Activity a) {
         try {
-            if (threadHeaderId == 0) {
-                threadHeaderId = a.getResources().getIdentifier("direct_thread_header", "id", a.getPackageName());
-                headerTitleId = a.getResources().getIdentifier("header_title", "id", a.getPackageName());
-            }
+            ensureIds(a);
             View decor = a.getWindow().getDecorView();
             if (tryInject(a)) return;
             if (!pendingDecors.add(decor)) return;
             decor.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
                 @Override
                 public void onGlobalLayout() {
-                    if (tryInject(a)) {
+                    if (ThreadHeaderInjector.handled(decor, "read") || tryInject(a)) {
                         pendingDecors.remove(decor);
                         try { decor.getViewTreeObserver().removeOnGlobalLayoutListener(this); } catch (Throwable ignored) {}
                     }

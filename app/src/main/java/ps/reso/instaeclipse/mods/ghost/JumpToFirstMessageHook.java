@@ -47,7 +47,7 @@ public class JumpToFirstMessageHook {
             MAIN.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    if (inject(activity)) return;
+                    if (ThreadHeaderInjector.handled(activity.getWindow().getDecorView(), "jump") || inject(activity)) return;
                     if (++tries[0] < 15) MAIN.postDelayed(this, 300);
                     else ModuleLog.detail("(IE|JumpFirst) gave up adding the button: header=" + (threadHeaderId != 0 && activity.findViewById(threadHeaderId) != null)
                             + " unsentBtn=" + (activity.getWindow().getDecorView().findViewWithTag("ie_unsent_btn") != null)

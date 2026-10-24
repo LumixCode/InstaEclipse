@@ -49,6 +49,14 @@ public class UnsentThreadButtonHook {
         }
         // Thread opened as a fragment inside the main activity fires no activity onResume.
         CurrentThreadTracker.install(classLoader);
+        ThreadHeaderInjector.install(classLoader);
+        ThreadHeaderInjector.register("unsent", false, (activity, threadId) -> !enabled() || unsentEntry(activity));
+        ThreadHeaderInjector.register("export", false, (activity, threadId) -> {
+            if (enabled()) ChatExportHook.inject(activity);
+            return true;
+        });
+        ThreadHeaderInjector.register("jump", false, (activity, threadId) ->
+                !enabled() || !FeatureFlags.jumpToFirstMessage || JumpToFirstMessageHook.inject(activity));
         CurrentThreadTracker.addListener((activity, threadId) -> {
             if (enabled()) registerListener(activity);
         });
@@ -109,7 +117,7 @@ public class UnsentThreadButtonHook {
             if (!pendingDecors.add(decor)) return;
             decor.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
                 @Override public void onGlobalLayout() {
-                    if (tryInject(activity)) {
+                    if (ThreadHeaderInjector.handled(decor, "unsent", "export", "jump") || tryInject(activity)) {
                         pendingDecors.remove(decor);
                         try { decor.getViewTreeObserver().removeOnGlobalLayoutListener(this); } catch (Throwable ignored) {}
                     }
@@ -122,7 +130,20 @@ public class UnsentThreadButtonHook {
 
     /** Returns true once the chat header is on screen and its entries are in place (the listener detaches). */
     private boolean tryInject(Activity activity) {
+        if (!unsentEntry(activity)) return false;
         try {
+            if (FeatureFlags.jumpToFirstMessage) JumpToFirstMessageHook.inject(activity);
+            ChatExportHook.inject(activity);
+            return true;
+        } catch (Throwable t) {
+            ModuleLog.detail("(IE|UnsentBtn) inject failed: " + t.getMessage());
+            return false;
+        }
+    }
+
+    private boolean unsentEntry(Activity activity) {
+        try {
+            ensureIds(activity);
             // Only inside a DM thread: the thread header must be on screen (not a hidden cached chat).
             final View header = ThreadHeaderMenu.findShown(activity.getWindow().getDecorView(), threadHeaderId);
             if (header == null) return false;
@@ -162,8 +183,6 @@ public class UnsentThreadButtonHook {
                 })) return false;
                 ModuleLog.probe("(IE|UnsentBtn) added to the thread menu");
             }
-            if (FeatureFlags.jumpToFirstMessage) JumpToFirstMessageHook.inject(activity);
-            ChatExportHook.inject(activity);
             return true;
         } catch (Throwable t) {
             ModuleLog.detail("(IE|UnsentBtn) inject failed: " + t.getMessage());
