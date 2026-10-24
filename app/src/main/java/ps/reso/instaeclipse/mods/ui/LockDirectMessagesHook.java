@@ -26,6 +26,8 @@ import ps.reso.instaeclipse.utils.toast.IeToast;
  *  (PBKDF2, see {@link PasscodeHasher}; five wrong tries lock entry for 30 s). */
 public class LockDirectMessagesHook {
     private static final String OVERLAY_TAG = "ie_dm_lock";
+    private static final String MAIN_CLASS = "com.instagram.mainactivity.InstagramMainActivity";
+    private static final String MAIN_ALIAS = "com.instagram.android.activity.MainTabActivity";
     private static final DirectLockSession session = new DirectLockSession();
     private static final java.util.Map<Activity, Gate> gates = new java.util.WeakHashMap<>();
     private static final java.util.Set<Activity> started =
@@ -158,11 +160,23 @@ public class LockDirectMessagesHook {
                 });
             }
             checkGate(activity);
+            if (isMainActivity(activity)) ps.reso.instaeclipse.utils.dialog.LockFlows.askAtResume(activity);
             // Both gates run from here: the whole-app one and the Direct one keep their own status.
             boolean passcodeSet = FeatureFlags.lockDirectPasscode != null && !FeatureFlags.lockDirectPasscode.isEmpty();
             if (passcodeSet && FeatureFlags.lockWholeApp) FeatureStatusTracker.setHooked("LockWholeApp");
             if (passcodeSet && FeatureFlags.lockDirectMessages) FeatureStatusTracker.setHooked("LockDirectMessages");
         });
+    }
+
+    public static boolean locksNeedPasscode() {
+        return ps.reso.instaeclipse.utils.core.PasscodeRules.locksNeedPasscode();
+    }
+
+    private static boolean isMainActivity(Activity activity) {
+        String name = activity.getClass().getName();
+        if (MAIN_CLASS.equals(name) || MAIN_ALIAS.equals(name)) return true;
+        android.content.ComponentName component = activity.getComponentName();
+        return component != null && MAIN_ALIAS.equals(component.getClassName());
     }
 
     private static void registerLifecycle(Activity seed) {

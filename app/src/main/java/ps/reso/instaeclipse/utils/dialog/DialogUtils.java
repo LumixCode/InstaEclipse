@@ -282,12 +282,16 @@ public class DialogUtils {
 
     private static ToggleRow flagSwitch(Context context, int iconRes, String accentHex, int labelRes, String flag, Runnable after) {
         ToggleRow row = createSwitch(context, iconRes, accentHex, I18n.t(context, labelRes), ExtrasFeatures.get(flag));
-        row.setOnCheckedChangeListener((b, checked) -> SettingsGuard.request(context, flag, checked, () -> {
-            ExtrasFeatures.set(flag, checked);
-            SAVES.request();
-            SettingsEvents.afterChange(flag);
-            if (after != null) after.run();
-        }));
+        row.setOnCheckedChangeListener((b, checked) -> {
+            if (suppressLockToggle) return;
+            if (!SettingsGuard.request(context, flag, checked, () -> {
+                setQuietly(row, checked);
+                ExtrasFeatures.set(flag, checked);
+                SAVES.request();
+                SettingsEvents.afterChange(flag);
+                if (after != null) after.run();
+            })) setQuietly(row, !checked);
+        });
         return row;
     }
 
@@ -1865,126 +1869,128 @@ public class DialogUtils {
     }
 
 
-    private static void addLockCards(Context context, LinearLayout layout, String accent) {
+    private static final String[] PAGE_LOCKS = {"lockWholeApp", "lockDirectMessages", "lockSpecificMessages"};
+
+    private static void addLockCards(Context context, LinearLayout layout, String accent, Runnable rebuild) {
+        boolean hasCode = LockFlows.hasPasscode();
+        java.util.List<Runnable> refresh = new java.util.ArrayList<>();
+        Runnable changed = () -> {
+            if (LockFlows.hasPasscode() != hasCode) rebuild.run();
+            else runAll(refresh);
+        };
         LinearLayout passcodeCard = IeRows.card(context, 5);
         FeatureCatalog.Item passcode = FeatureCatalog.item("lockPasscode");
-        LinearLayout passcodeRow = detailRow(context, passcode.icon, accent, I18n.t(context, passcode.label),
-                v -> promptChangeDmPasscode(context));
+        LinearLayout passcodeRow = detailRow(context, passcode.icon, accent,
+                I18n.t(context, hasCode ? R.string.ig_lock_change_passcode : R.string.ig_lock_set_passcode),
+                v -> changePasscode(context, rebuild));
         passcodeRow.setTag(passcode.key);
         passcodeCard.addView(passcodeRow);
-
-        ToggleRow useFp = catalogRow(context, "lockUseFingerprint", accent, FeatureFlags.lockUseFingerprint);
-        useFp.setOnCheckedChangeListener((b, checked) -> SettingsGuard.request(context, "lockUseFingerprint", checked, () -> {
-            FeatureFlags.lockUseFingerprint = checked;
-            SettingsManager.saveAllFlags();
-        }));
-        passcodeCard.addView(useFp);
+        if (hasCode) {
+            LinearLayout removeRow = detailRow(context, R.drawable.ic_delete, accent,
+                    I18n.t(context, R.string.ig_lock_remove_passcode), v -> removePasscode(context, rebuild));
+            removeRow.setTag("lockPasscodeRemove");
+            passcodeCard.addView(removeRow);
+        }
+        passcodeCard.addView(lockSwitch(context, "lockUseFingerprint", accent, refresh, changed));
         layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.cat_sec_passcode)));
         layout.addView(passcodeCard);
+        if (!hasCode) layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_lock_no_code_hint)));
 
         LinearLayout cardView = IeRows.card(context, 5);
-        ToggleRow lockApp = catalogRow(context, "lockWholeApp", accent, FeatureFlags.lockWholeApp);
-        lockApp.setOnCheckedChangeListener((b, checked) -> {
-            if (suppressLockToggle) return;
-            if (!checked && FeatureFlags.lockDirectPasscode != null && !FeatureFlags.lockDirectPasscode.isEmpty()) {
-                suppressLockToggle = true;
-                lockApp.setChecked(true);
-                suppressLockToggle = false;
-                promptDisableLock(context, lockApp, () -> FeatureFlags.lockWholeApp = false);
-            } else {
-                SettingsGuard.request(context, "lockWholeApp", checked, () -> {
-                    FeatureFlags.lockWholeApp = checked;
-                    SettingsManager.saveAllFlags();
-                });
-            }
-        });
-        cardView.addView(lockApp);
-
-        ToggleRow lockDms = catalogRow(context, "lockDirectMessages", accent, FeatureFlags.lockDirectMessages);
-        lockDms.setOnCheckedChangeListener((b, checked) -> {
-            if (suppressLockToggle) return;
-            if (!checked && FeatureFlags.lockDirectPasscode != null && !FeatureFlags.lockDirectPasscode.isEmpty()) {
-                suppressLockToggle = true;
-                lockDms.setChecked(true);
-                suppressLockToggle = false;
-                promptDisableLock(context, lockDms, () -> FeatureFlags.lockDirectMessages = false);
-            } else {
-                SettingsGuard.request(context, "lockDirectMessages", checked, () -> {
-                    FeatureFlags.lockDirectMessages = checked;
-                    SettingsManager.saveAllFlags();
-                });
-            }
-        });
-        cardView.addView(lockDms);
-
-        ToggleRow selected = catalogRow(context, "lockSpecificMessages", accent, FeatureFlags.lockSpecificMessages);
-        selected.setOnCheckedChangeListener((b, checked) -> {
-            if (suppressLockToggle) return;
-            if (!checked && FeatureFlags.lockDirectPasscode != null && !FeatureFlags.lockDirectPasscode.isEmpty()) {
-                suppressLockToggle = true;
-                selected.setChecked(true);
-                suppressLockToggle = false;
-                ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.authenticate(activityOf(context),
-                        I18n.t(context, R.string.ig_lock_change_locks_prompt), "settings", () -> {
-                            FeatureFlags.lockSpecificMessages = false;
-                            suppressLockToggle = true;
-                            selected.setChecked(false);
-                            suppressLockToggle = false;
-                            SettingsManager.saveAllFlags();
-                        });
-            } else {
-                SettingsGuard.request(context, "lockSpecificMessages", checked, () -> {
-                    FeatureFlags.lockSpecificMessages = checked;
-                    SettingsManager.saveAllFlags();
-                });
-            }
-        });
-        cardView.addView(selected);
+        for (String key : PAGE_LOCKS) cardView.addView(lockSwitch(context, key, accent, refresh, changed));
         FeatureCatalog.Item chooseChats = FeatureCatalog.item("lockChooseChats");
         LinearLayout chooseRow = detailRow(context, chooseChats.icon, accent, I18n.t(context, chooseChats.label), v ->
-                ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.authenticate(activityOf(context),
-                        I18n.t(context, R.string.ig_lock_change_locks_prompt), "settings",
-                        () -> showChatPicker(context, true)));
+                LockFlows.authenticate(activityOf(context), I18n.t(context, R.string.ig_lock_change_locks_prompt),
+                        "settings", () -> showChatPicker(context, true)));
         chooseRow.setTag(chooseChats.key);
         cardView.addView(chooseRow);
-
-        ToggleRow alwaysAsk = catalogRow(context, "lockDirectAlways", accent, FeatureFlags.lockDirectAlways);
-        alwaysAsk.setOnCheckedChangeListener((b, checked) -> SettingsGuard.request(context, "lockDirectAlways", checked, () -> {
-            FeatureFlags.lockDirectAlways = checked;
-            SettingsManager.saveAllFlags();
-        }));
-        cardView.addView(alwaysAsk);
-
-        ToggleRow lockColl = catalogRow(context, "lockSavedCollections", accent, FeatureFlags.lockSavedCollections);
-        lockColl.setOnCheckedChangeListener((b, checked) -> {
-            if (suppressLockToggle) return;
-            if (!checked && FeatureFlags.lockDirectPasscode != null && !FeatureFlags.lockDirectPasscode.isEmpty()) {
-                suppressLockToggle = true;
-                lockColl.setChecked(true);
-                suppressLockToggle = false;
-                promptDisableLock(context, lockColl, () -> FeatureFlags.lockSavedCollections = false);
-            } else {
-                SettingsGuard.request(context, "lockSavedCollections", checked, () -> {
-                    FeatureFlags.lockSavedCollections = checked;
-                    SettingsManager.saveAllFlags();
-                });
-            }
-        });
-        cardView.addView(lockColl);
+        cardView.addView(lockSwitch(context, "lockDirectAlways", accent, refresh, changed));
+        cardView.addView(lockSwitch(context, "lockSavedCollections", accent, refresh, changed));
         layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.ig_dialog_misc_lock_section)));
         layout.addView(cardView);
+        runAll(refresh);
+    }
+
+    private static ToggleRow lockSwitch(Context context, String key, String accent, java.util.List<Runnable> refresh,
+                                        Runnable changed) {
+        FeatureCatalog.Item item = FeatureCatalog.item(key);
+        ToggleRow row = catalogRow(context, key, accent, ExtrasFeatures.get(key));
+        row.setOnCheckedChangeListener((b, checked) -> {
+            if (suppressLockToggle) return;
+            if (!SettingsGuard.request(context, key, checked, () -> {
+                setQuietly(row, checked);
+                ExtrasFeatures.set(key, checked);
+                SettingsManager.saveAllFlags();
+                changed.run();
+            })) setQuietly(row, !checked);
+        });
+        if (PasscodeRules.isLock(key)) {
+            refresh.add(() -> row.setSubtitle(ExtrasFeatures.get(key) && !LockFlows.hasPasscode()
+                    ? I18n.t(context, R.string.ig_lock_on_needs_passcode) : describe(context, item)));
+        }
+        return row;
+    }
+
+    private static void setQuietly(ToggleRow row, boolean checked) {
+        suppressLockToggle = true;
+        row.setChecked(checked);
+        suppressLockToggle = false;
+    }
+
+    private static void changePasscode(Context context, Runnable rebuild) {
+        Activity activity = activityOf(context);
+        if (!LockFlows.hasPasscode()) {
+            LockFlows.setPasscode(activity, rebuild, null);
+            return;
+        }
+        LockFlows.authenticate(activity, I18n.t(context, R.string.ig_lock_settings_prompt), "settings",
+                () -> LockFlows.setPasscode(activity, rebuild, null));
+    }
+
+    private static void removePasscode(Context context, Runnable rebuild) {
+        LockFlows.authenticate(activityOf(context), I18n.t(context, R.string.ig_lock_settings_prompt), "settings", () -> {
+            try {
+                IeDialog dlg = new IeDialog(context).title(I18n.t(context, R.string.ig_lock_remove_passcode))
+                        .message(I18n.t(context, R.string.ig_lock_remove_passcode_confirm));
+                dlg.secondary(context.getString(android.R.string.cancel), null);
+                dlg.destructive(I18n.t(context, R.string.ig_lock_remove_passcode), () -> {
+                    LockFlows.removePasscode();
+                    SettingsManager.saveAllFlags();
+                    rebuild.run();
+                });
+                dlg.show();
+            } catch (Throwable t) {
+                ModuleLog.warn("(IE|Menu) Could not ask before removing the passcode", t);
+            }
+        });
     }
 
     private static void showLockOptions(Context context) {
+        showSection(context, lockPage(context));
+    }
+
+    private static IeSheet.Page lockPage(Context context) {
         FeatureCatalog.Category cat = FeatureCatalog.category("lock");
         String accent = accentHex(cat.group);
         LinearLayout layout = createSwitchLayout(context);
-        addLockCards(context, layout, accent);
+        Runnable rebuild = () -> replaceTop(context, lockPage(context));
+        addLockCards(context, layout, accent, rebuild);
         layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_lock_relock_hint)));
         layout.addView(IeRows.sectionHeader(context, I18n.t(context, R.string.cat_sec_hidden_chats)));
         layout.addView(hiddenChatsCard(context, accent));
         layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_hide_chats_picker_hint)));
-        showSectionDialog(context, I18n.t(context, cat.title), layout);
+        layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_hide_chats_view_hint)));
+        if (!LockFlows.hasPasscode()) {
+            layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_hide_chats_needs_passcode)));
+            LinearLayout setCard = IeRows.card(context, 5);
+            FeatureCatalog.Item passcode = FeatureCatalog.item("lockPasscode");
+            LinearLayout setRow = detailRow(context, passcode.icon, accent, I18n.t(context, R.string.ig_lock_set_passcode),
+                    v -> LockFlows.setPasscode(activityOf(context), rebuild, null));
+            setRow.setTag("hidePasscode");
+            setCard.addView(setRow);
+            layout.addView(setCard);
+        }
+        return new IeSheet.Page(I18n.t(context, cat.title), layout);
     }
 
     private static LinearLayout hiddenChatsCard(Context context, String accent) {
@@ -1993,7 +1999,7 @@ public class DialogUtils {
         hideCard.addView(catalogSwitch(context, FeatureCatalog.item("hideSpecificChats"), accent, refresh));
         hideCard.addView(catalogSwitch(context, FeatureCatalog.item("showHideChatButton"), accent, refresh));
         hideCard.addView(catalogAction(context, FeatureCatalog.item("hideChooseChats"), accent, refresh,
-                v -> showChatPicker(context)));
+                v -> SettingsGuard.request(context, SettingsGuard.HIDE_PICKER, null, () -> showChatPicker(context))));
         runAll(refresh);
         return hideCard;
     }
@@ -2115,67 +2121,6 @@ public class DialogUtils {
 
     private static boolean suppressLockToggle = false;
 
-    /** A numeric passcode field for the lock dialogs: the dialog's rounded input, centered and large. */
-    private static android.widget.EditText pinInput(IeDialog dlg, String hint) {
-        android.widget.EditText e = dlg.input(hint);
-        e.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
-        e.setGravity(Gravity.CENTER);
-        e.setTextSize(20);
-        e.setLetterSpacing(0.2f);
-        return e;
-    }
-
-    private static void toastWrongPass(Context context) {
-        ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.lockoutSecondsLeft() > 0
-                ? ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.failureText(context)
-                : I18n.t(context, R.string.ig_dialog_misc_lock_dms_wrong), Toast.LENGTH_SHORT).show();
-    }
-
-    /** Turning a lock toggle OFF requires the current passcode; on success run turnOff (clears that
-     *  lock's flag), uncheck + save, otherwise the toggle stays on. Cancel / ✕ leave the toggle on. */
-    private static void promptDisableLock(Context context, ToggleRow lockSwitch, Runnable turnOff) {
-        try {
-            IeDialog dlg = new IeDialog(context).title(I18n.t(context, R.string.ig_dialog_misc_lock_dms_disable));
-            final android.widget.EditText cur = pinInput(dlg, I18n.t(context, R.string.ig_dialog_misc_lock_dms_current));
-            dlg.secondary(context.getString(android.R.string.cancel), null);
-            dlg.primary(context.getString(android.R.string.ok), () -> {
-                if (ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.checkPass(cur.getText().toString())) {
-                    turnOff.run();
-                    suppressLockToggle = true;
-                    lockSwitch.setChecked(false);
-                    suppressLockToggle = false;
-                    SettingsManager.saveAllFlags();
-                } else {
-                    toastWrongPass(context);
-                }
-            });
-            dlg.show();
-        } catch (Throwable t) {
-            ModuleLog.warn("(IE|Menu) Could not open the passcode prompt to turn the lock off", t);
-        }
-    }
-
-    /** If a DM passcode already exists, require the current one before changing it. */
-    private static void promptChangeDmPasscode(Context context) {
-        String existing = FeatureFlags.lockDirectPasscode;
-        if (existing == null || existing.isEmpty()) { promptSetNewDmPasscode(context); return; }
-        try {
-            IeDialog dlg = new IeDialog(context).title(I18n.t(context, R.string.ig_dialog_misc_lock_dms_current));
-            final android.widget.EditText cur = pinInput(dlg, I18n.t(context, R.string.ig_dialog_misc_lock_dms_current));
-            dlg.secondary(context.getString(android.R.string.cancel), null);
-            dlg.primary(context.getString(android.R.string.ok), () -> {
-                if (ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.checkPass(cur.getText().toString())) {
-                    promptSetNewDmPasscode(context);
-                } else {
-                    toastWrongPass(context);
-                }
-            });
-            dlg.show();
-        } catch (Throwable t) {
-            ModuleLog.warn("(IE|Menu) Could not open the current passcode prompt", t);
-        }
-    }
-
     private static void setRowEnabled(View row, boolean on) {
         row.setEnabled(on);
         row.setAlpha(on ? 1f : 0.4f);
@@ -2290,31 +2235,6 @@ public class DialogUtils {
             dlg.show();
         } catch (Throwable t) {
             ModuleLog.warn("(IE|Menu) Could not open the share domain dialog", t);
-        }
-    }
-
-    /** Prompt for a new passcode (empty clears it). */
-    private static void promptSetNewDmPasscode(Context context) {
-        try {
-            IeDialog dlg = new IeDialog(context).title(I18n.t(context, R.string.ig_dialog_misc_lock_dms_set));
-            final android.widget.EditText input = pinInput(dlg, I18n.t(context, R.string.ig_dialog_misc_lock_dms_hint));
-            dlg.secondary(context.getString(android.R.string.cancel), null);
-            dlg.primary(context.getString(android.R.string.ok), () -> {
-                String pass = input.getText().toString();
-                if (PasscodeRules.checkNew(pass, pass) == PasscodeRules.Result.EMPTY) {
-                    PasscodeRules.removePasscode();
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_dialog_misc_lock_dms_cleared), Toast.LENGTH_SHORT).show();
-                } else {
-                    ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.newSalt(); // fresh salt per set
-                    FeatureFlags.lockDirectPasscode =
-                            ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.hashPass(pass);
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_dialog_misc_lock_dms_saved), Toast.LENGTH_SHORT).show();
-                }
-                SettingsManager.saveAllFlags();
-            });
-            dlg.show();
-        } catch (Throwable t) {
-            ModuleLog.warn("(IE|Menu) Could not open the new passcode prompt", t);
         }
     }
 

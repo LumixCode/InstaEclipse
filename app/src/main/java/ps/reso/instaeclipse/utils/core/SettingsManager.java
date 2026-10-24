@@ -30,7 +30,7 @@ public class SettingsManager {
     /** While a passcode is set, only Instagram's Lock menu (it asks for the passcode) turns these off. */
     private static final Set<String> PASSCODE_LOCKS = new HashSet<>(Arrays.asList(
             "lockWholeApp", "lockDirectMessages", "lockSpecificMessages", "lockDirectAlways",
-            "lockSavedCollections"));
+            "lockSavedCollections", "hideSpecificChats"));
     private static SharedPreferences prefs;
     /** Application context, for pushing in-app changes to the companion (CompanionSync). */
     private static Context appContext;

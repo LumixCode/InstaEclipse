@@ -19,4 +19,25 @@
     <string name="ig_lock_biometric_use_passcode">Use passcode</string>
     <string name="ig_hidden_inbox_show_all">Show all messages</string>
     <string name="ig_hidden_inbox_unavailable">Hidden chats are unavailable for this inbox.</string>
+    <string name="ig_lock_set_passcode">Set passcode</string>
+    <string name="ig_lock_change_passcode">Change passcode</string>
+    <string name="ig_lock_remove_passcode">Remove passcode</string>
+    <string name="ig_lock_remove_passcode_confirm">Remove the passcode? All locks turn off. Your locked-chat and collection lists and hidden chats are kept.</string>
+    <string name="ig_lock_new_passcode">New passcode</string>
+    <string name="ig_lock_repeat_passcode">Type it again</string>
+    <string name="ig_lock_passcode_rule">Use at least 4 digits.</string>
+    <string name="ig_lock_save">Save</string>
+    <string name="ig_lock_error_empty">Enter a passcode</string>
+    <string name="ig_lock_error_digits">Use digits only</string>
+    <string name="ig_lock_error_short">Use at least 4 digits</string>
+    <string name="ig_lock_error_mismatch">The two passcodes don\'t match</string>
+    <string name="ig_lock_settings_prompt">Enter your passcode to change lock settings</string>
+    <string name="ig_lock_on_needs_passcode">On · needs a passcode</string>
+    <string name="ig_lock_no_code_hint">No passcode yet. Turning on a lock asks you to choose one.</string>
+    <string name="ig_lock_needs_passcode_title">Your locks need a passcode</string>
+    <string name="ig_lock_needs_passcode_body">Some locks are on, but no passcode is set, so nothing is locked yet. Set a passcode or turn the locks off.</string>
+    <string name="ig_lock_turn_locks_off">Turn locks off</string>
+    <string name="ig_lock_not_now">Not now</string>
+    <string name="ig_hide_chats_view_hint">To see hidden chats, triple-tap your name at the top left of Messages and enter your passcode.</string>
+    <string name="ig_hide_chats_needs_passcode">Set a passcode to open hidden chats</string>
 </resources>

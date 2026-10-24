@@ -17,15 +17,26 @@ public final class PasscodeRules {
     private PasscodeRules() {}
 
     public static Result checkNew(String first, String second) {
-        return first == null || first.isEmpty() ? Result.EMPTY : Result.OK;
+        if (first == null || first.isEmpty()) return Result.EMPTY;
+        for (int i = 0; i < first.length(); i++) {
+            char c = first.charAt(i);
+            if (c < '0' || c > '9') return Result.NOT_DIGITS;
+        }
+        if (first.length() < MIN_DIGITS) return Result.TOO_SHORT;
+        return first.equals(second) ? Result.OK : Result.MISMATCH;
+    }
+
+    public static boolean isLock(String key) {
+        for (String lock : LOCKS) if (lock.equals(key)) return true;
+        return false;
     }
 
     public static boolean locksNeedPasscode() {
-        return false;
+        return !lockSet().isEmpty() && !SettingsManager.passcodeSet(FeatureFlags.lockDirectPasscode);
     }
 
     public static boolean askAtResume(boolean askedThisStart, String muted) {
-        return false;
+        return !askedThisStart && locksNeedPasscode() && !lockSet().equals(muted);
     }
 
     public static String lockSet() {
@@ -35,10 +46,12 @@ public final class PasscodeRules {
     }
 
     public static void turnLocksOff() {
+        for (String key : LOCKS) ExtrasFeatures.set(key, false);
     }
 
     public static void removePasscode() {
         FeatureFlags.lockDirectPasscode = "";
         FeatureFlags.lockDirectSalt = "";
+        turnLocksOff();
     }
 }

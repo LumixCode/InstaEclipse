@@ -74,6 +74,7 @@ import ps.reso.instaeclipse.mods.media.MediaStoreTarget;
 import ps.reso.instaeclipse.utils.backup.CompanionRestorePlan;
 import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
 import ps.reso.instaeclipse.utils.core.PermissionAsk;
+import ps.reso.instaeclipse.utils.core.SettingsGuard;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.core.SettingsSchema;
 import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
@@ -885,7 +886,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private static final Map<String, FeatureCatalog.Category> CATEGORY_OF_ITEM = categoryOfItem();
     private static final Set<String> FOCUS_LOCKED = focusLocked();
     private static final List<String> LOCK_SWITCHES = Arrays.asList(
-            "lockWholeApp", "lockDirectMessages", "lockSpecificMessages", "lockDirectAlways", "lockSavedCollections");
+            "lockWholeApp", "lockDirectMessages", "lockSpecificMessages", "lockDirectAlways", "lockSavedCollections",
+            "hideSpecificChats");
     private static final List<String> PASSCODE_LOCKS = Arrays.asList(
             "lockWholeApp", "lockDirectMessages", "lockSpecificMessages", "lockSavedCollections");
     private static final int[] CORNER_NAMES = {R.string.ig_dialog_extras_share_domain_off, R.string.feat_corner_small,
@@ -2377,10 +2379,20 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
     private void stageChanges(LinkedHashMap<String, Boolean> wanted) {
         LinkedHashMap<String, Object> changed = new LinkedHashMap<>();
+        Map<String, ?> current = localCache.getAll();
+        boolean refused = false;
         for (Map.Entry<String, Boolean> entry : wanted.entrySet()) {
-            if (localCache.getBoolean(entry.getKey(), defaultState(entry.getKey())) != entry.getValue()) {
-                changed.put(entry.getKey(), entry.getValue());
+            if (localCache.getBoolean(entry.getKey(), defaultState(entry.getKey())) == entry.getValue()) continue;
+            if (SettingsGuard.decideInApp(entry.getKey(), entry.getValue(), current) == SettingsGuard.Decision.REFUSE) {
+                refused = true;
+                continue;
             }
+            changed.put(entry.getKey(), entry.getValue());
+        }
+        if (refused) {
+            ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(),
+                    getString(R.string.ig_lock_turn_off_in_ig), Toast.LENGTH_LONG).show();
+            recyclerFeatures.post(this::reloadCurrentMenu);
         }
         if (changed.size() == 1) {
             Map.Entry<String, Object> only = changed.entrySet().iterator().next();
