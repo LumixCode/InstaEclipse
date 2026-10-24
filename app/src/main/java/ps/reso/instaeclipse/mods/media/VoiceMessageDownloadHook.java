@@ -1000,18 +1000,19 @@ public class VoiceMessageDownloadHook {
                 }
                 ModuleLog.detail(TAG + "DM media: " + urls.size() + " item(s), user=" + fUser);
                 if (urls.isEmpty()) throw new IllegalStateException("no media URL");
-                boolean delegated = false, anyVideo = false;
+                boolean delegated = false;
+                List<String> names = new ArrayList<>();
                 for (int i = 0; i < urls.size(); i++) {
                     String u = urls.get(i);
                     boolean video = FeedVideoDownloadHook.isVideoUrl(u);
-                    anyVideo |= video;
                     String itemId = urls.size() > 1 ? fId + "_" + (i + 1) : fId;
-                    delegated |= FeedVideoDownloadHook.downloadAndSave(ctx, u,
-                            FeedVideoDownloadHook.buildFilename(fUser, "dm", itemId, video), video, fUser);
+                    String name = FeedVideoDownloadHook.buildFilename(fUser, "dm", itemId, video);
+                    names.add(name);
+                    delegated |= FeedVideoDownloadHook.downloadAndSave(ctx, u, name, video, fUser);
                 }
-                int saved = anyVideo ? R.string.ig_toast_video_saved : R.string.ig_toast_photo_saved;
+                String saved = String.join(", ", names);
                 if (!delegated) FeedVideoDownloadHook.mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
-                        I18n.t(ctx, saved), android.widget.Toast.LENGTH_SHORT).show());
+                        I18n.t(ctx, R.string.ig_toast_file_saved, saved), android.widget.Toast.LENGTH_SHORT).show());
             } catch (Throwable t) {
                 ModuleLog.error(TAG + "Could not save the chat photo or video: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                 FeedVideoDownloadHook.mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
@@ -1186,7 +1187,7 @@ public class VoiceMessageDownloadHook {
             try {
                 boolean delegated = FeedVideoDownloadHook.downloadAndSave(ctx, url, name, false, user);
                 if (!delegated) FeedVideoDownloadHook.mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
-                        I18n.t(ctx, R.string.ig_toast_photo_saved), android.widget.Toast.LENGTH_SHORT).show());
+                        I18n.t(ctx, R.string.ig_toast_file_saved, name), android.widget.Toast.LENGTH_SHORT).show());
             } catch (Throwable t) {
                 ModuleLog.error(TAG + "Could not save the sticker: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                 FeedVideoDownloadHook.mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,

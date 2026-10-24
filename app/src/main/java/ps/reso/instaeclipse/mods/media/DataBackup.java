@@ -106,9 +106,11 @@ public final class DataBackup {
                     out.closeEntry();
                 }
                 String name = "instaeclipse_data_" + new SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(new Date()) + ".zip";
-                DownloadPublisher.save(app, zip, name, "application/zip", "", "", false, new DownloadEngine.Cancellation());
-                ModuleLog.line(TAG + "Backup saved to Download/InstaEclipse/" + name + " (" + count + " files, " + zip.length() + " bytes)");
-                toast(app, I18n.t(app, R.string.ig_data_backup_saved, "Download/InstaEclipse/" + name), true);
+                DownloadPublisher.Saved saved = DownloadPublisher.save(app, zip, name, "application/zip", "", "", false,
+                        new DownloadEngine.Cancellation());
+                String where = saved.displayPath + "/" + saved.name;
+                ModuleLog.line(TAG + "Backup saved to " + where + " (" + count + " files, " + zip.length() + " bytes)");
+                toast(app, I18n.t(app, R.string.ig_data_backup_saved, where), true);
             } catch (Throwable t) {
                 ModuleLog.error(TAG + "Could not save the backup", t);
                 toast(app, I18n.t(app, R.string.ig_data_backup_failed), true);

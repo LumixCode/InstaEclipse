@@ -3,20 +3,11 @@ package ps.reso.instaeclipse.mods.media;
 import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.ContentValues;
 import android.content.Context;
-import android.database.Cursor;
-import android.net.Uri;
-import android.os.Build;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.DocumentsContract;
-import android.provider.MediaStore;
 import android.widget.Button;
 import android.widget.Toast;
-
-import androidx.annotation.RequiresApi;
 
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
@@ -24,7 +15,6 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -47,6 +37,7 @@ import java.util.concurrent.ExecutorService;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.download.DownloadEngine;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -900,7 +891,7 @@ public class FeedVideoDownloadHook {
                     intent.putExtra("extractAudio", extractFromVideo);
                     intent.putExtra("trimStartMs", trimStartMs);
                     intent.putExtra("trimDurationMs", trimDurationMs);
-                    ps.reso.instaeclipse.utils.ipc.CompanionBridge.downloadLegacy(ctx, intent, error -> companionResult(ctx, error,
+                    ps.reso.instaeclipse.utils.ipc.CompanionBridge.downloadLegacy(ctx, intent, error -> companionResult(ctx, error, "audio/mp4",
                             () -> downloadAudio(ctx, url, filename, username, extractFromVideo, trimStartMs, trimDurationMs, true)));
                     return;
                 }
@@ -914,11 +905,7 @@ public class FeedVideoDownloadHook {
                     } else {
                         downloadToFileAndGetType(url, temp);
                     }
-                    try (FileInputStream in = new FileInputStream(temp);
-                         OutputStream out = openOutputStream(ctx, filename, "audio/mp4", username)) {
-                        byte[] buf = new byte[32768]; int n;
-                        while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-                    }
+                    DownloadPublisher.save(ctx, temp, filename, "audio/mp4", username, new DownloadEngine.Cancellation());
                 } finally {
                     //noinspection ResultOfMethodCallIgnored
                     temp.delete();
@@ -1099,15 +1086,12 @@ public class FeedVideoDownloadHook {
                 FeatureFlags.downloaderAddTimestamp, System.currentTimeMillis());
     }
 
-    /** Output stream for an exported chat (HTML) in the downloads location, "chats" subfolder. */
-    /** Output stream for an exported file (CSV etc.) in the downloads location, "exports" subfolder. */
     public static OutputStream openExport(Context ctx, String filename, String mime) throws Exception {
-        return openOutputStream(ctx, filename, mime, "exports");
+        return DownloadPublisher.openStream(ctx, filename, mime, "exports");
     }
 
-    /** Comment exports: <download folder>/comments/<file>. */
     public static OutputStream openCommentsExport(Context ctx, String filename) throws Exception {
-        return openOutputStream(ctx, filename, "text/html", "comments");
+        return DownloadPublisher.openStream(ctx, filename, "text/html", "comments");
     }
 
     /**
@@ -1118,147 +1102,13 @@ public class FeedVideoDownloadHook {
      */
     public static OutputStream openChatExportFile(Context ctx, String sub, String filename, String mime)
             throws Exception {
-        String user = "chats" + (sub == null || sub.isEmpty() ? "" : "/" + sub);
-        return openOutputStream(ctx, filename, mime, user, true);
+        String folder = "chats" + (sub == null || sub.isEmpty() ? "" : "/" + sub);
+        return DownloadPublisher.openStream(ctx, filename, mime, folder);
     }
 
-    /**
-     * Opens a writable OutputStream for the download destination, handling all storage strategies:
-     *   1. Raw file path (custom folder, avoids SAF authority issues when URI was granted to companion app)
-     *   2. SAF tree URI (works when folder was picked from inside Instagram's own dialog)
-     *   3. MediaStore Downloads (API 29+, default scoped-storage path)
-     *   4. Legacy direct file (API < 29)
-     */
-    static OutputStream openOutputStream(Context ctx, String filename, String mimeType, String username)
-            throws Exception {
-        return openOutputStream(ctx, filename, mimeType, username, FeatureFlags.downloaderUsernameFolder);
-    }
-
-    /**
-     * As {@link #openOutputStream(Context, String, String, String)}, but {@code nestFolder} forces
-     * (or suppresses) the {@code username} subfolder regardless of the downloader setting. Chat
-     * exports pass {@code true} so an export's HTML and its media/ folder always stay together.
-     * {@code username} may contain '/'; every segment is created.
-     */
-    static OutputStream openOutputStream(Context ctx, String filename, String mimeType, String username,
-                                         boolean nestFolder) throws Exception {
-
-        // 1. Raw path — preferred when set; bypasses SAF authority entirely
-        if (!FeatureFlags.downloaderCustomPath.isEmpty()) {
-            try {
-                return openRawPathOutputStream(filename, username, nestFolder);
-            } catch (Exception e) {
-                ModuleLog.warn("(InstaEclipse|DL) Could not save to your download folder path; trying your picked folder instead: " + e.getMessage());
-            }
-        }
-
-        // 2. SAF — only works when the folder was picked inside Instagram's process
-        //    (so Instagram holds the persistable URI permission, not the companion app)
-        if (!FeatureFlags.downloaderCustomUri.isEmpty()) {
-            try {
-                return openSafOutputStream(ctx, filename, mimeType, username, nestFolder);
-            } catch (Exception e) {
-                ModuleLog.warn("(InstaEclipse|DL) Could not save to your picked download folder; saving to the default Download folder instead: " + e.getMessage());
-            }
-        }
-
-        // 3. MediaStore (API 29+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            return openMediaStoreOutputStream(ctx, filename, mimeType, username, nestFolder);
-        }
-
-        // 4. Legacy API < 29: direct file write
-        File dir = new File(Environment.getExternalStorageDirectory(), "InstaEclipse");
-        if (nestFolder && username != null && !username.isEmpty()) {
-            dir = new File(dir, username);
-        }
-        //noinspection ResultOfMethodCallIgnored
-        dir.mkdirs();
-        return new FileOutputStream(new File(dir, filename));
-    }
-
-    private static OutputStream openRawPathOutputStream(String filename, String username, boolean nestFolder) throws Exception {
-        String rawPath = FeatureFlags.downloaderCustomPath;
-        // Reject if path conversion failed and we got a content URI string as fallback
-        if (rawPath.startsWith("content://")) {
-            throw new Exception("Not a raw file path: " + rawPath);
-        }
-        File dir = new File(rawPath);
-        if (nestFolder && username != null && !username.isEmpty()) {
-            dir = new File(dir, username);
-        }
-        if (!dir.exists() && !dir.mkdirs()) {
-            throw new Exception("Cannot create dir: " + dir.getAbsolutePath());
-        }
-        return new FileOutputStream(new File(dir, filename));
-    }
-
-    private static OutputStream openSafOutputStream(Context ctx, String filename, String mimeType, String username, boolean nestFolder)
-            throws Exception {
-        Uri treeUri = Uri.parse(FeatureFlags.downloaderCustomUri);
-        String rootDocId = DocumentsContract.getTreeDocumentId(treeUri);
-        Uri dirUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, rootDocId);
-        if (nestFolder && username != null && !username.isEmpty()) {
-            String parentDocId = rootDocId;
-            for (String seg : username.split("/")) {
-                if (seg.isEmpty()) continue;
-                dirUri = findOrCreateSafDir(ctx, treeUri, parentDocId, seg);
-                parentDocId = DocumentsContract.getDocumentId(dirUri);
-            }
-        }
-        Uri fileUri = DocumentsContract.createDocument(ctx.getContentResolver(), dirUri, mimeType, filename);
-        if (fileUri == null) throw new Exception("SAF createDocument returned null");
-        OutputStream out = ctx.getContentResolver().openOutputStream(fileUri);
-        if (out == null) throw new Exception("SAF openOutputStream returned null");
-        return out;
-    }
-
-    private static Uri findOrCreateSafDir(Context ctx, Uri treeUri, String parentDocId, String dirName)
-            throws Exception {
-        Uri childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocId);
-        try (Cursor c = ctx.getContentResolver().query(childrenUri,
-                new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                             DocumentsContract.Document.COLUMN_DISPLAY_NAME},
-                null, null, null)) {
-            while (c != null && c.moveToNext()) {
-                if (dirName.equals(c.getString(1))) {
-                    return DocumentsContract.buildDocumentUriUsingTree(treeUri, c.getString(0));
-                }
-            }
-        }
-        Uri parentUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, parentDocId);
-        Uri newDir = DocumentsContract.createDocument(ctx.getContentResolver(), parentUri,
-                DocumentsContract.Document.MIME_TYPE_DIR, dirName);
-        if (newDir == null) throw new Exception("SAF createDocument (dir) returned null");
-        return newDir;
-    }
-
-    @RequiresApi(Build.VERSION_CODES.Q)
-    @SuppressLint("NewApi")
-    private static OutputStream openMediaStoreOutputStream(Context ctx, String filename, String mimeType, String username, boolean nestFolder)
-            throws Exception {
-        String relPath = MediaStoreTarget.of(FeatureFlags.downloaderCustomPath,
-                Environment.getExternalStorageDirectory().getAbsolutePath(), username, nestFolder, mimeType).relativePath;
-        ContentValues values = new ContentValues();
-        values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename);
-        values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType);
-        values.put(MediaStore.MediaColumns.RELATIVE_PATH, relPath);
-        Uri collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
-        Uri itemUri = ctx.getContentResolver().insert(collection, values);
-        if (itemUri == null) throw new Exception("MediaStore insert failed");
-        OutputStream out = ctx.getContentResolver().openOutputStream(itemUri);
-        if (out == null) throw new Exception("MediaStore openOutputStream returned null");
-        return out;
-    }
-
-    /** Copies tempFile to the download destination (only used when no custom SAF URI is set). */
     static void saveFileToDestination(Context ctx, File tempFile, String filename,
                                       String mimeType, String username) throws Exception {
-        try (FileInputStream in = new FileInputStream(tempFile);
-             OutputStream out = openOutputStream(ctx, filename, mimeType, username)) {
-            byte[] buf = new byte[32768]; int n;
-            while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-        }
+        DownloadPublisher.save(ctx, tempFile, filename, mimeType, username, new DownloadEngine.Cancellation());
     }
 
     /**
@@ -1272,8 +1122,12 @@ public class FeedVideoDownloadHook {
                 File src = new File(localPath);
                 if (!src.exists()) return;
                 String fn = buildFilename(author, "story", id, video);
-                saveFileToDestination(ctx, src, fn, video ? "video/mp4" : "image/jpeg", author);
+                String mime = video ? "video/mp4" : "image/jpeg";
+                saveFileToDestination(ctx, src, fn, mime, author);
                 mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, okMsg, android.widget.Toast.LENGTH_SHORT).show());
+                if (hasCompanionDestination() && !DownloadPublisher.reachesChosenFolder(FeatureFlags.downloaderCustomPath, mime))
+                    mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
+                            I18n.t(ctx, R.string.ig_dl_companion_fallback), Toast.LENGTH_LONG).show());
             } catch (Throwable t) {
                 mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, failMsg, android.widget.Toast.LENGTH_SHORT).show());
             }
@@ -1304,12 +1158,6 @@ public class FeedVideoDownloadHook {
      */
     static boolean downloadAndSave(Context ctx, String url, String filename,
                                    boolean isVideo, String username) throws Exception {
-        // Prefer FeatureFlags (live value synced from companion via broadcast).
-        // Fall back to reading companion cache directly (missed-broadcast / cold-start case).
-        String uri = FeatureFlags.downloaderCustomUri.isEmpty()
-                ? readCompanionUri()
-                : FeatureFlags.downloaderCustomUri;
-
         String[] dash = isVideo ? DASH_UPGRADE.get(url) : null;
         return downloadCapturedOriginal(ctx, url, filename, isVideo, username, dash);
     }
@@ -1402,7 +1250,8 @@ public class FeedVideoDownloadHook {
         intent.putExtra("filename", filename);
         intent.putExtra("mimeType", isVideo ? "video/mp4" : "image/jpeg");
         intent.putExtra("username", username);
-        ps.reso.instaeclipse.utils.ipc.CompanionBridge.downloadLegacy(ctx, intent, error -> companionResult(ctx, error, saveLocally));
+        ps.reso.instaeclipse.utils.ipc.CompanionBridge.downloadLegacy(ctx, intent, error -> companionResult(ctx, error,
+                isVideo ? "video/mp4" : "image/jpeg", saveLocally));
         ModuleLog.detail("(IE|DL) Submitted companion download request");
     }
 
@@ -1410,10 +1259,10 @@ public class FeedVideoDownloadHook {
      * A companion download's result: when the app can't be reached, {@code saveLocally} (if any)
      * saves it from Instagram instead; any other error is shown.
      */
-    private static void companionResult(Context ctx, String error, Runnable saveLocally) {
+    private static void companionResult(Context ctx, String error, String mime, Runnable saveLocally) {
         if (error == null) return;
         if (saveLocally != null && SelectedMediaDownloads.companionUnreachable(error)) {
-            SelectedMediaDownloads.savedLocally(ctx);
+            SelectedMediaDownloads.savedLocally(ctx, mime);
             saveLocally.run();
             return;
         }

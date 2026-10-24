@@ -105,7 +105,7 @@ public final class CommentMediaDownload {
             try {
                 boolean delegated = FeedVideoDownloadHook.downloadAndSave(app, url, filename, false, commenter);
                 if (!delegated) FeedVideoDownloadHook.mainHandler.post(() -> IeToast.makeText(ctx,
-                        I18n.t(ctx, R.string.ig_toast_saved), Toast.LENGTH_SHORT).show());
+                        I18n.t(ctx, R.string.ig_toast_file_saved, filename), Toast.LENGTH_SHORT).show());
             } catch (Throwable t) {
                 ModuleLog.error(TAG + "Could not save the comment media: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                 FeedVideoDownloadHook.mainHandler.post(() -> IeToast.makeText(ctx,

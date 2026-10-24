@@ -241,8 +241,8 @@ final class SelectedMediaDownloads {
     }
 
     /** Instagram saves it itself; a warning only when that can't be the chosen folder. */
-    static void savedLocally(Context ctx) {
-        if (!DownloadPublisher.reachesChosenFolder(FeatureFlags.downloaderCustomPath))
+    static void savedLocally(Context ctx, String mime) {
+        if (!DownloadPublisher.reachesChosenFolder(FeatureFlags.downloaderCustomPath, mime))
             toast(ctx, I18n.t(ctx, R.string.ig_dl_companion_fallback));
     }
 
@@ -258,7 +258,7 @@ final class SelectedMediaDownloads {
             if (!local && FeedVideoDownloadHook.hasCompanionDestination()) {
                 CompanionBridge.downloadLegacy(ctx, captured.photoUrl, null, captured.photoFilename,
                         "image/jpeg", captured.media.owner, error -> {
-                            if (companionUnreachable(error)) { savedLocally(ctx); start(ctx, captured, false, batch, true); }
+                            if (companionUnreachable(error)) { savedLocally(ctx, "image/jpeg"); start(ctx, captured, false, batch, true); }
                             else if (error != null) failed(ctx, error);
                             else if (!batch) toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_photo));
                         });
@@ -303,7 +303,7 @@ final class SelectedMediaDownloads {
         try {
             if (!local && FeedVideoDownloadHook.hasCompanionDestination()) {
                 CompanionBridge.download(ctx, request, error -> {
-                    if (companionUnreachable(error)) { savedLocally(ctx); startVideo(ctx, request, batch, true); }
+                    if (companionUnreachable(error)) { savedLocally(ctx, "video/mp4"); startVideo(ctx, request, batch, true); }
                     else if (error != null) failed(ctx, error);
                     else if (!batch) toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_video));
                 });
