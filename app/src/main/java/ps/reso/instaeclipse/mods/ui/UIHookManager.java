@@ -151,11 +151,11 @@ public class UIHookManager {
         boolean anySearchFound = false;
         if (sSearchTabId != 0) {
             View v = activity.findViewById(sSearchTabId);
-            if (v != null) { processSearchView(activity, v, "search_tab"); anySearchFound = true; }
+            if (v != null) anySearchFound = processSearchView(activity, v, "search_tab");
         }
         if (!anySearchFound && sActionBarEndId != 0) {
             View v = activity.findViewById(sActionBarEndId);
-            if (v != null) { processSearchView(activity, v, "action_bar_end_action_buttons"); anySearchFound = true; }
+            if (v != null) anySearchFound = processSearchView(activity, v, "action_bar_end_action_buttons");
         }
 
         // Register at most ONE GlobalLayoutListener per activity to retry search wiring
@@ -172,11 +172,11 @@ public class UIHookManager {
                     boolean found = false;
                     if (sSearchTabId != 0) {
                         View lateView = activity.findViewById(sSearchTabId);
-                        if (lateView != null) { processSearchView(activity, lateView, "search_tab"); found = true; }
+                        if (lateView != null) found = processSearchView(activity, lateView, "search_tab");
                     }
                     if (!found && sActionBarEndId != 0) {
                         View lateView = activity.findViewById(sActionBarEndId);
-                        if (lateView != null) { processSearchView(activity, lateView, "action_bar_end_action_buttons"); found = true; }
+                        if (lateView != null) found = processSearchView(activity, lateView, "action_bar_end_action_buttons");
                     }
                     if (found) {
                         decorView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
@@ -317,17 +317,29 @@ public class UIHookManager {
         });
     }
 
-    private static void processSearchView(Activity activity, View view, String id) {
+    private static boolean processSearchView(Activity activity, View view, String id) {
         if (id.equals("action_bar_end_action_buttons") && view instanceof ViewGroup container) {
+            int wired = 0;
             for (int i = 0; i < container.getChildCount(); i++) {
                 View child = container.getChildAt(i);
-                CharSequence description = child.getContentDescription();
-                if (description != null && description.toString().toLowerCase().contains("search")) {
+                if (SearchTabMatch.isSearchChild(entryName(child), child.getContentDescription())) {
                     applySearchHook(activity, child);
+                    wired++;
                 }
             }
-        } else {
-            applySearchHook(activity, view);
+            return SearchTabMatch.found(true, true, wired);
+        }
+        applySearchHook(activity, view);
+        return SearchTabMatch.found(false, true, 1);
+    }
+
+    private static String entryName(View view) {
+        int id = view.getId();
+        if (id == View.NO_ID) return null;
+        try {
+            return view.getResources().getResourceEntryName(id);
+        } catch (Throwable t) {
+            return null;
         }
     }
 
