@@ -121,7 +121,7 @@ public class ProfileFollowsYouHook {
      */
     /** userId -> followed_by from /friendships/show/, kept so a result that arrives before the
      *  profile screen registers is still applied. */
-    private static final java.util.Map<String, Boolean> RESULTS = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final FollowsYouCache RESULTS = new FollowsYouCache();
 
     public static void onFollowResult(String userId, boolean followedBy) {
         if (!active || !FeatureFlags.showFollowStatusLabel || userId == null) return;
@@ -220,20 +220,19 @@ public class ProfileFollowsYouHook {
             Object vm = fieldOfType(frag, VIEW_MODEL);
             Object user = vm != null ? fieldOfType(vm, USER) : null;
             if (user == null) return null;
-            for (java.util.Map.Entry<String, Boolean> e : RESULTS.entrySet())
-                if (sameUserStrict(user, e.getKey())) return e.getValue();
+            return RESULTS.find(userStrings(user));
         } catch (Throwable ignored) {}
         return null;
     }
 
-    /** True only when one of the User's String fields equals userId. */
-    private static boolean sameUserStrict(Object user, String userId) {
+    private static java.util.Set<String> userStrings(Object user) {
+        java.util.Set<String> values = new java.util.HashSet<>();
         for (Class<?> c = user.getClass(); c != null && c != Object.class; c = c.getSuperclass())
             for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(c)) {
                 if (f.getType() != String.class || java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
-                try { f.setAccessible(true); if (userId.equals(f.get(user))) return true; } catch (Throwable ignored) {}
+                try { f.setAccessible(true); if (f.get(user) instanceof String v) values.add(v); } catch (Throwable ignored) {}
             }
-        return false;
+        return values;
     }
 
     private static void label(TextView tv, boolean followsMe) {
