@@ -9,18 +9,37 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.function.Consumer;
+
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 /** Resources belonging to the loaded module, including APKs embedded by LSPatch. */
 public final class ModuleResources {
-    // Written once in Application.attach, read from any thread afterwards.
-    private static volatile Resources loadedResources;
+    private static final Consumer<Runnable> BACKGROUND = task -> new Thread(task, "IE-Res").start();
+
+    private static volatile FutureTask<Resources> build;
+    private static volatile Consumer<Runnable> starter = BACKGROUND;
 
     private ModuleResources() {}
 
     public static void init(Context host, String modulePath) {
-        loadedResources = null;
-        if (modulePath == null || modulePath.isEmpty()) return;
+        if (modulePath == null || modulePath.isEmpty()) {
+            build = null;
+            return;
+        }
+        Context app = host.getApplicationContext() != null ? host.getApplicationContext() : host;
+        FutureTask<Resources> task = new FutureTask<>(() -> load(app, modulePath));
+        build = task;
+        starter.accept(task);
+    }
+
+    public static void startBuildsForTest(Consumer<Runnable> testStarter) {
+        starter = testStarter != null ? testStarter : BACKGROUND;
+    }
+
+    private static Resources load(Context host, String modulePath) {
         try {
             PackageManager pm = host.getPackageManager();
             PackageInfo archive = pm.getPackageArchiveInfo(modulePath, 0);
@@ -31,14 +50,35 @@ public final class ModuleResources {
             info.sourceDir = modulePath;
             info.publicSourceDir = modulePath;
             // Numeric resource IDs must match the loaded code, not a different companion version.
-            loadedResources = pm.getResourcesForApplication(info);
+            return pm.getResourcesForApplication(info);
         } catch (Exception e) {
             ModuleLog.detail("(IE|Resources) APK resources unavailable; trying installed module", e);
+            return null;
+        }
+    }
+
+    private static Resources loaded() {
+        FutureTask<Resources> task = build;
+        if (task == null) return null;
+        task.run();
+        boolean interrupted = false;
+        try {
+            while (true) {
+                try {
+                    return task.get();
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                } catch (ExecutionException e) {
+                    return null;
+                }
+            }
+        } finally {
+            if (interrupted) Thread.currentThread().interrupt();
         }
     }
 
     public static Resources get(Context context) throws PackageManager.NameNotFoundException {
-        Resources loaded = loadedResources;
+        Resources loaded = loaded();
         if (loaded != null) return loaded;
         if (CommonUtils.MY_PACKAGE_NAME.equals(context.getPackageName())) return context.getResources();
         return context.createPackageContext(CommonUtils.MY_PACKAGE_NAME,

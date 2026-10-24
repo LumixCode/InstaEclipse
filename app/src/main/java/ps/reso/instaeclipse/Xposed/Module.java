@@ -34,6 +34,7 @@ import ps.reso.instaeclipse.utils.core.DexKitStats;
 import ps.reso.instaeclipse.utils.core.LegacyPaths;
 import ps.reso.instaeclipse.utils.core.ModuleBridge;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
+import ps.reso.instaeclipse.utils.core.StartupIdle;
 import ps.reso.instaeclipse.utils.feature.FeatureManager;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -105,6 +106,7 @@ public class Module {
     private static final String CACHE_COMPLETE_VALUE = String.valueOf(ps.reso.instaeclipse.BuildConfig.VERSION_CODE);
 
     private static final String INIT_THREAD = "InstaEclipse-Init";
+    private static final long IDLE_DELAY_MS = 3000L;
     private static final String STEP_KEYS = "assets/dexkit/step-keys.tsv";
     private static final InstallSchedule.Store CACHE_STORE = new InstallSchedule.Store() {
         @Override
@@ -242,7 +244,11 @@ public class Module {
         CompanionSync.pull(context);
         // ...and the other way: bring the companion's copy up to date with changes
         // made in this menu (newer side wins per key, see PrefsMerge).
-        ps.reso.instaeclipse.utils.core.CompanionSync.pushAsync(context);
+        if (LegacyPaths.has(LegacyPaths.IDLE) || !CompanionSync.remotePrefsAvailable()) {
+            CompanionSync.pushAsync(context);
+        } else {
+            StartupIdle.afterFirstFrame(() -> CompanionSync.pushAsync(context), IDLE_DELAY_MS);
+        }
         // ...and while it sat frozen in the background: check again on every resume.
         if (application instanceof android.app.Application) {
             ((android.app.Application) application).registerActivityLifecycleCallbacks(
@@ -265,7 +271,11 @@ public class Module {
         Logging.init(context, "instaeclipse_module.log");
         // Mirror the buffer into a file owned by the companion app (LogMirrorProvider)
         // so its Logs tab works even when Instagram is backgrounded or killed.
-        Logging.enableMirror(context);
+        if (LegacyPaths.has(LegacyPaths.IDLE) || StartupIdle.previousStartEndedEarly(context)) {
+            Logging.enableMirror(context);
+        } else {
+            StartupIdle.afterFirstFrame(() -> Logging.enableMirror(context), IDLE_DELAY_MS);
+        }
         // Logs the previous exits and saves the last crash's tombstone and Breakpad
         // minidumps to the companion, before Instagram uploads and deletes them.
         ps.reso.instaeclipse.utils.log.CrashForensics.collectAsync(context);

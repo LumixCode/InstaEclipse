@@ -8,12 +8,14 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PermissionInfo;
 import android.content.pm.Signature;
-
-import androidx.core.content.ContextCompat;
+import android.os.Build;
+import android.os.SystemClock;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.util.function.BooleanSupplier;
+import java.util.function.LongSupplier;
 
 /**
  * Hardening for the broadcast bridge between the companion app and the hooked Instagram process.
@@ -34,7 +36,11 @@ public final class IpcSecurity {
     public static final String PERMISSION = "ps.reso.instaeclipse.permission.MODULE_IPC";
     public static final String EXTRA_NONCE = "ie_nonce";
 
+    static final long PERMISSION_MEMO_MS = 30_000L;
+
     private static final SecureRandom RNG = new SecureRandom();
+    private static final Memo COMPANION_PERMISSION = new Memo(PERMISSION_MEMO_MS);
+    static volatile LongSupplier clock = SystemClock::elapsedRealtime;
 
     private IpcSecurity() {}
 
@@ -48,8 +54,11 @@ public final class IpcSecurity {
                     "(IE|Ipc) companion receiver not registered: " + PERMISSION + " is not the companion's");
             return;
         }
-        ContextCompat.registerReceiver(context, receiver, filter, PERMISSION, null,
-                ContextCompat.RECEIVER_EXPORTED);
+        if (Build.VERSION.SDK_INT >= 33) {
+            context.registerReceiver(receiver, filter, PERMISSION, null, Context.RECEIVER_EXPORTED);
+        } else {
+            context.registerReceiver(receiver, filter, PERMISSION, null);
+        }
     }
 
     /** The module APK's signers, read once: the file doesn't change while the process runs. */
@@ -62,6 +71,38 @@ public final class IpcSecurity {
      * can declare the permission itself and hold it.
      */
     public static boolean isCompanionPermission(Context context) {
+        return COMPANION_PERMISSION.get(clock.getAsLong(), () -> checkCompanionPermission(context));
+    }
+
+    static void resetForTest() {
+        COMPANION_PERMISSION.clear();
+        clock = SystemClock::elapsedRealtime;
+    }
+
+    static final class Memo {
+        private final long ttlMs;
+        private boolean cached;
+        private boolean value;
+        private long at;
+
+        Memo(long ttlMs) {
+            this.ttlMs = ttlMs;
+        }
+
+        synchronized boolean get(long now, BooleanSupplier compute) {
+            if (cached && now >= at && now - at < ttlMs) return value;
+            value = compute.getAsBoolean();
+            at = now;
+            cached = true;
+            return value;
+        }
+
+        synchronized void clear() {
+            cached = false;
+        }
+    }
+
+    private static boolean checkCompanionPermission(Context context) {
         try {
             PackageManager pm = context.getPackageManager();
             PermissionInfo permission = pm.getPermissionInfo(PERMISSION, 0);

@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 import ps.reso.instaeclipse.Xposed.SettingsEvents;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -53,6 +55,8 @@ public final class CompanionSync {
     private static volatile boolean remoteAvailable;
     private static volatile int startupApplied;
     static volatile Consumer<Context> pusher = CompanionSync::queuePush;
+    static volatile Supplier<Map<String, ?>> remote = ps.reso.instaeclipse.xposedcompat.CompanionPrefs::all;
+    static volatile LongSupplier clock = SystemClock::elapsedRealtime;
 
     private CompanionSync() {}
 
@@ -63,7 +67,7 @@ public final class CompanionSync {
     public static void pullAsync(Context context) {
         Context app = context.getApplicationContext() != null ? context.getApplicationContext() : context;
         WORKER.execute(() -> {
-            List<String> applied = applyNewer(app);
+            List<String> applied = applyNewer(app, false);
             if (applied.isEmpty()) return;
             new Handler(Looper.getMainLooper()).post(() -> SettingsEvents.afterChange(applied));
         });
@@ -74,7 +78,7 @@ public final class CompanionSync {
      * side effects: nothing is on screen yet and the hooks install after this.
      */
     public static boolean pull(Context context) {
-        int applied = applyNewer(context).size();
+        int applied = applyNewer(context, true).size();
         startupApplied += applied;
         return applied > 0;
     }
@@ -95,14 +99,14 @@ public final class CompanionSync {
     }
 
     /** Applies newer companion settings; returns the keys it applied. */
-    private static synchronized List<String> applyNewer(Context context) {
-        long now = SystemClock.elapsedRealtime();
+    static synchronized List<String> applyNewer(Context context, boolean startup) {
+        long now = clock.getAsLong();
         if (!THROTTLE.due(now)) return new ArrayList<>();
         try {
             // Small, throttled, off the main thread: always re-read.
-            Map<String, ?> all = ps.reso.instaeclipse.xposedcompat.CompanionPrefs.all();
+            Map<String, ?> all = remote.get();
             THROTTLE.read(now, all.isEmpty());
-            if (!all.isEmpty()) remoteAvailable = true;
+            if (startup && !all.isEmpty()) remoteAvailable = true;
             if (all.isEmpty() && !emptyLogged) {
                 // Remote preferences unavailable (LSPatch local mode, companion not bound yet):
                 // only the provider reply in push() brings companion changes back then.
