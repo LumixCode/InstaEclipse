@@ -7,9 +7,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Toast;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.media.ShareLinkDownloadHook;
 
@@ -19,17 +16,14 @@ import ps.reso.instaeclipse.mods.media.ShareLinkDownloadHook;
  * then saves the media and sends Instagram back to the background. No UI of its own.
  */
 public class ShareDownloadActivity extends Activity {
-    private static final Pattern LINK = Pattern.compile(
-            "https?://(?:www\\.|m\\.)?instagram\\.com/(?:[A-Za-z0-9._]+/)?(?:p|reel|reels|tv)/[A-Za-z0-9_-]+[^\\s]*");
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        String link = findLink(getIntent());
+        ShareLinks.Link link = findLink(getIntent());
         if (link == null) {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, R.string.share_dl_no_link, Toast.LENGTH_SHORT).show();
         } else {
-            Intent ig = new Intent(Intent.ACTION_VIEW, Uri.parse(link))
+            Intent ig = new Intent(Intent.ACTION_VIEW, Uri.parse(link.canonicalUrl))
                     .setPackage("com.instagram.android")
                     .putExtra(ShareLinkDownloadHook.EXTRA, true)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -42,7 +36,7 @@ public class ShareDownloadActivity extends Activity {
         finish();
     }
 
-    private static String findLink(Intent i) {
+    private static ShareLinks.Link findLink(Intent i) {
         if (i == null) return null;
         String text = null;
         if (Intent.ACTION_SEND.equals(i.getAction())) {
@@ -51,8 +45,6 @@ public class ShareDownloadActivity extends Activity {
         } else if (Intent.ACTION_VIEW.equals(i.getAction()) && i.getData() != null) {
             text = i.getData().toString();
         }
-        if (text == null) return null;
-        Matcher m = LINK.matcher(text);
-        return m.find() ? m.group() : null;
+        return ShareLinks.parse(text);
     }
 }

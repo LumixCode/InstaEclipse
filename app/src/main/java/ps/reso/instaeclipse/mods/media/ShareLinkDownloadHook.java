@@ -10,13 +10,12 @@ import android.widget.Toast;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.share.ShareLinks;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -34,7 +33,6 @@ import ps.reso.instaeclipse.utils.text.MediaIds;
 public class ShareLinkDownloadHook {
     public static final String EXTRA = "ps.reso.instaeclipse.SHARE_DOWNLOAD";
     private static final String TAG = "(IE|ShareDL) ";
-    private static final Pattern SHORTCODE = Pattern.compile("/(?:p|reel|reels|tv)/([A-Za-z0-9_-]+)");
     private static final long TIMEOUT_MS = 25_000, STEP_MS = 500;
 
     /** every UserSession built in this process (several with multiple accounts) */
@@ -130,9 +128,8 @@ public class ShareLinkDownloadHook {
 
     /** Media pk from a post/reel link: the shortcode is the pk in base64url (first 11 chars). */
     static String pkFromLink(String link) {
-        Matcher m = SHORTCODE.matcher(link);
-        if (!m.find()) return null;
-        return MediaIds.pkFromShortcode(m.group(1));
+        String shortcode = ShareLinks.shortcode(link);
+        return shortcode == null ? null : MediaIds.pkFromShortcode(shortcode);
     }
 
     /** The post's Media from a session's MediaCache (its map, so the key format doesn't matter). */
