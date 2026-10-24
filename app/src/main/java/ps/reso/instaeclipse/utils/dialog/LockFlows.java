@@ -44,6 +44,15 @@ public final class LockFlows {
 
     public static void setPasscode(Activity activity, Runnable onSaved, Runnable onCancel) {
         if (activity == null) return;
+        if (hasPasscode()) {
+            authenticate(activity, I18n.t(activity, R.string.ig_lock_settings_prompt), "settings",
+                    () -> newPasscode(activity, true, onSaved, onCancel));
+            return;
+        }
+        newPasscode(activity, false, onSaved, onCancel);
+    }
+
+    private static void newPasscode(Activity activity, boolean verified, Runnable onSaved, Runnable onCancel) {
         try {
             IeDialog dlg = new IeDialog(activity).title(I18n.t(activity, R.string.ig_lock_set_passcode))
                     .message(I18n.t(activity, R.string.ig_lock_passcode_rule));
@@ -64,12 +73,19 @@ public final class LockFlows {
                     if (result == PasscodeRules.Result.MISMATCH) second.setText("");
                     return;
                 }
-                LockDirectMessagesHook.newSalt();
-                FeatureFlags.lockDirectPasscode = LockDirectMessagesHook.hashPass(first.getText().toString());
-                SettingsManager.saveAllFlags();
-                IeToast.makeText(activity, I18n.t(activity, R.string.ig_dialog_misc_lock_dms_saved), Toast.LENGTH_SHORT).show();
-                dlg.dismiss();
-                if (onSaved != null) onSaved.run();
+                Runnable save = () -> {
+                    LockDirectMessagesHook.newSalt();
+                    FeatureFlags.lockDirectPasscode = LockDirectMessagesHook.hashPass(first.getText().toString());
+                    SettingsManager.saveAllFlags();
+                    IeToast.makeText(activity, I18n.t(activity, R.string.ig_dialog_misc_lock_dms_saved), Toast.LENGTH_SHORT).show();
+                    dlg.dismiss();
+                    if (onSaved != null) onSaved.run();
+                };
+                if (!verified && hasPasscode()) {
+                    authenticate(activity, I18n.t(activity, R.string.ig_lock_settings_prompt), "settings", save);
+                } else {
+                    save.run();
+                }
             });
             dlg.show();
         } catch (Throwable t) {

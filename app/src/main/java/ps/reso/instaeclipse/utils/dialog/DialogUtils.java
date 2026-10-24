@@ -1937,7 +1937,7 @@ public class DialogUtils {
         FeatureCatalog.Item passcode = FeatureCatalog.item("lockPasscode");
         LinearLayout passcodeRow = detailRow(context, passcode.icon, accent,
                 I18n.t(context, hasCode ? R.string.ig_lock_change_passcode : R.string.ig_lock_set_passcode),
-                v -> changePasscode(context, rebuild));
+                v -> LockFlows.setPasscode(activityOf(context), rebuild, null));
         passcodeRow.setTag(passcode.key);
         passcodeCard.addView(passcodeRow);
         if (hasCode) {
@@ -1990,16 +1990,6 @@ public class DialogUtils {
         suppressLockToggle = true;
         row.setChecked(checked);
         suppressLockToggle = false;
-    }
-
-    private static void changePasscode(Context context, Runnable rebuild) {
-        Activity activity = activityOf(context);
-        if (!LockFlows.hasPasscode()) {
-            LockFlows.setPasscode(activity, rebuild, null);
-            return;
-        }
-        LockFlows.authenticate(activity, I18n.t(context, R.string.ig_lock_settings_prompt), "settings",
-                () -> LockFlows.setPasscode(activity, rebuild, null));
     }
 
     private static void removePasscode(Context context, Runnable rebuild) {
