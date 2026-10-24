@@ -12,4 +12,7 @@
     <string name="ig_dialog_restart_message_v2" tools:ignore="MissingTranslation">Instagram closes and opens again. Your settings stay.</string>
     <string name="ig_dialog_restart_clear_cache" tools:ignore="MissingTranslation">Clear Instagram\'s cache and restart</string>
     <string name="ig_dialog_auto_clear_cache_size_v2" tools:ignore="MissingTranslation">Clear above: %1$d MB</string>
+    <string name="ig_ring_stop_desc" tools:ignore="MissingTranslation">Colour %1$d of %2$d, %3$s</string>
+    <string name="ig_ring_add_colour" tools:ignore="MissingTranslation">Add colour</string>
+    <string name="ig_ring_reverse" tools:ignore="MissingTranslation">Reverse colours</string>
 </resources>
