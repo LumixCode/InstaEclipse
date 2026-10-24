@@ -15,4 +15,8 @@
     <string name="credits_on_github" tools:ignore="MissingTranslation">%1$s on GitHub</string>
     <string name="credits_on_telegram" tools:ignore="MissingTranslation">%1$s on Telegram</string>
     <string name="credits_on_linkedin" tools:ignore="MissingTranslation">%1$s on LinkedIn</string>
+    <string name="import_sending" tools:ignore="MissingTranslation">Sending to Instagram…</string>
+    <string name="import_too_large" tools:ignore="MissingTranslation">This file is too large to import</string>
+    <string name="import_cant_receive" tools:ignore="MissingTranslation">Instagram can\'t receive this file</string>
+    <string name="import_no_reply" tools:ignore="MissingTranslation">Instagram didn\'t confirm. Open Instagram (restart it after an InstaEclipse update), then try again.</string>
 </resources>

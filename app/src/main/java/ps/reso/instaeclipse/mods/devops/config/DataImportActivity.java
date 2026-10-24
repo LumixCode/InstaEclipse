@@ -4,13 +4,11 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.widget.Toast;
 
 import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
 
-import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.media.DataBackup;
 
 /**
@@ -44,7 +42,7 @@ public class DataImportActivity extends Activity {
         }
         String target = getIntent().getStringExtra("target_package");
         if (target == null || !ps.reso.instaeclipse.utils.ipc.CompanionBridge.isTrustedHost(this, target)) {
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.json_target_not_specified), Toast.LENGTH_LONG).show();
+            JsonImportActivity.show(this, ImportMessages.Result.CANT_RECEIVE, true, null);
             finish();
             return;
         }
@@ -61,9 +59,9 @@ public class DataImportActivity extends Activity {
                 b.putExtra("piece", pieces.get(i));
                 sendBroadcast(b);
             }
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.json_sent), Toast.LENGTH_SHORT).show();
+            JsonImportActivity.show(this, ImportMessages.Result.OK, true, null);
         } catch (Exception e) {
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.ig_data_restore_failed), Toast.LENGTH_LONG).show();
+            JsonImportActivity.show(this, ImportMessages.ofReadError(e), true, null);
         }
         finish();
     }

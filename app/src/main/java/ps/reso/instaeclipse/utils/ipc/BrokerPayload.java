@@ -29,6 +29,10 @@ public final class BrokerPayload {
     public static final int MAX_CONFIG_CHARS = 200_000;
     private BrokerPayload() { }
 
+    public static final class TooLarge extends java.io.IOException {
+        public TooLarge(String message) { super(message); }
+    }
+
     /** Same UTF-16 character limit on disk imports and exports; strict UTF-8, bounded reads. */
     public static String readConfig(java.io.InputStream input) throws java.io.IOException {
         if (input == null) throw new java.io.IOException("No configuration stream");
@@ -38,7 +42,7 @@ public final class BrokerPayload {
         char[] buffer = new char[4096];
         int count;
         while ((count = reader.read(buffer)) != -1) {
-            if (text.length() + count > MAX_CONFIG_CHARS) throw new java.io.IOException("Configuration too large");
+            if (text.length() + count > MAX_CONFIG_CHARS) throw new TooLarge("Configuration too large");
             text.append(buffer, 0, count);
         }
         String json = text.toString().trim();

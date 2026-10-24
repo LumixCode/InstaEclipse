@@ -2,6 +2,7 @@ package ps.reso.instaeclipse.mods.devops.config;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -38,7 +39,7 @@ public class JsonImportActivity extends Activity {
                     if (json.startsWith("{") && json.endsWith("}")) {
                         String targetPackage = getIntent().getStringExtra("target_package");
                         if (targetPackage == null || targetPackage.isEmpty()) {
-                            ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.json_target_not_specified), Toast.LENGTH_LONG).show();
+                            show(this, ImportMessages.Result.CANT_RECEIVE, false, null);
                         } else {
                             String action = getIntent().getStringExtra("broadcast_action");
                             if (action == null || action.isEmpty()) action = ACTION_IMPORT_CONFIG;
@@ -48,7 +49,7 @@ public class JsonImportActivity extends Activity {
                             if (!ps.reso.instaeclipse.utils.ipc.CompanionBridge.isTrustedHost(this, targetPackage)
                                     || !(ACTION_IMPORT_CONFIG.equals(action)
                                     || "ps.reso.instaeclipse.ACTION_RESTORE_SETTINGS".equals(action))) {
-                                ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.json_target_not_specified), Toast.LENGTH_LONG).show();
+                                show(this, ImportMessages.Result.CANT_RECEIVE, false, null);
                                 finish();
                                 return;
                             }
@@ -56,17 +57,22 @@ public class JsonImportActivity extends Activity {
                             broadcast.setPackage(targetPackage);
                             broadcast.putExtra("json_content", json);
                             sendBroadcast(broadcast);
-                            ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.json_sent), Toast.LENGTH_SHORT).show();
+                            show(this, ImportMessages.Result.OK, false, null);
                         }
                     } else {
-                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.json_not_valid), Toast.LENGTH_LONG).show();
+                        show(this, ImportMessages.Result.NOT_VALID, false, null);
                     }
                 } catch (Exception e) {
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.json_read_failed, "Cannot read this configuration (maximum 200,000 characters)"), Toast.LENGTH_LONG).show();
+                    show(this, ImportMessages.ofReadError(e), false, "Cannot read this configuration (maximum 200,000 characters)");
                 }
             }
         }
         finish();
+    }
+
+    static void show(Context context, ImportMessages.Result result, boolean data, String detail) {
+        ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, context.getString(ImportMessages.forResult(result, data), detail),
+                result == ImportMessages.Result.OK ? Toast.LENGTH_SHORT : Toast.LENGTH_LONG).show();
     }
 
     @SuppressLint("NewApi")
