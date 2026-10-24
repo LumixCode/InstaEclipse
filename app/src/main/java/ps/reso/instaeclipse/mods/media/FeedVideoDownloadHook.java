@@ -1237,7 +1237,8 @@ public class FeedVideoDownloadHook {
     @SuppressLint("NewApi")
     private static OutputStream openMediaStoreOutputStream(Context ctx, String filename, String mimeType, String username, boolean nestFolder)
             throws Exception {
-        String relPath = buildMediaStoreRelPath(username, nestFolder);
+        String relPath = MediaStoreTarget.of(FeatureFlags.downloaderCustomPath,
+                Environment.getExternalStorageDirectory().getAbsolutePath(), username, nestFolder, mimeType).relativePath;
         ContentValues values = new ContentValues();
         values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename);
         values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType);
@@ -1248,37 +1249,6 @@ public class FeedVideoDownloadHook {
         OutputStream out = ctx.getContentResolver().openOutputStream(itemUri);
         if (out == null) throw new Exception("MediaStore openOutputStream returned null");
         return out;
-    }
-
-    // Standard top-level directories that MediaStore.Downloads accepts as RELATIVE_PATH roots
-    private static final java.util.Set<String> MS_ROOTS = new java.util.HashSet<>(java.util.Arrays.asList(
-            "Download", "Downloads", "Pictures", "DCIM", "Movies", "Music",
-            "Ringtones", "Alarms", "Notifications", "Podcasts", "Audiobooks"));
-
-    /**
-     * Derives the MediaStore RELATIVE_PATH for the download.
-     * - If the custom path falls under a known MediaStore root (Download, Pictures, …),
-     *   it is used directly (e.g. Pictures/IG).
-     * - Otherwise the path is nested under Download/ (e.g. /sdcard/Test55 → Download/Test55).
-     * - Falls back to Download/InstaEclipse when no custom path is set.
-     */
-    private static String buildMediaStoreRelPath(String username, boolean nestFolder) {
-        String customPath = FeatureFlags.downloaderCustomPath;
-        String base = "Download/InstaEclipse"; // default
-
-        if (!customPath.isEmpty() && !customPath.startsWith("content://")) {
-            String extBase = Environment.getExternalStorageDirectory().getAbsolutePath();
-            if (customPath.startsWith(extBase + "/")) {
-                String relative = customPath.substring(extBase.length() + 1); // e.g. "Test55" or "Pictures/IG"
-                String topLevel = relative.split("/")[0];
-                base = MS_ROOTS.contains(topLevel) ? relative : ("Download/" + relative);
-            }
-        }
-
-        if (nestFolder && username != null && !username.isEmpty()) {
-            base += "/" + username;
-        }
-        return base;
     }
 
     /** Copies tempFile to the download destination (only used when no custom SAF URI is set). */

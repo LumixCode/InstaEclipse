@@ -15,18 +15,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Set;
-import java.util.Arrays;
-import java.util.HashSet;
 
 import ps.reso.instaeclipse.utils.download.DownloadEngine;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 
 /** Publishes only engine-verified files. Failed/cancelled copies remove their own partial output. */
 final class DownloadPublisher {
-    private static final Set<String> MEDIA_ROOTS = new HashSet<>(Arrays.asList("Download", "Downloads",
-            "Pictures", "DCIM", "Movies", "Music", "Ringtones", "Alarms", "Notifications", "Podcasts", "Audiobooks"));
-
     static void save(Context ctx, File source, String filename, String mime, String owner,
             DownloadEngine.Cancellation cancellation) throws Exception {
         save(ctx, source, filename, mime, owner, FeatureFlags.downloaderCustomPath,
@@ -65,8 +59,8 @@ final class DownloadPublisher {
         values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename);
         values.put(MediaStore.MediaColumns.MIME_TYPE, mime);
         values.put(MediaStore.MediaColumns.RELATIVE_PATH,
-                mediaStorePath(customPath, Environment.getExternalStorageDirectory().getAbsolutePath(),
-                        DownloadFiles.segment(owner, 64), usernameFolder));
+                MediaStoreTarget.of(customPath, Environment.getExternalStorageDirectory().getAbsolutePath(),
+                        DownloadFiles.segment(owner, 64), usernameFolder, mime).relativePath);
         values.put(MediaStore.MediaColumns.IS_PENDING, 1);
         Uri uri = ctx.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
         if (uri == null) throw new IOException("Cannot create gallery item");
@@ -116,27 +110,9 @@ final class DownloadPublisher {
         } finally { temp.delete(); }
     }
 
-    /**
-     * Whether a save made by Instagram itself (the app unreachable) lands in the folder chosen in
-     * the app: one inside Download is reachable through MediaStore without any permission.
-     */
     static boolean reachesChosenFolder(String customPath) {
-        String root = Environment.getExternalStorageDirectory().getAbsolutePath();
-        if (customPath == null || !customPath.startsWith(root + "/")) return false;
-        String top = customPath.substring(root.length() + 1).split("/")[0];
-        return top.equals("Download");
-    }
-
-    static String mediaStorePath(String customPath, String externalRoot, String owner, boolean usernameFolder) {
-        String base = "Download/InstaEclipse";
-        if (!customPath.isEmpty() && !customPath.startsWith("content://")
-                && customPath.startsWith(externalRoot + "/")) {
-            String relative = customPath.substring(externalRoot.length() + 1);
-            String top = relative.split("/")[0];
-            base = MEDIA_ROOTS.contains(top) ? relative : "Download/" + relative;
-        }
-        if (usernameFolder && owner != null && !owner.isEmpty()) base += "/" + owner;
-        return base;
+        return MediaStoreTarget.reachesChosenFolder(customPath,
+                Environment.getExternalStorageDirectory().getAbsolutePath(), null);
     }
 
     static Uri saveToSaf(Context ctx, File source, String filename, String mime, String saveUri,
