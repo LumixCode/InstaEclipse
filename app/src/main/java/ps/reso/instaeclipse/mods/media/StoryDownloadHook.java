@@ -25,7 +25,6 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
-import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -37,25 +36,13 @@ public class StoryDownloadHook {
 
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    private static final class StoryMedia {
-        final String url;
-        final boolean video;
-
-        StoryMedia(String url, boolean video) {
-            this.url = url;
-            this.video = video;
-        }
-    }
-
     private static final class StoryMediaOptions {
         final String imageUrl;
         final String videoUrl;
-        final boolean modelSaysVideo;
 
-        StoryMediaOptions(String imageUrl, String videoUrl, boolean modelSaysVideo) {
+        StoryMediaOptions(String imageUrl, String videoUrl) {
             this.imageUrl = imageUrl;
             this.videoUrl = videoUrl;
-            this.modelSaysVideo = modelSaysVideo;
         }
     }
 
@@ -795,12 +782,7 @@ public class StoryDownloadHook {
 
     /** The original Story selectors, restricted to the already resolved selected Media. */
     static String originalVideoFromSelected(Object media) {
-        String video = FeedVideoDownloadHook.bestVideoUrlFromMedia(media);
-        if (video != null) return video;
-        List<String> urls = new ArrayList<>();
-        scanCdnUrls(media, urls, 0, Collections.newSetFromMap(new IdentityHashMap<>()));
-        for (String url : urls) if (FeedVideoDownloadHook.isVideoUrl(url)) return url;
-        return null;
+        return FeedVideoDownloadHook.bestVideoUrlFromMedia(media);
     }
 
     static String originalImageFromSelected(Context context, Object media) {
@@ -847,22 +829,6 @@ public class StoryDownloadHook {
         return false;
     }
 
-    /**
-     * Extracts every downloadable representation from the holder object.
-     *   1. Reads the ReelItem field from the holder.
-     *   2. Searches for VideoVersionIntf → video URL (videos).
-     *   3. Searches for image Candidate objects (CDN URL + width int + height int) and
-     *      picks the one with the largest pixel area (photos).
-     *   4. Falls back to raw CDN string scan with area-based ranking.
-     *
-     * A photo story with music commonly exposes both image_versions2 (the original
-     * still) and video_versions (the rendered story with audio). Do not return after
-     * finding the MP4: keeping both URLs is what lets the user choose the JPG instead.
-     */
-    private static StoryMediaOptions extractStoryMediaOptions(Context ctx, Object holder) {
-        return extractStoryMediaOptions(ctx, holder, false);
-    }
-
     /** {@code direct}: holder IS the ReelItem (don't look for a nested ReelItem field). */
     private static StoryMediaOptions extractStoryMediaOptions(Context ctx, Object holder, boolean direct) {
         if (holder == null) return null;
@@ -876,8 +842,6 @@ public class StoryDownloadHook {
             // Every walk below stays inside the item's own Media when there is one: the
             // ReelItem's other Media field (A08) is the feed post a story ring was opened from.
             Object modelTarget = mediaObject != null ? mediaObject : target;
-            boolean modelSaysVideo = FeedVideoDownloadHook.isMediaVideo(modelTarget)
-                    || (modelTarget != target && FeedVideoDownloadHook.isMediaVideo(target));
 
             // Use the same source-aware extractor as feed/reels first. It understands
             // Pando video_versions getters whose URLs no longer expose a video-looking path.
@@ -926,7 +890,7 @@ public class StoryDownloadHook {
             if (imageUrl == null && !imageUrls.isEmpty()) imageUrl = pickBestUrl(imageUrls);
 
             if (imageUrl == null && videoUrl == null) return null;
-            return new StoryMediaOptions(imageUrl, videoUrl, modelSaysVideo);
+            return new StoryMediaOptions(imageUrl, videoUrl);
 
         } catch (Throwable t) {
             ModuleLog.warn("(IE|Story) Could not read one story item: " + t);
@@ -1328,12 +1292,6 @@ public class StoryDownloadHook {
         return null;
     }
 
-    private static boolean looksLikeUsername(String s) {
-        return s != null && s.length() >= 2 && s.length() <= 30
-                && s.matches("[a-zA-Z0-9._]+")
-                && !s.matches("\\d+");   // exclude pure numeric IDs
-    }
-
     /** Extracts the short media ID from the ReelItem held by the holder (first segment of getId()). */
     private static String extractMediaIdFromReelItemHolder(Object holder) {
         if (holder == null) return null;
@@ -1347,87 +1305,5 @@ public class StoryDownloadHook {
             if (id instanceof String s && !s.isEmpty()) return s.split("_")[0];
         } catch (Throwable ignored) {}
         return null;
-    }
-
-    // ── Download dispatch ─────────────────────────────────────────────────────
-
-    private void handleStoryMedia(Context ctx, StoryMediaOptions media,
-                                  String username, String mediaId) {
-        StoryDownloadChoicePolicy.Decision decision = StoryDownloadChoicePolicy.decide(
-                media.imageUrl != null, media.videoUrl != null, media.modelSaysVideo);
-        switch (decision) {
-            case DOWNLOAD_PHOTO -> startDownload(ctx, media.imageUrl, false, username, mediaId);
-            case DOWNLOAD_VIDEO -> startDownload(ctx, media.videoUrl, true, username, mediaId);
-            case ASK -> showStoryFormatDialog(ctx, media, username, mediaId);
-            case NOT_FOUND -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
-                    I18n.t(ctx, R.string.ig_toast_story_url_not_found), Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void showStoryFormatDialog(Context ctx, StoryMediaOptions media,
-                                       String username, String mediaId) {
-        List<CharSequence> labels = new ArrayList<>();
-        List<StoryMedia> choices = new ArrayList<>();
-
-        // Photo first: this is the requested path for photo stories carrying music.
-        if (media.imageUrl != null) {
-            labels.add(I18n.t(ctx, R.string.ig_story_download_photo));
-            choices.add(new StoryMedia(media.imageUrl, false));
-        }
-        if (media.videoUrl != null) {
-            labels.add(I18n.t(ctx, R.string.ig_story_download_video_music));
-            choices.add(new StoryMedia(media.videoUrl, true));
-        }
-
-        try {
-            CharSequence[] rows = new CharSequence[choices.size()];
-            // One tappable row per available format (📷 photo / 🎬 video with music).
-            for (int i = 0; i < choices.size(); i++)
-                rows[i] = (choices.get(i).video ? "🎬  " : "📷  ") + labels.get(i);
-            IeDialog dlg = new IeDialog(ctx)
-                    .title(I18n.t(ctx, R.string.ig_story_download_choice_title))
-                    .message(I18n.t(ctx, R.string.ig_story_download_choice_subtitle))
-                    .choices(rows, -1, which -> {
-                        StoryMedia choice = choices.get(which);
-                        startDownload(ctx, choice.url, choice.video, username, mediaId);
-                    });
-            dlg.secondary(ctx.getString(android.R.string.cancel), null);
-            dlg.show();
-        } catch (Throwable t) {
-            ModuleLog.error("(IE|Story) Could not show the story download choices: " + t);
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_download_failed,
-                    t.getMessage()), Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void startDownload(Context ctx, String url, boolean isVideo,
-                               String username, String mediaId) {
-        String fn = FeedVideoDownloadHook.buildFilename(username, "story", mediaId, isVideo);
-        ModuleLog.detail("(IE|Story|DL) username=" + username + " mediaId=" + mediaId
-                + " file=" + fn);
-        ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, isVideo ? I18n.t(ctx, R.string.ig_toast_downloading_story_video) : I18n.t(ctx, R.string.ig_toast_downloading_story_photo), Toast.LENGTH_SHORT).show();
-        mainHandler.post(() -> new Thread(() -> {
-            try {
-                boolean delegated = FeedVideoDownloadHook.downloadAndSave(ctx, url, fn, isVideo, username);
-                if (!delegated) {
-                    mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
-                            I18n.t(ctx, R.string.ig_toast_story_saved), Toast.LENGTH_SHORT).show());
-                }
-            } catch (Throwable e) {
-                mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
-                        I18n.t(ctx, R.string.ig_toast_download_failed, e.getMessage()), Toast.LENGTH_SHORT).show());
-            }
-        }).start());
-    }
-
-    private static void downloadToStream(String url, java.io.OutputStream out) throws Exception {
-        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
-        MediaHttp.applyTimeouts(conn);
-        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36");
-        conn.connect();
-        try (java.io.InputStream in = conn.getInputStream()) {
-            byte[] buf = new byte[32768]; int n;
-            while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-        } finally { conn.disconnect(); }
     }
 }

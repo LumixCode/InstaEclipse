@@ -2,69 +2,14 @@ package ps.reso.instaeclipse.mods.media;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Resolves Instagram's legacy and modern media dictionary models independently. */
 final class MediaModelResolver {
 
-    static final String MUTABLE_DICT_CLASS = "com.instagram.feed.media.MutableMediaDictIntf";
-    static final String LIVE_TREE_DICT_CLASS = "com.instagram.feed.media.LiveTreeMediaDict";
-
-    static final class Result {
-        final Class<?> mutableDictClass;
-        final Class<?> liveTreeDictClass;
-        final List<Method> listCandidates;
-
-        Result(Class<?> mutableDictClass, Class<?> liveTreeDictClass,
-               List<Method> listCandidates) {
-            this.mutableDictClass = mutableDictClass;
-            this.liveTreeDictClass = liveTreeDictClass;
-            this.listCandidates = listCandidates;
-        }
-    }
-
     private MediaModelResolver() {}
-
-    static Result resolve(ClassLoader classLoader) {
-        return resolve(classLoader, null);
-    }
-
-    static Result resolve(ClassLoader classLoader, Class<?> discoveredDictClass) {
-        Class<?> mutable = tryLoad(classLoader, MUTABLE_DICT_CLASS);
-        Class<?> liveTree = tryLoad(classLoader, LIVE_TREE_DICT_CLASS);
-        if (liveTree == null) liveTree = discoveredDictClass;
-        List<Method> candidates = new ArrayList<>();
-        Set<String> seen = new HashSet<>();
-
-        if (mutable != null) {
-            addListMethods(mutable, candidates, seen);
-            for (Class<?> superInterface : mutable.getInterfaces()) {
-                if (isInstagramModelClass(superInterface.getName())) {
-                    addListMethods(superInterface, candidates, seen);
-                }
-            }
-        }
-
-        // Never nest this lookup under MutableMediaDictIntf. Recent Instagram versions
-        // can remove the legacy interface while retaining the concrete Pando model.
-        if (liveTree != null) addListMethods(liveTree, candidates, seen);
-        return new Result(mutable, liveTree, candidates);
-    }
-
-    static Object findDictionary(Object media, Result model, int maxDepth) {
-        if (media == null || model == null || maxDepth < 0) return null;
-        Set<Object> visited = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
-        Object found = findObjectOfType(media, model.liveTreeDictClass, maxDepth, visited);
-        if (found != null) return found;
-        visited.clear();
-        return findObjectOfType(media, model.mutableDictClass, maxDepth, visited);
-    }
 
     static Object findObjectOfType(Object root, Class<?> target, int maxDepth) {
         Set<Object> visited = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
@@ -147,26 +92,6 @@ final class MediaModelResolver {
             }
         }
         return null;
-    }
-
-    private static Class<?> tryLoad(ClassLoader classLoader, String name) {
-        try {
-            return classLoader.loadClass(name);
-        } catch (Throwable ignored) {
-            return null;
-        }
-    }
-
-    private static void addListMethods(Class<?> type, List<Method> out, Set<String> seen) {
-        for (Method method : ps.reso.instaeclipse.utils.core.SafeReflect.methods(type)) {
-            if (method.getParameterCount() != 0
-                    || !List.class.isAssignableFrom(method.getReturnType())) continue;
-            String key = method.getDeclaringClass().getName() + '#' + method.getName()
-                    + ':' + method.getReturnType().getName();
-            if (!seen.add(key)) continue;
-            try { method.setAccessible(true); } catch (Throwable ignored) {}
-            out.add(method);
-        }
     }
 
     private static boolean isInstagramModelClass(String name) {
