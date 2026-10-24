@@ -882,6 +882,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         }
 
         tvHeaderTitle.setText(title);
+        fragmentView.findViewById(R.id.header_layout).setVisibility(isMain ? View.GONE : View.VISIBLE);
         btnBack.setVisibility(isMain ? View.GONE : View.VISIBLE);
         // Search lives on the main menu only; leaving it (e.g. via a nav row in the results) resets it
         tilSearch.setVisibility(isMain ? View.VISIBLE : View.GONE);

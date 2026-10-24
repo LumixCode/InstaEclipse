@@ -37,8 +37,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/features"
-                android:textAppearance="?attr/textAppearanceHeadlineMedium"
+                android:textAppearance="?attr/textAppearanceHeadlineSmall"
                 android:textStyle="bold"
+                android:maxLines="2"
+                android:ellipsize="end"
                 android:layout_marginStart="8dp" />
         </LinearLayout>
 

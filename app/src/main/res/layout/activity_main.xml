@@ -27,7 +27,8 @@
                 android:layout_height="42dp"
                 android:layout_gravity="start|center_vertical"
                 android:src="@drawable/ic_logo"
-                android:contentDescription="App Logo"
+                android:contentDescription="@null"
+                android:importantForAccessibility="no"
                 android:paddingEnd="7dp"
                 android:adjustViewBounds="true"
                 android:scaleType="fitCenter"
@@ -44,21 +45,33 @@
                 android:letterSpacing="0.01"
                 android:textColor="?attr/colorOnSurface" />
 
-            <TextView
-                android:id="@+id/toolbar_version"
+            <FrameLayout
+                android:id="@+id/toolbar_version_target"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="end|center_vertical"
-                android:layout_marginEnd="12dp"
-                android:background="@drawable/bg_version_chip"
-                android:text="@string/version"
-                android:textAppearance="?attr/textAppearanceLabelMedium"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="5dp"
-                android:paddingBottom="5dp"
-                tools:ignore="RtlSymmetry" />
+                android:layout_marginEnd="6dp"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:paddingHorizontal="6dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackgroundBorderless">
+
+                <TextView
+                    android:id="@+id/toolbar_version"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_version_chip"
+                    android:textAppearance="?attr/textAppearanceLabelMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    tools:ignore="RtlSymmetry" />
+            </FrameLayout>
         </com.google.android.material.appbar.MaterialToolbar>
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -68,6 +81,7 @@
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_gravity="center_horizontal|top"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         android:paddingBottom="82dp"
         android:clipToPadding="false" />

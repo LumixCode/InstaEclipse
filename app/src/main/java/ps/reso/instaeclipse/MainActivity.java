@@ -1,7 +1,9 @@
 package ps.reso.instaeclipse;
 
 import android.os.Bundle;
+import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
@@ -31,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String STATE_TAB = "selectedTab";
     private static final int[] TAB_IDS = {R.id.nav_home, R.id.nav_features, R.id.nav_logs, R.id.nav_help};
+    private static final int MAX_CONTENT_WIDTH_DP = 640;
 
     private BottomNavigationView bottomNavigation;
     private int selectedTab = R.id.nav_home;
@@ -60,6 +63,9 @@ public class MainActivity extends AppCompatActivity {
         if (actionBar != null) {
             actionBar.setDisplayShowTitleEnabled(false);
         }
+        TextView version = findViewById(R.id.toolbar_version);
+        version.setText("v" + BuildConfig.VERSION_NAME);
+        findViewById(R.id.toolbar_version_target).setOnClickListener(v -> showHelpAbout());
 
         // Prevent status bar color changes on scroll
         AppBarLayout appBarLayout = findViewById(R.id.app_bar_layout);
@@ -79,6 +85,17 @@ public class MainActivity extends AppCompatActivity {
             int navHeight = v.getHeight();
             if (fragmentContainer.getPaddingBottom() != navHeight) {
                 fragmentContainer.setPadding(0, 0, 0, navHeight);
+            }
+        });
+
+        int maxContentWidth = Math.round(MAX_CONTENT_WIDTH_DP * getResources().getDisplayMetrics().density);
+        findViewById(R.id.main).addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+            int available = v.getWidth() - v.getPaddingLeft() - v.getPaddingRight();
+            int width = available > maxContentWidth ? maxContentWidth : ViewGroup.LayoutParams.MATCH_PARENT;
+            ViewGroup.LayoutParams lp = fragmentContainer.getLayoutParams();
+            if (lp.width != width) {
+                lp.width = width;
+                fragmentContainer.setLayoutParams(lp);
             }
         });
 
