@@ -1,12 +1,6 @@
 package ps.reso.instaeclipse.mods.ui;
 
-import android.content.Context;
-import android.text.SpannableStringBuilder;
-import android.text.Spanned;
-import android.text.style.ForegroundColorSpan;
-import android.text.style.RelativeSizeSpan;
 import android.view.View;
-import android.widget.TextView;
 
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
@@ -17,21 +11,17 @@ import org.luckypray.dexkit.result.MethodData;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Collections;
 import java.util.List;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
-import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.misc.ProfileFollowStatusHook;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
-import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
-import ps.reso.instaeclipse.utils.ui.IeColors;
-import ps.reso.instaeclipse.utils.ui.IePalette;
-import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
  * "Follows you" label on profiles (#239), instead of only the follower toast.
@@ -39,12 +29,6 @@ import ps.reso.instaeclipse.utils.ui.ResIds;
  * After UserDetailFragment's onUserUpdated (static method using "UserDetailFragment.onUserUpdated":
  * A0d on 452, A0h on 451) the viewed User is read from the fragment's UserDetailViewModel and its
  * followed_by getter (User ()Boolean using "followed_by"; null = unknown/own profile → no label).
- * A small coloured "· Follows you" / "· Doesn't follow you" span is appended to the profile name
- * (profile_header_full_name_above_vanity / profile_header_full_name) and re-applied when IG
- * rebinds the text.
- *
- * Runs next to the local ProfileFollowStatusHook under the same key (showFollowStatusLabel) and
- * steps aside on a header where that hook already shows its label, so the two never stack.
  */
 public class ProfileFollowsYouHook {
 
@@ -56,7 +40,6 @@ public class ProfileFollowsYouHook {
     private static final String VIEW_MODEL = "com.instagram.profile.fragment.UserDetailViewModel";
     private static final String USER = "com.instagram.user.model.User";
     private static final String CACHE_UPDATED = "FollowsYou_onUserUpdated_v2";
-    private static final String MARK = " · "; // separator our span starts with
     private static Method followedByGetter;
     private static volatile java.lang.ref.WeakReference<Object> lastFragment;
 
@@ -137,9 +120,8 @@ public class ProfileFollowsYouHook {
         if (frag == null) return;
         new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
             try {
-                Object vm = fieldOfType(frag, VIEW_MODEL);
-                Object user = vm != null ? fieldOfType(vm, USER) : null;
-                if (user != null && sameUser(user, userId)) apply(frag, followedBy);
+                Object user = viewedUser(frag);
+                if (user != null && userId.equals(String.valueOf(user))) apply(frag, followedBy);
             } catch (Throwable t) {
                 ModuleLog.warn(TAG + "Could not show the follow status on this profile: "
                         + t.getClass().getSimpleName() + ": " + t.getMessage());
@@ -150,144 +132,24 @@ public class ProfileFollowsYouHook {
     private static void apply(Object frag, Boolean known) {
         try {
             View root = (View) frag.getClass().getMethod("getView").invoke(frag);
-            if (root == null || ProfileFollowStatusHook.isShowing(root)) return;
-            Boolean followsMe = known != null ? known : followedBy(frag);
-            if (followsMe == null) followsMe = cachedResult(frag);
-            if (followsMe == null) {
-                // IG fills in the viewed User's friendship status when its own /friendships/show/
-                // request returns: read the model again shortly (no network hooks needed).
-                retry(frag, root, 0);
-                return;
-            }
-            final boolean fm = followsMe;
-            Context ctx = root.getContext();
-            for (String idName : new String[]{"profile_header_full_name_above_vanity", "profile_header_full_name"}) {
-                int id = ResIds.id(ctx, idName); // cached: getIdentifier scans all of IG's resource keys
-                View v = id != 0 ? root.findViewById(id) : null;
-                if (v instanceof TextView tv && tv.getVisibility() == View.VISIBLE) {
-                    if (tv.getText() == null || tv.getText().length() == 0) continue; // no display name
-                    label(tv, fm);
-                    if (tv.getTag(R.id.ie_follows_you_tag) == null) {
-                        tv.setTag(R.id.ie_follows_you_tag, Boolean.TRUE);
-                        tv.addOnLayoutChangeListener((w, l, t, r, b, ol, ot, or, ob) ->
-                                w.post(() -> {
-                                    if (FeatureFlags.showFollowStatusLabel && !ProfileFollowStatusHook.isShowing(root)) label((TextView) w, fm);
-                                }));
-                    }
-                    return;
-                }
-            }
-            // No visible display name: show the label on its own in the (hidden/empty) name view.
-            for (String idName : new String[]{"profile_header_full_name_above_vanity", "profile_header_full_name"}) {
-                int id = ResIds.id(ctx, idName);
-                View v = id != 0 ? root.findViewById(id) : null;
-                if (v instanceof TextView tv) {
-                    standalone(tv, fm);
-                    return;
-                }
-            }
+            Object user = root != null ? viewedUser(frag) : null;
+            if (user == null) return;
+            String id = String.valueOf(user);
+            Boolean followsMe = known != null ? known : followedBy(user);
+            if (followsMe == null) followsMe = RESULTS.find(Collections.singleton(id));
+            if (followsMe != null) ProfileFollowStatusHook.showFromNetwork(root, followsMe, id);
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "Could not show the follow status on this profile: "
                     + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
-    private static void standalone(TextView tv, boolean followsMe) {
-        String text = I18n.t(tv.getContext(), followsMe ? R.string.ig_profile_follows_you : R.string.ig_profile_not_following_you);
-        SpannableStringBuilder sb = new SpannableStringBuilder(text);
-        sb.setSpan(new ForegroundColorSpan(color(tv.getContext(), followsMe)), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        sb.setSpan(new RelativeSizeSpan(0.8f), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        tv.setText(sb);
-        tv.setVisibility(View.VISIBLE);
-    }
-
-    private static int color(Context ctx, boolean followsMe) {
-        int bg = IePalette.of(ctx).backdrop;
-        return followsMe ? IeColors.success(ctx, bg) : IeColors.destructive(ctx, bg);
-    }
-
-    private static final long[] RETRY_DELAYS = {500, 1000, 1500, 3000};
-
-    /** Looks for the relationship again after each delay, until it is known or the screen is gone. */
-    private static void retry(Object frag, View root, int attempt) {
-        if (attempt >= RETRY_DELAYS.length) return;
-        root.postDelayed(() -> {
-            if (!FeatureFlags.showFollowStatusLabel || !root.isAttachedToWindow()) return;
-            Boolean known = cachedResult(frag);
-            if (known == null) {
-                try { known = followedBy(frag); } catch (Throwable ignored) {}
-            }
-            if (known != null) {
-                ModuleLog.probe(TAG + "relationship read from the User model (retry " + (attempt + 1) + ")");
-                apply(frag, known);
-            } else {
-                retry(frag, root, attempt + 1);
-            }
-        }, RETRY_DELAYS[attempt]);
-    }
-
-    private static Boolean cachedResult(Object frag) {
-        try {
-            Object vm = fieldOfType(frag, VIEW_MODEL);
-            Object user = vm != null ? fieldOfType(vm, USER) : null;
-            if (user == null) return null;
-            return RESULTS.find(userStrings(user));
-        } catch (Throwable ignored) {}
-        return null;
-    }
-
-    private static java.util.Set<String> userStrings(Object user) {
-        java.util.Set<String> values = new java.util.HashSet<>();
-        for (Class<?> c = user.getClass(); c != null && c != Object.class; c = c.getSuperclass())
-            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(c)) {
-                if (f.getType() != String.class || java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
-                try { f.setAccessible(true); if (f.get(user) instanceof String v) values.add(v); } catch (Throwable ignored) {}
-            }
-        return values;
-    }
-
-    private static void label(TextView tv, boolean followsMe) {
-        CharSequence cur = tv.getText();
-        if (cur == null || cur.length() == 0) return;
-        String yes = I18n.t(tv.getContext(), R.string.ig_profile_follows_you);
-        String no = I18n.t(tv.getContext(), R.string.ig_profile_not_following_you);
-        String s = cur.toString();
-        if (s.endsWith(MARK + yes) || s.endsWith(MARK + no)) return;
-        String text = MARK + (followsMe ? yes : no);
-        SpannableStringBuilder sb = new SpannableStringBuilder(cur);
-        int start = sb.length();
-        sb.append(text);
-        sb.setSpan(new ForegroundColorSpan(color(tv.getContext(), followsMe)), start, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        sb.setSpan(new RelativeSizeSpan(0.8f), start, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        tv.setText(sb);
-    }
-
-    /**
-     * True when the viewed User's id is userId. The pk is a String field on the model on most
-     * builds; when it isn't readable (Pando-backed), accept: the friendship request was made
-     * by the profile currently open.
-     */
-    private static boolean sameUser(Object user, String userId) {
-        boolean sawString = false;
-        for (Class<?> c = user.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
-            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(c)) {
-                if (f.getType() != String.class || java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
-                try {
-                    f.setAccessible(true);
-                    Object v = f.get(user);
-                    if (v == null) continue;
-                    sawString = true;
-                    if (userId.equals(v)) return true;
-                } catch (Throwable ignored) {}
-            }
-        }
-        return !sawString;
-    }
-
-    private static Boolean followedBy(Object frag) throws Exception {
+    private static Object viewedUser(Object frag) throws IllegalAccessException {
         Object vm = fieldOfType(frag, VIEW_MODEL);
-        Object user = vm != null ? fieldOfType(vm, USER) : null;
-        if (user == null) return null;
+        return vm != null ? fieldOfType(vm, USER) : null;
+    }
+
+    private static Boolean followedBy(Object user) throws Exception {
         Object r = followedByGetter.invoke(user);
         return r instanceof Boolean b ? b : null;
     }

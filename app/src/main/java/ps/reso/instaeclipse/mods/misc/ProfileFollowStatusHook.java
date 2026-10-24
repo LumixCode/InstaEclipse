@@ -41,6 +41,7 @@ import ps.reso.instaeclipse.utils.ui.ResIds;
 public final class ProfileFollowStatusHook {
     private static final String KEY = "FollowStatusLabel";
     private static final String TAG = "ie_profile_follow_status";
+    private static final String NETWORK = "network";
     private static final String SESSION = "com.instagram.common.session.UserSession";
     private static final String VIEW_MODEL = "com.instagram.profile.fragment.UserDetailViewModel";
     private static final String READER_KEY = "ProfileFollowReader_v1";
@@ -108,11 +109,14 @@ public final class ProfileFollowStatusHook {
         }
     }
 
-    /** Whether this header already shows the local label, so the network-based fallback stays out. */
-    public static boolean isShowing(View root) {
-        View label = root.findViewWithTag(TAG);
-        return label != null && label.getVisibility() == View.VISIBLE
-                && label.getTag(R.id.ie_follow_status_state) != ProfileFollowStatus.Status.HIDDEN;
+    public static void showFromNetwork(View root, boolean followsMe, String profileId) {
+        if (profileId == null) return;
+        View existing = root.findViewWithTag(TAG);
+        if (existing instanceof TextView label && label.getVisibility() == View.VISIBLE
+                && label.getTag(R.id.ie_follow_status_state) != ProfileFollowStatus.Status.HIDDEN
+                && !NETWORK.equals(label.getTag(R.id.ie_follows_you_tag))
+                && profileId.equals(label.getTag(R.id.ie_follow_status_profile))) return;
+        bindLabel(root, ProfileFollowStatus.fromNetwork(followsMe), profileId, true);
     }
 
     private static void diagnostic(String message) {
@@ -299,12 +303,18 @@ public final class ProfileFollowStatusHook {
      * profile (a recycled header), your own profile or conflicting data still hide it.
      */
     static void bindLabel(View root, ProfileFollowStatus.Status status, String profile) {
+        bindLabel(root, status, profile, false);
+    }
+
+    private static void bindLabel(View root, ProfileFollowStatus.Status status, String profile, boolean network) {
         View existing = root.findViewWithTag(TAG);
         TextView label = existing instanceof TextView ? (TextView) existing : null;
         if (status == ProfileFollowStatus.Status.HIDDEN) {
             if (label != null) {
-                if (profile != null && profile.equals(label.getTag(R.id.ie_follow_status_profile))
-                        && label.getTag(R.id.ie_follow_status_state) != ProfileFollowStatus.Status.HIDDEN) return;
+                boolean shown = label.getTag(R.id.ie_follow_status_state) != ProfileFollowStatus.Status.HIDDEN;
+                boolean fromNetwork = NETWORK.equals(label.getTag(R.id.ie_follows_you_tag));
+                String shownProfile = label.getTag(R.id.ie_follow_status_profile) instanceof String s ? s : null;
+                if (FollowLabelKeepRule.keep(shown, fromNetwork, shownProfile, profile)) return;
                 label.setTag(R.id.ie_follow_status_state, status);
                 applyVisibility(label, false);
             }
@@ -364,6 +374,7 @@ public final class ProfileFollowStatusHook {
         label.setTextColor(secondaryTextColor(root.getContext(), name != null ? name : anchor));
         label.setTag(R.id.ie_follow_status_state, status);
         label.setTag(R.id.ie_follow_status_profile, profile);
+        label.setTag(R.id.ie_follows_you_tag, network ? NETWORK : null);
         int text = status == ProfileFollowStatus.Status.MUTUAL ? R.string.ig_profile_follow_mutual
                 : status == ProfileFollowStatus.Status.FOLLOWS_YOU ? R.string.ig_profile_follows_you
                 : R.string.ig_profile_not_following_you;

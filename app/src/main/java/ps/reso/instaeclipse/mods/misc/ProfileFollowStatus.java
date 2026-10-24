@@ -36,6 +36,10 @@ final class ProfileFollowStatus {
         return Boolean.TRUE.equals(friendship.get("following")) ? Status.MUTUAL : Status.FOLLOWS_YOU;
     }
 
+    static Status fromNetwork(boolean followedBy) {
+        return followedBy ? Status.FOLLOWS_YOU : Status.DOES_NOT_FOLLOW;
+    }
+
     /** A header can carry several projections of the same profile; conflicting identities hide it. */
     static Status fromSchemas(String viewerId, List<Object> schemas, Method stringGetter,
                               Method childGetter, Method booleanGetter) throws ReflectiveOperationException {
