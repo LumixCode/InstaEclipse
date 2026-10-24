@@ -87,8 +87,9 @@ public class InstantSaveHook {
             } catch (Throwable ignored) {}
         }
         try {
-            if (ps.reso.instaeclipse.Xposed.Module.dexKitBridge == null) return null;
-            for (org.luckypray.dexkit.result.ClassData cd : DexKitQueryCache.findClass(ps.reso.instaeclipse.Xposed.Module.dexKitBridge, 
+            org.luckypray.dexkit.DexKitBridge bridge = ps.reso.instaeclipse.utils.core.ModuleBridge.get();
+            if (bridge == null) return null;
+            for (org.luckypray.dexkit.result.ClassData cd : DexKitQueryCache.findClass(bridge, 
                     org.luckypray.dexkit.query.FindClass.create().matcher(
                             org.luckypray.dexkit.query.matchers.ClassMatcher.create().className(
                                     VIEWER_PREFIX, org.luckypray.dexkit.query.enums.StringMatchType.StartsWith)))) {

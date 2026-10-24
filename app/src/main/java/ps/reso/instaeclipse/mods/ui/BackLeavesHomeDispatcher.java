@@ -14,10 +14,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.JitGuard;
+import ps.reso.instaeclipse.utils.core.ModuleBridge;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -37,7 +37,7 @@ public final class BackLeavesHomeDispatcher {
         try {
             Method dispatch = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(CACHE_KEY, cl) : null;
             if (dispatch == null) {
-                dispatch = find(Module.dexKitBridge, cl);
+                dispatch = find(ModuleBridge.get(), cl);
                 if (dispatch == null) return;
                 DexKitCache.saveMethod(CACHE_KEY, dispatch);
             }

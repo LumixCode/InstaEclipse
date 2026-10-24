@@ -1,6 +1,5 @@
 package ps.reso.instaeclipse.Xposed;
 
-import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -24,6 +23,7 @@ import ps.reso.instaeclipse.mods.ui.theme.ThemeSettingsHelper;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitStats;
+import ps.reso.instaeclipse.utils.core.ModuleBridge;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureManager;
@@ -31,7 +31,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.log.StartupTrace;
 
 
-@SuppressLint("UnsafeDynamicallyLoadedCode")
 /**
  * The module's bootstrap, shared by both entry points: {@code LegacyEntry} (assets/xposed_init,
  * legacy frameworks) and {@code ModernEntry} (META-INF/xposed/java_init.list, libxposed 102).
@@ -40,7 +39,7 @@ import ps.reso.instaeclipse.utils.log.StartupTrace;
 public class Module {
     // List of supported Instagram package names (maintained in CommonUtils)
     private static final List<String> SUPPORTED_PACKAGES = CommonUtils.SUPPORTED_PACKAGES;
-    public static DexKitBridge dexKitBridge;
+    public static volatile DexKitBridge dexKitBridge;
     public static ClassLoader hostClassLoader;
     public static String moduleSourceDir;
     private static String moduleLibDir;
@@ -83,33 +82,9 @@ public class Module {
                 return;
             }
             ModuleLog.line("(InstaEclipse): Xposed backend: " + ps.reso.instaeclipse.xposedcompat.XposedBridge.backend().name());
-            try {
-                if (dexKitBridge == null) {
-                    StartupTrace.Span span = StartupTrace.begin(StartupTrace.DEXKIT);
-                    try {
-                        // Load the .so file from your module (if not already loaded)
-                        System.load(moduleLibDir + "/libdexkit.so");
-                        DexKitStats.libraryLoaded();
-                        // ModuleLog.line("libdexkit.so loaded successfully.");
-
-                        // Initialize DexKitBridge with the target app's APK
-                        dexKitBridge = DexKitBridge.create(lpparam.appInfo.sourceDir);
-                        DexKitStats.bridgeCreated();
-                        // ModuleLog.line("DexKitBridge initialized with target APK: " + lpparam.appInfo.sourceDir);
-                    } finally {
-                        StartupTrace.end(span);
-                    }
-                }
-
-                // Use the target app's ClassLoader
-                hostClassLoader = lpparam.classLoader;
-
-                // Call the method to hook the target app
-                hookInstagram(lpparam);
-
-            } catch (Exception e) {
-                ModuleLog.error("(InstaEclipse): Could not start in " + lpparam.packageName + ", so no feature will work", e);
-            }
+            hostClassLoader = lpparam.classLoader;
+            hookInstagram(lpparam);
+            ModuleBridge.start(moduleLibDir, lpparam.appInfo.sourceDir);
         }
     }
 
@@ -317,7 +292,7 @@ public class Module {
         InstallRunner runner = new InstallRunner(skipSet(), android.os.SystemClock::elapsedRealtimeNanos,
                 warm ? DexKitStats.INLINE : DexKitStats.BACKGROUND);
         lastRunner = runner;
-        runner.runAll(new InstallPlan(), new InstallPlan.InstallCtx(context, lpparam, hostClassLoader, dexKitBridge), InstallRunner.LOG);
+        runner.runAll(new InstallPlan(), new InstallPlan.InstallCtx(context, lpparam, hostClassLoader, ModuleBridge.peek()), InstallRunner.LOG);
         runner.mark("(finish)");
         // Every lookup is cached now: later launches install inline.
         DexKitCache.saveString(CACHE_COMPLETE_KEY, CACHE_COMPLETE_VALUE);

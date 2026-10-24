@@ -16,6 +16,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.ModuleBridge;
 
 public class IGNetworkInterceptor {
 
@@ -34,9 +35,10 @@ public class IGNetworkInterceptor {
     private static void hookChainEntry(ClassLoader classLoader, Class<?> p1, Class<?> p2, Class<?> p3,
                                        XC_MethodHook dropHook) {
         try {
-            if (ps.reso.instaeclipse.Xposed.Module.dexKitBridge == null) return;
+            org.luckypray.dexkit.DexKitBridge bridge = ModuleBridge.get();
+            if (bridge == null) return;
             java.util.List<org.luckypray.dexkit.result.MethodData> found =
-                    DexKitQueryCache.findMethod(ps.reso.instaeclipse.Xposed.Module.dexKitBridge, 
+                    DexKitQueryCache.findMethod(bridge, 
                             org.luckypray.dexkit.query.FindMethod.create().matcher(
                                     org.luckypray.dexkit.query.matchers.MethodMatcher.create()
                                             .name("startRequest")

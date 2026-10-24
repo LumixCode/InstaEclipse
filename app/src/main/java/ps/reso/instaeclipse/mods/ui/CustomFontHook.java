@@ -445,9 +445,10 @@ public class CustomFontHook {
 
     private boolean installEmojiWorkerHook(final ClassLoader cl) {
         try {
-            if (ps.reso.instaeclipse.Xposed.Module.dexKitBridge == null) return false;
+            org.luckypray.dexkit.DexKitBridge bridge = ps.reso.instaeclipse.utils.core.ModuleBridge.get();
+            if (bridge == null) return false;
             java.util.List<org.luckypray.dexkit.result.MethodData> found =
-                    DexKitQueryCache.findMethod(ps.reso.instaeclipse.Xposed.Module.dexKitBridge, 
+                    DexKitQueryCache.findMethod(bridge, 
                             org.luckypray.dexkit.query.FindMethod.create().matcher(
                                     org.luckypray.dexkit.query.matchers.MethodMatcher.create()
                                             .name("run")

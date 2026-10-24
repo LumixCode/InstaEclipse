@@ -30,9 +30,9 @@ import java.util.Set;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
-import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.ModuleBridge;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -130,7 +130,7 @@ public class ShareSheetCleanupHook {
     };
 
     public void install(ClassLoader classLoader) {
-        resolveShareDecorations(Module.dexKitBridge, classLoader);
+        resolveShareDecorations(ModuleBridge.get(), classLoader);
         int hooked = 0;
         try {
             XposedHelpers.findAndHookMethod(FRAGMENT, classLoader, "onViewCreated",
