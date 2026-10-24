@@ -44,14 +44,14 @@ final class FollowListToolsIcon {
     private static final Map<View, BarWatch> watchedBars = new WeakHashMap<>();
     private static final Set<View> queuedBars = Collections.newSetFromMap(new WeakHashMap<>());
     private static final Map<Object, long[]> screens = Collections.synchronizedMap(new WeakHashMap<>());
-    private static final int SCREEN = 1, KNOWN = 2, OWN = 4;
+    private static final int SCREEN = 1, KNOWN = 2;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static boolean loggedNoBar;
 
     private FollowListToolsIcon() {}
 
     static boolean enabled() {
-        return FeatureFlags.profileAnalyzer || FeatureFlags.followListExport || FeatureFlags.followersHistory;
+        return FeatureFlags.profileAnalyzer || FeatureFlags.followListExport;
     }
 
     /** A follow list tab's view was created: give its screen's action bar the icon. */
@@ -162,14 +162,12 @@ final class FollowListToolsIcon {
             // still be setting up its tabs
             if (s == null || ((s[0] & SCREEN) == 0 && now - s[1] > 2000)) {
                 FollowListExportHook.ListInfo info = FollowListExportHook.listInfo(e[0]);
-                int f = (FollowListExportHook.tabsOf(e[0]) != null ? SCREEN : 0) | (info != null ? KNOWN : 0)
-                        | (FollowListExportHook.ownFollowersOf(e[0]) != null ? OWN : 0);
+                int f = (FollowListExportHook.tabsOf(e[0]) != null ? SCREEN : 0) | (info != null ? KNOWN : 0);
                 screens.put(e[0], s = new long[]{f, now});
             }
             long f = s[0];
             if ((f & SCREEN) == 0) continue;
-            if (FeatureFlags.followListExport || (FeatureFlags.profileAnalyzer && (f & KNOWN) != 0)
-                    || (FeatureFlags.followersHistory && (f & OWN) != 0)) return true;
+            if (FeatureFlags.followListExport || (FeatureFlags.profileAnalyzer && (f & KNOWN) != 0)) return true;
         }
         return false;
     }
@@ -327,11 +325,10 @@ final class FollowListToolsIcon {
             FollowListExportHook.ListInfo info = FollowListExportHook.listInfo(frag);
             boolean own = FollowListExportHook.ownFollowersOf(frag) != null;
             List<FollowListPolicy.Action> actions = FollowListPolicy.actions(FeatureFlags.profileAnalyzer,
-                    FeatureFlags.followListExport, FeatureFlags.followersHistory, info != null, own);
+                    FeatureFlags.followListExport, FeatureFlags.profileAnalyzer, info != null, own);
             ModuleLog.detail(TAG + "tap: " + actions + (info != null ? " on " + info.type + " of " + info.owner : ""));
             if (actions.isEmpty()) {
-                int msg = FeatureFlags.followersHistory ? R.string.ig_followers_history_wrong_tab
-                        : FeatureFlags.profileAnalyzer ? R.string.ig_pa_wrong_tab : R.string.ig_follow_export_none;
+                int msg = FeatureFlags.profileAnalyzer ? R.string.ig_pa_wrong_tab : R.string.ig_follow_export_none;
                 IeToast.makeText(ctx, I18n.t(ctx, msg), Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -387,7 +384,7 @@ final class FollowListToolsIcon {
             case ANALYZE -> R.string.ig_pa_analyze;
             case CHANGELOG -> R.string.ig_pa_changelog;
             case EXPORT -> R.string.ig_follow_export;
-            case HISTORY -> R.string.ig_followers_history;
+            case HISTORY -> R.string.ig_pa_check_mine;
         };
     }
 
@@ -422,7 +419,7 @@ final class FollowListToolsIcon {
         switch (a) {
             case ANALYZE -> ProfileAnalyzer.startFromList(v, info);
             case EXPORT -> FollowListExportHook.exportList(root, frag);
-            case HISTORY -> FollowListExportHook.checkHistory(root, frag);
+            case HISTORY -> ProfileAnalyzer.checkMine(v, info);
             default -> { }
         }
     }

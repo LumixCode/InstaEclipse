@@ -6,7 +6,6 @@ import android.os.Looper;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import org.luckypray.dexkit.DexKitBridge;
@@ -21,7 +20,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -33,31 +31,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
-import ps.reso.instaeclipse.utils.ui.IeColors;
 
-/**
- * Export a followers / following list to CSV (#224).
- *
- * FollowListFragment = class whose method uses "Invalid entry type for FollowListFragment"
- * (X.0D9r on 452, X.0D96 on 451). After its onViewCreated the follow list screen's action bar gets
- * one tools button (FollowListToolsIcon: Instagram's search glyph, a menu of the enabled actions).
- * Export CSV loads the list to the end with IG's own pager (FollowListLoader: IG sends the API
- * requests and parses each page into the adapter) and writes every account of the adapter's account
- * list as username,full_name,id (the profile owner and the logged-in user, held in plain fields,
- * are not in that list). A progress dialog keeps the user on the list (IG's pager only runs while
- * it is open); "Stop & save" ends early.
- *
- * Followers history: on your own Followers tab the tools button also offers "Followers history",
- * which loads the whole list the same way and hands it to FollowersHistory (compared with the last
- * check: who unfollowed / followed). Own Followers tab = the fragment's FollowListFragment.FollowListData
- * argument holds the FOLLOWERS entry of IG's list-type enum (constant names are kept) and a String
- * equal to your user id, which is the part after ':' of the IgSessionManager.SESSION_TOKEN_KEY
- * argument. Only a list that loaded to the end (no next_max_id, not stopped) is compared.
- *
- * When Instagram refuses a load (rate limit, challenge, action block: FollowListLoader's failure
- * callback, Result.blocked), Export CSV writes nothing and Followers history compares nothing;
- * both show what Instagram said instead.
- */
 public class FollowListExportHook {
 
     private static final String TAG = "(IE|FollowExport) ";
@@ -338,8 +312,6 @@ public class FollowListExportHook {
         return tab;
     }
 
-    // ---- Followers history ----
-
     /** Your user id when {@code frag} is your own Followers tab, else null. */
     static String ownFollowersOf(Object frag) {
         try {
@@ -360,128 +332,6 @@ public class FollowListExportHook {
             return followers && own && self.matches("\\d+") ? self : null;
         } catch (Throwable t) {
             return null;
-        }
-    }
-
-    /** Followers history: loads your own Followers list to the end, then compares it. */
-    static void checkHistory(View root, Object frag) {
-        String self = ownFollowersOf(frag);
-        if (self == null) {
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(root.getContext(), I18n.t(root.getContext(), R.string.ig_followers_history_wrong_tab), Toast.LENGTH_SHORT).show();
-            return;
-        }
-        FollowListLoader.loadAll(root, frag, I18n.t(root.getContext(), R.string.ig_followers_history),
-                I18n.t(root.getContext(), R.string.ig_follow_load_stop), r -> checkHistory(root, self, r));
-    }
-
-    private static void checkHistory(View root, String self, FollowListLoader.Result loaded) {
-        Activity act = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
-        android.content.Context ctx = act != null ? act : root.getContext();
-        // Instagram refused the load (rate limit, challenge, action block): say so, compare nothing
-        if (loaded.blocked != null) {
-            ModuleLog.warn(TAG + "Followers history stopped: Instagram blocked loading the list (" + loaded.blocked.kind + "), nothing was compared");
-            FollowListLoader.showBlocked(ctx, loaded.blocked);
-            return;
-        }
-        Map<String, String[]> users = loaded.users;
-        boolean complete = loaded.complete;
-        new Thread(() -> {
-            ps.reso.instaeclipse.utils.users.FollowersHistory.State state =
-                    ps.reso.instaeclipse.utils.users.FollowersHistory.load(ctx, self);
-            ps.reso.instaeclipse.utils.users.FollowersHistory.Result result = null;
-            String error = null;
-            if (complete && !users.isEmpty()) {
-                result = ps.reso.instaeclipse.utils.users.FollowersHistory.apply(state, users, System.currentTimeMillis());
-                try {
-                    ps.reso.instaeclipse.utils.users.FollowersHistory.save(ctx, self, state);
-                } catch (Throwable t) {
-                    error = t.toString();
-                    ModuleLog.error(TAG + "Could not save the followers history", t);
-                }
-                ModuleLog.line(TAG + "Followers history: " + users.size() + " followers, " + result.added.size() + " new changes"
-                        + (result.first ? " (first check)" : ""));
-            } else {
-                ModuleLog.line(TAG + "Followers history: the list did not load completely (" + users.size() + " accounts), nothing was compared");
-            }
-            final ps.reso.instaeclipse.utils.users.FollowersHistory.Result r = result;
-            final String err = error;
-            new Handler(Looper.getMainLooper()).post(() -> showHistory(ctx, self, state, r, complete && !users.isEmpty(), err, loaded));
-        }).start();
-    }
-
-    private static void showHistory(android.content.Context ctx, String self,
-                                    ps.reso.instaeclipse.utils.users.FollowersHistory.State state,
-                                    ps.reso.instaeclipse.utils.users.FollowersHistory.Result r,
-                                    boolean compared, String error, FollowListLoader.Result loaded) {
-        try {
-            java.text.DateFormat df = ps.reso.instaeclipse.utils.text.TimestampFormat.dialogDateFormat(ctx);
-            ps.reso.instaeclipse.utils.dialog.IeDialog dlg = new ps.reso.instaeclipse.utils.dialog.IeDialog(ctx)
-                    .title(I18n.t(ctx, R.string.ig_followers_history));
-            String head;
-            if (!compared) head = I18n.t(ctx, R.string.ig_followers_history_partial);
-            else if (r.first) head = I18n.t(ctx, R.string.ig_followers_history_first, r.count);
-            else {
-                int lost = 0, gained = 0;
-                for (ps.reso.instaeclipse.utils.users.FollowersHistory.Event e : r.added)
-                    if (ps.reso.instaeclipse.utils.users.FollowersHistory.LOST.equals(e.type)) lost++; else gained++;
-                head = I18n.t(ctx, R.string.ig_followers_history_changes, df.format(new Date(r.previousCheck)), lost, gained);
-            }
-            if (state.lastCheck > 0)
-                head += "\n" + I18n.t(ctx, R.string.ig_followers_history_summary, state.users.size(), df.format(new Date(state.lastCheck)));
-            if (compared) {
-                String listed = ProfileAnalyzer.listedNotes(ctx, new String[]{FOLLOWERS}, new int[]{loaded.users.size()},
-                        new int[]{loaded.expected}, new boolean[]{loaded.limited});
-                if (!listed.isEmpty()) head += "\n" + listed;
-            }
-            if (error != null) head += "\n⚠️ " + error;
-            dlg.message(head);
-
-            if (state.events.isEmpty()) {
-                TextView empty = new TextView(dlg.ctx);
-                empty.setText(I18n.t(ctx, R.string.ig_followers_history_empty));
-                empty.setTextColor(dlg.sub);
-                empty.setTextSize(14);
-                dlg.view(empty);
-            } else {
-                android.widget.LinearLayout rows = new android.widget.LinearLayout(dlg.ctx);
-                rows.setOrientation(android.widget.LinearLayout.VERTICAL);
-                int shown = 0;
-                for (ps.reso.instaeclipse.utils.users.FollowersHistory.Event e : state.events) {
-                    if (shown++ >= 300) break;
-                    boolean lost = ps.reso.instaeclipse.utils.users.FollowersHistory.LOST.equals(e.type);
-                    android.text.SpannableStringBuilder sb = new android.text.SpannableStringBuilder();
-                    sb.append(lost ? "− " : "+ ");
-                    sb.append("@").append(e.username != null ? e.username : e.id);
-                    sb.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, sb.length(), 0);
-                    if (e.fullName != null && !e.fullName.isEmpty()) sb.append("  ").append(e.fullName);
-                    int start = sb.length();
-                    sb.append("\n").append(I18n.t(ctx, lost ? R.string.ig_followers_history_unfollowed : R.string.ig_followers_history_followed))
-                            .append(" · ").append(df.format(new Date(e.ts)));
-                    sb.setSpan(new android.text.style.ForegroundColorSpan(lost ? IeColors.destructive(dlg.ctx, dlg.bg)
-                            : IeColors.success(dlg.ctx, dlg.bg)), start, sb.length(), 0);
-                    sb.setSpan(new android.text.style.RelativeSizeSpan(0.85f), start, sb.length(), 0);
-                    TextView row = new TextView(dlg.ctx);
-                    row.setText(sb);
-                    row.setTextColor(dlg.text);
-                    row.setTextSize(14);
-                    row.setPadding(0, dlg.dp(6), 0, dlg.dp(6));
-                    row.setTextIsSelectable(true);
-                    rows.addView(row);
-                }
-                dlg.view(rows);
-                TextView note = new TextView(dlg.ctx);
-                note.setText(I18n.t(ctx, R.string.ig_followers_history_note));
-                note.setTextColor(dlg.sub);
-                note.setTextSize(12);
-                dlg.view(note);
-            }
-            if (state.lastCheck > 0) {
-                dlg.secondary(I18n.t(ctx, R.string.ig_followers_history_clear), () ->
-                        new Thread(() -> ps.reso.instaeclipse.utils.users.FollowersHistory.clear(ctx, self)).start());
-            }
-            dlg.show();
-        } catch (Throwable t) {
-            ModuleLog.error(TAG + "Could not show the followers history", t);
         }
     }
 

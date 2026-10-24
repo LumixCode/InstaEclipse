@@ -6,13 +6,14 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import ps.reso.instaeclipse.utils.core.AtomicFiles;
 
 /**
  * Profile analyzer watchlist: other profiles whose Followers and Following lists you check.
@@ -236,6 +237,7 @@ public final class WatchlistStore {
         public List<Check> checks = new ArrayList<>();
         /** Analyses whose changes the user marked unreliable (removed from the log), by time. */
         public List<Long> unreliable = new ArrayList<>();
+        public long importedHistoryMtime;
     }
 
     /** Instagram's {followers, following} counts for a profile id as its header showed them
@@ -305,12 +307,16 @@ public final class WatchlistStore {
         boolean first = p.lastCheck == 0;
         long previous = p.lastCheck;
         ListCheck qFol = qFollowers != null ? qFollowers : new ListCheck();
-        ListCheck qFing = qFollowing != null ? qFollowing : new ListCheck();
+        ListCheck qFing = following == null ? null : qFollowing != null ? qFollowing : new ListCheck();
         // Instagram's header counts at the last analysis: the saved lists' counts when they have none
         boolean header = p.baseAt > 0 && p.baseAt == p.lastCheck;
         List<Event> added = new ArrayList<>(), notListed = new ArrayList<>();
-        p.following = applyList(p.following, p.missingFollowing, p.followingState, following, qFing, first, previous,
-                header ? p.baseFollowing : -1, now, B_UNFOLLOWED, B_FOLLOWED, B_NOT_LISTED, added, notListed);
+        if (following != null) {
+            p.following = applyList(p.following, p.missingFollowing, p.followingState, following, qFing, first, previous,
+                    header ? p.baseFollowing : -1, now, B_UNFOLLOWED, B_FOLLOWED, B_NOT_LISTED, added, notListed);
+        } else if (first) {
+            p.followingState.ts = -1;
+        }
         p.followers = applyList(p.followers, p.missingFollowers, p.followersState, followers, qFol, first, previous,
                 header ? p.baseFollowers : -1, now, LOST_FOLLOWER, GAINED_FOLLOWER, NOT_LISTED, added, notListed);
         List<Event> all = new ArrayList<>(added);
@@ -320,7 +326,8 @@ public final class WatchlistStore {
         p.events = all;
         p.lastCheck = now;
         applyBaseline(p, now);
-        Check c = new Check(now, previous, first, followers.size(), following.size(),
+        int followingSize = following != null ? following.size() : -1;
+        Check c = new Check(now, previous, first, followers.size(), followingSize,
                 p.baseFollowers, p.baseFollowing, added.size());
         c.followersList = qFol;
         c.followingList = qFing;
@@ -329,7 +336,7 @@ public final class WatchlistStore {
         checks.addAll(p.checks);
         while (checks.size() > MAX_CHECKS) checks.remove(checks.size() - 1);
         p.checks = checks;
-        return new Result(first, followers.size(), following.size(), previous, added, notListed, qFol, qFing);
+        return new Result(first, followers.size(), followingSize, previous, added, notListed, qFol, qFing);
     }
 
     /**
@@ -345,8 +352,8 @@ public final class WatchlistStore {
         q.distinct = now.size();
         q.complete = WatchlistPolicy.complete(q.passes, q.repeated, q.lastPassAdded, q.estMissing, q.expected, q.hidden,
                 now.size(), q.limited);
-        q.before = first ? -1 : saved.size();
-        WatchlistPolicy.DiffMode mode = WatchlistPolicy.diffMode(!first && !st.limited, q.limited);
+        q.before = first || st.ts < 0 ? -1 : saved.size();
+        WatchlistPolicy.DiffMode mode = WatchlistPolicy.diffMode(!first && st.ts >= 0 && !st.limited, q.limited);
         if (mode == WatchlistPolicy.DiffMode.FULL) {
             q.prevListed = saved.size() + missing.size();
             q.prevCount = st.expected >= 0 ? st.expected : headerCount;
@@ -356,7 +363,7 @@ public final class WatchlistStore {
                 default -> Outcome.FULL;
             };
         } else if (mode == WatchlistPolicy.DiffMode.ADDITIONS_ONLY) q.outcome = Outcome.ADDITIONS;
-        else q.outcome = q.limited ? Outcome.NOT_COMPARED : first ? Outcome.FIRST : Outcome.BASELINE;
+        else q.outcome = q.limited ? Outcome.NOT_COMPARED : first || st.ts < 0 ? Outcome.FIRST : Outcome.BASELINE;
 
         boolean uncertain = st.complete != 1;
         switch (q.outcome) {
@@ -486,7 +493,7 @@ public final class WatchlistStore {
         if (p.username != null) e.username = p.username;
         e.lastCheck = p.lastCheck;
         e.followers = p.lastCheck > 0 ? p.followers.size() : -1;
-        e.following = p.lastCheck > 0 ? p.following.size() : -1;
+        e.following = p.lastCheck > 0 && p.followingState.ts >= 0 ? p.following.size() : -1;
         e.baseFollowers = p.baseFollowers;
         e.baseFollowing = p.baseFollowing;
         e.baseAt = p.baseAt;
@@ -674,6 +681,7 @@ public final class WatchlistStore {
             }
             JSONArray ur = o.optJSONArray("ur");
             if (ur != null) for (int i = 0; i < ur.length(); i++) if (ur.optLong(i) > 0) p.unreliable.add(ur.optLong(i));
+            p.importedHistoryMtime = o.optLong("ih");
         } catch (Throwable ignored) {
         }
         return p;
@@ -729,6 +737,7 @@ public final class WatchlistStore {
             for (long ts : p.unreliable) ur.put(ts);
             root.put("ur", ur);
         }
+        if (p.importedHistoryMtime > 0) root.put("ih", p.importedHistoryMtime);
         write(profileFile(ctx, self, p.id), root.toString());
     }
 
@@ -863,7 +872,8 @@ public final class WatchlistStore {
         for (java.util.Iterator<String> it = users.keys(); it.hasNext(); ) {
             String id = it.next();
             JSONArray u = users.optJSONArray(id);
-            into.put(id, new String[]{u != null ? u.optString(0, null) : null, u != null ? u.optString(1, null) : null});
+            into.put(id, new String[]{u != null && !u.isNull(0) ? u.optString(0, null) : null,
+                    u != null && !u.isNull(1) ? u.optString(1, null) : null});
         }
     }
 
@@ -883,12 +893,7 @@ public final class WatchlistStore {
         return new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
     }
 
-    /** Write to a temp file, then rename over the target, so a crash never leaves half a file. */
     private static void write(File f, String s) throws Exception {
-        File tmp = new File(f.getPath() + ".tmp");
-        try (FileOutputStream out = new FileOutputStream(tmp)) {
-            out.write(s.getBytes(StandardCharsets.UTF_8));
-        }
-        if (!tmp.renameTo(f)) throw new java.io.IOException("rename " + tmp);
+        AtomicFiles.write(f, s);
     }
 }

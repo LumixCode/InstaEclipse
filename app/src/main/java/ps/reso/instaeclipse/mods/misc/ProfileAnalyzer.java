@@ -36,6 +36,7 @@ import ps.reso.instaeclipse.utils.text.CopyFeedback;
 import ps.reso.instaeclipse.utils.text.TimestampFormat;
 import ps.reso.instaeclipse.utils.toast.IeToast;
 import ps.reso.instaeclipse.utils.ui.IeColors;
+import ps.reso.instaeclipse.utils.users.FollowersHistory;
 import ps.reso.instaeclipse.utils.users.WatchlistStore;
 
 /**
@@ -70,7 +71,7 @@ public final class ProfileAnalyzer {
     private static final class Session {
         final String id;
         String username, self;
-        final boolean fromMenu;
+        final boolean fromMenu, followersOnly;
         final long started = SystemClock.uptimeMillis();
         long lastSeen, warmSince, nextTabAt;
         boolean seen, busy, hinted;
@@ -80,10 +81,11 @@ public final class ProfileAnalyzer {
         WatchlistStore.ListCheck followersLoad, followingLoad;
         Context ctx;
 
-        Session(String id, String username, boolean fromMenu) {
+        Session(String id, String username, boolean fromMenu, boolean followersOnly) {
             this.id = id;
             this.username = username;
             this.fromMenu = fromMenu;
+            this.followersOnly = followersOnly;
         }
 
         String name() { return username != null ? username : id; }
@@ -117,7 +119,7 @@ public final class ProfileAnalyzer {
 
     private static void startNow(Activity a, Context app, String self, String id, String username) {
         if (self != null) new Thread(() -> WatchlistStore.add(app, self, id, username)).start();
-        Session s = begin(a, id, username, true);
+        Session s = begin(a, id, username, true, false);
         if (!openFollowers(a)) {
             ModuleLog.warn(TAG + "Could not open the followers list of @" + username + " (its followers count is not shown or cannot be tapped)");
             end(s);
@@ -125,11 +127,12 @@ public final class ProfileAnalyzer {
         }
     }
 
-    private static Session begin(Context ctx, String id, String username, boolean fromMenu) {
-        Session s = new Session(id, username, fromMenu);
+    private static Session begin(Context ctx, String id, String username, boolean fromMenu, boolean followersOnly) {
+        Session s = new Session(id, username, fromMenu, followersOnly);
         s.ctx = ctx;
         session = s;
-        ModuleLog.line(TAG + "Analyzing @" + username + " (" + id + ")" + (fromMenu ? ", started from the profile menu" : ", started from the list"));
+        ModuleLog.line(TAG + "Analyzing @" + username + " (" + id + ")" + (followersOnly ? ", your followers only" : "")
+                + (fromMenu ? ", started from the profile menu" : ", started from the list"));
         H.postDelayed(() -> drive(s), fromMenu ? 900 : 0);
         return s;
     }
@@ -152,7 +155,45 @@ public final class ProfileAnalyzer {
             WatchlistStore.Entry e = WatchlistStore.find(WatchlistStore.loadIndex(v.getContext().getApplicationContext(), info.self), info.owner);
             if (e != null) name = e.username;
         }
-        begin(v.getContext(), info.owner, name, false);
+        begin(v.getContext(), info.owner, name, false, false);
+    }
+
+    static void checkMine(View v, FollowListExportHook.ListInfo info) {
+        if (!FeatureFlags.profileAnalyzer) return;
+        Context ctx = v.getContext();
+        if (info == null || info.self == null || !info.self.equals(info.owner)) {
+            IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_followers_history_wrong_tab), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Session cur = session;
+        if (cur != null && cur.id.equals(info.owner)) return;
+        String name = info.username != null ? info.username : titleOf(v);
+        Context app = ctx.getApplicationContext();
+        new Thread(() -> {
+            importHistory(app, info.self, name);
+            H.post(() -> begin(ctx, info.self, name, false, true));
+        }, "ie-check-mine").start();
+    }
+
+    static FollowersHistory.Import importHistory(Context app, String self, String name) {
+        try {
+            WatchlistStore.Profile p = WatchlistStore.loadProfile(app, self, self);
+            if (p.username == null) p.username = name;
+            FollowersHistory.Import result = FollowersHistory.importInto(FollowersHistory.file(app, self), p,
+                    profile -> WatchlistStore.saveProfile(app, self, profile));
+            if (result == FollowersHistory.Import.IMPORTED) {
+                List<WatchlistStore.Entry> index = WatchlistStore.loadIndex(app, self);
+                WatchlistStore.touch(index, p, System.currentTimeMillis());
+                WatchlistStore.saveIndex(app, self, index);
+                ModuleLog.line(TAG + "Your followers history was carried over into the analyzer (" + p.events.size() + " entries)");
+            } else if (result == FollowersHistory.Import.ERROR) {
+                ModuleLog.warn(TAG + "Your old followers history could not be read, so it was not carried over");
+            }
+            return result;
+        } catch (Throwable t) {
+            ModuleLog.error(TAG + "Could not carry over your followers history", t);
+            return FollowersHistory.Import.ERROR;
+        }
     }
 
     // ---- the driver: wait for the profile's lists, load each to the end ----
@@ -219,7 +260,7 @@ public final class ProfileAnalyzer {
     }
 
     private static boolean missing(Session s, String type) {
-        return FollowListExportHook.FOLLOWERS.equals(type) ? s.followers == null : s.following == null;
+        return FollowListExportHook.FOLLOWERS.equals(type) ? s.followers == null : !s.followersOnly && s.following == null;
     }
 
     private static void loaded(Session s, String type, FollowListLoader.Result r) {
@@ -243,7 +284,9 @@ public final class ProfileAnalyzer {
         // an empty list only counts when Instagram's own count says 0 (the loader checked it); an
         // extra pass that ended early (stopped, left the list, a failed page) leaves a list as
         // incomplete as a first pass that did, so nothing is saved either
-        if (!r.complete || r.interrupted || (users.isEmpty() && r.expected != 0)) {
+        boolean compare = s.followersOnly ? FollowersHistory.shouldCompare(r.complete, r.interrupted, r.limited, users.size())
+                : r.complete && !r.interrupted && !(users.isEmpty() && r.expected != 0);
+        if (!compare) {
             end(s);
             new IeDialog(s.ctx).title("@" + s.name()).message(I18n.t(s.ctx, R.string.ig_pa_partial)).show();
             return;
@@ -258,7 +301,7 @@ public final class ProfileAnalyzer {
         s.tabTries = 0;
         s.hinted = false;
         s.nextTabAt = 0;
-        if (s.followers != null && s.following != null) {
+        if (s.followers != null && (s.followersOnly || s.following != null)) {
             end(s);
             finish(s);
             return;
@@ -300,7 +343,8 @@ public final class ProfileAnalyzer {
                     + countThen(p, p.followersState, p.baseFollowers) + "/" + countThen(p, p.followingState, p.baseFollowing) + ")"
                     : "";
             long now = System.currentTimeMillis();
-            WatchlistStore.Result r = WatchlistStore.apply(p, s.followers, s.following, s.followersLoad, s.followingLoad, now);
+            WatchlistStore.Result r = WatchlistStore.apply(p, s.followers, s.followersOnly ? null : s.following, s.followersLoad,
+                    s.followersOnly ? null : s.followingLoad, now);
             boolean saveFailed = false;
             try {
                 WatchlistStore.saveProfile(app, self, p);
@@ -311,14 +355,15 @@ public final class ProfileAnalyzer {
                 saveFailed = true;
                 ModuleLog.error(TAG + "Could not save the analysis", t);
             }
-            ModuleLog.line(TAG + "@" + s.name() + ": " + r.followers + " followers, " + r.following + " following, "
-                    + r.added.size() + " changes" + (r.first ? " (first)" : "")
+            WatchlistStore.ListCheck fing = r.followingList;
+            ModuleLog.line(TAG + "@" + s.name() + ": " + r.followers + " followers, "
+                    + (fing != null ? r.following + " following, " : "") + r.added.size() + " changes" + (r.first ? " (first)" : "")
                     + " (gained " + r.followersList.gained + uncertain(r.followersList) + ", lost " + r.followersList.gone
-                    + ", B followed " + r.followingList.gained + uncertain(r.followingList) + ", B unfollowed " + r.followingList.gone
-                    + "; not listed " + r.followersList.notListed + "/" + r.followingList.notListed + ")"
-                    + before + ", Instagram now " + r.followersList.expected + "/" + r.followingList.expected);
+                    + (fing != null ? ", B followed " + fing.gained + uncertain(fing) + ", B unfollowed " + fing.gone : "")
+                    + "; not listed " + r.followersList.notListed + (fing != null ? "/" + fing.notListed : "") + ")"
+                    + before + ", Instagram now " + r.followersList.expected + (fing != null ? "/" + fing.expected : ""));
             ModuleLog.detail(TAG + listLine(FollowListExportHook.FOLLOWERS, r.followersList));
-            ModuleLog.detail(TAG + listLine(FollowListExportHook.FOLLOWING, r.followingList));
+            if (fing != null) ModuleLog.detail(TAG + listLine(FollowListExportHook.FOLLOWING, fing));
             final String me = self;
             final boolean failed = saveFailed;
             H.post(() -> showResult(ctx, me, p, r, failed));
@@ -430,10 +475,14 @@ public final class ProfileAnalyzer {
             String name = p.username != null ? p.username : p.id;
             IeDialog dlg = new IeDialog(ctx).title("@" + name);
             String head;
-            if (r.first) head = I18n.t(ctx, R.string.ig_pa_first, r.followers, r.following);
+            boolean followersOnly = r.followingList == null;
+            if (r.first) head = followersOnly ? I18n.t(ctx, R.string.ig_followers_history_first, r.followers)
+                    : I18n.t(ctx, R.string.ig_pa_first, r.followers, r.following);
             else {
-                head = I18n.t(ctx, R.string.ig_pa_since, df.format(new Date(r.previousCheck)))
-                        + "\n" + I18n.t(ctx, R.string.ig_pa_counts, r.followers, r.following);
+                head = I18n.t(ctx, R.string.ig_pa_since, df.format(new Date(r.previousCheck))) + "\n" + (followersOnly
+                        ? I18n.t(ctx, R.string.ig_pa_cl_list, label(ctx, FollowListExportHook.FOLLOWERS), r.followers,
+                        r.followersList.expected >= 0 ? String.valueOf(r.followersList.expected) : I18n.t(ctx, R.string.ig_pa_cl_not_recorded))
+                        : I18n.t(ctx, R.string.ig_pa_counts, r.followers, r.following));
                 if (r.added.isEmpty()) head += "\n\n" + I18n.t(ctx, R.string.ig_pa_no_changes);
             }
             // what Instagram listed short of its counts, how a list was compared when not as usual,
@@ -580,9 +629,9 @@ public final class ProfileAnalyzer {
                 SpannableStringBuilder sb = new SpannableStringBuilder("@" + name);
                 sb.setSpan(new StyleSpan(Typeface.BOLD), 0, sb.length(), 0);
                 int st = sb.length();
-                sb.append("\n").append(e.lastCheck > 0
-                        ? I18n.t(ctx, R.string.ig_pa_watch_row, e.followers, e.following, df.format(new Date(e.lastCheck)))
-                        : I18n.t(ctx, R.string.ig_pa_never));
+                sb.append("\n").append(e.lastCheck <= 0 ? I18n.t(ctx, R.string.ig_pa_never) : e.following < 0
+                        ? I18n.t(ctx, R.string.ig_pa_watch_row_followers, e.followers, df.format(new Date(e.lastCheck)))
+                        : I18n.t(ctx, R.string.ig_pa_watch_row, e.followers, e.following, df.format(new Date(e.lastCheck))));
                 if (e.events > 0) sb.append(" · ").append(I18n.t(ctx, R.string.ig_pa_watch_changes, e.events));
                 sb.setSpan(new ForegroundColorSpan(dlg.sub), st, sb.length(), 0);
                 sb.setSpan(new RelativeSizeSpan(0.85f), st, sb.length(), 0);

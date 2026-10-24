@@ -12,6 +12,8 @@
     <string name="ig_follow_tools_title" tools:ignore="MissingTranslation">\@%1$s · %2$s: %3$s</string>
     <string name="ig_follow_load_stop" tools:ignore="MissingTranslation">Stop</string>
     <string name="ig_follow_export_failed" tools:ignore="MissingTranslation">Could not save the export: %1$s</string>
+    <string name="ig_pa_check_mine" tools:ignore="MissingTranslation">Check my followers</string>
+    <string name="ig_pa_watch_row_followers" tools:ignore="MissingTranslation">%1$d followers · %2$s</string>
     <plurals name="ig_list_more" tools:ignore="MissingTranslation">
         <item quantity="one">+%1$d more · see Changelog</item>
         <item quantity="other">+%1$d more · see Changelog</item>

@@ -161,7 +161,7 @@ final class ProfileChangelogPolicy {
         for (Group g : byTs.values()) {
             if (g.ts == p.lastCheck) {
                 fol = p.followers.size();
-                fing = p.following.size();
+                fing = p.followingState.ts >= 0 ? p.following.size() : -1;
             }
             if (g.recorded) {
                 fol = g.followers;

@@ -10,33 +10,17 @@ import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-/**
- * Followers history: who unfollowed you and who followed you, between checks.
- *
- * A check is a full load of your own Followers list (FollowListExportHook drives IG's pager). The
- * list is kept as the last snapshot (id → {username, full name}) in Instagram's private files, one
- * file per account; each check is compared with it and every difference is added to the event log.
- * A change is only seen when you check, so an event's date is when it was noticed, and the
- * previous check's date bounds when it happened.
- *
- * <p>Unlike the profile analyzer's watchlist (WatchlistStore), an account a check doesn't list
- * counts as unfollowed at once: the missed accounts there come from Instagram paging someone else's
- * Followers through a ranking made for the viewer that shifts between requests, while your own
- * lists come in a stable order Instagram honours (other tools' measurements, e.g. instagrapi #2857;
- * not measured here yet), and a load that does repeat accounts gets extra passes (FollowListLoader).
- * Should your own Followers load ever log repeats, this needs the watchlist's not-listed handling.
- */
 public final class FollowersHistory {
 
     public static final String LOST = "lost";
     public static final String GAINED = "gained";
-    private static final int MAX_EVENTS = 2000;
 
-    /** One noticed change. */
     public static final class Event {
         public final long ts, since;
         public final String type, id, username, fullName;
@@ -51,85 +35,47 @@ public final class FollowersHistory {
         }
     }
 
-    /** What a check found. {@code first}: no earlier snapshot, nothing compared. */
-    public static final class Result {
-        public final boolean first;
-        public final int count;
-        public final long previousCheck;
-        public final List<Event> added;
-        public final List<Event> all;
-
-        Result(boolean first, int count, long previousCheck, List<Event> added, List<Event> all) {
-            this.first = first;
-            this.count = count;
-            this.previousCheck = previousCheck;
-            this.added = added;
-            this.all = all;
-        }
-    }
-
-    /** Saved state: the last snapshot and the event log, newest event first. */
     public static final class State {
         public long lastCheck;
+        public int expected = -1;
         public Map<String, String[]> users = new LinkedHashMap<>();
         public List<Event> events = new ArrayList<>();
+        public Throwable error;
     }
+
+    public interface ProfileSaver {
+        void save(WatchlistStore.Profile p) throws Exception;
+    }
+
+    public enum Import { NONE, UNCHANGED, ERROR, IMPORTED }
 
     private FollowersHistory() {}
 
-    /**
-     * Changes from {@code before} to {@code after} (both id → {username, full name}): ids that are
-     * gone are LOST, new ids are GAINED. Usernames come from the side that has the id.
-     */
-    public static List<Event> diff(Map<String, String[]> before, Map<String, String[]> after, long now, long since) {
-        List<Event> out = new ArrayList<>();
-        for (Map.Entry<String, String[]> e : before.entrySet())
-            if (!after.containsKey(e.getKey())) out.add(event(now, since, LOST, e.getKey(), e.getValue()));
-        for (Map.Entry<String, String[]> e : after.entrySet())
-            if (!before.containsKey(e.getKey())) out.add(event(now, since, GAINED, e.getKey(), e.getValue()));
-        return out;
+    public static boolean shouldCompare(boolean complete, boolean interrupted, boolean limited, int listed) {
+        return complete && !interrupted && !limited && listed > 0;
     }
 
-    private static Event event(long now, long since, String type, String id, String[] u) {
-        return new Event(now, since, type, id, u != null && u.length > 0 ? u[0] : null, u != null && u.length > 1 ? u[1] : null);
-    }
-
-    /**
-     * Applies a complete followers list (id → {username, full name}) to {@code state}: the
-     * differences are prepended to the log (capped) and the list becomes the new snapshot.
-     */
-    public static Result apply(State state, Map<String, String[]> users, long now) {
-        boolean first = state.lastCheck == 0;
-        long previous = state.lastCheck;
-        List<Event> added = first ? new ArrayList<>() : diff(state.users, users, now, previous);
-        List<Event> all = new ArrayList<>(added);
-        all.addAll(state.events);
-        while (all.size() > MAX_EVENTS) all.remove(all.size() - 1);
-        state.events = all;
-        state.users = new LinkedHashMap<>(users);
-        state.lastCheck = now;
-        return new Result(first, users.size(), previous, added, all);
-    }
-
-    // ---- storage (Instagram's private files, one file per account) ----
-
-    private static File file(Context ctx, String selfId) {
+    public static File file(Context ctx, String selfId) {
         return new File(ctx.getFilesDir(), "ie_followers_history_" + selfId + ".json");
     }
 
     public static State load(Context ctx, String selfId) {
+        return read(file(ctx, selfId));
+    }
+
+    public static State read(File f) {
         State s = new State();
+        if (!f.exists()) return s;
         try {
-            File f = file(ctx, selfId);
-            if (!f.exists()) return s;
             JSONObject o = new JSONObject(new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8));
             s.lastCheck = o.optLong("lastCheck");
+            s.expected = o.optInt("exp", -1);
             JSONObject users = o.optJSONObject("users");
             if (users != null) {
                 for (java.util.Iterator<String> it = users.keys(); it.hasNext(); ) {
                     String id = it.next();
                     JSONArray u = users.optJSONArray(id);
-                    s.users.put(id, new String[]{u != null ? u.optString(0, null) : null, u != null ? u.optString(1, null) : null});
+                    s.users.put(id, new String[]{text(u, 0), text(u, 1)});
                 }
             }
             JSONArray ev = o.optJSONArray("events");
@@ -137,12 +83,70 @@ public final class FollowersHistory {
                 for (int i = 0; i < ev.length(); i++) {
                     JSONObject e = ev.getJSONObject(i);
                     s.events.add(new Event(e.optLong("ts"), e.optLong("since"), e.optString("type"),
-                            e.optString("id"), e.optString("u", null), e.optString("n", null)));
+                            e.optString("id"), text(e, "u"), text(e, "n")));
                 }
             }
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
+            State failed = new State();
+            failed.error = t;
+            return failed;
         }
         return s;
+    }
+
+    private static String text(JSONArray a, int i) {
+        return a == null || a.isNull(i) ? null : a.optString(i, null);
+    }
+
+    private static String text(JSONObject o, String key) {
+        return o.isNull(key) ? null : o.optString(key, null);
+    }
+
+    public static Import importInto(File history, WatchlistStore.Profile p, ProfileSaver saver) throws Exception {
+        if (!history.exists()) return Import.NONE;
+        long mtime = history.lastModified();
+        if (mtime <= p.importedHistoryMtime) return Import.UNCHANGED;
+        State h = read(history);
+        if (h.error != null) return Import.ERROR;
+        merge(h, p);
+        saver.save(p);
+        p.importedHistoryMtime = mtime;
+        saver.save(p);
+        return Import.IMPORTED;
+    }
+
+    public static int merge(State h, WatchlistStore.Profile p) {
+        long saved = p.followersState.ts > 0 ? p.followersState.ts : p.lastCheck;
+        if (h.lastCheck > saved && !h.users.isEmpty()) {
+            boolean neverChecked = p.lastCheck == 0;
+            p.followers = new LinkedHashMap<>(h.users);
+            p.missingFollowers.clear();
+            p.followersState.ts = h.lastCheck;
+            p.followersState.expected = h.expected;
+            p.followersState.complete = -1;
+            p.followersState.limited = false;
+            if (neverChecked) p.followingState.ts = -1;
+            p.lastCheck = Math.max(p.lastCheck, h.lastCheck);
+        }
+        Set<String> known = new HashSet<>();
+        for (WatchlistStore.Event e : p.events) known.add(key(e.id, e.type, e.ts));
+        List<WatchlistStore.Event> added = new ArrayList<>();
+        for (Event e : h.events) {
+            String type = LOST.equals(e.type) ? WatchlistStore.LOST_FOLLOWER : GAINED.equals(e.type) ? WatchlistStore.GAINED_FOLLOWER : null;
+            if (type == null || e.id == null || !known.add(key(e.id, type, e.ts))) continue;
+            added.add(new WatchlistStore.Event(e.ts, e.since, type, e.id, e.username, e.fullName));
+        }
+        if (added.isEmpty()) return 0;
+        List<WatchlistStore.Event> all = new ArrayList<>(p.events);
+        all.addAll(added);
+        all.sort((a, b) -> Long.compare(b.ts, a.ts));
+        while (all.size() > WatchlistStore.maxEvents()) all.remove(all.size() - 1);
+        p.events = all;
+        return added.size();
+    }
+
+    private static String key(String id, String type, long ts) {
+        return id + '\u0000' + type + '\u0000' + ts;
     }
 
     public static void save(Context ctx, String selfId, State s) throws Exception {
@@ -174,10 +178,5 @@ public final class FollowersHistory {
             out.write(root.toString().getBytes(StandardCharsets.UTF_8));
         }
         if (!tmp.renameTo(f)) throw new java.io.IOException("rename " + tmp);
-    }
-
-    public static void clear(Context ctx, String selfId) {
-        //noinspection ResultOfMethodCallIgnored
-        file(ctx, selfId).delete();
     }
 }
