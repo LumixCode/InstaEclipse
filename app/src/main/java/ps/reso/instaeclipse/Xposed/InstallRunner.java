@@ -1,6 +1,7 @@
 package ps.reso.instaeclipse.Xposed;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,6 +28,12 @@ public final class InstallRunner {
         }
     }
 
+    public interface Ledger {
+        boolean wantsKeys(InstallStep step);
+
+        void ran(InstallStep step, String segment, long searches, Collection<String> keys);
+    }
+
     public static final Reporter LOG = new Reporter() {
         @Override
         public void error(String message, Throwable t) {
@@ -50,6 +57,7 @@ public final class InstallRunner {
     private final List<Object[]> marks = Collections.synchronizedList(new ArrayList<>());
     private InstallPlan.InstallCtx bridged;
     private int withoutBridge;
+    private volatile Ledger ledger;
 
     public InstallRunner(Set<String> skipped, LongSupplier clock, String segment) {
         this(skipped, clock, segment, ModuleBridge::get);
@@ -62,21 +70,46 @@ public final class InstallRunner {
         this.bridges = bridges;
     }
 
+    public void setLedger(Ledger ledger) {
+        this.ledger = ledger;
+    }
+
     public void runAll(InstallPlan plan, InstallPlan.InstallCtx ctx, Reporter reporter) {
+        run(plan, plan.steps(), segment, ctx, reporter);
+        report(reporter);
+    }
+
+    public void run(InstallPlan plan, List<InstallStep> steps, String segment, InstallPlan.InstallCtx ctx, Reporter reporter) {
+        run(plan, steps, segment, ctx, reporter, -1, null);
+    }
+
+    public void run(InstallPlan plan, List<InstallStep> steps, String segment, InstallPlan.InstallCtx ctx, Reporter reporter,
+                    int pauseAt, Runnable pause) {
         String previous = DexKitStats.segment();
         DexKitStats.setSegment(segment);
         DexKitCache.beginBatch();
         try {
-            for (InstallStep step : plan.steps()) runStep(plan, step, ctx, reporter);
+            for (int i = 0; i <= steps.size(); i++) {
+                if (i == pauseAt && pause != null) pause.run();
+                if (i < steps.size()) runStep(plan, steps.get(i), segment, ctx, reporter);
+            }
         } finally {
             DexKitCache.flushBatch();
             DexKitStats.setSegment(DexKitStats.NONE.equals(previous) ? null : previous);
         }
-        if (withoutBridge > 0) reporter.withoutBridge(withoutBridge);
     }
 
-    private void runStep(InstallPlan plan, InstallStep step, InstallPlan.InstallCtx ctx, Reporter reporter) {
+    public void report(Reporter reporter) {
+        int missed = withoutBridge;
+        withoutBridge = 0;
+        if (missed > 0) reporter.withoutBridge(missed);
+    }
+
+    private void runStep(InstallPlan plan, InstallStep step, String segment, InstallPlan.InstallCtx ctx, Reporter reporter) {
         StartupTrace.Span span = null;
+        Ledger book = ledger;
+        List<String> keys = null;
+        long searches = -1;
         try {
             if (step.gateKey != null && !plan.gateOpen(step.gateKey)) return;
             mark(step.name);
@@ -92,14 +125,29 @@ public final class InstallRunner {
             }
             span = StartupTrace.step(step.name);
             DexKitStats.enterStep(step.name);
+            if (book != null) {
+                if (book.wantsKeys(step)) {
+                    keys = new ArrayList<>();
+                    DexKitStats.collectKeys(keys);
+                }
+                searches = DexKitStats.totals().queryMisses;
+            }
             plan.run(step, stepCtx);
             RAN.add(step.name);
         } catch (Throwable t) {
             reporter.error(step.failTag + step.failText, t);
         } finally {
             if (span != null) {
+                if (keys != null) DexKitStats.collectKeys(null);
                 DexKitStats.exitStep();
                 StartupTrace.end(span);
+            }
+            if (book != null && searches >= 0) {
+                try {
+                    book.ran(step, segment, DexKitStats.totals().queryMisses - searches, keys);
+                } catch (Throwable t) {
+                    ModuleLog.detail("(IE|Startup) Could not note that " + step.name + " is set up: " + t);
+                }
             }
         }
     }

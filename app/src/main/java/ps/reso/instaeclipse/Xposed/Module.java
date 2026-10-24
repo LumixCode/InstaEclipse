@@ -273,7 +273,9 @@ public class Module {
     }
 
     private static boolean installedBefore() {
-        return DexKitCache.isCacheValid() && CACHE_COMPLETE_VALUE.equals(DexKitCache.loadString(CACHE_COMPLETE_KEY));
+        return InstallSchedule.split(new InstallPlan().steps(), step -> true, step -> "",
+                name -> DexKitCache.isCacheValid() ? DexKitCache.loadString(name) : null,
+                InstallSchedule.StepKeys.EMPTY, key -> false).background.isEmpty();
     }
 
     public static void installFeatureHooks(Context context, XC_LoadPackage.LoadPackageParam lpparam) {

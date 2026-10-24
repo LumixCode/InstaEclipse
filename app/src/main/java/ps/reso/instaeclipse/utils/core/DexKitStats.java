@@ -3,6 +3,7 @@ package ps.reso.instaeclipse.utils.core;
 import android.os.Looper;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +68,7 @@ public final class DexKitStats {
 
     private static final ThreadLocal<String> STEP = new ThreadLocal<>();
     private static final ThreadLocal<String> SEGMENT = new ThreadLocal<>();
+    private static final ThreadLocal<Collection<String>> SINK = new ThreadLocal<>();
     private static final Map<String, Counter> COUNTERS = new LinkedHashMap<>();
     private static final Counter TOTAL = new Counter();
     private static final Map<String, List<String>> KEYS = new LinkedHashMap<>();
@@ -145,8 +147,16 @@ public final class DexKitStats {
         recordKeys = on;
     }
 
+    public static void collectKeys(Collection<String> sink) {
+        if (sink == null) SINK.remove();
+        else SINK.set(sink);
+    }
+
     public static void keyRead(String key) {
-        if (!recordKeys || key == null) return;
+        if (key == null) return;
+        Collection<String> sink = SINK.get();
+        if (sink != null) sink.add(key);
+        if (!recordKeys) return;
         String step = currentStep();
         synchronized (KEYS) {
             List<String> keys = KEYS.get(step);

@@ -4,6 +4,8 @@ import java.util.Set;
 
 public final class InstallStep {
 
+    private static final String[] NONE = new String[0];
+
     public final int id;
     public final String name;
     private final String[] skipAliases;
@@ -11,20 +13,51 @@ public final class InstallStep {
     public final String failText;
     public final boolean dexKit;
     public final String gateKey;
+    public final boolean phaseA;
+    private final String[] lookupFlags;
+    private final String[] restartKeys;
 
     public InstallStep(int id, String name, String[] skipAliases, String failTag, String failText,
                        boolean dexKit, String gateKey) {
+        this(id, name, skipAliases, failTag, failText, dexKit, gateKey, false, NONE, NONE);
+    }
+
+    private InstallStep(int id, String name, String[] skipAliases, String failTag, String failText,
+                        boolean dexKit, String gateKey, boolean phaseA, String[] lookupFlags, String[] restartKeys) {
         this.id = id;
         this.name = name;
-        this.skipAliases = skipAliases == null ? new String[0] : skipAliases.clone();
+        this.skipAliases = skipAliases == null ? NONE : skipAliases.clone();
         this.failTag = failTag;
         this.failText = failText;
         this.dexKit = dexKit;
         this.gateKey = gateKey;
+        this.phaseA = phaseA;
+        this.lookupFlags = lookupFlags == null ? NONE : lookupFlags.clone();
+        this.restartKeys = restartKeys == null ? NONE : restartKeys.clone();
+    }
+
+    public InstallStep inPhaseA() {
+        return new InstallStep(id, name, skipAliases, failTag, failText, dexKit, gateKey, true, lookupFlags, restartKeys);
+    }
+
+    public InstallStep withLookupFlags(String... flags) {
+        return new InstallStep(id, name, skipAliases, failTag, failText, dexKit, gateKey, phaseA, flags, restartKeys);
+    }
+
+    public InstallStep withRestartKeys(String... keys) {
+        return new InstallStep(id, name, skipAliases, failTag, failText, dexKit, gateKey, phaseA, lookupFlags, keys);
     }
 
     public String[] skipAliases() {
         return skipAliases.clone();
+    }
+
+    public String[] lookupFlags() {
+        return lookupFlags.clone();
+    }
+
+    public String[] restartKeys() {
+        return restartKeys.clone();
     }
 
     public boolean skippedBy(Set<String> skipped) {

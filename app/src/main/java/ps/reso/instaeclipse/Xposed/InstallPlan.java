@@ -5,6 +5,7 @@ import android.content.Context;
 import org.luckypray.dexkit.DexKitBridge;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -219,6 +220,12 @@ public class InstallPlan {
     static final int TERMINATED_EXECUTOR_GUARD = 101;
     static final int EXEC_GUARD_DISPATCHERS = 102;
 
+    private static final List<String> EARLY = Arrays.asList(
+            "interceptorChainEntry", "ExecGuardDispatchers", "BackLeavesHomeDispatcher",
+            "GhostDMSeenHook", "GhostDMMarkAsReadHook", "GhostChannelMarkAsReadHook", "GhostTypingIndicatorHook",
+            "GhostScreenshotDetectionHook", "GhostViewOnceHook", "GhostStorySeenHook", "KeepUnsentMessagesHook",
+            "GhostEphemeralKeepHook", "GhostPermanentViewHook", "EditHistoryHook",
+            "FollowingOnlyFeedHook", "HideSuggestedFeedItemsHook", "AdBlocker");
     private static final List<InstallStep> STEPS;
 
     static {
@@ -329,6 +336,28 @@ public class InstallPlan {
 
     public List<InstallStep> steps() {
         return STEPS;
+    }
+
+    public List<InstallStep> legacySteps() {
+        return STEPS;
+    }
+
+    public static int earlyCount(List<InstallStep> background) {
+        int n = 0;
+        while (n < background.size() && EARLY.contains(background.get(n).name)) n++;
+        return n;
+    }
+
+    public boolean open(InstallStep step) {
+        return step.gateKey == null || gateOpen(step.gateKey);
+    }
+
+    public Object flag(String name) {
+        try {
+            return FeatureFlags.class.getField(name).get(null);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalArgumentException("Unknown feature flag: " + name, e);
+        }
     }
 
     public boolean gateOpen(String gateKey) {
