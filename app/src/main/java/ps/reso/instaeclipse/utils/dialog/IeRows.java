@@ -27,6 +27,7 @@ import java.util.List;
 import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.IePalette;
+import ps.reso.instaeclipse.utils.ui.IeSwitch;
 
 final class IeRows {
 
@@ -247,12 +248,7 @@ final class IeRows {
 
             toggle = new Switch(context);
             toggle.setChecked(checked);
-            toggle.setThumbTintList(new ColorStateList(
-                    new int[][]{new int[]{-android.R.attr.state_enabled}, new int[]{android.R.attr.state_checked}, new int[]{}},
-                    new int[]{Color.parseColor("#555555"), p.accent, Color.parseColor("#FFFFFF")}));
-            toggle.setTrackTintList(new ColorStateList(
-                    new int[][]{new int[]{-android.R.attr.state_enabled}, new int[]{android.R.attr.state_checked}, new int[]{}},
-                    new int[]{Color.parseColor("#777777"), IePalette.withAlpha(p.accent, 0x66), Color.parseColor("#CFD8DC")}));
+            IeSwitch.style(toggle, p);
             toggle.setClickable(false);
             toggle.setFocusable(false);
             toggle.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);

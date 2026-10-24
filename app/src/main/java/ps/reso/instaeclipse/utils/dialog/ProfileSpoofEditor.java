@@ -1,7 +1,6 @@
 package ps.reso.instaeclipse.utils.dialog;
 
 import android.content.Context;
-import android.content.res.ColorStateList;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.text.Editable;
@@ -150,9 +149,7 @@ public final class ProfileSpoofEditor {
         badgeRow.addView(badgeLabel, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         verified = new android.widget.Switch(ctx);
         verified.setChecked(v.verified);
-        int[][] states = {{android.R.attr.state_checked}, {}};
-        verified.setThumbTintList(new ColorStateList(states, new int[]{p.accent, 0xFFF2F2F2}));
-        verified.setTrackTintList(new ColorStateList(states, new int[]{(p.accent & 0x00FFFFFF) | 0x80000000, 0x40808080}));
+        ps.reso.instaeclipse.utils.ui.IeSwitch.style(verified, p.accent, p.field, p.text);
         badgeRow.addView(verified);
         badgeRow.setOnClickListener(x -> verified.toggle());
         badge.addView(badgeRow, matchWrap());

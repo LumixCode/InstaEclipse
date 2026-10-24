@@ -64,6 +64,7 @@ public final class IePalette {
     public final int text, sub, line, pressed;
     public final int danger, success, accent, onAccent;
     public final int backdrop, highlight;
+    public final int thumbOff, trackOff, trackOn;
 
     private final boolean night;
     private final int themeAccent;
@@ -94,6 +95,17 @@ public final class IePalette {
         accent = themeAccent != MISSING ? themeAccent | 0xFF000000 : v[PRIMARY_BUTTON];
         onAccent = contrast(WHITE, accent) >= ICON ? WHITE : blackOrWhite(accent);
         highlight = v[HIGHLIGHT_BACKGROUND];
+        thumbOff = WHITE;
+        trackOff = trackOff(card, text);
+        trackOn = trackOn(card, accent);
+    }
+
+    static int trackOff(int surface, int text) {
+        return readable(mix(surface, text, 0.38f), surface, ICON);
+    }
+
+    static int trackOn(int surface, int accent) {
+        return mix(surface, accent, 0.5f);
     }
 
     public static IePalette of(Context context) {
