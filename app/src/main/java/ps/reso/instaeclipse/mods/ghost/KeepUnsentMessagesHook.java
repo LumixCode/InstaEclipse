@@ -53,6 +53,7 @@ import ps.reso.instaeclipse.utils.ghost.UnsentMessageIndex;
 import ps.reso.instaeclipse.utils.ghost.UnsentMessageIndex.Key;
 import ps.reso.instaeclipse.utils.ghost.UnsentMessageStore;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.users.UserUtils;
 
 /**
  * Keeps locally removed messages through both live removal and thread reconciliation.
@@ -68,6 +69,7 @@ public class KeepUnsentMessagesHook {
     private static final String RECONCILE_ANCHOR =
             " is not in cache, may need to double check if this message is deleted locally or not";
     private static final String DTK = "com.instagram.model.direct.DirectThreadKey";
+    private static final String USER_CACHE = "com.instagram.user.model.UserCache";
     private static final String MISSING = "missing";
     private static final long EXPIRY_MARGIN_MS = 60_000;
 
@@ -85,6 +87,9 @@ public class KeepUnsentMessagesHook {
     private static volatile Boolean listNewestFirst;
     /** Messages already described (or found not to need it) this process; see describe(). */
     private static final Set<Key> described = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private static final Map<String, String> senderHandles = new ConcurrentHashMap<>();
+    private static volatile Method userCacheOf;
+    private static volatile List<Method> usersById;
     // Instagram's direct.db message codec; all null when discovery failed (no restart copies).
     private static Method messageTable, encodeMessage, decodeMessage, messageTime;
     private static Field messageThreadKey;
@@ -420,7 +425,7 @@ public class KeepUnsentMessagesHook {
                                     saveCopy(key, message, copy);
                                 }
                                 // An empty copy: the encoding failed, so it is only "without text".
-                                markUnsent(message, key, UnsentIdentity.messageIds(message), null,
+                                markUnsent(message, key, UnsentIdentity.messageIds(message), entry,
                                         copy != null ? copy : new byte[0]);
                                 UnsentIndicatorHook.refreshVisibleRows();
                             }
@@ -781,6 +786,7 @@ public class KeepUnsentMessagesHook {
      *  Without that removal only log-only entries may go: a message kept in the chat whose entry
      *  is cleared would stay there for good as an unmarked ordinary message. */
     public static boolean clearSaved(Context context, String thread) {
+        if (thread != null && thread.isEmpty()) return UnsentLog.clearThread(context, thread) != null;
         if (!localClearingAvailable && UnsentLog.hasRetained(context, thread)) return false;
         String account = thread == null ? UnsentLog.clear(context) : UnsentLog.clearThread(context, thread);
         if (account == null) return false;
@@ -1045,10 +1051,71 @@ public class KeepUnsentMessagesHook {
             UnsentDetail detail = msg == null || (text != null && !text.trim().isEmpty())
                     ? null : describe(msg, key, ids, owner, copy);
             UnsentLog.add(key.account, key.thread, ids, ThreadNames.get(key.thread), text,
-                    !FeatureFlags.keepUnsentInChat, detail);
+                    !FeatureFlags.keepUnsentInChat, detail, senderHandle(msg, owner));
         } catch (Throwable t) {
             ModuleLog.warn("(IE|KeepUnsent) Could not add an unsent message to the unsent log", t);
         }
+    }
+
+    private static String senderHandle(Object msg, Object owner) {
+        String id = senderId(msg);
+        if (id == null) return null;
+        String known = senderHandles.get(id);
+        if (known != null || owner == null) return known;
+        String handle = lookUpHandle(owner, id);
+        if (handle != null) {
+            if (senderHandles.size() > 500) senderHandles.clear();
+            senderHandles.put(id, handle);
+        }
+        return handle;
+    }
+
+    private static String senderId(Object msg) {
+        if (msg == null) return null;
+        try {
+            Field field = UnsentIdentity.senderField(msg.getClass());
+            if (field == null || !field.getDeclaringClass().isInstance(msg)) return null;
+            Object id = field.get(msg);
+            return id instanceof String s && s.matches("\\d{1,20}") ? s : null;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static String lookUpHandle(Object owner, String id) {
+        try {
+            ClassLoader loader = owner.getClass().getClassLoader();
+            Class<?> sessionType = Class.forName(UnsentIdentity.SESSION, false, loader);
+            Object session = sessionType.isInstance(owner) ? owner : UnsentIdentity.directValue(owner, sessionType);
+            if (session == null) return null;
+            Method of = userCacheOf;
+            List<Method> lookups = usersById;
+            if (of == null || lookups == null) {
+                Class<?> cacheType = Class.forName(USER_CACHE, false, loader);
+                Class<?> userType = Class.forName(UnsentIdentity.USER, false, loader);
+                List<Method> found = new ArrayList<>();
+                for (Method m : cacheType.getDeclaredMethods()) {
+                    Class<?>[] params = m.getParameterTypes();
+                    if (params.length != 1 || !Modifier.isPublic(m.getModifiers())) continue;
+                    boolean isStatic = Modifier.isStatic(m.getModifiers());
+                    if (isStatic && m.getReturnType() == cacheType && params[0] == sessionType) of = m;
+                    else if (!isStatic && m.getReturnType() == userType && params[0] == String.class) found.add(m);
+                }
+                if (of == null || found.isEmpty()) return null;
+                userCacheOf = of;
+                usersById = lookups = found;
+            }
+            Object cache = of.invoke(null, session);
+            if (cache == null) return null;
+            for (Method lookup : lookups) {
+                Object user = lookup.invoke(cache, id);
+                String handle = user == null ? null : UserUtils.callUsernameGetter(user);
+                if (handle != null) return handle;
+            }
+        } catch (Throwable t) {
+            ModuleLog.detail("(IE|KeepUnsent) sender lookup: " + t.getClass().getSimpleName());
+        }
+        return null;
     }
 
     /** What a message without text was (a reel, a voice message…), read from Instagram's own

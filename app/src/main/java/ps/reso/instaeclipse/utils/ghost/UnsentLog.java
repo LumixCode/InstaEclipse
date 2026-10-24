@@ -52,7 +52,7 @@ public class UnsentLog {
         public final String text;
         public final String account;
         public final String messageId;
-        public final boolean unsent;
+        public final String by;
         public final boolean hasBody;
         public final boolean cleared;
         /** Captured while "keep in chat" was off: Instagram removed the message, nothing stayed in the chat. */
@@ -60,20 +60,32 @@ public class UnsentLog {
         /** What a message without text was; null when unknown (entries from before this existed). */
         public final UnsentDetail detail;
         public Entry(long time, String account, String thread, String messageId, String sender, String text) {
-            this(time, account, thread, messageId, sender, text, true, false, false, null);
+            this(time, account, thread, messageId, sender, "", text, true, false, false, null);
         }
-        private Entry(long time, String account, String thread, String messageId, String sender, String text,
-                      boolean hasBody, boolean cleared, boolean logOnly, UnsentDetail detail) {
+        private Entry(long time, String account, String thread, String messageId, String sender, String by,
+                      String text, boolean hasBody, boolean cleared, boolean logOnly, UnsentDetail detail) {
             this.time = time; this.account = account; this.thread = thread;
-            this.messageId = messageId; this.unsent = true; this.cleared = cleared;
+            this.messageId = messageId; this.cleared = cleared;
             this.sender = cleared ? "" : sender; this.text = cleared ? "" : text;
+            this.by = cleared || by == null ? "" : by;
             this.hasBody = !cleared && hasBody;
             this.logOnly = logOnly;
             this.detail = cleared ? null : detail;
         }
 
-        private Entry withDetail(UnsentDetail detail) {
-            return new Entry(time, account, thread, messageId, sender, text, hasBody, cleared, logOnly, detail);
+        private Entry with(UnsentDetail detail, String by) {
+            return new Entry(time, account, thread, messageId, sender, by, text, hasBody, cleared, logOnly, detail);
+        }
+
+        public String senderLabel() {
+            return by.isEmpty() ? sender : "@" + by;
+        }
+
+        public boolean showsSender(String chat) {
+            if (by.isEmpty()) return false;
+            String name = chat == null ? "" : chat.trim();
+            if (name.startsWith("@")) name = name.substring(1);
+            return !by.equalsIgnoreCase(name);
         }
 
         /** No text and no (or only the generic) description yet. */
@@ -370,7 +382,7 @@ public class UnsentLog {
         for (Object item : arr) {
             if (!(item instanceof Map<?, ?> o)) throw new IllegalArgumentException("not an entry");
             Entry entry = new Entry(number(o.get("t")), text(o.get("a"), ""),
-                    text(o.get("th"), ""), text(o.get("id"), ""), text(o.get("s"), ""),
+                    text(o.get("th"), ""), text(o.get("id"), ""), text(o.get("s"), ""), text(o.get("by"), ""),
                     text(o.get("m"), ""), flag(o.get("body"), true), flag(o.get("cleared"), false),
                     flag(o.get("logOnly"), false), readDetail(o.get("d") instanceof Map<?, ?> d ? d : null));
             entries.add(entry);
@@ -458,6 +470,7 @@ public class UnsentLog {
                 o.put("cleared", true);
             } else {
                 o.put("s", e.sender); o.put("m", e.text); o.put("body", e.hasBody);
+                if (!e.by.isEmpty()) o.put("by", e.by);
                 if (e.logOnly) o.put("logOnly", true);
                 if (e.detail != null) o.put("d", writeDetail(e.detail));
             }
@@ -509,20 +522,25 @@ public class UnsentLog {
     /** @param detail what a message without text was; fills an entry that lacks one. */
     public static synchronized void add(String account, String thread, List<String> ids, String sender, String text,
                                         boolean logOnly, UnsentDetail detail) {
+        add(account, thread, ids, sender, text, logOnly, detail, null);
+    }
+
+    public static synchronized void add(String account, String thread, List<String> ids, String sender, String text,
+                                        boolean logOnly, UnsentDetail detail, String by) {
         requestLoad();
-        if (!record(account, thread, ids, sender, text, logOnly, detail, System.currentTimeMillis(), false)) return;
+        if (!record(account, thread, ids, sender, by, text, logOnly, detail, System.currentTimeMillis(), false)) return;
         publishRevision();
         persist();
     }
 
     private static void merge(Entry entry, List<String> aliases) {
         List<String> ids = aliases.isEmpty() ? Collections.singletonList(entry.messageId) : aliases;
-        record(entry.account, entry.thread, ids, entry.sender, entry.hasBody ? entry.text : null, entry.logOnly,
-                entry.detail, entry.time, true);
+        record(entry.account, entry.thread, ids, entry.sender, entry.by, entry.hasBody ? entry.text : null,
+                entry.logOnly, entry.detail, entry.time, true);
     }
 
-    private static boolean record(String account, String thread, List<String> ids, String sender, String text,
-                                  boolean logOnly, UnsentDetail detail, long time, boolean newerWins) {
+    private static boolean record(String account, String thread, List<String> ids, String sender, String by,
+                                  String text, boolean logOnly, UnsentDetail detail, long time, boolean newerWins) {
         UnsentMessageIndex.Key cleared = valid(account) && valid(thread) ? clearedIds.find(account, thread, ids) : null;
         if (cleared != null) {
             if (ids != null) for (String id : ids) if (deletions.contains(account, thread, id)) return false;
@@ -539,21 +557,26 @@ public class UnsentLog {
         for (int i = 0; i < cache.size(); i++) {
             Entry old = cache.get(i);
             if (!old.account.equals(key.account) || !old.thread.equals(key.thread) || !old.messageId.equals(key.message)) continue;
+            String who = valid(by) && (old.by.isEmpty() || newerWins) ? by : old.by;
             // A removal is useful even when the native cache has already dropped its body. A later
             // exact row/reconcile capture may fill it in without duplicating the deletion event.
             if (hasBody && (!old.hasBody || newerWins)) {
                 String label = newerWins && sender != null && !sender.isEmpty() ? sender : old.sender;
-                cache.set(i, new Entry(old.time, old.account, old.thread, old.messageId, label, text,
+                cache.set(i, new Entry(old.time, old.account, old.thread, old.messageId, label, who, text,
                         true, false, old.logOnly, old.detail));
                 return true;
             }
             if (!hasBody && improves(old, detail)) {
-                cache.set(i, old.withDetail(detail));
+                cache.set(i, old.with(detail, who));
+                return true;
+            }
+            if (!who.equals(old.by)) {
+                cache.set(i, old.with(old.detail, who));
                 return true;
             }
             return revision != deletions.revision();
         }
-        cache.add(new Entry(time, account, thread, key.message, sender == null ? "" : sender,
+        cache.add(new Entry(time, account, thread, key.message, sender == null ? "" : sender, by,
                 // Kept as before for older builds and backups; the viewer shows the detail instead.
                 // Log-only mode keeps nothing in the chat, so "retained" would be wrong there.
                 hasBody ? text : logOnly ? "[Unsent message]" : "[Retained message]", hasBody, false, logOnly,
@@ -627,7 +650,7 @@ public class UnsentLog {
         for (Map.Entry<Entry, UnsentDetail> description : found.entrySet()) {
             int index = cache.indexOf(description.getKey());
             if (index < 0) continue; // cleared, filled in or dropped meanwhile
-            cache.set(index, description.getKey().withDetail(description.getValue()));
+            cache.set(index, description.getKey().with(description.getValue(), description.getKey().by));
             described++;
         }
         if (described == 0) return;
@@ -701,7 +724,7 @@ public class UnsentLog {
     /** Clear content only in this thread; return its account only after the durable write succeeds. */
     public static String clearThread(Context context, String thread) {
         String account = viewer(context);
-        return valid(thread) ? markCleared(account, thread) : null;
+        return thread != null ? markCleared(account, thread) : null;
     }
 
     private static synchronized String viewer(Context context) {
@@ -710,7 +733,7 @@ public class UnsentLog {
     }
 
     static String markCleared(String account, String thread) {
-        if (!valid(account) || (thread != null && !valid(thread)) || !awaitLoaded(VIEWER_WAIT_MS)) return null;
+        if (!valid(account) || !awaitLoaded(VIEWER_WAIT_MS)) return null;
         FutureTask<String> task = new FutureTask<>(() -> clearNow(account, thread));
         Executor runner;
         synchronized (UnsentLog.class) {
@@ -742,7 +765,7 @@ public class UnsentLog {
             if (!account.equals(entry.account)
                     || (thread != null && !thread.equals(entry.thread))) continue;
             updatedCleared.recordAliases(account, entry.thread, deletions.aliases(key(entry)));
-            updated.set(i, new Entry(entry.time, entry.account, entry.thread, entry.messageId, "", "", false, true, false, null));
+            updated.set(i, new Entry(entry.time, entry.account, entry.thread, entry.messageId, "", "", "", false, true, false, null));
             changed = true;
         }
         if (changed) {
@@ -755,7 +778,7 @@ public class UnsentLog {
             cache.clear();
             cache.addAll(updated);
             clearedIds = updatedCleared;
-            deletions.clear(account, thread);
+            if (thread == null || valid(thread)) deletions.clear(account, thread);
             publishRevision();
         }
         return account;

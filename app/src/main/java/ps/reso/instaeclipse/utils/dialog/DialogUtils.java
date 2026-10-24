@@ -885,6 +885,7 @@ public class DialogUtils {
                 ps.reso.instaeclipse.utils.ghost.UnsentLog.getForThread(context, threadId != null ? threadId : "");
 
         final String chat = chatName != null && !chatName.trim().isEmpty() ? chatName.trim() : null;
+        addSetAsideNotice(context, layout);
 
         if (!entries.isEmpty()) {
             layout.addView(IeRows.actionRow(context, R.drawable.ic_upload, I18n.t(context, R.string.ig_dialog_unsent_export), "#0A84FF",
@@ -896,8 +897,7 @@ public class DialogUtils {
                             .message(I18n.t(context, R.string.ig_unsent_clear_saved_confirm));
                     dlg.secondary(context.getString(android.R.string.cancel), null);
                     dlg.primary(I18n.t(context, R.string.ig_dialog_unsent_clear_yes), () -> {
-                        // clearSaved(null) means every chat, so an unknown thread is never cleared from here.
-                        if (threadId == null || !ps.reso.instaeclipse.mods.ghost.KeepUnsentMessagesHook.clearSaved(context, threadId)) {
+                        if (!ps.reso.instaeclipse.mods.ghost.KeepUnsentMessagesHook.clearSaved(context, threadId != null ? threadId : "")) {
                             ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_unsent_clear_failed), Toast.LENGTH_LONG).show();
                             return;
                         }
@@ -928,9 +928,9 @@ public class DialogUtils {
 
                 LinearLayout meta = new LinearLayout(context);
                 meta.setGravity(Gravity.CENTER_VERTICAL);
-                // e.sender holds the chat name captured at unsend time, which the title already shows.
-                String tag = FeatureFlags.showUnsentIndicator && e.unsent
+                String tag = FeatureFlags.showUnsentIndicator
                         ? I18n.t(context, R.string.ig_unsent_indicator_label) : "";
+                if (e.showsSender(chat)) tag = tag.isEmpty() ? e.senderLabel() : e.senderLabel() + " · " + tag;
                 TextView sender = new TextView(context);
                 sender.setText(tag);
                 if (tag.isEmpty()) sender.setVisibility(View.GONE);
@@ -1023,7 +1023,7 @@ public class DialogUtils {
                 org.json.JSONObject o = new org.json.JSONObject();
                 o.put("time", e.time);
                 o.put("time_iso", iso.format(new java.util.Date(e.time)));
-                if (e.sender != null && !e.sender.isEmpty()) o.put("sender", e.sender);
+                if (!e.senderLabel().isEmpty()) o.put("sender", e.senderLabel());
                 o.put("text", ps.reso.instaeclipse.utils.ghost.UnsentDetailText.body(context, e));
                 // Marks "text" as a description of a message without text, not its words.
                 if (ps.reso.instaeclipse.utils.ghost.UnsentDetailText.isDescription(e)) {
@@ -1069,12 +1069,19 @@ public class DialogUtils {
         showSection(context, unsentListPage(context));
     }
 
+    private static void addSetAsideNotice(Context context, LinearLayout layout) {
+        if (ps.reso.instaeclipse.utils.ghost.UnsentLog.takeSetAsideNotice()) {
+            layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ie_unsent_log_set_aside)));
+        }
+    }
+
     private static IeSheet.Page unsentListPage(Context context) {
         unsentListStale = false;
         LinearLayout layout = createSwitchLayout(context);
 
         java.util.List<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry> entries =
                 ps.reso.instaeclipse.utils.ghost.UnsentLog.getAll(context);
+        addSetAsideNotice(context, layout);
 
         if (entries.isEmpty()) {
             layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_dialog_unsent_empty)));
