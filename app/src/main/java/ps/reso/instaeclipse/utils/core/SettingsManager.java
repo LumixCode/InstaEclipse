@@ -33,7 +33,7 @@ public class SettingsManager {
     private static SharedPreferences prefs;
     /** Application context, for pushing in-app changes to the companion (CompanionSync). */
     private static Context appContext;
-    static final Object LOCK = new Object();
+    public static final Object LOCK = new Object();
     private static final java.util.concurrent.atomic.AtomicInteger LOADS = new java.util.concurrent.atomic.AtomicInteger();
 
     public static void init(Context context) {
@@ -177,7 +177,6 @@ public class SettingsManager {
         // Misc
         editor.putBoolean("disableStoryFlipping", FeatureFlags.disableStoryFlipping);
         editor.putBoolean("disableVideoAutoPlay", FeatureFlags.disableVideoAutoPlay);
-        editor.putBoolean("spoofLastSeen", FeatureFlags.spoofLastSeen);
         editor.putBoolean("disableSearchHistory", FeatureFlags.disableSearchHistory);
         editor.putBoolean("confirmCalls", FeatureFlags.confirmCalls);
         editor.putBoolean("spoofLocation", FeatureFlags.spoofLocation);
@@ -333,9 +332,9 @@ public class SettingsManager {
         FeatureFlags.hideSpecificChats = prefs.getBoolean("hideSpecificChats", false);
         FeatureFlags.showHideChatButton = prefs.getBoolean("showHideChatButton", true);
         FeatureFlags.downloaderUseOriginal = prefs.getBoolean("downloaderUseOriginal", true);
-        FeatureFlags.downloaderQualityMaxShortSide = prefs.getInt("downloaderQualityMaxShortSide", 0);
-        FeatureFlags.storyTrayScale = prefs.getInt("storyTrayScale", 100);
-        FeatureFlags.feedCornerRadius = prefs.getInt("feedCornerRadius", 0);
+        FeatureFlags.downloaderQualityMaxShortSide = clamped("downloaderQualityMaxShortSide", prefs.getInt("downloaderQualityMaxShortSide", 0));
+        FeatureFlags.storyTrayScale = clamped("storyTrayScale", prefs.getInt("storyTrayScale", 100));
+        FeatureFlags.feedCornerRadius = clamped("feedCornerRadius", prefs.getInt("feedCornerRadius", 0));
         FeatureFlags.storyRingColor = prefs.getString("storyRingColor", "");
         FeatureFlags.downloaderCompatibility = prefs.getBoolean("downloaderCompatibility", false);
         FeatureFlags.downloaderAllowFallback = prefs.getBoolean("downloaderAllowFallback", false);
@@ -422,7 +421,6 @@ public class SettingsManager {
         // Misc
         FeatureFlags.disableStoryFlipping = prefs.getBoolean("disableStoryFlipping", false);
         FeatureFlags.disableVideoAutoPlay = prefs.getBoolean("disableVideoAutoPlay", false);
-        FeatureFlags.spoofLastSeen = prefs.getBoolean("spoofLastSeen", false);
         FeatureFlags.disableSearchHistory = prefs.getBoolean("disableSearchHistory", false);
         FeatureFlags.confirmCalls = prefs.getBoolean("confirmCalls", false);
         FeatureFlags.spoofLocation = prefs.getBoolean("spoofLocation", false);
@@ -443,9 +441,9 @@ public class SettingsManager {
         FeatureFlags.profileMenuTools = prefs.getBoolean("profileMenuTools", false);
         FeatureFlags.postCountSpoof = prefs.getBoolean("postCountSpoof", false);
         FeatureFlags.profileSpoofer = prefs.getBoolean("profileSpoofer", false);
-        FeatureFlags.spoofFollowers = prefs.getInt("spoofFollowers", -1);
-        FeatureFlags.spoofFollowing = prefs.getInt("spoofFollowing", -1);
-        FeatureFlags.spoofPosts = prefs.getInt("spoofPosts", -1);
+        FeatureFlags.spoofFollowers = clamped("spoofFollowers", prefs.getInt("spoofFollowers", -1));
+        FeatureFlags.spoofFollowing = clamped("spoofFollowing", prefs.getInt("spoofFollowing", -1));
+        FeatureFlags.spoofPosts = clamped("spoofPosts", prefs.getInt("spoofPosts", -1));
         FeatureFlags.spoofVerified = prefs.getBoolean("spoofVerified", false);
         FeatureFlags.spoofName = prefs.getString("spoofName", "");
         FeatureFlags.spoofUsername = prefs.getString("spoofUsername", "");
@@ -517,6 +515,11 @@ public class SettingsManager {
         FeatureManager.refreshFeatureStatus();
     }
 
+    private static int clamped(String key, int stored) {
+        Object value = SettingsSchema.restorable(key, stored);
+        return value instanceof Integer ? (Integer) value : stored;
+    }
+
     private static double readDoublePref(SharedPreferences p, String key, double fallback) {
         try {
             return Double.parseDouble(p.getString(key, String.valueOf(fallback)));
@@ -549,6 +552,7 @@ public class SettingsManager {
     }
 
     private static void applyEdits(java.util.Map<String, Object> edits) {
+        java.util.Map<String, ?> before = new java.util.HashMap<>(prefs.getAll());
         SharedPreferences.Editor e = prefs.edit();
         for (java.util.Map.Entry<String, Object> edit : edits.entrySet()) {
             Object value = edit.getValue();
@@ -558,6 +562,7 @@ public class SettingsManager {
             else e.putString(edit.getKey(), String.valueOf(value));
         }
         e.apply();
+        stampChangedKeys(before);
     }
 
     /**

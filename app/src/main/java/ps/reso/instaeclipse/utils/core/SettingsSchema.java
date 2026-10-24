@@ -17,6 +17,7 @@ import ps.reso.instaeclipse.mods.reels.DailyReelLimit;
 import ps.reso.instaeclipse.mods.reels.NightReelSchedule;
 import ps.reso.instaeclipse.mods.ui.StartupTabHook;
 import ps.reso.instaeclipse.mods.ui.StoryTrayHook;
+import ps.reso.instaeclipse.mods.ui.TabOrderPolicy;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 import ps.reso.instaeclipse.utils.profile.SpoofAvatar;
@@ -29,10 +30,8 @@ public final class SettingsSchema {
             "lockDirectAlways", "lockSavedCollections", "lockedCollections", "lockUseFingerprint");
     public static final Set<String> PATHS = set("downloaderCustomPath", "downloaderCustomUri", "customFontPath",
             "customEmojiPath");
-    public static final Set<String> LEGACY_IGNORED = set("isGhostModeEnabled", "isMiscEnabled", "isDistractionFree");
-    private static final Set<String> NOT_IN_BACKUP = set("enablePhotoZoom", "customThemeEnabled", "themePresetId",
-            "themeLightPresetId", "themePaletteJson", "navTabOrder", "autoClearCache", "autoClearCacheSizeMb",
-            "customFontEnabled", "customEmojiEnabled");
+    public static final Set<String> LEGACY_IGNORED = set("spoofLastSeen", "followersHistory", "isGhostModeEnabled",
+            "isMiscEnabled", "isDistractionFree");
     private static final Map<String, Field> FIELDS = fields();
     private static final Map<String, Class<?>> TYPES = types(FIELDS);
 
@@ -86,16 +85,19 @@ public final class SettingsSchema {
             if (Boolean.TRUE.equals(stored.get("blockLocationPrompts"))) edits.put("hideOnboardingPrompts", true);
             edits.put("blockLocationPrompts", null);
         }
+        if (Boolean.TRUE.equals(stored.get("followersHistory"))) {
+            edits.put("profileAnalyzer", true);
+            edits.put("followersHistory", null);
+        }
         return edits;
     }
 
     public static List<String> backupKeys(boolean withLocks) {
         List<String> keys = new ArrayList<>();
         for (String key : TYPES.keySet()) {
-            if (PRIVATE.contains(key) || "isExtremeMode".equals(key)) continue;
-            if (withLocks ? "lockedCollections".equals(key)
-                    : LOCKS.contains(key) || PATHS.contains(key) || NOT_IN_BACKUP.contains(key)) continue;
-            keys.add(key);
+            if (PRIVATE.contains(key) || PATHS.contains(key) || LEGACY_IGNORED.contains(key)) continue;
+            if (withLocks ? "lockedCollections".equals(key) : LOCKS.contains(key)) continue;
+            if (!"isExtremeMode".equals(key)) keys.add(key);
         }
         keys.add("isExtremeMode");
         return keys;
@@ -112,7 +114,7 @@ public final class SettingsSchema {
     private static Object restorableInt(String key, Object raw) {
         if ("forceReelQuality".equals(key) && raw instanceof Boolean) return (Boolean) raw ? 1080 : 0;
         Integer value = toInteger(raw);
-        if (value == null) return "storyCacheHours".equals(key) ? StoryCacheRetention.DEFAULT_HOURS : null;
+        if (value == null) return null;
         int n = value;
         switch (key) {
             case "storyTrayScale":
@@ -120,10 +122,13 @@ public final class SettingsSchema {
             case "feedCornerRadius":
                 return Math.max(0, Math.min(48, n));
             case "downloaderQualityMaxShortSide":
+            case "autoClearCacheSizeMb":
+            case "themePresetId":
                 return Math.max(0, n);
             case "spoofFollowers":
             case "spoofFollowing":
             case "spoofPosts":
+            case "themeLightPresetId":
                 return Math.max(-1, n);
             case "dailyReelLimit":
                 return DailyReelLimit.validLimit(n);
@@ -141,10 +146,12 @@ public final class SettingsSchema {
     private static Object restorableString(String key, Object raw) {
         if ("spoofLat".equals(key) || "spoofLng".equals(key)) {
             double value = toDouble(raw);
-            if (Double.isNaN(value)) return null;
-            return raw instanceof String ? raw : String.valueOf(value);
+            return Double.isNaN(value) ? null : String.valueOf(value);
         }
-        String value = String.valueOf(raw);
+        if (!(raw instanceof String)) return null;
+        String value = (String) raw;
+        if ("spoofAvatar".equals(key)) return SpoofAvatar.isValid(value) ? value : null;
+        if (value.length() > MAX_STRING_CHARS) return null;
         switch (key) {
             case "startupTab":
                 return Arrays.asList(StartupTabHook.TABS).contains(value) ? value : null;
@@ -156,11 +163,21 @@ public final class SettingsSchema {
                 return Arrays.asList(DeviceSpoofHook.DEVICES).contains(value) ? value : null;
             case "storyRingColor":
                 return value.isEmpty() || StoryTrayHook.parseColors(value) != null ? value : null;
-            case "spoofAvatar":
-                return SpoofAvatar.isValid(value) ? value : null;
+            case "navTabOrder":
+                return tabOrder(value);
             default:
                 return value;
         }
+    }
+
+    private static String tabOrder(String value) {
+        List<String> known = Arrays.asList(TabOrderPolicy.ORDERABLE_TABS);
+        List<String> tabs = new ArrayList<>();
+        for (String part : value.split(",")) {
+            String tab = part.trim();
+            if (known.contains(tab) && !tabs.contains(tab)) tabs.add(tab);
+        }
+        return String.join(",", tabs);
     }
 
     private static Boolean toBoolean(Object raw) {

@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-final class TabOrderPolicy {
+public final class TabOrderPolicy {
 
-    static final String[] ORDERABLE_TABS =
+    public static final String[] ORDERABLE_TABS =
             {"feed_tab", "clips_tab", "search_tab", "creation_tab", "direct_tab", "news_tab", "profile_tab"};
 
     private String seen;
