@@ -101,7 +101,8 @@ public final class ModuleLog {
     }
 
     private static void log(Level level, String msg, Throwable t) {
-        sink.write(level, getCallerInfo() + msg, t);
+        boolean caller = verbose || level == Level.WARN || level == Level.ERROR;
+        sink.write(level, caller ? getCallerInfo() + msg : msg, t);
     }
 
     interface Sink {

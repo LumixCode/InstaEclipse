@@ -6,23 +6,24 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
+import android.os.Process;
 import android.system.Os;
 import android.util.Log;
 import android.util.AtomicFile;
 
-import java.io.BufferedReader;
-import java.io.BufferedInputStream;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -52,13 +53,14 @@ public final class Logging {
     // CannotDeliverBroadcastException instead of ever seeing the intent.
     private static final int IPC_MAX_CHARS = 150000;
     private static final long MAX_FILE_BYTES = 4 * 1024 * 1024;
+    private static final long MAX_LOCAL_BYTES = 2 * MAX_FILE_BYTES;
     private static final int MAX_LINES = 10000;
     private static final int MAX_LINE_CHARS = 4096;
     private static final int MAX_ENTRY_CHARS = MAX_LINE_CHARS + 128;
+    private static final int READ_CHUNK_CHARS = 16 * 1024;
 
     private static final Object LOCK = new Object();
-    private static final Object INIT_LOCK = new Object();
-    private static final ArrayDeque<String> LINES = new ArrayDeque<>(MAX_LINES + 16);
+    private static final ArrayDeque<Entry> LINES = new ArrayDeque<>(MAX_LINES + 16);
     private static final ThreadLocal<SimpleDateFormat> TS =
             ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US));
 
@@ -74,6 +76,10 @@ public final class Logging {
     private static String lastBody;
     private static String lastBodyTime;
     private static int lastBodyRepeat = 1;
+    private static long nextSeq;
+    private static long writtenSeq;
+    private static boolean rewriteAll;
+    private static boolean replaceLast;
 
     // Mirror into the companion app's storage (Instagram process only).
     private static final Uri MIRROR_URI = Uri.parse("content://ps.reso.instaeclipse.logmirror/log");
@@ -83,8 +89,31 @@ public final class Logging {
     // logging from the main thread never waits for disk I/O.
     private static volatile FileOutputStream mirrorOut;
     private static long mirrorBytes;
+    private static long mirrorLastStart = -1;
+    private static FileOutputStream localOut;
+    private static long localBytes;
+    private static long localLastStart = -1;
+    private static boolean localUnsynced;
 
-    private static final Runnable REWRITE_RUNNABLE = Logging::rewriteFileRunnable;
+    private static final Runnable FLUSH_RUNNABLE = () -> persistOnIoThread(false);
+
+    private static final class Entry {
+        final long seq;
+        final String text;
+        final long bytes;
+
+        Entry(long seq, String text) {
+            this.seq = seq;
+            this.text = text;
+            bytes = text.getBytes(StandardCharsets.UTF_8).length + 1L;
+        }
+    }
+
+    private static final class History {
+        final ArrayDeque<String> lines = new ArrayDeque<>();
+        long bytes;
+        boolean appendable;
+    }
 
     private Logging() {}
 
@@ -93,26 +122,37 @@ public final class Logging {
     }
 
     public static void init(Context context, String filename) {
-        synchronized (INIT_LOCK) {
+        synchronized (LOCK) {
+            if (logFile != null) return;
+            logFile = new File(context.getFilesDir(), filename);
+            ensureIoThread();
+            ioHandler.post(Logging::loadHistory);
+        }
+    }
+
+    private static void loadHistory() {
+        try {
+            File file;
             synchronized (LOCK) {
-                if (initialized) return;
-                logFile = new File(context.getFilesDir(), filename);
-                ensureIoThread();
+                file = logFile;
             }
-            // Startup reads also stay outside the buffer lock. Concurrent startup events are
-            // retained in the same bounded buffer, then placed after the persisted history.
-            List<String> history = readHistory(logFile);
+            History history = readHistory(file);
+            localBytes = history.bytes;
+            localLastStart = -1;
             synchronized (LOCK) {
-                List<String> pending = new ArrayList<>(LINES);
+                List<Entry> pending = new ArrayList<>(LINES);
                 LINES.clear();
                 bufferedBytes = 0;
-                if (!clearedBeforeInit) for (String entry : history) addLineLocked(entry);
-                for (String entry : pending) addLineLocked(entry);
+                if (!clearedBeforeInit) for (String text : history.lines) addEntryLocked(new Entry(0, text));
+                for (Entry entry : pending) addEntryLocked(entry);
+                if (!history.appendable) rewriteAll = true;
                 initialized = true;
                 dirtyFile = true;
                 revision++;
                 scheduleFlushLocked(0);
             }
+        } catch (Throwable t) {
+            Log.w("InstaEclipse", "[Logging] log history unavailable (" + t.getClass().getSimpleName() + ")");
         }
     }
 
@@ -125,10 +165,6 @@ public final class Logging {
         refreshMirror(context, null);
     }
 
-    /**
-     * Re-opens the mirror FD (handles the companion having cleared its data since Instagram
-     * started) and rewrites it from the in-memory buffer, then runs {@code after} on the IO thread.
-     */
     public static void refreshMirror(Context context, Runnable after) {
         if (context == null) {
             if (after != null) after.run();
@@ -142,24 +178,10 @@ public final class Logging {
             h = ioHandler;
         }
         h.post(() -> {
-            ParcelFileDescriptor fresh = null;
             try {
-                ParcelFileDescriptor pfd = app.getContentResolver().openFileDescriptor(MIRROR_URI, "wa");
-                if (pfd != null) {
-                    // dup() + close(): the PFD from ContentResolver pins a stable provider
-                    // reference (Instagram would be killed if the companion process dies). A dup
-                    // is a plain kernel FD with no such link.
-                    fresh = pfd.dup();
-                    try { pfd.close(); } catch (Throwable ignored) {}
-                }
+                attachMirror(app);
             } catch (Throwable t) {
                 Log.w("InstaEclipse", "[Logging] log mirror unavailable (" + t.getClass().getSimpleName() + ")");
-            }
-            closeMirror();
-            if (fresh != null) {
-                mirrorPfd = fresh;
-                mirrorOut = new FileOutputStream(fresh.getFileDescriptor());
-                rewriteMirror(snapshotLines());
             }
             if (after != null) {
                 try { after.run(); } catch (Throwable ignored) {}
@@ -167,16 +189,34 @@ public final class Logging {
         });
     }
 
+    private static void attachMirror(Context app) {
+        ParcelFileDescriptor fresh = null;
+        try {
+            ParcelFileDescriptor pfd = app.getContentResolver().openFileDescriptor(MIRROR_URI, "wa");
+            if (pfd != null) {
+                fresh = pfd.dup();
+                try { pfd.close(); } catch (Throwable ignored) {}
+            }
+        } catch (Throwable t) {
+            Log.w("InstaEclipse", "[Logging] log mirror unavailable (" + t.getClass().getSimpleName() + ")");
+        }
+        closeMirror();
+        if (fresh == null) return;
+        mirrorPfd = fresh;
+        mirrorOut = new FileOutputStream(fresh.getFileDescriptor());
+        List<Entry> early = null;
+        synchronized (LOCK) {
+            rewriteAll = true;
+            dirtyFile = true;
+            if (!initialized) early = new ArrayList<>(LINES);
+        }
+        if (early == null) persistOnIoThread(false);
+        else rewriteMirror(encode(early), lastBytes(early));
+    }
+
     /** True while Instagram's buffer is being mirrored into the companion's storage. */
     public static boolean isMirrorActive() {
         return mirrorOut != null;
-    }
-
-    /** Copy of the buffered lines, taken under LOCK so the IO thread can write without it. */
-    private static java.util.List<String> snapshotLines() {
-        synchronized (LOCK) {
-            return new ArrayList<>(LINES);
-        }
     }
 
     private static void closeMirror() {
@@ -186,70 +226,70 @@ public final class Logging {
         mirrorPfd = null;
         mirrorOut = null;
         mirrorBytes = 0;
+        mirrorLastStart = -1;
     }
 
-    private static void writeMirror(byte[] data) {
-        if (mirrorOut == null) return;
-        try {
-            mirrorOut.write(data);
-            mirrorBytes += data.length;
-        } catch (Throwable t) {
-            // EBADF/EPIPE etc.: drop it; the companion's next request re-attaches.
-            closeMirror();
+    private static void closeLocal() {
+        if (localOut != null) {
+            try { localOut.close(); } catch (Throwable ignored) {}
         }
-    }
-
-    private static void rewriteMirror(java.util.List<String> lines) {
-        if (mirrorPfd == null) return;
-        try {
-            Os.ftruncate(mirrorPfd.getFileDescriptor(), 0);
-        } catch (Throwable t) {
-            closeMirror();
-            return;
-        }
-        mirrorBytes = 0;
-        StringBuilder sb = new StringBuilder(lines.size() * 96);
-        for (String s : lines) sb.append(s).append('\n');
-        if (sb.length() > 0) writeMirror(sb.toString().getBytes(StandardCharsets.UTF_8));
+        localOut = null;
+        localLastStart = -1;
+        localUnsynced = false;
     }
 
     private static void ensureIoThread() {
         if (ioThread != null) return;
-        ioThread = new HandlerThread("InstaEclipse-Logging-IO");
+        ioThread = new HandlerThread("InstaEclipse-Logging-IO", Process.THREAD_PRIORITY_BACKGROUND);
         ioThread.start();
         ioHandler = new Handler(ioThread.getLooper());
     }
 
-    private static List<String> readHistory(File file) {
-        List<String> history = new ArrayList<>();
-        if (file == null) return history;
+    private static History readHistory(File file) {
+        History history = new History();
         try (FileInputStream input = new AtomicFile(file).openRead()) {
-            long skip = Math.max(0, input.getChannel().size() - MAX_FILE_BYTES);
-            input.getChannel().position(skip);
-            BufferedReader br = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
-            if (skip > 0) readBoundedLine(br); // discard a potentially partial UTF-8 line
-            String line;
-            ArrayDeque<String> tail = new ArrayDeque<>();
-            while ((line = readBoundedLine(br)) != null) {
-                if (tail.size() == MAX_LINES) tail.removeFirst();
-                tail.addLast(line);
+            long size = input.getChannel().size();
+            long skip = Math.max(0, size - MAX_FILE_BYTES);
+            if (skip > 0) input.getChannel().position(skip);
+            Reader reader = new InputStreamReader(input, StandardCharsets.UTF_8);
+            char[] buf = new char[READ_CHUNK_CHARS];
+            StringBuilder line = new StringBuilder();
+            boolean discard = skip > 0;
+            char last = '\n';
+            int n;
+            while ((n = reader.read(buf)) > 0) {
+                int from = 0;
+                for (int i = 0; i < n; i++) {
+                    if (buf[i] != '\n') continue;
+                    appendBounded(line, buf, from, i);
+                    if (discard) discard = false;
+                    else addHistoryLine(history.lines, line);
+                    line.setLength(0);
+                    from = i + 1;
+                }
+                appendBounded(line, buf, from, n);
+                last = buf[n - 1];
             }
-            history.addAll(tail);
+            if (line.length() > 0 && !discard) addHistoryLine(history.lines, line);
+            history.bytes = size;
+            history.appendable = last == '\n';
+        } catch (FileNotFoundException missing) {
+            history.appendable = !file.exists();
         } catch (Throwable ignored) {}
         return history;
     }
 
-    private static String readBoundedLine(BufferedReader reader) throws java.io.IOException {
-        StringBuilder line = new StringBuilder();
-        int c;
-        while ((c = reader.read()) != -1 && c != '\n') {
-            if (line.length() < MAX_ENTRY_CHARS) line.append((char) c);
-        }
-        if (c == -1 && line.length() == 0) return null;
+    private static void appendBounded(StringBuilder line, char[] buf, int from, int to) {
+        int room = MAX_ENTRY_CHARS - line.length();
+        if (room > 0 && to > from) line.append(buf, from, Math.min(room, to - from));
+    }
+
+    private static void addHistoryLine(ArrayDeque<String> tail, StringBuilder line) {
         int end = line.length();
-        if (end > 0 && line.charAt(end - 1) == '\r') line.setLength(--end);
-        if (end > 0 && Character.isHighSurrogate(line.charAt(end - 1))) line.setLength(end - 1);
-        return line.toString();
+        if (end > 0 && line.charAt(end - 1) == '\r') end--;
+        if (end > 0 && Character.isHighSurrogate(line.charAt(end - 1))) end--;
+        if (tail.size() == MAX_LINES) tail.removeFirst();
+        tail.addLast(line.substring(0, end));
     }
 
     public static void append(String line) {
@@ -262,7 +302,9 @@ public final class Logging {
         synchronized (LOCK) {
             if (line.equals(lastBody) && !LINES.isEmpty()) {
                 lastBodyRepeat++;
-                bufferedBytes -= lineBytes(LINES.removeLast());
+                Entry last = LINES.removeLast();
+                bufferedBytes -= last.bytes;
+                if (last.seq <= writtenSeq) replaceLast = true;
                 addLineLocked(lastBodyTime + " " + line + " (×" + lastBodyRepeat + ")");
                 dirtyFile = true;
                 revision++;
@@ -280,57 +322,175 @@ public final class Logging {
         }
     }
 
-    private static long lineBytes(String entry) {
-        return entry.getBytes(StandardCharsets.UTF_8).length + 1L;
+    private static void addLineLocked(String text) {
+        addEntryLocked(new Entry(++nextSeq, text));
     }
 
-    private static void addLineLocked(String entry) {
+    private static void addEntryLocked(Entry entry) {
         LINES.addLast(entry);
-        bufferedBytes += lineBytes(entry);
+        bufferedBytes += entry.bytes;
         while (LINES.size() > MAX_LINES || bufferedBytes > MAX_FILE_BYTES)
-            bufferedBytes -= lineBytes(LINES.removeFirst());
+            bufferedBytes -= LINES.removeFirst().bytes;
     }
 
     private static void scheduleFlushLocked(long delayMs) {
         if (!initialized || ioHandler == null) return;
         // Keep the first deadline even under a continuous stream of repeated/new events.
         if (flushScheduled && delayMs > 0) return;
-        ioHandler.removeCallbacks(REWRITE_RUNNABLE);
-        flushScheduled = ioHandler.postDelayed(REWRITE_RUNNABLE, delayMs);
+        ioHandler.removeCallbacks(FLUSH_RUNNABLE);
+        flushScheduled = ioHandler.postDelayed(FLUSH_RUNNABLE, delayMs);
     }
 
-    private static void rewriteFileRunnable() {
-        persistOnIoThread();
+    private static boolean persistOnIoThread(boolean sync) {
+        try {
+            List<Entry> batch = new ArrayList<>();
+            boolean full;
+            boolean trim;
+            long capturedRevision;
+            File file;
+            synchronized (LOCK) {
+                flushScheduled = false;
+                if (!initialized) return false;
+                long pendingBytes = 0;
+                Iterator<Entry> newest = LINES.descendingIterator();
+                while (newest.hasNext()) {
+                    Entry entry = newest.next();
+                    if (entry.seq <= writtenSeq) break;
+                    batch.add(entry);
+                    pendingBytes += entry.bytes;
+                }
+                full = rewriteAll || (replaceLast && localLastStart < 0)
+                        || localBytes + pendingBytes > MAX_LOCAL_BYTES;
+                if (full) batch = new ArrayList<>(LINES);
+                else Collections.reverse(batch);
+                trim = replaceLast && !full;
+                writtenSeq = nextSeq;
+                rewriteAll = false;
+                replaceLast = false;
+                capturedRevision = revision;
+                file = logFile;
+            }
+            boolean saved = full ? rewriteBoth(file, batch) : appendBoth(file, batch, trim, sync);
+            synchronized (LOCK) {
+                if (!saved) rewriteAll = true;
+                else if (revision == capturedRevision) dirtyFile = false;
+            }
+            return saved;
+        } catch (Throwable t) {
+            synchronized (LOCK) {
+                rewriteAll = true;
+            }
+            return false;
+        }
     }
 
-    /** Only the IO thread writes either destination; no disk operation holds LOCK. */
-    private static boolean persistOnIoThread() {
-        List<String> lines;
-        long capturedRevision;
-        synchronized (LOCK) {
-            flushScheduled = false;
-            if (!initialized) return false;
-            if (!dirtyFile) return true;
-            lines = new ArrayList<>(LINES);
-            capturedRevision = revision;
+    private static byte[] encode(List<Entry> entries) {
+        long total = 0;
+        for (Entry entry : entries) total += entry.bytes;
+        byte[] out = new byte[(int) total];
+        int pos = 0;
+        for (Entry entry : entries) {
+            byte[] text = entry.text.getBytes(StandardCharsets.UTF_8);
+            System.arraycopy(text, 0, out, pos, text.length);
+            pos += text.length;
+            out[pos++] = '\n';
         }
-        boolean saved = rewriteLocalFile(lines);
-        rewriteMirror(lines);
-        synchronized (LOCK) {
-            if (saved && revision == capturedRevision) dirtyFile = false;
+        return out;
+    }
+
+    private static long lastBytes(List<Entry> entries) {
+        return entries.isEmpty() ? 0 : entries.get(entries.size() - 1).bytes;
+    }
+
+    private static boolean rewriteBoth(File file, List<Entry> entries) {
+        byte[] data = encode(entries);
+        long last = lastBytes(entries);
+        closeLocal();
+        boolean saved = rewriteLocalFile(file, data);
+        if (saved) {
+            localBytes = data.length;
+            localLastStart = entries.isEmpty() ? -1 : data.length - last;
         }
+        rewriteMirror(data, last);
         return saved;
     }
 
-    /**
-     * Persists buffered lines before a worker finishes. Call off the main thread: it waits up
-     * to ten seconds for the IO queue. A false result leaves the buffer available for retry.
-     * The local file is atomic; the existing companion mirror FD remains best-effort.
-     */
+    private static boolean appendBoth(File file, List<Entry> entries, boolean trim, boolean sync) {
+        byte[] data = encode(entries);
+        long last = lastBytes(entries);
+        boolean saved = appendLocal(file, data, last, trim, sync);
+        appendMirror(data, last, trim);
+        return saved;
+    }
+
+    private static boolean appendLocal(File file, byte[] data, long last, boolean trim, boolean sync) {
+        try {
+            if (data.length > 0 || trim) {
+                if (localOut == null) {
+                    localOut = new FileOutputStream(file, true);
+                    localBytes = Os.fstat(localOut.getFD()).st_size;
+                }
+                if (trim) {
+                    Os.ftruncate(localOut.getFD(), localLastStart);
+                    localBytes = localLastStart;
+                }
+                if (data.length > 0) {
+                    localOut.write(data);
+                    localLastStart = localBytes + data.length - last;
+                    localBytes += data.length;
+                }
+                localUnsynced = true;
+            }
+            if (sync && localUnsynced) {
+                localOut.getFD().sync();
+                localUnsynced = false;
+            }
+            return true;
+        } catch (Throwable t) {
+            closeLocal();
+            return false;
+        }
+    }
+
+    private static void appendMirror(byte[] data, long last, boolean trim) {
+        FileOutputStream out = mirrorOut;
+        if (out == null || mirrorPfd == null || (data.length == 0 && !trim)) return;
+        try {
+            long size = mirrorBytes;
+            if (trim) {
+                size = Os.fstat(mirrorPfd.getFileDescriptor()).st_size;
+                if (mirrorLastStart >= 0 && size == mirrorBytes) {
+                    Os.ftruncate(mirrorPfd.getFileDescriptor(), mirrorLastStart);
+                    size = mirrorLastStart;
+                }
+            }
+            if (data.length > 0) {
+                out.write(data);
+                mirrorLastStart = size + data.length - last;
+                size += data.length;
+            }
+            mirrorBytes = size;
+        } catch (Throwable t) {
+            closeMirror();
+        }
+    }
+
+    private static void rewriteMirror(byte[] data, long last) {
+        if (mirrorOut == null || mirrorPfd == null) return;
+        try {
+            Os.ftruncate(mirrorPfd.getFileDescriptor(), 0);
+            if (data.length > 0) mirrorOut.write(data);
+            mirrorBytes = data.length;
+            mirrorLastStart = data.length == 0 ? -1 : data.length - last;
+        } catch (Throwable t) {
+            closeMirror();
+        }
+    }
+
     public static boolean flush() {
         Handler handler;
         synchronized (LOCK) {
-            if (!initialized) return false;
+            if (logFile == null || ioHandler == null) return false;
             handler = ioHandler;
         }
         if (Looper.myLooper() == handler.getLooper()) return flushOnIoThread();
@@ -338,6 +498,7 @@ public final class Logging {
         AtomicBoolean saved = new AtomicBoolean();
         if (!handler.post(() -> {
             try { saved.set(flushOnIoThread()); }
+            catch (Throwable ignored) {}
             finally { done.countDown(); }
         })) return false;
         try { return done.await(10, TimeUnit.SECONDS) && saved.get(); }
@@ -349,47 +510,26 @@ public final class Logging {
 
     private static boolean flushOnIoThread() {
         synchronized (LOCK) {
-            ioHandler.removeCallbacks(REWRITE_RUNNABLE);
+            ioHandler.removeCallbacks(FLUSH_RUNNABLE);
             flushScheduled = false;
         }
-        return persistOnIoThread();
+        return persistOnIoThread(true);
     }
 
-    private static boolean rewriteLocalFile(List<String> lines) {
-        if (logFile == null) return false;
-        AtomicFile file = new AtomicFile(logFile);
+    private static boolean rewriteLocalFile(File file, byte[] data) {
+        if (file == null) return false;
+        AtomicFile atomic = new AtomicFile(file);
         FileOutputStream output = null;
         try {
-            output = file.startWrite();
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
-            for (String s : lines) {
-                bw.write(s);
-                bw.write('\n');
-            }
-            bw.flush();
-            // AtomicFile logs some sync/rename failures without throwing. Detect sync failure
-            // here, then verify the committed bytes before acknowledging this revision.
+            output = atomic.startWrite();
+            output.write(data);
             output.getFD().sync();
-            file.finishWrite(output);
+            atomic.finishWrite(output);
             output = null;
-            return matchesCommittedSnapshot(file, lines);
+            return file.isFile() && file.length() == data.length;
         } catch (Throwable ignored) {
-            if (output != null) file.failWrite(output);
+            if (output != null) atomic.failWrite(output);
             return false;
-        }
-    }
-
-    /** Bounded read-back on the IO thread; never allocates a second full-file snapshot. */
-    private static boolean matchesCommittedSnapshot(AtomicFile file, List<String> lines) throws java.io.IOException {
-        try (BufferedInputStream input = new BufferedInputStream(file.openRead())) {
-            long bytes = 0;
-            for (String line : lines) {
-                byte[] expected = (line + '\n').getBytes(StandardCharsets.UTF_8);
-                bytes += expected.length;
-                if (bytes > MAX_FILE_BYTES) return false;
-                for (byte value : expected) if (input.read() != (value & 0xff)) return false;
-            }
-            return input.read() == -1;
         }
     }
 
@@ -401,6 +541,7 @@ public final class Logging {
             lastBodyRepeat = 1;
             lastBodyTime = null;
             dirtyFile = true;
+            rewriteAll = true;
             revision++;
             if (!initialized) clearedBeforeInit = true;
             scheduleFlushLocked(0);
@@ -422,7 +563,7 @@ public final class Logging {
     private static String buildSnapshot(boolean forIpc) {
         if (LINES.isEmpty()) return "";
         StringBuilder sb = new StringBuilder(LINES.size() * 96);
-        for (String s : LINES) sb.append(s).append('\n');
+        for (Entry e : LINES) sb.append(e.text).append('\n');
         String snap = sb.toString();
         if (!forIpc || snap.length() <= IPC_MAX_CHARS) return snap;
         return "(truncated — older lines omitted)\n\n" + snap.substring(snap.length() - IPC_MAX_CHARS + 40);
