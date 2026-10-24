@@ -328,7 +328,7 @@ final class SelectedMediaDownloads {
                     // Occupy this serial worker until the prompt is dismissed, so a later item
                     // of a batch cannot cover a decision about this one.
                     if (offerFallbackAndWait(ctx, failure.getMessage(), cancel))
-                        startVideo(ctx, allowFallback(request), batch, local);
+                        startVideo(ctx, allowFallback(request, failure), batch, local);
                 } else failed(ctx, failure.getMessage());
             } catch (Throwable error) {
                 failed(ctx, cancel.isCancelled() ? I18n.t(ctx, R.string.ie_download_cancelled)
@@ -375,11 +375,8 @@ final class SelectedMediaDownloads {
     /** Downloads run quietly behind a toast at the start and one at the end, as in 0.8.0 (#287). */
     private static final DownloadEngine.Progress NO_PROGRESS = (phase, done, total) -> { };
 
-    static DownloadRequest allowFallback(DownloadRequest original) {
-        return new DownloadRequest(original.mediaId, original.owner, original.filename,
-                original.manifest, original.direct, new DownloadRequest.Options(
-                original.options.maxShortSide, original.options.compatibility, true,
-                original.options.originalSelection), original.audio);
+    static DownloadRequest allowFallback(DownloadRequest original, DownloadEngine.Failure failure) {
+        return DownloadEngine.fallback(original, failure);
     }
 
     static void unavailable(Context ctx, Throwable error) {

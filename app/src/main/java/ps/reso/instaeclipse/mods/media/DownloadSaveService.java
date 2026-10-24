@@ -203,7 +203,7 @@ public class DownloadSaveService extends Service {
                         : e instanceof DownloadEngine.Failure failure ? failure.getMessage() : "Could not save download";
                 DownloadRequest retry = captured != null && !captured.options.allowFallback
                         && e instanceof DownloadEngine.Failure failure && failure.canOfferFallback
-                        && !cancellation.isCancelled() ? new DownloadRequest(captured.mediaId, captured.owner, captured.filename, captured.manifest, captured.direct, new DownloadRequest.Options(captured.options.maxShortSide, captured.options.compatibility, true, captured.options.originalSelection), captured.audio) : null;
+                        && !cancellation.isCancelled() ? SelectedMediaDownloads.allowFallback(captured, failure) : null;
                 postFailureNotification(notificationId, reason, retry);
                 showToast(getString(R.string.ig_toast_download_failed, reason));
                 String diagnostic = e instanceof DownloadEngine.Failure failure

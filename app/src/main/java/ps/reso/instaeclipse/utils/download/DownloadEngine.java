@@ -181,11 +181,10 @@ public final class DownloadEngine {
             RenditionPicker.Choice choice = plan.choices.get(i);
             try {
                 if (choice.unsupported != null) throw new Failure("UNSUPPORTED", choice.unsupported, false);
-                return attempt.run(choice, invalidManifest || i > 0);
+                return attempt.run(choice, lower(plan, i, invalidManifest));
             } catch (Failure failure) {
                 if (first == null) first = failure;
-                boolean terminal = failure.status.equals("CANCELLED") || failure.status.equals("STORAGE");
-                if (terminal) throw failure;
+                if (terminal(failure)) throw failure;
                 if (!request.options.allowFallback) {
                     boolean offer = i + 1 < plan.choices.size();
                     throw new Failure(failure.status, failure.getMessage() + (offer
@@ -194,6 +193,20 @@ public final class DownloadEngine {
             }
         }
         throw new Failure(first.status, first.getMessage() + ". No permitted candidate completed successfully.", false, first.diagnostic);
+    }
+
+    static boolean terminal(Failure failure) {
+        return failure.status.equals("CANCELLED") || failure.status.equals("STORAGE");
+    }
+
+    static boolean lower(RenditionPicker.Plan plan, int index, boolean invalidManifest) {
+        return invalidManifest || index > 0;
+    }
+
+    public static DownloadRequest fallback(DownloadRequest request, Failure failure) {
+        return new DownloadRequest(request.mediaId, request.owner, request.filename, request.manifest, request.direct,
+                new DownloadRequest.Options(request.options.maxShortSide, request.options.compatibility, true,
+                        request.options.originalSelection), request.audio);
     }
 
     private static Result run(File cache, DownloadRequest request, RenditionPicker.Choice choice,

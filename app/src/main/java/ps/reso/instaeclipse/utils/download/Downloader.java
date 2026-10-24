@@ -204,6 +204,7 @@ final class Downloader {
     static volatile int readTimeoutMs = READ_TIMEOUT_MS;
     private static final int BUFFER = 64 * 1024;
     static final long MAX_BYTES = 512L * 1024L * 1024L;
+    static final long SNIFF_BOX_MAX = 512L * 1024L * 1024L;
     private static final int MAX_REDIRECTS = 5;
 
     /** The most of an error answer's body that's read, and the longest spent reading it. */
@@ -532,7 +533,7 @@ final class Downloader {
      */
     private static boolean boxSizeFits(byte[] head) {
         long size = boxSize(head);
-        return size == 0 || size == 1 || (size >= 8 && size <= MAX_BYTES);
+        return size == 0 || size == 1 || (size >= 8 && size <= SNIFF_BOX_MAX);
     }
 
     /** The size the first four bytes give an ISO media box, read as unsigned. */
