@@ -7,7 +7,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
@@ -27,7 +29,7 @@ public final class LifecycleHookUtil {
         void after(Activity activity, XC_MethodHook.MethodHookParam param) throws Throwable;
     }
 
-    private record Entry(Class<?> target, AfterCallback callback) {}
+    private record Entry(Class<?> target, AfterCallback callback, AtomicBoolean failed) {}
 
     private static final Map<Method, List<Entry>> DISPATCH = new HashMap<>();
 
@@ -51,6 +53,7 @@ public final class LifecycleHookUtil {
         }
         if (declared == null) throw new NoSuchMethodException(className + "#" + methodName);
 
+        String where = declared.getDeclaringClass().getName() + "#" + methodName;
         List<Entry> entries = DISPATCH.get(declared);
         if (entries == null) {
             final List<Entry> list = new CopyOnWriteArrayList<>();
@@ -65,13 +68,18 @@ public final class LifecycleHookUtil {
                         if (!e.target().isInstance(self)) continue;
                         try {
                             e.callback().after(activity, param);
-                        } catch (Throwable ignored) {
+                        } catch (Throwable t) {
+                            if (e.failed().compareAndSet(false, true)) {
+                                ModuleLog.warn("(IE|Lifecycle) A step after " + where + " failed on "
+                                        + activity.getClass().getSimpleName() + " (later failures are not logged): "
+                                        + t.getClass().getSimpleName() + ": " + t.getMessage());
+                            }
                         }
                     }
                 }
             });
         }
-        entries.add(new Entry(target, callback));
-        return declared.getDeclaringClass().getName() + "#" + methodName;
+        entries.add(new Entry(target, callback, new AtomicBoolean()));
+        return where;
     }
 }

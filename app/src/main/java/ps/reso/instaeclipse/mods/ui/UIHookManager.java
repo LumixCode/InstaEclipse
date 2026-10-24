@@ -11,6 +11,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
@@ -21,7 +22,6 @@ import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.devops.config.ConfigManager;
 import ps.reso.instaeclipse.mods.ui.utils.LifecycleHookUtil;
-import ps.reso.instaeclipse.mods.ui.utils.VibrationUtil;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.dialog.DialogUtils;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -244,7 +244,7 @@ public class UIHookManager {
                     Activity activity = currentActivity;
                     if (activity == null) return;
                     GhostModeUtils.toggleSelectedGhostOptions(activity);
-                    VibrationUtil.vibrate(activity);
+                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                     param.setResult(true); // consume — skip Instagram's handler entirely
                 }
             });
@@ -259,7 +259,9 @@ public class UIHookManager {
                     (activity, param) -> activity.runOnUiThread(() -> {
                         try {
                             setupHooks(activity, false);
-                        } catch (Exception ignored) {
+                        } catch (Exception e) {
+                            ModuleLog.warn("(InstaEclipse) Could not set up InstaEclipse's buttons on this screen: "
+                                    + e.getClass().getSimpleName() + ": " + e.getMessage());
                         }
                     }));
         } catch (Throwable t) {
@@ -312,7 +314,6 @@ public class UIHookManager {
     private static void applySearchHook(Activity activity, View v) {
         v.setOnLongClickListener(view -> {
             DialogUtils.showEclipseOptionsDialog(activity);
-            VibrationUtil.vibrate(activity);
             return true;
         });
     }
