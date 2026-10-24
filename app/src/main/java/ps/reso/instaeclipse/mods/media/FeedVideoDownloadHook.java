@@ -37,6 +37,7 @@ import java.util.concurrent.ExecutorService;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.download.DownloadEngine;
+import ps.reso.instaeclipse.utils.download.DownloadMessages;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -786,9 +787,9 @@ public class FeedVideoDownloadHook {
                 }
                 mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_audio_saved), Toast.LENGTH_SHORT).show());
             } catch (Throwable e) {
-                ModuleLog.error("(IE|DL|Audio) Could not save the audio: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                ModuleLog.error("(IE|DL|Audio) Could not save the audio: " + failureLog(e, url));
                 mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
-                        I18n.t(ctx, R.string.ig_toast_download_failed, e.getMessage()), Toast.LENGTH_SHORT).show());
+                        DownloadMessages.failure(ctx, e), Toast.LENGTH_SHORT).show());
             }
         });
     }
@@ -1009,8 +1010,9 @@ public class FeedVideoDownloadHook {
                         mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
                                 I18n.t(ctx, R.string.ig_toast_file_saved, filename), Toast.LENGTH_SHORT).show());
                 } catch (Throwable e) {
+                    ModuleLog.error("(IE|DL) Could not save the download: " + failureLog(e, url));
                     mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
-                            I18n.t(ctx, R.string.ig_toast_download_failed, String.valueOf(e.getMessage())), Toast.LENGTH_SHORT).show());
+                            DownloadMessages.failure(ctx, e), Toast.LENGTH_SHORT).show());
                 }
             });
             if (dash != null) delegateUrlToCompanionApp(ctx, dash[0], dash[1], url, filename, true, username, saveLocally);
@@ -1034,7 +1036,7 @@ public class FeedVideoDownloadHook {
                 return false;
             } catch (Throwable t) {
                 ModuleLog.warn("(IE|DL) Could not download the highest quality; saving the version Instagram was playing instead");
-                ModuleLog.detail("(IE|DL) DASH download failed, saving the progressive file: " + t);
+                ModuleLog.detail("(IE|DL) DASH download failed, saving the progressive file: " + failureLog(t, dash[0]));
             } finally {
                 //noinspection ResultOfMethodCallIgnored
                 tv.delete();
@@ -1098,8 +1100,7 @@ public class FeedVideoDownloadHook {
             return;
         }
         mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
-                I18n.t(ctx, R.string.ig_toast_download_failed,
-                        ps.reso.instaeclipse.utils.ipc.CompanionBridge.message(ctx, error)), Toast.LENGTH_SHORT).show());
+                DownloadMessages.companionFailure(ctx, error), Toast.LENGTH_SHORT).show());
     }
 
     /**
@@ -1330,13 +1331,24 @@ public class FeedVideoDownloadHook {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         MediaHttp.applyTimeouts(conn);
         conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36");
-        conn.connect();
-        String contentType = conn.getContentType();
-        try (InputStream in = conn.getInputStream(); FileOutputStream fos = new FileOutputStream(dest)) {
-            byte[] buf = new byte[32768]; int n;
-            while ((n = in.read(buf)) != -1) fos.write(buf, 0, n);
+        try {
+            conn.connect();
+            int code = conn.getResponseCode();
+            if (code >= 400) throw new HttpStatusException(code, conn.getURL().getHost());
+            String contentType = conn.getContentType();
+            try (InputStream in = conn.getInputStream(); FileOutputStream fos = new FileOutputStream(dest)) {
+                byte[] buf = new byte[32768]; int n;
+                while ((n = in.read(buf)) != -1) fos.write(buf, 0, n);
+            }
+            return contentType;
         } finally { conn.disconnect(); }
-        return contentType;
+    }
+
+    static String failureLog(Throwable error, String url) {
+        String host;
+        try { host = new URL(url).getHost(); } catch (Exception invalid) { host = "an invalid address"; }
+        return error.getClass().getSimpleName()
+                + (error instanceof HttpStatusException http ? " " + http.code : "") + " from " + host;
     }
 
     /**

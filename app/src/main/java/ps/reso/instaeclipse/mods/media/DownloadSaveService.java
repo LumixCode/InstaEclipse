@@ -23,6 +23,7 @@ import ps.reso.instaeclipse.BuildConfig;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.log.Logging;
 import ps.reso.instaeclipse.utils.download.DownloadEngine;
+import ps.reso.instaeclipse.utils.download.DownloadMessages;
 import ps.reso.instaeclipse.utils.download.DownloadRequest;
 import ps.reso.instaeclipse.utils.download.TempFiles;
 
@@ -168,8 +169,8 @@ public class DownloadSaveService extends Service {
                         pushProgress("Saving…", 99, 100, false);
                         Uri saved = writeViaSaf(result.file, captured.filename, result.mime,
                                 fSave, captured.owner, fUF, cancellation);
-                        String verified = getString(result.lowerFallback ? R.string.ie_download_fallback_used
-                                : R.string.ie_download_verified, result.summary);
+                        String verified = getString(DownloadMessages.saved(result.lowerFallback), captured.filename,
+                                DownloadMessages.quality(result.metadata));
                         postDoneNotification(notificationId, verified, result.mime, saved);
                         showToast(verified);
                         ModuleLog.line("(IE|Download) Saved " + captured.filename

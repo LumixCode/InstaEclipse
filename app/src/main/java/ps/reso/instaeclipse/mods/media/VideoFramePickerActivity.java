@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.download.DownloadEngine;
+import ps.reso.instaeclipse.utils.download.DownloadMessages;
 import ps.reso.instaeclipse.utils.download.DownloadRequest;
 import ps.reso.instaeclipse.utils.download.VideoFrameExtractor;
 import ps.reso.instaeclipse.utils.ipc.BrokerPayload;
@@ -334,8 +335,8 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
         main.post(() -> {
             if (!alive()) return;
             String message = getString(cleaned ? R.string.ie_frame_failed : R.string.ie_frame_cleanup_pending_open);
-            if (cleaned && failure instanceof VideoFrameExtractor.FrameFailure)
-                message += "\n" + failure.getMessage(); // Helper-owned fixed text, never a platform exception.
+            int reason = cleaned ? DownloadMessages.frameReason(code) : 0;
+            if (reason != 0) message += "\n" + getString(reason);
             failMessage(message);
         });
     }

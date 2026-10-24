@@ -1,7 +1,7 @@
 package ps.reso.instaeclipse.mods.media;
 
 import android.app.Activity;
-import android.app.AlertDialog;
+import android.app.Dialog;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import android.content.Context;
 import android.content.ContextWrapper;
@@ -21,13 +21,14 @@ import java.io.File;
 import ps.reso.instaeclipse.utils.ipc.CompanionBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.download.DownloadEngine;
+import ps.reso.instaeclipse.utils.download.DownloadMessages;
 import ps.reso.instaeclipse.utils.download.DownloadRequest;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 /** All chooser callbacks close over these detached values, never Instagram models or Views. */
-final class SelectedMediaDownloads {
+public final class SelectedMediaDownloads {
     private static final ExecutorService WORKER = Executors.newSingleThreadExecutor();
     enum Choice { PHOTO, VIDEO, FRAME, AUDIO }
 
@@ -215,10 +216,10 @@ final class SelectedMediaDownloads {
         if (request == null) { unavailable(ctx, null); return; }
         try {
             CompanionBridge.saveFrame(ctx, request, error -> {
-                if (error != null) failed(ctx, error);
+                if (error != null) companionFailed(ctx, error);
             });
         } catch (Throwable error) {
-            failed(ctx, "Could not open video frame picker");
+            failed(ctx, R.string.ie_download_reason_generic);
         }
     }
 
@@ -259,12 +260,12 @@ final class SelectedMediaDownloads {
                 CompanionBridge.downloadLegacy(ctx, captured.photoUrl, null, captured.photoFilename,
                         "image/jpeg", captured.media.owner, error -> {
                             if (companionUnreachable(error)) { savedLocally(ctx, "image/jpeg"); start(ctx, captured, false, batch, true); }
-                            else if (error != null) failed(ctx, error);
+                            else if (error != null) companionFailed(ctx, error);
                             else if (!batch) toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_photo));
                         });
                 return;
             }
-        } catch (Throwable error) { failed(ctx, "Could not start download service"); return; }
+        } catch (Throwable error) { failed(ctx, R.string.ie_download_reason_generic); return; }
         DownloadEngine.Cancellation cancel = new DownloadEngine.Cancellation();
         Context app = ctx.getApplicationContext();
         if (!batch) toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_photo));
@@ -277,8 +278,7 @@ final class SelectedMediaDownloads {
                 DownloadPublisher.save(app, temp, detected.filename, detected.mimeType, captured.media.owner, cancel);
                 if (!batch) toast(ctx, I18n.t(ctx, R.string.ig_toast_file_saved, detected.filename));
             } catch (Throwable error) {
-                failed(ctx, cancel.isCancelled() ? I18n.t(ctx, R.string.ie_download_cancelled)
-                        : error instanceof DownloadEngine.Failure failure ? failure.getMessage() : "Photo download failed");
+                failed(ctx, cancel.isCancelled() ? R.string.ie_download_cancelled : DownloadMessages.reason(error));
             } finally { if (temp != null) temp.delete(); }
         });
     }
@@ -294,7 +294,7 @@ final class SelectedMediaDownloads {
                 boolean delegated = FeedVideoDownloadHook.downloadCapturedOriginal(ctx, base,
                         filename, true, captured.media.owner, upgrade);
                 if (!delegated) toast(ctx, I18n.t(ctx, R.string.ig_toast_file_saved, filename));
-            } catch (Throwable failure) { failed(ctx, "Original download failed"); }
+            } catch (Throwable failure) { failed(ctx, DownloadMessages.reason(failure)); }
         });
     }
 
@@ -304,12 +304,12 @@ final class SelectedMediaDownloads {
             if (!local && FeedVideoDownloadHook.hasCompanionDestination()) {
                 CompanionBridge.download(ctx, request, error -> {
                     if (companionUnreachable(error)) { savedLocally(ctx, "video/mp4"); startVideo(ctx, request, batch, true); }
-                    else if (error != null) failed(ctx, error);
+                    else if (error != null) companionFailed(ctx, error);
                     else if (!batch) toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_video));
                 });
                 return;
             }
-        } catch (Throwable error) { failed(ctx, "Could not start download service"); return; }
+        } catch (Throwable error) { failed(ctx, R.string.ie_download_reason_generic); return; }
 
         DownloadEngine.Cancellation cancel = new DownloadEngine.Cancellation();
         Context app = ctx.getApplicationContext();
@@ -318,41 +318,34 @@ final class SelectedMediaDownloads {
             try (DownloadEngine.Result result = DownloadEngine.execute(app, request, cancel, NO_PROGRESS)) {
                 DownloadPublisher.save(app, result.file, request.filename, result.mime, request.owner, cancel);
                 if (!batch || result.lowerFallback)
-                    toast(ctx, I18n.t(ctx, result.lowerFallback ? R.string.ie_download_fallback_used
-                            : R.string.ie_download_verified, result.summary));
+                    toast(ctx, I18n.t(ctx, DownloadMessages.saved(result.lowerFallback), request.filename,
+                            DownloadMessages.quality(result.metadata)));
                 ModuleLog.line("(IE|Download) Saved " + request.filename);
                 ModuleLog.detail("(IE|Download) published " + result.summary);
             } catch (DownloadEngine.Failure failure) {
-                if (cancel.isCancelled()) toast(ctx, I18n.t(ctx, R.string.ie_download_cancelled));
+                if (cancel.isCancelled()) failed(ctx, R.string.ie_download_cancelled);
                 else if (failure.canOfferFallback && !request.options.allowFallback && canShow(ctx)) {
                     // Occupy this serial worker until the prompt is dismissed, so a later item
                     // of a batch cannot cover a decision about this one.
-                    if (offerFallbackAndWait(ctx, failure.getMessage(), cancel))
+                    if (offerFallbackAndWait(ctx, DownloadMessages.reason(failure), cancel))
                         startVideo(ctx, allowFallback(request, failure), batch, local);
-                } else failed(ctx, failure.getMessage());
+                } else failed(ctx, DownloadMessages.reason(failure));
             } catch (Throwable error) {
-                failed(ctx, cancel.isCancelled() ? I18n.t(ctx, R.string.ie_download_cancelled)
-                        : "Could not save verified video");
+                failed(ctx, cancel.isCancelled() ? R.string.ie_download_cancelled : DownloadMessages.reason(error));
             }
         });
     }
 
-    private static boolean offerFallbackAndWait(Context ctx, String failure,
+    private static boolean offerFallbackAndWait(Context ctx, int reason,
             DownloadEngine.Cancellation cancellation) {
         CountDownLatch dismissed = new CountDownLatch(1);
         AtomicBoolean retry = new AtomicBoolean(false);
-        AtomicReference<AlertDialog> prompt = new AtomicReference<>();
+        AtomicReference<Dialog> prompt = new AtomicReference<>();
         FeedVideoDownloadHook.mainHandler.post(() -> {
             if (!canShow(ctx) || cancellation.isCancelled()) { dismissed.countDown(); return; }
             try {
-                AlertDialog dialog = new AlertDialog.Builder(ctx).setTitle(I18n.t(ctx, R.string.ig_dl_title))
-                        .setMessage(failure + "\n\n" + I18n.t(ctx, R.string.ie_download_fallback_prompt))
-                        .setPositiveButton(I18n.t(ctx, R.string.ie_download_retry_lower),
-                                (ignored, which) -> retry.set(true))
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .setOnDismissListener(ignored -> dismissed.countDown()).create();
-                prompt.set(dialog);
-                dialog.show();
+                prompt.set(fallbackPrompt(ctx, reason, () -> { retry.set(true); dismissed.countDown(); },
+                        dismissed::countDown).show());
             } catch (Throwable ignored) { dismissed.countDown(); }
         });
         try {
@@ -366,10 +359,18 @@ final class SelectedMediaDownloads {
             return false;
         } finally {
             FeedVideoDownloadHook.mainHandler.post(() -> {
-                try { AlertDialog dialog = prompt.get(); if (dialog != null) dialog.dismiss(); }
+                try { Dialog dialog = prompt.get(); if (dialog != null) dialog.dismiss(); }
                 catch (Throwable ignored) { }
             });
         }
+    }
+
+    public static IeDialog fallbackPrompt(Context ctx, int reason, Runnable retry, Runnable dismissed) {
+        IeDialog dialog = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_dl_title))
+                .message(I18n.t(ctx, reason) + "\n\n" + I18n.t(ctx, R.string.ie_download_fallback_prompt));
+        dialog.primary(I18n.t(ctx, R.string.ie_download_retry_lower), retry);
+        dialog.secondary(I18n.t(ctx, R.string.ig_dialog_cancel), null);
+        return dialog.onDismiss(dismissed);
     }
 
     /** Downloads run quietly behind a toast at the start and one at the end, as in 0.8.0 (#287). */
@@ -400,8 +401,11 @@ final class SelectedMediaDownloads {
         return false;
     }
 
-    private static void failed(Context ctx, String reason) {
-        toast(ctx, I18n.t(ctx, R.string.ig_toast_download_failed, CompanionBridge.message(ctx, reason)));
+    private static void failed(Context ctx, int reason) {
+        toast(ctx, DownloadMessages.failure(ctx, reason));
+    }
+    private static void companionFailed(Context ctx, String error) {
+        toast(ctx, DownloadMessages.companionFailure(ctx, error));
     }
     private static void toast(Context ctx, String message) {
         FeedVideoDownloadHook.mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx.getApplicationContext(), message, Toast.LENGTH_LONG).show());

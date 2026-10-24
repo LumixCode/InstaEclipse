@@ -9,4 +9,18 @@
     <string name="ie_companion_invalid">This request can\'t be sent to the InstaEclipse app.</string>
     <string name="ie_companion_not_visible">Open this from the screen you\'re on.</string>
     <string name="ie_companion_launch_failed">The InstaEclipse app couldn\'t open. Try again from this screen.</string>
+    <string name="ie_download_saved_quality">Saved: %1$s (%2$s)</string>
+    <string name="ie_download_saved_lower">Saved in lower quality: %1$s (%2$s)</string>
+    <string name="ie_download_reason_expired">The link expired. Open the post again and retry.</string>
+    <string name="ie_download_reason_offline">Connection problem. Check your internet and try again.</string>
+    <string name="ie_download_reason_server">Instagram\'s server didn\'t send the file. Try again later.</string>
+    <string name="ie_download_reason_storage">Not enough free space on this phone.</string>
+    <string name="ie_download_reason_too_large">The file is too large to save.</string>
+    <string name="ie_download_reason_no_media">There\'s nothing to download here.</string>
+    <string name="ie_download_reason_ceiling">No version fits your quality limit.</string>
+    <string name="ie_download_reason_unplayable">The file didn\'t pass the playback check.</string>
+    <string name="ie_download_reason_blocked">Blocked: this isn\'t an Instagram media file.</string>
+    <string name="ie_download_reason_generic">Something went wrong. Try again.</string>
+    <string name="ie_frame_reason_memory">Not enough memory for this frame.</string>
+    <string name="ie_frame_reason_write">The PNG couldn\'t be written. Check your free space.</string>
 </resources>
