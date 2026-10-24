@@ -2,6 +2,7 @@ package ps.reso.instaeclipse.mods.location;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -18,16 +19,19 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.ColorUtils;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.android.material.textfield.TextInputEditText;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.config.Configuration;
 import org.osmdroid.events.MapListener;
 import org.osmdroid.events.ScrollEvent;
@@ -47,6 +51,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.utils.ui.Links;
 
 /**
  * Full-screen OpenStreetMap picker for the coordinates the GPS spoof reports to Instagram.
@@ -68,6 +73,12 @@ public class LocationPickerActivity extends AppCompatActivity {
     public static final String RESULT_LNG = "result_lng";
 
     private static final long REVERSE_DELAY_MS = 900;
+    private static final String OSM_COPYRIGHT = "https://www.openstreetmap.org/copyright";
+    private static final String STATE_LAT = "lat";
+    private static final String STATE_LNG = "lng";
+    private static final String STATE_ZOOM = "zoom";
+    private static final String STATE_LABEL = "label";
+    private static final String STATE_LABEL_LOCKED = "labelLocked";
 
     private MapView map;
     private TextView placeName;
@@ -112,6 +123,14 @@ public class LocationPickerActivity extends AppCompatActivity {
 
         back.setOnClickListener(v -> finish());
 
+        TextView attribution = findViewById(R.id.osm_attribution_text);
+        GradientDrawable scrim = new GradientDrawable();
+        scrim.setColor(ColorUtils.setAlphaComponent(
+                MaterialColors.getColor(attribution, com.google.android.material.R.attr.colorSurface), 0xCC));
+        scrim.setCornerRadius(getResources().getDisplayMetrics().density * 8);
+        attribution.setBackground(scrim);
+        findViewById(R.id.osm_attribution).setOnClickListener(v -> Links.open(this, OSM_COPYRIGHT));
+
         searchInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId != EditorInfo.IME_ACTION_SEARCH) return false;
             String q = v.getText() != null ? v.getText().toString().trim() : "";
@@ -138,7 +157,14 @@ public class LocationPickerActivity extends AppCompatActivity {
 
         double startLat = getIntent().getDoubleExtra(EXTRA_LAT, 0.0);
         double startLng = getIntent().getDoubleExtra(EXTRA_LNG, 0.0);
-        if (!LocationPresets.valid(startLat, startLng)) {
+        if (savedInstanceState != null && savedInstanceState.containsKey(STATE_LAT)) {
+            startLat = savedInstanceState.getDouble(STATE_LAT);
+            startLng = savedInstanceState.getDouble(STATE_LNG);
+            map.getController().setZoom(savedInstanceState.getDouble(STATE_ZOOM, 15.0));
+            currentLabel = savedInstanceState.getString(STATE_LABEL, "");
+            labelLocked = savedInstanceState.getBoolean(STATE_LABEL_LOCKED) && !currentLabel.isEmpty();
+            if (labelLocked) placeName.setText(currentLabel);
+        } else if (!LocationPresets.valid(startLat, startLng)) {
             startLat = 41.0082; // Istanbul as a neutral first view
             startLng = 28.9784;
             map.getController().setZoom(11.0);
@@ -173,6 +199,18 @@ public class LocationPickerActivity extends AppCompatActivity {
             setResult(RESULT_OK, data);
             finish();
         });
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (map == null) return;
+        IGeoPoint c = map.getMapCenter();
+        outState.putDouble(STATE_LAT, c.getLatitude());
+        outState.putDouble(STATE_LNG, c.getLongitude());
+        outState.putDouble(STATE_ZOOM, map.getZoomLevelDouble());
+        outState.putString(STATE_LABEL, currentLabel);
+        outState.putBoolean(STATE_LABEL_LOCKED, labelLocked);
     }
 
     // ---- map ------------------------------------------------------------------------------
