@@ -1,8 +1,6 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import android.content.Context;
-import android.content.res.ColorStateList;
-import android.graphics.ColorFilter;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
@@ -31,6 +29,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.toast.IeToast;
+import ps.reso.instaeclipse.utils.ui.IgTint;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.users.WatchlistStore;
 
@@ -284,16 +283,6 @@ final class FollowListToolsIcon {
         return id != 0 ? bar.findViewById(id) : null;
     }
 
-    private static ImageView firstImage(ViewGroup g) {
-        for (int i = 0; i < g.getChildCount(); i++) {
-            View c = g.getChildAt(i);
-            if (c instanceof ImageView iv) return iv;
-            ImageView inner = c instanceof ViewGroup cg ? firstImage(cg) : null;
-            if (inner != null) return inner;
-        }
-        return null;
-    }
-
     @android.annotation.SuppressLint("UseCompatLoadingForDrawables")
     private static ImageView newIcon(Context ctx, ViewGroup bar) {
         ImageView icon = new ImageView(ctx);
@@ -309,7 +298,7 @@ final class FollowListToolsIcon {
         if (glyph != null) glyph = glyph.mutate();
         icon.setImageDrawable(glyph);
         icon.setScaleType(ImageView.ScaleType.CENTER); // the 24dp glyph in the middle of the touch target
-        tint(icon, bar);
+        IgTint.copy(back(bar), icon);
         TypedValue ripple = new TypedValue();
         if (ctx.getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, ripple, true) && ripple.resourceId != 0) {
             try { icon.setBackground(ctx.getDrawable(ripple.resourceId)); } catch (Throwable ignored) {}
@@ -326,35 +315,6 @@ final class FollowListToolsIcon {
         icon.setTooltipText(label);
         icon.setOnClickListener(FollowListToolsIcon::onTap);
         return icon;
-    }
-
-    /** Same colour as the bar's back arrow (Instagram colours it through its tint, the view's colour
-     *  filter or the drawable's), else the theme's primary icon colour. */
-    private static void tint(ImageView icon, ViewGroup bar) {
-        View b = back(bar);
-        ImageView back = b instanceof ImageView iv ? iv : b instanceof ViewGroup g ? firstImage(g) : null;
-        if (back != null) {
-            ColorStateList list = back.getImageTintList();
-            if (list != null) { icon.setImageTintList(list); return; }
-            ColorFilter filter = back.getColorFilter();
-            if (filter == null && back.getDrawable() != null) filter = back.getDrawable().getColorFilter();
-            if (filter != null) { icon.setColorFilter(filter); return; }
-        }
-        Context c = bar.getContext();
-        int color;
-        try {
-            @android.annotation.SuppressLint("DiscouragedApi")
-            int attr = c.getResources().getIdentifier("igds_color_primary_icon", "attr", c.getPackageName());
-            TypedValue v = new TypedValue();
-            if (attr != 0 && c.getTheme().resolveAttribute(attr, v, true)) {
-                color = v.resourceId != 0 ? c.getColor(v.resourceId) : v.data;
-                icon.setImageTintList(ColorStateList.valueOf(color));
-                return;
-            }
-        } catch (Throwable ignored) {}
-        boolean night = (c.getResources().getConfiguration().uiMode
-                & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
-        icon.setImageTintList(ColorStateList.valueOf(night ? 0xFFF5F5F5 : 0xFF000000));
     }
 
     // ---- tap ----

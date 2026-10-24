@@ -5,6 +5,8 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
 
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -54,5 +56,16 @@ public final class ModuleResources {
             ModuleLog.warn("(IE|Resources) An icon could not be loaded (0x" + Integer.toHexString(resId) + ")", t);
             return null;
         }
+    }
+
+    public static Drawable icon(Context context, int resId) {
+        Drawable icon = drawable(context, resId);
+        return icon != null ? icon.mutate() : null;
+    }
+
+    public static Drawable icon(Context context, int resId, int tint) {
+        Drawable icon = icon(context, resId);
+        if (icon != null) icon.setColorFilter(new PorterDuffColorFilter(tint, PorterDuff.Mode.SRC_IN));
+        return icon;
     }
 }

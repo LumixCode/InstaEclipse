@@ -2022,12 +2022,7 @@ public class DialogUtils {
 
     /** A typed count, or -1 (keep the real one) when empty or not a number. */
     public static int parseSpoofCount(String s) {
-        try {
-            long v = Long.parseLong(s.trim());
-            return v < 0 ? -1 : (int) Math.min(v, Integer.MAX_VALUE);
-        } catch (Throwable t) {
-            return -1;
-        }
+        return ps.reso.instaeclipse.utils.profile.SpoofCounts.parse(s);
     }
 
     /** App & Account: account limit, notification fix, InstaEclipse's own toasts, Plus benefits, links. */
@@ -3319,12 +3314,12 @@ public class DialogUtils {
 
     /** Public wrapper so hooks (e.g. the DM thread button) can load a tinted module vector. */
     public static Drawable moduleIcon(Context context, int iconRes, int tintColor) {
-        return IeRows.icon(context, iconRes, tintColor);
+        return ModuleResources.icon(context, iconRes, tintColor);
     }
 
     /** Same, for callers without a Context at hand (resolved against Instagram's Application). */
     public static Drawable moduleIcon(int iconRes, int tintColor) {
-        return IeRows.icon(ps.reso.instaeclipse.xposedcompat.AndroidAppHelper.currentApplication(), iconRes, tintColor);
+        return ModuleResources.icon(ps.reso.instaeclipse.xposedcompat.AndroidAppHelper.currentApplication(), iconRes, tintColor);
     }
 
     private static View createDragHandle(Context context) {

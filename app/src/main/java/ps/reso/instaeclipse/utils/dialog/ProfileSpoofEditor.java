@@ -21,6 +21,7 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.ui.ProfileSpoofHook;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.profile.SpoofAvatar;
+import ps.reso.instaeclipse.utils.profile.SpoofCounts;
 
 /**
  * The profile spoofer's editor, shared by Instagram's InstaEclipse menu (in an IeDialog) and the
@@ -212,9 +213,9 @@ public final class ProfileSpoofEditor {
         v.username = username.getText().toString().trim();
         v.name = name.getText().toString().trim();
         v.bio = bio.getText().toString().trim();
-        v.posts = DialogUtils.parseSpoofCount(posts.getText().toString());
-        v.followers = DialogUtils.parseSpoofCount(followers.getText().toString());
-        v.following = DialogUtils.parseSpoofCount(following.getText().toString());
+        v.posts = SpoofCounts.parse(posts.getText().toString());
+        v.followers = SpoofCounts.parse(followers.getText().toString());
+        v.following = SpoofCounts.parse(following.getText().toString());
         v.verified = verified.isChecked();
         v.avatar = avatar;
         return v;

@@ -537,7 +537,7 @@ public final class PostCountSpoof {
             int[] c = new int[FIELDS.length];
             boolean any = false;
             for (int i = 0; i < FIELDS.length; i++) {
-                c[i] = ps.reso.instaeclipse.utils.dialog.DialogUtils.parseSpoofCount(inputs[i].getText().toString());
+                c[i] = ps.reso.instaeclipse.utils.profile.SpoofCounts.parse(inputs[i].getText().toString());
                 any |= c[i] >= 0;
             }
             if (any) COUNTS.put(id, c); else COUNTS.remove(id);
