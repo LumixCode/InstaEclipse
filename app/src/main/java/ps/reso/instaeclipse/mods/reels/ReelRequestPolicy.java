@@ -4,14 +4,21 @@ import java.net.URI;
 
 /** The DM exception changes reel delivery only; it must never skip other network privacy checks. */
 public final class ReelRequestPolicy {
+    private static final String CLIPS = "/clips/";
+    private static final String[] CREATION_ENDPOINTS = {"drafts", "delete_draft", "draft_content",
+            "draft_reminder", "archive_clip", "music", "creative_tool", "clips_info_for_creation", "effect",
+            "write_seen_state"};
+    private static final String[] CREATION_PREFIXES = {"template", "translation_", "item/set_", "user/set_"};
+
     private ReelRequestPolicy() {}
 
     public static boolean shouldBlock(URI uri, boolean blocked, boolean allowDM) {
         if (!blocked || uri == null || uri.getPath() == null) return false;
         String path = uri.getPath();
-        boolean clips = path.contains("/clips/") || path.endsWith("/clips");
-        // discover/explore_clips/ is the Explore reels feed; "_clips/" does not match "/clips/".
-        boolean discovery = path.contains("/mixed_media/") || path.contains("/explore_clips/");
+        int clipsAt = path.indexOf(CLIPS);
+        if (clipsAt >= 0 && isCreation(path.substring(clipsAt + CLIPS.length()))) return false;
+        boolean clips = clipsAt >= 0 || path.endsWith("/clips");
+        boolean discovery = path.contains("/explore_clips/");
         if (!clips && !discovery) return false;
         if (!allowDM) return true;
         // DM-opened items remain fetchable while a restriction is active. The viewer validates the
@@ -19,8 +26,14 @@ public final class ReelRequestPolicy {
         return discovery || !path.endsWith("/clips/items/") || hasPagination(uri.getRawQuery());
     }
 
-    public static boolean shouldBlock(URI uri, boolean disabled, boolean allowDM, boolean limitReached) {
-        return shouldBlock(uri, disabled || limitReached, allowDM);
+    private static boolean isCreation(String endpoint) {
+        for (String name : CREATION_ENDPOINTS) {
+            if (endpoint.equals(name) || endpoint.startsWith(name + "/")) return true;
+        }
+        for (String prefix : CREATION_PREFIXES) {
+            if (endpoint.startsWith(prefix)) return true;
+        }
+        return false;
     }
 
     private static boolean hasPagination(String query) {

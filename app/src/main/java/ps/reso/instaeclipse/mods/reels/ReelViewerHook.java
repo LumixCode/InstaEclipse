@@ -53,8 +53,6 @@ public final class ReelViewerHook {
     private static final String CACHE_REGISTRARS = "ReelImpressionRegistrars_v2";
     private static final String MISSING = "missing";
     private static final Set<View> blockedRoots = Collections.newSetFromMap(new WeakHashMap<>());
-    private static volatile boolean trackingAvailable;
-    private static volatile boolean blockingAvailable;
     private final Set<Object> players = Collections.newSetFromMap(new WeakHashMap<>());
     private final Map<Object, ReelViewerSession> sessions = new WeakHashMap<>();
     private final Map<Object, ReelViewerSession> impressionSources = new WeakHashMap<>();
@@ -64,13 +62,11 @@ public final class ReelViewerHook {
     private boolean anyPagerLocked;
     private boolean touchGateInstalled;
 
-    public static boolean isTrackingAvailable() { return trackingAvailable; }
-    public static boolean isBlockingAvailable() { return blockingAvailable; }
-
     public void install(DexKitBridge bridge, ClassLoader loader) {
         installScrollGate(bridge, loader);
         try {
             bindImpressionSources(bridge, loader);
+            boolean trackingAvailable = false;
             List<Method> impressions = resolve(bridge, loader, "ReelImpression_v1",
                     "_ClipsViewerOrganicImpressionAction_handleImpression");
             for (Method method : impressions) {
@@ -161,9 +157,11 @@ public final class ReelViewerHook {
                 });
                 viewerHooks++;
             }
-            blockingAvailable = viewerHooks > 0 && itemPlaybackHooks > 0 && pausePlayer != null;
+            boolean blockingAvailable = viewerHooks > 0 && itemPlaybackHooks > 0 && pausePlayer != null;
             if (blockingAvailable) FeatureStatusTracker.setHooked("NightReelBlock");
             else if (FeatureFlags.nightReelBlockEnabled) FeatureStatusTracker.setBroken("NightReelBlock");
+            if (trackingAvailable && blockingAvailable) FeatureStatusTracker.setHooked("DailyReelLimit");
+            else if (FeatureFlags.dailyReelLimitEnabled) FeatureStatusTracker.setBroken("DailyReelLimit");
             ModuleLog.line("(IE|ReelLimit) " + (trackingAvailable && blockingAvailable ? "✅ ready"
                     : "❌ Reel limits cannot fully work on this Instagram version ("
                     + (trackingAvailable ? "reels are counted but cannot be blocked"

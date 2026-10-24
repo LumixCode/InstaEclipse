@@ -52,6 +52,7 @@ public class CustomToast {
             case "hideOnboardingPrompts": case "ChatExport": case "EditHistory":
             case "LockSavedCollections": case "DisableRepost": case "BlockAnalytics": case "LockWholeApp":
             case "DisableSearchHistory": case "ConfirmCalls": case "ChatMenuTripleTap": case "NightReelBlock":
+            case "DailyReelLimit":
                 return "Privacy";
             case "PostDownload": case "ReelDownload": case "StoryDownload": case "ProfileDownload":
             case "CopyMediaLink": case "SaveInstants": case "UploadInstants": case "CacheStories":

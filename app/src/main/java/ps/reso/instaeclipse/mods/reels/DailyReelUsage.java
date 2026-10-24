@@ -16,11 +16,12 @@ final class DailyReelUsage {
     }
 
     boolean rollover(long today) {
-        // Moving the clock backwards must not grant a second allowance for an earlier day.
-        if (today <= day) return false;
+        if (today == day) return false;
+        if (today > day) {
+            count = 0;
+            lastMediaId = null;
+        }
         day = today;
-        count = 0;
-        lastMediaId = null;
         return true;
     }
 

@@ -332,6 +332,7 @@ public class FeatureManager {
         reg(FeatureFlags.enablePhotoZoom,      "PhotoZoom",            R.string.ig_feat_photo_zoom);
         reg(FeatureFlags.unlockPlusBenefits,   "UnlockPlusBenefits",   R.string.ig_feature_unlock_plus);
         reg(FeatureFlags.nightReelBlockEnabled, "NightReelBlock",      R.string.ig_night_reels_enable);
+        reg(FeatureFlags.dailyReelLimitEnabled, "DailyReelLimit",      R.string.ig_reel_limit_enable);
         // Child rows count only while their parent feature is on; the child preference is kept.
         reg(FeatureFlags.showUnsentIndicator && FeatureFlags.keepUnsentMessages,
                 "UnsentIndicator", R.string.ig_feature_unsent_indicator);
