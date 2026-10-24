@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="share_dl_opened_in_instagram">Opened in Instagram. Save this one from its menu.</string>
+    <string name="ie_companion_unreachable">The InstaEclipse app didn\'t answer. Open it once, then try again.</string>
+    <string name="ie_companion_timeout">The InstaEclipse app took too long to answer. Try again.</string>
+    <string name="ie_companion_busy">The InstaEclipse app is busy. Try again in a moment.</string>
+    <string name="ie_companion_denied">The InstaEclipse app refused this request. Update both apps to the same version.</string>
+    <string name="ie_companion_failed">The InstaEclipse app couldn\'t do this. Try again.</string>
+    <string name="ie_companion_invalid">This request can\'t be sent to the InstaEclipse app.</string>
+    <string name="ie_companion_not_visible">Open this from the screen you\'re on.</string>
+    <string name="ie_companion_launch_failed">The InstaEclipse app couldn\'t open. Try again from this screen.</string>
 </resources>

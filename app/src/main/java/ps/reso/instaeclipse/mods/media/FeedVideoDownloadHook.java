@@ -1448,7 +1448,8 @@ public class FeedVideoDownloadHook {
             return;
         }
         mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
-                I18n.t(ctx, R.string.ig_toast_download_failed, error), Toast.LENGTH_SHORT).show());
+                I18n.t(ctx, R.string.ig_toast_download_failed,
+                        ps.reso.instaeclipse.utils.ipc.CompanionBridge.message(ctx, error)), Toast.LENGTH_SHORT).show());
     }
 
     /**

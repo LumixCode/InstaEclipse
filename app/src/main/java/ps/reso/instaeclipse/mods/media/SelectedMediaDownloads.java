@@ -237,8 +237,7 @@ final class SelectedMediaDownloads {
      * Download/InstaEclipse, since the folder chosen in the companion is only writable there.
      */
     static boolean companionUnreachable(String error) {
-        return error != null && (error.startsWith("Companion connection") || error.startsWith("Companion unavailable")
-                || error.startsWith("Companion disconnected") || error.startsWith("Companion is busy"));
+        return CompanionBridge.isUnreachable(error);
     }
 
     /** Instagram saves it itself; a warning only when that can't be the chosen folder. */
@@ -405,7 +404,7 @@ final class SelectedMediaDownloads {
     }
 
     private static void failed(Context ctx, String reason) {
-        toast(ctx, I18n.t(ctx, R.string.ig_toast_download_failed, reason));
+        toast(ctx, I18n.t(ctx, R.string.ig_toast_download_failed, CompanionBridge.message(ctx, reason)));
     }
     private static void toast(Context ctx, String message) {
         FeedVideoDownloadHook.mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx.getApplicationContext(), message, Toast.LENGTH_LONG).show());

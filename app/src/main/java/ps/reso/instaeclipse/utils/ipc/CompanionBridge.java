@@ -26,13 +26,15 @@ import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import ps.reso.instaeclipse.BuildConfig;
+import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.download.DownloadRequest;
+import ps.reso.instaeclipse.utils.i18n.I18n;
 
 /** Authenticated capability client. No host URL, configuration or exception text is logged. */
 public final class CompanionBridge {
@@ -48,9 +50,40 @@ public final class CompanionBridge {
             hex("3a10c50c18ba937506c2875e9047be74f8fd8b86fae2ff9feaa50a81fcb4c014")
     };
     private static final int CONFIG_MAX_BYTES = 64 * 1024;
-    private static final ThreadPoolExecutor IPC = new ThreadPoolExecutor(2, 2, 30, TimeUnit.SECONDS,
-            new ArrayBlockingQueue<>(16), new ThreadPoolExecutor.AbortPolicy());
+    static final String UNREACHABLE = "unreachable", TIMEOUT = "timeout", BUSY = "busy", DENIED = "denied",
+            FAILED = "failed", INVALID = "invalid", NOT_VISIBLE = "not_visible", LAUNCH_FAILED = "launch_failed";
+    private static final ThreadPoolExecutor IPC = ipcPool();
     private CompanionBridge() { }
+
+    static ThreadPoolExecutor ipcPool() {
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(2, 2, 30, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
+        pool.allowCoreThreadTimeOut(true);
+        return pool;
+    }
+
+    public static boolean isUnreachable(String code) {
+        return UNREACHABLE.equals(code) || TIMEOUT.equals(code) || BUSY.equals(code);
+    }
+
+    public static String message(Context context, String code) {
+        int text = messageText(code);
+        return text == 0 ? code : I18n.t(context, text);
+    }
+
+    static int messageText(String code) {
+        if (code == null) return 0;
+        switch (code) {
+            case UNREACHABLE: return R.string.ie_companion_unreachable;
+            case TIMEOUT: return R.string.ie_companion_timeout;
+            case BUSY: return R.string.ie_companion_busy;
+            case DENIED: return R.string.ie_companion_denied;
+            case FAILED: return R.string.ie_companion_failed;
+            case INVALID: return R.string.ie_companion_invalid;
+            case NOT_VISIBLE: return R.string.ie_companion_not_visible;
+            case LAUNCH_FAILED: return R.string.ie_companion_launch_failed;
+            default: return 0;
+        }
+    }
 
     public interface Callback { void onResult(String error); }
     private interface Writer { void write(Parcel parcel); }
@@ -141,7 +174,7 @@ public final class CompanionBridge {
         try {
             String json = BrokerPayload.request(request.toJson()).toJson();
             begin(context, DOWNLOAD, parcel -> parcel.writeString(json), callback);
-        } catch (RuntimeException invalid) { report(callback, "Invalid download request"); }
+        } catch (RuntimeException invalid) { report(callback, INVALID); }
     }
 
     public static void saveFrame(Context context, DownloadRequest request, Callback callback) {
@@ -149,7 +182,7 @@ public final class CompanionBridge {
             Map<String, String> values = new LinkedHashMap<>();
             values.put(BrokerPayload.FRAME_REQUEST, request.toJson());
             openActivity(context, BrokerPayload.FRAME, values, callback);
-        } catch (RuntimeException invalid) { report(callback, "Invalid frame request"); }
+        } catch (RuntimeException invalid) { report(callback, INVALID); }
     }
 
     public static void downloadLegacy(Context context, String url, String audioUrl, String filename,
@@ -164,7 +197,7 @@ public final class CompanionBridge {
         try {
             Bundle extras = LegacyBrokerPayload.validate(intent == null ? null : intent.getExtras());
             begin(context, LEGACY, parcel -> parcel.writeBundle(extras), callback);
-        } catch (RuntimeException invalid) { report(callback, "Invalid or oversized download request"); }
+        } catch (RuntimeException invalid) { report(callback, INVALID); }
     }
 
     /** True means scheduled, not launched. Completion/failure is reported asynchronously. */
@@ -188,7 +221,7 @@ public final class CompanionBridge {
             }
             openActivity(context, name, extras, error -> { if (error != null) errorToast(context, error); });
             return true;
-        } catch (RuntimeException invalid) { errorToast(context, "Invalid companion activity request"); return false; }
+        } catch (RuntimeException invalid) { errorToast(context, INVALID); return false; }
     }
 
     public static void openActivity(Context context, String name, Map<String, String> values, Callback callback) {
@@ -200,11 +233,11 @@ public final class CompanionBridge {
                     parcel.writeString(extra.getKey()); parcel.writeString(extra.getValue());
                 }
             }, callback);
-        } catch (RuntimeException invalid) { report(callback, "Invalid companion activity request"); }
+        } catch (RuntimeException invalid) { report(callback, INVALID); }
     }
 
     private static void begin(Context context, int code, Writer writer, Callback callback) {
-        if (context == null) { report(callback, "Companion unavailable"); return; }
+        if (context == null) { report(callback, UNREACHABLE); return; }
         Main.HANDLER.post(() -> new Operation(context, code, writer, callback).start());
     }
     private static void report(Callback callback, String error) {
@@ -212,7 +245,7 @@ public final class CompanionBridge {
     }
     private static void errorToast(Context context, String error) {
         if (context == null) return;
-        Main.HANDLER.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, error, Toast.LENGTH_LONG).show());
+        Main.HANDLER.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, message(context, error), Toast.LENGTH_LONG).show());
     }
 
     private static Activity activity(Context context) {
@@ -239,16 +272,16 @@ public final class CompanionBridge {
         final AtomicBoolean complete = new AtomicBoolean();
         final Runnable timeout = () -> {
             ps.reso.instaeclipse.utils.log.ModuleLog.warn("(IE|Companion) The InstaEclipse app did not answer within 10 seconds (it may be frozen or starting slowly)");
-            finish(null, "Companion connection timed out");
+            finish(null, TIMEOUT);
         };
-        boolean bound;
+        boolean bindAttempted;
         int expectedUid;
         Operation(Context context, int code, Writer writer, Callback callback) {
             caller = context; app = context.getApplicationContext() == null ? context : context.getApplicationContext();
             this.code = code; this.writer = writer; this.callback = callback;
         }
         void start() {
-            if (code == ACTIVITY && !visible(activity(caller))) { finish(null, "Open this action from the current screen"); return; }
+            if (code == ACTIVITY && !visible(activity(caller))) { finish(null, NOT_VISIBLE); return; }
             Main.HANDLER.postDelayed(timeout, 10_000);
             try {
                 expectedUid = app.getPackageManager().getApplicationInfo(BuildConfig.APPLICATION_ID, 0).uid;
@@ -259,7 +292,8 @@ public final class CompanionBridge {
                 return;
             }
             try {
-                bound = app.bindService(new Intent().setClassName(BuildConfig.APPLICATION_ID, SERVICE), this, Context.BIND_AUTO_CREATE);
+                bindAttempted = true;
+                boolean bound = app.bindService(new Intent().setClassName(BuildConfig.APPLICATION_ID, SERVICE), this, Context.BIND_AUTO_CREATE);
                 // Refused by the system: the app is asleep or not allowed to start from another app
                 // (Samsung sleeping / deep sleeping apps, Xiaomi autostart, battery restrictions).
                 if (!bound) unreachable("start refused by the system (sleeping app / autostart / battery limits)");
@@ -267,12 +301,12 @@ public final class CompanionBridge {
         }
         void unreachable(String why) {
             ps.reso.instaeclipse.utils.log.ModuleLog.warn("(IE|Companion) Could not reach the InstaEclipse app: " + why);
-            finish(null, "Companion connection unavailable");
+            finish(null, UNREACHABLE);
         }
         @Override public void onServiceConnected(ComponentName name, IBinder binder) {
             if (complete.get()) return;
             try { IPC.execute(() -> transact(binder)); }
-            catch (RuntimeException busy) { finish(null, "Companion is busy; try again"); }
+            catch (RuntimeException busy) { finish(null, BUSY); }
         }
         void transact(IBinder binder) {
             Parcel data = Parcel.obtain(), reply = Parcel.obtain();
@@ -291,17 +325,17 @@ public final class CompanionBridge {
                 finish(token, null);
             } catch (SecurityException denied) {
                 if (token != null) token.cancel();
-                finish(null, "Companion request denied");
+                finish(null, DENIED);
             } catch (Exception failure) {
                 if (token != null) token.cancel();
-                finish(null, "Companion request failed");
+                finish(null, FAILED);
             } finally { data.recycle(); reply.recycle(); }
         }
         void finish(PendingIntent token, String error) {
             Main.HANDLER.post(() -> {
                 if (!complete.compareAndSet(false, true)) { if (token != null) token.cancel(); return; }
                 Main.HANDLER.removeCallbacks(timeout);
-                if (bound) { try { app.unbindService(this); } catch (RuntimeException ignored) { } bound = false; }
+                if (bindAttempted) { try { app.unbindService(this); } catch (IllegalArgumentException ignored) { } bindAttempted = false; }
                 String result = error;
                 if (token != null) {
                     try {
@@ -313,13 +347,13 @@ public final class CompanionBridge {
                             options = launch.toBundle();
                         }
                         token.send(caller, 0, null, null, null, null, options);
-                    } catch (Exception failure) { token.cancel(); result = "Companion launch failed; try again from the current screen"; }
+                    } catch (Exception failure) { token.cancel(); result = LAUNCH_FAILED; }
                 }
                 if (callback != null) callback.onResult(result);
             });
         }
-        @Override public void onServiceDisconnected(ComponentName name) { finish(null, "Companion disconnected"); }
-        @Override public void onBindingDied(ComponentName name) { finish(null, "Companion connection closed"); }
+        @Override public void onServiceDisconnected(ComponentName name) { finish(null, UNREACHABLE); }
+        @Override public void onBindingDied(ComponentName name) { finish(null, UNREACHABLE); }
         @Override public void onNullBinding(ComponentName name) { unreachable("the app returned no connection (outdated or disabled service?)"); }
     }
 }
