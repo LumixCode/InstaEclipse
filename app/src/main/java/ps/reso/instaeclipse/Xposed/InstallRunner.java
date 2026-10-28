@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongSupplier;
 
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.DexKitSeed;
 import ps.reso.instaeclipse.utils.core.DexKitStats;
 import ps.reso.instaeclipse.utils.core.ModuleBridge;
 import ps.reso.instaeclipse.utils.feature.RestartPending;
@@ -85,6 +86,7 @@ public final class InstallRunner {
         DexKitStats.setSegment(segment);
         DexKitCache.beginBatch();
         try {
+            if (DexKitStats.BACKGROUND.equals(segment)) seed(ctx);
             for (int i = 0; i <= steps.size(); i++) {
                 if (i == pauseAt && pause != null) pause.run();
                 if (i < steps.size()) runStep(plan, steps.get(i), segment, ctx, reporter);
@@ -99,6 +101,15 @@ public final class InstallRunner {
         } finally {
             DexKitCache.flushBatch();
             DexKitStats.setSegment(DexKitStats.NONE.equals(previous) ? null : previous);
+        }
+    }
+
+    private static void seed(InstallPlan.InstallCtx ctx) {
+        if (ctx == null || ctx.lpparam == null || ctx.lpparam.appInfo == null) return;
+        try {
+            DexKitSeed.importIfEmpty(Module.moduleSourceDir, ctx.lpparam.appInfo.sourceDir);
+        } catch (Throwable t) {
+            ModuleLog.detail("(IE|Startup) Could not read the bundled lookup table, so Instagram's code is searched: " + t);
         }
     }
 

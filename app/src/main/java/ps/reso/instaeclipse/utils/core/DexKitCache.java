@@ -61,6 +61,7 @@ public class DexKitCache {
     private static long applies;
     private static boolean cacheValid = false;
     private static boolean restored = false;
+    private static volatile String activeQueryKey;
 
     public static void preload(Context context) {
         StartupTrace.Span span = StartupTrace.begin(PRELOAD_SPAN);
@@ -100,6 +101,7 @@ public class DexKitCache {
             ModuleLog.detail("(DexKitCache) Version " + stored + " → " + igVersion + ", cache cleared");
         }
         Store store = new Store(preferences);
+        activeQueryKey = null;
         start(store, store, kept);
     }
 
@@ -119,7 +121,51 @@ public class DexKitCache {
         }
         if (!handKept) ModuleLog.detail("(DexKitCache) Version " + storedHand + " → " + handKey + ", own lookups cleared");
         if (!queriesKept) ModuleLog.detail("(DexKitCache) Search key " + storedQuery + " → " + queryKey + ", saved searches cleared");
+        activeQueryKey = queryKey;
         start(new Store(handPrefs), new Store(queryPrefs), queriesKept);
+    }
+
+    static long seedVersionCode() {
+        String key = activeQueryKey;
+        int bar = key == null ? -1 : key.indexOf('|');
+        if (bar <= 0) return -1;
+        try {
+            return Long.parseLong(key.substring(0, bar));
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    static boolean acceptsSeed() {
+        synchronized (LOCK) {
+            Store queryStore = queries;
+            return queryStore != null && queryStore != hand && !hasSearches(queryStore);
+        }
+    }
+
+    static int importSearches(Map<String, String> searches) {
+        if (searches == null || searches.isEmpty()) return 0;
+        synchronized (LOCK) {
+            Store queryStore = queries;
+            if (queryStore == null || queryStore == hand || hasSearches(queryStore)) return 0;
+            SharedPreferences.Editor editor = queryStore.prefs.edit();
+            for (Map.Entry<String, String> e : searches.entrySet()) editor.putString("s_" + e.getKey(), e.getValue());
+            editor.apply();
+            queryStore.saves += searches.size();
+            applies++;
+        }
+        return searches.size();
+    }
+
+    private static boolean hasSearches(Store store) {
+        for (Map.Entry<String, Object> e : store.pending.entrySet()) {
+            String key = e.getKey();
+            if (e.getValue() != REMOVED && key.startsWith("s_") && DexKitSeed.isSearchKey(key.substring(2))) return true;
+        }
+        for (String key : store.prefs.getAll().keySet()) {
+            if (key.startsWith("s_") && DexKitSeed.isSearchKey(key.substring(2))) return true;
+        }
+        return false;
     }
 
     private static void reset(SharedPreferences preferences, String key) {
