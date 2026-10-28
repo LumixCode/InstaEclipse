@@ -48,6 +48,7 @@ import ps.reso.instaeclipse.mods.ui.utils.LifecycleHookUtil;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.LegacyPaths;
 import ps.reso.instaeclipse.utils.core.ModuleResources;
+import ps.reso.instaeclipse.utils.dialog.LockFlows;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker;
@@ -86,6 +87,7 @@ public class HideChatsHook {
     private static final Map<View, WeakReference<Activity>> watchedRoots = new WeakHashMap<>();
     private static final Map<View, ViewTreeObserver.OnGlobalLayoutListener> layoutListeners = new WeakHashMap<>();
     private static final Map<Activity, MenuBinding> menuBindings = new WeakHashMap<>();
+    private static final Map<Activity, LockBinding> lockBindings = new WeakHashMap<>();
     private static final Map<Activity, ForegroundThread> foregroundThreads = new WeakHashMap<>();
     private static final Map<Activity, WeakReference<Object>> foregroundInboxes = new WeakHashMap<>();
     private static final Map<Activity, InboxControlBinding> inboxControls = new WeakHashMap<>();
@@ -130,6 +132,12 @@ public class HideChatsHook {
             View view = header.get();
             return view != null && view.isAttachedToWindow() && view.isShown() && threadId.equals(liveThreadId)
                     && hide != HiddenThreads.isHidden(threadId) ? view : null;
+        }
+    }
+
+    private record LockBinding(WeakReference<View> header, String threadId, int state, int revision) {
+        boolean same(View shown, String id, int now, int menu) {
+            return header.get() == shown && threadId.equals(id) && state == now && revision == menu;
         }
     }
 
@@ -607,6 +615,7 @@ public class HideChatsHook {
                     || layoutListeners.containsKey(a.getWindow().getDecorView())) tryInject(a);
             return true;
         });
+        ThreadHeaderInjector.register("lock", true, HideChatsHook::lockEntry);
         CurrentThreadTracker.addListener((a, threadId) -> {
             boolean chat = !LegacyPaths.has(LegacyPaths.HEADER)
                     && CurrentThreadTracker.fragment(a, HideChatsHook::chatScreen) != null;
@@ -706,6 +715,7 @@ public class HideChatsHook {
                 foregroundThreads.remove(destroyed);
                 foregroundInboxes.remove(destroyed);
                 menuBindings.remove(destroyed);
+                lockBindings.remove(destroyed);
                 tapGestures.remove(destroyed);
             }
         });
@@ -781,6 +791,64 @@ public class HideChatsHook {
         IeToast.makeText(activity, text(activity, hide ? R.string.ig_hide_chat_hidden : R.string.ig_hide_chat_unhidden),
                 Toast.LENGTH_SHORT).show();
         ModuleLog.line("(IE|HideChats) " + (hide ? "Chat hidden" : "Chat unhidden") + " (thread " + liveId + ")");
+    }
+
+    private static boolean lockEntry(Activity activity, String openThread) {
+        View header = ThreadHeaderMenu.shownHeader(activity);
+        if (header == null) return false;
+        String threadId = openThread != null ? openThread : resolveThreadId(activity);
+        if (threadId == null) return false;
+        boolean passcode = LockFlows.hasPasscode(), listed = LockedThreads.contains(threadId);
+        boolean on = FeatureFlags.lockSpecificMessages;
+        int state = (passcode ? 1 : 0) | (listed ? 2 : 0) | (on ? 4 : 0);
+        LockBinding bound = lockBindings.get(activity);
+        if (bound != null && bound.same(header, threadId, state, ThreadHeaderMenu.revision())) return true;
+        LockChatEntry entry = LockChatEntry.of(passcode, listed, on, ThreadHeaderMenu.hasOthers(activity, "lock"));
+        if (!entry.shown) ThreadHeaderMenu.remove(activity, "lock");
+        else if (!ThreadHeaderMenu.add(activity, "lock", text(activity, entry.label),
+                () -> onLockEntry(activity, threadId, header))) return false;
+        lockBindings.put(activity, new LockBinding(new WeakReference<>(header), threadId, state, ThreadHeaderMenu.revision()));
+        return true;
+    }
+
+    private static LockChatEntry lockState(Activity activity, String threadId) {
+        return LockChatEntry.of(LockFlows.hasPasscode(), LockedThreads.contains(threadId),
+                FeatureFlags.lockSpecificMessages, ThreadHeaderMenu.hasOthers(activity, "lock"));
+    }
+
+    private static void onLockEntry(Activity activity, String boundId, View header) {
+        if (!boundId.equals(resolveThreadId(activity))) {
+            lockBindings.remove(activity);
+            IeToast.makeText(activity, text(activity, R.string.ig_hide_chat_no_thread), Toast.LENGTH_SHORT).show();
+            ModuleLog.detail("(IE|HideChats) rejected stale lock entry");
+            return;
+        }
+        String known = knownThreadTitle(boundId);
+        String title = known.isEmpty() ? threadTitle(header) : known;
+        switch (lockState(activity, boundId).step) {
+            case SET_PASSCODE -> LockFlows.setPasscode(activity, () -> lockChat(activity, boundId, title), null);
+            case LOCK -> lockChat(activity, boundId, title);
+            case AUTHENTICATE -> LockFlows.authenticate(activity, text(activity, R.string.ig_lock_change_locks_prompt),
+                    "settings", () -> unlockChat(activity, boundId, title));
+            case UNLOCK -> unlockChat(activity, boundId, title);
+        }
+    }
+
+    private static void lockChat(Activity activity, String id, String title) {
+        boolean turnedOn = LockedThreads.lockChat(id, title);
+        lockBindings.remove(activity);
+        lockEntry(activity, id);
+        IeToast.makeText(activity, text(activity, turnedOn ? R.string.ig_lock_chat_locked_on : R.string.ig_lock_chat_locked),
+                Toast.LENGTH_SHORT).show();
+        ModuleLog.line("(IE|HideChats) Chat locked (thread " + id + ")" + (turnedOn ? "; Lock chosen chats turned on" : ""));
+    }
+
+    private static void unlockChat(Activity activity, String id, String title) {
+        LockedThreads.set(id, title, false);
+        lockBindings.remove(activity);
+        lockEntry(activity, id);
+        IeToast.makeText(activity, text(activity, R.string.ig_lock_chat_unlocked), Toast.LENGTH_SHORT).show();
+        ModuleLog.line("(IE|HideChats) Chat unlocked (thread " + id + ")");
     }
 
     @SuppressLint("RtlHardcoded") // The requested gesture is on the physical left in every locale.

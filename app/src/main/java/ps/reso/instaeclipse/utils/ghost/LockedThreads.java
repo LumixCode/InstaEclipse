@@ -33,6 +33,14 @@ public final class LockedThreads {
         SettingsManager.saveAllFlags();
     }
 
+    public static synchronized boolean lockChat(String id, String title) {
+        if (id == null || id.isEmpty()) return false;
+        boolean turnedOn = !FeatureFlags.lockSpecificMessages;
+        FeatureFlags.lockSpecificMessages = true;
+        set(id, title, true);
+        return turnedOn;
+    }
+
     private static void load() {
         String json = FeatureFlags.lockedDirectThreads;
         if (json != null && json.equals(cachedJson)) return;

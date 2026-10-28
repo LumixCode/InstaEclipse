@@ -268,7 +268,8 @@ public final class FeatureCatalog {
                                     .desc(R.string.cat_lockWholeApp_desc).status("LockWholeApp"),
                             sw("lockDirectMessages", R.string.ig_dialog_misc_lock_dms, R.drawable.ic_shield)
                                     .desc(R.string.cat_lockDirectMessages_desc).status("LockDirectMessages"),
-                            sw("lockSpecificMessages", R.string.ig_lock_selected_enable, R.drawable.ic_chat),
+                            sw("lockSpecificMessages", R.string.ig_lock_selected_enable, R.drawable.ic_chat)
+                                    .desc(R.string.ig_lock_selected_menu_desc),
                             action("lockChooseChats", R.string.ig_lock_select_chats, R.drawable.ic_chat)
                                     .requires("lockSpecificMessages").side(Side.IG_ONLY),
                             sw("lockDirectAlways", R.string.ig_dialog_misc_lock_dms_always, R.drawable.ic_shield)

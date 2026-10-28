@@ -44,7 +44,7 @@ import ps.reso.instaeclipse.utils.ui.ResIds;
  */
 final class ThreadHeaderMenu {
     static final String TAG = "ie_thread_menu";
-    static final String[] ORDER = {"unsent", "export", "jump", "read", "hide"};
+    static final String[] ORDER = {"unsent", "export", "jump", "read", "hide", "lock"};
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     /**
      * How long a held header tap waits for the next one before it reaches Instagram. Half of
@@ -83,6 +83,7 @@ final class ThreadHeaderMenu {
     private static int headerId, titleBoxId, endButtonsId;
     private static final Map<Activity, WeakReference<View>> shownHeaders = new WeakHashMap<>();
     private static final Map<Activity, WeakReference<MenuButton>> shownButtons = new WeakHashMap<>();
+    private static int revision;
 
     private static Map<String, Entry> entriesOf(View btn) {
         return btn instanceof MenuButton b ? b.entries : null;
@@ -138,6 +139,15 @@ final class ThreadHeaderMenu {
         return m != null && m.containsKey(key);
     }
 
+    static int revision() {
+        return revision;
+    }
+
+    static boolean hasOthers(Activity a, String key) {
+        Map<String, Entry> m = entriesOf(shownButton(a));
+        return m != null && m.size() > (m.containsKey(key) ? 1 : 0);
+    }
+
     /** Adds (or replaces) an entry, creating the menu button if needed. False if the header isn't there. */
     static boolean add(Activity a, String key, CharSequence label, Runnable action) {
         try {
@@ -147,6 +157,7 @@ final class ThreadHeaderMenu {
             Map<String, Entry> m = entriesOf(btn);
             if (m == null) return false;
             m.put(key, new Entry(label, action));
+            revision++;
             if (btn instanceof MenuButton b) b.tint();
             btn.setVisibility(buttonVisibility()); // the option may have changed since the chat opened
             return true;
@@ -160,7 +171,9 @@ final class ThreadHeaderMenu {
     static void remove(Activity a, String key) {
         View btn = shownButton(a);
         Map<String, Entry> m = entriesOf(btn);
-        if (m == null || m.remove(key) == null || !m.isEmpty()) return;
+        if (m == null || m.remove(key) == null) return;
+        revision++;
+        if (!m.isEmpty()) return;
         if (btn.getParent() instanceof ViewGroup g) g.removeView(btn);
     }
 
