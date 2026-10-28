@@ -39,7 +39,7 @@ public class LockedCollectionsHook {
     private static final String TAG = "(IE|LockedColl) ";
     private static final String BTN_TAG = "ie_lock_collection_btn";
     private static final String ARG_PREFIX = "SaveFragment.ARGUMENT_SAVED_";
-    private static boolean prompting;
+    private static final PromptGuard<Activity> prompt = new PromptGuard<>(a -> !a.isFinishing() && !a.isDestroyed());
     /** the collection screen on display (its root view) and its id, for re-adding the button */
     private static java.lang.ref.WeakReference<View> active;
     private static String activeId;
@@ -267,10 +267,9 @@ public class LockedCollectionsHook {
     private static void gate(Activity a, Object frag, View root) {
         root.setAlpha(0f);
         hidden.put(root, frag);
-        if (prompting) return;
-        prompting = true;
+        if (!prompt.begin(a)) return;
         Runnable open = () -> {
-            prompting = false;
+            prompt.end(a);
             for (java.util.Map.Entry<View, Object> e : hidden.entrySet()) {
                 e.getKey().setAlpha(1f);
                 unlockedFrags.add(e.getValue());
@@ -278,7 +277,7 @@ public class LockedCollectionsHook {
             hidden.clear();
         };
         ask(a, open, () -> {
-            prompting = false;
+            prompt.end(a);
             hidden.clear();
             a.onBackPressed();
         }, open);
