@@ -3115,6 +3115,15 @@ public class DialogUtils {
     }
 
     private static void restoreData(Context context) {
+        IeDialog dlg = new IeDialog(context)
+                .title(I18n.t(context, R.string.ig_data_restore))
+                .message(I18n.t(context, R.string.ig_data_restore_confirm));
+        dlg.secondary(I18n.t(context, R.string.ig_dialog_cancel), null);
+        dlg.primary(I18n.t(context, R.string.ig_data_restore_choose), () -> pickDataBackup(context));
+        dlg.show();
+    }
+
+    private static void pickDataBackup(Context context) {
         Activity a = UIHookManager.getCurrentActivity();
         if (a != null && !a.isFinishing()) ps.reso.instaeclipse.mods.media.DataBackup.pickAndRestore(a);
         else showSimpleDialog(context, I18n.t(context, R.string.ig_dialog_error), I18n.t(context, R.string.ig_dialog_instagram_not_ready));

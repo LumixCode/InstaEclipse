@@ -43,4 +43,6 @@
     <string name="menu_search_clear" tools:ignore="MissingTranslation">Clear search</string>
     <string name="menu_search_empty" tools:ignore="MissingTranslation">No matching options</string>
     <string name="menu_search_try_another" tools:ignore="MissingTranslation">Try another word</string>
+    <string name="ig_data_restore_confirm" tools:ignore="MissingTranslation">Instagram restarts; newer data on this phone is kept.</string>
+    <string name="ig_data_restore_choose" tools:ignore="MissingTranslation">Choose backup</string>
 </resources>

@@ -306,7 +306,7 @@ public final class DataBackup {
             ModuleLog.line(TAG + "Backup restored (" + restored + " files); restarting Instagram");
             confirm(request, null);
             toast(app, I18n.t(app, R.string.ig_data_restore_done, restored), false);
-            new Handler(Looper.getMainLooper()).postDelayed(() -> restart(app), 1800);
+            new Handler(Looper.getMainLooper()).postDelayed(() -> ps.reso.instaeclipse.utils.dialog.DialogUtils.restart(app, false), 1800);
         } catch (Throwable t) {
             setRestoring(false);
             ModuleLog.error(TAG + "Could not restore the backup: " + t.getClass().getSimpleName() + ": " + t.getMessage());
@@ -603,23 +603,6 @@ public final class DataBackup {
         } catch (Exception e) {
             atomic.failWrite(out);
             throw e;
-        }
-    }
-
-    private static void restart(Context app) {
-        try {
-            Intent launch = app.getPackageManager().getLaunchIntentForPackage(app.getPackageName());
-            if (launch != null) {
-                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                android.app.PendingIntent pi = android.app.PendingIntent.getActivity(app, 0x1EB, launch,
-                        android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_CANCEL_CURRENT);
-                android.app.AlarmManager am = (android.app.AlarmManager) app.getSystemService(Context.ALARM_SERVICE);
-                if (am != null) am.set(android.app.AlarmManager.RTC, System.currentTimeMillis() + 400, pi);
-            }
-        } catch (Throwable t) {
-            ModuleLog.warn(TAG + "Could not reopen Instagram after the restore: " + t.getClass().getSimpleName() + ": " + t.getMessage());
-        } finally {
-            android.os.Process.killProcess(android.os.Process.myPid());
         }
     }
 
