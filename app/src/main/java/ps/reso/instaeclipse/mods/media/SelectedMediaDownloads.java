@@ -126,10 +126,19 @@ public final class SelectedMediaDownloads {
         showPost(ctx, captured, -1);
     }
 
+    static void showPost(Context ctx, Captured captured, Runnable onClosed) {
+        showPost(ctx, captured, -1, onClosed);
+    }
+
     /** A carousel offers the slide on screen and all of them, like 0.8.0; any slide is one tap further. */
     static void showPost(Context ctx, Captured captured, int current) {
-        if (captured.children.isEmpty()) { showItemChoices(ctx, captured); return; }
-        if (!canShow(ctx)) return;
+        showPost(ctx, captured, current, null);
+    }
+
+    static void showPost(Context ctx, Captured captured, int current, Runnable onClosed) {
+        Runnable closed = onClosed == null ? NOTHING : onClosed;
+        if (captured.children.isEmpty()) { showItemChoices(ctx, captured, closed); return; }
+        if (!canShow(ctx)) { closed.run(); return; }
         int n = captured.children.size();
         boolean known = current >= 0 && current < n;
         ArrayList<CharSequence> labels = new ArrayList<>();
@@ -137,23 +146,29 @@ public final class SelectedMediaDownloads {
         labels.add(I18n.t(ctx, R.string.ig_dl_carousel_all, n));
         labels.add(I18n.t(ctx, R.string.ie_download_select_item));
         int offset = known ? 1 : 0;
+        AtomicBoolean handedOver = new AtomicBoolean();
         IeDialog dialog = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_dl_title));
         dialog.choices(labels.toArray(new CharSequence[0]), -1, which -> {
-            if (known && which == 0) showItemChoices(ctx, captured.children.get(current));
+            if (known && which == 0) { handedOver.set(true); showItemChoices(ctx, captured.children.get(current), closed); }
             else if (which == offset) startAll(ctx, captured);
-            else showItemList(ctx, captured);
+            else { handedOver.set(true); showItemList(ctx, captured, closed); }
         });
+        dialog.onDismiss(() -> { if (!handedOver.get()) closed.run(); });
         dialog.show();
     }
 
-    private static void showItemList(Context ctx, Captured captured) {
-        if (!canShow(ctx)) return;
+    private static void showItemList(Context ctx, Captured captured, Runnable closed) {
+        if (!canShow(ctx)) { closed.run(); return; }
         ArrayList<CharSequence> labels = new ArrayList<>();
         for (int i = 0; i < captured.children.size(); i++)
             labels.add(I18n.t(ctx, R.string.ie_download_item, i + 1));
+        AtomicBoolean handedOver = new AtomicBoolean();
         IeDialog dialog = new IeDialog(ctx).title(I18n.t(ctx, R.string.ie_download_select_item));
-        dialog.choices(labels.toArray(new CharSequence[0]), -1,
-                which -> showItemChoices(ctx, captured.children.get(which)));
+        dialog.choices(labels.toArray(new CharSequence[0]), -1, which -> {
+            handedOver.set(true);
+            showItemChoices(ctx, captured.children.get(which), closed);
+        });
+        dialog.onDismiss(() -> { if (!handedOver.get()) closed.run(); });
         dialog.show();
     }
 
@@ -165,13 +180,13 @@ public final class SelectedMediaDownloads {
             start(ctx, child, child.batchKind() == DownloadChoices.Choice.VIDEO, batch);
     }
 
-    private static void showItemChoices(Context ctx, Captured captured) {
+    private static void showItemChoices(Context ctx, Captured captured, Runnable closed) {
         List<DownloadChoices.Choice> choices = DownloadChoices.order(captured.media.imageUrl != null,
                 captured.video != null, captured.media.photoWithMusic, captured.offersAudio(), Build.VERSION.SDK_INT);
-        if (choices.size() == 1) { startChoice(ctx, captured, choices.get(0)); return; }
-        if (choices.isEmpty()) { unavailable(ctx, null); return; }
-        if (!canShow(ctx)) return;
-        chooser(ctx, choices, choice -> startChoice(ctx, captured, choice)).show();
+        if (choices.size() == 1) { startChoice(ctx, captured, choices.get(0)); closed.run(); return; }
+        if (choices.isEmpty()) { unavailable(ctx, null); closed.run(); return; }
+        if (!canShow(ctx)) { closed.run(); return; }
+        chooser(ctx, choices, choice -> startChoice(ctx, captured, choice)).onDismiss(closed).show();
     }
 
     public static IeDialog chooser(Context ctx, List<DownloadChoices.Choice> choices,
@@ -403,6 +418,7 @@ public final class SelectedMediaDownloads {
 
     /** Downloads run quietly behind a toast at the start and one at the end, as in 0.8.0 (#287). */
     private static final DownloadEngine.Progress NO_PROGRESS = (phase, done, total) -> { };
+    private static final Runnable NOTHING = () -> { };
 
     static DownloadRequest allowFallback(DownloadRequest original, DownloadEngine.Failure failure) {
         return DownloadEngine.fallback(original, failure);

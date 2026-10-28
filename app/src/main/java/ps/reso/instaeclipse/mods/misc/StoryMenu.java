@@ -13,6 +13,7 @@ import android.widget.Toast;
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
+import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
@@ -31,6 +32,7 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.media.StoryDownloadHook;
@@ -50,15 +52,25 @@ public final class StoryMenu {
     public static final int INFO = 0;
     public static final int MENTIONS = 1;
     public static final int LINKS = 2;
+    public static final int DOWNLOAD = 4;
+    public static final int SPEED = 5;
 
     public interface Row {
         boolean enabled();
 
-        void rows(Object media, List<CharSequence> out);
+        default void rows(Object media, List<CharSequence> out) {}
+
+        default void rows(Object menu, Object media, List<CharSequence> out) {
+            rows(media, out);
+        }
 
         boolean owns(CharSequence tapped);
 
-        void tap(CharSequence tapped, Object media, Context ctx);
+        default void tap(CharSequence tapped, Object media, Context ctx) {}
+
+        default void tap(CharSequence tapped, Object menu, Object media, Context ctx, Runnable resume) {
+            tap(tapped, media, ctx);
+        }
     }
 
     private static final class Entry {
@@ -74,11 +86,13 @@ public final class StoryMenu {
     private static final String ANCHOR = "[INTERNAL] Pause Playback";
     private static final String BUILDERS = "StoryMenuBuilders_v1";
     private static final String DISPATCHERS = "StoryMenuDispatchers_v1";
+    private static final String RESUMES = "StoryMenuResume_v1";
     private static final String SHARED_BUILDERS = "MentionButtons";
     private static final String REEL_ITEM = "com.instagram.model.reels.ReelItem";
     private static final String MEDIA = "com.instagram.feed.media.Media";
     private static final int GRAPH_MAX_DEPTH = 6;
     private static final Comparator<Member> BY_NAME = Comparator.comparing(Member::getName);
+    private static final Runnable NO_RESUME = () -> {};
 
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
     private static final List<Entry> entries = new CopyOnWriteArrayList<>();
@@ -92,6 +106,7 @@ public final class StoryMenu {
     private static Boolean installed;
     private static volatile List<Method> builders = Collections.emptyList();
     private static volatile List<Method> dispatchers = Collections.emptyList();
+    private static volatile List<Method> resumes = Collections.emptyList();
     private static volatile List<Method> dialogs = Collections.emptyList();
     private static volatile List<Method> mediaGetters = Collections.emptyList();
 
@@ -103,7 +118,8 @@ public final class StoryMenu {
         try {
             List<Method> b = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(BUILDERS, classLoader) : null;
             List<Method> d = b == null || b.isEmpty() ? null : DexKitCache.loadMethods(DISPATCHERS, classLoader);
-            if (b == null || b.isEmpty() || d == null || d.isEmpty()) {
+            boolean searched = b == null || b.isEmpty() || d == null || d.isEmpty();
+            if (searched) {
                 b = new ArrayList<>(StoryDownloadHook.storyOptionBuilders(DexKitQueryCache.findMethod(bridge, FindMethod.create()
                         .matcher(MethodMatcher.create().usingStrings(ANCHOR))), classLoader));
                 b.sort(BY_NAME);
@@ -119,6 +135,7 @@ public final class StoryMenu {
                 return false;
             }
             resolveShape(b);
+            resumes = resumesOf(bridge, classLoader, d, searched);
             int rows = hookAll(b, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) { JitGuard.tick(param.method);
@@ -160,6 +177,26 @@ public final class StoryMenu {
         return installed;
     }
 
+    private static List<Method> resumesOf(DexKitBridge bridge, ClassLoader classLoader, List<Method> d, boolean searched) {
+        List<Method> r = searched || !DexKitCache.isCacheValid() ? null : DexKitCache.loadMethods(RESUMES, classLoader);
+        if (r != null) return r;
+        List<Method> users = new ArrayList<>();
+        try {
+            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                    .matcher(MethodMatcher.create().usingStrings(StoryMenuRows.RESUME)))) {
+                try {
+                    users.add(md.getMethodInstance(classLoader));
+                } catch (Throwable ignored) {}
+            }
+        } catch (Throwable t) {
+            ModuleLog.warn("(IE|StoryMenu) Stories may stay paused after a row's sheet closes: " + t);
+            return Collections.emptyList();
+        }
+        r = StoryMenuRows.resumable(d, users);
+        DexKitCache.saveMethods(RESUMES, r);
+        return r;
+    }
+
     public static synchronized void register(int order, Row row) {
         entries.removeIf(e -> e.order == order);
         int at = 0;
@@ -169,7 +206,8 @@ public final class StoryMenu {
 
     public static synchronized String describe() {
         return "builders=" + names(builders) + " dispatchers=" + names(dispatchers) + " dialog=" + names(dialogs)
-                + " story=" + names(storyFields.values()) + " media=" + names(mediaGetters) + " rows=" + entries.size();
+                + " story=" + names(storyFields.values()) + " media=" + names(mediaGetters) + " resume=" + names(resumes)
+                + " rows=" + entries.size();
     }
 
     private static String names(Collection<? extends Member> members) {
@@ -272,7 +310,7 @@ public final class StoryMenu {
         List<CharSequence> add = new ArrayList<>();
         for (Row row : active) {
             try {
-                row.rows(media, add);
+                row.rows(menu, media, add);
             } catch (Throwable t) {
                 ModuleLog.warn("(IE|StoryMenu) A row could not be added to this story menu: " + t);
             }
@@ -282,13 +320,24 @@ public final class StoryMenu {
         if (menu != null) {
             Set<String> labels = new LinkedHashSet<>();
             for (int i = original.length; i < extended.length; i++) labels.add(extended[i].toString());
-            synchronized (shown) {
-                Set<String> known = shown.get(menu);
-                if (known == null) shown.put(menu, labels);
-                else known.addAll(labels);
-            }
+            mark(menu, labels);
         }
         param.setResult(extended);
+    }
+
+    public static boolean remember(Object[] args, CharSequence label) {
+        Object menu = args == null || label == null ? null : menuOf(args);
+        if (menu == null) return false;
+        mark(menu, Collections.singleton(label.toString()));
+        return true;
+    }
+
+    private static void mark(Object menu, Set<String> labels) {
+        synchronized (shown) {
+            Set<String> known = shown.get(menu);
+            if (known == null) shown.put(menu, new LinkedHashSet<>(labels));
+            else known.addAll(labels);
+        }
     }
 
     private static boolean added(Object menu, CharSequence label) {
@@ -307,8 +356,27 @@ public final class StoryMenu {
         if (!added(menu, tapped)) return;
         Object media = mediaOf(menu, param.args);
         Context ctx = contextOf(menu, param.args);
+        Runnable resume = resumeOf(param);
         param.setResult(null);
-        deliver(owner, tapped.toString(), media, ctx);
+        deliver(owner, tapped.toString(), menu, media, ctx, resume);
+    }
+
+    private static Runnable resumeOf(XC_MethodHook.MethodHookParam param) {
+        Member method = param.method;
+        if (!resumes.contains(method)) return NO_RESUME;
+        Object self = param.thisObject;
+        Object[] args = StoryMenuRows.resumeArgs(param.args);
+        AtomicBoolean once = new AtomicBoolean();
+        return () -> {
+            if (!once.compareAndSet(false, true)) return;
+            mainHandler.post(() -> {
+                try {
+                    XposedBridge.invokeOriginalMethod(method, self, args);
+                } catch (Throwable t) {
+                    ModuleLog.warn("(IE|StoryMenu) Could not resume the story: " + t);
+                }
+            });
+        };
     }
 
     private static void wrapDialog(XC_MethodHook.MethodHookParam param) {
@@ -334,24 +402,27 @@ public final class StoryMenu {
             try {
                 dialog.dismiss();
             } catch (Throwable ignored) {}
-            deliver(owner, label.toString(), mediaOf(menu, args), contextOf(menu, args));
+            deliver(owner, label.toString(), menu, mediaOf(menu, args), contextOf(menu, args), NO_RESUME);
         };
     }
 
-    private static void deliver(Row owner, String label, Object media, Context ctx) {
+    private static void deliver(Row owner, String label, Object menu, Object media, Context ctx, Runnable resume) {
         if (ctx == null) {
             ModuleLog.error("(IE|StoryMenu) Could not open \"" + label + "\": no open screen found");
+            resume.run();
             return;
         }
         if (media == null) {
             IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_story_unavailable), Toast.LENGTH_SHORT).show();
+            resume.run();
             return;
         }
         mainHandler.post(() -> {
             try {
-                owner.tap(label, media, ctx);
+                owner.tap(label, menu, media, ctx, resume);
             } catch (Throwable t) {
                 ModuleLog.error("(IE|StoryMenu) Could not open \"" + label + "\"", t);
+                resume.run();
             }
         });
     }

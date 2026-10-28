@@ -19,11 +19,14 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.mods.misc.StoryMenu;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -54,55 +57,6 @@ public class StoryDownloadHook {
     // (UserSession) -> List methods return the ReelItems (the whole highlight is fetched by
     // feed/reels_media/ when it opens).
     private static Class<?> reelClass;
-
-    private static Object findHighlightReel(Object root) {
-        if (reelClass == null || root == null) return null;
-        Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-        java.util.ArrayDeque<Object[]> q = new java.util.ArrayDeque<>();
-        q.add(new Object[]{root, 0});
-        while (!q.isEmpty() && seen.size() < 2000) {
-            Object[] e = q.poll();
-            Object o = e[0];
-            int d = (int) e[1];
-            if (o == null || !seen.add(o)) continue;
-            if (reelClass.isInstance(o)) {
-                if (isHighlight(o)) return o;
-                continue;
-            }
-            if (d >= 4) continue;
-            if (o instanceof android.app.Activity || o instanceof android.view.View || o instanceof android.content.Context
-                    || o instanceof android.content.res.Resources || o.getClass().getName().startsWith("androidx.")) continue;
-            String n = o.getClass().getName();
-            if (!n.startsWith("X.") && !n.startsWith("com.instagram.") && !n.startsWith("instagram.")) continue;
-            for (Class<?> k = o.getClass(); k != null && k != Object.class; k = k.getSuperclass())
-                for (java.lang.reflect.Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
-                    if (java.lang.reflect.Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive() || f.getType() == String.class) continue;
-                    try { f.setAccessible(true); q.add(new Object[]{f.get(o), d + 1}); } catch (Throwable ignored) {}
-                }
-        }
-        return null;
-    }
-
-    private static Object highlightFromParam(XC_MethodHook.MethodHookParam param) {
-        Object holder = findReelItemHolder(param);
-        Object r = findHighlightReel(holder);
-        if (r == null) r = findHighlightReel(param.thisObject);
-        if (r == null && param.args != null) for (Object a : param.args) { r = findHighlightReel(a); if (r != null) break; }
-        return r;
-    }
-
-    private static boolean isHighlight(Object reel) {
-        for (Class<?> k = reel.getClass(); k != null && k != Object.class; k = k.getSuperclass())
-            for (java.lang.reflect.Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
-                if (f.getType() != String.class || java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
-                try {
-                    f.setAccessible(true);
-                    Object v = f.get(reel);
-                    if (v instanceof String str && str.startsWith("highlight:")) return true;
-                } catch (Throwable ignored) {}
-            }
-        return false;
-    }
 
     private static List<?> highlightItems(Object reel, Object holder) {
         return highlightItemsWith(reel, readFieldByTypeName(holder, "com.instagram.common.session.UserSession"));
@@ -168,16 +122,167 @@ public class StoryDownloadHook {
             }
             if (reelClass == null)
                 ModuleLog.warn("(IE|Highlight) Downloading a whole highlight (Download all) is not available in this Instagram version; single stories still download");
+            else reelIdGetter = idGetter(reelClass);
             ModuleLog.detail("(IE|Highlight) reel class " + (reelClass != null ? reelClass.getName() : "not found"));
         } catch (Throwable t) {
             ModuleLog.warn("(IE|Highlight) Downloading a whole highlight (Download all) is not available; single stories still download: " + t);
         }
-        installButtonInjectorHook(bridge, classLoader);
+        installMenuRows(bridge, classLoader);
         installHighlightButtonInjectorHook(bridge, classLoader);
-        installClickHandlerHook(bridge, classLoader);
         installHighlightTrayHook(bridge, classLoader);
         resolveExpiringGetter(bridge, classLoader);
         installStoryCaptureHook(bridge, classLoader);
+    }
+
+    private static void installMenuRows(DexKitBridge bridge, ClassLoader classLoader) {
+        if (!StoryMenu.install(bridge, classLoader)) {
+            ModuleLog.error("(IE|Story) Download will not appear in the story menu: the menu was not found in this Instagram version");
+            if (FeatureFlags.enableStoryDownload) FeatureStatusTracker.setBroken("StoryDownload");
+            return;
+        }
+        StoryMenu.register(StoryMenu.DOWNLOAD, new DownloadRows());
+        StoryMenu.register(StoryMenu.SPEED, new SpeedRow());
+        ModuleLog.ok("(IE|Story) ready");
+        FeatureStatusTracker.setHooked("StoryDownload");
+    }
+
+    private static String label(int id) {
+        return I18n.t(AndroidAppHelper.currentApplication(), id);
+    }
+
+    private static final class DownloadRows implements StoryMenu.Row {
+        @Override
+        public boolean enabled() {
+            return FeatureFlags.enableStoryDownload;
+        }
+
+        @Override
+        public void rows(Object menu, Object media, List<CharSequence> out) {
+            out.add(label(R.string.ig_dl_title));
+            if (highlight(menuReel(menu))) out.add(label(R.string.ig_highlight_download_all));
+        }
+
+        @Override
+        public boolean owns(CharSequence tapped) {
+            return label(R.string.ig_dl_title).contentEquals(tapped)
+                    || label(R.string.ig_highlight_download_all).contentEquals(tapped);
+        }
+
+        @Override
+        public void tap(CharSequence tapped, Object menu, Object media, Context ctx, Runnable resume) {
+            if (label(R.string.ig_highlight_download_all).contentEquals(tapped)) {
+                Object reel = menuReel(menu);
+                if (highlight(reel)) downloadHighlight(ctx, reel, menu);
+                else ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_story_unavailable), Toast.LENGTH_SHORT).show();
+                resume.run();
+                return;
+            }
+            try {
+                SelectedMediaDownloads.showPost(ctx, SelectedMediaDownloads.capture(ctx, media, "story"), resume);
+            } catch (Throwable unavailable) {
+                SelectedMediaDownloads.unavailable(ctx, unavailable);
+                resume.run();
+            }
+        }
+    }
+
+    private static final class SpeedRow implements StoryMenu.Row {
+        @Override
+        public boolean enabled() {
+            return FeatureFlags.offerPlaybackSpeed;
+        }
+
+        @Override
+        public void rows(Object menu, Object media, List<CharSequence> out) {
+            out.add(label(R.string.ig_playback_speed_title));
+        }
+
+        @Override
+        public boolean owns(CharSequence tapped) {
+            return label(R.string.ig_playback_speed_title).contentEquals(tapped);
+        }
+
+        @Override
+        public void tap(CharSequence tapped, Object menu, Object media, Context ctx, Runnable resume) {
+            PlaybackSpeedHook.showChooser(ctx, resume);
+        }
+    }
+
+    private static final Field[] NO_PATH = new Field[0];
+    private static final Map<Class<?>, Field[]> reelPaths = new ConcurrentHashMap<>();
+    private static volatile Method reelIdGetter;
+
+    private static Method idGetter(Class<?> reel) {
+        try {
+            Method m = reel.getMethod("getId");
+            return m.getReturnType() == String.class ? m : null;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static Object menuReel(Object menu) {
+        if (menu == null || reelClass == null) return null;
+        Field[] path = reelPaths.computeIfAbsent(menu.getClass(), StoryDownloadHook::reelPath);
+        if (path.length == 0) return null;
+        Object at = menu;
+        for (Field f : path) {
+            if (at == null) return null;
+            try {
+                at = f.get(at);
+            } catch (Throwable t) {
+                return null;
+            }
+        }
+        return at;
+    }
+
+    private static Field[] reelPath(Class<?> menu) {
+        List<Field> direct = instanceFields(menu, reelClass);
+        if (direct.size() == 1) return new Field[]{direct.get(0)};
+        if (!direct.isEmpty()) return NO_PATH;
+        Field holder = null, inner = null;
+        for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(menu)) {
+            if (java.lang.reflect.Modifier.isStatic(f.getModifiers()) || !f.getType().getName().startsWith("X.")) continue;
+            List<Field> reels = instanceFields(f.getType(), reelClass);
+            if (reels.isEmpty()) continue;
+            if (holder != null || reels.size() > 1) return NO_PATH;
+            holder = f;
+            inner = reels.get(0);
+        }
+        if (holder == null) return NO_PATH;
+        try {
+            holder.setAccessible(true);
+            inner.setAccessible(true);
+        } catch (Throwable t) {
+            return NO_PATH;
+        }
+        return new Field[]{holder, inner};
+    }
+
+    private static List<Field> instanceFields(Class<?> owner, Class<?> type) {
+        List<Field> out = new ArrayList<>();
+        for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(owner)) {
+            if (java.lang.reflect.Modifier.isStatic(f.getModifiers()) || f.getType() != type) continue;
+            try {
+                f.setAccessible(true);
+            } catch (Throwable t) {
+                return Collections.emptyList();
+            }
+            out.add(f);
+        }
+        return out;
+    }
+
+    private static boolean highlight(Object reel) {
+        if (reel == null) return false;
+        Method getter = reelIdGetter;
+        if (getter == null) return highlightId(reel) != null;
+        try {
+            return getter.invoke(reel) instanceof String id && id.startsWith("highlight:");
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     // ── Highlight long-press menu (profile tray): "Download whole highlight" ──
@@ -462,39 +567,12 @@ public class StoryDownloadHook {
         } catch (Throwable t) { ModuleLog.detail("(IE|StoryCache) captureFromReelItem: " + t); }
     }
 
-    // ── Hook 1: inject "Download" into the story options button list ──────────
-    //
-    // Found via "[INTERNAL] Pause Playback" string + CharSequence[] return type, 1 param.
-    // afterHookedMethod: appends our "Download" entry to the returned CharSequence[] array.
-
     /**
      * Every CharSequence[] option builder of the story-options helper class (X.0mt9 on 452).
      * IG 452 moved the "[INTERNAL] …" rows into a private List helper (A0c), so the builder used
      * for other people's stories (A0t) no longer contains the anchor string itself; taking all
      * CharSequence[] methods of the anchor's declaring class(es) catches it again.
      */
-    /**
-     * Every story-menu tap dispatcher: the void methods behind "[INTERNAL] Pause Playback". Others'
-     * stories and your own story use different ones (your own is a static helper), so features that
-     * add menu rows hook them all and check the tapped label themselves.
-     */
-    public static java.util.List<Method> storyClickDispatchers(DexKitBridge bridge, ClassLoader cl) {
-        java.util.List<Method> out = ps.reso.instaeclipse.utils.core.DexKitCache.isCacheValid()
-                ? ps.reso.instaeclipse.utils.core.DexKitCache.loadMethods("StoryClickDispatchers", cl) : null;
-        if (out != null && !out.isEmpty()) return out;
-        out = new java.util.ArrayList<>();
-        try {
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                    .returnType("void").usingStrings("[INTERNAL] Pause Playback")))) {
-                try { out.add(md.getMethodInstance(cl)); } catch (Throwable ignored) {}
-            }
-        } catch (Throwable t) {
-            ModuleLog.detail("(IE|Story) click dispatchers: " + t);
-        }
-        if (!out.isEmpty()) ps.reso.instaeclipse.utils.core.DexKitCache.saveMethods("StoryClickDispatchers", out);
-        return out;
-    }
-
     public static java.util.Set<Method> storyOptionBuilders(List<MethodData> anchorMethods, ClassLoader classLoader) {
         java.util.Set<Method> out = new java.util.LinkedHashSet<>();
         java.util.Set<Class<?>> owners = new java.util.LinkedHashSet<>();
@@ -517,82 +595,13 @@ public class StoryDownloadHook {
         return rt.isArray() && CharSequence.class.isAssignableFrom(rt.getComponentType());
     }
 
-    private void installButtonInjectorHook(DexKitBridge bridge, ClassLoader classLoader) {
-        // Hook EVERY CharSequence[]-returning candidate behind the "[INTERNAL] Pause Playback"
-        // anchor — NOT just the first 1-arg one. Instagram builds the option list with a DIFFERENT
-        // method for your OWN story (a 3-arg static helper: Delete/Archive/Save video/…) than for
-        // someone else's (1-arg: Report/Mute/AI info). Filtering paramCount(1) + first-match only
-        // ever caught the others'-story builder, so Download never appeared on your own stories.
-        // Own-story Download matters because it grabs the rendered video_version and KEEPS the
-        // music, which IG's native Save drops. (Ported from PR #200 by izadiegizabal.) Anchored on
-        // the stable string only, so it stays valid across versions; static + instance both accepted.
-        try {
-            List<MethodData> methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                    .matcher(MethodMatcher.create()
-                            .usingStrings("[INTERNAL] Pause Playback")));
-            if (methods.isEmpty()) {
-                ModuleLog.error("(IE|Story) Download will not appear in the story menu: the menu was not found in this Instagram version");
-                return;
-            }
-
-            XC_MethodHook injector = new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                    if (!FeatureFlags.enableStoryDownload && !FeatureFlags.offerPlaybackSpeed) return;
-                    if (!(param.getResult() instanceof CharSequence[] original) || original == null) return;
-
-                    java.util.List<CharSequence> add = new java.util.ArrayList<>();
-                    if (FeatureFlags.enableStoryDownload)
-                        add.add(I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_dl_title));
-                    // Highlight "Download all" (#250)
-                    if (FeatureFlags.enableStoryDownload && highlightFromParam(param) != null)
-                        add.add(I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_highlight_download_all));
-                    // Story playback speed (Instagram Plus–style, our own implementation)
-                    if (FeatureFlags.offerPlaybackSpeed)
-                        add.add(I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_playback_speed_title));
-
-                    // Guard: don't inject twice
-                    for (CharSequence cs : original) {
-                        if (cs == null) continue;
-                        add.removeIf(a -> a.toString().contentEquals(cs));
-                    }
-                    if (add.isEmpty()) return;
-
-                    CharSequence[] extended = new CharSequence[original.length + add.size()];
-                    System.arraycopy(original, 0, extended, 0, original.length);
-                    for (int i = 0; i < add.size(); i++) extended[original.length + i] = add.get(i);
-                    param.setResult(extended);
-                }
-            };
-
-            int hooked = 0;
-            for (Method m : storyOptionBuilders(methods, classLoader)) {
-                try {
-                    XposedBridge.hookMethod(m, injector);
-                    hooked++;
-                } catch (Throwable ignored) {}
-            }
-            ModuleLog.detail("(IE|Story) button injector hooked " + hooked + " builder(s)");
-            if (hooked == 0) ModuleLog.error("(IE|Story) Download will not appear in the story menu: the menu's option list was not found in this Instagram version");
-        } catch (Throwable t) {
-            ModuleLog.error("(IE|Story) Download will not appear in the story menu", t);
-        }
-    }
-
-
-    // ── Hook 2: handle click on our "Download" option ────────────────────────
-    //
-    // Found via "explore_viewer" + "friendships/mute_friend_reel/%s/" strings.
-    // beforeHookedMethod: reads the CharSequence param (the tapped label); if it
-    // equals "Download", triggers the download. Context and ReelItem are resolved
-    // from fields on 'this' or same-class params.
-
     private static XC_MethodHook menuButtonInjector() {
         return new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 if (!FeatureFlags.enableStoryDownload || param.hasThrowable()) return;
                 Object original = param.getResult();
                 String label = I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_dl_title);
+                if (!StoryMenu.remember(param.args, label)) return;
                 Object extended = StoryMenuOptions.appendDownload(original, label);
                 if (extended != original) param.setResult(extended);
             }
@@ -645,148 +654,6 @@ public class StoryDownloadHook {
         }
     }
 
-
-    private static volatile Set<java.lang.reflect.Member> resumes = Collections.emptySet();
-
-    private void installClickHandlerHook(DexKitBridge bridge, ClassLoader classLoader) {
-        // Anchor ONLY on the common "[INTERNAL] Pause Playback" string and hook EVERY void
-        // dispatcher behind it. The old matcher also required "explore_viewer" +
-        // "mute_friend_reel" — but those exist ONLY on someone-else's-story dispatcher, so the
-        // self-story handler could never match and Download did nothing on your own stories.
-        // The self-story dispatcher is a STATIC helper (takes the outer class as a param), so we
-        // must not exclude statics. Our runtime label check (tapped == "Download") gates it, so
-        // hooking the extra dispatchers is harmless. (Ported from PR #200 by izadiegizabal.)
-        List<MethodData> methods;
-        try {
-            methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
-                    .matcher(MethodMatcher.create()
-                            .returnType("void")
-                            .usingStrings("[INTERNAL] Pause Playback")));
-        } catch (Throwable t) {
-            ModuleLog.error("(IE|Story) Tapping Download in the story menu will not work", t);
-            return;
-        }
-        if (methods == null || methods.isEmpty()) {
-            ModuleLog.error("(IE|Story) Tapping Download in the story menu will not work: the menu's tap handler was not found in this Instagram version");
-            return;
-        }
-
-        XC_MethodHook clickHook = new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
-                if (!FeatureFlags.enableStoryDownload && !FeatureFlags.offerPlaybackSpeed) return;
-
-                // 1. Find which button was tapped
-                CharSequence tapped = null;
-                for (Object arg : param.args) {
-                    if (arg instanceof CharSequence cs) { tapped = cs; break; }
-                }
-                if (tapped == null) return;
-
-                String allLabel = I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_highlight_download_all);
-                if (FeatureFlags.enableStoryDownload && allLabel.contentEquals(tapped)) {
-                    param.setResult(null);
-                    Object holder = findReelItemHolder(param);
-                    Object reel = highlightFromParam(param);
-                    Context ctx = findContextAcrossParam(param, holder != null ? holder : param.thisObject);
-                    if (ctx == null) ctx = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
-                    if (ctx != null && reel != null) downloadHighlight(ctx, reel, holder);
-                    return;
-                }
-                String speedLabel = I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_playback_speed_title);
-                if (FeatureFlags.offerPlaybackSpeed && speedLabel.contentEquals(tapped)) {
-                    param.setResult(null);
-                    Object holder = findReelItemHolder(param);
-                    Context ctx = findContextAcrossParam(param, holder != null ? holder : param.thisObject);
-                    if (ctx == null) ctx = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
-                    // IG paused the story when its menu opened and resumes it only for options it
-                    // handles itself; we swallowed this tap, so replay the dispatcher with IG's own
-                    // "[INTERNAL] Resume Playback" once our chooser closes.
-                    final java.lang.reflect.Member method = param.method;
-                    final Object self = param.thisObject;
-                    final Object[] args = param.args.clone();
-                    Runnable resume = () -> {
-                        if (!resumes.contains(method)) return;
-                        try {
-                            ps.reso.instaeclipse.xposedcompat.XposedBridge.invokeOriginalMethod(method, self,
-                                    ps.reso.instaeclipse.mods.misc.StoryMenuRows.resumeArgs(args));
-                        } catch (Throwable t) {
-                            ModuleLog.warn("(IE|Story) Could not resume the story after choosing a speed: " + t);
-                        }
-                    };
-                    if (ctx != null) PlaybackSpeedHook.showChooser(ctx, resume);
-                    return;
-                }
-
-                if (!FeatureFlags.enableStoryDownload) return;
-                String dlLabel = I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_dl_title);
-                if (!dlLabel.contentEquals(tapped)) return;
-
-                // 2. Consume the event — Instagram won't process an option it didn't add
-                param.setResult(null);
-
-                // 3. Locate the ReelItem holder — 'this' or any same-class param (self-story
-                //    passes the outer class as an argument).
-                Object holder = findReelItemHolder(param);
-                Object effectiveHolder = holder != null ? holder : param.thisObject;
-
-                // 4. Context — the self-story dispatcher passes the ReelItem and the Context on
-                //    SEPARATE args, so search 'this' AND every argument, not just the holder.
-                Context ctx = findContextAcrossParam(param, effectiveHolder);
-                if (ctx == null) {
-                    ModuleLog.error("(IE|Story) Could not download the story: the screen was not found");
-                    return;
-                }
-
-                try {
-                    Object selected = SelectedMediaAdapter.findStoryMedia((Method) param.method,
-                            param.thisObject, param.args);
-                    SelectedMediaDownloads.Captured captured = SelectedMediaDownloads.capture(ctx, selected, "story");
-                    SelectedMediaDownloads.showPost(ctx, captured);
-                } catch (Throwable unavailable) { SelectedMediaDownloads.unavailable(ctx, unavailable); }
-
-            }
-        };
-
-        List<java.lang.reflect.Member> users = new ArrayList<>();
-        List<java.lang.reflect.Member> dispatchers = new ArrayList<>();
-        for (MethodData md : methods) {
-            try {
-                Method m = md.getMethodInstance(classLoader);
-                users.add(m);
-                if (m.getParameterCount() == 0) continue; // dispatchers receive the tapped label
-                XposedBridge.hookMethod(m, clickHook);
-                dispatchers.add(m);
-            } catch (Throwable ignored) {}
-        }
-        int hooked = dispatchers.size();
-        resumes = new java.util.HashSet<>(ps.reso.instaeclipse.mods.misc.StoryMenuRows.resumable(dispatchers, users));
-        if (hooked == 0) {
-            ModuleLog.error("(IE|Story) Tapping Download in the story menu will not work: the menu's tap handler could not be changed");
-            return;
-        }
-        ModuleLog.ok("(IE|Story) ready");
-        ModuleLog.detail("(IE|Story) click handler hooked " + hooked + " dispatcher(s)");
-        FeatureStatusTracker.setHooked("StoryDownload");
-    }
-
-    /** Context lookup for the click dispatcher: try the ReelItem holder, then 'this', then each
-     *  argument (self-story passes the Context on a separate arg, or an arg may BE a Context). */
-    private static Context findContextAcrossParam(XC_MethodHook.MethodHookParam param, Object preferred) {
-        Context c = findContext(preferred);
-        if (c != null) return c;
-        if (param.thisObject != preferred) {
-            c = findContext(param.thisObject);
-            if (c != null) return c;
-        }
-        for (Object arg : param.args) {
-            if (arg instanceof Context ctx) return ctx;
-            c = findContext(arg);
-            if (c != null) return c;
-        }
-        return null;
-    }
-
     /** The original Story selectors, restricted to the already resolved selected Media. */
     static String originalVideoFromSelected(Object media) {
         return FeedVideoDownloadHook.bestVideoUrlFromMedia(media);
@@ -809,32 +676,6 @@ public class StoryDownloadHook {
     }
 
     // ── URL extraction ────────────────────────────────────────────────────────
-
-    /**
-     * Finds the object (either 'this' or a same-class parameter) that holds the
-     * ReelItem field. The click handler sometimes receives a reference to the outer
-     * class as a parameter rather than p0/this.
-     */
-    private static Object findReelItemHolder(XC_MethodHook.MethodHookParam param) {
-        if (hasReelItemField(param.thisObject)) return param.thisObject;
-        // Check method parameters — the outer class is sometimes passed as an arg
-        for (Object arg : param.args) {
-            if (arg != null && hasReelItemField(arg)) return arg;
-        }
-        return null;
-    }
-
-    private static boolean hasReelItemField(Object obj) {
-        if (obj == null) return false;
-        Class<?> cls = obj.getClass();
-        while (cls != null && cls != Object.class) {
-            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(cls)) {
-                if (f.getType().getName().equals("com.instagram.model.reels.ReelItem")) return true;
-            }
-            cls = cls.getSuperclass();
-        }
-        return false;
-    }
 
     /** {@code direct}: holder IS the ReelItem (don't look for a nested ReelItem field). */
     private static StoryMediaOptions extractStoryMediaOptions(Context ctx, Object holder, boolean direct) {
@@ -1140,24 +981,6 @@ public class StoryDownloadHook {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private static Context findContext(Object obj) {
-        if (obj == null) return null;
-        Class<?> cls = obj.getClass();
-        while (cls != null && cls != Object.class) {
-            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(cls)) {
-                if (Context.class.isAssignableFrom(f.getType())) {
-                    f.setAccessible(true);
-                    try {
-                        Object v = f.get(obj);
-                        if (v instanceof Context ctx) return ctx;
-                    } catch (Throwable ignored) {}
-                }
-            }
-            cls = cls.getSuperclass();
-        }
-        return null;
-    }
 
     private static boolean isCdnUrl(String url) {
         if (url == null || url.isEmpty()) return false;

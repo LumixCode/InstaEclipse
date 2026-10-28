@@ -5,9 +5,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
 
-public final class StoryMenuRows {
+final class StoryMenuRows {
 
-    public static final String RESUME = "[INTERNAL] Resume Playback";
+    static final String RESUME = "[INTERNAL] Resume Playback";
 
     private StoryMenuRows() {}
 
@@ -56,9 +56,9 @@ public final class StoryMenuRows {
         return item != null && owned.test(item) ? item : null;
     }
 
-    public static Object[] resumeArgs(Object[] args) {
+    static Object[] resumeArgs(Object[] args) {
         Object[] out = args.clone();
-        for (int i = 0; i < out.length; i++) {
+        for (int i = out.length - 1; i >= 0; i--) {
             if (out[i] instanceof CharSequence) {
                 out[i] = RESUME;
                 break;
@@ -67,7 +67,7 @@ public final class StoryMenuRows {
         return out;
     }
 
-    public static <T> List<T> resumable(Collection<T> dispatchers, Collection<T> users) {
+    static <T> List<T> resumable(Collection<T> dispatchers, Collection<T> users) {
         List<T> out = new ArrayList<>();
         for (T d : dispatchers) if (users.contains(d)) out.add(d);
         return out;
