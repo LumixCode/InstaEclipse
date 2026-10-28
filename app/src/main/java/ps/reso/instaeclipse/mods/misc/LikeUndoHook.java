@@ -150,7 +150,7 @@ public class LikeUndoHook {
         report("LikeUndo", FeatureFlags.likeUndo, ready);
         installed = true;
         onLikeUndoChanged();
-        LikeHeartTint.install();
+        if (FeatureFlags.likeUndo) LikeHeartTint.install();
         // View.performClick is a very hot framework method; hooking it app-wide triggers ART's JIT
         // SIGSEGV on IG 451+ / Android 13, so the heart tap hook is only installed when Ask before
         // liking is on (turning it on later holds heart taps after an Instagram restart; until

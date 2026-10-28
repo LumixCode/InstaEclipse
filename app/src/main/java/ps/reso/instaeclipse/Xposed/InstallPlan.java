@@ -252,20 +252,23 @@ public class InstallPlan {
         s.add(new InstallStep(SCREENSHOT_PERMISSION_HOOK, "ScreenshotPermissionHook", null, "(InstaEclipse | ScreenshotPermission): ", COULD_NOT_START, false, null).inPhaseA());
         s.add(new InstallStep(GHOST_VIEW_ONCE_HOOK, "GhostViewOnceHook", null, "(InstaEclipse | GhostViewOnce): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(GHOST_STORY_SEEN_HOOK, "GhostStorySeenHook", null, "(InstaEclipse | GhostStorySeen): ", COULD_NOT_START, true, null));
-        s.add(new InstallStep(KEEP_UNSENT_MESSAGES_HOOK, "KeepUnsentMessagesHook", null, "(InstaEclipse | KeepUnsent): ", COULD_NOT_START, true, null));
+        s.add(new InstallStep(KEEP_UNSENT_MESSAGES_HOOK, "KeepUnsentMessagesHook", null, "(InstaEclipse | KeepUnsent): ", COULD_NOT_START, true, null)
+                .withLookupFlags("keepUnsentMessages", "showUnsentIndicator").withRestartKeys("showUnsentIndicator"));
         s.add(new InstallStep(UNSENT_THREAD_BUTTON_HOOK, "UnsentThreadButtonHook", null, "(InstaEclipse | UnsentBtn): ", COULD_NOT_START, false, null));
         s.add(new InstallStep(HIDE_CHATS_HOOK, "HideChatsHook", null, "(InstaEclipse | HideChats): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(INBOX_DISCOVER_PEOPLE_HOOK, "InboxDiscoverPeopleHook", null, "(InstaEclipse | InboxDiscover): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(CUSTOM_FONT_HOOK, "CustomFontHook", null, "(InstaEclipse | CustomFont): ", COULD_NOT_START, true, null)
                 .withLookupFlags("customEmojiEnabled")
                 .withRestartKeys("customFontEnabled", "customEmojiEnabled", "customFontPath", "customEmojiPath"));
-        s.add(new InstallStep(META_AI, "metaAi", null, "(InstaEclipse | RemoveMetaAI): ", COULD_NOT_START, false, null));
-        s.add(new InstallStep(META_AI_REELS, "metaAiReels", new String[]{"metaAi"}, "(InstaEclipse | RemoveMetaAI): ", COULD_NOT_START, true, null));
+        s.add(new InstallStep(META_AI, "metaAi", null, "(InstaEclipse | RemoveMetaAI): ", COULD_NOT_START, false, "removeMetaAI")
+                .withRestartKeys("removeMetaAI"));
+        s.add(new InstallStep(META_AI_REELS, "metaAiReels", new String[]{"metaAi"}, "(InstaEclipse | RemoveMetaAI): ", COULD_NOT_START, true, "removeMetaAI"));
         s.add(new InstallStep(DISABLE_REPOST_HOOK, "DisableRepostHook", null, "(InstaEclipse | DisableRepost): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(HIDE_SUGGESTED_FEED_ITEMS_HOOK, "HideSuggestedFeedItemsHook", null, "(InstaEclipse | HideSuggested): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(AD_BLOCKER, "AdBlocker", null, "(InstaEclipse | AdBlocker): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(TRACKING_LINK_DISABLE, "TrackingLinkDisable", null, "(InstaEclipse | TrackingLinkDisable): ", COULD_NOT_START, false, null));
-        s.add(new InstallStep(EXACT_TIMESTAMP_HOOK, "ExactTimestampHook", null, "(InstaEclipse | ExactTime): ", COULD_NOT_START, true, null));
+        s.add(new InstallStep(EXACT_TIMESTAMP_HOOK, "ExactTimestampHook", null, "(InstaEclipse | ExactTime): ", COULD_NOT_START, true, null)
+                .withLookupFlags("exactTimestamps").withRestartKeys("exactTimestamps"));
         s.add(new InstallStep(EXPAND_CAPTIONS_HOOK, "ExpandCaptionsHook", null, "(InstaEclipse | ExpandCaptions): ", COULD_NOT_START, true, "expandCaptions").withRestartKeys("expandCaptions"));
         s.add(new InstallStep(HIDE_COMMUNITY_NOTES_HOOK, "HideCommunityNotesHook", null, "(InstaEclipse | CommunityNotes): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(REELS_CONTROLS_HOOK, "ReelsControlsHook", null, "(InstaEclipse | Reels): ", COULD_NOT_START, true, null));
@@ -284,11 +287,17 @@ public class InstallPlan {
         s.add(new InstallStep(PROFILE_COUNT_DELTA_HOOK, "ProfileCountDeltaHook", null, "(IE|CountDelta) ", COULD_NOT_START, true, null));
         s.add(new InstallStep(FOLLOW_STATUS_HOOK, "FollowStatusHook", null, "(InstaEclipse | FollowerToast): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(FOLLOWING_FOLLOW_STATUS_HOOK, "FollowingFollowStatusHook", null, "(InstaEclipse | FollowingFollowStatus): ", COULD_NOT_START, true, null));
-        s.add(new InstallStep(PLAYBACK_SPEED_HOOK, "PlaybackSpeedHook", null, "(InstaEclipse | PlaybackSpeed): ", COULD_NOT_START, true, null).withRestartKeys("holdLeftSlowMotion"));
+        s.add(new InstallStep(PLAYBACK_SPEED_HOOK, "PlaybackSpeedHook", null, "(InstaEclipse | PlaybackSpeed): ", COULD_NOT_START, true,
+                "offerPlaybackSpeed|holdLeftSlowMotion|forceReelScrubber")
+                .withLookupFlags("offerPlaybackSpeed", "holdLeftSlowMotion", "forceReelScrubber")
+                .withRestartKeys("offerPlaybackSpeed", "holdLeftSlowMotion", "forceReelScrubber"));
         s.add(new InstallStep(HIDE_NOTES_TRAY_HOOK, "HideNotesTrayHook", null, "(InstaEclipse | NotesTray): ", COULD_NOT_START, true, null));
-        s.add(new InstallStep(VOICE_USER_CACHE_TRACKER, "VoiceUserCacheTracker", new String[]{"VoiceMessageDownloadHook"}, "(IE|VoiceDL) ", STICKER_SENDER, false, null));
-        s.add(new InstallStep(VOICE_MESSAGE_DOWNLOAD_HOOK, "VoiceMessageDownloadHook", null, "(IE|VoiceDL) ", COULD_NOT_START, true, null)
-                .withLookupFlags("bulkUnsend").withRestartKeys("bulkUnsend"));
+        s.add(new InstallStep(VOICE_USER_CACHE_TRACKER, "VoiceUserCacheTracker", new String[]{"VoiceMessageDownloadHook"}, "(IE|VoiceDL) ", STICKER_SENDER, false,
+                "enableStickerDownload"));
+        s.add(new InstallStep(VOICE_MESSAGE_DOWNLOAD_HOOK, "VoiceMessageDownloadHook", null, "(IE|VoiceDL) ", COULD_NOT_START, true,
+                "enableVoiceDownload|enableStickerDownload|enableDmMediaDownload|translateMessages|bulkUnsend")
+                .withLookupFlags("bulkUnsend")
+                .withRestartKeys("enableVoiceDownload", "enableStickerDownload", "enableDmMediaDownload", "translateMessages", "bulkUnsend"));
         s.add(new InstallStep(EDIT_HISTORY_HOOK, "EditHistoryHook", null, "(IE|EditHistory) ", COULD_NOT_START, true, null));
         s.add(new InstallStep(JUMP_TO_FIRST_MESSAGE_HOOK, "JumpToFirstMessageHook", null, "(IE|JumpFirst) ", COULD_NOT_START, false, null));
         s.add(new InstallStep(READ_RECEIPT_CHAT_HOOK, "ReadReceiptChatHook", null, "(IE|ReadReceiptChat) ", COULD_NOT_START, false, null));
@@ -296,8 +305,10 @@ public class InstallPlan {
         s.add(new InstallStep(UNLOCK_PLUS_BENEFITS_HOOK, "UnlockPlusBenefitsHook", null, "(InstaEclipse | UnlockPlus): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(COMMENT_SEARCH_HOOK, "CommentSearchHook", null, "(IE|CommentSearch) ", COULD_NOT_START, true, null));
         s.add(new InstallStep(CHAT_EXPORT_HOOK, "ChatExportHook", null, "(IE|ChatExport) ", COULD_NOT_START, true, null));
-        s.add(new InstallStep(FOLLOW_LIST_EXPORT_HOOK, "FollowListExportHook", null, "(IE|FollowExport) ", COULD_NOT_START, true, null));
-        s.add(new InstallStep(LIKE_UNDO_HOOK, "LikeUndoHook", null, "(InstaEclipse | LikeUndo): ", COULD_NOT_START, true, null).withRestartKeys("confirmLikes"));
+        s.add(new InstallStep(FOLLOW_LIST_EXPORT_HOOK, "FollowListExportHook", null, "(IE|FollowExport) ", COULD_NOT_START, true,
+                "followListExport|profileAnalyzer").withRestartKeys("followListExport", "profileAnalyzer"));
+        s.add(new InstallStep(LIKE_UNDO_HOOK, "LikeUndoHook", null, "(InstaEclipse | LikeUndo): ", COULD_NOT_START, true, null)
+                .withLookupFlags("likeUndo").withRestartKeys("confirmLikes", "likeUndo"));
         s.add(new InstallStep(STORY_LIKE_UNDO_HOOK, "StoryLikeUndoHook", null, "(InstaEclipse | LikeUndo): ", STORY_LIKES, true, null));
         s.add(new InstallStep(FOLLOW_CONFIRM_HOOK, "FollowConfirmHook", null, "(InstaEclipse | FollowConfirm): ", COULD_NOT_START, true, "confirmFollows").withRestartKeys("confirmFollows"));
         s.add(new InstallStep(PROFILE_MENU_HOOK, "ProfileMenuHook", null, "(IE|ProfileMenu) ", COULD_NOT_START, true, null));
@@ -314,13 +325,16 @@ public class InstallPlan {
         s.add(new InstallStep(STORY_INFO_HOOK, "StoryInfoHook", null, "(IE|StoryInfo) ", COULD_NOT_START, true, null));
         s.add(new InstallStep(MANUAL_STORY_SEEN_HOOK, "ManualStorySeenHook", null, "(InstaEclipse | ManualStorySeen): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(COMMENT_COPY_HOOK, "CommentCopyHook", null, "(InstaEclipse | CopyComment): ", COULD_NOT_START, false, null));
-        s.add(new InstallStep(CAPTION_COPY_HOOK, "CaptionCopyHook", null, "(InstaEclipse | Caption): ", COULD_NOT_START, true, null));
+        s.add(new InstallStep(CAPTION_COPY_HOOK, "CaptionCopyHook", null, "(InstaEclipse | Caption): ", COULD_NOT_START, true, null)
+                .withLookupFlags("enableCaptionCopy").withRestartKeys("enableCaptionCopy"));
         s.add(new InstallStep(DISABLE_DOUBLE_TAP_LIKE_HOOK, "DisableDoubleTapLikeHook", null, "(InstaEclipse | DoubleTapLike): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(DOUBLE_TAP_EXTRAS_HOOK, "DoubleTapExtrasHook", null, "(InstaEclipse | DoubleTapLike): ", COMMENTS_AND_CHATS, true, null));
         s.add(new InstallStep(FEED_PHOTO_ZOOM_HOOK, "FeedPhotoZoomHook", null, "(InstaEclipse | PhotoZoom): ", COULD_NOT_START, false, null).inPhaseA());
-        s.add(new InstallStep(LOCATION_SPOOF_HOOK, "LocationSpoofHook", null, "(InstaEclipse | SpoofLocation): ", COULD_NOT_START, false, null).inPhaseA());
+        s.add(new InstallStep(LOCATION_SPOOF_HOOK, "LocationSpoofHook", null, "(InstaEclipse | SpoofLocation): ", COULD_NOT_START, false, "spoofLocation")
+                .withRestartKeys("spoofLocation").inPhaseA());
         s.add(new InstallStep(IG_THEME_HOOK, "IgThemeHook", null, "(InstaEclipse | Theme): ", COULD_NOT_START, false, null).inPhaseA());
-        s.add(new InstallStep(FORCE_REEL_QUALITY_HOOK, "ForceReelQualityHook", null, "(InstaEclipse | ForceReelQuality): ", COULD_NOT_START, true, null));
+        s.add(new InstallStep(FORCE_REEL_QUALITY_HOOK, "ForceReelQualityHook", null, "(InstaEclipse | ForceReelQuality): ", COULD_NOT_START, true, null)
+                .withRestartKeys("forceReelQuality"));
         s.add(new InstallStep(MAX_UPLOAD_QUALITY_HOOK, "MaxUploadQualityHook", null, "(IE|MaxUploadQuality) ", COULD_NOT_START, true, null));
         s.add(new InstallStep(DISABLE_VIDEO_AUTO_PLAY_HOOK, "DisableVideoAutoPlayHook", null, "(InstaEclipse | AutoPlayDisable): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(BUILD_EXPIRED_POPUP_HOOK, "BuildExpiredPopupHook", null, "(InstaEclipse | BuildExpired): ", COULD_NOT_START, true, null));
@@ -329,7 +343,8 @@ public class InstallPlan {
         s.add(new InstallStep(POST_DOWNLOAD_CONTEXT_MENU_HOOK, "PostDownloadContextMenuHook", null, "(InstaEclipse | PostDownload): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(REEL_MENU_LABELS, "ReelMenuLabels", null, "(InstaEclipse | ReelMenuLabels): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(INSTANT_SAVE_HOOK, "InstantSaveHook", null, "(InstaEclipse | InstantSave): ", COULD_NOT_START, true, null));
-        s.add(new InstallStep(INSTANT_UPLOAD_HOOK, "InstantUploadHook", null, "(InstaEclipse | InstantUpload): ", COULD_NOT_START, false, null));
+        s.add(new InstallStep(INSTANT_UPLOAD_HOOK, "InstantUploadHook", null, "(InstaEclipse | InstantUpload): ", COULD_NOT_START, false, "uploadInstants")
+                .withRestartKeys("uploadInstants"));
         s.add(new InstallStep(GHOST_EPHEMERAL_KEEP_HOOK, "GhostEphemeralKeepHook", null, "(InstaEclipse | EphemeralHook): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(GHOST_PERMANENT_VIEW_HOOK, "GhostPermanentViewHook", null, "(InstaEclipse | ViewOnceMedia): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(VIEW_ONCE_BADGE_HOOK, "ViewOnceBadgeHook", null, "(InstaEclipse | VOBadge): ", COULD_NOT_START, true, null));
@@ -407,6 +422,21 @@ public class InstallPlan {
                 return FeatureFlags.postCountSpoof;
             case "profileSpoofer|postCountSpoof":
                 return FeatureFlags.profileSpoofer || FeatureFlags.postCountSpoof;
+            case "spoofLocation":
+                return FeatureFlags.spoofLocation;
+            case "removeMetaAI":
+                return FeatureFlags.removeMetaAI;
+            case "uploadInstants":
+                return FeatureFlags.uploadInstants;
+            case "enableStickerDownload":
+                return FeatureFlags.enableStickerDownload;
+            case "enableVoiceDownload|enableStickerDownload|enableDmMediaDownload|translateMessages|bulkUnsend":
+                return FeatureFlags.enableVoiceDownload || FeatureFlags.enableStickerDownload
+                        || FeatureFlags.enableDmMediaDownload || FeatureFlags.translateMessages || FeatureFlags.bulkUnsend;
+            case "offerPlaybackSpeed|holdLeftSlowMotion|forceReelScrubber":
+                return FeatureFlags.offerPlaybackSpeed || FeatureFlags.holdLeftSlowMotion || FeatureFlags.forceReelScrubber;
+            case "followListExport|profileAnalyzer":
+                return FeatureFlags.followListExport || FeatureFlags.profileAnalyzer;
             default:
                 throw new IllegalArgumentException("Unknown install gate: " + gateKey);
         }

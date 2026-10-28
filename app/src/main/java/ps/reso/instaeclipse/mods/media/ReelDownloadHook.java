@@ -176,7 +176,7 @@ public class ReelDownloadHook {
                     boolean wantDl = FeatureFlags.enableReelDownload && download != null;
                     boolean wantCl = FeatureFlags.copyMediaLink && copyLink != null;
                     boolean wantInfo = FeatureFlags.offerMediaInfo && info != null;
-                    boolean wantSpeed = FeatureFlags.offerPlaybackSpeed && speedRow != null;
+                    boolean wantSpeed = PlaybackSpeedHook.offered() && speedRow != null;
                     if (!wantDl && !wantCl && !wantInfo && !wantSpeed) return;
                     try {
                         Object result = param.getResult();

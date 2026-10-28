@@ -147,6 +147,7 @@ public class ForceReelQualityHook {
 
             videoVersionsGetter.setAccessible(true);
             useHeightGetter(heightGetterName, interfaceHeightGetter(classLoader, heightGetterName));
+            if (FeatureFlags.forceReelQuality <= 0) return;
 
             XposedBridge.hookMethod(videoVersionsGetter, new XC_MethodHook() {
                 @Override

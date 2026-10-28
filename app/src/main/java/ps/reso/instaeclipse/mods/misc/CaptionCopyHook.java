@@ -91,6 +91,7 @@ public class CaptionCopyHook {
             if (FeatureFlags.enableCaptionCopy) FeatureStatusTracker.setBroken("CaptionCopy", R.string.ig_dialog_misc_copy_caption);
             return;
         }
+        if (!FeatureFlags.enableCaptionCopy) return;
         int hooked = 0;
         for (String type : new String[]{TEXT_VIEW, LITHO_HOST}) {
             try {

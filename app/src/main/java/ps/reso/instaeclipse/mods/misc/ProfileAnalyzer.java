@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.Xposed.InstallRunner;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -100,6 +101,10 @@ public final class ProfileAnalyzer {
     /** "Analyze profile" in the ⋮ menu of {@code username}'s profile ({@code user}: its User model). */
     public static void start(Activity a, Object user, String username) {
         if (!FeatureFlags.profileAnalyzer || a == null) return;
+        if (!InstallRunner.ran("FollowListExportHook")) {
+            IeToast.makeText(a, I18n.t(a, R.string.ig_restart_to_apply_hint), Toast.LENGTH_SHORT).show();
+            return;
+        }
         String id = user != null ? FollowListLoader.idOf(user) : null;
         if (id == null) {
             IeToast.makeText(a, I18n.t(a, R.string.ig_pa_no_id), Toast.LENGTH_SHORT).show();

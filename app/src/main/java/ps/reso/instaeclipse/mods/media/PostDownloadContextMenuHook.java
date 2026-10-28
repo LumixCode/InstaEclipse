@@ -318,7 +318,7 @@ public class PostDownloadContextMenuHook {
         if (FeatureFlags.copyMediaLink) rows.add(PostMenuRowsPolicy.Row.COPY_MEDIA_LINK);
         if (FeatureFlags.offerCopyImage) rows.add(PostMenuRowsPolicy.Row.COPY_IMAGE);
         if (FeatureFlags.offerMediaInfo) rows.add(PostMenuRowsPolicy.Row.MEDIA_INFO);
-        if (FeatureFlags.offerPlaybackSpeed) rows.add(PostMenuRowsPolicy.Row.SPEED);
+        if (PlaybackSpeedHook.offered()) rows.add(PostMenuRowsPolicy.Row.SPEED);
         if (FeatureFlags.postCountSpoof) rows.add(PostMenuRowsPolicy.Row.COUNTS);
         return rows;
     }
@@ -499,7 +499,7 @@ public class PostDownloadContextMenuHook {
                             && !original.contains(copyImageOptionValue);
                     boolean addInfo = FeatureFlags.offerMediaInfo && mediaInfoOptionValue != null
                             && !original.contains(mediaInfoOptionValue);
-                    boolean addSpeed = FeatureFlags.offerPlaybackSpeed && speedOptionValue != null
+                    boolean addSpeed = PlaybackSpeedHook.offered() && speedOptionValue != null
                             && !original.contains(speedOptionValue);
                     if (!addDownload && !addCopyLink && !addCopyImage && !addInfo && !addSpeed) return;
 
@@ -590,7 +590,7 @@ public class PostDownloadContextMenuHook {
             boolean isCopyLink = row == PostMenuRowsPolicy.Row.COPY_MEDIA_LINK && FeatureFlags.copyMediaLink;
             boolean isCopyImage = row == PostMenuRowsPolicy.Row.COPY_IMAGE && FeatureFlags.offerCopyImage;
             boolean isInfo = row == PostMenuRowsPolicy.Row.MEDIA_INFO && FeatureFlags.offerMediaInfo;
-            boolean isSpeed = row == PostMenuRowsPolicy.Row.SPEED && FeatureFlags.offerPlaybackSpeed;
+            boolean isSpeed = row == PostMenuRowsPolicy.Row.SPEED && PlaybackSpeedHook.offered();
             boolean isCounts = row == PostMenuRowsPolicy.Row.COUNTS && FeatureFlags.postCountSpoof;
             if (!isDownload && !isCopyLink && !isCopyImage && !isInfo && !isSpeed && !isCounts) return;
 

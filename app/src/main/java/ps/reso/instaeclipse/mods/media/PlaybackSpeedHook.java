@@ -160,10 +160,19 @@ public class PlaybackSpeedHook {
         return ok;
     }
 
+    private static volatile boolean speedHooks;
+
+    public static boolean offered() {
+        return FeatureFlags.offerPlaybackSpeed && speedHooks;
+    }
+
     public void install(ClassLoader cl) {
-        installFeed(cl);
-        installHero(cl);
-        installReelScrubber(cl);
+        if (FeatureFlags.offerPlaybackSpeed || FeatureFlags.holdLeftSlowMotion) {
+            installFeed(cl);
+            installHero(cl);
+            speedHooks = true;
+        }
+        if (FeatureFlags.forceReelScrubber) installReelScrubber(cl);
         // The hold-side hooks sit on very hot framework methods (Activity.dispatchTouchEvent,
         // TextView.setText, StaticLayout/BoringLayout); hooking those app-wide triggers ART's JIT
         // SIGSEGV on IG 451+ / Android 13, so they are only installed when the feature is on

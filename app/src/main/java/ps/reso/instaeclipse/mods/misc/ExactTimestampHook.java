@@ -65,11 +65,13 @@ public final class ExactTimestampHook {
                 ModuleLog.warn("(ExactTimestamps) Exact times in chats are not available in this Instagram version; other dates still work");
                 ModuleLog.detail("(ExactTimestamps) DM seconds unavailable: " + error);
             }
-            try {
-                installComposeStoryLayout(classLoader);
-            } catch (Throwable error) {
-                ModuleLog.warn("(ExactTimestamps) Long dates in stories may be cut off: the story date layout was not found in this Instagram version");
-                ModuleLog.detail("(ExactTimestamps) Story layout adjustment unavailable: " + error);
+            if (FeatureFlags.exactTimestamps) {
+                try {
+                    installComposeStoryLayout(classLoader);
+                } catch (Throwable error) {
+                    ModuleLog.warn("(ExactTimestamps) Long dates in stories may be cut off: the story date layout was not found in this Instagram version");
+                    ModuleLog.detail("(ExactTimestamps) Story layout adjustment unavailable: " + error);
+                }
             }
             FeatureStatusTracker.setHooked("ExactTimestamps");
             ModuleLog.ok("(ExactTimestamps) Ready");

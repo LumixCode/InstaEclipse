@@ -61,10 +61,19 @@ public final class RestartPending {
             if (was == null) continue;
             String now = String.valueOf(current.apply(rule.getKey()));
             if (was.equals(now)) continue;
-            if (Boolean.TRUE.equals(rule.getValue()) && !("true".equals(now) && "false".equals(was))) continue;
+            if (Boolean.TRUE.equals(rule.getValue()) && (!on(now) || on(was))) continue;
             out.add(rule.getKey());
         }
         return out;
+    }
+
+    private static boolean on(String value) {
+        if ("true".equals(value)) return true;
+        try {
+            return Integer.parseInt(value) > 0;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     private static Object flag(String key) {

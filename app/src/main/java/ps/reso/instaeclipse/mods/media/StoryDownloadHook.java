@@ -195,7 +195,7 @@ public class StoryDownloadHook {
     private static final class SpeedRow implements StoryMenu.Row {
         @Override
         public boolean enabled() {
-            return FeatureFlags.offerPlaybackSpeed;
+            return PlaybackSpeedHook.offered();
         }
 
         @Override

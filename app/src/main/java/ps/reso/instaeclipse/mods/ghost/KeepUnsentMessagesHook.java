@@ -104,7 +104,7 @@ public class KeepUnsentMessagesHook {
         // outside the inbox only this listener feeds it.
         CurrentThreadTracker.install(classLoader);
         CurrentThreadTracker.addListener((activity, id) -> rememberThreadName(id, activity));
-        new UnsentIndicatorHook().install(classLoader);
+        if (FeatureFlags.keepUnsentMessages && FeatureFlags.showUnsentIndicator) new UnsentIndicatorHook().install(classLoader);
     }
 
     // ── DexKit results cached per Instagram build ───────────────────────────────
