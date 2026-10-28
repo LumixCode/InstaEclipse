@@ -11,15 +11,21 @@ import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,11 +44,16 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
+import ps.reso.instaeclipse.mods.location.LocationPresets;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.core.CompanionSettings;
 import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
@@ -51,9 +62,12 @@ import ps.reso.instaeclipse.utils.core.InstagramCompat;
 import ps.reso.instaeclipse.utils.core.InstagramRestarter;
 import ps.reso.instaeclipse.utils.core.PermissionAsk;
 import ps.reso.instaeclipse.utils.core.RestartDecision;
-import ps.reso.instaeclipse.utils.core.SettingsManager;
+import ps.reso.instaeclipse.utils.core.SettingsGuard;
+import ps.reso.instaeclipse.utils.core.SettingsSchema;
 import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
 import ps.reso.instaeclipse.utils.log.LogMirrorProvider;
+import ps.reso.instaeclipse.utils.ui.CompanionRestartHint;
+import ps.reso.instaeclipse.utils.ui.Links;
 
 public class HomeFragment extends Fragment implements TabFragment {
 
@@ -68,55 +82,42 @@ public class HomeFragment extends Fragment implements TabFragment {
             "disableExplore", "disableComments", "dailyReelLimitEnabled", "dailyReelLimitAllowDM",
             "nightReelBlockEnabled", "nightReelBlockAllowDM");
 
-    private static final class Shortcut {
-        final String key;
-        final int labelRes;
-        final int iconRes;
-        final int accent;
-
-        Shortcut(String key, int labelRes, int iconRes, int accent) {
-            this.key = key;
-            this.labelRes = labelRes;
-            this.iconRes = iconRes;
-            this.accent = accent;
-        }
-    }
+    private static final long SYNC_DELAY_MS = 200;
 
     static final class ShortcutPicker {
         static final int MAX_PINNED = 8;
         private static final String DEFAULT_PINNED = "isGhostSeen,isGhostTyping,isGhostStory,isAdBlockEnabled";
-
-        private static final List<Shortcut> CATALOG = Arrays.asList(
-                new Shortcut("isGhostSeen", R.string.ig_dialog_ghost_hide_dm_seen, R.drawable.ic_eye_off, 0xFF5E5CE6),
-                new Shortcut("isGhostTyping", R.string.ig_dialog_ghost_hide_typing, R.drawable.ic_chat, 0xFF5E5CE6),
-                new Shortcut("isGhostStory", R.string.ig_dialog_ghost_hide_story_views, R.drawable.ic_story_ring, 0xFF5E5CE6),
-                new Shortcut("isGhostViewOnce", R.string.ig_dialog_ghost_hide_view_once, R.drawable.ic_eye_off, 0xFF5E5CE6),
-                new Shortcut("isGhostScreenshot", R.string.ig_dialog_ghost_bypass_screenshot, R.drawable.ic_camera, 0xFF5E5CE6),
-                new Shortcut("enablePostDownload", R.string.ig_dialog_downloader_posts, R.drawable.ic_download, 0xFFFF9F0A),
-                new Shortcut("enableReelDownload", R.string.ig_dialog_downloader_reels, R.drawable.ic_download, 0xFFFF9F0A),
-                new Shortcut("enableStoryDownload", R.string.ig_dialog_downloader_stories, R.drawable.ic_download, 0xFFFF9F0A),
-                new Shortcut("isAdBlockEnabled", R.string.ig_dialog_ad_block_ads, R.drawable.ic_shield, 0xFFFF453A),
-                new Shortcut("customThemeEnabled", R.string.theme_enable, R.drawable.ic_palette, 0xFFFF375F),
-                new Shortcut("disableReels", R.string.ig_dialog_distraction_disable_reels, R.drawable.ic_movie, 0xFF30D158),
-                new Shortcut("disableStories", R.string.ig_dialog_distraction_disable_stories, R.drawable.ic_story_ring, 0xFF30D158),
-                new Shortcut("disableExplore", R.string.ig_dialog_distraction_disable_explore, R.drawable.ic_search, 0xFF30D158),
-                new Shortcut("maxUploadQuality", R.string.ig_dialog_max_upload_quality, R.drawable.ic_upload, 0xFFFF9F0A)
-        );
+        private static final Map<String, FeatureCatalog.Category> CATEGORY = new HashMap<>();
+        private static final List<String> OFFERED = offeredKeys();
 
         private ShortcutPicker() {}
 
-        static List<String> offered() {
+        private static List<String> offeredKeys() {
             List<String> out = new ArrayList<>();
-            for (Shortcut s : CATALOG) out.add(s.key);
-            return out;
+            for (FeatureCatalog.Category c : FeatureCatalog.CATEGORIES) {
+                for (FeatureCatalog.Item i : c.items()) CATEGORY.putIfAbsent(i.key, c);
+                if (c.hidden) continue;
+                for (FeatureCatalog.Item i : c.items()) {
+                    if (i.kind == FeatureCatalog.Kind.SWITCH && i.counts && i.side != FeatureCatalog.Side.IG_ONLY
+                            && !out.contains(i.key)) {
+                        out.add(i.key);
+                    }
+                }
+            }
+            return Collections.unmodifiableList(out);
+        }
+
+        static List<String> offered() {
+            return OFFERED;
         }
 
         static List<String> pinned(@Nullable String raw) {
             if (raw == null) raw = DEFAULT_PINNED;
             List<String> out = new ArrayList<>();
             for (String k : raw.split(",")) {
-                String key = k.trim();
-                if (!key.isEmpty() && find(key) != null && !out.contains(key)) out.add(key);
+                String trimmed = k.trim();
+                String key = SettingsSchema.LEGACY.getOrDefault(trimmed, trimmed);
+                if (!key.isEmpty() && OFFERED.contains(key) && !out.contains(key)) out.add(key);
                 if (out.size() >= MAX_PINNED) break;
             }
             return out;
@@ -136,9 +137,24 @@ public class HomeFragment extends Fragment implements TabFragment {
         }
 
         @Nullable
-        static Shortcut find(String key) {
-            for (Shortcut s : CATALOG) if (s.key.equals(key)) return s;
-            return null;
+        static FeatureCatalog.Item find(String key) {
+            return OFFERED.contains(key) ? FeatureCatalog.item(key) : null;
+        }
+
+        static int accent(String key) {
+            FeatureCatalog.Category c = CATEGORY.get(key);
+            return c != null ? c.group.accent : FeatureCatalog.Group.TOOLS.accent;
+        }
+    }
+
+    private static final class ShortcutRow {
+        final String key;
+        final MaterialSwitch toggle;
+        CompoundButton.OnCheckedChangeListener listener;
+
+        ShortcutRow(String key, MaterialSwitch toggle) {
+            this.key = key;
+            this.toggle = toggle;
         }
     }
 
@@ -173,6 +189,16 @@ public class HomeFragment extends Fragment implements TabFragment {
     private boolean moduleConfirmed;
     private boolean restarting;
     private boolean pingReceiverRegistered;
+    private boolean listeningToCache;
+    private List<String> renderedPins;
+    private Map<String, String> renderedLocks;
+    private final List<ShortcutRow> shortcutRows = new ArrayList<>();
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable syncShortcuts = this::syncShortcutStates;
+    private final SharedPreferences.OnSharedPreferenceChangeListener cacheListener = (prefs, key) -> {
+        handler.removeCallbacks(syncShortcuts);
+        handler.postDelayed(syncShortcuts, SYNC_DELAY_MS);
+    };
 
     /**
      * Liveness ping: the module answers ACTION_REQUEST_PREFS with ACTION_SEND_PREFS from inside a
@@ -225,6 +251,8 @@ public class HomeFragment extends Fragment implements TabFragment {
         shortcutsContainer = view.findViewById(R.id.home_shortcuts_container);
         shortcutsEmpty = view.findViewById(R.id.home_shortcuts_empty);
         shortcutsHint = view.findViewById(R.id.home_shortcuts_hint);
+        renderedPins = null;
+        shortcutRows.clear();
 
         int primary = MaterialColors.getColor(view, com.google.android.material.R.attr.colorPrimary);
         applyTonalSquare(view.findViewById(R.id.home_features_icon_container),
@@ -257,9 +285,15 @@ public class HomeFragment extends Fragment implements TabFragment {
         updateSetupCard();
 
         restartInstagramButton.setOnClickListener(v -> restartInstagram());
-        downloadButton.setOnClickListener(v -> {
-            String url = ps.reso.instaeclipse.utils.core.ExportBrand.TESTED_INSTAGRAM_APK;
-            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        downloadButton.setOnClickListener(v -> Links.open(requireContext(), ExportBrand.TESTED_INSTAGRAM_APK));
+        View countRow = (View) featuresCountText.getParent();
+        TypedValue countRipple = new TypedValue();
+        requireContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground, countRipple, true);
+        countRow.setBackgroundResource(countRipple.resourceId);
+        countRow.setOnClickListener(v -> {
+            if (getActivity() instanceof ps.reso.instaeclipse.MainActivity) {
+                ((ps.reso.instaeclipse.MainActivity) getActivity()).selectTab(R.id.nav_features);
+            }
         });
         view.findViewById(R.id.home_shortcuts_edit).setOnClickListener(v -> showEditShortcutsDialog());
 
@@ -270,15 +304,22 @@ public class HomeFragment extends Fragment implements TabFragment {
     public void onResume() {
         super.onResume();
         checkInstagramStatus();
-        // Prefs may have changed in the Features tab or from inside Instagram.
-        updateFeatureCount();
-        renderShortcuts();
+        syncShortcutStates();
         pingModule();
+        if (!listeningToCache) {
+            localCache.registerOnSharedPreferenceChangeListener(cacheListener);
+            listeningToCache = true;
+        }
     }
 
     @Override
     public void onPause() {
         super.onPause();
+        if (listeningToCache) {
+            localCache.unregisterOnSharedPreferenceChangeListener(cacheListener);
+            listeningToCache = false;
+        }
+        handler.removeCallbacks(syncShortcuts);
         if (pingReceiverRegistered) {
             if (pingReply != null) { pingReply.cancel(); pingReply = null; }
             pingReceiverRegistered = false;
@@ -378,6 +419,7 @@ public class HomeFragment extends Fragment implements TabFragment {
         });
 
         launchInstagramButton.setOnClickListener(v -> launchPackage(pkg));
+        updateShortcutsHint();
     }
 
     private void launchPackage(String pkg) {
@@ -520,61 +562,126 @@ public class HomeFragment extends Fragment implements TabFragment {
         return ShortcutPicker.pinned(uiPrefs.getString(CompanionUiPrefs.HOME_PINNED_SHORTCUTS, null));
     }
 
+    private void syncShortcutStates() {
+        if (shortcutsContainer == null || !isAdded()) return;
+        List<String> pins = getPinnedKeys();
+        Map<String, ?> all = localCache.getAll();
+        if (!pins.equals(renderedPins) || !lockReasons(pins, all).equals(renderedLocks)) {
+            renderShortcuts();
+        } else {
+            for (ShortcutRow entry : shortcutRows) setQuietly(entry, isOn(entry.key, all));
+            updateShortcutsHint();
+        }
+        updateFeatureCount();
+    }
+
     private void renderShortcuts() {
         if (shortcutsContainer == null) return;
         shortcutsContainer.removeAllViews();
+        shortcutRows.clear();
         List<String> pinned = getPinnedKeys();
-        boolean extreme = localCache.getBoolean("isExtremeMode", false);
+        Map<String, ?> all = localCache.getAll();
+        Map<String, String> locks = lockReasons(pinned, all);
         for (String key : pinned) {
-            Shortcut s = ShortcutPicker.find(key);
-            if (s == null) continue;
-            // A lock that is on turns off only in Instagram's Lock menu, which asks for the passcode.
-            int lockedHint = extreme && EXTREME_LOCKED.contains(s.key) ? R.string.home_shortcuts_locked_extreme
-                    : SettingsManager.isPasscodeLock(s.key) && localCache.getBoolean(s.key, false)
-                    ? R.string.ig_lock_turn_off_in_ig : 0;
-            shortcutsContainer.addView(buildShortcutRow(s, lockedHint));
+            FeatureCatalog.Item item = ShortcutPicker.find(key);
+            if (item == null) continue;
+            shortcutsContainer.addView(buildShortcutRow(item, locks.get(key), isOn(key, all)));
         }
+        renderedPins = pinned;
+        renderedLocks = locks;
         boolean empty = shortcutsContainer.getChildCount() == 0;
         shortcutsEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
-        shortcutsHint.setVisibility(empty ? View.GONE : View.VISIBLE);
+        updateShortcutsHint();
     }
 
-    /** {@code lockedHint}: the subtitle of a row that can't be toggled here, or 0. */
-    private View buildShortcutRow(Shortcut s, int lockedHint) {
+    private void updateShortcutsHint() {
+        if (shortcutsHint == null || shortcutsContainer == null) return;
+        boolean live = CommonUtils.IG_PACKAGE_NAME.equals(activePackage) && shortcutsContainer.getChildCount() > 0;
+        shortcutsHint.setVisibility(live ? View.VISIBLE : View.GONE);
+    }
+
+    private Map<String, String> lockReasons(List<String> pins, Map<String, ?> all) {
+        Map<String, String> out = new LinkedHashMap<>();
+        for (String key : pins) {
+            FeatureCatalog.Item item = FeatureCatalog.item(key);
+            if (item != null) out.put(key, lockReason(item, all));
+        }
+        return out;
+    }
+
+    @Nullable
+    private String lockReason(FeatureCatalog.Item item, Map<String, ?> all) {
+        boolean on = isOn(item.key, all);
+        if ("isExtremeMode".equals(item.key) && on) return getString(R.string.ig_extreme_active);
+        if (isOn("isExtremeMode", all) && EXTREME_LOCKED.contains(item.key)) {
+            return getString(R.string.home_shortcuts_locked_extreme);
+        }
+        if (on && SettingsGuard.decideInApp(item.key, false, all) == SettingsGuard.Decision.REFUSE) {
+            return getString(R.string.ig_lock_turn_off_in_ig);
+        }
+        if (item.overriddenBy != null && isOn(item.overriddenBy, all)) {
+            return getString(R.string.feat_reason_overridden, labelOf(item.overriddenBy));
+        }
+        if (item.requires.length > 0 && !anyOn(item.requires, all)) {
+            return item.requires.length == 1 ? getString(R.string.cat_requires, labelOf(item.requires[0]))
+                    : getString(R.string.home_shortcuts_needs_setting);
+        }
+        return null;
+    }
+
+    private static boolean isOn(String key, Map<String, ?> all) {
+        Object value = all.get(key);
+        if (value instanceof Boolean) return (Boolean) value;
+        FeatureCatalog.Item item = FeatureCatalog.item(key);
+        return item != null && item.defaultOn;
+    }
+
+    private static boolean anyOn(String[] keys, Map<String, ?> all) {
+        for (String key : keys) if (isOn(key, all)) return true;
+        return false;
+    }
+
+    private String labelOf(String key) {
+        FeatureCatalog.Item item = FeatureCatalog.item(key);
+        return item != null ? getString(item.label) : key;
+    }
+
+    private View buildShortcutRow(FeatureCatalog.Item item, @Nullable String lockedHint, boolean on) {
         Context ctx = requireContext();
-        boolean locked = lockedHint != 0;
+        boolean locked = lockedHint != null;
+        int accent = ShortcutPicker.accent(item.key);
 
         LinearLayout row = new LinearLayout(ctx);
+        row.setTag(item.key);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setMinimumHeight(dp(64));
         row.setPadding(dp(16), dp(8), dp(16), dp(8));
+        row.setFocusable(true);
         TypedValue ripple = new TypedValue();
         ctx.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, ripple, true);
         row.setBackgroundResource(ripple.resourceId);
 
         FrameLayout iconBox = new FrameLayout(ctx);
         ImageView icon = new ImageView(ctx);
-        icon.setImageResource(s.iconRes);
+        icon.setImageResource(item.icon);
         icon.setContentDescription(null);
         FrameLayout.LayoutParams iconLp = new FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER);
         iconBox.addView(icon, iconLp);
-        applyTonalSquare(iconBox, icon, s.accent);
+        applyTonalSquare(iconBox, icon, accent);
         row.addView(iconBox, new LinearLayout.LayoutParams(dp(40), dp(40)));
 
         LinearLayout texts = new LinearLayout(ctx);
         texts.setOrientation(LinearLayout.VERTICAL);
         TextView title = new TextView(ctx);
-        title.setText(s.labelRes);
+        title.setText(item.label);
         title.setTextAppearance(resolveStyle(com.google.android.material.R.attr.textAppearanceBodyLarge));
         title.setTextColor(MaterialColors.getColor(row, com.google.android.material.R.attr.colorOnSurface));
         texts.addView(title);
-        if (locked) {
-            TextView sub = new TextView(ctx);
-            sub.setText(lockedHint);
-            sub.setTextAppearance(resolveStyle(com.google.android.material.R.attr.textAppearanceBodySmall));
-            sub.setTextColor(MaterialColors.getColor(row, com.google.android.material.R.attr.colorOnSurfaceVariant));
-            texts.addView(sub);
+        if (locked) texts.addView(subLine(row, lockedHint));
+        if (item.restartOn != FeatureCatalog.Restart.NONE) {
+            texts.addView(subLine(row, getString(item.restartOn == FeatureCatalog.Restart.BOTH
+                    ? R.string.ig_restart_to_apply_both : R.string.ig_restart_to_apply_hint)));
         }
         LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         textLp.setMarginStart(dp(14));
@@ -582,33 +689,112 @@ public class HomeFragment extends Fragment implements TabFragment {
         row.addView(texts, textLp);
 
         MaterialSwitch sw = new MaterialSwitch(ctx);
-        sw.setChecked(localCache.getBoolean(s.key, false));
-        sw.setContentDescription(getString(s.labelRes));
+        sw.setChecked(on);
+        sw.setFocusable(false);
+        sw.setClickable(false);
+        sw.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         row.addView(sw, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        row.setAccessibilityDelegate(new View.AccessibilityDelegate() {
+            @Override
+            public void onInitializeAccessibilityNodeInfo(@NonNull View host, @NonNull AccessibilityNodeInfo info) {
+                super.onInitializeAccessibilityNodeInfo(host, info);
+                info.setClassName(Switch.class.getName());
+                info.setCheckable(true);
+                info.setChecked(sw.isChecked());
+            }
 
+            @Override
+            public void onInitializeAccessibilityEvent(@NonNull View host, @NonNull AccessibilityEvent event) {
+                super.onInitializeAccessibilityEvent(host, event);
+                event.setClassName(Switch.class.getName());
+                event.setChecked(sw.isChecked());
+            }
+        });
+
+        ShortcutRow entry = new ShortcutRow(item.key, sw);
         if (locked) {
             sw.setEnabled(false);
             row.setEnabled(false);
             row.setAlpha(0.4f);
         } else {
-            sw.setOnCheckedChangeListener((btn, checked) -> {
-                setFeature(s.key, checked);
-                updateFeatureCount();
-            });
+            entry.listener = (btn, checked) -> onShortcutToggled(entry, checked);
+            sw.setOnCheckedChangeListener(entry.listener);
             row.setOnClickListener(v -> sw.toggle());
         }
+        shortcutRows.add(entry);
         return row;
     }
 
+    private TextView subLine(View row, String text) {
+        TextView sub = new TextView(row.getContext());
+        sub.setText(text);
+        sub.setTextAppearance(resolveStyle(com.google.android.material.R.attr.textAppearanceBodySmall));
+        sub.setTextColor(MaterialColors.getColor(row, com.google.android.material.R.attr.colorOnSurfaceVariant));
+        return sub;
+    }
+
+    private static void setQuietly(ShortcutRow entry, boolean checked) {
+        entry.toggle.setOnCheckedChangeListener(null);
+        entry.toggle.setChecked(checked);
+        entry.toggle.setOnCheckedChangeListener(entry.listener);
+    }
+
+    private void onShortcutToggled(ShortcutRow entry, boolean checked) {
+        if (checked && "isExtremeMode".equals(entry.key)) {
+            setQuietly(entry, false);
+            confirmExtreme(entry);
+            return;
+        }
+        if (checked && "spoofLocation".equals(entry.key) && !hasSpoofPoint()) {
+            setQuietly(entry, false);
+            Intent picker = new Intent(requireContext(), LocationPickerActivity.class);
+            picker.putExtra(LocationPickerActivity.EXTRA_ENABLE_ON_PICK, true);
+            startActivity(picker);
+            return;
+        }
+        if (SettingsGuard.decideInApp(entry.key, checked, localCache.getAll()) == SettingsGuard.Decision.REFUSE) {
+            setQuietly(entry, !checked);
+            ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(),
+                    getString(R.string.ig_lock_turn_off_in_ig), Toast.LENGTH_LONG).show();
+            return;
+        }
+        setFeature(entry.key, checked);
+        updateFeatureCount();
+    }
+
+    private void confirmExtreme(ShortcutRow entry) {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.ig_dialog_distraction_extreme_title)
+                .setMessage(R.string.cat_extreme_message)
+                .setPositiveButton(R.string.ig_dialog_yes, (dialog, which) -> {
+                    setQuietly(entry, true);
+                    setFeature(entry.key, true);
+                    updateFeatureCount();
+                })
+                .setNegativeButton(R.string.ig_dialog_cancel, null)
+                .show();
+    }
+
+    private boolean hasSpoofPoint() {
+        try {
+            return LocationPresets.valid(Double.parseDouble(localCache.getString("spoofLat", "0")),
+                    Double.parseDouble(localCache.getString("spoofLng", "0")));
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
     private void setFeature(String key, boolean value) {
+        Set<String> restart;
         if (!value && "disableReels".equals(key) && localCache.getBoolean("disableReelsExceptDM", false)) {
             LinkedHashMap<String, Object> values = new LinkedHashMap<>();
             values.put(key, false);
             values.put("disableReelsExceptDM", false);
-            CompanionSettings.putAll(requireContext(), values);
+            restart = CompanionSettings.putAll(requireContext(), values);
         } else {
-            CompanionSettings.put(requireContext(), key, value);
+            restart = CompanionSettings.put(requireContext(), key, value);
         }
+        CompanionRestartHint.show(requireActivity(), restart);
         PermissionAsk.Trigger trigger = PermissionAsk.forChanges(java.util.Collections.singletonMap(key, value));
         if (trigger != PermissionAsk.Trigger.NONE && getActivity() instanceof ps.reso.instaeclipse.MainActivity) {
             ((ps.reso.instaeclipse.MainActivity) getActivity()).requestDownloadPermissionsIfNeeded(trigger);
@@ -621,7 +807,7 @@ public class HomeFragment extends Fragment implements TabFragment {
         final String[] labels = new String[offered.size()];
         final boolean[] checked = new boolean[offered.size()];
         for (int i = 0; i < offered.size(); i++) {
-            labels[i] = getString(ShortcutPicker.find(offered.get(i)).labelRes);
+            labels[i] = getString(FeatureCatalog.item(offered.get(i)).label);
             checked[i] = current.contains(offered.get(i));
         }
 

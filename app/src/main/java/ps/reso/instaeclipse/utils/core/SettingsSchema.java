@@ -32,10 +32,19 @@ public final class SettingsSchema {
             "customEmojiPath");
     public static final Set<String> LEGACY_IGNORED = set("spoofLastSeen", "followersHistory", "isGhostModeEnabled",
             "isMiscEnabled", "isDistractionFree");
+    public static final Map<String, String> LEGACY = legacy();
     private static final Map<String, Field> FIELDS = fields();
     private static final Map<String, Class<?>> TYPES = types(FIELDS);
 
     private SettingsSchema() {}
+
+    private static Map<String, String> legacy() {
+        Map<String, String> out = new LinkedHashMap<>();
+        out.put("hideCreateGroupButton", "hideShareCreateGroup");
+        out.put("blockLocationPrompts", "hideOnboardingPrompts");
+        out.put("followersHistory", "profileAnalyzer");
+        return Collections.unmodifiableMap(out);
+    }
 
     public static Map<String, Class<?>> types() {
         return TYPES;

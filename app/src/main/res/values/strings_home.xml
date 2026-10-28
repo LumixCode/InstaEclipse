@@ -44,4 +44,5 @@
     <string name="home_setup_open_instagram" tools:ignore="MissingTranslation">Open Instagram</string>
     <string name="home_setup_got_it" tools:ignore="MissingTranslation">Got it</string>
     <string name="home_restarting" tools:ignore="MissingTranslation">Restarting…</string>
+    <string name="home_shortcuts_needs_setting" tools:ignore="MissingTranslation">Turn on a setting it needs first</string>
 </resources>

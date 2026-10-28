@@ -136,6 +136,10 @@ public class MainActivity extends AppCompatActivity {
         outState.putInt(STATE_TAB, selectedTab);
     }
 
+    public void selectTab(int id) {
+        bottomNavigation.setSelectedItemId(id);
+    }
+
     public void showHelpAbout() {
         bottomNavigation.setSelectedItemId(R.id.nav_help);
         Fragment help = getSupportFragmentManager().findFragmentByTag(tagOf(R.id.nav_help));

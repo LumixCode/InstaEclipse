@@ -1957,7 +1957,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         int accent = accentOf(FeatureCatalog.item("locationRecent"));
         for (ps.reso.instaeclipse.mods.location.LocationPresets.Preset p
                 : ps.reso.instaeclipse.mods.location.LocationPresets.parse(localCache.getString("spoofRecent", ""))) {
-            rows.add(createNav(R.drawable.ic_history, accent, p.title(), () -> {
+            rows.add(createClickable(R.drawable.ic_history, accent, p.title(), () -> {
                 ps.reso.instaeclipse.mods.location.LocationPresets.applyFromCompanion(requireContext(), p);
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getCurrentState("spoofLocation")
                         ? R.string.ig_dialog_location_applied : R.string.loc_saved_spoof_off, Toast.LENGTH_SHORT).show();
