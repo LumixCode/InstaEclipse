@@ -8,6 +8,7 @@ q_fc_5598f9a2ccc2d452	LX/01zI;
 q_fc_56d41d7a42892f57	LX/01Tq;	LX/03Ks;
 q_fc_57dd6b6cd1777c4f	LX/06xR;
 q_fc_a9bb824f2b4edbf8	LX/02AM;
+q_fc_f3dfdf1412cb4fce	LX/017l;
 q_fm_0275532fb28da921	LX/01NK;->A06(Z)V
 q_fm_02f0bc792155f2ba	LX/01MY;->A0K(LX/03F7;Lcom/instagram/user/model/User;Ljava/lang/String;)V
 q_fm_036c466b6b05020b	LX/07Ln;->A02(LX/07Ln;)V
@@ -160,6 +161,7 @@ q_fm_9344cd16e53dfe84	Lcom/instagram/user/model/User;->A1E()Lcom/instagram/api/s
 q_fm_9379a5d1739c3eba	LX/09rB;->A00(LX/0Iwn;LX/00F1;LX/02qz;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Z)V
 q_fm_93f001d45adf3ac6	LX/09cA;->A0D(LX/09cA;FF)V
 q_fm_94bf5496b97f65d4	Lcom/instagram/user/model/User;->A8G()Ljava/lang/String;
+q_fm_9520bde3c109242b	LX/06Xf;->A01(Lcom/instagram/common/session/UserSession;Ljava/lang/String;Ljava/util/List;)Ljava/util/List;
 q_fm_9527f630790a7ea6	LX/00tS;->A05()Z
 q_fm_95ae5dde89e1af2c	Lcom/instagram/feed/media/Media;-><clinit>()V	Lcom/instagram/feed/media/Media;->A9s()Ljava/util/List;
 q_fm_97b0b1030186ef62	LX/04r2;->A0E(LX/02nR;I)I
@@ -277,6 +279,7 @@ q_fm_fcb32baaff87cab6	LX/0A0e;->A05(Landroid/content/Context;LX/03M9;Lcom/instag
 q_fm_fcd091e3d0146b6a	LX/00jG;->A03(Landroid/content/Context;LX/08jO;Lcom/instagram/search/common/analytics/SearchContext;LX/00jG;Ljava/lang/String;Ljava/lang/String;Z)Landroid/util/Pair;	LX/00jG;->A05(Landroid/content/Context;Landroid/text/SpannableStringBuilder;LX/08jO;Lcom/instagram/search/common/analytics/SearchContext;ZZZ)V
 q_fm_fcf85ac37e5f26dc	LX/00FB;->GnD(Lcom/instagram/model/direct/DirectThreadKey;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/String;Z)V
 q_fm_fd0496329726a0ba	LX/00EK;->A00(LX/03Db;LX/00E9;)V
+q_fm_fdba4f756512b9e7	LX/04ej;->A0D(Lcom/instagram/common/session/UserSession;)Z	LX/06ZE;->A00(LX/06ZE;)Z
 q_fm_fdf41306fe442c87	Lcom/instagram/urlhandlers/saved/SavedUrlHandlerActivity;->A2V(Landroid/os/Bundle;Landroid/os/Bundle;Lcom/instagram/common/session/UserSession;)V
 q_fm_fe9289568a18ce6f	LX/04yK;->A00(LX/04yI;)I
 q_fm_febac23185b0ff85	Lcom/instagram/feed/media/Media;-><clinit>()V	Lcom/instagram/feed/media/Media;->A3U()Lcom/instagram/user/model/User;
