@@ -63,4 +63,6 @@
     <string name="ig_gesture_comment" tools:ignore="MissingTranslation">Hold a comment</string>
     <string name="ig_gesture_comment_desc" tools:ignore="MissingTranslation">Copies it; GIFs and images in comments can be saved too.</string>
     <string name="ig_story_cache_viewed_at" tools:ignore="MissingTranslation">Viewed %1$s</string>
+    <string name="ig_restart_prompt" tools:ignore="MissingTranslation">Restart Instagram to apply: %1$s</string>
+    <string name="ig_restart_prompt_more" tools:ignore="MissingTranslation">+%1$d</string>
 </resources>

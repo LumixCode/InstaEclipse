@@ -42,4 +42,5 @@
     <string name="feat_corner_extra_large" tools:ignore="MissingTranslation">Extra large</string>
     <string name="feat_corner_round" tools:ignore="MissingTranslation">Round</string>
     <string name="feat_lock_needs_passcode" tools:ignore="MissingTranslation">On · needs a passcode in Instagram</string>
+    <string name="feat_restart_waiting" tools:ignore="MissingTranslation">Waiting for an Instagram restart</string>
 </resources>

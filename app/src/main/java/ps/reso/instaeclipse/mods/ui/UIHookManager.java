@@ -236,6 +236,7 @@ public class UIHookManager {
                                         + e.getClass().getSimpleName() + ": " + e.getMessage());
                             }
                             armGestureHint(activity);
+                            ps.reso.instaeclipse.utils.dialog.RestartPrompt.onMainResume(activity);
                         });
                     });
             ModuleLog.detail("(InstaEclipse): main onResume hooked via " + where);

@@ -1,5 +1,7 @@
 package ps.reso.instaeclipse.utils.feature;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -9,6 +11,7 @@ import java.util.function.Function;
 public final class RestartPending {
 
     private static final Map<String, String> SEEN = new ConcurrentHashMap<>();
+    private static volatile Map<String, Boolean> rules;
 
     private RestartPending() {}
 
@@ -18,6 +21,33 @@ public final class RestartPending {
 
     public static String seen(String key) {
         return key == null ? null : SEEN.get(key);
+    }
+
+    public static Map<String, Boolean> rules() {
+        Map<String, Boolean> out = rules;
+        if (out != null) return out;
+        Map<String, Boolean> built = new LinkedHashMap<>();
+        for (FeatureCatalog.Category c : FeatureCatalog.CATEGORIES) {
+            for (FeatureCatalog.Item item : c.items()) {
+                if (item.restartOn != FeatureCatalog.Restart.NONE) {
+                    built.put(item.key, item.restartOn == FeatureCatalog.Restart.ON_ONLY);
+                }
+            }
+        }
+        built.put("customFontPath", false);
+        built.put("customEmojiPath", false);
+        out = Collections.unmodifiableMap(built);
+        rules = out;
+        return out;
+    }
+
+    public static Set<String> pending() {
+        if (SEEN.isEmpty()) return new TreeSet<>();
+        return pending(rules());
+    }
+
+    public static boolean captured(String key) {
+        return key != null && SEEN.containsKey(key);
     }
 
     public static Set<String> pending(Map<String, Boolean> onOnly) {

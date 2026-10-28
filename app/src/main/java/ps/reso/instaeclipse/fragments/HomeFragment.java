@@ -63,8 +63,10 @@ import ps.reso.instaeclipse.utils.core.InstagramRestarter;
 import ps.reso.instaeclipse.utils.core.PermissionAsk;
 import ps.reso.instaeclipse.utils.core.RestartDecision;
 import ps.reso.instaeclipse.utils.core.SettingsGuard;
+import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.core.SettingsSchema;
 import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
+import ps.reso.instaeclipse.utils.feature.RestartPromptRule;
 import ps.reso.instaeclipse.utils.log.LogMirrorProvider;
 import ps.reso.instaeclipse.utils.ui.CompanionRestartHint;
 import ps.reso.instaeclipse.utils.ui.Links;
@@ -640,6 +642,16 @@ public class HomeFragment extends Fragment implements TabFragment {
         return item != null ? getString(item.label) : key;
     }
 
+    private java.util.Set<String> restartWaiting() {
+        Object stored;
+        try {
+            stored = localCache == null ? null : localCache.getString(SettingsManager.RESTART_PENDING, "");
+        } catch (ClassCastException e) {
+            stored = null;
+        }
+        return RestartPromptRule.rowKeys(RestartPromptRule.parse(stored));
+    }
+
     private View buildShortcutRow(FeatureCatalog.Item item, @Nullable String lockedHint, boolean on) {
         Context ctx = requireContext();
         boolean locked = lockedHint != null;
@@ -674,7 +686,8 @@ public class HomeFragment extends Fragment implements TabFragment {
         texts.addView(title);
         if (locked) texts.addView(subLine(row, lockedHint));
         if (item.restartOn != FeatureCatalog.Restart.NONE) {
-            texts.addView(subLine(row, getString(item.restartOn == FeatureCatalog.Restart.BOTH
+            texts.addView(subLine(row, getString(restartWaiting().contains(item.key) ? R.string.feat_restart_waiting
+                    : item.restartOn == FeatureCatalog.Restart.BOTH
                     ? R.string.ig_restart_to_apply_both : R.string.ig_restart_to_apply_hint)));
         }
         LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);

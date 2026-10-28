@@ -911,24 +911,8 @@ public class DialogUtils {
         return false;
     }
 
-    private static java.util.Map<String, Boolean> restartRules;
-
     static java.util.Set<String> restartPending() {
-        java.util.Map<String, Boolean> rules = restartRules;
-        if (rules == null) {
-            rules = new java.util.LinkedHashMap<>();
-            for (FeatureCatalog.Category c : FeatureCatalog.CATEGORIES) {
-                for (FeatureCatalog.Item item : c.items()) {
-                    if (item.restartOn != FeatureCatalog.Restart.NONE) {
-                        rules.put(item.key, item.restartOn == FeatureCatalog.Restart.ON_ONLY);
-                    }
-                }
-            }
-            rules.put("customFontPath", false);
-            rules.put("customEmojiPath", false);
-            restartRules = rules;
-        }
-        return RestartPending.pending(rules);
+        return RestartPending.pending();
     }
 
     private static TextView statusChip(Context context, String text, int textColor, View.OnClickListener onClick) {

@@ -35,7 +35,8 @@ public final class PrefsMerge {
             "lockDirectPasscode", "lockDirectSalt", "lockedDirectThreads",
             IpcSecurity.EXTRA_NONCE));
 
-    static final Set<String> STATUS = Collections.singleton("lockPasscodeSet");
+    static final Set<String> STATUS = Collections.unmodifiableSet(
+            new HashSet<>(Arrays.asList("lockPasscodeSet", "restartPendingKeys")));
     static final Set<String> NOT_SEEDED = new HashSet<>(Arrays.asList("customFontPath", "customEmojiPath"));
 
     private PrefsMerge() {}
@@ -52,7 +53,7 @@ public final class PrefsMerge {
     /** True for a setting Instagram may share with the companion. */
     public static boolean isSharedSetting(String key, Object value) {
         if (key == null || key.startsWith("__") || isPrivate(key)) return false;
-        if (STATUS.contains(key)) return value instanceof Boolean;
+        if (STATUS.contains(key)) return "restartPendingKeys".equals(key) ? value instanceof String : value instanceof Boolean;
         Class<?> type = SettingsSchema.type(key);
         return type != null && type.isInstance(value);
     }

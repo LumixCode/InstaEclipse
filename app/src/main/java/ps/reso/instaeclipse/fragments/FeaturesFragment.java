@@ -80,6 +80,7 @@ import ps.reso.instaeclipse.utils.core.SettingsGuard;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.core.SettingsSchema;
 import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
+import ps.reso.instaeclipse.utils.feature.RestartPromptRule;
 import ps.reso.instaeclipse.utils.ipc.ModuleReplies;
 import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 import ps.reso.instaeclipse.utils.text.CacheTimeText;
@@ -1260,6 +1261,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private FeatureItem valueRow(String key, String value, Runnable onClick) {
         FeatureCatalog.Item item = FeatureCatalog.item(key);
         FeatureItem row = createValueRow(item.icon, accentOf(item), getString(item.label), value, onClick);
+        if (item.restartOn != FeatureCatalog.Restart.NONE && restartWaiting().contains(key)) {
+            row.subtitle = lines(row.subtitle, getString(R.string.feat_restart_waiting));
+        }
         applyRequires(row, item);
         return row;
     }
@@ -1282,10 +1286,21 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private String describe(FeatureCatalog.Item item) {
         String text = item.desc != 0 ? getString(item.desc) : null;
         if (item.restartOn != FeatureCatalog.Restart.NONE) {
-            text = lines(text, getString(item.restartOn == FeatureCatalog.Restart.BOTH
+            text = lines(text, getString(restartWaiting().contains(item.key) ? R.string.feat_restart_waiting
+                    : item.restartOn == FeatureCatalog.Restart.BOTH
                     ? R.string.ig_restart_to_apply_both : R.string.ig_restart_to_apply_hint));
         }
         return text;
+    }
+
+    private java.util.Set<String> restartWaiting() {
+        Object stored;
+        try {
+            stored = localCache.getString(SettingsManager.RESTART_PENDING, "");
+        } catch (ClassCastException e) {
+            stored = null;
+        }
+        return RestartPromptRule.rowKeys(RestartPromptRule.parse(stored));
     }
 
     private static String lines(String first, String second) {

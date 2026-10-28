@@ -12,12 +12,15 @@ import ps.reso.instaeclipse.mods.reels.DailyReelLimit;
 import ps.reso.instaeclipse.mods.reels.NightReelSchedule;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureManager;
+import ps.reso.instaeclipse.utils.feature.RestartPending;
+import ps.reso.instaeclipse.utils.feature.RestartPromptRule;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 
 public class SettingsManager {
     private static final String PREF_NAME = "instaeclipse_prefs";
     public static final String PASSCODE_SET = "lockPasscodeSet";
+    public static final String RESTART_PENDING = "restartPendingKeys";
 
     /** While a passcode is set, only Instagram's Lock menu (it asks for the passcode) turns these off. */
     private static final Set<String> PASSCODE_LOCKS = new HashSet<>(Arrays.asList(
@@ -83,6 +86,7 @@ public class SettingsManager {
         editor.putString("lockDirectPasscode", FeatureFlags.lockDirectPasscode);
         editor.putString("lockDirectSalt", FeatureFlags.lockDirectSalt);
         editor.putBoolean(PASSCODE_SET, passcodeSet(FeatureFlags.lockDirectPasscode));
+        editor.putString(RESTART_PENDING, restartPendingValue());
         editor.putBoolean("lockDirectAlways", FeatureFlags.lockDirectAlways);
         editor.putBoolean("lockWholeApp", FeatureFlags.lockWholeApp);
         editor.putBoolean("hideSpecificChats", FeatureFlags.hideSpecificChats);
@@ -518,12 +522,30 @@ public class SettingsManager {
         if (!Boolean.valueOf(passcodeSet).equals(all.get(PASSCODE_SET))) {
             applyEdits(java.util.Collections.singletonMap(PASSCODE_SET, passcodeSet));
         }
+        String restart = restartPendingValue();
+        Object storedRestart = all.get(RESTART_PENDING);
+        if (storedRestart == null ? !restart.isEmpty() : !restart.equals(storedRestart)) {
+            applyEdits(java.util.Collections.singletonMap(RESTART_PENDING, restart));
+        }
 
         FeatureManager.refreshFeatureStatus();
     }
 
     public static boolean passcodeSet(String hash) {
         return hash != null && !hash.isEmpty();
+    }
+
+    static String restartPendingValue() {
+        return RestartPromptRule.format(RestartPending.pending());
+    }
+
+    public static void publishRestartPending() {
+        synchronized (LOCK) {
+            if (prefs == null) return;
+            String value = restartPendingValue();
+            if (!value.equals(prefs.getAll().get(RESTART_PENDING))) prefs.edit().putString(RESTART_PENDING, value).apply();
+        }
+        CompanionSync.pushAsync(appContext);
     }
 
     private static int clamped(String key, int stored) {

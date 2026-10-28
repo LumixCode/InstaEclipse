@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 import ps.reso.instaeclipse.mods.extras.AirplaneModeHook;
@@ -18,6 +19,10 @@ import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine;
 import ps.reso.instaeclipse.mods.ui.theme.IgThemeHook;
 import ps.reso.instaeclipse.mods.ui.theme.ThemeSettingsHelper;
+import ps.reso.instaeclipse.utils.core.SettingsManager;
+import ps.reso.instaeclipse.utils.dialog.RestartPrompt;
+import ps.reso.instaeclipse.utils.feature.RestartPending;
+import ps.reso.instaeclipse.utils.feature.RestartPromptRule;
 import ps.reso.instaeclipse.utils.ghost.GhostModeUtils;
 import ps.reso.instaeclipse.utils.media.StoryCache;
 
@@ -54,6 +59,7 @@ public final class SettingsEvents {
         boolean ghost = false;
         boolean bulkUnsend = false;
         boolean locks = false;
+        boolean restart = false;
         for (String key : keys) {
             if (key == null) continue;
             chats |= CHAT_KEYS.contains(key);
@@ -64,6 +70,7 @@ public final class SettingsEvents {
             ghost |= GHOST_KEYS.contains(key);
             bulkUnsend |= "bulkUnsend".equals(key);
             locks |= LOCK_KEYS.contains(key);
+            restart |= RestartPending.captured(key);
         }
         boolean recreating = false;
         if (chats) HideChatsHook.refreshVisibleButtons();
@@ -80,7 +87,14 @@ public final class SettingsEvents {
             Activity activity = UIHookManager.getCurrentActivity();
             if (activity != null) GhostEmojiManager.addGhostEmojiNextToInbox(activity, GhostModeUtils.isGhostModeActive());
         }
+        if (restart) promptRestart(keys, recreating);
         return recreating;
+    }
+
+    private static void promptRestart(Collection<String> applied, boolean recreating) {
+        SettingsManager.publishRestartPending();
+        List<String> prompt = RestartPromptRule.toPrompt(applied, RestartPending.pending(), RestartPrompt.shown());
+        if (!prompt.isEmpty()) RestartPrompt.show(recreating ? null : UIHookManager.topActivity(), prompt);
     }
 
     private static Set<String> keys(String... keys) {
