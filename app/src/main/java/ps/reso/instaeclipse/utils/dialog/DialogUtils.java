@@ -34,6 +34,7 @@ import ps.reso.instaeclipse.mods.ghost.ui.GhostEmojiManager;
 import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
 import ps.reso.instaeclipse.mods.reels.DailyReelLimit;
 import ps.reso.instaeclipse.mods.reels.NightReelSchedule;
+import ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook;
 import ps.reso.instaeclipse.mods.ui.StartupTabPolicy;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.core.ExtremeRules;
@@ -2177,6 +2178,7 @@ public class DialogUtils {
         boolean hasCode = LockFlows.hasPasscode();
         java.util.List<Runnable> refresh = new java.util.ArrayList<>();
         Runnable changed = () -> {
+            LockDirectMessagesHook.locksChanged();
             if (LockFlows.hasPasscode() != hasCode) rebuild.run();
             else runAll(refresh);
         };
@@ -2248,6 +2250,7 @@ public class DialogUtils {
                 dlg.destructive(I18n.t(context, R.string.ig_lock_remove_passcode), () -> {
                     LockFlows.removePasscode();
                     SettingsManager.saveAllFlags();
+                    LockDirectMessagesHook.locksChanged();
                     rebuild.run();
                 });
                 dlg.show();

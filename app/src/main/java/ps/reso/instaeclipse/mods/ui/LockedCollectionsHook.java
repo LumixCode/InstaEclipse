@@ -285,6 +285,7 @@ public class LockedCollectionsHook {
 
     /** Passcode dialog (+ fingerprint when enabled); onOk after success, onCancel otherwise. */
     private static void ask(Activity a, Runnable onOk, Runnable onCancel) {
+        LockDirectMessagesHook.bindLockout(a);
         final ps.reso.instaeclipse.utils.dialog.IeDialog d = new ps.reso.instaeclipse.utils.dialog.IeDialog(a)
                 .title("🔒 " + I18n.t(a, R.string.ig_locked_coll_title))
                 .cancelable(false);
@@ -314,7 +315,7 @@ public class LockedCollectionsHook {
         });
         d.show();
         if (FeatureFlags.lockUseFingerprint && LockDirectMessagesHook.canAuthenticate(a))
-            LockDirectMessagesHook.promptBiometric(a, success);
+            LockDirectMessagesHook.promptBiometric(a, I18n.t(a, R.string.ig_locked_coll_title), success);
     }
 
     private static Activity activityOf(View v) {

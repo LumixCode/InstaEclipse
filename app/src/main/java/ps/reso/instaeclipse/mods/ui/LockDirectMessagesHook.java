@@ -2,7 +2,6 @@ package ps.reso.instaeclipse.mods.ui;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.graphics.Color;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
@@ -22,11 +21,13 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.toast.IeToast;
+import ps.reso.instaeclipse.utils.ui.IeColors;
+import ps.reso.instaeclipse.utils.ui.IePalette;
 
 /** Gates the app, a Direct visit, or selected conversations with one shared credential
  *  (PBKDF2, see {@link PasscodeHasher}; five wrong tries lock entry for 30 s). */
 public class LockDirectMessagesHook {
-    private static final String OVERLAY_TAG = "ie_dm_lock";
+    private static final String LOCKOUT_PREFS = "instaeclipse_lockout";
     private static final String MAIN_CLASS = "com.instagram.mainactivity.InstagramMainActivity";
     private static final String MAIN_ALIAS = "com.instagram.android.activity.MainTabActivity";
     private static final DirectLockSession session = new DirectLockSession();
@@ -36,12 +37,11 @@ public class LockDirectMessagesHook {
     private static final java.util.Set<Activity> resumed =
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
     private static final java.util.Map<Activity, Boolean> recentsHidden = new java.util.WeakHashMap<>();
-    private static final java.util.Set<View> watched =
-            java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    private static final java.util.Map<View, Watch> watched = new java.util.WeakHashMap<>();
     private static boolean lifecycleRegistered;
     private static boolean appUnlocked;
-    private static String previousSettings;
-    private static String previousAppSettings;
+    private static boolean settingsSeen, seenWholeApp, seenDirect, seenSpecific, seenAlways, seenPasscode;
+    private static String seenThreads, seenSalt;
     private static String currentAccount;
     private static int inboxId, listId, threadId;
     private static long outsideDirectSince;
@@ -125,49 +125,95 @@ public class LockDirectMessagesHook {
         }
     }
 
+    private static final class Watch implements android.view.ViewTreeObserver.OnGlobalLayoutListener,
+            android.view.ViewTreeObserver.OnPreDrawListener, Runnable {
+        final java.lang.ref.WeakReference<Activity> activity;
+        final GateThrottle throttle = new GateThrottle();
+
+        Watch(Activity activity) {
+            this.activity = new java.lang.ref.WeakReference<>(activity);
+        }
+
+        @Override public void onGlobalLayout() {
+            throttle.laidOut(android.os.SystemClock.uptimeMillis());
+        }
+
+        @Override public boolean onPreDraw() {
+            try {
+                Activity a = activity.get();
+                if (a != null && resumed.contains(a)) {
+                    long delay = throttle.preDraw(android.os.SystemClock.uptimeMillis());
+                    if (delay == 0L) checkGate(a);
+                    else if (delay > 0L) main.postDelayed(this, delay);
+                }
+            } catch (Throwable t) {
+                ModuleLog.warn("(IE|LockDMs) Could not check whether to show the lock: "
+                        + t.getClass().getSimpleName() + ": " + t.getMessage());
+            }
+            return true;
+        }
+
+        @Override public void run() {
+            try {
+                Activity a = activity.get();
+                if (throttle.trailingDue(android.os.SystemClock.uptimeMillis()) && a != null
+                        && resumed.contains(a)) checkGate(a);
+            } catch (Throwable t) {
+                ModuleLog.warn("(IE|LockDMs) Could not check whether to show the lock: "
+                        + t.getClass().getSimpleName() + ": " + t.getMessage());
+            }
+        }
+    }
+
     public static void watchActivity(Activity activity) {
         if (activity == null) return;
         activity.runOnUiThread(() -> {
             registerLifecycle(activity);
+            bindLockout(activity);
             started.add(activity);
             resumed.add(activity);
             ensureIds(activity);
-            View decor = activity.getWindow().getDecorView();
-            if (watched.add(decor)) {
-                GateThrottle throttle = new GateThrottle();
-                Runnable trailing = () -> {
-                    try {
-                        if (throttle.trailingDue(android.os.SystemClock.uptimeMillis())
-                                && resumed.contains(activity)) checkGate(activity);
-                    } catch (Throwable t) {
-                        ModuleLog.warn("(IE|LockDMs) Could not check whether to show the lock: "
-                                + t.getClass().getSimpleName() + ": " + t.getMessage());
-                    }
-                };
-                android.view.ViewTreeObserver observer = decor.getViewTreeObserver();
-                // Runs before the same frame's pre-draw: a new screen is always laid out.
-                observer.addOnGlobalLayoutListener(() -> throttle.laidOut(android.os.SystemClock.uptimeMillis()));
-                observer.addOnPreDrawListener(() -> {
-                    try {
-                        if (resumed.contains(activity)) {
-                            long delay = throttle.preDraw(android.os.SystemClock.uptimeMillis());
-                            if (delay == 0L) checkGate(activity);
-                            else if (delay > 0L) main.postDelayed(trailing, delay);
-                        }
-                    } catch (Throwable t) {
-                        ModuleLog.warn("(IE|LockDMs) Could not check whether to show the lock: "
-                                + t.getClass().getSimpleName() + ": " + t.getMessage());
-                    }
-                    return true;
-                });
-            }
+            if (locksOn()) arm(activity);
             checkGate(activity);
             if (isMainActivity(activity)) ps.reso.instaeclipse.utils.dialog.LockFlows.askAtResume(activity);
-            // Both gates run from here: the whole-app one and the Direct one keep their own status.
             boolean passcodeSet = FeatureFlags.lockDirectPasscode != null && !FeatureFlags.lockDirectPasscode.isEmpty();
             if (passcodeSet && FeatureFlags.lockWholeApp) FeatureStatusTracker.setHooked("LockWholeApp");
             if (passcodeSet && FeatureFlags.lockDirectMessages) FeatureStatusTracker.setHooked("LockDirectMessages");
         });
+    }
+
+    public static void locksChanged() {
+        main.post(() -> {
+            for (Activity a : new java.util.ArrayList<>(resumed)) {
+                if (a.isFinishing() || a.isDestroyed()) continue;
+                if (locksOn()) arm(a);
+                checkGate(a);
+            }
+        });
+    }
+
+    private static boolean locksOn() {
+        return FeatureFlags.lockWholeApp || FeatureFlags.lockDirectMessages || FeatureFlags.lockSpecificMessages;
+    }
+
+    private static void arm(Activity a) {
+        View decor = a.getWindow().getDecorView();
+        if (watched.containsKey(decor)) return;
+        Watch watch = new Watch(a);
+        android.view.ViewTreeObserver observer = decor.getViewTreeObserver();
+        observer.addOnGlobalLayoutListener(watch);
+        observer.addOnPreDrawListener(watch);
+        watched.put(decor, watch);
+    }
+
+    private static void disarm(Activity a) {
+        View decor = a.getWindow() != null ? a.getWindow().peekDecorView() : null;
+        Watch watch = decor != null ? watched.remove(decor) : null;
+        if (watch == null) return;
+        android.view.ViewTreeObserver observer = decor.getViewTreeObserver();
+        observer.removeOnGlobalLayoutListener(watch);
+        observer.removeOnPreDrawListener(watch);
+        main.removeCallbacks(watch);
     }
 
     public static boolean locksNeedPasscode() {
@@ -239,30 +285,35 @@ public class LockDirectMessagesHook {
 
     private static void checkGate(Activity a) {
         if (a.isFinishing() || a.isDestroyed()) return;
-        if (!FeatureFlags.lockWholeApp && !FeatureFlags.lockDirectMessages
-                && !FeatureFlags.lockSpecificMessages && !gates.containsKey(a)) {
+        if (!locksOn() && !gates.containsKey(a)) {
             session.reset();
             appUnlocked = false;
             hideRecents(a, false);
+            disarm(a);
             return;
         }
         try {
+            boolean passcodeSet = FeatureFlags.lockDirectPasscode != null && !FeatureFlags.lockDirectPasscode.isEmpty();
             // The salt, not the hash: the first unlock re-hashes a legacy passcode (PBKDF2), which
             // must not reset the session and prompt again. A new passcode always gets a new salt.
-            String credential = FeatureFlags.lockDirectSalt + ":"
-                    + (FeatureFlags.lockDirectPasscode == null || FeatureFlags.lockDirectPasscode.isEmpty());
-            String settings = FeatureFlags.lockWholeApp + ":" + FeatureFlags.lockDirectMessages
-                    + ":" + FeatureFlags.lockSpecificMessages + ":" + FeatureFlags.lockDirectAlways
-                    + ":" + FeatureFlags.lockedDirectThreads + ":" + credential;
-            if (!settings.equals(previousSettings)) {
-                previousSettings = settings;
+            boolean appChanged = !settingsSeen || seenPasscode != passcodeSet
+                    || !java.util.Objects.equals(seenSalt, FeatureFlags.lockDirectSalt)
+                    || seenWholeApp != FeatureFlags.lockWholeApp;
+            boolean changed = appChanged || seenDirect != FeatureFlags.lockDirectMessages
+                    || seenSpecific != FeatureFlags.lockSpecificMessages || seenAlways != FeatureFlags.lockDirectAlways
+                    || !java.util.Objects.equals(seenThreads, FeatureFlags.lockedDirectThreads);
+            if (changed) {
+                settingsSeen = true;
+                seenPasscode = passcodeSet;
+                seenSalt = FeatureFlags.lockDirectSalt;
+                seenWholeApp = FeatureFlags.lockWholeApp;
+                seenDirect = FeatureFlags.lockDirectMessages;
+                seenSpecific = FeatureFlags.lockSpecificMessages;
+                seenAlways = FeatureFlags.lockDirectAlways;
+                seenThreads = FeatureFlags.lockedDirectThreads;
                 session.reset();
             }
-            String appSettings = FeatureFlags.lockWholeApp + ":" + credential;
-            if (!appSettings.equals(previousAppSettings)) {
-                previousAppSettings = appSettings;
-                appUnlocked = false;
-            }
+            if (appChanged) appUnlocked = false;
             DirectLockSession.Screen screen = screen(a);
             String id = screen == DirectLockSession.Screen.THREAD
                     ? ps.reso.instaeclipse.mods.ghost.HideChatsHook.currentThreadId(a) : null;
@@ -287,9 +338,8 @@ public class LockDirectMessagesHook {
                 if (now - outsideDirectSince < 250L) screen = DirectLockSession.Screen.UNKNOWN;
             } else if (screen != DirectLockSession.Screen.UNKNOWN) outsideDirectSince = 0L;
             session.visit(screen, id, account, FeatureFlags.lockDirectAlways);
-            boolean passcodeSet = FeatureFlags.lockDirectPasscode != null && !FeatureFlags.lockDirectPasscode.isEmpty();
             boolean chatLocked = FeatureFlags.lockSpecificMessages && screen == DirectLockSession.Screen.THREAD
-                    && (id == null ? !ps.reso.instaeclipse.utils.ghost.LockedThreads.all().isEmpty()
+                    && (id == null ? !ps.reso.instaeclipse.utils.ghost.LockedThreads.isEmpty()
                     : ps.reso.instaeclipse.utils.ghost.LockedThreads.contains(id));
             hideRecents(a, LockRecentsPolicy.hides(android.os.Build.VERSION.SDK_INT, passcodeSet,
                     FeatureFlags.lockWholeApp, FeatureFlags.lockDirectMessages, FeatureFlags.lockSpecificMessages,
@@ -320,7 +370,7 @@ public class LockDirectMessagesHook {
             final String requestedScope = scope;
             final String requestedThread = id;
             final String requestedAccount = account;
-            showAuthenticationOverlay(a, title, I18n.t(a, R.string.ig_lock_biometric_title), () -> {
+            showAuthenticationOverlay(a, title, () -> {
                 if ("app".equals(requestedScope)) {
                     appUnlocked = true;
                     session.unlockInbox();
@@ -350,9 +400,15 @@ public class LockDirectMessagesHook {
     }
 
     private static void hideRecents(Activity a, boolean hide) {
-        if (android.os.Build.VERSION.SDK_INT < LockRecentsPolicy.MIN_SDK || recentsHidden(a) == hide) return;
+        if (recentsHidden(a) == hide) return;
         recentsHidden.put(a, hide);
-        a.setRecentsScreenshotEnabled(!hide);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) a.setRecentsScreenshotEnabled(!hide);
+    }
+
+    private static android.graphics.drawable.Drawable lockIcon(Activity a, int tint) {
+        android.graphics.drawable.Drawable icon = ps.reso.instaeclipse.utils.dialog.IeDialog.igIcon(a,
+                "instagram_lock_pano_outline_24", tint);
+        return icon != null ? icon : ps.reso.instaeclipse.utils.core.ModuleResources.icon(a, R.drawable.ic_shield, tint);
     }
 
     private static void dismissGate(Activity a) {
@@ -375,16 +431,17 @@ public class LockDirectMessagesHook {
             IeToast.makeText(a, I18n.t(a, R.string.ig_lock_set_passcode_first), Toast.LENGTH_SHORT).show();
             return false;
         }
-        return showAuthenticationOverlay(a, title, I18n.t(a, R.string.ig_lock_biometric_title), onSuccess, scope,
+        return showAuthenticationOverlay(a, title, onSuccess, scope,
                 () -> resumed.contains(a) && !a.isFinishing(), () -> {});
     }
 
     private static boolean showAuthenticationOverlay(Activity a, String titleText,
-                                                     String biometricTitle,
                                                      Runnable onSuccess, String scope,
                                                      java.util.function.BooleanSupplier valid,
                                                      Runnable onCancel) {
         if (gates.containsKey(a) || a.isFinishing() || a.isDestroyed()) return false;
+        bindLockout(a);
+        arm(a);
         android.app.Dialog dialog = new android.app.Dialog(a, android.R.style.Theme_Material_NoActionBar) {
             @Override public void cancel() {
                 if (scope.equals("hidden") || scope.equals("settings")) {
@@ -419,10 +476,10 @@ public class LockDirectMessagesHook {
             }
         };
         Gate gate = new Gate(dialog, scope);
+        IePalette palette = IePalette.of(a);
         FrameLayout overlay = new FrameLayout(a);
-        overlay.setTag(OVERLAY_TAG);
         overlay.setClickable(true);
-        overlay.setBackgroundColor(Color.parseColor("#121214"));
+        overlay.setBackgroundColor(palette.backdrop);
         overlay.setLayoutParams(new FrameLayout.LayoutParams(-1, -1));
 
         // Scrollable so the card is always reachable even on short screens with the keyboard up.
@@ -438,8 +495,9 @@ public class LockDirectMessagesHook {
         int pad = dp(a, 28);
         col.setPadding(pad, pad, pad, pad);
         android.graphics.drawable.GradientDrawable cardBg = new android.graphics.drawable.GradientDrawable();
-        cardBg.setColor(Color.parseColor("#1E1E20"));
+        cardBg.setColor(palette.dialog);
         cardBg.setCornerRadius(dp(a, 22));
+        cardBg.setStroke(Math.max(1, dp(a, 1)), palette.line);
         col.setBackground(cardBg);
         FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(dp(a, 300), -2);
         clp.gravity = Gravity.CENTER;
@@ -447,15 +505,18 @@ public class LockDirectMessagesHook {
         clp.bottomMargin = dp(a, 40);
         col.setLayoutParams(clp);
 
-        TextView lock = new TextView(a);
-        lock.setText("🔒");
-        lock.setTextSize(34);
-        lock.setGravity(Gravity.CENTER);
-        lock.setPadding(0, 0, 0, dp(a, 8));
+        android.widget.ImageView lock = new android.widget.ImageView(a);
+        lock.setImageDrawable(lockIcon(a, palette.text));
+        lock.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        lock.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        LinearLayout.LayoutParams lockLp = new LinearLayout.LayoutParams(dp(a, 40), dp(a, 40));
+        lockLp.gravity = Gravity.CENTER_HORIZONTAL;
+        lockLp.bottomMargin = dp(a, 12);
+        lock.setLayoutParams(lockLp);
 
         TextView title = new TextView(a);
         title.setText(titleText);
-        title.setTextColor(Color.WHITE);
+        title.setTextColor(palette.text);
         title.setTextSize(17);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
         title.setGravity(Gravity.CENTER);
@@ -466,8 +527,8 @@ public class LockDirectMessagesHook {
         code.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_DONE);
         code.setSingleLine(true);
         code.setHint(I18n.t(a, R.string.ig_locked_coll_hint));
-        code.setTextColor(Color.WHITE);
-        code.setHintTextColor(Color.parseColor("#8E8E93"));
+        code.setTextColor(palette.text);
+        code.setHintTextColor(palette.sub);
         code.setGravity(Gravity.CENTER);
         code.setTextSize(20);
         code.setLetterSpacing(0.15f);
@@ -476,7 +537,7 @@ public class LockDirectMessagesHook {
         code.setMinWidth(0);
         code.setMinimumWidth(0);
         android.graphics.drawable.GradientDrawable inBg = new android.graphics.drawable.GradientDrawable();
-        inBg.setColor(Color.parseColor("#2C2C2E"));
+        inBg.setColor(palette.field);
         inBg.setCornerRadius(dp(a, 12));
         code.setBackground(inBg);
         int ip = dp(a, 12);
@@ -486,7 +547,7 @@ public class LockDirectMessagesHook {
         code.setLayoutParams(codeLp);
 
         final TextView error = new TextView(a);
-        error.setTextColor(Color.parseColor("#FF6B6B"));
+        error.setTextColor(IeColors.destructive(a, palette.dialog));
         error.setTextSize(13);
         error.setGravity(Gravity.CENTER);
         error.setPadding(0, dp(a, 8), 0, 0);
@@ -495,10 +556,10 @@ public class LockDirectMessagesHook {
         Button unlock = new Button(a);
         unlock.setText(I18n.t(a, R.string.ig_lock_unlock));
         unlock.setAllCaps(false);
-        unlock.setTextColor(Color.WHITE);
+        unlock.setTextColor(palette.onAccent);
         unlock.setTextSize(16);
         android.graphics.drawable.GradientDrawable btnBg = new android.graphics.drawable.GradientDrawable();
-        btnBg.setColor(Color.parseColor("#0A84FF"));
+        btnBg.setColor(palette.accent);
         btnBg.setCornerRadius(dp(a, 12));
         unlock.setBackground(btnBg);
         LinearLayout.LayoutParams btnLp = new LinearLayout.LayoutParams(-1, dp(a, 46));
@@ -553,7 +614,7 @@ public class LockDirectMessagesHook {
         });
         android.view.Window window = dialog.getWindow();
         if (window == null) return false;
-        window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.rgb(18, 18, 20)));
+        window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(palette.backdrop));
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
         window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         window.setDimAmount(1f);
@@ -576,11 +637,11 @@ public class LockDirectMessagesHook {
                     android.view.Window w = dialog.getWindow();
                     if (gates.get(a) == gate && !gate.completed.get() && resumed.contains(a) && !a.isFinishing()
                             && w != null && w.getDecorView().hasWindowFocus()) {
-                        promptGate(a, gate, biometricTitle, succeed);
+                        promptGate(a, gate, titleText, succeed);
                     }
                 };
             }
-            promptGate(a, gate, biometricTitle, succeed);
+            promptGate(a, gate, titleText, succeed);
         }
         return true;
     }
@@ -635,8 +696,8 @@ public class LockDirectMessagesHook {
 
     /** Biometric prompt for callers without a gate of their own (LockedCollectionsHook). */
     @SuppressLint("MissingPermission") // runs in Instagram, which holds USE_BIOMETRIC
-    static void promptBiometric(Activity a, Runnable onSuccess) {
-        promptBiometric(a, I18n.t(a, R.string.ig_lock_biometric_title), new android.os.CancellationSignal(), onSuccess, null);
+    static void promptBiometric(Activity a, String title, Runnable onSuccess) {
+        promptBiometric(a, title, new android.os.CancellationSignal(), onSuccess, null);
     }
 
     /**
@@ -653,7 +714,7 @@ public class LockDirectMessagesHook {
             android.hardware.biometrics.BiometricPrompt prompt =
                     new android.hardware.biometrics.BiometricPrompt.Builder(a)
                             .setTitle(title)
-                            .setDescription(I18n.t(a, R.string.ig_lock_biometric_description))
+                            .setDescription(I18n.t(a, R.string.ig_lock_biometric_confirm))
                             .setNegativeButton(I18n.t(a, R.string.ig_lock_biometric_use_passcode), a.getMainExecutor(), (d, w) -> {
                                 if (onClosed != null) onClosed.accept(false);
                             })
@@ -687,28 +748,30 @@ public class LockDirectMessagesHook {
         } catch (Throwable ignored) {}
     }
 
-    /** SHA-256 hex of the input. */
-    public static String sha256(String s) {
-        try {
-            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] d = md.digest(s.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
-            for (byte b : d) sb.append(String.format("%02x", b));
-            return sb.toString();
-        } catch (Throwable t) { return s; }
-    }
-
     /** Hash for a NEW passcode: PBKDF2 with the per-install salt (see {@link PasscodeHasher}). */
     public static String hashPass(String passcode) {
         String salt = FeatureFlags.lockDirectSalt == null ? "" : FeatureFlags.lockDirectSalt;
         return PasscodeHasher.hash(passcode, salt);
     }
 
-    private static final PasscodeLockout lockout = new PasscodeLockout(null, android.os.SystemClock::elapsedRealtime);
+    private static PasscodeLockout lockout;
+
+    private static synchronized PasscodeLockout lockout() {
+        if (lockout == null) bindLockout(ps.reso.instaeclipse.Xposed.Module.appContext());
+        if (lockout == null) lockout = new PasscodeLockout(null, System::currentTimeMillis);
+        return lockout;
+    }
+
+    static synchronized void bindLockout(android.content.Context context) {
+        if (lockout != null || context == null) return;
+        android.content.Context app = context.getApplicationContext() != null ? context.getApplicationContext() : context;
+        lockout = new PasscodeLockout(app.getSharedPreferences(LOCKOUT_PREFS, android.content.Context.MODE_PRIVATE),
+                System::currentTimeMillis);
+    }
 
     /** Seconds left in the lockout after too many wrong passcodes, or 0. */
     public static int lockoutSecondsLeft() {
-        return lockout.secondsLeft();
+        return lockout().secondsLeft();
     }
 
     /**
@@ -717,6 +780,7 @@ public class LockDirectMessagesHook {
      * during the lockout every attempt fails without being checked.
      */
     public static synchronized boolean checkPass(String passcode) {
+        PasscodeLockout lockout = lockout();
         if (lockout.secondsLeft() > 0) return false;
         String salt = FeatureFlags.lockDirectSalt == null ? "" : FeatureFlags.lockDirectSalt;
         if (PasscodeHasher.verify(passcode, salt, FeatureFlags.lockDirectPasscode)) {

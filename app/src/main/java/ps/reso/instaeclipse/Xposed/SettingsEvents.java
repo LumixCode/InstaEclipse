@@ -13,6 +13,7 @@ import ps.reso.instaeclipse.mods.ghost.BulkUnsend;
 import ps.reso.instaeclipse.mods.ghost.HideChatsHook;
 import ps.reso.instaeclipse.mods.ghost.ui.GhostEmojiManager;
 import ps.reso.instaeclipse.mods.misc.LikeUndoHook;
+import ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine;
 import ps.reso.instaeclipse.mods.ui.theme.IgThemeHook;
@@ -31,6 +32,8 @@ public final class SettingsEvents {
     private static final Set<String> STORY_CACHE_KEYS = keys("cacheStories", "storyCacheHours");
     private static final Set<String> THEME_KEYS =
             keys("customThemeEnabled", "themePresetId", "themePaletteJson", "themeLightPresetId");
+    private static final Set<String> LOCK_KEYS = keys("lockWholeApp", "lockDirectMessages", "lockSpecificMessages",
+            "lockDirectAlways", "lockedDirectThreads", "lockDirectPasscode", "lockDirectSalt");
 
     public static final Set<String> SIDE_EFFECT_KEYS = union(GHOST_KEYS, CHAT_KEYS, STORY_CACHE_KEYS, THEME_KEYS,
             keys("airplaneMode", "likeUndo", "bulkUnsend"));
@@ -50,6 +53,7 @@ public final class SettingsEvents {
         boolean theme = false;
         boolean ghost = false;
         boolean bulkUnsend = false;
+        boolean locks = false;
         for (String key : keys) {
             if (key == null) continue;
             chats |= CHAT_KEYS.contains(key);
@@ -59,6 +63,7 @@ public final class SettingsEvents {
             theme |= ThemeSettingsHelper.isThemeKey(key);
             ghost |= GHOST_KEYS.contains(key);
             bulkUnsend |= "bulkUnsend".equals(key);
+            locks |= LOCK_KEYS.contains(key);
         }
         boolean recreating = false;
         if (chats) HideChatsHook.refreshVisibleButtons();
@@ -66,6 +71,7 @@ public final class SettingsEvents {
         if (airplane) AirplaneModeHook.apply();
         if (likeUndo) LikeUndoHook.onLikeUndoChanged();
         if (bulkUnsend) BulkUnsend.switched();
+        if (locks) LockDirectMessagesHook.locksChanged();
         if (theme) {
             IgThemeEngine.invalidate();
             recreating = IgThemeHook.refreshCurrentActivity();

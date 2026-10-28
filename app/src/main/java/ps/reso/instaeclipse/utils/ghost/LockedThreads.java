@@ -3,6 +3,7 @@ package ps.reso.instaeclipse.utils.ghost;
 import org.json.JSONObject;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 
@@ -18,6 +19,11 @@ public final class LockedThreads {
         return new LinkedHashMap<>(threads);
     }
 
+    public static synchronized boolean isEmpty() {
+        load();
+        return threads.isEmpty();
+    }
+
     public static synchronized boolean contains(String id) {
         load();
         return id != null && threads.containsKey(id);
@@ -31,6 +37,7 @@ public final class LockedThreads {
         FeatureFlags.lockedDirectThreads = new JSONObject(threads).toString();
         cachedJson = FeatureFlags.lockedDirectThreads;
         SettingsManager.saveAllFlags();
+        LockDirectMessagesHook.locksChanged();
     }
 
     public static synchronized boolean lockChat(String id, String title) {
