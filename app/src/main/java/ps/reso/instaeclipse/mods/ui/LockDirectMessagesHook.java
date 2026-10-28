@@ -596,6 +596,11 @@ public class LockDirectMessagesHook {
         col.addView(code);
         col.addView(error);
         col.addView(unlock);
+        col.addView(forgotLink(a, palette, () -> {
+            if (gates.get(a) != gate) return;
+            hideKeyboard(a, code);
+            dismissGate(a);
+        }));
         // Wrapper fills the viewport (via fillViewport) and centers the card — so the card itself
         // stays at its content height instead of the ScrollView stretching it to full screen.
         FrameLayout inner = new FrameLayout(a);
@@ -735,6 +740,110 @@ public class LockDirectMessagesHook {
             ModuleLog.warn("(IE|LockDMs) Could not show the fingerprint prompt: "
                     + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
+    }
+
+    static TextView forgotLink(Activity a, IePalette palette, Runnable onRecovered) {
+        TextView link = new TextView(a);
+        link.setText(I18n.t(a, R.string.ig_lock_forgot));
+        link.setTextColor(IePalette.readable(palette.accent, palette.dialog, IePalette.TEXT));
+        link.setTextSize(14);
+        link.setGravity(Gravity.CENTER);
+        int p = dp(a, 12);
+        link.setPadding(p, 0, p, 0);
+        link.setMinHeight(dp(a, 48));
+        link.setMinWidth(dp(a, 48));
+        link.setOnClickListener(v -> forgotPasscode(a, onRecovered));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
+        lp.gravity = Gravity.CENTER_HORIZONTAL;
+        lp.topMargin = dp(a, 6);
+        link.setLayoutParams(lp);
+        return link;
+    }
+
+    static void forgotPasscode(Activity a, Runnable onRecovered) {
+        boolean secure = false;
+        try {
+            android.app.KeyguardManager keyguard = a.getSystemService(android.app.KeyguardManager.class);
+            secure = keyguard != null && keyguard.isDeviceSecure();
+        } catch (Throwable t) {
+            ModuleLog.warn("(IE|LockDMs) Could not check for a screen lock: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
+        }
+        showRecovery(a, PasscodeRecovery.path(android.os.Build.VERSION.SDK_INT, secure), onRecovered);
+    }
+
+    static void showRecovery(Activity a, PasscodeRecovery.Path path, Runnable onRecovered) {
+        ps.reso.instaeclipse.utils.dialog.IeDialog d = new ps.reso.instaeclipse.utils.dialog.IeDialog(a)
+                .title(I18n.t(a, R.string.ig_lock_forgot));
+        if (PasscodeRecovery.asksForCredential(path)) {
+            d.message(I18n.t(a, R.string.ig_lock_forgot_explainer));
+            d.secondary(I18n.t(a, R.string.ig_dialog_cancel), null);
+            d.primary(I18n.t(a, R.string.ig_lock_forgot_continue), () -> confirmCredential(a, path, onRecovered));
+        } else {
+            d.message(I18n.t(a, path == PasscodeRecovery.Path.NEEDS_ANDROID_10
+                    ? R.string.ig_lock_forgot_needs_android_10 : R.string.ig_lock_forgot_needs_screen_lock)
+                    + "\n\n" + I18n.t(a, R.string.ig_lock_forgot_last_resort));
+            d.primary(I18n.t(a, R.string.ig_dialog_ok), null);
+        }
+        d.show();
+    }
+
+    @SuppressLint("MissingPermission")
+    private static void confirmCredential(Activity a, PasscodeRecovery.Path path, Runnable onRecovered) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return;
+        try {
+            android.hardware.biometrics.BiometricPrompt.Builder builder =
+                    new android.hardware.biometrics.BiometricPrompt.Builder(a)
+                            .setTitle(I18n.t(a, R.string.ig_lock_forgot_prompt_title))
+                            .setDescription(I18n.t(a, R.string.ig_lock_forgot_prompt_body));
+            if (path == PasscodeRecovery.Path.DEVICE_CREDENTIAL
+                    && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                builder.setAllowedAuthenticators(
+                        android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL);
+            } else {
+                builder.setDeviceCredentialAllowed(true);
+            }
+            builder.build().authenticate(new android.os.CancellationSignal(), a.getMainExecutor(),
+                    new android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+                        @Override public void onAuthenticationSucceeded(
+                                android.hardware.biometrics.BiometricPrompt.AuthenticationResult result) {
+                            a.runOnUiThread(() -> recoveryEnded(a, PasscodeRecovery.Outcome.RECOVERED, null, onRecovered));
+                        }
+
+                        @Override public void onAuthenticationError(int errorCode, CharSequence errString) {
+                            a.runOnUiThread(() -> recoveryEnded(a, PasscodeRecovery.error(errorCode), errString, onRecovered));
+                        }
+                    });
+        } catch (Throwable t) {
+            ModuleLog.warn("(IE|LockDMs) Could not ask for the screen lock: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
+        }
+    }
+
+    private static void recoveryEnded(Activity a, PasscodeRecovery.Outcome outcome, CharSequence error,
+                                      Runnable onRecovered) {
+        if (PasscodeRecovery.removesPasscode(outcome)) {
+            recovered(a, onRecovered);
+        } else if (outcome == PasscodeRecovery.Outcome.NEEDS_SCREEN_LOCK) {
+            showRecovery(a, PasscodeRecovery.Path.NEEDS_SCREEN_LOCK, onRecovered);
+        } else if (outcome == PasscodeRecovery.Outcome.FAILED && error != null && error.length() > 0) {
+            IeToast.makeText(a, error, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private static void recovered(Activity a, Runnable onRecovered) {
+        ps.reso.instaeclipse.utils.dialog.LockFlows.removePasscode();
+        ps.reso.instaeclipse.utils.core.SettingsManager.saveAllFlags();
+        lockout().reset();
+        locksChanged();
+        if (onRecovered != null) onRecovered.run();
+        ps.reso.instaeclipse.utils.dialog.IeDialog d = new ps.reso.instaeclipse.utils.dialog.IeDialog(a)
+                .title(I18n.t(a, R.string.ig_lock_recovered_title))
+                .message(I18n.t(a, R.string.ig_lock_recovered_body));
+        d.secondary(I18n.t(a, R.string.ig_lock_not_now), null);
+        d.primary(I18n.t(a, R.string.ig_lock_set_new_passcode),
+                () -> ps.reso.instaeclipse.utils.dialog.LockFlows.setPasscode(a, null, null));
+        d.show();
     }
 
     static int dp(Activity a, int v) { return Math.round(v * a.getResources().getDisplayMetrics().density); }

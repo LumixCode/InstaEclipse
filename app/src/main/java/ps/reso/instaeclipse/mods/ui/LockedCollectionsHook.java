@@ -257,7 +257,7 @@ public class LockedCollectionsHook {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, nowLocked ? R.string.ig_locked_coll_locked : R.string.ig_locked_coll_unlocked),
                     Toast.LENGTH_SHORT).show();
         };
-        if (isLocked(id)) ask(a, flip, null); // removing a lock needs the passcode too
+        if (isLocked(id)) ask(a, flip, null, null);
         else flip.run();
     }
 
@@ -269,22 +269,23 @@ public class LockedCollectionsHook {
         hidden.put(root, frag);
         if (prompting) return;
         prompting = true;
-        ask(a, () -> {
+        Runnable open = () -> {
             prompting = false;
             for (java.util.Map.Entry<View, Object> e : hidden.entrySet()) {
                 e.getKey().setAlpha(1f);
                 unlockedFrags.add(e.getValue());
             }
             hidden.clear();
-        }, () -> {
+        };
+        ask(a, open, () -> {
             prompting = false;
             hidden.clear();
             a.onBackPressed();
-        });
+        }, open);
     }
 
     /** Passcode dialog (+ fingerprint when enabled); onOk after success, onCancel otherwise. */
-    private static void ask(Activity a, Runnable onOk, Runnable onCancel) {
+    private static void ask(Activity a, Runnable onOk, Runnable onCancel, Runnable onRecovered) {
         LockDirectMessagesHook.bindLockout(a);
         final ps.reso.instaeclipse.utils.dialog.IeDialog d = new ps.reso.instaeclipse.utils.dialog.IeDialog(a)
                 .title("🔒 " + I18n.t(a, R.string.ig_locked_coll_title))
@@ -306,6 +307,13 @@ public class LockedCollectionsHook {
             LockDirectMessagesHook.hideKeyboard(a, code);
             if (onCancel != null) onCancel.run();
         };
+        d.view(LockDirectMessagesHook.forgotLink(a, ps.reso.instaeclipse.utils.ui.IePalette.of(a), () -> {
+            if (done[0]) return;
+            done[0] = true;
+            LockDirectMessagesHook.hideKeyboard(a, code);
+            d.dismiss();
+            if (onRecovered != null) onRecovered.run();
+        }));
         d.secondary(I18n.t(a, R.string.ig_dialog_cancel), cancel);
         d.onClose(cancel); // ✕ = Cancel (never leaves the locked content showing)
         d.primaryKeepOpen(I18n.t(a, R.string.ig_locked_coll_open), () -> {
