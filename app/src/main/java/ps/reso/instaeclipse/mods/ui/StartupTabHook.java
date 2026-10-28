@@ -57,8 +57,10 @@ public class StartupTabHook {
                 Intent intent = activity.getIntent();
                 if (intent == null || intent.hasExtra(EXTRA) || intent.hasExtra(ENTRANCE_EXTRA)) return;
                 if (!Intent.ACTION_MAIN.equals(intent.getAction())) return; // deep links pick their own tab
-                intent.putExtra(EXTRA, FeatureFlags.startupTab);
-                intent.putExtra(ENTRANCE_EXTRA, FeatureFlags.startupTab);
+                String tab = StartupTabPolicy.tabToOpen(FeatureFlags.startupTab, StartupTabPolicy::flagOn);
+                if (tab.isEmpty()) return;
+                intent.putExtra(EXTRA, tab);
+                intent.putExtra(ENTRANCE_EXTRA, tab);
                 intent.putExtra(MARK, true);
             }
         };
@@ -105,8 +107,9 @@ public class StartupTabHook {
                     if (!isMainActivity(activity)) return;
                     Intent intent = activity.getIntent();
                     if (intent == null || !intent.hasExtra(MARK) || intent.hasExtra(APPLIED)) return;
+                    String tab = StartupTabPolicy.tabToOpen(FeatureFlags.startupTab, StartupTabPolicy::flagOn);
+                    if (tab.isEmpty()) return;
                     intent.putExtra(APPLIED, true);
-                    String tab = FeatureFlags.startupTab;
                     activity.getWindow().getDecorView().post(() -> switchTab(activity, tab));
                 }
             });
