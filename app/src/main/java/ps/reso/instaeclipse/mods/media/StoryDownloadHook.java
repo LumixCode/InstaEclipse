@@ -586,32 +586,42 @@ public class StoryDownloadHook {
         } catch (Throwable t) { ModuleLog.error("(IE|StoryCache) Could not turn on the story cache: " + t.getClass().getSimpleName() + ": " + t.getMessage()); }
     }
 
+    private static final String USER_CLASS = "com.instagram.user.model.User";
+    private static final String MEDIA_CLASS = "com.instagram.feed.media.Media";
+    private static volatile Method storyIdGetter;
+
     private void captureFromReelItem(Object reelItem) {
         try {
-            Object media = findMediaObject(reelItem);
-            if (media == null) return;
-            Context ctx = AndroidAppHelper.currentApplication();
-            String id;
+            String id = StoryCapturePolicy.id(storyId(reelItem));
+            if (id == null || ps.reso.instaeclipse.utils.media.StoryCache.hasCached(id)) return;
+            Object media;
             try {
-                id = StoryCapturePolicy.id(reelItem.getClass().getMethod("getId").invoke(reelItem));
-            } catch (Throwable t) { id = null; }
-            if (id == null || ps.reso.instaeclipse.utils.media.StoryCache.has(id)) return;
-            List<String> urls = FeedVideoDownloadHook.extractAllUrlsFromMedia(ctx, media);
-            if (urls == null || urls.isEmpty()) return;
-            final String url = urls.get(0);
-            final boolean video = FeedVideoDownloadHook.isVideoUrl(url);
-            String author = extractUsernameFromReelItemHolder(reelItem);
-            if (author == null || author.isEmpty()) author = FeedVideoDownloadHook.extractUsernameFromMediaObject(media);
+                media = SelectedMediaAdapter.storyItemMedia(reelItem);
+            } catch (Throwable noMedia) {
+                return;
+            }
+            if (media == null) return;
+            SelectedMediaAdapter.StoryFile file = SelectedMediaAdapter.storyFile(AndroidAppHelper.currentApplication(), media);
+            if (file == null) return;
+            String author = StoryCapturePolicy.author(reelItem, USER_CLASS, MEDIA_CLASS,
+                    UserUtils::callUsernameGetter, FeedVideoDownloadHook::extractUsernameFromMediaObject);
             long expiring = 0;
             if (expiringGetter != null) {
                 try {
                     expiring = StoryCapturePolicy.expiryMs(expiringGetter.invoke(media));
                 } catch (Throwable ignored) {}
             }
-            final String fid = id, fauthor = author; final long fexp = expiring;
-            FeedVideoDownloadHook.executor.submit(() ->
-                    ps.reso.instaeclipse.utils.media.StoryCache.capture(fid, fauthor, url, video, fexp));
+            ps.reso.instaeclipse.utils.media.StoryCache.captureAsync(id, author, file.url, file.video, expiring);
         } catch (Throwable t) { ModuleLog.detail("(IE|StoryCache) captureFromReelItem: " + t); }
+    }
+
+    private static Object storyId(Object item) throws ReflectiveOperationException {
+        Method getter = storyIdGetter;
+        if (getter == null || !getter.getDeclaringClass().isInstance(item)) {
+            getter = item.getClass().getMethod("getId");
+            storyIdGetter = getter;
+        }
+        return getter.invoke(item);
     }
 
     /**
@@ -730,47 +740,6 @@ public class StoryDownloadHook {
     }
 
     // ── URL extraction ────────────────────────────────────────────────────────
-
-    private static volatile boolean loggedMediaProbe;
-
-    /** Resolves the Media nested in ReelItem without relying on obfuscated method names. */
-    private static Object findMediaObject(Object obj) {
-        if (obj == null) return null;
-        if (obj.getClass().getName().equals("com.instagram.feed.media.Media")) return obj;
-
-        // The item's own Media field. Never the first Media-typed one: on IG 451 that is A08,
-        // the feed post a story ring was opened from, which X.010G copies over from Reel.A0F.
-        Field own = OwnMedia.field(obj.getClass(), "com.instagram.feed.media.Media");
-        if (own != null) {
-            // null = an item without media (IG's own A0G() throws "Required value was null.")
-            try { return own.get(obj); } catch (Throwable ignored) { return null; }
-        }
-
-        // Fallback for builds without a single own Media field: invoke the getters.
-        if (!loggedMediaProbe) {
-            loggedMediaProbe = true;
-            ModuleLog.detail("(IE|Story) no own Media field on " + obj.getClass().getName()
-                    + ", probing its getters");
-        }
-        Class<?> cls = obj.getClass();
-        while (cls != null && cls != Object.class) {
-            for (Method method : ps.reso.instaeclipse.utils.core.SafeReflect.methods(cls)) {
-                if (method.getParameterCount() != 0
-                        || java.lang.reflect.Modifier.isStatic(method.getModifiers())) continue;
-                Class<?> returnType = method.getReturnType();
-                if (returnType.isPrimitive() || returnType == String.class
-                        || returnType == void.class) continue;
-                try {
-                    method.setAccessible(true);
-                    Object result = method.invoke(obj);
-                    if (result != null && result.getClass().getName()
-                            .equals("com.instagram.feed.media.Media")) return result;
-                } catch (Throwable ignored) {}
-            }
-            cls = cls.getSuperclass();
-        }
-        return null;
-    }
 
     /**
      * A ReelItem's own Media field, kept free of Android types for unit tests. IG 446/451 give
@@ -1018,58 +987,5 @@ public class StoryDownloadHook {
             } catch (NumberFormatException ignored) {}
         }
         return maxArea;
-    }
-
-    // ── Username extraction ───────────────────────────────────────────────────
-
-    /**
-     * Tries to extract the story author's username from the holder or ReelItem object.
-     * ReelItem is non-obfuscated so getUser() and getUsername() are stable method names.
-     */
-    private static String extractUsernameFromReelItemHolder(Object holder) {
-        if (holder == null) {
-            ModuleLog.probe("(IE|Story|Username) holder is null");
-            return null;
-        }
-        ModuleLog.probe("(IE|Story|Username) searching in holder=" + holder.getClass().getName());
-        try {
-            // Step 1: find the ReelItem field on the holder
-            Object reelItem = null;
-            Class<?> cls = holder.getClass();
-            while (cls != null && cls != Object.class) {
-                for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(cls)) {
-                    f.setAccessible(true);
-                    try {
-                        Object val = f.get(holder);
-                        if (val != null && val.getClass().getName()
-                                .equals("com.instagram.model.reels.ReelItem")) {
-                            reelItem = val;
-                            ModuleLog.probe("(IE|Story|Username) found ReelItem in field="
-                                    + f.getName() + " on " + cls.getName());
-                            break;
-                        }
-                    } catch (Throwable ignored) {}
-                }
-                if (reelItem != null) break;
-                cls = cls.getSuperclass();
-            }
-            if (reelItem == null && holder.getClass().getName()
-                    .equals("com.instagram.model.reels.ReelItem")) {
-                reelItem = holder;
-                ModuleLog.probe("(IE|Story|Username) holder is itself a ReelItem");
-            }
-            if (reelItem == null) {
-                ModuleLog.probe("(IE|Story|Username) ReelItem not found in holder");
-                return null;
-            }
-
-            String name = StoryCapturePolicy.author(reelItem, "com.instagram.user.model.User", "com.instagram.feed.media.Media",
-                    UserUtils::callUsernameGetter, FeedVideoDownloadHook::extractUsernameFromMediaObject);
-            ModuleLog.probe("(IE|Story|Username) " + (name != null ? "reelItem → " + name : "username not found on ReelItem methods"));
-            return name;
-        } catch (Throwable t) {
-            ModuleLog.detail("(IE|Story|Username) username lookup failed: " + t);
-        }
-        return null;
     }
 }

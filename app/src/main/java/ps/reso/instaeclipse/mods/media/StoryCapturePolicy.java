@@ -1,21 +1,22 @@
 package ps.reso.instaeclipse.mods.media;
 
-import java.lang.reflect.Method;
+import java.lang.reflect.Field;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-
-import ps.reso.instaeclipse.utils.core.SafeReflect;
 
 final class StoryCapturePolicy {
     private static final long SECONDS_LIMIT = 100000000000L;
+    private static final Map<Class<?>, Map<String, Optional<Field>>> OWN = new ConcurrentHashMap<>();
 
     private StoryCapturePolicy() {}
 
     static String id(Object raw) {
-        try {
-            return raw instanceof String s && !s.isEmpty() ? s.split("_")[0] : null;
-        } catch (RuntimeException e) {
-            return null;
-        }
+        if (!(raw instanceof String s)) return null;
+        int cut = s.indexOf('_');
+        String first = cut < 0 ? s : s.substring(0, cut);
+        return first.isEmpty() ? null : first;
     }
 
     static long expiryMs(Object raw) {
@@ -26,20 +27,24 @@ final class StoryCapturePolicy {
     static String author(Object item, String userType, String mediaType,
                          Function<Object, String> userName, Function<Object, String> mediaUserName) {
         if (item == null) return null;
-        for (Method m : SafeReflect.methods(item.getClass())) {
-            if (m.getParameterCount() != 0) continue;
-            Class<?> ret = m.getReturnType();
-            if (ret.isPrimitive() || ret == String.class || ret == void.class) continue;
-            try {
-                m.setAccessible(true);
-                Object candidate = m.invoke(item);
-                if (candidate == null) continue;
-                String type = candidate.getClass().getName();
-                String name = type.equals(userType) ? userName.apply(candidate)
-                        : type.equals(mediaType) ? mediaUserName.apply(candidate) : null;
-                if (name != null) return name;
-            } catch (Throwable ignored) {}
+        Object user = own(item, userType);
+        String name = user == null ? null : userName.apply(user);
+        if (name != null) return name;
+        Object media = own(item, mediaType);
+        return media == null ? null : mediaUserName.apply(media);
+    }
+
+    private static Object own(Object item, String type) {
+        if (type == null) return null;
+        Class<?> cls = item.getClass();
+        Field field = OWN.computeIfAbsent(cls, c -> new ConcurrentHashMap<>())
+                .computeIfAbsent(type, t -> Optional.ofNullable(StoryDownloadHook.OwnMedia.field(cls, t)))
+                .orElse(null);
+        if (field == null) return null;
+        try {
+            return field.get(item);
+        } catch (IllegalAccessException e) {
+            return null;
         }
-        return null;
     }
 }

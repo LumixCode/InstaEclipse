@@ -219,6 +219,46 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
         return adapter.reelItemMedia.invoke(item);
     }
 
+    static final class StoryFile {
+        final String url;
+        final boolean video;
+
+        StoryFile(String url, boolean video) {
+            this.url = url;
+            this.video = video;
+        }
+    }
+
+    static StoryFile storyFile(Context context, Object media) throws Exception {
+        SelectedMediaAdapter adapter = installed;
+        if (adapter == null || !adapter.mediaClass.isInstance(media)) return null;
+        Object versions = ForceReelQualityHook.raw(() -> adapter.read(media, "video_versions").value);
+        if (versions instanceof List<?> items && !items.isEmpty()) {
+            List<String> urls = new ArrayList<>();
+            Map<String, Integer> heights = new HashMap<>();
+            for (Object item : new ArrayList<>(items)) {
+                String url = adapter.versionUrl(item);
+                if (url == null) continue;
+                urls.add(url);
+                int height = ForceReelQualityHook.heightOf(item);
+                if (height > 0) heights.put(url, height);
+            }
+            VideoUrlRanking.Pick pick = VideoUrlRanking.pick(urls, heights);
+            return pick == null ? null : new StoryFile(pick.url, true);
+        }
+        if (adapter.read(media, "media_type").value instanceof Number type && type.intValue() == 2) return null;
+        String image = FeedVideoDownloadHook.imageUrlFromMedia(context, media);
+        return image == null ? null : new StoryFile(image, false);
+    }
+
+    private String versionUrl(Object item) {
+        try {
+            return read(item, "url").value instanceof String url && FeedVideoDownloadHook.isCdnMediaUrl(url) ? url : null;
+        } catch (Exception unreadable) {
+            return null;
+        }
+    }
+
     static Object ownedStoryItem(Method dispatcher, Object receiver, Object[] args, Class<?> itemType) {
         if (dispatcher == null || args == null || itemType == null) return null;
         Class<?> ownerType = dispatcher.getDeclaringClass();
