@@ -49,4 +49,5 @@
     <string name="ig_lock_chat_locked_on">Chat locked. Lock chosen chats is now on.</string>
     <string name="ig_lock_chat_unlocked">Chat unlocked</string>
     <string name="ig_lock_selected_menu_desc">Pick chats here or with Lock this chat in a chat\'s menu</string>
+    <string name="ig_ghost_messages_tab_label">Messages, ghost mode on</string>
 </resources>
