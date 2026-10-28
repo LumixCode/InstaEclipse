@@ -1,5 +1,6 @@
 package ps.reso.instaeclipse.mods.ui;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.BroadcastReceiver;
@@ -193,6 +194,7 @@ public final class LockGrace {
         return pkg != null && !pkg.equals(who.getPackageName());
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private static synchronized void listen(Context who) {
         if (receiver != null) return;
         Context app = who.getApplicationContext() != null ? who.getApplicationContext() : who;
