@@ -9,6 +9,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import ps.reso.instaeclipse.mods.extras.AirplaneModeHook;
+import ps.reso.instaeclipse.mods.ghost.BulkUnsend;
 import ps.reso.instaeclipse.mods.ghost.HideChatsHook;
 import ps.reso.instaeclipse.mods.ghost.ui.GhostEmojiManager;
 import ps.reso.instaeclipse.mods.misc.LikeUndoHook;
@@ -32,7 +33,7 @@ public final class SettingsEvents {
             keys("customThemeEnabled", "themePresetId", "themePaletteJson", "themeLightPresetId");
 
     public static final Set<String> SIDE_EFFECT_KEYS = union(GHOST_KEYS, CHAT_KEYS, STORY_CACHE_KEYS, THEME_KEYS,
-            keys("airplaneMode", "likeUndo"));
+            keys("airplaneMode", "likeUndo", "bulkUnsend"));
 
     private SettingsEvents() {}
 
@@ -48,6 +49,7 @@ public final class SettingsEvents {
         boolean likeUndo = false;
         boolean theme = false;
         boolean ghost = false;
+        boolean bulkUnsend = false;
         for (String key : keys) {
             if (key == null) continue;
             chats |= CHAT_KEYS.contains(key);
@@ -56,12 +58,14 @@ public final class SettingsEvents {
             likeUndo |= "likeUndo".equals(key);
             theme |= ThemeSettingsHelper.isThemeKey(key);
             ghost |= GHOST_KEYS.contains(key);
+            bulkUnsend |= "bulkUnsend".equals(key);
         }
         boolean recreating = false;
         if (chats) HideChatsHook.refreshVisibleButtons();
         if (storyCache) StoryCache.refreshAsync();
         if (airplane) AirplaneModeHook.apply();
         if (likeUndo) LikeUndoHook.onLikeUndoChanged();
+        if (bulkUnsend) BulkUnsend.switched();
         if (theme) {
             IgThemeEngine.invalidate();
             recreating = IgThemeHook.refreshCurrentActivity();

@@ -38,14 +38,24 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.ModuleBridge;
+import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
+import ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
  * Bulk unsend (#245): select several of your own messages right in the chat and unsend them at once.
@@ -74,16 +84,27 @@ public final class BulkUnsend {
     private static final String TAG = "(IE|BulkUnsend) ";
     private static final String DTK = "com.instagram.model.direct.DirectThreadKey";
     private static final String SESSION = "com.instagram.common.session.UserSession";
+    private static final String FUTURE = "com.google.common.util.concurrent.ListenableFuture";
+    private static final String UNSEND_KEY = "BulkUnsend_unsend_v1";
+    private static final String REF_KEY = "BulkUnsend_ref_v1";
 
-    private static Class<?> messageClass;
-    private static Method unsendMethod;      // sender.(MessageRef, DirectThreadKey) -> ListenableFuture
-    private static Constructor<?> refCtor;   // MessageRef(Message, DirectThreadKey)
+    private static volatile ClassLoader loader;
+    private static volatile Class<?> messageClass;
+    private static volatile Method unsendMethod;
+    private static volatile Constructor<?> refCtor;
+    private static volatile Method senderFor;
+    private static volatile String source = "none";
 
     /** The message cache passed to the last message lookup (the open thread's). */
     private static volatile Object lastCache;
 
     /** Ids of messages we unsent, so the unsent-messages log does not keep our own. */
     private static final Set<String> OWN_IDS = Collections.synchronizedSet(new LinkedHashSet<>());
+    private static final Set<String> PENDING_IDS = Collections.synchronizedSet(new LinkedHashSet<>());
+    private static final Map<Class<?>, Field[]> HOLDER_FIELDS = new ConcurrentHashMap<>();
+    private static final Executor BACKGROUND = r -> new Thread(r, "IE-BulkUnsend").start();
+    private static final LazyResolve LAZY = new LazyResolve(BulkUnsend::ready,
+            () -> resolve(ModuleBridge.get(), loader, messageClass));
 
     private static Selection active;
 
@@ -98,56 +119,141 @@ public final class BulkUnsend {
     }
 
     public static boolean isOwnUnsend(String id) {
-        return id != null && OWN_IDS.contains(id);
+        return id != null && (OWN_IDS.contains(id) || PENDING_IDS.contains(id));
+    }
+
+    public static String describe() {
+        return "ready=" + ready() + " source=" + source;
     }
 
     public static void install(DexKitBridge bridge, ClassLoader cl, Class<?> message) {
+        loader = cl;
         messageClass = message;
+        if (FeatureFlags.bulkUnsend) resolve(bridge, cl, message);
+    }
+
+    public static void switched() {
+        if (loader != null) LAZY.request(FeatureFlags.bulkUnsend, BACKGROUND);
+    }
+
+    static final class LazyResolve {
+        private final AtomicBoolean running = new AtomicBoolean();
+        private final BooleanSupplier resolved;
+        private final Runnable resolve;
+
+        LazyResolve(BooleanSupplier resolved, Runnable resolve) {
+            this.resolved = resolved;
+            this.resolve = resolve;
+        }
+
+        boolean request(boolean on, Executor executor) {
+            if (!on || resolved.getAsBoolean() || !running.compareAndSet(false, true)) return false;
+            try {
+                executor.execute(() -> {
+                    try {
+                        if (!resolved.getAsBoolean()) resolve.run();
+                    } finally {
+                        running.set(false);
+                    }
+                });
+                return true;
+            } catch (RuntimeException e) {
+                running.set(false);
+                return false;
+            }
+        }
+    }
+
+    private static synchronized void resolve(DexKitBridge bridge, ClassLoader cl, Class<?> message) {
+        if (ready() || cl == null) return;
         if (message == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: not supported by this Instagram version (no message class)"); return; }
         try {
             UnsentIdentity.senderField(message);
             Class<?> dtk = cl.loadClass(DTK);
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                    .usingStrings("DirectUnsendMessageInteractor")))) {
-                String owner = md.getClassName();
-                for (MethodData m : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                        .declaredClass(owner)))) {
-                    for (MethodData inv : DexKitQueryCache.invokes(m)) {
-                        if (!"com.google.common.util.concurrent.ListenableFuture".equals(inv.getReturnTypeName())) continue;
-                        List<String> p = inv.getParamTypeNames();
-                        if (p.size() != 2 || !DTK.equals(p.get(1))) continue;
-                        try {
-                            Method um = inv.getMethodInstance(cl);
-                            if (Modifier.isStatic(um.getModifiers())) continue;
-                            unsendMethod = um;
-                        } catch (Throwable ignored) {}
-                        if (unsendMethod != null) break;
-                    }
-                    if (unsendMethod != null) break;
-                }
-                if (unsendMethod != null) break;
+            boolean cached = DexKitCache.isCacheValid();
+            Method um = cached ? DexKitCache.loadMethod(UNSEND_KEY, cl) : null;
+            Constructor<?> rc = cached && isUnsend(um, dtk) ? DexKitCache.loadConstructor(REF_KEY, cl) : null;
+            if (isUnsend(um, dtk) && isRef(rc, um, message, dtk)) {
+                source = "cache";
+            } else {
+                source = "search";
+                if (bridge == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: Instagram's code can't be searched right now"); return; }
+                um = findUnsend(bridge, cl, dtk);
+                if (um == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: not supported by this Instagram version (unsend method not found)"); return; }
+                rc = findRef(bridge, cl, um, message, dtk);
+                if (rc == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: not supported by this Instagram version (message reference not found)"); return; }
+                DexKitCache.saveMethod(UNSEND_KEY, um);
+                DexKitCache.saveConstructor(REF_KEY, rc);
             }
-            if (unsendMethod == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: not supported by this Instagram version (unsend method not found)"); return; }
-            unsendMethod.setAccessible(true);
-            Class<?> refBase = unsendMethod.getParameterTypes()[0];
-            for (ClassData cd : DexKitQueryCache.findClass(bridge, FindClass.create().matcher(ClassMatcher.create()
-                    .superClass(refBase.getName())))) {
-                Class<?> c = cd.getInstance(cl);
-                for (Constructor<?> k : ps.reso.instaeclipse.utils.core.SafeReflect.constructors(c)) {
-                    Class<?>[] p = k.getParameterTypes();
-                    if (p.length == 2 && p[0] == message && p[1] == dtk) { refCtor = k; break; }
-                }
-                if (refCtor != null) break;
-            }
-            if (refCtor == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: not supported by this Instagram version (message reference not found)"); return; }
-            refCtor.setAccessible(true);
+            um.setAccessible(true);
+            rc.setAccessible(true);
+            senderFor = senderAccessor(um.getDeclaringClass());
+            refCtor = rc;
+            unsendMethod = um;
             FeatureStatusTracker.setHooked("BulkUnsend");
             ModuleLog.ok(TAG + "ready");
-            ModuleLog.detail(TAG + "unsend=" + unsendMethod.getDeclaringClass().getName() + "." + unsendMethod.getName()
-                    + " ref=" + refCtor.getDeclaringClass().getName());
+            ModuleLog.detail(TAG + "unsend=" + um.getDeclaringClass().getName() + "." + um.getName()
+                    + " ref=" + rc.getDeclaringClass().getName() + " from " + source
+                    + " sender=" + (senderFor != null ? "session" : "cache walk"));
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not turn on bulk unsend", t);
         }
+    }
+
+    private static boolean isUnsend(Method m, Class<?> dtk) {
+        if (m == null || Modifier.isStatic(m.getModifiers()) || !FUTURE.equals(m.getReturnType().getName())) return false;
+        Class<?>[] p = m.getParameterTypes();
+        return p.length == 2 && p[1] == dtk;
+    }
+
+    private static boolean isRef(Constructor<?> c, Method unsend, Class<?> message, Class<?> dtk) {
+        if (c == null || !unsend.getParameterTypes()[0].isAssignableFrom(c.getDeclaringClass())) return false;
+        Class<?>[] p = c.getParameterTypes();
+        return p.length == 2 && p[0] == message && p[1] == dtk;
+    }
+
+    private static Method findUnsend(DexKitBridge bridge, ClassLoader cl, Class<?> dtk) {
+        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                .usingStrings("DirectUnsendMessageInteractor")))) {
+            String owner = md.getClassName();
+            for (MethodData m : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                    .declaredClass(owner)))) {
+                for (MethodData inv : DexKitQueryCache.invokes(m)) {
+                    if (!FUTURE.equals(inv.getReturnTypeName())) continue;
+                    List<String> p = inv.getParamTypeNames();
+                    if (p.size() != 2 || !DTK.equals(p.get(1))) continue;
+                    try {
+                        Method um = inv.getMethodInstance(cl);
+                        if (isUnsend(um, dtk)) return um;
+                    } catch (Throwable ignored) {}
+                }
+            }
+        }
+        return null;
+    }
+
+    private static Constructor<?> findRef(DexKitBridge bridge, ClassLoader cl, Method unsend, Class<?> message, Class<?> dtk)
+            throws ClassNotFoundException {
+        Class<?> refBase = unsend.getParameterTypes()[0];
+        for (ClassData cd : DexKitQueryCache.findClass(bridge, FindClass.create().matcher(ClassMatcher.create()
+                .superClass(refBase.getName())))) {
+            Class<?> c = cd.getInstance(cl);
+            for (Constructor<?> k : ps.reso.instaeclipse.utils.core.SafeReflect.constructors(c)) {
+                if (isRef(k, unsend, message, dtk)) return k;
+            }
+        }
+        return null;
+    }
+
+    private static Method senderAccessor(Class<?> sender) {
+        for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(sender)) {
+            Class<?>[] p = m.getParameterTypes();
+            if (!Modifier.isStatic(m.getModifiers()) || m.getReturnType() != sender || p.length != 1
+                    || !SESSION.equals(p[0].getName())) continue;
+            m.setAccessible(true);
+            return m;
+        }
+        return null;
     }
 
     // ── Thread state ─────────────────────────────────────────────────────────────
@@ -155,24 +261,46 @@ public final class BulkUnsend {
     private static final class Ctx {
         Object sender;
         Object session;
-        Object threadKey;
     }
 
-    /** Walks the message cache to the thread container (the object holding the sender, X.03CE on
-     *  451), then reads the session and the open thread's key from there. */
-    private static Ctx resolve(Object cache) {
+    private static Ctx chatContext(Activity act, String openThread) {
         Ctx c = new Ctx();
+        Object fragment = CurrentThreadTracker.fragment(act,
+                f -> openThread == null || openThread.equals(CurrentThreadTracker.threadIdOf(f)));
+        c.session = sessionOf(fragment);
+        Method accessor = senderFor;
+        if (accessor != null && c.session != null) {
+            try { c.sender = accessor.invoke(null, c.session); } catch (Throwable ignored) {}
+        }
+        if (c.sender == null && lastCache != null) fromCache(c, lastCache);
+        return c;
+    }
+
+    private static Object sessionOf(Object owner) {
+        Method getter = owner == null ? null : HideChatsHook.noArgMethod(owner.getClass(), "getSession");
+        if (getter == null) return null;
+        try {
+            Object session = getter.invoke(owner);
+            return session != null && SESSION.equals(session.getClass().getName()) ? session : null;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static void fromCache(Ctx c, Object cache) {
         Class<?> senderClass = unsendMethod.getDeclaringClass();
         Object[] container = new Object[1];
+        Object[] sender = new Object[1];
         walk(cache, 4, (o, v) -> {
-            if (senderClass.isInstance(v)) { container[0] = o; c.sender = v; return true; }
+            if (senderClass.isInstance(v)) { container[0] = o; sender[0] = v; return true; }
             return false;
         });
-        if (container[0] == null) return c;
+        if (container[0] == null) return;
+        c.sender = sender[0];
+        if (c.session != null) return;
         walk(container[0], 3, (o, v) -> {
             if (c.session == null && SESSION.equals(v.getClass().getName())) c.session = v;
-            if (c.threadKey == null && DTK.equals(v.getClass().getName())) c.threadKey = v;
-            return c.session != null && c.threadKey != null;
+            return c.session != null;
         });
         if (c.session == null) {
             for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(c.sender.getClass())) {
@@ -180,21 +308,15 @@ public final class BulkUnsend {
                 try { f.setAccessible(true); c.session = f.get(c.sender); } catch (Throwable ignored) {}
             }
         }
-        return c;
     }
 
     private interface Visit { boolean on(Object owner, Object value); }
 
-    /** Breadth-first over IG objects' fields (and lazy holders' get()), until {@code v} says stop. */
     private static void walk(Object start, int maxDepth, Visit v) {
-        walk(start, maxDepth, 3000, v);
-    }
-
-    private static void walk(Object start, int maxDepth, int maxNodes, Visit v) {
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         ArrayDeque<Object[]> q = new ArrayDeque<>();
         q.add(new Object[]{start, 0});
-        while (!q.isEmpty() && seen.size() < maxNodes) {
+        while (!q.isEmpty() && seen.size() < 3000) {
             Object[] e = q.poll();
             Object o = e[0];
             int d = (int) e[1];
@@ -202,17 +324,11 @@ public final class BulkUnsend {
             Class<?> k = o.getClass();
             String n = k.getName();
             if (n.startsWith("java.") || n.startsWith("android.") || SESSION.equals(n)) continue;
-            // lazy holders (kotlin Lazy / provider): a no-arg get()/getValue() returning Object
             if (!(o instanceof View)) {
-                for (String g : new String[]{"get", "getValue"}) {
-                    try {
-                        Method m = k.getMethod(g);
-                        if (m.getReturnType() != Object.class) continue;
-                        Object val = m.invoke(o);
-                        if (val == null) continue;
-                        if (v.on(o, val)) return;
-                        q.add(new Object[]{val, d + 1});
-                    } catch (Throwable ignored) {}
+                Object val = initializedLazyValue(o);
+                if (val != null) {
+                    if (v.on(o, val)) return;
+                    q.add(new Object[]{val, d + 1});
                 }
             }
             if (!n.startsWith("X.") && !n.startsWith("com.instagram.") && !n.startsWith("androidx.recyclerview.")) continue;
@@ -232,6 +348,29 @@ public final class BulkUnsend {
         }
     }
 
+    static Object initializedLazyValue(Object o) {
+        if (o instanceof java.util.concurrent.Future<?>) return null;
+        for (Class<?> type : o.getClass().getInterfaces()) {
+            Method value = null;
+            Method initialized = null;
+            boolean other = false;
+            for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(type)) {
+                if (Modifier.isStatic(m.getModifiers())) continue;
+                if (m.getParameterCount() == 0 && "getValue".equals(m.getName()) && m.getReturnType() == Object.class) value = m;
+                else if (m.getParameterCount() == 0 && m.getReturnType() == boolean.class && initialized == null) initialized = m;
+                else other = true;
+            }
+            if (other || value == null || initialized == null) continue;
+            try {
+                if (!Boolean.TRUE.equals(initialized.invoke(o))) return null;
+                return value.invoke(o);
+            } catch (Throwable t) {
+                return null;
+            }
+        }
+        return null;
+    }
+
     private static String userId(Object session) {
         try { return (String) session.getClass().getMethod("getUserId").invoke(session); }
         catch (Throwable t) { return null; }
@@ -247,39 +386,54 @@ public final class BulkUnsend {
         return null;
     }
 
-    /** The message bound to a chat-list row: the first Message in its layout params' graph. */
     private static Object messageOf(View row) {
         ViewGroup.LayoutParams lp = row.getLayoutParams();
-        if (lp == null) return null;
-        Object[] found = new Object[1];
-        walk(lp, 5, 300, (o, v) -> {
-            if (messageClass.isInstance(v)) { found[0] = v; return true; }
-            return false;
+        Class<?> message = messageClass;
+        if (lp == null || message == null) return null;
+        for (Field f : holderFields(lp.getClass())) {
+            try {
+                Object holder = f.get(lp);
+                if (holder == null || holder instanceof View) continue;
+                Object msg = UnsentIdentity.directValue(UnsentIdentity.boundData(holder, message), message);
+                if (msg != null) return msg;
+            } catch (Throwable ignored) {}
+        }
+        return null;
+    }
+
+    private static Field[] holderFields(Class<?> params) {
+        return HOLDER_FIELDS.computeIfAbsent(params, k -> {
+            List<Field> out = new ArrayList<>();
+            for (Class<?> x = k; x != null && x != Object.class && !x.getName().startsWith("android."); x = x.getSuperclass()) {
+                for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(x)) {
+                    if (Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive() || f.getType() == String.class) continue;
+                    try { f.setAccessible(true); out.add(f); } catch (Throwable ignored) {}
+                }
+            }
+            return out.toArray(new Field[0]);
         });
-        return found[0];
     }
 
     // ── Selection mode ───────────────────────────────────────────────────────────
 
-    /** Turns the open chat into selection mode with {@code pressed} (the long-pressed message) selected. */
     public static void show(Activity act, Object pressed) {
         if (act == null) return;
         if (active != null) active.exit();
-        if (!ready() || lastCache == null) { toast(act, I18n.t(act, R.string.ig_bulk_unsend_unavailable)); return; }
+        if (!ready()) { toast(act, I18n.t(act, R.string.ig_bulk_unsend_unavailable)); return; }
+        View list = ThreadHeaderMenu.findShown(act.getWindow().getDecorView(), ResIds.id(act, "message_list"));
+        String open = HideChatsHook.resolveThreadId(act);
         Ctx c;
-        try { c = resolve(lastCache); } catch (Throwable t) { c = null; ModuleLog.detail(TAG + "resolve failed: " + t); }
-        @SuppressLint("DiscouragedApi")
-        int listId = act.getResources().getIdentifier("message_list", "id", act.getPackageName());
-        View list = listId != 0 ? act.getWindow().getDecorView().findViewById(listId) : null;
-        if (c == null || c.sender == null || !(list instanceof ViewGroup rv) || !list.isShown()) {
+        try { c = chatContext(act, open); } catch (Throwable t) { c = null; ModuleLog.detail(TAG + "resolve failed: " + t); }
+        String me = c != null && c.session != null ? userId(c.session) : null;
+        if (c == null || c.sender == null || me == null || !(list instanceof ViewGroup rv)) {
             ModuleLog.warn(TAG + "Could not start selecting messages: this chat is not ready yet");
-            ModuleLog.detail(TAG + "resolve: sender=" + (c != null && c.sender != null) + " list=" + (list != null));
-            toast(act, I18n.t(act, R.string.ig_bulk_unsend_unavailable));
+            ModuleLog.detail(TAG + "resolve: sender=" + (c != null && c.sender != null) + " me=" + (me != null)
+                    + " list=" + (list != null) + " thread=" + (open != null));
+            toast(act, I18n.t(act, R.string.ig_bulk_unsend_not_ready));
             return;
         }
-        String me = c.session != null ? userId(c.session) : null;
-        active = new Selection(act, rv, c, me, pressed);
-        ModuleLog.detail(TAG + "selection mode: me=" + (me != null) + " key=" + (c.threadKey != null));
+        active = new Selection(act, rv, c, me, open, pressed);
+        ModuleLog.detail(TAG + "selection mode: thread=" + (open != null) + " rows=" + active.rows.size());
     }
 
     private static final class Selection {
@@ -287,20 +441,28 @@ public final class BulkUnsend {
         final ViewGroup rv;
         final Ctx ctx;
         final String me;
+        final String thread;
         final List<Object> selected = new ArrayList<>();
         final IdentityHashMap<Object, Boolean> mineCache = new IdentityHashMap<>();
+        final IdentityHashMap<View, Object> rows = new IdentityHashMap<>();
         final Overlay overlay;
         final LinearLayout bar;
         final TextView go;
+        final ViewTreeObserver observer;
         final ViewTreeObserver.OnPreDrawListener preDraw;
+        final View.OnAttachStateChangeListener detach;
         long lastLayout;
+        long rowSet = Long.MIN_VALUE;
 
-        Selection(Activity act, ViewGroup rv, Ctx ctx, String me, Object pressed) {
+        Selection(Activity act, ViewGroup rv, Ctx ctx, String me, String thread, Object pressed) {
             this.act = act;
             this.rv = rv;
             this.ctx = ctx;
             this.me = me;
-            if (pressed != null) selected.add(pressed);
+            this.thread = thread;
+            refreshRows();
+            Object shown = shownRowOf(pressed);
+            if (shown != null && isMine(shown)) selected.add(shown);
             float d = act.getResources().getDisplayMetrics().density;
             int accent = ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine.accentOr(0xFF0095F6);
 
@@ -348,30 +510,59 @@ public final class BulkUnsend {
 
             preDraw = () -> {
                 if (!rv.isShown() || !rv.isAttachedToWindow()) { exit(); return true; }
+                refreshRows();
                 long sig = rv.getChildCount();
                 for (int i = 0; i < rv.getChildCount(); i++) sig = sig * 31 + rv.getChildAt(i).getTop() + rv.getChildAt(i).hashCode();
                 if (sig != lastLayout) { lastLayout = sig; overlay.invalidate(); }
                 return true;
             };
-            rv.getViewTreeObserver().addOnPreDrawListener(preDraw);
+            detach = new View.OnAttachStateChangeListener() {
+                @Override public void onViewAttachedToWindow(View v) {}
+
+                @Override public void onViewDetachedFromWindow(View v) { exit(); }
+            };
+            observer = rv.getViewTreeObserver();
+            observer.addOnPreDrawListener(preDraw);
+            rv.addOnAttachStateChangeListener(detach);
+        }
+
+        void refreshRows() {
+            long set = rv.getChildCount();
+            for (int i = 0; i < rv.getChildCount(); i++) set = set * 31 + System.identityHashCode(rv.getChildAt(i));
+            if (set == rowSet) return;
+            rowSet = set;
+            rows.clear();
+            for (int i = 0; i < rv.getChildCount(); i++) {
+                View ch = rv.getChildAt(i);
+                Object msg = messageOf(ch);
+                if (msg != null) rows.put(ch, msg);
+            }
+        }
+
+        Object shownRowOf(Object msg) {
+            if (msg == null) return null;
+            for (Object m : rows.values()) if (m == msg) return m;
+            List<String> ids = UnsentIdentity.messageIds(msg);
+            if (ids.isEmpty()) return null;
+            for (Object m : rows.values()) if (!Collections.disjoint(ids, UnsentIdentity.messageIds(m))) return m;
+            return null;
         }
 
         boolean isMine(Object msg) {
             Boolean b = mineCache.get(msg);
             if (b == null) {
-                b = selected.contains(msg) || (UnsentIdentity.senderField(messageClass) != null
-                        ? UnsentIdentity.isFromAccount(msg, me) : UnsentIdentity.anyStringFieldIs(msg, me));
+                b = UnsentIdentity.senderField(messageClass) != null
+                        ? UnsentIdentity.isFromAccount(msg, me) : UnsentIdentity.anyStringFieldIs(msg, me);
                 mineCache.put(msg, b);
             }
             return b;
         }
 
-        /** The row under (x, y) in rv coordinates and its message, if it's one of ours. */
         Object messageAt(float x, float y) {
             for (int i = rv.getChildCount() - 1; i >= 0; i--) {
                 View ch = rv.getChildAt(i);
                 if (y < ch.getTop() || y > ch.getBottom()) continue;
-                Object msg = messageOf(ch);
+                Object msg = rows.get(ch);
                 return msg != null && isMine(msg) ? msg : null;
             }
             return null;
@@ -393,12 +584,13 @@ public final class BulkUnsend {
             if (selected.isEmpty()) return;
             List<Object> picked = new ArrayList<>(selected);
             exit();
-            unsendAll(act, ctx, picked);
+            unsendAll(act, ctx, thread, picked);
         }
 
         void exit() {
             if (active == this) active = null;
-            try { rv.getViewTreeObserver().removeOnPreDrawListener(preDraw); } catch (Throwable ignored) {}
+            try { rv.removeOnAttachStateChangeListener(detach); } catch (Throwable ignored) {}
+            try { if (observer.isAlive()) observer.removeOnPreDrawListener(preDraw); } catch (Throwable ignored) {}
             for (View v : new View[]{overlay, bar}) {
                 if (v.getParent() instanceof ViewGroup p) p.removeView(v);
             }
@@ -447,7 +639,7 @@ public final class BulkUnsend {
             float r = 11 * d, cx = ox + 22 * d;
             for (int i = 0; i < s.rv.getChildCount(); i++) {
                 View ch = s.rv.getChildAt(i);
-                Object msg = messageOf(ch);
+                Object msg = s.rows.get(ch);
                 if (msg == null || !s.isMine(msg)) continue;
                 float top = oy + ch.getTop() + ch.getTranslationY(), bottom = oy + ch.getBottom() + ch.getTranslationY();
                 float cy = (top + bottom) / 2f;
@@ -508,36 +700,49 @@ public final class BulkUnsend {
 
     // ── Unsend ───────────────────────────────────────────────────────────────────
 
-    /** Unsends {@code msgs} one after another on a background thread. */
-    private static void unsendAll(Activity act, Ctx c, List<Object> msgs) {
+    private static void unsendAll(Activity act, Ctx c, String thread, List<Object> msgs) {
         Handler main = new Handler(Looper.getMainLooper());
         new Thread(() -> {
-            int ok = 0;
+            UnsendTally tally = new UnsendTally(msgs.size(), OWN_IDS, PENDING_IDS);
             for (Object m : msgs) {
+                Object key = threadKeyOf(m);
+                if (!UnsendTally.sameChat(thread, key != null ? UnsentIdentity.thread(key) : null)) {
+                    ModuleLog.detail(TAG + "skipped a message: " + (key == null ? "no thread key" : "another chat"));
+                    continue;
+                }
+                List<String> ids = messageIds(m, key);
+                tally.begin(ids);
+                Object r = null;
                 try {
-                    Object key = threadKeyOf(m);
-                    if (key == null) key = c.threadKey;
-                    if (key == null) { ModuleLog.detail(TAG + "skipped a message: no thread key"); continue; }
-                    rememberIds(m, key);
                     Object ref = refCtor.newInstance(m, key);
                     Object future = unsendMethod.invoke(c.sender, ref, key);
-                    Object r = future instanceof java.util.concurrent.Future<?> f ? f.get(10, java.util.concurrent.TimeUnit.SECONDS) : future;
-                    ModuleLog.detail(TAG + "unsend → " + r + " (key from " + (threadKeyOf(m) != null ? "message" : "thread") + ")");
-                    ok++;
-                    Thread.sleep(250);
+                    r = future instanceof java.util.concurrent.Future<?> f ? f.get(10, java.util.concurrent.TimeUnit.SECONDS) : future;
+                    ModuleLog.detail(TAG + "unsend → " + r);
                 } catch (Throwable t) {
                     ModuleLog.detail(TAG + "unsend failed: " + t + " / " + t.getCause());
                 }
+                if (tally.finish(ids, r)) {
+                    try { Thread.sleep(250); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                }
             }
-            final int done = ok;
-            ModuleLog.line(TAG + (done == msgs.size() ? "" : done == 0 ? "❌ " : "⚠️ ") + "Unsent " + done + " of " + msgs.size() + " messages");
-            main.post(() -> toast(act, I18n.t(act, R.string.ig_bulk_unsend_done, done)));
+            int done = tally.unsent();
+            int total = tally.total();
+            ModuleLog.line(TAG + (done == total ? "" : done == 0 ? "❌ " : "⚠️ ") + "Unsent " + done + " of " + total + " messages");
+            main.post(() -> toast(act, result(act, done, total)));
         }, "IE-BulkUnsend").start();
     }
 
-    /** The message's id-like Strings ("mid.…", long digit or hex ids), not its thread's id. */
-    private static void rememberIds(Object msg, Object key) {
-        String thread = ps.reso.instaeclipse.utils.ghost.CurrentThreadTracker.firstStringField(key);
+    private static String result(Context c, int done, int total) {
+        try {
+            return I18n.moduleResources(c).getQuantityString(R.plurals.ig_bulk_unsend_result, total, done, total);
+        } catch (Throwable t) {
+            return done + "/" + total;
+        }
+    }
+
+    private static List<String> messageIds(Object msg, Object key) {
+        List<String> out = new ArrayList<>();
+        String thread = CurrentThreadTracker.firstStringField(key);
         for (Class<?> k = msg.getClass(); k != null && k != Object.class; k = k.getSuperclass()) {
             for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
                 if (Modifier.isStatic(f.getModifiers()) || f.getType() != String.class) continue;
@@ -545,10 +750,11 @@ public final class BulkUnsend {
                     f.setAccessible(true);
                     Object v = f.get(msg);
                     if (!(v instanceof String s) || s.equals(thread)) continue;
-                    if (s.startsWith("mid.") || s.matches("[0-9]{15,}") || s.matches("[0-9a-fA-F-]{20,}")) OWN_IDS.add(s);
+                    if (s.startsWith("mid.") || s.matches("[0-9]{15,}") || s.matches("[0-9a-fA-F-]{20,}")) out.add(s);
                 } catch (Throwable ignored) {}
             }
         }
+        return out;
     }
 
     private static void toast(Context c, String s) {

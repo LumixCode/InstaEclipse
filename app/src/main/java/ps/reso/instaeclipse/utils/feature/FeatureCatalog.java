@@ -524,7 +524,7 @@ public final class FeatureCatalog {
                                     .desc(R.string.cat_translateMessages_desc).status("ChatTranslate")
                                     .aliases(R.string.ig_dialog_translate_messages),
                             sw("bulkUnsend", R.string.ig_dialog_bulk_unsend, R.drawable.ic_chat)
-                                    .desc(R.string.cat_bulkUnsend_desc).restart(Restart.ON_ONLY).status("BulkUnsend"),
+                                    .desc(R.string.cat_bulkUnsend_desc).status("BulkUnsend"),
                             sw("confirmCalls", R.string.ig_call_confirm, R.drawable.ic_shield)
                                     .restart(Restart.ON_ONLY).status("ConfirmCalls"),
                             sw("hideChatMenuButton", R.string.ig_hide_chat_menu_button, R.drawable.ic_tune)
