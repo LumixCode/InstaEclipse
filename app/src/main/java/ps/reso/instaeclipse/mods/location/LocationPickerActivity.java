@@ -93,6 +93,7 @@ public class LocationPickerActivity extends AppCompatActivity {
     private static final String STATE_ZOOM = "zoom";
     private static final String STATE_LABEL = "label";
     private static final String STATE_LABEL_LOCKED = "labelLocked";
+    private static final String STATE_TARGET = "target";
     private static final double WORLD_LAT = 20.0;
     private static final double WORLD_LNG = 0.0;
     private static final double WORLD_ZOOM = 3.0;
@@ -186,10 +187,13 @@ public class LocationPickerActivity extends AppCompatActivity {
             currentLabel = savedInstanceState.getString(STATE_LABEL, "");
             labelLocked = savedInstanceState.getBoolean(STATE_LABEL_LOCKED) && !currentLabel.isEmpty();
             if (labelLocked) placeName.setText(currentLabel);
+            if (savedInstanceState.getBoolean(STATE_TARGET)) target = new GeoPoint(startLat, startLng);
         } else if (!LocationPresets.valid(startLat, startLng)) {
             startLat = WORLD_LAT;
             startLng = WORLD_LNG;
             map.getController().setZoom(WORLD_ZOOM);
+        } else {
+            target = new GeoPoint(startLat, startLng);
         }
         map.getController().setCenter(new GeoPoint(startLat, startLng));
         onCenterChanged();
@@ -269,9 +273,10 @@ public class LocationPickerActivity extends AppCompatActivity {
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         if (map == null) return;
-        IGeoPoint c = map.getMapCenter();
+        IGeoPoint c = target != null ? target : map.getMapCenter();
         outState.putDouble(STATE_LAT, c.getLatitude());
         outState.putDouble(STATE_LNG, c.getLongitude());
+        outState.putBoolean(STATE_TARGET, target != null);
         outState.putDouble(STATE_ZOOM, map.getZoomLevelDouble());
         outState.putString(STATE_LABEL, currentLabel);
         outState.putBoolean(STATE_LABEL_LOCKED, labelLocked);
