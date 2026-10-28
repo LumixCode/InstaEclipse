@@ -15,10 +15,8 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -42,6 +40,7 @@ import ps.reso.instaeclipse.utils.ui.IePalette;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Search your story's viewers (Instagram Plus–style, our own implementation; no Plus check is
@@ -66,15 +65,15 @@ public class StoryViewerSearchHook {
     private static Method rebuild;
     private static Class<?> recordClass;
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         try {
             Class<?> adapter = null;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("search_result_rendered")))) {
                 adapter = cl.loadClass(md.getClassName());
                 break;
             }
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("XDTViewerFeedbackDict")))) {
                 recordClass = cl.loadClass(md.getClassName());
                 break;
@@ -90,7 +89,7 @@ public class StoryViewerSearchHook {
                 if (m.getReturnType() == void.class && p.length == 4 && p[0] == List.class
                         && p[1] == boolean.class && p[2] == boolean.class && p[3] == boolean.class) build = m;
             }
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass(adapter.getName()).paramCount(0).returnType("void")
                     .usingStrings("dismissed_reel_viewers_list_megaphone")))) {
                 rebuild = md.getMethodInstance(cl);

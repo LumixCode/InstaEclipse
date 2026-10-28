@@ -15,13 +15,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.ClassData;
-import org.luckypray.dexkit.result.MethodData;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -32,6 +29,8 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 
 /**
  * Removes Meta AI entry points (GitHub #179) by collapsing the Meta AI XML layouts as they inflate.
@@ -125,23 +124,23 @@ public class RemoveMetaAIHook {
      * never invokes, so nothing fired. These target the data/eligibility layer instead, which
      * runs on the normal path and carries stable strings. Needs the DexKit bridge.
      */
-    public void installReels(DexKitBridge bridge, ClassLoader classLoader) {
-        installReelsCardEligibility(bridge, classLoader); // in-feed reels Meta AI card
-        installVideoAttribution(bridge, classLoader);     // Meta AI attribution subtitle (video posts)
-        installReelsOverflowGate(bridge, classLoader);    // reel ⋮ "Ask Meta AI" entrypoint
-        installMenuOptionFilter(bridge, classLoader);     // GEN_AI MediaOption rows in overflow menus
-        installAddButtonFilter(bridge, classLoader);      // ... and rows added one at a time
-        installReelContentDeepDive(bridge, classLoader);  // reel "Ask Meta AI about this" (Content Deep Dive)
+    public void installReels(ClassLoader classLoader) {
+        installReelsCardEligibility(classLoader); // in-feed reels Meta AI card
+        installVideoAttribution(classLoader);     // Meta AI attribution subtitle (video posts)
+        installReelsOverflowGate(classLoader);    // reel ⋮ "Ask Meta AI" entrypoint
+        installMenuOptionFilter(classLoader);     // GEN_AI MediaOption rows in overflow menus
+        installAddButtonFilter(classLoader);      // ... and rows added one at a time
+        installReelContentDeepDive(classLoader);  // reel "Ask Meta AI about this" (Content Deep Dive)
     }
 
-    private void installReelContentDeepDive(DexKitBridge bridge, ClassLoader cl) {
+    private void installReelContentDeepDive(ClassLoader cl) {
         // Fetcher: skip fetching prompt data so there is nothing to render.
         XC_MethodHook skip = new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                 if (FeatureFlags.removeMetaAI) p.setResult(null);
             }
         };
-        hookByMarker(bridge, cl, skip,
+        hookByMarker(cl, skip,
                 "android_purge_26_q3_ClipsContentDeepDivePromptFetcher_fetchContentDeepDivePromptDataForMediaIds",
                 "cdd-fetch", null);
 
@@ -157,7 +156,7 @@ public class RemoveMetaAIHook {
                 } catch (Throwable ignored) {}
             }
         };
-        hookByMarker(bridge, cl, skipIfVoid,
+        hookByMarker(cl, skipIfVoid,
                 "android_purge_26_q3_ClipsOrganicMediaItemViewMoreOptionsController_maybeAddGenAIInfoRow",
                 "reel-menu-genai-row", null);
     }
@@ -166,7 +165,7 @@ public class RemoveMetaAIHook {
      *  methods with that return type (guards the force-false against non-boolean overloads).
      *  Every hook here blanks, skips or replaces, so a method R8 built from more than the marked
      *  method (see {@link #sharedReason}) is skipped and logged instead. */
-    private void hookByMarker(DexKitBridge bridge, ClassLoader cl, XC_MethodHook hook,
+    private void hookByMarker(ClassLoader cl, XC_MethodHook hook,
                               String marker, String label, String returnTypeFilter) {
         int n = 0;
         try {
@@ -178,7 +177,7 @@ public class RemoveMetaAIHook {
                 targets = new ArrayList<>();
                 MethodMatcher mm = MethodMatcher.create().usingStrings(marker);
                 if (returnTypeFilter != null) mm = mm.returnType(returnTypeFilter);
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(mm))) {
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(mm))) {
                     try {
                         Method m = md.getMethodInstance(cl);
                         String shared = sharedReason(md, m, marker);
@@ -206,10 +205,10 @@ public class RemoveMetaAIHook {
     }
 
     /** Why a marker hit is more than the marked method, or null when it is that method. */
-    private static String sharedReason(MethodData md, Method m, String marker) {
+    private static String sharedReason(Found md, Method m, String marker) {
         Class<?> owner = m.getDeclaringClass();
-        if (HookTargetGuard.isMergedLambda(owner, md.getOpCodes())) return "R8-merged lambda";
-        if (!HookTargetGuard.ownsMarker(md.getUsingStrings(), marker)) return "marker inlined into another method";
+        if (HookTargetGuard.isMergedLambda(owner, md.data().getOpCodes())) return "R8-merged lambda";
+        if (!HookTargetGuard.ownsMarker(md.data().getUsingStrings(), marker)) return "marker inlined into another method";
         if (!HookTargetGuard.ownClass(owner)) return "abstract or non-final class";
         return null;
     }
@@ -221,7 +220,7 @@ public class RemoveMetaAIHook {
      * Anchored on the fetcher's stable trace markers; the method only reads+clears sets, so a
      * no-op is side-effect-safe.
      */
-    private void installReelsCardEligibility(DexKitBridge bridge, ClassLoader cl) {
+    private void installReelsCardEligibility(ClassLoader cl) {
         XC_MethodHook skip = new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                 if (FeatureFlags.removeMetaAI) p.setResult(null); // void → skip candidate build/inject
@@ -236,7 +235,7 @@ public class RemoveMetaAIHook {
         java.util.Set<String> hooked = new HashSet<>();
         for (String a : anchors) {
             try {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create().usingStrings(a)))) {
                     String key = md.getDescriptor();
                     if (!hooked.add(key)) continue; // both markers live on the same method
@@ -257,7 +256,7 @@ public class RemoveMetaAIHook {
      * the result (a downstream final field would NPE), so we blank the UI-state's String fields
      * — the row then renders no Meta AI text. Anchored on the use-case's stable marker string.
      */
-    private void installVideoAttribution(DexKitBridge bridge, ClassLoader cl) {
+    private void installVideoAttribution(ClassLoader cl) {
         XC_MethodHook blank = new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                 if (!FeatureFlags.removeMetaAI) return;
@@ -273,7 +272,7 @@ public class RemoveMetaAIHook {
                 } catch (Throwable ignored) {}
             }
         };
-        hookByMarker(bridge, cl, blank,
+        hookByMarker(cl, blank,
                 "android_purge_26_q3_MetaAIVideoAttributionSubtitleUseCase_getUiState",
                 "video-attribution", null);
     }
@@ -286,24 +285,24 @@ public class RemoveMetaAIHook {
     private static final long META_AI_GATE_451_ID_1 = 0x8110d700005b5bL;
     private static final long META_AI_GATE_451_ID_2 = 0x81103500005795L;
 
-    private void installReelsOverflowGate(DexKitBridge bridge, ClassLoader classLoader) {
+    private void installReelsOverflowGate(ClassLoader classLoader) {
         XC_MethodHook forceFalse = new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 if (FeatureFlags.removeMetaAI) param.setResult(false);
             }
         };
-        int n = hookGate(bridge, classLoader, forceFalse, new Number[]{META_AI_GATE_451_ID_1, META_AI_GATE_451_ID_2});
+        int n = hookGate(classLoader, forceFalse, new Number[]{META_AI_GATE_451_ID_1, META_AI_GATE_451_ID_2});
         ModuleLog.detail("(IE|RemoveMetaAI) reels-overflow gate: " + n + " method(s)");
     }
 
-    private int hookGate(DexKitBridge bridge, ClassLoader cl, XC_MethodHook hook, Number[] ids) {
+    private int hookGate(ClassLoader cl, XC_MethodHook hook, Number[] ids) {
         int n = 0;
         try {
             MethodMatcher m = MethodMatcher.create()
                     .returnType("boolean")
                     .paramTypes("com.instagram.common.session.UserSession")
                     .usingNumbers(ids);
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(m))) {
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(m))) {
                 try { XposedBridge.hookMethod(md.getMethodInstance(cl), hook); n++; }
                 catch (Throwable ignored) {}
             }
@@ -319,7 +318,7 @@ public class RemoveMetaAIHook {
      * we hook the list builders (anchored by their referenced enum fields) and remove any option
      * whose enum name is a Meta-AI one. Stable-field anchored — no obfuscated X.* names.
      */
-    private void installMenuOptionFilter(DexKitBridge bridge, ClassLoader cl) {
+    private void installMenuOptionFilter(ClassLoader cl) {
         final String od = "Lcom/instagram/feed/media/mediaoption/MediaOption$Option;";
         XC_MethodHook filter = new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -347,11 +346,11 @@ public class RemoveMetaAIHook {
                 } catch (Throwable ignored) {}
             }
         };
-        hookBuilder(bridge, cl, filter, FindMethod.create().matcher(MethodMatcher.create()
+        hookBuilder(cl, filter, FindMethod.create().matcher(MethodMatcher.create()
                 .returnType("java.util.List").addUsingField(od + "->GEN_AI_INFO:" + od)), "list-GEN_AI_INFO");
         // Reel options list (ArrayList referencing PLAYBACK_CONTROLS + UNSAVE) — kept for builds
         // where the reel menu builder does not statically reference GEN_AI_INFO.
-        hookBuilder(bridge, cl, filter, FindMethod.create().matcher(MethodMatcher.create()
+        hookBuilder(cl, filter, FindMethod.create().matcher(MethodMatcher.create()
                 .returnType("java.util.ArrayList")
                 .addUsingField(od + "->PLAYBACK_CONTROLS:" + od)
                 .addUsingField(od + "->UNSAVE:" + od)), "reel-options");
@@ -361,12 +360,12 @@ public class RemoveMetaAIHook {
      * The post and reel ⋮ menus also add rows one at a time through MediaOptionsOverflowMenuCreator's
      * static add-button method, which the option lists above never see. Skip a Meta AI row there.
      */
-    private void installAddButtonFilter(DexKitBridge bridge, ClassLoader cl) {
+    private void installAddButtonFilter(ClassLoader cl) {
         try {
             Class<?> option = cl.loadClass("com.instagram.feed.media.mediaoption.MediaOption$Option");
             Method addButton = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(ADD_BUTTON_CACHE, cl) : null;
             if (addButton == null) {
-                addButton = findAddButton(bridge, cl, option);
+                addButton = findAddButton(cl, option);
                 if (addButton == null) {
                     ModuleLog.warn("(IE|RemoveMetaAI) The Meta AI row may still show in some post menus (not found in this Instagram version)");
                     ModuleLog.detail("(IE|RemoveMetaAI) overflow add-button not found");
@@ -391,11 +390,11 @@ public class RemoveMetaAIHook {
         }
     }
 
-    private static Method findAddButton(DexKitBridge bridge, ClassLoader cl, Class<?> option) {
-        List<ClassData> creators = DexKitQueryCache.findClass(bridge, FindClass.create().matcher(
+    private static Method findAddButton(ClassLoader cl, Class<?> option) {
+        List<FoundClass> creators = DexKitQueryCache.classes(FindClass.create().matcher(
                 ClassMatcher.create().usingStrings("MediaOptionsOverflowMenuCreator")));
         if (creators.isEmpty()) return null;
-        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .declaredClass(creators.get(0).getName()).returnType("void")))) {
             try {
                 Method m = md.getMethodInstance(cl);
@@ -411,10 +410,10 @@ public class RemoveMetaAIHook {
         return null;
     }
 
-    private void hookBuilder(DexKitBridge bridge, ClassLoader cl, XC_MethodHook hook, FindMethod q, String label) {
+    private void hookBuilder(ClassLoader cl, XC_MethodHook hook, FindMethod q, String label) {
         try {
             int n = 0;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, q)) {
+            for (Found md : DexKitQueryCache.methods(q)) {
                 try { XposedBridge.hookMethod(md.getMethodInstance(cl), hook); n++; } catch (Throwable ignored) {}
             }
             ModuleLog.detail("(IE|RemoveMetaAI) " + label + " filter: " + n + " method(s)");

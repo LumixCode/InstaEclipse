@@ -15,7 +15,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 
@@ -32,7 +31,6 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
-import ps.reso.instaeclipse.utils.core.ModuleBridge;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -130,7 +128,7 @@ public class ShareSheetCleanupHook {
     };
 
     public void install(ClassLoader classLoader) {
-        resolveShareDecorations(ModuleBridge.get(), classLoader);
+        resolveShareDecorations(classLoader);
         int hooked = 0;
         try {
             XposedHelpers.findAndHookMethod(FRAGMENT, classLoader, "onViewCreated",
@@ -675,7 +673,7 @@ public class ShareSheetCleanupHook {
         return false;
     }
 
-    private static void resolveShareDecorations(DexKitBridge bridge, ClassLoader loader) {
+    private static void resolveShareDecorations(ClassLoader loader) {
         try {
             Method remover = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(CACHE_REMOVER, loader) : null;
             String listName = DexKitCache.isCacheValid() ? DexKitCache.loadString(CACHE_DECORATIONS) : null;
@@ -686,8 +684,7 @@ public class ShareSheetCleanupHook {
                 } catch (NoSuchFieldException ignored) {} // stale cache: rediscover below
             }
             if (decorations == null) {
-                if (bridge == null) throw new IllegalStateException("DexKit unavailable");
-                var matches = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                var matches = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass("androidx.recyclerview.widget.RecyclerView")
                         .usingStrings("Cannot remove item decoration during a scroll  or layout")
                         .paramCount(1).returnType(void.class)));
@@ -696,7 +693,7 @@ public class ShareSheetCleanupHook {
                 remover = data.getMethodInstance(loader);
                 // Both the remover and its list are obfuscated. Resolve the list used by the native
                 // remover so its normal inset invalidation and layout bookkeeping still run.
-                for (var use : data.getUsingFields()) {
+                for (var use : data.data().getUsingFields()) {
                     Field field = use.getField().getFieldInstance(loader);
                     if (Modifier.isStatic(field.getModifiers())
                             || field.getDeclaringClass() != remover.getDeclaringClass()

@@ -458,7 +458,7 @@ public class InstallPlan {
                 new HideChatsHook().install(ctx.lpparam.classLoader);
                 return;
             case INBOX_DISCOVER_PEOPLE_HOOK:
-                new InboxDiscoverPeopleHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new InboxDiscoverPeopleHook().install(ctx.lpparam.classLoader);
                 return;
             case CUSTOM_FONT_HOOK:
                 new CustomFontHook().install(ctx.lpparam.classLoader);
@@ -467,10 +467,10 @@ public class InstallPlan {
                 new RemoveMetaAIHook().install(ctx.lpparam.classLoader);
                 return;
             case META_AI_REELS:
-                new RemoveMetaAIHook().installReels(ctx.bridge, ctx.lpparam.classLoader);
+                new RemoveMetaAIHook().installReels(ctx.lpparam.classLoader);
                 return;
             case DISABLE_REPOST_HOOK:
-                new DisableRepostHook().install(ctx.context, ctx.bridge, ctx.lpparam.classLoader);
+                new DisableRepostHook().install(ctx.context, ctx.lpparam.classLoader);
                 return;
             case HIDE_SUGGESTED_FEED_ITEMS_HOOK:
                 new HideSuggestedFeedItemsHook().install(ctx.bridge, ctx.loader);
@@ -527,7 +527,7 @@ public class InstallPlan {
                 new ProfileFollowStatusHook().install(ctx.loader);
                 return;
             case PROFILE_FOLLOWS_YOU_HOOK:
-                new ProfileFollowsYouHook().install(ctx.bridge, ctx.loader);
+                new ProfileFollowsYouHook().install(ctx.loader);
                 return;
             case PROFILE_COUNT_DELTA_HOOK:
                 new ProfileCountDeltaHook().install(ctx.loader);
@@ -542,7 +542,7 @@ public class InstallPlan {
                 new PlaybackSpeedHook().install(ctx.loader);
                 return;
             case HIDE_NOTES_TRAY_HOOK:
-                new HideNotesTrayHook().install(ctx.bridge);
+                new HideNotesTrayHook().install();
                 return;
             case VOICE_USER_CACHE_TRACKER:
                 VoiceMessageDownloadHook.installUserCacheTracker(ctx.loader);
@@ -560,7 +560,7 @@ public class InstallPlan {
                 new ReadReceiptChatHook().install(ctx.loader);
                 return;
             case STORY_VIEWER_SEARCH_HOOK:
-                new StoryViewerSearchHook().install(ctx.bridge, ctx.loader);
+                new StoryViewerSearchHook().install(ctx.loader);
                 return;
             case UNLOCK_PLUS_BENEFITS_HOOK:
                 new UnlockPlusBenefitsHook().install(ctx.loader);
@@ -584,16 +584,16 @@ public class InstallPlan {
                 new FollowConfirmHook().install();
                 return;
             case PROFILE_MENU_HOOK:
-                new ProfileMenuHook().install(ctx.bridge, ctx.loader);
+                new ProfileMenuHook().install(ctx.loader);
                 return;
             case POST_COUNT_SPOOF:
                 PostCountSpoof.install(ctx.bridge, ctx.loader);
                 return;
             case PROFILE_TEXT_COPY_HOOK:
-                new ProfileTextCopyHook().install(ctx.bridge, ctx.loader);
+                new ProfileTextCopyHook().install(ctx.loader);
                 return;
             case PROFILE_SPOOF_HOOK:
-                new ProfileSpoofHook().install(ctx.bridge, ctx.loader);
+                new ProfileSpoofHook().install(ctx.loader);
                 return;
             case SHARE_SHEET_CLEANUP_HOOK:
                 new ShareSheetCleanupHook().install(ctx.loader);
@@ -662,7 +662,7 @@ public class InstallPlan {
                 new PostDownloadContextMenuHook().install(ctx.lpparam.classLoader);
                 return;
             case REEL_MENU_LABELS:
-                ReelMenuLabels.install(ctx.bridge, ctx.lpparam.classLoader);
+                ReelMenuLabels.install(ctx.lpparam.classLoader);
                 return;
             case INSTANT_SAVE_HOOK:
                 new InstantSaveHook().install(ctx.lpparam.classLoader);
@@ -683,10 +683,10 @@ public class InstallPlan {
                 new LockedCollectionsHook().install(ctx.loader);
                 return;
             case SAVED_ON_PROFILE_HOOK:
-                new SavedOnProfileHook().install(ctx.bridge, ctx.loader);
+                new SavedOnProfileHook().install(ctx.loader);
                 return;
             case HIDE_HEADER_BUTTONS_HOOK:
-                new HideHeaderButtonsHook().install(ctx.bridge, ctx.loader);
+                new HideHeaderButtonsHook().install(ctx.loader);
                 return;
             case SHARE_LINK_DOWNLOAD_HOOK:
                 new ShareLinkDownloadHook().install(ctx.loader);

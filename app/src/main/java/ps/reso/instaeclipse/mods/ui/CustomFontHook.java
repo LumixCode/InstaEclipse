@@ -20,6 +20,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Custom UI font: replace Instagram's text typeface with a user-supplied .ttf/.otf.
@@ -478,16 +479,14 @@ public class CustomFontHook {
 
     private boolean installEmojiWorkerHook(final ClassLoader cl) {
         try {
-            org.luckypray.dexkit.DexKitBridge bridge = ps.reso.instaeclipse.utils.core.ModuleBridge.get();
-            if (bridge == null) return false;
-            java.util.List<org.luckypray.dexkit.result.MethodData> found =
-                    DexKitQueryCache.findMethod(bridge, 
+            java.util.List<Found> found =
+                    DexKitQueryCache.methods(
                             org.luckypray.dexkit.query.FindMethod.create().matcher(
                                     org.luckypray.dexkit.query.matchers.MethodMatcher.create()
                                             .name("run")
                                             .usingStrings("fetchFonts failed (", "EmojiCompat.MetadataRepo.create")));
             int n = 0;
-            for (org.luckypray.dexkit.result.MethodData md : found) {
+            for (Found md : found) {
                 java.lang.reflect.Method run = md.getMethodInstance(cl);
                 ps.reso.instaeclipse.xposedcompat.XposedBridge.hookMethod(run, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);

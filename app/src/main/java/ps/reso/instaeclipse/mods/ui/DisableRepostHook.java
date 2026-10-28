@@ -12,13 +12,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.ClassData;
-import org.luckypray.dexkit.result.MethodData;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -27,6 +24,8 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 
 /**
  * Disable Repost (feed + reels/clips + profile grid).
@@ -90,11 +89,11 @@ public class DisableRepostHook {
     private static final String UFI_STATE_CACHE = "DisableRepost_ufiState_v1";
     private static final String REPOST_BUTTON_LABEL = ", isRepostButtonEnabled=";
 
-    public void install(Context context, DexKitBridge bridge, ClassLoader classLoader) {
-        int total = installActionHandler(bridge, classLoader);
+    public void install(Context context, ClassLoader classLoader) {
+        int total = installActionHandler(classLoader);
         total += installFeedCommit(classLoader);
-        total += installButtonRemoval(context, bridge, classLoader);
-        total += installUfiState(bridge, classLoader);
+        total += installButtonRemoval(context, classLoader);
+        total += installUfiState(classLoader);
 
         if (total > 0) FeatureStatusTracker.setHooked("DisableRepost");
         if (total > 0) ModuleLog.ok("(IE|Repost) ready");
@@ -103,7 +102,7 @@ public class DisableRepostHook {
     }
 
     // Reels + profile path — swallow the shared handler's void entry points entirely.
-    private int installActionHandler(DexKitBridge bridge, ClassLoader classLoader) {
+    private int installActionHandler(ClassLoader classLoader) {
         XC_MethodHook skip = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -118,7 +117,7 @@ public class DisableRepostHook {
         Set<String> hooked = new HashSet<>();
         for (String anchor : NEUTRALIZE_ANCHORS) {
             try {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create().usingStrings(anchor)))) {
                     String key = md.getDescriptor();
                     if (!hooked.add(key)) continue; // avoid double-hooking a shared method
@@ -193,11 +192,11 @@ public class DisableRepostHook {
     // render returns null takes no space, and the reels count helper already returns null when a
     // reel has no repost count. Results are replaced after the original runs, so Litho's hook state
     // stays consistent when the setting changes.
-    private int installButtonRemoval(Context context, DexKitBridge bridge, ClassLoader classLoader) {
+    private int installButtonRemoval(Context context, ClassLoader classLoader) {
         List<Method> targets = DexKitCache.isCacheValid()
                 ? DexKitCache.loadMethods(BUTTON_CACHE, classLoader) : null;
         if (targets == null || targets.isEmpty()) {
-            targets = findButtonBuilders(context, bridge, classLoader);
+            targets = findButtonBuilders(context, classLoader);
             if (!targets.isEmpty()) DexKitCache.saveMethods(BUTTON_CACHE, targets);
         }
         targets.removeIf(m -> !ownRender(m));
@@ -222,11 +221,11 @@ public class DisableRepostHook {
         return total;
     }
 
-    private int installUfiState(DexKitBridge bridge, ClassLoader classLoader) {
+    private int installUfiState(ClassLoader classLoader) {
         try {
             Field field = DexKitCache.isCacheValid() ? DexKitCache.loadField(UFI_STATE_CACHE, classLoader) : null;
             if (field == null) {
-                field = findUfiStateField(bridge, classLoader);
+                field = findUfiStateField(classLoader);
                 if (field == null) return 0;
                 DexKitCache.saveField(UFI_STATE_CACHE, field);
             }
@@ -251,9 +250,8 @@ public class DisableRepostHook {
         }
     }
 
-    private static Field findUfiStateField(DexKitBridge bridge, ClassLoader classLoader) throws Exception {
-        if (bridge == null) return null;
-        List<ClassData> found = DexKitQueryCache.findClass(bridge, FindClass.create().matcher(ClassMatcher.create()
+    private static Field findUfiStateField(ClassLoader classLoader) throws Exception {
+        List<FoundClass> found = DexKitQueryCache.classes(FindClass.create().matcher(ClassMatcher.create()
                 .usingStrings(REPOST_BUTTON_LABEL)));
         if (found.size() != 1) {
             ModuleLog.warn("(IE|Repost) The repost button may stay visible on home-feed posts; reposting is still blocked");
@@ -277,11 +275,11 @@ public class DisableRepostHook {
     }
 
     @SuppressLint("DiscouragedApi")
-    private static List<Method> findButtonBuilders(Context context, DexKitBridge bridge, ClassLoader classLoader) {
+    private static List<Method> findButtonBuilders(Context context, ClassLoader classLoader) {
         List<Method> found = new ArrayList<>();
         try {
             for (String anchor : REELS_BUTTON_ANCHORS) {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create().usingStrings(anchor)))) {
                     addBuilder(found, md, classLoader);
                 }
@@ -292,14 +290,14 @@ public class DisableRepostHook {
             // using the same id returns void and is skipped).
             int feedButton = res.getIdentifier("reposts_ufi_icon", "id", pkg);
             if (feedButton != 0) {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create().paramCount(1).usingNumbers(feedButton)))) {
                     addBuilder(found, md, classLoader);
                 }
             }
             int reelCount = res.getIdentifier("repost_count", "id", pkg);
             if (reelCount != 0) {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create().usingStrings("ufi_count").usingNumbers(reelCount)))) {
                     addBuilder(found, md, classLoader);
                 }
@@ -311,7 +309,7 @@ public class DisableRepostHook {
         return found;
     }
 
-    private static void addBuilder(List<Method> found, MethodData md, ClassLoader classLoader) {
+    private static void addBuilder(List<Method> found, Found md, ClassLoader classLoader) {
         if (!md.isMethod()) return;
         try {
             Method m = md.getMethodInstance(classLoader);

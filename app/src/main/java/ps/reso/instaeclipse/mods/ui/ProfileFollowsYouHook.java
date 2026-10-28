@@ -2,11 +2,9 @@ package ps.reso.instaeclipse.mods.ui;
 
 import android.view.View;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.enums.MatchType;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -22,6 +20,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * "Follows you" label on profiles (#239), instead of only the follower toast.
@@ -43,15 +42,15 @@ public class ProfileFollowsYouHook {
     private static Method followedByGetter;
     private static volatile java.lang.ref.WeakReference<Object> lastFragment;
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         try {
             Method updated = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(CACHE_UPDATED, cl) : null;
             followedByGetter = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("FollowsYou_followedBy", cl) : null;
             if (updated == null || followedByGetter == null) {
-                List<MethodData> u = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                List<Found> u = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(FRAGMENT).modifiers(Modifier.STATIC, MatchType.Contains).paramCount(2)
                         .usingEqStrings(java.util.List.of("UserDetailFragment.onUserUpdated"))));
-                List<MethodData> f = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                List<Found> f = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(USER).paramCount(0).returnType("java.lang.Boolean")
                         .usingEqStrings(java.util.List.of("followed_by"))));
                 if (u.size() != 1 || f.size() != 1) {

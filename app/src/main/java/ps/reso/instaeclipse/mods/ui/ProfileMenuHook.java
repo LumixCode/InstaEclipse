@@ -12,10 +12,8 @@ import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -32,6 +30,7 @@ import java.util.function.BooleanSupplier;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -63,11 +62,11 @@ public final class ProfileMenuHook {
     private static Method bioGetter;
     private static final ConcurrentHashMap<Class<?>, Field[]> WALKED_FIELDS = new ConcurrentHashMap<>();
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         try {
             bioGetter = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("ProfileBioGetter", cl) : null;
             if (bioGetter == null) {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(USER).paramCount(0).returnType("java.lang.String")
                         .usingNumbers("biography".hashCode())))) {
                     bioGetter = md.getMethodInstance(cl);

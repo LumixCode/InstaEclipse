@@ -8,10 +8,8 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -27,6 +25,7 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -68,7 +67,7 @@ public class HideHeaderButtonsHook {
     private static volatile boolean gateHooked, gateLogged, barLogged;
     static int walks;
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         try {
             Application app = application();
             if (app == null) throw new IllegalStateException("no Application");
@@ -90,7 +89,7 @@ public class HideHeaderButtonsHook {
         }
         // Reflection only, so it is in place before the DexKit lookup of the gate.
         hookProfileActionBar(cl);
-        hookThreadsGate(bridge, cl);
+        hookThreadsGate(cl);
     }
 
     private static Application application() {
@@ -115,11 +114,11 @@ public class HideHeaderButtonsHook {
         return ThreadsButtonPolicy.scanWindow(FeatureFlags.hideThreadsButton, FeatureFlags.hideThreadsSuggestions, gateHooked);
     }
 
-    private static void hookThreadsGate(DexKitBridge bridge, ClassLoader cl) {
+    private static void hookThreadsGate(ClassLoader cl) {
         try {
             Method gate = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(CACHE_GATE, cl) : null;
             if (gate == null) {
-                gate = findThreadsGate(bridge, cl);
+                gate = findThreadsGate(cl);
                 if (gate == null) return;
                 DexKitCache.saveMethod(CACHE_GATE, gate);
             }
@@ -143,9 +142,8 @@ public class HideHeaderButtonsHook {
         }
     }
 
-    private static Method findThreadsGate(DexKitBridge bridge, ClassLoader cl) {
-        if (bridge == null) return null;
-        List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+    private static Method findThreadsGate(ClassLoader cl) {
+        List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("com.instagram.barcelona")
                 .returnType("boolean")
                 .paramCount(6)));

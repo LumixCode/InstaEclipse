@@ -8,7 +8,6 @@ import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
@@ -29,6 +28,7 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Saved one tap away on your own profile (#237): a bookmark button in the profile action bar
@@ -52,13 +52,13 @@ public class SavedOnProfileHook {
     private static final java.util.Set<View> watched =
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         if (!FeatureFlags.savedOnProfile) return; // applies after an Instagram restart
         try {
             List<Method> invoked = new ArrayList<>();
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass(HANDLER).paramCount(3)))) {
-                for (MethodData inv : md.getInvokes()) {
+                for (MethodData inv : md.data().getInvokes()) {
                     if (!inv.isMethod()) continue;
                     Method m;
                     try { m = inv.getMethodInstance(cl); } catch (Throwable t) { continue; }

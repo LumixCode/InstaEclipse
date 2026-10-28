@@ -2,7 +2,6 @@ package ps.reso.instaeclipse.mods.ui;
 
 import android.app.Activity;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
@@ -16,8 +15,8 @@ import java.util.Set;
 
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.JitGuard;
-import ps.reso.instaeclipse.utils.core.ModuleBridge;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -37,7 +36,7 @@ public final class BackLeavesHomeDispatcher {
         try {
             Method dispatch = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(CACHE_KEY, cl) : null;
             if (dispatch == null) {
-                dispatch = find(ModuleBridge.get(), cl);
+                dispatch = find(cl);
                 if (dispatch == null) return;
                 DexKitCache.saveMethod(CACHE_KEY, dispatch);
             }
@@ -71,9 +70,8 @@ public final class BackLeavesHomeDispatcher {
         }
     }
 
-    private static Method find(DexKitBridge bridge, ClassLoader cl) {
-        if (bridge == null) return null;
-        List<MethodData> back = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+    private static Method find(ClassLoader cl) {
+        List<Found> back = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .declaredClass(COMPONENT_ACTIVITY)
                 .name("onBackPressed")
                 .paramCount(0)));
@@ -81,7 +79,7 @@ public final class BackLeavesHomeDispatcher {
             ModuleLog.warn(TAG + NOT_FOUND + "the activity's Back handler was not found in this Instagram version");
             return null;
         }
-        List<MethodData> invokes = back.get(0).getInvokes();
+        List<MethodData> invokes = back.get(0).data().getInvokes();
         List<String> descriptors = new ArrayList<>();
         for (MethodData m : invokes) descriptors.add(m.getDescriptor());
         String picked = pick(descriptors);

@@ -3,10 +3,8 @@ package ps.reso.instaeclipse.mods.ui;
 import android.content.Context;
 import android.view.View;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -21,6 +19,7 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -51,7 +50,7 @@ public final class ReelMenuLabels {
 
     private ReelMenuLabels() {}
 
-    public static void install(DexKitBridge bridge, ClassLoader classLoader) {
+    public static void install(ClassLoader classLoader) {
         try {
             mediaOptionEnumClass = classLoader.loadClass(
                     "com.instagram.feed.media.mediaoption.MediaOption$Option");
@@ -62,7 +61,7 @@ public final class ReelMenuLabels {
                     + t.getClass().getSimpleName() + ": " + t.getMessage());
             return;
         }
-        Method resolver = labelResolver(bridge, classLoader);
+        Method resolver = labelResolver(classLoader);
         if (resolver == null) {
             ModuleLog.warn("(IE|ReelLabels) The rows InstaEclipse adds to the reel menu may show the wrong names (not found in this Instagram version)");
             ModuleLog.detail("(IE|ReelLabels) reel label resolver not found");
@@ -70,19 +69,19 @@ public final class ReelMenuLabels {
         }
         hookReelLabelResolver(resolver);
         try {
-            installReelLabelOverrideHook(bridge, classLoader, resolver);
+            installReelLabelOverrideHook(classLoader, resolver);
         } catch (Throwable t) {
             ModuleLog.warn("(IE|ReelLabels) The rows InstaEclipse adds to the reel menu may show the wrong names: "
                     + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
-    private static Method labelResolver(DexKitBridge bridge, ClassLoader classLoader) {
+    private static Method labelResolver(ClassLoader classLoader) {
         try {
             Method resolver = DexKitCache.isCacheValid()
                     ? DexKitCache.loadMethod("ReelLabelResolver", classLoader) : null;
             if (resolver != null) return resolver;
-            List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingEqStrings(List.of(RESOLVER_ANCHOR))));
             if (found.isEmpty()) return null;
             resolver = found.get(0).getMethodInstance(classLoader);
@@ -115,8 +114,7 @@ public final class ReelMenuLabels {
         }
     }
 
-    private static void installReelLabelOverrideHook(DexKitBridge bridge, ClassLoader classLoader,
-                                                     Method labelResolver) {
+    private static void installReelLabelOverrideHook(ClassLoader classLoader, Method labelResolver) {
         if (DexKitCache.isCacheValid()) {
             List<Method> cached = DexKitCache.loadMethods("ReelRowBuilders", classLoader);
             if (cached != null && !cached.isEmpty()) {
@@ -132,14 +130,14 @@ public final class ReelMenuLabels {
         }
 
         // Row-adder methods: invoke the resolver AND take a MediaOption$Option.
-        List<MethodData> adderResults = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+        List<Found> adderResults = DexKitQueryCache.methods(FindMethod.create()
                 .matcher(MethodMatcher.create()
                         .returnType("void")
                         .addInvoke(MethodMatcher.create(labelResolver))));
 
         List<Method> hooked = new ArrayList<>();
         Set<Method> seen = new HashSet<>();
-        for (MethodData md : adderResults) {
+        for (Found md : adderResults) {
             Method rowAdder;
             try { rowAdder = md.getMethodInstance(classLoader); }
             catch (Throwable ignored) { continue; }
@@ -150,15 +148,15 @@ public final class ReelMenuLabels {
             if (!takesOption) continue;
 
             // Row builders: the void methods this adder CALLS.
-            List<MethodData> builderResults;
+            List<Found> builderResults;
             try {
-                builderResults = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                builderResults = DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create()
                                 .returnType("void")
                                 .addCaller(MethodMatcher.create(rowAdder))));
             } catch (Throwable ignored) { continue; }
 
-            for (MethodData bmd : builderResults) {
+            for (Found bmd : builderResults) {
                 Method bm;
                 try { bm = bmd.getMethodInstance(classLoader); }
                 catch (Throwable ignored) { continue; }

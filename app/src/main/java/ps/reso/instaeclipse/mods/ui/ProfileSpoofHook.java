@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.ui;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -11,6 +9,7 @@ import java.lang.reflect.Modifier;
 
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -66,22 +65,22 @@ public final class ProfileSpoofHook {
     private static volatile Field idField;
     private static volatile boolean idFieldSearched;
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         if (!FeatureFlags.profileSpoofer) {
             ModuleLog.detail(TAG + "account tracking=" + trackAccount(cl));
             return;
         }
         int hooked = 0;
         StringBuilder log = new StringBuilder();
-        hooked += hook(bridge, cl, "follower_count", "ProfileSpoofFollowers_v2", log, COUNT_TYPES, 0);
-        hooked += hook(bridge, cl, "following_count", "ProfileSpoofFollowing_v2", log, COUNT_TYPES, 1);
-        hooked += hook(bridge, cl, "media_count", "ProfileSpoofPosts_v2", log, COUNT_TYPES, 2);
-        hooked += hook(bridge, cl, "is_verified", "ProfileSpoofVerified_v2", log, FLAG_TYPES, 3);
+        hooked += hook(cl, "follower_count", "ProfileSpoofFollowers_v2", log, COUNT_TYPES, 0);
+        hooked += hook(cl, "following_count", "ProfileSpoofFollowing_v2", log, COUNT_TYPES, 1);
+        hooked += hook(cl, "media_count", "ProfileSpoofPosts_v2", log, COUNT_TYPES, 2);
+        hooked += hook(cl, "is_verified", "ProfileSpoofVerified_v2", log, FLAG_TYPES, 3);
         boolean session = trackAccount(cl);
         hookHeaderViews();
-        hookMetricWriter(bridge, cl, log);
+        hookMetricWriter(cl, log);
         hookAvatarView();
-        log.append(", bio=").append(ProfileBioState.installSpoof(bridge, cl, ProfileSpoofHook::spoofBio));
+        log.append(", bio=").append(ProfileBioState.installSpoof(cl, ProfileSpoofHook::spoofBio));
         if (hooked > 0 && session) FeatureStatusTracker.setHooked("ProfileSpoofer");
         if (hooked > 0 && session) ModuleLog.ok(TAG + "ready");
         else ModuleLog.error(TAG + "Will not work: profile counts or your account could not be found in this Instagram version");
@@ -105,13 +104,13 @@ public final class ProfileSpoofHook {
     }
 
     /** Finds User's zero-arg getter for {@code field} and hooks it; returns how many were hooked. */
-    private static int hook(DexKitBridge bridge, ClassLoader cl, String field, String cacheKey,
+    private static int hook(ClassLoader cl, String field, String cacheKey,
                             StringBuilder log, java.util.List<Class<?>> types, int which) {
         try {
             java.util.List<Method> found = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(cacheKey, cl) : null;
             if (found == null || found.isEmpty()) {
                 found = new java.util.ArrayList<>();
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(USER).paramCount(0).usingNumbers(field.hashCode())))) {
                     if (!md.isMethod()) continue;
                     Method m = md.getMethodInstance(cl);
@@ -225,11 +224,11 @@ public final class ProfileSpoofHook {
         });
     }
 
-    private static void hookMetricWriter(DexKitBridge bridge, ClassLoader cl, StringBuilder log) {
+    private static void hookMetricWriter(ClassLoader cl, StringBuilder log) {
         try {
             Method writer = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(METRIC_WRITER_KEY, cl) : null;
             if (writer == null) {
-                java.util.List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                java.util.List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .modifiers(Modifier.STATIC, org.luckypray.dexkit.query.enums.MatchType.Contains)
                         .usingEqStrings(java.util.List.of("UserMetricsBinderHelper.shrinkVanityMetrics"))));
                 if (found.size() != 1) {

@@ -1,10 +1,8 @@
 package ps.reso.instaeclipse.mods.ui;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.enums.StringMatchType;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -13,6 +11,7 @@ import java.util.List;
 
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -72,25 +71,25 @@ public final class ProfileBioState {
 
     private ProfileBioState() {}
 
-    public static String installSpoof(DexKitBridge bridge, ClassLoader cl, Spoof part) {
+    public static String installSpoof(ClassLoader cl, Spoof part) {
         spoof = part;
-        return install(bridge, cl);
+        return install(cl);
     }
 
-    public static String installCopy(DexKitBridge bridge, ClassLoader cl, Copy part) {
+    public static String installCopy(ClassLoader cl, Copy part) {
         copy = part;
-        return install(bridge, cl);
+        return install(cl);
     }
 
-    private static synchronized String install(DexKitBridge bridge, ClassLoader cl) {
+    private static synchronized String install(ClassLoader cl) {
         if (!tried) {
             tried = true;
-            found = hook(bridge, cl);
+            found = hook(cl);
         }
         return found;
     }
 
-    private static String hook(DexKitBridge bridge, ClassLoader cl) {
+    private static String hook(ClassLoader cl) {
         try {
             Class<?> state = null;
             String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(KEY) : null;
@@ -98,7 +97,7 @@ public final class ProfileBioState {
                 try { state = Class.forName(cached, false, cl); } catch (Throwable ignored) {}
             }
             if (state == null) {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings(List.of(BIO_COMPOSABLE), StringMatchType.Contains, false)))) {
                     Method m;
                     try { m = md.getMethodInstance(cl); } catch (Throwable t) { continue; }

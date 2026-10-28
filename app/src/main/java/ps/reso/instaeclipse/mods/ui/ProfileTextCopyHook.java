@@ -13,7 +13,6 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityNodeProvider;
 import android.widget.TextView;
 
-import org.luckypray.dexkit.DexKitBridge;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
@@ -90,10 +89,10 @@ public final class ProfileTextCopyHook {
         }
     };
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         int title = hookTitle(cl);
         boolean bio = hookBioTouches(cl);
-        String header = ProfileBioState.installCopy(bridge, cl, ProfileTextCopyHook::remember);
+        String header = ProfileBioState.installCopy(cl, ProfileTextCopyHook::remember);
         if (title > 0 || bio) FeatureStatusTracker.setHooked("ProfileMenuTools");
         if (title > 0 && bio) ModuleLog.ok(TAG + "hold to copy ready");
         else if (title > 0) ModuleLog.warn(TAG + "Hold to copy works for the username only; copying the bio is not available in this Instagram version");

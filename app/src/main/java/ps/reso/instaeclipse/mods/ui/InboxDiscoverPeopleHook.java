@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.ui;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -35,10 +34,10 @@ public class InboxDiscoverPeopleHook {
     /** Section types already reported as dropped: one log line each per process. */
     private static final Set<String> dropped = ConcurrentHashMap.newKeySet();
 
-    public void install(DexKitBridge bridge, ClassLoader loader) {
+    public void install(ClassLoader loader) {
         try {
             InboxSectionPath path = null;
-            for (MethodData data : DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            for (Found data : DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create().usingStrings(LOOKUP_ANCHOR)))) {
                 if (!data.isMethod()) continue;
                 InboxSectionPath found = InboxSectionPath.of(data.getMethodInstance(loader));
