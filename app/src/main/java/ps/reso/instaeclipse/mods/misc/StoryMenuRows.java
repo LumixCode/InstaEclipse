@@ -1,10 +1,13 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
 
-final class StoryMenuRows {
+public final class StoryMenuRows {
+
+    public static final String RESUME = "[INTERNAL] Resume Playback";
 
     private StoryMenuRows() {}
 
@@ -51,5 +54,22 @@ final class StoryMenuRows {
         if (items == null || which < 0 || which >= items.length) return null;
         CharSequence item = items[which];
         return item != null && owned.test(item) ? item : null;
+    }
+
+    public static Object[] resumeArgs(Object[] args) {
+        Object[] out = args.clone();
+        for (int i = 0; i < out.length; i++) {
+            if (out[i] instanceof CharSequence) {
+                out[i] = RESUME;
+                break;
+            }
+        }
+        return out;
+    }
+
+    public static <T> List<T> resumable(Collection<T> dispatchers, Collection<T> users) {
+        List<T> out = new ArrayList<>();
+        for (T d : dispatchers) if (users.contains(d)) out.add(d);
+        return out;
     }
 }

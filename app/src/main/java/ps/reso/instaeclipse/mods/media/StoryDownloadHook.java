@@ -646,6 +646,8 @@ public class StoryDownloadHook {
     }
 
 
+    private static volatile Set<java.lang.reflect.Member> resumes = Collections.emptySet();
+
     private void installClickHandlerHook(DexKitBridge bridge, ClassLoader classLoader) {
         // Anchor ONLY on the common "[INTERNAL] Pause Playback" string and hook EVERY void
         // dispatcher behind it. The old matcher also required "explore_viewer" +
@@ -704,10 +706,10 @@ public class StoryDownloadHook {
                     final Object self = param.thisObject;
                     final Object[] args = param.args.clone();
                     Runnable resume = () -> {
+                        if (!resumes.contains(method)) return;
                         try {
-                            for (int i = 0; i < args.length; i++)
-                                if (args[i] instanceof CharSequence) { args[i] = "[INTERNAL] Resume Playback"; break; }
-                            ps.reso.instaeclipse.xposedcompat.XposedBridge.invokeOriginalMethod(method, self, args);
+                            ps.reso.instaeclipse.xposedcompat.XposedBridge.invokeOriginalMethod(method, self,
+                                    ps.reso.instaeclipse.mods.misc.StoryMenuRows.resumeArgs(args));
                         } catch (Throwable t) {
                             ModuleLog.warn("(IE|Story) Could not resume the story after choosing a speed: " + t);
                         }
@@ -746,15 +748,19 @@ public class StoryDownloadHook {
             }
         };
 
-        int hooked = 0;
+        List<java.lang.reflect.Member> users = new ArrayList<>();
+        List<java.lang.reflect.Member> dispatchers = new ArrayList<>();
         for (MethodData md : methods) {
             try {
                 Method m = md.getMethodInstance(classLoader);
+                users.add(m);
                 if (m.getParameterCount() == 0) continue; // dispatchers receive the tapped label
                 XposedBridge.hookMethod(m, clickHook);
-                hooked++;
+                dispatchers.add(m);
             } catch (Throwable ignored) {}
         }
+        int hooked = dispatchers.size();
+        resumes = new java.util.HashSet<>(ps.reso.instaeclipse.mods.misc.StoryMenuRows.resumable(dispatchers, users));
         if (hooked == 0) {
             ModuleLog.error("(IE|Story) Tapping Download in the story menu will not work: the menu's tap handler could not be changed");
             return;
