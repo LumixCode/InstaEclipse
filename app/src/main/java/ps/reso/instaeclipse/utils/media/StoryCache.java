@@ -30,6 +30,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntConsumer;
 
 import ps.reso.instaeclipse.utils.core.StartupIdle;
@@ -139,6 +140,7 @@ public class StoryCache {
     private static long version, written;
     private static final AtomicBoolean startupPrune = new AtomicBoolean();
     private static final List<Runnable> clearDone = new ArrayList<>();
+    private static final AtomicInteger counts = new AtomicInteger();
     private static ExecutorService worker;
     private static final Queue QUEUE = new Queue(StoryCache::execute);
 
@@ -493,6 +495,22 @@ public class StoryCache {
                     Handler main = new Handler(Looper.getMainLooper());
                     for (Runnable r : run) main.post(r);
                 }
+            }
+        });
+    }
+
+    public static void countAsync(IntConsumer done) {
+        QUEUE.post("count" + counts.incrementAndGet(), () -> {
+            int count = 0;
+            try {
+                Context c = ctx();
+                if (c != null && new File(c.getFilesDir(), INDEX).exists()) {
+                    refresh();
+                    synchronized (StoryCache.class) { count = loaded ? cache.size() : 0; }
+                }
+            } finally {
+                int n = count;
+                new Handler(Looper.getMainLooper()).post(() -> done.accept(n));
             }
         });
     }

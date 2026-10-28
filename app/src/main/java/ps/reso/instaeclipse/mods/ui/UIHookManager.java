@@ -234,6 +234,7 @@ public class UIHookManager {
                             }
                             armGestureHint(activity);
                             ps.reso.instaeclipse.utils.dialog.RestartPrompt.onMainResume(activity);
+                            ps.reso.instaeclipse.utils.media.StoryCachePrompt.onMainResume(activity);
                         });
                     });
             ModuleLog.detail("(InstaEclipse): main onResume hooked via " + where);

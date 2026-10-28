@@ -21,11 +21,13 @@ import ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine;
 import ps.reso.instaeclipse.mods.ui.theme.IgThemeHook;
 import ps.reso.instaeclipse.mods.ui.theme.ThemeSettingsHelper;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
+import ps.reso.instaeclipse.utils.dialog.IeSheet;
 import ps.reso.instaeclipse.utils.dialog.RestartPrompt;
 import ps.reso.instaeclipse.utils.feature.RestartPending;
 import ps.reso.instaeclipse.utils.feature.RestartPromptRule;
 import ps.reso.instaeclipse.utils.ghost.GhostModeUtils;
 import ps.reso.instaeclipse.utils.media.StoryCache;
+import ps.reso.instaeclipse.utils.media.StoryCachePrompt;
 
 public final class SettingsEvents {
 
@@ -54,6 +56,7 @@ public final class SettingsEvents {
         if (keys == null || keys.isEmpty()) return false;
         boolean chats = false;
         boolean storyCache = false;
+        boolean caching = false;
         boolean airplane = false;
         boolean likeUndo = false;
         boolean theme = false;
@@ -66,6 +69,7 @@ public final class SettingsEvents {
             if (key == null) continue;
             chats |= CHAT_KEYS.contains(key);
             storyCache |= STORY_CACHE_KEYS.contains(key);
+            caching |= "cacheStories".equals(key);
             airplane |= "airplaneMode".equals(key);
             likeUndo |= "likeUndo".equals(key);
             theme |= ThemeSettingsHelper.isThemeKey(key);
@@ -78,6 +82,7 @@ public final class SettingsEvents {
         boolean recreating = false;
         if (chats) HideChatsHook.refreshVisibleButtons();
         if (storyCache) StoryCache.refreshAsync();
+        if (caching) StoryCachePrompt.cachingChanged(IeSheet.showing() != null);
         if (airplane) AirplaneModeHook.apply();
         if (likeUndo) LikeUndoHook.onLikeUndoChanged();
         if (bulkUnsend) BulkUnsend.switched();

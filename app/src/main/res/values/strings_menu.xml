@@ -65,4 +65,11 @@
     <string name="ig_story_cache_viewed_at" tools:ignore="MissingTranslation">Viewed %1$s</string>
     <string name="ig_restart_prompt" tools:ignore="MissingTranslation">Restart Instagram to apply: %1$s</string>
     <string name="ig_restart_prompt_more" tools:ignore="MissingTranslation">+%1$d</string>
+    <plurals name="ig_story_cache_delete_prompt" tools:ignore="MissingTranslation">
+        <item quantity="one">Delete %1$d cached story now?</item>
+        <item quantity="other">Delete %1$d cached stories now?</item>
+    </plurals>
+    <string name="ig_story_cache_delete_prompt_body" tools:ignore="MissingTranslation">Stories you keep are deleted when their keep time ends.</string>
+    <string name="ig_story_cache_delete" tools:ignore="MissingTranslation">Delete</string>
+    <string name="ig_story_cache_keep" tools:ignore="MissingTranslation">Keep</string>
 </resources>
