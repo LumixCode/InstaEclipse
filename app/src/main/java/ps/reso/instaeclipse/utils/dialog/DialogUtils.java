@@ -2242,7 +2242,13 @@ public class DialogUtils {
         if (!hasCode) layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_lock_no_code_hint)));
 
         LinearLayout cardView = IeRows.card(context, 5);
-        for (String key : PAGE_LOCKS) cardView.addView(lockSwitch(context, key, accent, refresh, changed));
+        for (String key : PAGE_LOCKS) {
+            cardView.addView(lockSwitch(context, key, accent, refresh, changed));
+            if ("lockWholeApp".equals(key)) {
+                FeatureCatalog.Item grace = FeatureCatalog.item("lockWholeAppGrace");
+                cardView.addView(infoRow(context, grace, I18n.t(context, grace.label), refresh));
+            }
+        }
         FeatureCatalog.Item chooseChats = FeatureCatalog.item("lockChooseChats");
         LinearLayout chooseRow = detailRow(context, chooseChats.icon, accent, I18n.t(context, chooseChats.label), v ->
                 LockFlows.authenticate(activityOf(context), I18n.t(context, R.string.ig_lock_change_locks_prompt),
