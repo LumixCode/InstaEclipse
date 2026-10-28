@@ -158,4 +158,9 @@
     <string name="cat_dataBackup">Back up data</string>
     <string name="cat_dataBackup_desc">Unsent messages, analyzed profiles and followers history</string>
     <string name="cat_isDevEnabled_desc">Meta\'s internal settings, for advanced users</string>
+    <string name="cat_download_quality_hint">Standard saves what Instagram shows you (photos up to your screen width). Best checks every version, HDR included, and saves the sharpest one, or the sharpest up to the resolution you pick.</string>
+    <plurals name="ig_story_cache_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
 </resources>

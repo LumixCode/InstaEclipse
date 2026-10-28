@@ -82,6 +82,7 @@ import ps.reso.instaeclipse.utils.core.SettingsSchema;
 import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
 import ps.reso.instaeclipse.utils.ipc.ModuleReplies;
 import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
+import ps.reso.instaeclipse.utils.text.CacheTimeText;
 import ps.reso.instaeclipse.utils.text.SearchText;
 import ps.reso.instaeclipse.utils.ui.CompanionRestartHint;
 import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
@@ -2129,7 +2130,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
     private FeatureItem storyCacheItem() {
         int cacheHours = StoryCacheRetention.fromStored(localCache.getAll().get("storyCacheHours"));
-        return valueRow("storyCacheHours", getString(R.string.ig_story_cache_hours, cacheHours),
+        return valueRow("storyCacheHours", CacheTimeText.format(getResources(), cacheHours),
                 () -> ps.reso.instaeclipse.utils.dialog.DialogUtils.showStoryCacheDurationPicker(requireContext(), cacheHours, value -> {
                     if (!getCurrentState("cacheStories")) return;
                     write("storyCacheHours", StoryCacheRetention.normalize(value));
@@ -2168,12 +2169,19 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     : values[i] == 0 ? getString(R.string.ie_download_best) : getString(R.string.ie_download_ceiling, values[i]);
             if (!standard && values[i] == current) selected = i;
         }
-        new MaterialAlertDialogBuilder(requireContext()).setTitle(R.string.ie_download_quality)
+        Context ctx = requireContext();
+        android.widget.TextView hint = new android.widget.TextView(ctx);
+        hint.setText(R.string.cat_download_quality_hint);
+        hint.setTextSize(14);
+        hint.setTextColor(com.google.android.material.color.MaterialColors.getColor(ctx, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));
+        int pad = Math.round(24 * getResources().getDisplayMetrics().density);
+        hint.setPadding(pad, pad / 3, pad, 0);
+        new MaterialAlertDialogBuilder(ctx).setTitle(R.string.ie_download_quality)
                 .setSingleChoiceItems(labels, selected, (dialog, which) -> {
                     write("downloaderUseOriginal", values[which] < 0);
                     if (values[which] >= 0) write("downloaderQualityMaxShortSide", values[which]);
                     dialog.dismiss(); reloadCurrentMenu();
-                }).setNegativeButton(android.R.string.cancel, null).show();
+                }).setView(hint).setNegativeButton(android.R.string.cancel, null).show();
     }
 
     // =========================================================

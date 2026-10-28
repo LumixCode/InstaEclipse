@@ -2802,7 +2802,7 @@ public class DialogUtils {
         }
         new IeDialog(context)
                 .title(I18n.t(context, R.string.ie_download_quality))
-                .message(I18n.t(context, R.string.ie_download_quality_hint))
+                .message(I18n.t(context, R.string.cat_download_quality_hint))
                 .choices(labels, selected, which -> {
                     FeatureFlags.downloaderUseOriginal = ceilings[which] < 0;
                     if (ceilings[which] >= 0) FeatureFlags.downloaderQualityMaxShortSide = ceilings[which];
@@ -2837,7 +2837,7 @@ public class DialogUtils {
     private static View storyCacheDurationRow(Context context, FeatureCatalog.Item item, java.util.List<Runnable> refresh) {
         IePalette p = IePalette.of(context);
         LinearLayout duration = (LinearLayout) IeRows.valueRow(context, I18n.t(context, item.label),
-                I18n.t(context, R.string.ig_story_cache_hours, FeatureFlags.storyCacheHours));
+                cacheTimeText(context, FeatureFlags.storyCacheHours));
         duration.setTag(item.key);
         TextView hours = (TextView) duration.getChildAt(1);
         hours.setTextColor(IePalette.readable(p.accent, p.card, IePalette.TEXT));
@@ -2848,7 +2848,7 @@ public class DialogUtils {
             FeatureFlags.storyCacheHours = value;
             SettingsManager.saveAllFlags();
             SettingsEvents.afterChange("storyCacheHours");
-            hours.setText(I18n.t(context, R.string.ig_story_cache_hours, value));
+            hours.setText(cacheTimeText(context, value));
         }));
         refresh.add(() -> {
             boolean on = anyOn(item.requires);
@@ -2856,6 +2856,16 @@ public class DialogUtils {
             duration.setAlpha(on ? 1f : .45f);
         });
         return duration;
+    }
+
+    private static String cacheTimeText(Context context, int hours) {
+        return ps.reso.instaeclipse.utils.text.CacheTimeText.format(hours, days -> {
+            try {
+                return ModuleResources.get(context).getQuantityString(R.plurals.ig_story_cache_days, days, days);
+            } catch (Exception e) {
+                return I18n.t(context, R.string.ig_story_cache_hours, days * 24);
+            }
+        }, h -> I18n.t(context, R.string.ig_story_cache_hours, h));
     }
 
     /** Viewer for the story cache — a list per author; tap to view; plus a clear action. */
