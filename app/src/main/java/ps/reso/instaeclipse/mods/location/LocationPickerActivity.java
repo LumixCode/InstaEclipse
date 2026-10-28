@@ -26,6 +26,7 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.color.MaterialColors;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -45,12 +46,18 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.utils.core.CommonUtils;
+import ps.reso.instaeclipse.utils.core.CompanionSettings;
+import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
+import ps.reso.instaeclipse.utils.ui.CompanionRestartHint;
 import ps.reso.instaeclipse.utils.ui.Links;
 
 /**
@@ -71,6 +78,13 @@ public class LocationPickerActivity extends AppCompatActivity {
     public static final String EXTRA_LNG = "lng";
     public static final String RESULT_LAT = "result_lat";
     public static final String RESULT_LNG = "result_lng";
+    public static final String EXTRA_ENABLE_ON_PICK = "enable_on_pick";
+
+    public interface Fetch {
+        String get(String url) throws Exception;
+    }
+
+    private static volatile Fetch fetchOverride;
 
     private static final long REVERSE_DELAY_MS = 900;
     private static final String OSM_COPYRIGHT = "https://www.openstreetmap.org/copyright";
@@ -79,6 +93,9 @@ public class LocationPickerActivity extends AppCompatActivity {
     private static final String STATE_ZOOM = "zoom";
     private static final String STATE_LABEL = "label";
     private static final String STATE_LABEL_LOCKED = "labelLocked";
+    private static final double WORLD_LAT = 20.0;
+    private static final double WORLD_LNG = 0.0;
+    private static final double WORLD_ZOOM = 3.0;
 
     private MapView map;
     private TextView placeName;
@@ -95,7 +112,12 @@ public class LocationPickerActivity extends AppCompatActivity {
     private String currentLabel = "";
     /** Set when the pin was placed from a named source (search hit / recent chip). */
     private boolean labelLocked;
+    private GeoPoint target;
     private final Runnable reverseTask = this::reverseGeocodeCenter;
+
+    public static void overrideFetchForTest(Fetch fetch) {
+        fetchOverride = fetch;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -165,9 +187,9 @@ public class LocationPickerActivity extends AppCompatActivity {
             labelLocked = savedInstanceState.getBoolean(STATE_LABEL_LOCKED) && !currentLabel.isEmpty();
             if (labelLocked) placeName.setText(currentLabel);
         } else if (!LocationPresets.valid(startLat, startLng)) {
-            startLat = 41.0082; // Istanbul as a neutral first view
-            startLng = 28.9784;
-            map.getController().setZoom(11.0);
+            startLat = WORLD_LAT;
+            startLng = WORLD_LNG;
+            map.getController().setZoom(WORLD_ZOOM);
         }
         map.getController().setCenter(new GeoPoint(startLat, startLng));
         onCenterChanged();
@@ -182,6 +204,7 @@ public class LocationPickerActivity extends AppCompatActivity {
         map.setOnTouchListener((v, e) -> {
             if (e.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
                 labelLocked = false;
+                target = null;
                 resultsCard.setVisibility(View.GONE);
             }
             return false;
@@ -189,16 +212,57 @@ public class LocationPickerActivity extends AppCompatActivity {
 
         buildRecentChips();
 
-        useBtn.setOnClickListener(v -> {
-            GeoPoint c = (GeoPoint) map.getMapCenter();
-            LocationPresets.Preset picked = new LocationPresets.Preset(c.getLatitude(), c.getLongitude(), currentLabel);
+        useBtn.setOnClickListener(v -> onUse());
+    }
+
+    private void onUse() {
+        map.getController().stopAnimation(true);
+        IGeoPoint c = target != null ? target : map.getMapCenter();
+        LocationPresets.Preset picked = new LocationPresets.Preset(c.getLatitude(), c.getLongitude(), currentLabel);
+        if (getIntent().getBooleanExtra(EXTRA_ENABLE_ON_PICK, false)) {
+            turnOn(picked);
+        } else if (CommonUtils.companionCache(this).getBoolean("spoofLocation", false)) {
             LocationPresets.applyFromCompanion(this, picked);
-            Intent data = new Intent();
-            data.putExtra(RESULT_LAT, picked.lat);
-            data.putExtra(RESULT_LNG, picked.lng);
-            setResult(RESULT_OK, data);
-            finish();
-        });
+            finishWith(picked);
+        } else {
+            askToTurnOn(picked);
+        }
+    }
+
+    private void askToTurnOn(LocationPresets.Preset picked) {
+        String message = getString(R.string.loc_picker_spoof_off);
+        FeatureCatalog.Item spoof = FeatureCatalog.item("spoofLocation");
+        if (spoof != null && spoof.restartOn != FeatureCatalog.Restart.NONE) {
+            message += " " + getString(R.string.loc_picker_needs_restart);
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setMessage(message)
+                .setPositiveButton(R.string.loc_picker_turn_on, (d, w) -> turnOn(picked))
+                .setNegativeButton(R.string.loc_picker_only_save, (d, w) -> {
+                    LocationPresets.applyFromCompanion(this, picked);
+                    finishWith(picked);
+                })
+                .show();
+    }
+
+    private void turnOn(LocationPresets.Preset picked) {
+        LinkedHashMap<String, Object> values = LocationPresets.placeValues(this, picked);
+        values.put("spoofLocation", true);
+        Set<String> restart = CompanionSettings.putAll(this, values);
+        setResultFor(picked);
+        CompanionRestartHint.show(this, restart, this::finish);
+    }
+
+    private void finishWith(LocationPresets.Preset picked) {
+        setResultFor(picked);
+        finish();
+    }
+
+    private void setResultFor(LocationPresets.Preset picked) {
+        Intent data = new Intent();
+        data.putExtra(RESULT_LAT, picked.lat);
+        data.putExtra(RESULT_LNG, picked.lng);
+        setResult(RESULT_OK, data);
     }
 
     @Override
@@ -226,6 +290,7 @@ public class LocationPickerActivity extends AppCompatActivity {
     }
 
     private void moveTo(double lat, double lng, String label) {
+        target = new GeoPoint(lat, lng);
         labelLocked = label != null && !label.isEmpty();
         currentLabel = labelLocked ? label : "";
         if (labelLocked) placeName.setText(label);
@@ -241,12 +306,12 @@ public class LocationPickerActivity extends AppCompatActivity {
         ChipGroup group = findViewById(R.id.recent_chips);
         HorizontalScrollView scroll = findViewById(R.id.recent_scroll);
         List<LocationPresets.Preset> recent = LocationPresets.parse(
-                ps.reso.instaeclipse.utils.core.CommonUtils.companionCache(this).getString("spoofRecent", ""));
+                CommonUtils.companionCache(this).getString("spoofRecent", ""));
         group.removeAllViews();
         for (LocationPresets.Preset p : recent) {
             Chip chip = new Chip(this, null, com.google.android.material.R.attr.chipStyle);
             chip.setText(shorten(p.title()));
-            chip.setChipIconResource(R.drawable.ic_timer);
+            chip.setChipIconResource(R.drawable.ic_history);
             chip.setChipIconVisible(true);
             chip.setOnClickListener(v -> moveTo(p.lat, p.lng, p.label));
             group.addView(chip);
@@ -279,7 +344,8 @@ public class LocationPickerActivity extends AppCompatActivity {
             } catch (Throwable t) {
                 main.post(() -> {
                     searchProgress.setVisibility(View.GONE);
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, getString(R.string.loc_picker_search_error, String.valueOf(t.getMessage())),
+                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(this, LocationPresets.offline(t)
+                            ? R.string.loc_picker_no_connection : R.string.loc_picker_search_unavailable,
                             Toast.LENGTH_SHORT).show();
                 });
             }
@@ -355,6 +421,8 @@ public class LocationPickerActivity extends AppCompatActivity {
     }
 
     private String fetch(String url) throws Exception {
+        Fetch override = fetchOverride;
+        if (override != null) return override.get(url);
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         try {
             conn.setConnectTimeout(8000);

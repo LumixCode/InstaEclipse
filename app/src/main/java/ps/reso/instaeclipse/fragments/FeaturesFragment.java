@@ -359,6 +359,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         /** Switch is locked (disabled) when this key is currently true. */
         public String disabledWhenTrue;
         public String subtitleWhenOn;
+        public Runnable onTurnOn;
         /** False when another setting overrides this row (fixed when the menu is built). */
         public boolean enabled = true;
 
@@ -644,6 +645,12 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                                     .setNegativeButton(getString(R.string.ig_dialog_cancel), (dialog, which) -> rebind(item))
                                     .setOnCancelListener(dialog -> rebind(item))
                                     .show();
+                            return;
+                        }
+
+                        if (checked && item.onTurnOn != null) {
+                            rebind(item);
+                            item.onTurnOn.run();
                             return;
                         }
 
@@ -956,6 +963,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         });
         f.put("storyCacheHours", this::storyCacheItem);
         f.put("locationPlace", this::locationPlaceItem);
+        f.put("spoofLocation", this::spoofLocationItem);
         f.put("themeCustomize", () -> actionRow("themeCustomize", () ->
                 themeCustomizerLauncher.launch(new Intent(requireContext(), ThemeCustomizerActivity.class))));
         f.put("themePresetId", () -> isNightMode() ? valueRow("themePresetId",
@@ -1906,23 +1914,42 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     }
 
     private FeatureItem locationPlaceItem() {
-        double lat = 0.0, lng = 0.0;
-        try { lat = Double.parseDouble(localCache.getString("spoofLat", "0")); } catch (Throwable ignored) {}
-        try { lng = Double.parseDouble(localCache.getString("spoofLng", "0")); } catch (Throwable ignored) {}
+        double[] point = spoofPoint();
+        double lat = point[0], lng = point[1];
         String label = localCache.getString("spoofLabel", "");
         String place = !ps.reso.instaeclipse.mods.location.LocationPresets.valid(lat, lng)
                 ? getString(R.string.ig_dialog_location_unset)
                 : !label.isEmpty() ? label : ps.reso.instaeclipse.mods.location.LocationPresets.coords(lat, lng);
-        final double curLat = lat, curLng = lng;
         FeatureCatalog.Item item = FeatureCatalog.item("locationPlace");
-        FeatureItem row = createNav(item.icon, accentOf(item), getString(item.label), () -> {
-            Intent i = new Intent(requireContext(), LocationPickerActivity.class);
-            i.putExtra(LocationPickerActivity.EXTRA_LAT, curLat);
-            i.putExtra(LocationPickerActivity.EXTRA_LNG, curLng);
-            locationPickerLauncher.launch(i);
-        });
+        FeatureItem row = createNav(item.icon, accentOf(item), getString(item.label), () -> openLocationPicker(false));
         row.subtitle = place;
         return row;
+    }
+
+    private FeatureItem spoofLocationItem() {
+        FeatureCatalog.Item item = FeatureCatalog.item("spoofLocation");
+        FeatureItem row = catalogSwitch(item, accentOf(item));
+        double[] point = spoofPoint();
+        if (!ps.reso.instaeclipse.mods.location.LocationPresets.valid(point[0], point[1])) {
+            row.onTurnOn = () -> openLocationPicker(true);
+        }
+        return row;
+    }
+
+    private double[] spoofPoint() {
+        double lat = 0.0, lng = 0.0;
+        try { lat = Double.parseDouble(localCache.getString("spoofLat", "0")); } catch (Throwable ignored) {}
+        try { lng = Double.parseDouble(localCache.getString("spoofLng", "0")); } catch (Throwable ignored) {}
+        return new double[]{lat, lng};
+    }
+
+    private void openLocationPicker(boolean enableOnPick) {
+        double[] point = spoofPoint();
+        Intent i = new Intent(requireContext(), LocationPickerActivity.class);
+        i.putExtra(LocationPickerActivity.EXTRA_LAT, point[0]);
+        i.putExtra(LocationPickerActivity.EXTRA_LNG, point[1]);
+        if (enableOnPick) i.putExtra(LocationPickerActivity.EXTRA_ENABLE_ON_PICK, true);
+        locationPickerLauncher.launch(i);
     }
 
     private List<FeatureItem> recentPlaceRows() {
@@ -1930,9 +1957,10 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         int accent = accentOf(FeatureCatalog.item("locationRecent"));
         for (ps.reso.instaeclipse.mods.location.LocationPresets.Preset p
                 : ps.reso.instaeclipse.mods.location.LocationPresets.parse(localCache.getString("spoofRecent", ""))) {
-            rows.add(createNav(R.drawable.ic_timer, accent, p.title(), () -> {
+            rows.add(createNav(R.drawable.ic_history, accent, p.title(), () -> {
                 ps.reso.instaeclipse.mods.location.LocationPresets.applyFromCompanion(requireContext(), p);
-                ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), R.string.ig_dialog_location_applied, Toast.LENGTH_SHORT).show();
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(), getCurrentState("spoofLocation")
+                        ? R.string.ig_dialog_location_applied : R.string.loc_saved_spoof_off, Toast.LENGTH_SHORT).show();
                 reloadCurrentMenu();
             }));
         }

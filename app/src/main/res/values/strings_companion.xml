@@ -19,4 +19,11 @@
     <string name="import_too_large" tools:ignore="MissingTranslation">This file is too large to import</string>
     <string name="import_cant_receive" tools:ignore="MissingTranslation">Instagram can\'t receive this file</string>
     <string name="import_no_reply" tools:ignore="MissingTranslation">Instagram didn\'t confirm. Open Instagram (restart it after an InstaEclipse update), then try again.</string>
+    <string name="loc_picker_spoof_off" tools:ignore="MissingTranslation">The fake location is off, so Instagram still sees your real location.</string>
+    <string name="loc_picker_needs_restart" tools:ignore="MissingTranslation">Instagram needs one restart to use it.</string>
+    <string name="loc_picker_turn_on" tools:ignore="MissingTranslation">Turn on</string>
+    <string name="loc_picker_only_save" tools:ignore="MissingTranslation">Only save</string>
+    <string name="loc_saved_spoof_off" tools:ignore="MissingTranslation">Saved. Turn on the fake location to use it.</string>
+    <string name="loc_picker_no_connection" tools:ignore="MissingTranslation">No connection</string>
+    <string name="loc_picker_search_unavailable" tools:ignore="MissingTranslation">Search isn\'t available right now</string>
 </resources>

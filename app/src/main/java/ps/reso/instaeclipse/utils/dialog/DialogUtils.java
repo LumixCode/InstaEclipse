@@ -2292,13 +2292,21 @@ public class DialogUtils {
         String accent = accentHex(cat.group);
         LinearLayout layout = createSwitchLayout(context);
 
+        boolean set = ps.reso.instaeclipse.mods.location.LocationPresets.valid(FeatureFlags.spoofLat, FeatureFlags.spoofLng);
         java.util.List<Runnable> refresh = new java.util.ArrayList<>();
         LinearLayout toggleCard = IeRows.card(context, 5);
-        toggleCard.addView(catalogSwitch(context, FeatureCatalog.item("spoofLocation"), accent, refresh));
+        ToggleRow spoof = catalogSwitch(context, FeatureCatalog.item("spoofLocation"), accent, refresh);
+        if (!set && !FeatureFlags.spoofLocation) {
+            spoof.setOnCheckedChangeListener((b, checked) -> {
+                if (suppressLockToggle || !checked) return;
+                setQuietly(spoof, false);
+                openLocationPicker(context, true);
+            });
+        }
+        toggleCard.addView(spoof);
         runAll(refresh);
         layout.addView(toggleCard);
 
-        boolean set = ps.reso.instaeclipse.mods.location.LocationPresets.valid(FeatureFlags.spoofLat, FeatureFlags.spoofLng);
         String place = !set ? I18n.t(context, R.string.ig_dialog_location_unset)
                 : !FeatureFlags.spoofLabel.isEmpty() ? FeatureFlags.spoofLabel
                 : ps.reso.instaeclipse.mods.location.LocationPresets.coords(FeatureFlags.spoofLat, FeatureFlags.spoofLng);
@@ -2308,15 +2316,8 @@ public class DialogUtils {
         View placeRow = IeRows.valueRow(context, I18n.t(context, placeItem.label), place);
         placeRow.setTag(placeItem.key);
         current.addView(placeRow);
-        LinearLayout pickRow = detailRow(context, placeItem.icon, accent, I18n.t(context, R.string.ig_dialog_location_pick), v -> {
-            Bundle extras = new Bundle();
-            extras.putDouble(LocationPickerActivity.EXTRA_LAT, FeatureFlags.spoofLat);
-            extras.putDouble(LocationPickerActivity.EXTRA_LNG, FeatureFlags.spoofLng);
-            if (ModuleActivityLauncher.launch(context,
-                    ps.reso.instaeclipse.utils.ipc.BrokerPayload.LOCATION, extras)) {
-                IeSheet.close();
-            }
-        });
+        LinearLayout pickRow = detailRow(context, placeItem.icon, accent, I18n.t(context, R.string.ig_dialog_location_pick),
+                v -> openLocationPicker(context, false));
         pickRow.setTag(placeItem.key);
         current.addView(pickRow);
         layout.addView(current);
@@ -2339,7 +2340,8 @@ public class DialogUtils {
                         ps.reso.instaeclipse.mods.location.LocationPresets.remember(recent, p));
                 SettingsManager.saveAllFlags();
                 SettingsEvents.afterChange(java.util.Arrays.asList("spoofLat", "spoofLng", "spoofLabel", "spoofRecent"));
-                ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_dialog_location_applied), Toast.LENGTH_SHORT).show();
+                ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, FeatureFlags.spoofLocation
+                        ? R.string.ig_dialog_location_applied : R.string.loc_saved_spoof_off), Toast.LENGTH_SHORT).show();
                 replaceTop(context, locationPage(context));
             });
             recentCard.addView(row);
@@ -2350,6 +2352,16 @@ public class DialogUtils {
         layout.addView(recentCard);
 
         return new IeSheet.Page(I18n.t(context, cat.title), layout);
+    }
+
+    private static void openLocationPicker(Context context, boolean enableOnPick) {
+        Bundle extras = new Bundle();
+        extras.putDouble(LocationPickerActivity.EXTRA_LAT, FeatureFlags.spoofLat);
+        extras.putDouble(LocationPickerActivity.EXTRA_LNG, FeatureFlags.spoofLng);
+        if (enableOnPick) extras.putBoolean(LocationPickerActivity.EXTRA_ENABLE_ON_PICK, true);
+        if (ModuleActivityLauncher.launch(context, ps.reso.instaeclipse.utils.ipc.BrokerPayload.LOCATION, extras)) {
+            IeSheet.close();
+        }
     }
 
     private static void showThemeOptions(Context context) {

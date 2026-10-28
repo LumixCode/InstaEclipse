@@ -115,6 +115,10 @@ public final class LocationPresets {
     }
 
     public static void applyFromCompanion(Context context, Preset picked) {
+        CompanionSettings.putAll(context, placeValues(context, picked));
+    }
+
+    public static LinkedHashMap<String, Object> placeValues(Context context, Preset picked) {
         android.content.SharedPreferences cache = CommonUtils.companionCache(context);
         String recent = serialize(remember(parse(cache.getString("spoofRecent", "")), picked));
         LinkedHashMap<String, Object> values = new LinkedHashMap<>();
@@ -122,7 +126,17 @@ public final class LocationPresets {
         values.put("spoofLng", String.valueOf(picked.lng));
         values.put("spoofLabel", picked.label);
         values.put("spoofRecent", recent);
-        CompanionSettings.putAll(context, values);
+        return values;
+    }
+
+    public static boolean offline(Throwable error) {
+        for (Throwable t = error; t != null; t = t.getCause() == t ? null : t.getCause()) {
+            if (t instanceof java.net.UnknownHostException || t instanceof java.net.ConnectException
+                    || t instanceof java.net.NoRouteToHostException || t instanceof java.net.SocketTimeoutException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Max distance of a spoofed fix from the picked point. */
