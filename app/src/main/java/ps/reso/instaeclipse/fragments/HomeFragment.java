@@ -50,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ps.reso.instaeclipse.MainActivity;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
 import ps.reso.instaeclipse.mods.location.LocationPresets;
@@ -70,6 +71,7 @@ import ps.reso.instaeclipse.utils.feature.RestartPromptRule;
 import ps.reso.instaeclipse.utils.log.LogMirrorProvider;
 import ps.reso.instaeclipse.utils.ui.CompanionRestartHint;
 import ps.reso.instaeclipse.utils.ui.Links;
+import ps.reso.instaeclipse.utils.ui.NoticeQueue;
 
 public class HomeFragment extends Fragment implements TabFragment {
 
@@ -485,8 +487,16 @@ public class HomeFragment extends Fragment implements TabFragment {
 
     private void updateSetupCard() {
         boolean confirmedOnce = uiPrefs.getBoolean(CompanionUiPrefs.MODULE_CONFIRMED_ONCE, false);
-        setupSteps.setVisibility(confirmedOnce ? View.GONE : View.VISIBLE);
+        MainActivity.NOTICES.offer(new NoticeQueue.Notice<>(MainActivity.NOTICE_SETUP, 3,
+                screen -> !confirmedOnce && MainActivity.SCREEN_HOME.equals(screen)));
+        NoticeQueue.Notice<String> next = MainActivity.NOTICES.next(MainActivity.SCREEN_HOME);
+        boolean steps = next != null && MainActivity.NOTICE_SETUP.equals(next.id);
+        setupSteps.setVisibility(steps ? View.VISIBLE : View.GONE);
         setupTip.setVisibility(confirmedOnce ? View.VISIBLE : View.GONE);
+    }
+
+    public void refreshNotices() {
+        if (setupSteps != null && uiPrefs != null && isAdded()) updateSetupCard();
     }
 
     private void updateFeatureCount() {

@@ -72,4 +72,8 @@
     <string name="ig_story_cache_delete_prompt_body" tools:ignore="MissingTranslation">Stories you keep are deleted when their keep time ends.</string>
     <string name="ig_story_cache_delete" tools:ignore="MissingTranslation">Delete</string>
     <string name="ig_story_cache_keep" tools:ignore="MissingTranslation">Keep</string>
+    <string name="ig_what_changed_title" tools:ignore="MissingTranslation">What changed</string>
+    <string name="ig_what_changed_menu" tools:ignore="MissingTranslation">The menu is reorganised: Distraction-Free Instagram is now Focus mode, Lock and Hide specific chats share Lock &amp; hidden chats, Downloader is Downloads, Airplane mode is Appear offline and Clear hooks cache is Rescan Instagram. Search also finds the old names.</string>
+    <string name="ig_what_changed_spoof" tools:ignore="MissingTranslation">Spoof last seen was removed: it didn\'t work on Instagram 451. To hide when you\'re active, turn off Activity status in Instagram\'s settings.</string>
+    <string name="ig_what_changed_followers" tools:ignore="MissingTranslation">Followers history is now part of the Profile analyzer.</string>
 </resources>

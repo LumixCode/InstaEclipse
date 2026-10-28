@@ -5,7 +5,10 @@ import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
 
+import androidx.appcompat.app.AlertDialog;
+
 import ps.reso.instaeclipse.BuildConfig;
+import ps.reso.instaeclipse.MainActivity;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
 import ps.reso.instaeclipse.utils.core.ExportBrand;
@@ -112,13 +115,16 @@ public class VersionCheckUtility {
             }
             message.append("\n\n").append(activity.getString(R.string.update_whats_new)).append('\n').append(body);
         }
-        new MaterialAlertDialogBuilder(activity)
+        AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
                 .setTitle(activity.getString(R.string.ig_update_title))
                 .setMessage(message)
                 .setPositiveButton(activity.getString(R.string.ig_update_button), (dialogInterface, which) -> Links.open(activity, release.url))
                 .setNegativeButton(activity.getString(R.string.ig_update_later), (dialogInterface, which) -> dialogInterface.dismiss())
                 .setNeutralButton(activity.getString(R.string.update_skip_version), (dialogInterface, which) ->
                         ui.edit().putString(CompanionUiPrefs.SKIPPED_VERSION, release.version).apply())
-                .show();
+                .create();
+        dialog.setOnDismissListener(d -> MainActivity.noticeClosed(activity, MainActivity.NOTICE_UPDATE));
+        MainActivity.noticeOpened(activity, MainActivity.NOTICE_UPDATE);
+        dialog.show();
     }
 }

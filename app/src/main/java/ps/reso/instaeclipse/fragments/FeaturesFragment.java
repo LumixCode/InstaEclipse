@@ -68,6 +68,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import ps.reso.instaeclipse.MainActivity;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.devops.config.DevConfigReply;
 import ps.reso.instaeclipse.mods.media.MediaStoreTarget;
@@ -86,6 +87,7 @@ import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 import ps.reso.instaeclipse.utils.text.CacheTimeText;
 import ps.reso.instaeclipse.utils.text.SearchText;
 import ps.reso.instaeclipse.utils.ui.CompanionRestartHint;
+import ps.reso.instaeclipse.utils.ui.NoticeQueue;
 import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
 import ps.reso.instaeclipse.utils.core.CompanionSettings;
 import ps.reso.instaeclipse.ui.theme.ThemeCustomizerActivity;
@@ -894,7 +896,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return item;
     }
 
-    public static final String MENU_REORGANISED_SEEN = "menuReorganisedSeen";
     private static final int DESTRUCTIVE = 0xFFFF453A;
     private static final Map<String, String> RETIRED_MENUS = retiredMenus();
     private static final Map<String, FeatureCatalog.Category> CATEGORY_OF_ITEM = categoryOfItem();
@@ -1033,19 +1034,13 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
     private List<Object> mainDefs() {
         List<Object> defs = new ArrayList<>();
-        if (ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.shouldShow(localCache)) {
-            FeatureItem notice = new FeatureItem();
-            notice.type = FeatureItem.TYPE_NOTICE;
-            notice.title = getString(R.string.ie_spoof_last_seen_removed);
-            notice.onClick = this::dismissSpoofLastSeenNotice;
-            defs.add(Collections.singletonList(notice));
-        }
-        if (!CompanionUiPrefs.get(requireContext()).getBoolean(MENU_REORGANISED_SEEN, false)) {
+        List<NoticeQueue.WhatChanged.Line> changed = whatChangedLines();
+        if (changed != null) {
             FeatureItem card = new FeatureItem();
             card.type = FeatureItem.TYPE_NOTICE;
-            card.title = getString(R.string.cat_menu_reorganised_title);
-            card.subtitle = getString(R.string.cat_menu_reorganised_body);
-            card.onClick = this::dismissMenuReorganised;
+            card.title = getString(R.string.ig_what_changed_title);
+            card.subtitle = whatChangedText(changed);
+            card.onClick = () -> dismissWhatChanged(changed);
             defs.add(Collections.singletonList(card));
         }
         FeatureCatalog.Values values = cacheValues();
@@ -1114,14 +1109,42 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         defs.add(rows);
     }
 
-    private void dismissSpoofLastSeenNotice() {
-        ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.dismiss(localCache);
-        write(ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.KEY, false);
+    private List<NoticeQueue.WhatChanged.Line> whatChangedLines() {
+        SharedPreferences ui = CompanionUiPrefs.get(requireContext());
+        String from = NoticeQueue.WhatChanged.from(ui, NoticeQueue.WhatChanged.APP_FROM, localCache::getAll, () -> false);
+        boolean due = NoticeQueue.WhatChanged.due(from, ui.getBoolean(NoticeQueue.WhatChanged.APP_SEEN, false));
+        MainActivity.NOTICES.offer(new NoticeQueue.Notice<>(NoticeQueue.WhatChanged.ID, 2,
+                screen -> due && MainActivity.SCREEN_FEATURES.equals(screen)));
+        NoticeQueue.Notice<String> next = MainActivity.NOTICES.next(MainActivity.SCREEN_FEATURES);
+        if (next == null || !NoticeQueue.WhatChanged.ID.equals(next.id)) return null;
+        return NoticeQueue.WhatChanged.lines(localCache.getAll(), () -> false);
+    }
+
+    private String whatChangedText(List<NoticeQueue.WhatChanged.Line> lines) {
+        StringBuilder out = new StringBuilder();
+        for (NoticeQueue.WhatChanged.Line line : lines) {
+            if (out.length() > 0) out.append("\n\n");
+            out.append(getString(switch (line) {
+                case MENU -> R.string.ig_what_changed_menu;
+                case SPOOF_LAST_SEEN -> R.string.ig_what_changed_spoof;
+                case FOLLOWERS_HISTORY -> R.string.ig_what_changed_followers;
+            }));
+        }
+        return out.toString();
+    }
+
+    private void dismissWhatChanged(List<NoticeQueue.WhatChanged.Line> lines) {
+        CompanionUiPrefs.get(requireContext()).edit().putBoolean(NoticeQueue.WhatChanged.APP_SEEN, true).apply();
+        MainActivity.NOTICES.dismissed(NoticeQueue.WhatChanged.ID);
+        if (lines.contains(NoticeQueue.WhatChanged.Line.SPOOF_LAST_SEEN)) {
+            ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.dismiss(localCache);
+            write(ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.KEY, false);
+        }
         if ("main".equals(currentMenu) && !isSearching()) loadMainMenu();
     }
 
-    private void dismissMenuReorganised() {
-        CompanionUiPrefs.get(requireContext()).edit().putBoolean(MENU_REORGANISED_SEEN, true).apply();
+    public void refreshNotices() {
+        if (localCache == null || !isAdded() || getView() == null) return;
         if ("main".equals(currentMenu) && !isSearching()) loadMainMenu();
     }
 

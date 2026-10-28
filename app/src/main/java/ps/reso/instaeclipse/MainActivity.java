@@ -1,5 +1,6 @@
 package ps.reso.instaeclipse;
 
+import android.app.Activity;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -35,12 +36,19 @@ import ps.reso.instaeclipse.fragments.HelpFragment;
 import ps.reso.instaeclipse.fragments.HomeFragment;
 import ps.reso.instaeclipse.fragments.LoggingFragment;
 import ps.reso.instaeclipse.fragments.TabFragment;
+import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
 import ps.reso.instaeclipse.utils.core.PermissionAsk;
+import ps.reso.instaeclipse.utils.ui.NoticeQueue;
 import ps.reso.instaeclipse.utils.version.VersionCheckUtility;
 
 public class MainActivity extends AppCompatActivity {
 
+    public static final NoticeQueue<String> NOTICES = new NoticeQueue<>();
+    public static final String NOTICE_UPDATE = "update";
+    public static final String NOTICE_SETUP = "setup";
+    public static final String SCREEN_HOME = "home";
+    public static final String SCREEN_FEATURES = "features";
     private static final String STATE_TAB = "selectedTab";
     private static final int[] TAB_IDS = {R.id.nav_home, R.id.nav_features, R.id.nav_logs, R.id.nav_help};
     private static final int MAX_CONTENT_WIDTH_DP = 640;
@@ -64,6 +72,8 @@ public class MainActivity extends AppCompatActivity {
         // (see Theme.InstaEclipse); adopting the wallpaper palette here would override the brand.
         super.onCreate(savedInstanceState);
         permissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {});
+        NoticeQueue.WhatChanged.from(CompanionUiPrefs.get(this), NoticeQueue.WhatChanged.APP_FROM,
+                () -> CommonUtils.companionCache(this).getAll(), () -> false);
         if (savedInstanceState == null) VersionCheckUtility.checkForUpdates(this); // not again on rotation
         // Stale companion-cache keys are dropped once per process in InstaEclipseApp.onCreate.
 
@@ -163,6 +173,25 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .setNegativeButton(R.string.feat_permission_not_now, null)
                 .show();
+    }
+
+    public static void noticeOpened(Activity activity, String id) {
+        NOTICES.opened(id);
+        refreshNotices(activity);
+    }
+
+    public static void noticeClosed(Activity activity, String id) {
+        NOTICES.closed(id);
+        refreshNotices(activity);
+    }
+
+    private static void refreshNotices(Activity activity) {
+        if (!(activity instanceof MainActivity main) || main.isFinishing() || main.isDestroyed()) return;
+        FragmentManager fragments = main.getSupportFragmentManager();
+        Fragment home = fragments.findFragmentByTag(tagOf(R.id.nav_home));
+        if (home instanceof HomeFragment h) h.refreshNotices();
+        Fragment features = fragments.findFragmentByTag(tagOf(R.id.nav_features));
+        if (features instanceof FeaturesFragment f) f.refreshNotices();
     }
 
     public static int permissionRequestsForTest() {

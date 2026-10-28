@@ -52,6 +52,7 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.Gestures;
 import ps.reso.instaeclipse.utils.ui.IePalette;
+import ps.reso.instaeclipse.utils.ui.NoticeQueue;
 import ps.reso.instaeclipse.utils.dialog.IeRows.RadioRow;
 import ps.reso.instaeclipse.utils.dialog.IeRows.ToggleRow;
 
@@ -62,7 +63,6 @@ import static ps.reso.instaeclipse.utils.dialog.IeRows.hairline;
 public class DialogUtils {
 
     private static final SaveBatcher SAVES = new SaveBatcher(SettingsManager::saveAllFlags);
-    public static final String MENU_REORGANISED_SEEN = "__menuReorganisedSeen";
     private static final String DESTRUCTIVE = "#FF453A";
     private static String cachedHostVersion;
     private static boolean unsentListStale;
@@ -342,13 +342,8 @@ public class DialogUtils {
     private static LinearLayout buildMainMenuLayout(Context context, java.util.List<Runnable> counts) {
         LinearLayout mainLayout = new LinearLayout(context);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
-        if (ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.shouldShow(SettingsManager.prefs())) {
-            mainLayout.addView(spoofLastSeenNotice(context));
-        }
-        android.content.SharedPreferences prefs = SettingsManager.prefs();
-        if (prefs != null && !prefs.getBoolean(MENU_REORGANISED_SEEN, false)) {
-            mainLayout.addView(menuReorganisedNotice(context));
-        }
+        java.util.List<NoticeQueue.WhatChanged.Line> changed = whatChangedLines(context);
+        if (changed != null) mainLayout.addView(whatChangedNotice(context, changed));
         FeatureCatalog.Values values = new FlagValues();
         for (FeatureCatalog.Group group : FeatureCatalog.Group.values()) {
             LinearLayout card = null;
@@ -370,20 +365,70 @@ public class DialogUtils {
         return mainLayout;
     }
 
-    private static View spoofLastSeenNotice(Context context) {
-        return notice(context, null, I18n.t(context, R.string.ie_spoof_last_seen_removed), () -> {
-            FeatureFlags.spoofLastSeen = false;
-            ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.dismiss(SettingsManager.prefs());
-            SettingsManager.saveAllFlags();
-        });
+    public static boolean whatChangedDue(Context context) {
+        android.content.SharedPreferences prefs = SettingsManager.prefs();
+        if (prefs == null || context == null) return false;
+        String from = NoticeQueue.WhatChanged.from(prefs, NoticeQueue.WhatChanged.FROM, prefs::getAll,
+                () -> followersHistoryFile(context));
+        return NoticeQueue.WhatChanged.due(from, prefs.getBoolean(NoticeQueue.WhatChanged.SEEN, false));
     }
 
-    private static View menuReorganisedNotice(Context context) {
-        return notice(context, I18n.t(context, R.string.cat_menu_reorganised_title),
-                I18n.t(context, R.string.cat_menu_reorganised_body), () -> {
-                    android.content.SharedPreferences prefs = SettingsManager.prefs();
-                    if (prefs != null) prefs.edit().putBoolean(MENU_REORGANISED_SEEN, true).apply();
-                });
+    public static boolean showWhatChanged(Activity activity, Runnable onClosed) {
+        java.util.List<NoticeQueue.WhatChanged.Line> lines = whatChangedLines(activity);
+        if (lines == null) return false;
+        try {
+            IeDialog dlg = new IeDialog(activity).title(I18n.t(activity, R.string.ig_what_changed_title))
+                    .message(whatChangedText(activity, lines));
+            dlg.primary(I18n.t(activity, R.string.ig_dialog_ok), null);
+            dlg.onDismiss(onClosed);
+            if (!dlg.show().isShowing()) return false;
+            whatChangedSeen(lines);
+            return true;
+        } catch (Throwable t) {
+            ModuleLog.warn("(IE|Notices) Could not show what changed", t);
+            return false;
+        }
+    }
+
+    private static java.util.List<NoticeQueue.WhatChanged.Line> whatChangedLines(Context context) {
+        if (!whatChangedDue(context)) return null;
+        return NoticeQueue.WhatChanged.lines(SettingsManager.prefs().getAll(), () -> followersHistoryFile(context));
+    }
+
+    private static boolean followersHistoryFile(Context context) {
+        try {
+            File dir = context.getFilesDir();
+            return dir != null && NoticeQueue.WhatChanged.historyFile(dir.list());
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    private static String whatChangedText(Context context, java.util.List<NoticeQueue.WhatChanged.Line> lines) {
+        StringBuilder out = new StringBuilder();
+        for (NoticeQueue.WhatChanged.Line line : lines) {
+            if (out.length() > 0) out.append("\n\n");
+            out.append(I18n.t(context, switch (line) {
+                case MENU -> R.string.ig_what_changed_menu;
+                case SPOOF_LAST_SEEN -> R.string.ig_what_changed_spoof;
+                case FOLLOWERS_HISTORY -> R.string.ig_what_changed_followers;
+            }));
+        }
+        return out.toString();
+    }
+
+    private static void whatChangedSeen(java.util.List<NoticeQueue.WhatChanged.Line> lines) {
+        android.content.SharedPreferences prefs = SettingsManager.prefs();
+        if (prefs != null) prefs.edit().putBoolean(NoticeQueue.WhatChanged.SEEN, true).apply();
+        if (!lines.contains(NoticeQueue.WhatChanged.Line.SPOOF_LAST_SEEN)) return;
+        FeatureFlags.spoofLastSeen = false;
+        ps.reso.instaeclipse.utils.feature.SpoofLastSeenNotice.dismiss(prefs);
+        SettingsManager.saveAllFlags();
+    }
+
+    private static View whatChangedNotice(Context context, java.util.List<NoticeQueue.WhatChanged.Line> lines) {
+        return notice(context, I18n.t(context, R.string.ig_what_changed_title), whatChangedText(context, lines),
+                () -> whatChangedSeen(lines));
     }
 
     private static View notice(Context context, String title, String text, Runnable onOk) {

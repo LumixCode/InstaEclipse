@@ -97,6 +97,7 @@ public final class SettingsSchema {
         if (Boolean.TRUE.equals(stored.get("followersHistory"))) {
             edits.put("profileAnalyzer", true);
             edits.put("followersHistory", null);
+            edits.put(ps.reso.instaeclipse.utils.ui.NoticeQueue.WhatChanged.FOLLOWERS_TRACE, true);
         }
         return edits;
     }

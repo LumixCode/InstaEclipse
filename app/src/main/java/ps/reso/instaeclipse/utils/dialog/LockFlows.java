@@ -101,11 +101,14 @@ public final class LockFlows {
         }
     }
 
-    public static void askAtResume(Activity activity) {
-        if (activity == null) return;
+    public static boolean asksAtResume() {
         SharedPreferences prefs = SettingsManager.prefs();
         String muted = prefs != null ? prefs.getString(PasscodeRules.MUTED, null) : null;
-        if (!PasscodeRules.askAtResume(askedThisStart, muted)) return;
+        return PasscodeRules.askAtResume(askedThisStart, muted);
+    }
+
+    public static void askAtResume(Activity activity) {
+        if (activity == null || !asksAtResume()) return;
         askedThisStart = true;
         try {
             IeDialog dlg = new IeDialog(activity).title(I18n.t(activity, R.string.ig_lock_needs_passcode_title))

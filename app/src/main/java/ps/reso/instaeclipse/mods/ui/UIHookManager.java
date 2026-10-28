@@ -24,12 +24,15 @@ import ps.reso.instaeclipse.mods.devops.config.ConfigManager;
 import ps.reso.instaeclipse.mods.ui.utils.LifecycleHookUtil;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.dialog.DialogUtils;
+import ps.reso.instaeclipse.utils.dialog.LockFlows;
+import ps.reso.instaeclipse.utils.media.StoryCachePrompt;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.GhostModeUtils;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.toast.CustomToast;
 import ps.reso.instaeclipse.utils.ui.Gestures;
+import ps.reso.instaeclipse.utils.ui.NoticeQueue;
 import ps.reso.instaeclipse.utils.ui.TopActivityTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.log.StartupTrace;
@@ -44,6 +47,11 @@ public class UIHookManager {
             new TopActivityTracker<>(a -> a.isFinishing() || a.isDestroyed());
     private static volatile boolean trackingActivities;
     private static Gestures.HintRule gestureHint = new Gestures.HintRule();
+    static final String NOTICE_LOCKS = "locks";
+    static final String NOTICE_STORY_CACHE = "storyCache";
+    static final String NOTICE_GESTURES = "gestures";
+    static final long WHAT_CHANGED_DELAY_MS = 1500L;
+    private static final NoticeQueue<Activity> notices = new NoticeQueue<>();
 
     public static Activity getCurrentActivity() {
         return currentActivity;
@@ -232,9 +240,8 @@ public class UIHookManager {
                                 ModuleLog.warn("(InstaEclipse) Could not set up InstaEclipse's buttons on this screen: "
                                         + e.getClass().getSimpleName() + ": " + e.getMessage());
                             }
-                            armGestureHint(activity);
+                            mainNotices(activity);
                             ps.reso.instaeclipse.utils.dialog.RestartPrompt.onMainResume(activity);
-                            ps.reso.instaeclipse.utils.media.StoryCachePrompt.onMainResume(activity);
                         });
                     });
             ModuleLog.detail("(InstaEclipse): main onResume hooked via " + where);
@@ -285,6 +292,47 @@ public class UIHookManager {
         }
 
         FancyBioFontHook.install(classLoader);
+    }
+
+    static void mainNotices(Activity activity) {
+        try {
+            boolean whatChanged = DialogUtils.whatChangedDue(activity);
+            notices.offer(new NoticeQueue.Notice<>(NOTICE_LOCKS, 1, a -> LockFlows.asksAtResume()));
+            notices.offer(new NoticeQueue.Notice<>(NoticeQueue.WhatChanged.ID, 2, a -> whatChanged));
+            notices.offer(new NoticeQueue.Notice<>(NOTICE_STORY_CACHE, 3, a -> StoryCachePrompt.pending()));
+            notices.offer(new NoticeQueue.Notice<>(NOTICE_GESTURES, 4, a -> !Gestures.hintShown(a)));
+            NoticeQueue.Notice<Activity> next = notices.next(activity);
+            if (next == null) return;
+            switch (next.id) {
+                case NOTICE_LOCKS -> {
+                    notices.shown(NOTICE_LOCKS);
+                    LockFlows.askAtResume(activity);
+                }
+                case NoticeQueue.WhatChanged.ID -> showWhatChangedLater(activity);
+                case NOTICE_STORY_CACHE -> StoryCachePrompt.onMainResume(activity);
+                default -> armGestureHint(activity);
+            }
+        } catch (Exception e) {
+            ModuleLog.warn("(InstaEclipse) Could not show this start's notice: "
+                    + e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    private static void showWhatChangedLater(Activity activity) {
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            try {
+                boolean inFront = currentActivity == activity && !activity.isFinishing() && !activity.isDestroyed()
+                        && activity.hasWindowFocus();
+                if (!inFront || notices.finished(NoticeQueue.WhatChanged.ID)) return;
+                notices.opened(NoticeQueue.WhatChanged.ID);
+                if (!DialogUtils.showWhatChanged(activity, () -> notices.closed(NoticeQueue.WhatChanged.ID))) {
+                    notices.closed(NoticeQueue.WhatChanged.ID);
+                }
+            } catch (Exception e) {
+                ModuleLog.warn("(InstaEclipse) Could not show what changed: "
+                        + e.getClass().getSimpleName() + ": " + e.getMessage());
+            }
+        }, WHAT_CHANGED_DELAY_MS);
     }
 
     static void armGestureHint(Activity activity) {

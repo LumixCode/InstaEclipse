@@ -52,8 +52,12 @@ public final class StoryCachePrompt {
         if (inMenu && due(prefs, FeatureFlags.cacheStories)) ask(UIHookManager.topActivity(), false);
     }
 
+    public static boolean pending() {
+        return due(SettingsManager.prefs(), FeatureFlags.cacheStories);
+    }
+
     public static void onMainResume(Activity activity) {
-        if (!due(SettingsManager.prefs(), FeatureFlags.cacheStories)) return;
+        if (!pending()) return;
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             if (inFront(activity, true)) ask(activity, true);
         }, RESUME_DELAY_MS);
