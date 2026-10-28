@@ -267,7 +267,8 @@ public final class FeatureCatalog {
                                     .requires(LOCKS).defaultOn().uncounted()),
                     section(R.string.ig_dialog_misc_lock_section,
                             sw("lockWholeApp", R.string.ig_dialog_misc_lock_whole_app, R.drawable.ic_shield)
-                                    .desc(R.string.cat_lockWholeApp_desc).status("LockWholeApp"),
+                                    .desc(R.string.cat_lockWholeApp_desc_grace).status("LockWholeApp"),
+                            info("lockWholeAppGrace", R.string.cat_lockWholeAppGrace).requires("lockWholeApp"),
                             sw("lockDirectMessages", R.string.ig_dialog_misc_lock_dms, R.drawable.ic_shield)
                                     .desc(R.string.cat_lockDirectMessages_desc).status("LockDirectMessages"),
                             sw("lockSpecificMessages", R.string.ig_lock_selected_enable, R.drawable.ic_chat)

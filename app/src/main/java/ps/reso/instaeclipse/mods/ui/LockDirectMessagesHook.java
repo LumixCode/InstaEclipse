@@ -216,6 +216,15 @@ public class LockDirectMessagesHook {
         main().removeCallbacks(watch);
     }
 
+    static boolean appUnlocked() {
+        return appUnlocked;
+    }
+
+    static void graceChecked(Activity a, boolean passes) {
+        if (passes) appUnlocked = true;
+        if (resumed.contains(a) && !a.isFinishing() && !a.isDestroyed()) checkGate(a);
+    }
+
     public static boolean locksNeedPasscode() {
         return ps.reso.instaeclipse.utils.core.PasscodeRules.locksNeedPasscode();
     }
@@ -232,13 +241,17 @@ public class LockDirectMessagesHook {
         lifecycleRegistered = true;
         seed.getApplication().registerActivityLifecycleCallbacks(new android.app.Application.ActivityLifecycleCallbacks() {
             @Override public void onActivityStarted(Activity a) { started.add(a); }
-            @Override public void onActivityResumed(Activity a) { watchActivity(a); }
+            @Override public void onActivityResumed(Activity a) {
+                LockGrace.appResumed(a);
+                watchActivity(a);
+            }
             @Override public void onActivityPaused(Activity a) { resumed.remove(a); }
             @Override public void onActivityStopped(Activity a) {
                 started.remove(a);
                 dismissGate(a);
                 if (!started.isEmpty() || a.isChangingConfigurations()) return;
                 appUnlocked = false;
+                LockGrace.appBackground();
                 session.background(FeatureFlags.lockDirectAlways);
                 outsideDirectSince = 0L;
             }
@@ -351,6 +364,7 @@ public class LockDirectMessagesHook {
             String scope = null;
             String title = null;
             if (FeatureFlags.lockWholeApp && !appUnlocked) {
+                if (LockGrace.holds(a)) return;
                 scope = "app";
                 title = I18n.t(a, R.string.ig_lock_open_app_prompt);
             } else if (session.needsInboxLock(screen, FeatureFlags.lockDirectMessages)) {

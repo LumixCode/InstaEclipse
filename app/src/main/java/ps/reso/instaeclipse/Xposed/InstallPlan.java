@@ -97,6 +97,7 @@ import ps.reso.instaeclipse.mods.ui.DisableRepostHook;
 import ps.reso.instaeclipse.mods.ui.HideHeaderButtonsHook;
 import ps.reso.instaeclipse.mods.ui.HideNotesTrayHook;
 import ps.reso.instaeclipse.mods.ui.InboxDiscoverPeopleHook;
+import ps.reso.instaeclipse.mods.ui.LockGrace;
 import ps.reso.instaeclipse.mods.ui.LockedCollectionsHook;
 import ps.reso.instaeclipse.mods.ui.ProfileFollowsYouHook;
 import ps.reso.instaeclipse.mods.ui.ProfileMenuHook;
@@ -629,6 +630,7 @@ public class InstallPlan {
                 return;
             case EXTERNAL_BROWSER_HOOK:
                 new ExternalBrowserHook().install();
+                if (FeatureFlags.lockWholeApp) LockGrace.install();
                 return;
             case OPEN_LINKS_EXTERNALLY_HOOK:
                 new OpenLinksExternallyHook().install(ctx.loader);
