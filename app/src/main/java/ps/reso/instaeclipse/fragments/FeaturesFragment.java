@@ -71,6 +71,7 @@ import java.util.function.Supplier;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.devops.config.DevConfigReply;
 import ps.reso.instaeclipse.mods.media.MediaStoreTarget;
+import ps.reso.instaeclipse.mods.ui.StartupTabPolicy;
 import ps.reso.instaeclipse.utils.backup.CompanionRestorePlan;
 import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
 import ps.reso.instaeclipse.utils.core.ExtremeRules;
@@ -1674,14 +1675,21 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     }
 
     private String[] startupTabNames() {
-        return new String[]{
-                getString(R.string.ig_story_ring_default),
+        String[] tabs = ps.reso.instaeclipse.mods.ui.StartupTabHook.TABS;
+        String[] names = {
+                getString(R.string.ig_startup_tab_default),
                 getString(R.string.ig_nav_name_home),
                 getString(R.string.ig_nav_name_reels),
                 getString(R.string.ig_nav_name_messages),
                 getString(R.string.ig_nav_name_search),
                 getString(R.string.ig_nav_name_profile),
                 getString(R.string.ig_nav_name_activity)};
+        for (int i = 1; i < names.length; i++) {
+            if (StartupTabPolicy.hidden(tabs[i], this::getCurrentState)) {
+                names[i] = getString(R.string.ig_startup_tab_hidden, names[i]);
+            }
+        }
+        return names;
     }
 
     private String timestampFormatName(String pattern) {

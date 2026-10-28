@@ -34,6 +34,7 @@ import ps.reso.instaeclipse.mods.ghost.ui.GhostEmojiManager;
 import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
 import ps.reso.instaeclipse.mods.reels.DailyReelLimit;
 import ps.reso.instaeclipse.mods.reels.NightReelSchedule;
+import ps.reso.instaeclipse.mods.ui.StartupTabPolicy;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.core.ExtremeRules;
 import ps.reso.instaeclipse.utils.core.ModuleActivityLauncher;
@@ -1703,14 +1704,21 @@ public class DialogUtils {
     }
 
     static String[] startupTabNames(Context context) {
-        return new String[]{
-                I18n.t(context, R.string.ig_dialog_extras_share_domain_off),
+        String[] tabs = ps.reso.instaeclipse.mods.ui.StartupTabHook.TABS;
+        String[] names = {
+                I18n.t(context, R.string.ig_startup_tab_default),
                 I18n.t(context, R.string.ig_nav_name_home),
                 I18n.t(context, R.string.ig_nav_name_reels),
                 I18n.t(context, R.string.ig_nav_name_messages),
                 I18n.t(context, R.string.ig_nav_name_search),
                 I18n.t(context, R.string.ig_nav_name_profile),
                 I18n.t(context, R.string.ig_nav_name_activity)};
+        for (int i = 1; i < names.length; i++) {
+            if (StartupTabPolicy.hidden(tabs[i], StartupTabPolicy::flagOn)) {
+                names[i] = I18n.t(context, R.string.ig_startup_tab_hidden, names[i]);
+            }
+        }
+        return names;
     }
 
     private static String startupTabLabel(Context context) {
