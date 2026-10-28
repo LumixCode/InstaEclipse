@@ -14,7 +14,8 @@ public final class LegacyBrokerPayload {
     private static final Set<String> MEDIA = keys("url", "audioUrl", "fallbackUrl", "filename", "mimeType",
             "username", "extractAudio", "trimStartMs", "trimDurationMs");
     private static final Set<String> EXPORT = keys("chatExportSubdir", "htmlFilename", "htmlB64",
-            "saveUri", "messageCount", "mediaUrls", "mediaNames", "mediaMimes");
+            "saveUri", "messageCount", "mediaUrls", "mediaNames", "mediaMimes", "exportMime");
+    private static final Set<String> EXPORT_TYPES = keys("text/html", "text/csv");
 
     public static Bundle validate(Bundle source) {
         if (source == null || source.hasFileDescriptors()) invalid();
@@ -53,8 +54,10 @@ public final class LegacyBrokerPayload {
         }
         if (export) {
             String subdir = string(out, "chatExportSubdir", true);
-            if (subdir.length() > 160 || !subdir.matches("(?:chats|comments)/[A-Za-z0-9._-]+")
+            if (subdir.length() > 160 || !subdir.matches("(?:chats|comments)/[A-Za-z0-9._-]+|exports")
                     || subdir.endsWith("/.") || subdir.endsWith("/..")) invalid();
+            String type = string(out, "exportMime", false);
+            if (type != null && !EXPORT_TYPES.contains(type)) invalid();
             filename(string(out, "htmlFilename", true));
             String encoded = string(out, "htmlB64", true);
             if (encoded.length() > 240_000 || !encoded.matches("[A-Za-z0-9+/=]*")) invalid();

@@ -466,6 +466,8 @@ public class DownloadSaveService extends Service {
         final String subdir       = DownloadRequestValidator.sanitizeSubdir(intent.getStringExtra("chatExportSubdir"));
         final String htmlFilename = DownloadRequestValidator.sanitizeFileName(intent.getStringExtra("htmlFilename"), null);
         final String htmlB64      = intent.getStringExtra("htmlB64");
+        final boolean csv = "text/csv".equals(intent.getStringExtra("exportMime"));
+        final String mainMime = csv ? "text/csv" : "text/html";
         final String[] urls  = intent.getStringArrayExtra("mediaUrls");
         final String[] names = intent.getStringArrayExtra("mediaNames");
         if (names != null) {
@@ -501,7 +503,7 @@ public class DownloadSaveService extends Service {
                 ExportDir dir = resolveNestedDir(fSave, subdir);
                 String saving = getString(R.string.ie_export_saving);
                 pushProgress(saving, 0, 100, true);
-                HtmlInliner html = htmlB64 != null && htmlFilename != null
+                HtmlInliner html = !csv && htmlB64 != null && htmlFilename != null
                         ? new HtmlInliner(new String(android.util.Base64.decode(htmlB64, android.util.Base64.DEFAULT), java.nio.charset.StandardCharsets.UTF_8))
                         : null;
                 for (int i = 0; i < total; i++) {
@@ -524,17 +526,24 @@ public class DownloadSaveService extends Service {
                         if (!keep) tmp.delete(); }
                 }
                 Uri htmlUri = null;
-                if (html != null) {
+                if (csv) {
+                    if (htmlB64 == null || htmlFilename == null) throw new IllegalStateException("the export has no file");
+                    byte[] body = android.util.Base64.decode(htmlB64, android.util.Base64.DEFAULT);
+                    pushProgress(saving, 99, 100, true);
+                    htmlUri = writeToDir(dir, htmlFilename, mainMime, os -> os.write(body));
+                } else if (html != null) {
                     pushProgress(saving, 99, 100, true);
                     htmlUri = writeToDir(dir, htmlFilename, "text/html", html::write);
                 }
                 final int fSaved = saved;
                 DownloadFiles.check(cancellation);
-                if (fSaved < total) ModuleLog.warn("(IE|Export|Service) Chat export saved, but " + (total - fSaved)
+                if (csv) ModuleLog.line("(IE|Export|Service) Export saved: " + subdir + "/" + htmlFilename);
+                else if (fSaved < total) ModuleLog.warn("(IE|Export|Service) Chat export saved, but " + (total - fSaved)
                         + " of " + total + " media files could not be downloaded");
                 else ModuleLog.line("(IE|Export|Service) Chat export saved with all " + total + " media files");
-                String text = getString(R.string.ig_export_media_saved, fSaved, subdir);
-                postDoneNotification(notificationId, text, "text/html", htmlUri, true);
+                String text = csv ? getString(R.string.ig_toast_file_saved, htmlFilename)
+                        : getString(R.string.ig_export_media_saved, fSaved, subdir);
+                postDoneNotification(notificationId, text, mainMime, htmlUri, true);
                 saved(text);
             } catch (Throwable e) {
                 if (cancellation.isCancelled()) {

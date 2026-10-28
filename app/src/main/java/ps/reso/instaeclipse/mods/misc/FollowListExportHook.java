@@ -1,8 +1,10 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Base64;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
@@ -29,6 +31,7 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
+import ps.reso.instaeclipse.utils.ipc.ExportDelegate;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 
@@ -180,11 +183,45 @@ public class FollowListExportHook {
             failed.accept(t);
             return;
         }
+        int count = users.size();
+        Runnable writeLocally = () -> writeLocally(ctx, main, failed, bytes, file, count, note);
+        if (!sendToCompanion(ctx, bytes, file, count, writeLocally)) {
+            writeLocally.run();
+            return;
+        }
+        if (note != null)
+            main.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, note, Toast.LENGTH_LONG).show());
+    }
+
+    private static void writeLocally(android.content.Context ctx, Handler main, java.util.function.Consumer<Throwable> failed,
+                                     byte[] bytes, String file, int count, String note) {
         if (!CsvCells.write(() -> ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook.openExport(ctx, file, "text/csv"),
                 bytes, failed)) return;
-        ModuleLog.line(TAG + "Exported " + users.size() + " accounts to " + file);
+        ModuleLog.line(TAG + "Exported " + count + " accounts to " + file);
         main.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_follow_export_done,
-                users.size(), "exports/" + file) + (note != null ? "\n" + note : ""), Toast.LENGTH_LONG).show());
+                count, "exports/" + file) + (note != null ? "\n" + note : ""), Toast.LENGTH_LONG).show());
+    }
+
+    private static boolean sendToCompanion(android.content.Context ctx, byte[] bytes, String file, int count,
+                                           Runnable writeLocally) {
+        String saf = FeatureFlags.downloaderCustomUri;
+        if (saf == null || saf.isEmpty()) return false;
+        try {
+            Intent request = new Intent();
+            request.setClassName("ps.reso.instaeclipse", "ps.reso.instaeclipse.mods.media.DownloadSaveService");
+            request.putExtra("chatExportSubdir", "exports");
+            request.putExtra("exportMime", "text/csv");
+            request.putExtra("htmlFilename", file);
+            request.putExtra("htmlB64", Base64.encodeToString(bytes, Base64.NO_WRAP));
+            request.putExtra("saveUri", saf);
+            boolean sent = ExportDelegate.delegate(ctx, request, TAG, writeLocally);
+            if (sent) ModuleLog.line(TAG + "Exporting " + count + " accounts through the InstaEclipse app to exports/" + file);
+            else ModuleLog.detail(TAG + "The list is outside the InstaEclipse app's limits (" + bytes.length + " bytes), saving it from Instagram");
+            return sent;
+        } catch (Throwable t) {
+            ModuleLog.warn(TAG + "Could not hand the export to the InstaEclipse app, saving it from Instagram instead: " + t);
+            return false;
+        }
     }
 
     private static byte[] csv(Map<String, String[]> users) {
