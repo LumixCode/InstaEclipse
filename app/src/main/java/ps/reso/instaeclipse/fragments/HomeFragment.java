@@ -57,9 +57,6 @@ import ps.reso.instaeclipse.utils.log.LogMirrorProvider;
 
 public class HomeFragment extends Fragment implements TabFragment {
 
-    private static final String DEFAULT_PINNED = "isGhostSeen,isGhostTyping,isGhostStory,isAdBlockEnabled";
-    private static final int MAX_PINNED = 8;
-
     private static final int COLOR_OK = 0xFF30D158;
     private static final int COLOR_WARN = 0xFFFF9F0A;
     private static final int COLOR_ERROR = 0xFFFF453A;
@@ -71,7 +68,6 @@ public class HomeFragment extends Fragment implements TabFragment {
             "disableExplore", "disableComments", "dailyReelLimitEnabled", "dailyReelLimitAllowDM",
             "nightReelBlockEnabled", "nightReelBlockAllowDM");
 
-    /** A pinnable toggle on the Home dashboard. */
     private static final class Shortcut {
         final String key;
         final int labelRes;
@@ -86,23 +82,65 @@ public class HomeFragment extends Fragment implements TabFragment {
         }
     }
 
-    // Same icons / accent colours FeaturesFragment uses for these rows.
-    private static final List<Shortcut> CATALOG = Arrays.asList(
-            new Shortcut("isGhostSeen", R.string.ig_dialog_ghost_hide_dm_seen, R.drawable.ic_eye_off, 0xFF5E5CE6),
-            new Shortcut("isGhostTyping", R.string.ig_dialog_ghost_hide_typing, R.drawable.ic_chat, 0xFF5E5CE6),
-            new Shortcut("isGhostStory", R.string.ig_dialog_ghost_hide_story_views, R.drawable.ic_story_ring, 0xFF5E5CE6),
-            new Shortcut("isGhostViewOnce", R.string.ig_dialog_ghost_hide_view_once, R.drawable.ic_eye_off, 0xFF5E5CE6),
-            new Shortcut("isGhostScreenshot", R.string.ig_dialog_ghost_bypass_screenshot, R.drawable.ic_camera, 0xFF5E5CE6),
-            new Shortcut("enablePostDownload", R.string.ig_dialog_downloader_posts, R.drawable.ic_download, 0xFFFF9F0A),
-            new Shortcut("enableReelDownload", R.string.ig_dialog_downloader_reels, R.drawable.ic_download, 0xFFFF9F0A),
-            new Shortcut("enableStoryDownload", R.string.ig_dialog_downloader_stories, R.drawable.ic_download, 0xFFFF9F0A),
-            new Shortcut("isAdBlockEnabled", R.string.ig_dialog_ad_block_ads, R.drawable.ic_shield, 0xFFFF453A),
-            new Shortcut("customThemeEnabled", R.string.theme_enable, R.drawable.ic_palette, 0xFFFF375F),
-            new Shortcut("disableReels", R.string.ig_dialog_distraction_disable_reels, R.drawable.ic_movie, 0xFF30D158),
-            new Shortcut("disableStories", R.string.ig_dialog_distraction_disable_stories, R.drawable.ic_story_ring, 0xFF30D158),
-            new Shortcut("disableExplore", R.string.ig_dialog_distraction_disable_explore, R.drawable.ic_search, 0xFF30D158),
-            new Shortcut("maxUploadQuality", R.string.ig_dialog_max_upload_quality, R.drawable.ic_upload, 0xFFFF9F0A)
-    );
+    static final class ShortcutPicker {
+        static final int MAX_PINNED = 8;
+        private static final String DEFAULT_PINNED = "isGhostSeen,isGhostTyping,isGhostStory,isAdBlockEnabled";
+
+        private static final List<Shortcut> CATALOG = Arrays.asList(
+                new Shortcut("isGhostSeen", R.string.ig_dialog_ghost_hide_dm_seen, R.drawable.ic_eye_off, 0xFF5E5CE6),
+                new Shortcut("isGhostTyping", R.string.ig_dialog_ghost_hide_typing, R.drawable.ic_chat, 0xFF5E5CE6),
+                new Shortcut("isGhostStory", R.string.ig_dialog_ghost_hide_story_views, R.drawable.ic_story_ring, 0xFF5E5CE6),
+                new Shortcut("isGhostViewOnce", R.string.ig_dialog_ghost_hide_view_once, R.drawable.ic_eye_off, 0xFF5E5CE6),
+                new Shortcut("isGhostScreenshot", R.string.ig_dialog_ghost_bypass_screenshot, R.drawable.ic_camera, 0xFF5E5CE6),
+                new Shortcut("enablePostDownload", R.string.ig_dialog_downloader_posts, R.drawable.ic_download, 0xFFFF9F0A),
+                new Shortcut("enableReelDownload", R.string.ig_dialog_downloader_reels, R.drawable.ic_download, 0xFFFF9F0A),
+                new Shortcut("enableStoryDownload", R.string.ig_dialog_downloader_stories, R.drawable.ic_download, 0xFFFF9F0A),
+                new Shortcut("isAdBlockEnabled", R.string.ig_dialog_ad_block_ads, R.drawable.ic_shield, 0xFFFF453A),
+                new Shortcut("customThemeEnabled", R.string.theme_enable, R.drawable.ic_palette, 0xFFFF375F),
+                new Shortcut("disableReels", R.string.ig_dialog_distraction_disable_reels, R.drawable.ic_movie, 0xFF30D158),
+                new Shortcut("disableStories", R.string.ig_dialog_distraction_disable_stories, R.drawable.ic_story_ring, 0xFF30D158),
+                new Shortcut("disableExplore", R.string.ig_dialog_distraction_disable_explore, R.drawable.ic_search, 0xFF30D158),
+                new Shortcut("maxUploadQuality", R.string.ig_dialog_max_upload_quality, R.drawable.ic_upload, 0xFFFF9F0A)
+        );
+
+        private ShortcutPicker() {}
+
+        static List<String> offered() {
+            List<String> out = new ArrayList<>();
+            for (Shortcut s : CATALOG) out.add(s.key);
+            return out;
+        }
+
+        static List<String> pinned(@Nullable String raw) {
+            if (raw == null) raw = DEFAULT_PINNED;
+            List<String> out = new ArrayList<>();
+            for (String k : raw.split(",")) {
+                String key = k.trim();
+                if (!key.isEmpty() && find(key) != null && !out.contains(key)) out.add(key);
+                if (out.size() >= MAX_PINNED) break;
+            }
+            return out;
+        }
+
+        static List<String> chosen(List<String> current, List<String> offered, boolean[] checked) {
+            List<String> result = new ArrayList<>();
+            for (String key : current) {
+                int idx = offered.indexOf(key);
+                if (idx >= 0 && checked[idx]) result.add(key);
+            }
+            for (int i = 0; i < offered.size(); i++) {
+                String key = offered.get(i);
+                if (checked[i] && !result.contains(key) && result.size() < MAX_PINNED) result.add(key);
+            }
+            return result;
+        }
+
+        @Nullable
+        static Shortcut find(String key) {
+            for (Shortcut s : CATALOG) if (s.key.equals(key)) return s;
+            return null;
+        }
+    }
 
     private SharedPreferences localCache;
     private SharedPreferences uiPrefs;
@@ -479,21 +517,7 @@ public class HomeFragment extends Fragment implements TabFragment {
     // =========================================================
 
     private List<String> getPinnedKeys() {
-        String raw = uiPrefs.getString(CompanionUiPrefs.HOME_PINNED_SHORTCUTS, null);
-        if (raw == null) raw = DEFAULT_PINNED;
-        List<String> out = new ArrayList<>();
-        for (String k : raw.split(",")) {
-            String key = k.trim();
-            if (!key.isEmpty() && findShortcut(key) != null && !out.contains(key)) out.add(key);
-            if (out.size() >= MAX_PINNED) break;
-        }
-        return out;
-    }
-
-    @Nullable
-    private static Shortcut findShortcut(String key) {
-        for (Shortcut s : CATALOG) if (s.key.equals(key)) return s;
-        return null;
+        return ShortcutPicker.pinned(uiPrefs.getString(CompanionUiPrefs.HOME_PINNED_SHORTCUTS, null));
     }
 
     private void renderShortcuts() {
@@ -502,7 +526,7 @@ public class HomeFragment extends Fragment implements TabFragment {
         List<String> pinned = getPinnedKeys();
         boolean extreme = localCache.getBoolean("isExtremeMode", false);
         for (String key : pinned) {
-            Shortcut s = findShortcut(key);
+            Shortcut s = ShortcutPicker.find(key);
             if (s == null) continue;
             // A lock that is on turns off only in Instagram's Lock menu, which asks for the passcode.
             int lockedHint = extreme && EXTREME_LOCKED.contains(s.key) ? R.string.home_shortcuts_locked_extreme
@@ -593,11 +617,12 @@ public class HomeFragment extends Fragment implements TabFragment {
 
     private void showEditShortcutsDialog() {
         final List<String> current = getPinnedKeys();
-        final String[] labels = new String[CATALOG.size()];
-        final boolean[] checked = new boolean[CATALOG.size()];
-        for (int i = 0; i < CATALOG.size(); i++) {
-            labels[i] = getString(CATALOG.get(i).labelRes);
-            checked[i] = current.contains(CATALOG.get(i).key);
+        final List<String> offered = ShortcutPicker.offered();
+        final String[] labels = new String[offered.size()];
+        final boolean[] checked = new boolean[offered.size()];
+        for (int i = 0; i < offered.size(); i++) {
+            labels[i] = getString(ShortcutPicker.find(offered.get(i)).labelRes);
+            checked[i] = current.contains(offered.get(i));
         }
 
         new MaterialAlertDialogBuilder(requireContext())
@@ -606,35 +631,21 @@ public class HomeFragment extends Fragment implements TabFragment {
                     if (isChecked) {
                         int count = 0;
                         for (boolean b : checked) if (b) count++;
-                        if (count > MAX_PINNED) {
+                        if (count > ShortcutPicker.MAX_PINNED) {
                             checked[which] = false;
                             ((AlertDialog) dialog).getListView().setItemChecked(which, false);
                             ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(),
-                                    getString(R.string.home_shortcuts_limit, MAX_PINNED), Toast.LENGTH_SHORT).show();
+                                    getString(R.string.home_shortcuts_limit, ShortcutPicker.MAX_PINNED), Toast.LENGTH_SHORT).show();
                         }
                     }
                 })
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    // Keep the existing order for shortcuts that stay pinned, append new ones.
-                    List<String> result = new ArrayList<>();
-                    for (String key : current) {
-                        int idx = indexOfShortcut(key);
-                        if (idx >= 0 && checked[idx]) result.add(key);
-                    }
-                    for (int i = 0; i < CATALOG.size(); i++) {
-                        String key = CATALOG.get(i).key;
-                        if (checked[i] && !result.contains(key) && result.size() < MAX_PINNED) result.add(key);
-                    }
+                    List<String> result = ShortcutPicker.chosen(current, offered, checked);
                     uiPrefs.edit().putString(CompanionUiPrefs.HOME_PINNED_SHORTCUTS, String.join(",", result)).apply();
                     renderShortcuts();
                 })
                 .setNegativeButton(R.string.ig_dialog_cancel, null)
                 .show();
-    }
-
-    private static int indexOfShortcut(String key) {
-        for (int i = 0; i < CATALOG.size(); i++) if (CATALOG.get(i).key.equals(key)) return i;
-        return -1;
     }
 
     // =========================================================
