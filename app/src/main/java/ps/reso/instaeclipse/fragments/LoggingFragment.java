@@ -2,7 +2,6 @@ package ps.reso.instaeclipse.fragments;
 
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -63,6 +62,7 @@ import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.log.CrashReports;
 import ps.reso.instaeclipse.utils.log.LogMirrorProvider;
 import ps.reso.instaeclipse.utils.log.Logging;
+import ps.reso.instaeclipse.utils.text.CopyFeedback;
 
 /**
  * Logs tab. Instagram's module log is read from a file in the companion's own storage that the
@@ -536,10 +536,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, R.string.logs_nothing_to_copy, Toast.LENGTH_SHORT).show();
             return;
         }
-        ClipboardManager clipboard = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-        if (clipboard == null) return;
-        clipboard.setPrimaryClip(ClipData.newPlainText("InstaEclipse logs", text));
-        ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, R.string.logs_copied, Toast.LENGTH_SHORT).show();
+        CopyFeedback.copy(ctx, "InstaEclipse logs", text, R.string.logs_copied);
     }
 
     private void shareLogs() {
@@ -718,11 +715,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
             }
             holder.text.setTextColor(c);
             holder.text.setOnLongClickListener(v -> {
-                ClipboardManager cm = (ClipboardManager) v.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
-                if (cm != null) {
-                    cm.setPrimaryClip(ClipData.newPlainText("InstaEclipse log entry", e.full));
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(v.getContext(), R.string.logs_entry_copied, Toast.LENGTH_SHORT).show();
-                }
+                CopyFeedback.copy(v.getContext(), "InstaEclipse log entry", e.full, R.string.logs_entry_copied);
                 return true;
             });
         }
