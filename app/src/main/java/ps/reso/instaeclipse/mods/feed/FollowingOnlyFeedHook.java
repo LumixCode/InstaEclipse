@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.feed;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -17,6 +15,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Limits the home feed to accounts the user follows by forcing the feed/timeline request's
@@ -56,7 +55,7 @@ public class FollowingOnlyFeedHook {
         return true;
     }
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
+    public void install(ClassLoader classLoader) {
         Method build = null;
         List<Method> adders = null;
         if (DexKitCache.isCacheValid()) {
@@ -70,7 +69,7 @@ public class FollowingOnlyFeedHook {
         }
 
         if (build == null || adders == null || adders.isEmpty()) {
-            build = findBuildMethod(bridge, classLoader);
+            build = findBuildMethod(classLoader);
             if (build == null) {
                 DexKitCache.saveString(CACHE_BUILD, "missing");
                 ModuleLog.error(TAG + "Will not work: the feed request code was not found in this Instagram version");
@@ -135,9 +134,9 @@ public class FollowingOnlyFeedHook {
                 + build.getName() + " + " + adders.size() + " adders");
     }
 
-    private static Method findBuildMethod(DexKitBridge bridge, ClassLoader classLoader) {
+    private static Method findBuildMethod(ClassLoader classLoader) {
         try {
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("homecoming_all", "X-IG-PRIMED-FEED-REQUEST")))) {
                 if (md.isConstructor() || md.isStaticInitializer()) continue;
                 Method m = md.getMethodInstance(classLoader);

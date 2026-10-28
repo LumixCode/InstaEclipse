@@ -82,8 +82,8 @@ public final class ViewPager2Input {
         return null;
     }
 
-    public static Field setterInputField(org.luckypray.dexkit.DexKitBridge bridge, ClassLoader loader,
-                                         Class<?> pagerClass, Method setter) throws ReflectiveOperationException {
+    public static Field setterInputField(ClassLoader loader, Class<?> pagerClass, Method setter)
+            throws ReflectiveOperationException {
         String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(CACHE_SETTER_INPUT) : null;
         if (cached != null) {
             try {
@@ -95,7 +95,7 @@ public final class ViewPager2Input {
             } catch (NoSuchFieldException ignored) {}
         }
         Field inputField = null;
-        for (var use : bridge.getMethodData(setter).getUsingFields()) {
+        for (var use : DexKitQueryCache.methodData(setter).getUsingFields()) {
             Field field = use.getField().getFieldInstance(loader);
             if (!use.getUsingType().isWrite() || field.getType() != boolean.class
                     || field.getDeclaringClass() != pagerClass || Modifier.isStatic(field.getModifiers())) continue;

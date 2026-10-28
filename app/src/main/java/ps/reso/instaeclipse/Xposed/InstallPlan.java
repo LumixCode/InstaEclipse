@@ -419,7 +419,7 @@ public class InstallPlan {
                 new UIHookManager().mainActivity(ctx.loader);
                 return;
             case REEL_VIEWER_HOOK:
-                new ReelViewerHook().install(ctx.bridge, ctx.loader);
+                new ReelViewerHook().install(ctx.loader);
                 return;
             case DEV_OPTIONS_UNLOCK_HOOK:
                 new DevOptionsUnlockHook().handleDevOptions(ctx.bridge);
@@ -473,7 +473,7 @@ public class InstallPlan {
                 new DisableRepostHook().install(ctx.context, ctx.lpparam.classLoader);
                 return;
             case HIDE_SUGGESTED_FEED_ITEMS_HOOK:
-                new HideSuggestedFeedItemsHook().install(ctx.bridge, ctx.loader);
+                new HideSuggestedFeedItemsHook().install(ctx.loader);
                 return;
             case AD_BLOCKER:
                 new AdBlocker().disableSponsoredContent(ctx.bridge, ctx.loader);
@@ -485,10 +485,10 @@ public class InstallPlan {
                 new ExactTimestampHook().install(ctx.loader);
                 return;
             case EXPAND_CAPTIONS_HOOK:
-                new ExpandCaptionsHook().install(ctx.bridge);
+                new ExpandCaptionsHook().install();
                 return;
             case HIDE_COMMUNITY_NOTES_HOOK:
-                new HideCommunityNotesHook().install(ctx.bridge, ctx.loader);
+                new HideCommunityNotesHook().install(ctx.loader);
                 return;
             case REELS_CONTROLS_HOOK:
                 new ReelsControlsHook().install(ctx.bridge, ctx.loader);
@@ -521,7 +521,7 @@ public class InstallPlan {
                 new SwipeToCameraHook().install(ctx.loader);
                 return;
             case FOLLOWING_ONLY_FEED_HOOK:
-                new FollowingOnlyFeedHook().install(ctx.bridge, ctx.loader);
+                new FollowingOnlyFeedHook().install(ctx.loader);
                 return;
             case PROFILE_FOLLOW_STATUS_HOOK:
                 new ProfileFollowStatusHook().install(ctx.loader);
@@ -587,7 +587,7 @@ public class InstallPlan {
                 new ProfileMenuHook().install(ctx.loader);
                 return;
             case POST_COUNT_SPOOF:
-                PostCountSpoof.install(ctx.bridge, ctx.loader);
+                PostCountSpoof.install(ctx.loader);
                 return;
             case PROFILE_TEXT_COPY_HOOK:
                 new ProfileTextCopyHook().install(ctx.loader);

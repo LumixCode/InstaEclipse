@@ -5,10 +5,8 @@ import android.text.InputType;
 import android.widget.EditText;
 
 import org.json.JSONObject;
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -25,6 +23,7 @@ import ps.reso.instaeclipse.mods.ui.ProfileSpoofHook;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -59,13 +58,13 @@ public final class PostCountSpoof {
 
     private PostCountSpoof() {}
 
-    public static void install(DexKitBridge bridge, ClassLoader cl) {
+    public static void install(ClassLoader cl) {
         StringBuilder log = new StringBuilder();
         int hooked = 0;
         try { getId = cl.loadClass(MEDIA).getMethod("getId"); } catch (Throwable t) { log.append(" no getId"); }
         for (int i = 0; i < KEYS.length; i++) {
             final int which = i;
-            List<Method> found = lookup(bridge, cl, KEYS[i], m -> isCount(m.getReturnType()), true);
+            List<Method> found = lookup(cl, KEYS[i], m -> isCount(m.getReturnType()), true);
             if (!found.isEmpty()) log.append(" ").append(KEYS[i]);
             for (Method m : found) {
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
@@ -88,7 +87,7 @@ public final class PostCountSpoof {
             if (found.isEmpty()) log.append(" ").append(FIELDS[i]).append("=none");
         }
         for (String key : HIDDEN) {
-            for (Method m : lookup(bridge, cl, key, m -> m.getReturnType() == Boolean.class || m.getReturnType() == boolean.class, false)) {
+            for (Method m : lookup(cl, key, m -> m.getReturnType() == Boolean.class || m.getReturnType() == boolean.class, false)) {
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) {
                         ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -99,7 +98,7 @@ public final class PostCountSpoof {
                 log.append(" ").append(key).append("=").append(m.getName());
             }
         }
-        List<Method> owner = lookup(bridge, cl, AUTHOR, m -> m.getReturnType().getName().equals(USER), false);
+        List<Method> owner = lookup(cl, AUTHOR, m -> m.getReturnType().getName().equals(USER), false);
         ownerGetter = owner.isEmpty() ? null : owner.get(0);
         log.append(" owner=").append(ownerGetter != null ? ownerGetter.getName() : "none");
         if (FeatureFlags.postCountSpoof) hookCountViews();
@@ -113,19 +112,19 @@ public final class PostCountSpoof {
         return t == Integer.class || t == int.class || t == Long.class || t == long.class;
     }
 
-    private static List<Method> lookup(DexKitBridge bridge, ClassLoader cl, String key, Predicate<Method> getter, boolean helpers) {
+    private static List<Method> lookup(ClassLoader cl, String key, Predicate<Method> getter, boolean helpers) {
         String cacheKey = CACHE + key;
         List<Method> cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(cacheKey, cl) : null;
         if (cached != null && !cached.isEmpty()) return cached;
         List<Method> found = new ArrayList<>();
         try {
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass(MEDIA).paramCount(0).usingNumbers(key.hashCode())))) {
                 if (!md.isMethod()) continue;
                 Method m = md.getMethodInstance(cl);
                 if (!Modifier.isStatic(m.getModifiers()) && getter.test(m)) found.add(m);
             }
-            if (helpers && !found.isEmpty()) addHelpers(bridge, cl, key, found);
+            if (helpers && !found.isEmpty()) addHelpers(cl, key, found);
         } catch (Throwable t) {
             return found;
         }
@@ -133,13 +132,13 @@ public final class PostCountSpoof {
         return found;
     }
 
-    private static void addHelpers(DexKitBridge bridge, ClassLoader cl, String key, List<Method> found) throws NoSuchMethodException {
-        for (MethodData helper : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+    private static void addHelpers(ClassLoader cl, String key, List<Method> found) throws NoSuchMethodException {
+        for (Found helper : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingNumbers(key.hashCode()).returnType("int").paramCount(1)))) {
             if (!helper.isMethod() || helper.getClassName().equals(MEDIA)) continue;
             Method h = helper.getMethodInstance(cl);
             if (Modifier.isStatic(h.getModifiers()) && !found.contains(h)) found.add(h);
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass(MEDIA).paramCount(0).returnType("int")
                     .addInvoke(MethodMatcher.create().declaredClass(helper.getClassName()).name(helper.getName()))))) {
                 if (!md.isMethod()) continue;

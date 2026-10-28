@@ -1,11 +1,9 @@
 package ps.reso.instaeclipse.mods.feed;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.enums.UsingType;
 import org.luckypray.dexkit.query.matchers.FieldMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -22,6 +20,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class HideSuggestedFeedItemsHook {
 
@@ -34,7 +33,7 @@ public class HideSuggestedFeedItemsHook {
     // — reached through the Media field of that type. Resolved once at install (#249).
     private static volatile Method hasLikedGetter;
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
+    public void install(ClassLoader classLoader) {
         XC_MethodHook filterHook = new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -56,7 +55,7 @@ public class HideSuggestedFeedItemsHook {
             }
         };
 
-        resolveHasLikedGetter(bridge, classLoader);
+        resolveHasLikedGetter(classLoader);
 
         if (DexKitCache.isCacheValid()) {
             String cached = DexKitCache.loadString(CACHE_KEY_PARSER);
@@ -74,7 +73,7 @@ public class HideSuggestedFeedItemsHook {
         }
 
         try {
-            String targetClass = findFeedItemParser(bridge, classLoader);
+            String targetClass = findFeedItemParser(classLoader);
             if (targetClass == null) return;
             hookBridgeMethod(targetClass, classLoader, filterHook);
             DexKitCache.saveString(CACHE_KEY_PARSER, targetClass);
@@ -94,9 +93,9 @@ public class HideSuggestedFeedItemsHook {
      * Type" moved into the FeedItem itself, and clips_netego + media_or_ad also hits a string table
      * and an enum. So the Media write is required, and exactly one class must match.
      */
-    private static String findFeedItemParser(DexKitBridge bridge, ClassLoader classLoader) {
+    private static String findFeedItemParser(ClassLoader classLoader) {
         Set<String> classes = new LinkedHashSet<>();
-        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .name("unsafeParseFromJson")
                 .usingStrings("clips_netego")
                 .addUsingField(FieldMatcher.create().type(MEDIA_CLASS), UsingType.Write)))) {
@@ -106,7 +105,7 @@ public class HideSuggestedFeedItemsHook {
         if (classes.isEmpty()) {
             // The strict query needs the unsafeParseFromJson name; on a build that renamed it,
             // fall back to the string queries, every match checked for the parser's shape.
-            String fallback = findCheckedFeedItemParser(bridge, classLoader);
+            String fallback = findCheckedFeedItemParser(classLoader);
             if (fallback != null) {
                 ModuleLog.detail("(InstaEclipse | HideSuggested): strict FeedItem parser query found nothing, "
                         + "using the shape-checked fallback: " + fallback);
@@ -123,13 +122,13 @@ public class HideSuggestedFeedItemsHook {
      * Fallback lookup by the parser's strings. Other classes use the same strings (on 451 a large
      * string table, X.0000, matches first), so every match must pass {@link #isFeedItemParser}.
      */
-    private static String findCheckedFeedItemParser(DexKitBridge bridge, ClassLoader classLoader) {
+    private static String findCheckedFeedItemParser(ClassLoader classLoader) {
         String[][] queries = {
                 {"clips_netego", "suggested_users", "Unknown FeedItem Type"},
                 {"clips_netego", "media_or_ad"},
                 {"clips_netego", "stories_netego", "bloks_netego"}};
         for (String[] strings : queries) {
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(
                     MethodMatcher.create().usingStrings(strings)))) {
                 if (isFeedItemParser(md.getClassName(), classLoader)) return md.getClassName();
             }
@@ -158,7 +157,7 @@ public class HideSuggestedFeedItemsHook {
         }
     }
 
-    private static void resolveHasLikedGetter(DexKitBridge bridge, ClassLoader classLoader) {
+    private static void resolveHasLikedGetter(ClassLoader classLoader) {
         try {
             if (DexKitCache.isCacheValid()) {
                 Method cached = DexKitCache.loadMethod(CACHE_KEY_HAS_LIKED, classLoader);
@@ -166,9 +165,9 @@ public class HideSuggestedFeedItemsHook {
             }
             for (String owner : new String[]{"com.instagram.feed.media.Media",
                     "com.instagram.feed.media.LiveTreeMediaDict"}) {
-                List<MethodData> found;
+                List<Found> found;
                 try {
-                    found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                    found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                             .declaredClass(owner)
                             .usingEqStrings(java.util.List.of("has_liked"))
                             .returnType("java.lang.Boolean")

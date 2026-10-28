@@ -11,7 +11,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.enums.StringMatchType;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
@@ -73,12 +72,12 @@ public final class ReelViewerHook {
     private boolean anyPagerLocked;
     private boolean touchGateInstalled;
 
-    public void install(DexKitBridge bridge, ClassLoader loader) {
-        installScrollGate(bridge, loader);
+    public void install(ClassLoader loader) {
+        installScrollGate(loader);
         try {
-            bindImpressionSources(bridge, loader);
+            bindImpressionSources(loader);
             boolean trackingAvailable = false;
-            List<Method> impressions = resolve(bridge, loader, "ReelImpression_v1",
+            List<Method> impressions = resolve(loader, "ReelImpression_v1",
                     "_ClipsViewerOrganicImpressionAction_handleImpression");
             for (Method method : impressions) {
                 if (method.getParameterCount() != 2 || method.getReturnType() != void.class) continue;
@@ -111,7 +110,7 @@ public final class ReelViewerHook {
                 trackingAvailable = true;
             }
 
-            List<Method> pauses = resolve(bridge, loader, "ReelPause_v1",
+            List<Method> pauses = resolve(loader, "ReelPause_v1",
                     "ClipsVideoPlayerController.pauseCurrentPlayer pauseReason=");
             for (Method method : pauses) {
                 Class<?>[] p = method.getParameterTypes();
@@ -126,7 +125,7 @@ public final class ReelViewerHook {
             int itemPlaybackHooks = 0;
             for (String suffix : new String[]{"maybeResumePlayer", "resumeCurrentPlayer", "tryToResumeVideoPlayback"}) {
                 boolean suppliesItem = suffix.equals("maybeResumePlayer");
-                for (Method method : resolve(bridge, loader, "ReelPlayback_" + suffix,
+                for (Method method : resolve(loader, "ReelPlayback_" + suffix,
                         "_ClipsVideoPlayerController_" + suffix)) {
                     if (Modifier.isStatic(method.getModifiers()) || method.getReturnType() != void.class) continue;
                     XposedBridge.hookMethod(method, new XC_MethodHook() {
@@ -156,7 +155,7 @@ public final class ReelViewerHook {
             }
 
             int viewerHooks = 0;
-            for (Method method : resolve(bridge, loader, "ReelViewerCreated_v1", "ClipsViewerFragment.onViewCreated")) {
+            for (Method method : resolve(loader, "ReelViewerCreated_v1", "ClipsViewerFragment.onViewCreated")) {
                 Class<?>[] p = method.getParameterTypes();
                 if (p.length != 2 || p[0] != View.class || p[1] != Bundle.class) continue;
                 XposedBridge.hookMethod(method, new XC_MethodHook() {
@@ -320,7 +319,7 @@ public final class ReelViewerHook {
         }
     }
 
-    private void installScrollGate(DexKitBridge bridge, ClassLoader loader) {
+    private void installScrollGate(ClassLoader loader) {
         try {
             Class<?> pager = loader.loadClass(VIEWPAGER2);
             Method setter = null;
@@ -331,7 +330,7 @@ public final class ReelViewerHook {
             }
             if (setter != null) {
                 try {
-                    inputField = ViewPager2Input.setterInputField(bridge, loader, pager, setter);
+                    inputField = ViewPager2Input.setterInputField(loader, pager, setter);
                 } catch (Throwable t) {
                     ModuleLog.detail("(IE|ReelLimit) pager setter field unresolved; using ViewPager2Input", t);
                 }
@@ -478,12 +477,12 @@ public final class ReelViewerHook {
         return null;
     }
 
-    private void bindImpressionSources(DexKitBridge bridge, ClassLoader loader) {
+    private void bindImpressionSources(ClassLoader loader) {
         int bindings = 0;
         try {
             // This registrar receives both the viewer config and the logger source forwarded to
             // organic impression handlers. Match their identity, never the currently visible tab.
-            for (Constructor<?> constructor : impressionRegistrars(bridge, loader)) {
+            for (Constructor<?> constructor : impressionRegistrars(loader)) {
                 Class<?>[] types = constructor.getParameterTypes();
                 int configIndex = configParam(types);
                 int[] sourceIndexes = ReelSessions.sourceParams(types);
@@ -508,7 +507,7 @@ public final class ReelViewerHook {
     }
 
     /** Registrar constructors taking the viewer config. DexKitCache stores Methods only, so cache class names. */
-    private static List<Constructor<?>> impressionRegistrars(DexKitBridge bridge, ClassLoader loader)
+    private static List<Constructor<?>> impressionRegistrars(ClassLoader loader)
             throws ReflectiveOperationException {
         List<Constructor<?>> result = new ArrayList<>();
         String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(CACHE_REGISTRARS) : null;
@@ -525,7 +524,7 @@ public final class ReelViewerHook {
         // Any registrar marker, then the owning class's config-taking constructor: on IG 451 the
         // "_init" marker sits in a class without the config (X.056c), while the registrar that
         // takes it (X.054k) only carries "_addAction".
-        for (var data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (var data : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .addUsingString("ClipsViewerSponsoredViewpointRegistrar_", StringMatchType.Contains)))) {
             String owner = data.getClassName();
             if (classes.contains(owner)) continue;
@@ -575,7 +574,7 @@ public final class ReelViewerHook {
                 || name.equals("DIRECT_CROSS_APP_SAVES") || name.equals("CUTOUT_ATTRIBUTION_ON_DIRECT_MESSAGE");
     }
 
-    private static List<Method> resolve(DexKitBridge bridge, ClassLoader loader, String key, String anchor) {
+    private static List<Method> resolve(ClassLoader loader, String key, String anchor) {
         if (DexKitCache.isCacheValid()) {
             List<Method> cached = DexKitCache.loadMethods(key, loader);
             if (cached != null && !cached.isEmpty()) return cached;
@@ -583,7 +582,7 @@ public final class ReelViewerHook {
             if (MISSING.equals(DexKitCache.loadString(key))) return new ArrayList<>();
         }
         List<Method> result = new ArrayList<>();
-        for (var data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (var data : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .addUsingString(anchor, StringMatchType.Contains)))) {
             try {
                 Method method = data.getMethodInstance(loader);

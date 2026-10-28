@@ -1,6 +1,5 @@
 package ps.reso.instaeclipse.mods.feed;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
@@ -18,6 +17,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Auto-expand feed captions (#246): no "… more" truncation.
@@ -37,10 +37,10 @@ public class ExpandCaptionsHook {
     private static final String CACHE_KEY = "ExpandCaptions_builder_helper";
     private static final ThreadLocal<Integer> IN_BUILDER = new ThreadLocal<>();
 
-    public void install(DexKitBridge bridge) {
+    public void install() {
         List<Method> pair = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(CACHE_KEY, Module.hostClassLoader) : null;
         if (pair == null || pair.size() != 2) {
-            pair = find(bridge);
+            pair = find();
             if (pair == null) return;
             DexKitCache.saveMethods(CACHE_KEY, pair);
         }
@@ -71,9 +71,9 @@ public class ExpandCaptionsHook {
         FeatureStatusTracker.setHooked("ExpandCaptions");
     }
 
-    private static List<Method> find(DexKitBridge bridge) {
+    private static List<Method> find() {
         try {
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings(" [...]").paramCount(7)))) {
                 Method b = md.getMethodInstance(Module.hostClassLoader);
                 if (!Modifier.isStatic(b.getModifiers()) || b.getReturnType() == void.class) continue;

@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.feed;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -15,6 +13,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Hide community notes on posts and reels (#259).
@@ -36,11 +35,11 @@ public class HideCommunityNotesHook {
     private static final String MUTABLE = "com.instagram.api.schemas.MediaOverlayPayloadSchema";
     private static final int NOTES_BLOKS_DATA = 0xc2d475a;
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         String name = DexKitCache.isCacheValid() ? DexKitCache.loadString(CACHE_KEY) : null;
         if (name == null) {
             try {
-                List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(PANDO).paramCount(0).usingNumbers(NOTES_BLOKS_DATA)));
                 if (found.size() != 1) {
                     ModuleLog.error(TAG + "Will not work: community notes were not found in this Instagram version");
