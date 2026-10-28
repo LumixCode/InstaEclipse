@@ -5,12 +5,12 @@ import android.content.Context;
 import android.widget.Toast;
 
 import java.lang.reflect.Proxy;
-import java.util.List;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -51,18 +51,25 @@ public class InstantSaveHook {
     private static volatile Object currentMedia;
 
     public void install(ClassLoader cl) {
-        cacheCurrentInstant(cl);
-        wrapLongPress(cl);
+        boolean viewer = cacheCurrentInstant(cl);
+        boolean longPress = wrapLongPress(cl);
+        if (viewer && longPress) {
+            FeatureStatusTracker.setHooked("SaveInstants");
+            ModuleLog.ok("(IE|InstantSave) ready");
+        } else if (FeatureFlags.saveInstants) {
+            FeatureStatusTracker.setBroken("SaveInstants");
+        }
     }
 
     /** Hook the current-card coroutine ctor and cache arg[6]'s Media (field A01). */
-    private void cacheCurrentInstant(ClassLoader cl) {
+    private boolean cacheCurrentInstant(ClassLoader cl) {
         try {
             Class<?> lambda = resolveViewerLambda(cl);
             if (lambda == null) {
                 ModuleLog.error("(IE|InstantSave) Could not turn on saving Instants: the Instant viewer was not found in this Instagram version");
-                return;
+                return false;
             }
+            int hooked = 0;
             for (java.lang.reflect.Constructor<?> c : ps.reso.instaeclipse.utils.core.SafeReflect.constructors(lambda)) {
                 XposedBridge.hookMethod(c, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
@@ -72,10 +79,17 @@ public class InstantSaveHook {
                         } catch (Throwable ignored) {}
                     }
                 });
+                hooked++;
+            }
+            if (hooked == 0) {
+                ModuleLog.error("(IE|InstantSave) Could not turn on saving Instants: the Instant viewer has no constructor to watch");
+                return false;
             }
             ModuleLog.detail("(IE|InstantSave) viewer cache hooked: " + lambda.getName());
+            return true;
         } catch (Throwable t) {
             ModuleLog.error("(IE|InstantSave) Could not turn on saving Instants: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            return false;
         }
     }
 
@@ -152,10 +166,11 @@ public class InstantSaveHook {
      * cached Instant, then still run IG's original callback so its own behaviour (pause, etc.) is
      * preserved. The field is picked by {@link #longPressField}, not by its obfuscated letter.
      */
-    private void wrapLongPress(ClassLoader cl) {
+    private boolean wrapLongPress(ClassLoader cl) {
         try {
             final Class<?> function1 = XposedHelpers.findClass("kotlin.jvm.functions.Function1", cl);
             Class<?> handler = XposedHelpers.findClass(LONGPRESS_LAMBDA, cl);
+            int hooked = 0;
             for (java.lang.reflect.Constructor<?> c : ps.reso.instaeclipse.utils.core.SafeReflect.constructors(handler)) {
                 XposedBridge.hookMethod(c, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
@@ -166,24 +181,23 @@ public class InstantSaveHook {
                             if (orig == null || !function1.isInstance(orig)) return;
                             if (orig.getClass().getName().startsWith("$Proxy")) return; // already wrapped
                             Object wrapper = Proxy.newProxyInstance(cl, new Class[]{function1}, (proxy, method, a) -> {
-                                if ("invoke".equals(method.getName()) && FeatureFlags.saveInstants) {
-                                    long now = android.os.SystemClock.uptimeMillis();
-                                    if (POLICY.hold(null, now) == InstantSavePolicy.Decision.SAVE) {
-                                        POLICY.saved(null, now);
-                                        saveCurrent();
-                                    }
-                                }
+                                if ("invoke".equals(method.getName()) && FeatureFlags.saveInstants) saveCurrent();
                                 return orig != null ? method.invoke(orig, a) : null;
                             });
                             field.set(p.thisObject, wrapper);
                         } catch (Throwable ignored) {}
                     }
                 });
+                hooked++;
             }
-            FeatureStatusTracker.setHooked("SaveInstants");
-            ModuleLog.ok("(IE|InstantSave) ready");
+            if (hooked == 0) {
+                ModuleLog.error("(IE|InstantSave) Could not turn on holding an Instant to save it: the hold gesture has no constructor to watch");
+                return false;
+            }
+            return true;
         } catch (Throwable t) {
             ModuleLog.error("(IE|InstantSave) Could not turn on holding an Instant to save it: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            return false;
         }
     }
 
@@ -226,45 +240,43 @@ public class InstantSaveHook {
         return null;
     }
 
-    /** Saves the cached current Instant's media via the module's downloader. */
     private static void saveCurrent() {
         final Object media = currentMedia;
-        final Context ctx = AndroidAppHelper.currentApplication();
-        if (ctx == null) return;
-        if (media == null) {
-            FeedVideoDownloadHook.mainHandler.post(() ->
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_instant_save_none), Toast.LENGTH_SHORT).show());
-            return;
-        }
-        FeedVideoDownloadHook.executor.submit(() -> {
+        final Context app = AndroidAppHelper.currentApplication();
+        if (app == null) return;
+        final String id = media == null ? null : mediaId(media);
+        final InstantSavePolicy.Decision decision = POLICY.hold(id, android.os.SystemClock.uptimeMillis());
+        if (decision == InstantSavePolicy.Decision.IGNORE) return;
+        FeedVideoDownloadHook.mainHandler.post(() -> {
+            Context ui = UIHookManager.getCurrentActivity();
+            if (ui == null) ui = app;
+            if (media == null) { toast(ui, R.string.ig_instant_save_none); return; }
+            if (decision == InstantSavePolicy.Decision.ALREADY_SAVED) { toast(ui, R.string.ig_instant_already_saved); return; }
             try {
-                List<String> urls = FeedVideoDownloadHook.extractAllUrlsFromMedia(ctx, media);
-                if (urls == null || urls.isEmpty()) {
-                    FeedVideoDownloadHook.mainHandler.post(() ->
-                            ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_instant_save_none), Toast.LENGTH_SHORT).show());
-                    return;
-                }
-                String url = urls.get(0);
-                boolean isVid = FeedVideoDownloadHook.isVideoUrl(url);
-                String username = FeedVideoDownloadHook.extractUsernameFromMediaObject(media);
-                if (username == null) username = "instant";
-                String mediaId = "0";
-                try {
-                    Object id = media.getClass().getMethod("getId").invoke(media);
-                    if (id instanceof String s && !s.isEmpty()) mediaId = s;
-                } catch (Throwable ignored) {}
-                String fn = FeedVideoDownloadHook.buildFilename(username, "instant", mediaId, isVid);
-                final String fUser = username;
-                FeedVideoDownloadHook.mainHandler.post(() ->
-                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_instant_saving), Toast.LENGTH_SHORT).show());
-                boolean delegated = FeedVideoDownloadHook.downloadAndSave(ctx, url, fn, isVid, fUser);
-                if (!delegated) {
-                    FeedVideoDownloadHook.mainHandler.post(() ->
-                            ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_instant_saved), Toast.LENGTH_SHORT).show());
-                }
-            } catch (Throwable e) {
-                ModuleLog.error("(IE|InstantSave) Could not save the Instant: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                SelectedMediaDownloads.Captured captured = SelectedMediaDownloads.capture(ui, media, "instant");
+                if (captured.children.isEmpty()) start(ui, captured);
+                else for (SelectedMediaDownloads.Captured child : captured.children) start(ui, child);
+                POLICY.saved(id, android.os.SystemClock.uptimeMillis());
+            } catch (Throwable error) {
+                SelectedMediaDownloads.unavailable(ui, error);
             }
         });
+    }
+
+    private static void start(Context ctx, SelectedMediaDownloads.Captured captured) {
+        SelectedMediaDownloads.start(ctx, captured, captured.batchKind() == DownloadChoices.Choice.VIDEO);
+    }
+
+    private static String mediaId(Object media) {
+        try {
+            Object id = media.getClass().getMethod("getId").invoke(media);
+            return id instanceof String s && !s.isEmpty() ? s : null;
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static void toast(Context ctx, int text) {
+        ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, text), Toast.LENGTH_SHORT).show();
     }
 }

@@ -65,6 +65,7 @@
     <string name="ig_media_info_megabytes">%1$.2f MB</string>
     <string name="ig_media_info_error">Couldn\'t read this post</string>
     <string name="ig_highlight_failed">Couldn\'t download this highlight. Try again.</string>
+    <string name="ig_instant_already_saved">Already saved</string>
     <plurals name="ie_download_batch_done">
         <item quantity="one">Saved %1$d of %2$d</item>
         <item quantity="other">Saved %1$d of %2$d</item>
