@@ -593,23 +593,19 @@ public class StoryDownloadHook {
             Context ctx = AndroidAppHelper.currentApplication();
             String id;
             try {
-                Object rid = reelItem.getClass().getMethod("getId").invoke(reelItem);
-                id = (rid instanceof String s && !s.isEmpty()) ? s.split("_")[0] : null;
+                id = StoryCapturePolicy.id(reelItem.getClass().getMethod("getId").invoke(reelItem));
             } catch (Throwable t) { id = null; }
             if (id == null || ps.reso.instaeclipse.utils.media.StoryCache.has(id)) return;
             List<String> urls = FeedVideoDownloadHook.extractAllUrlsFromMedia(ctx, media);
             if (urls == null || urls.isEmpty()) return;
             final String url = urls.get(0);
             final boolean video = FeedVideoDownloadHook.isVideoUrl(url);
-            // Use the ReelItem-based username resolver (handles a ReelItem passed directly) — the
-            // media-dictionary resolver doesn't populate for story media, giving "unknown".
             String author = extractUsernameFromReelItemHolder(reelItem);
             if (author == null || author.isEmpty()) author = FeedVideoDownloadHook.extractUsernameFromMediaObject(media);
             long expiring = 0;
             if (expiringGetter != null) {
                 try {
-                    Object v = expiringGetter.invoke(media);
-                    if (v instanceof Long l && l > 0) expiring = l < 100000000000L ? l * 1000L : l; // sec→ms
+                    expiring = StoryCapturePolicy.expiryMs(expiringGetter.invoke(media));
                 } catch (Throwable ignored) {}
             }
             final String fid = id, fauthor = author; final long fexp = expiring;
@@ -1067,44 +1063,10 @@ public class StoryDownloadHook {
                 return null;
             }
 
-            // Step 2: probe all no-arg non-primitive methods on ReelItem.
-            // Priority: find a method returning com.instagram.user.model.User.
-            // Fallback: if a method returns com.instagram.feed.media.Media → delegate to feed extractor.
-            for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(reelItem.getClass())) {
-                if (m.getParameterCount() != 0) continue;
-                Class<?> ret = m.getReturnType();
-                if (ret.isPrimitive() || ret == String.class || ret == void.class) continue;
-                try {
-                    m.setAccessible(true);
-                    Object candidate = m.invoke(reelItem);
-                    if (candidate == null) continue;
-
-                    String candidateClass = candidate.getClass().getName();
-
-                    // Direct User object — use DexKit-resolved getter (stable int constant -265713450)
-                    if (candidateClass.equals("com.instagram.user.model.User")) {
-                        String username = UserUtils.callUsernameGetter(candidate);
-                        if (username != null) {
-                            ModuleLog.probe("(IE|Story|Username) reelItem." + m.getName() + "() [User] → " + username);
-                            return username;
-                        }
-                        continue;
-                    }
-
-                    // Media object — delegate to feed extractor (has LiveTreeMediaDict path)
-                    if (candidateClass.equals("com.instagram.feed.media.Media")) {
-                        String username = FeedVideoDownloadHook.extractUsernameFromMediaObject(candidate);
-                        if (username != null) {
-                            ModuleLog.probe("(IE|Story|Username) reelItem." + m.getName()
-                                    + "() [Media] → " + username);
-                            return username;
-                        }
-                        continue; // don't probe String methods on Media
-                    }
-                } catch (Throwable ignored) {}
-            }
-
-            ModuleLog.probe("(IE|Story|Username) username not found on ReelItem methods");
+            String name = StoryCapturePolicy.author(reelItem, "com.instagram.user.model.User", "com.instagram.feed.media.Media",
+                    UserUtils::callUsernameGetter, FeedVideoDownloadHook::extractUsernameFromMediaObject);
+            ModuleLog.probe("(IE|Story|Username) " + (name != null ? "reelItem → " + name : "username not found on ReelItem methods"));
+            return name;
         } catch (Throwable t) {
             ModuleLog.detail("(IE|Story|Username) username lookup failed: " + t);
         }
