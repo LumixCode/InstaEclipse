@@ -16,6 +16,7 @@ import android.widget.Toast;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.PasscodeHasher;
+import ps.reso.instaeclipse.utils.core.PasscodeLockout;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -34,6 +35,7 @@ public class LockDirectMessagesHook {
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
     private static final java.util.Set<Activity> resumed =
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    private static final java.util.Map<Activity, Boolean> recentsHidden = new java.util.WeakHashMap<>();
     private static final java.util.Set<View> watched =
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
     private static boolean lifecycleRegistered;
@@ -241,6 +243,7 @@ public class LockDirectMessagesHook {
                 && !FeatureFlags.lockSpecificMessages && !gates.containsKey(a)) {
             session.reset();
             appUnlocked = false;
+            hideRecents(a, false);
             return;
         }
         try {
@@ -284,7 +287,14 @@ public class LockDirectMessagesHook {
                 if (now - outsideDirectSince < 250L) screen = DirectLockSession.Screen.UNKNOWN;
             } else if (screen != DirectLockSession.Screen.UNKNOWN) outsideDirectSince = 0L;
             session.visit(screen, id, account, FeatureFlags.lockDirectAlways);
-            if (FeatureFlags.lockDirectPasscode == null || FeatureFlags.lockDirectPasscode.isEmpty()) {
+            boolean passcodeSet = FeatureFlags.lockDirectPasscode != null && !FeatureFlags.lockDirectPasscode.isEmpty();
+            boolean chatLocked = FeatureFlags.lockSpecificMessages && screen == DirectLockSession.Screen.THREAD
+                    && (id == null ? !ps.reso.instaeclipse.utils.ghost.LockedThreads.all().isEmpty()
+                    : ps.reso.instaeclipse.utils.ghost.LockedThreads.contains(id));
+            hideRecents(a, LockRecentsPolicy.hides(android.os.Build.VERSION.SDK_INT, passcodeSet,
+                    FeatureFlags.lockWholeApp, FeatureFlags.lockDirectMessages, FeatureFlags.lockSpecificMessages,
+                    screen, chatLocked, recentsHidden(a)));
+            if (!passcodeSet) {
                 dismissGate(a);
                 return;
             }
@@ -297,9 +307,7 @@ public class LockDirectMessagesHook {
                 scope = "inbox";
                 title = I18n.t(a, R.string.ig_lock_open_dms_prompt);
             } else if (!FeatureFlags.lockDirectMessages && FeatureFlags.lockSpecificMessages
-                    && session.needsThreadLock(screen, id,
-                    id == null ? !ps.reso.instaeclipse.utils.ghost.LockedThreads.all().isEmpty()
-                            : ps.reso.instaeclipse.utils.ghost.LockedThreads.contains(id))) {
+                    && session.needsThreadLock(screen, id, chatLocked)) {
                 scope = "thread:" + id;
                 title = I18n.t(a, R.string.ig_lock_open_chat_prompt);
             }
@@ -335,6 +343,16 @@ public class LockDirectMessagesHook {
         } catch (Throwable t) {
             ModuleLog.error("(IE|LockDMs) Could not show the lock screen: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
+    }
+
+    private static boolean recentsHidden(Activity a) {
+        return Boolean.TRUE.equals(recentsHidden.get(a));
+    }
+
+    private static void hideRecents(Activity a, boolean hide) {
+        if (android.os.Build.VERSION.SDK_INT < LockRecentsPolicy.MIN_SDK || recentsHidden(a) == hide) return;
+        recentsHidden.put(a, hide);
+        a.setRecentsScreenshotEnabled(!hide);
     }
 
     private static void dismissGate(Activity a) {
@@ -686,15 +704,11 @@ public class LockDirectMessagesHook {
         return PasscodeHasher.hash(passcode, salt);
     }
 
-    private static final int MAX_FAILURES = 5;
-    private static final long LOCKOUT_MS = 30_000;
-    private static int failures;
-    private static long lockedUntil;
+    private static final PasscodeLockout lockout = new PasscodeLockout(null, android.os.SystemClock::elapsedRealtime);
 
     /** Seconds left in the lockout after too many wrong passcodes, or 0. */
     public static int lockoutSecondsLeft() {
-        long left = lockedUntil - android.os.SystemClock.elapsedRealtime();
-        return left > 0 ? (int) ((left + 999) / 1000) : 0;
+        return lockout.secondsLeft();
     }
 
     /**
@@ -703,20 +717,17 @@ public class LockDirectMessagesHook {
      * during the lockout every attempt fails without being checked.
      */
     public static synchronized boolean checkPass(String passcode) {
-        if (lockoutSecondsLeft() > 0) return false;
+        if (lockout.secondsLeft() > 0) return false;
         String salt = FeatureFlags.lockDirectSalt == null ? "" : FeatureFlags.lockDirectSalt;
         if (PasscodeHasher.verify(passcode, salt, FeatureFlags.lockDirectPasscode)) {
-            failures = 0;
+            lockout.succeeded();
             if (PasscodeHasher.needsUpgrade(FeatureFlags.lockDirectPasscode)) {
                 FeatureFlags.lockDirectPasscode = PasscodeHasher.hash(passcode, salt);
                 ps.reso.instaeclipse.utils.core.SettingsManager.saveAllFlags();
             }
             return true;
         }
-        if (++failures >= MAX_FAILURES) {
-            failures = 0;
-            lockedUntil = android.os.SystemClock.elapsedRealtime() + LOCKOUT_MS;
-        }
+        lockout.failed();
         return false;
     }
 
