@@ -12,7 +12,7 @@ import java.util.function.BiFunction;
 import ps.reso.instaeclipse.utils.text.TimestampFormat;
 
 /** The host's absolute timestamp formatters accept epoch seconds, including their long overloads. */
-final class ExactTimestampFormatter {
+public final class ExactTimestampFormatter {
     private static final int FORMATS_PER_THREAD = 4;
     private static volatile PatternMemo lastPattern, lastTimePattern;
     private static final ThreadLocal<Map<String, SimpleDateFormat>> FORMATS = ThreadLocal.withInitial(() ->
@@ -42,7 +42,7 @@ final class ExactTimestampFormatter {
         }
     }
 
-    static String skeleton(boolean use24HourClock) {
+    public static String skeleton(boolean use24HourClock) {
         return use24HourClock ? "yMMMdHms" : "yMMMdhms";
     }
 

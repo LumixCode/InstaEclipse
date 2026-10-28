@@ -1693,7 +1693,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     }
 
     private String timestampFormatName(String pattern) {
-        String sample = ps.reso.instaeclipse.utils.text.TimestampFormat.format(pattern, new java.util.Date(), java.util.Locale.getDefault());
+        String sample = ps.reso.instaeclipse.utils.text.TimestampFormat.formatAsPosts(requireContext(), pattern, new java.util.Date());
         return pattern.isEmpty() ? getString(R.string.ig_timestamp_format_default) + "  ·  " + sample : sample;
     }
 
@@ -1739,7 +1739,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         Runnable update = () -> {
             String p = input.getText().toString();
             preview.setText(ps.reso.instaeclipse.utils.text.TimestampFormat.isValid(p) && !p.isEmpty()
-                    ? ps.reso.instaeclipse.utils.text.TimestampFormat.format(p, new java.util.Date(), java.util.Locale.getDefault())
+                    ? ps.reso.instaeclipse.utils.text.TimestampFormat.formatAsPosts(c, p, new java.util.Date())
                     : getString(R.string.ig_timestamp_format_invalid));
         };
         input.addTextChangedListener(new android.text.TextWatcher() {

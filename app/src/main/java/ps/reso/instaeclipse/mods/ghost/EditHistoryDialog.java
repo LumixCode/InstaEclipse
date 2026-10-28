@@ -10,7 +10,6 @@ import android.widget.Toast;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
@@ -94,7 +93,7 @@ final class EditHistoryDialog {
         if (row.time <= 0) {
             when = I18n.t(ctx, R.string.ig_edit_history_time_unknown);
         } else {
-            when = TimestampFormat.format(FeatureFlags.exactTimestampFormat, new Date(row.time), Locale.getDefault());
+            when = TimestampFormat.formatAsPosts(ctx, FeatureFlags.exactTimestampFormat, new Date(row.time));
             if (row.noticed) when = I18n.t(ctx, R.string.ig_edit_history_noticed, when);
         }
         return I18n.t(ctx, kind) + "  ·  " + when;

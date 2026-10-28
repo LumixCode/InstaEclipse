@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
+import ps.reso.instaeclipse.mods.misc.ExactTimestampFormatter;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 
 /**
@@ -111,6 +112,19 @@ public final class TimestampFormat {
     }
 
     public static String format(String pattern, Date date, Locale locale, String devicePattern) {
+        if (pattern != null && !pattern.isEmpty() && isValid(pattern)) {
+            return new SimpleDateFormat(pattern, locale).format(date);
+        }
+        if (devicePattern != null && !devicePattern.isEmpty() && isValid(devicePattern)) {
+            return new SimpleDateFormat(devicePattern, locale).format(date);
+        }
         return format(pattern, date, locale);
+    }
+
+    public static String formatAsPosts(Context ctx, String pattern, Date date) {
+        Locale locale = Locale.getDefault();
+        String device = android.text.format.DateFormat.getBestDateTimePattern(locale,
+                ExactTimestampFormatter.skeleton(android.text.format.DateFormat.is24HourFormat(ctx)));
+        return format(pattern, date, locale, device);
     }
 }

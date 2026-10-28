@@ -2190,7 +2190,7 @@ public class DialogUtils {
 
     /** The format, or "Device default", with a sample of the current time. */
     private static String timestampFormatName(Context context, String pattern) {
-        String sample = ps.reso.instaeclipse.utils.text.TimestampFormat.format(pattern, new java.util.Date(), java.util.Locale.getDefault());
+        String sample = ps.reso.instaeclipse.utils.text.TimestampFormat.formatAsPosts(context, pattern, new java.util.Date());
         return pattern.isEmpty() ? I18n.t(context, R.string.ig_timestamp_format_default) + "  ·  " + sample : sample;
     }
 
@@ -2235,7 +2235,7 @@ public class DialogUtils {
             Runnable update = () -> {
                 String p = input.getText().toString();
                 preview.setText(ps.reso.instaeclipse.utils.text.TimestampFormat.isValid(p) && !p.isEmpty()
-                        ? ps.reso.instaeclipse.utils.text.TimestampFormat.format(p, new java.util.Date(), java.util.Locale.getDefault())
+                        ? ps.reso.instaeclipse.utils.text.TimestampFormat.formatAsPosts(context, p, new java.util.Date())
                         : I18n.t(context, R.string.ig_timestamp_format_invalid));
             };
             input.addTextChangedListener(new android.text.TextWatcher() {
