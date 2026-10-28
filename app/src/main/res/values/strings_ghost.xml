@@ -26,6 +26,14 @@
         <item quantity="one">Unsent %1$d of %2$d message</item>
         <item quantity="other">Unsent %1$d of %2$d messages</item>
     </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="one">Unsend %1$d message? This can\'t be undone.</item>
+        <item quantity="other">Unsend %1$d messages? This can\'t be undone.</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="one">Unsending %1$d/%2$d</item>
+        <item quantity="other">Unsending %1$d/%2$d</item>
+    </plurals>
     <string name="ig_jump_first_stop_menu">Stop loading older messages</string>
     <plurals name="ig_jump_first_progress">
         <item quantity="one">Loading older messages · %1$d loaded</item>

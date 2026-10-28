@@ -4,17 +4,19 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -55,6 +57,8 @@ import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.dialog.IeDialog;
+import ps.reso.instaeclipse.utils.ui.IePalette;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 
 /**
@@ -258,7 +262,7 @@ public final class BulkUnsend {
 
     // ── Thread state ─────────────────────────────────────────────────────────────
 
-    private static final class Ctx {
+    static final class Ctx {
         Object sender;
         Object session;
     }
@@ -432,11 +436,29 @@ public final class BulkUnsend {
             toast(act, I18n.t(act, R.string.ig_bulk_unsend_not_ready));
             return;
         }
-        active = new Selection(act, rv, c, me, open, pressed);
-        ModuleLog.detail(TAG + "selection mode: thread=" + (open != null) + " rows=" + active.rows.size());
+        Selection selection = start(act, rv, c, me, open, pressed);
+        ModuleLog.detail(TAG + "selection mode: thread=" + (open != null) + " rows=" + selection.rows.size());
     }
 
-    private static final class Selection {
+    static Selection start(Activity act, ViewGroup rv, Ctx c, String me, String thread, Object pressed) {
+        if (active != null) active.exit();
+        active = new Selection(act, rv, c, me, thread, pressed);
+        return active;
+    }
+
+    public static IeDialog confirm(Activity act, int count, Runnable unsend) {
+        IeDialog dlg = new IeDialog(act).title(I18n.t(act, R.string.ig_dialog_bulk_unsend))
+                .message(text(act).confirm(count));
+        dlg.secondary(I18n.t(act, R.string.ig_dialog_cancel), null);
+        dlg.destructive(I18n.t(act, R.string.ig_bulk_unsend_go), unsend);
+        return dlg;
+    }
+
+    static BulkUnsendText text(Context c) {
+        return new BulkUnsendText((id, count, args) -> I18n.moduleResources(c).getQuantityString(id, count, args));
+    }
+
+    static final class Selection {
         final Activity act;
         final ViewGroup rv;
         final Ctx ctx;
@@ -446,11 +468,12 @@ public final class BulkUnsend {
         final IdentityHashMap<Object, Boolean> mineCache = new IdentityHashMap<>();
         final IdentityHashMap<View, Object> rows = new IdentityHashMap<>();
         final Overlay overlay;
-        final LinearLayout bar;
-        final TextView go;
+        final Bar bar;
         final ViewTreeObserver observer;
         final ViewTreeObserver.OnPreDrawListener preDraw;
         final View.OnAttachStateChangeListener detach;
+        volatile boolean stopped;
+        boolean unsending;
         long lastLayout;
         long rowSet = Long.MIN_VALUE;
 
@@ -464,40 +487,10 @@ public final class BulkUnsend {
             Object shown = shownRowOf(pressed);
             if (shown != null && isMine(shown)) selected.add(shown);
             float d = act.getResources().getDisplayMetrics().density;
-            int accent = ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine.accentOr(0xFF0095F6);
 
-            overlay = new Overlay(act, this, accent, d);
-            bar = new LinearLayout(act);
-            bar.setGravity(Gravity.CENTER_VERTICAL);
-            bar.setPadding((int) (16 * d), (int) (10 * d), (int) (12 * d), (int) (10 * d));
-            boolean dark = (act.getResources().getConfiguration().uiMode
-                    & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
-            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-            bg.setColor(dark ? 0xFF1C1C1E : 0xFFFFFFFF);
-            bg.setCornerRadius(22 * d);
-            bg.setStroke(Math.max(1, (int) d), dark ? 0x33FFFFFF : 0x1F000000);
-            bar.setBackground(bg);
-            bar.setElevation(8 * d);
-            TextView cancel = new TextView(act);
-            cancel.setText(I18n.t(act, R.string.ig_dialog_cancel));
-            cancel.setTextSize(15);
-            cancel.setTextColor(dark ? 0xFFF5F5F5 : 0xFF111111);
-            cancel.setPadding((int) (6 * d), (int) (8 * d), (int) (12 * d), (int) (8 * d));
-            cancel.setOnClickListener(v -> exit());
-            bar.addView(cancel, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-            go = new TextView(act);
-            go.setTextSize(15);
-            go.setTypeface(Typeface.DEFAULT_BOLD);
-            go.setTextColor(Color.WHITE);
-            go.setGravity(Gravity.CENTER);
-            go.setPadding((int) (18 * d), (int) (10 * d), (int) (18 * d), (int) (10 * d));
-            android.graphics.drawable.GradientDrawable pill = new android.graphics.drawable.GradientDrawable();
-            pill.setColor(accent);
-            pill.setCornerRadius(20 * d);
-            go.setBackground(pill);
-            go.setOnClickListener(v -> unsendSelected());
-            bar.addView(go);
-            updateBar();
+            overlay = new Overlay(act, this, IePalette.of(act), d);
+            bar = new Bar(act, this::exit, this::confirmSelected);
+            bar.selected(selected.size());
 
             ViewGroup content = act.findViewById(android.R.id.content);
             content.addView(overlay, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -506,7 +499,10 @@ public final class BulkUnsend {
             // over the composer (hidden while selecting), so the newest message stays visible
             int m = (int) (10 * d);
             blp.setMargins(m, 0, m, m);
-            content.addView(bar, blp);
+            content.addView(bar.view(), blp);
+            overlay.requestFocus();
+            InputMethodManager ime = (InputMethodManager) act.getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (ime != null) ime.hideSoftInputFromWindow(rv.getWindowToken(), 0);
 
             preDraw = () -> {
                 if (!rv.isShown() || !rv.isAttachedToWindow()) { exit(); return true; }
@@ -569,38 +565,114 @@ public final class BulkUnsend {
         }
 
         void toggle(Object msg) {
+            if (unsending) return;
             if (!selected.remove(msg)) selected.add(msg);
-            updateBar();
+            bar.selected(selected.size());
             overlay.invalidate();
         }
 
-        void updateBar() {
-            int n = selected.size();
+        void confirmSelected() {
+            if (selected.isEmpty() || unsending) return;
+            confirm(act, selected.size(), this::unsendSelected).show();
+        }
+
+        void unsendSelected() {
+            if (selected.isEmpty() || unsending || stopped || active != this) return;
+            unsending = true;
+            List<Object> picked = new ArrayList<>(selected);
+            bar.progress(0, picked.size());
+            unsendAll(act, ctx, thread, picked, this);
+        }
+
+        void progress(int done, int total) {
+            if (!stopped) bar.progress(done, total);
+        }
+
+        void exit() {
+            stopped = true;
+            if (active == this) active = null;
+            try { rv.removeOnAttachStateChangeListener(detach); } catch (Throwable ignored) {}
+            try { if (observer.isAlive()) observer.removeOnPreDrawListener(preDraw); } catch (Throwable ignored) {}
+            for (View v : new View[]{overlay, bar.view()}) {
+                if (v.getParent() instanceof ViewGroup p) p.removeView(v);
+            }
+        }
+    }
+
+    public static final class Bar {
+        private final Activity act;
+        private final LinearLayout view;
+        private final TextView cancel;
+        private final TextView status;
+        private final TextView go;
+
+        public Bar(Activity act, Runnable onCancel, Runnable onGo) {
+            this.act = act;
+            IePalette p = IePalette.of(act);
+            float d = act.getResources().getDisplayMetrics().density;
+            int target = Math.round(48 * d);
+            view = new LinearLayout(act);
+            view.setGravity(Gravity.CENTER_VERTICAL);
+            view.setPadding((int) (16 * d), (int) (4 * d), (int) (8 * d), (int) (4 * d));
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(p.dialog);
+            bg.setCornerRadius(24 * d);
+            bg.setStroke(Math.max(1, (int) d), p.line);
+            view.setBackground(bg);
+            view.setElevation(8 * d);
+            cancel = new TextView(act);
+            cancel.setText(I18n.t(act, R.string.ig_dialog_cancel));
+            cancel.setTextSize(15);
+            cancel.setTextColor(p.text);
+            cancel.setGravity(Gravity.CENTER_VERTICAL);
+            cancel.setMinHeight(target);
+            cancel.setPadding((int) (6 * d), 0, (int) (12 * d), 0);
+            cancel.setOnClickListener(v -> onCancel.run());
+            view.addView(cancel, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            status = new TextView(act);
+            status.setTextSize(15);
+            status.setTextColor(p.text);
+            status.setGravity(Gravity.CENTER_VERTICAL);
+            status.setMinHeight(target);
+            status.setPadding((int) (6 * d), 0, (int) (6 * d), 0);
+            status.setVisibility(View.GONE);
+            view.addView(status, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            go = new TextView(act);
+            go.setTextSize(15);
+            go.setTypeface(Typeface.DEFAULT_BOLD);
+            go.setTextColor(p.onAccent);
+            go.setGravity(Gravity.CENTER);
+            go.setMinHeight(target);
+            go.setPadding((int) (18 * d), 0, (int) (18 * d), 0);
+            GradientDrawable pill = new GradientDrawable();
+            pill.setColor(p.accent);
+            pill.setCornerRadius(24 * d);
+            go.setBackground(pill);
+            go.setOnClickListener(v -> onGo.run());
+            view.addView(go);
+        }
+
+        public View view() {
+            return view;
+        }
+
+        public void selected(int n) {
             go.setText(I18n.t(act, R.string.ig_bulk_unsend_go) + (n > 0 ? " (" + n + ")" : ""));
             go.setAlpha(n > 0 ? 1f : 0.5f);
         }
 
-        void unsendSelected() {
-            if (selected.isEmpty()) return;
-            List<Object> picked = new ArrayList<>(selected);
-            exit();
-            unsendAll(act, ctx, thread, picked);
-        }
-
-        void exit() {
-            if (active == this) active = null;
-            try { rv.removeOnAttachStateChangeListener(detach); } catch (Throwable ignored) {}
-            try { if (observer.isAlive()) observer.removeOnPreDrawListener(preDraw); } catch (Throwable ignored) {}
-            for (View v : new View[]{overlay, bar}) {
-                if (v.getParent() instanceof ViewGroup p) p.removeView(v);
-            }
+        public void progress(int done, int total) {
+            cancel.setVisibility(View.GONE);
+            go.setVisibility(View.GONE);
+            status.setVisibility(View.VISIBLE);
+            status.setText(text(act).progress(done, total));
         }
     }
 
     /** Draws the check circles and turns taps on our messages into selection toggles; drags still
      *  scroll the chat (the gesture is handed to the list once it moves). */
     @SuppressLint("ViewConstructor")
-    private static final class Overlay extends View {
+    static final class Overlay extends View {
         final Selection s;
         final Paint ring = new Paint(Paint.ANTI_ALIAS_FLAG);
         final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -611,21 +683,31 @@ public final class BulkUnsend {
         final int[] rvLoc = new int[2], myLoc = new int[2];
         MotionEvent down;
         boolean forwarding;
+        boolean guarding;
 
-        Overlay(Context c, Selection s, int accent, float d) {
+        Overlay(Context c, Selection s, IePalette p, float d) {
             super(c);
             this.s = s;
             this.d = d;
             slop = ViewConfiguration.get(c).getScaledTouchSlop();
+            setFocusable(true);
+            setFocusableInTouchMode(true);
             ring.setStyle(Paint.Style.STROKE);
             ring.setStrokeWidth(2 * d);
-            ring.setColor(0xCCFFFFFF);
-            fill.setColor(accent);
-            tick.setColor(Color.WHITE);
+            ring.setColor(IePalette.readable(p.sub, p.backdrop, IePalette.ICON));
+            fill.setColor(p.accent);
+            tick.setColor(p.onAccent);
             tick.setStyle(Paint.Style.STROKE);
             tick.setStrokeWidth(2.2f * d);
             tick.setStrokeCap(Paint.Cap.ROUND);
-            tint.setColor((accent & 0x00FFFFFF) | 0x33000000);
+            tint.setColor((p.accent & 0x00FFFFFF) | 0x33000000);
+        }
+
+        @Override
+        public boolean dispatchKeyEvent(KeyEvent e) {
+            if (e.getKeyCode() != KeyEvent.KEYCODE_BACK) return super.dispatchKeyEvent(e);
+            if (e.getAction() == KeyEvent.ACTION_UP && !e.isCanceled()) s.exit();
+            return true;
         }
 
         private float dx() { s.rv.getLocationInWindow(rvLoc); getLocationInWindow(myLoc); return rvLoc[0] - myLoc[0]; }
@@ -663,12 +745,14 @@ public final class BulkUnsend {
             float x = e.getX() - ox, y = e.getY() - oy;
             switch (e.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
-                    if (x < 0 || y < 0 || x > s.rv.getWidth() || y > s.rv.getHeight()) return false;
+                    guarding = x < 0 || y < 0 || x > s.rv.getWidth() || y > s.rv.getHeight();
                     forwarding = false;
+                    if (guarding) return true;
                     if (down != null) down.recycle();
                     down = MotionEvent.obtain(e);
                     return true;
                 case MotionEvent.ACTION_MOVE:
+                    if (guarding) return true;
                     if (!forwarding && down != null && Math.hypot(e.getX() - down.getX(), e.getY() - down.getY()) > slop) {
                         forwarding = true;
                         forward(down, ox, oy);
@@ -676,16 +760,18 @@ public final class BulkUnsend {
                     if (forwarding) forward(e, ox, oy);
                     return true;
                 case MotionEvent.ACTION_UP:
+                    if (guarding) { guarding = false; return true; }
                     if (forwarding) { forward(e, ox, oy); forwarding = false; return true; }
                     Object msg = s.messageAt(x, y);
                     if (msg != null) s.toggle(msg);
                     return true;
                 case MotionEvent.ACTION_CANCEL:
-                    if (forwarding) forward(e, ox, oy);
+                    if (forwarding && !guarding) forward(e, ox, oy);
                     forwarding = false;
+                    guarding = false;
                     return true;
                 default:
-                    if (forwarding) forward(e, ox, oy);
+                    if (forwarding && !guarding) forward(e, ox, oy);
                     return true;
             }
         }
@@ -700,11 +786,15 @@ public final class BulkUnsend {
 
     // ── Unsend ───────────────────────────────────────────────────────────────────
 
-    private static void unsendAll(Activity act, Ctx c, String thread, List<Object> msgs) {
+    private static void unsendAll(Activity act, Ctx c, String thread, List<Object> msgs, Selection selection) {
         Handler main = new Handler(Looper.getMainLooper());
+        BulkUnsendText text = text(act);
         new Thread(() -> {
             UnsendTally tally = new UnsendTally(msgs.size(), OWN_IDS, PENDING_IDS);
-            for (Object m : msgs) {
+            for (int i = 0; i < msgs.size() && !selection.stopped; i++) {
+                Object m = msgs.get(i);
+                int at = i + 1;
+                main.post(() -> selection.progress(at, msgs.size()));
                 Object key = threadKeyOf(m);
                 if (!UnsendTally.sameChat(thread, key != null ? UnsentIdentity.thread(key) : null)) {
                     ModuleLog.detail(TAG + "skipped a message: " + (key == null ? "no thread key" : "another chat"));
@@ -727,17 +817,13 @@ public final class BulkUnsend {
             }
             int done = tally.unsent();
             int total = tally.total();
+            if (selection.stopped && done < total) ModuleLog.detail(TAG + "stopped by leaving selection mode");
             ModuleLog.line(TAG + (done == total ? "" : done == 0 ? "❌ " : "⚠️ ") + "Unsent " + done + " of " + total + " messages");
-            main.post(() -> toast(act, result(act, done, total)));
+            main.post(() -> {
+                selection.exit();
+                toast(act, text.result(done, total));
+            });
         }, "IE-BulkUnsend").start();
-    }
-
-    private static String result(Context c, int done, int total) {
-        try {
-            return I18n.moduleResources(c).getQuantityString(R.plurals.ig_bulk_unsend_result, total, done, total);
-        } catch (Throwable t) {
-            return done + "/" + total;
-        }
     }
 
     private static List<String> messageIds(Object msg, Object key) {
