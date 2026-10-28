@@ -109,4 +109,8 @@ public final class TimestampFormat {
         }
         return DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, locale).format(date);
     }
+
+    public static String format(String pattern, Date date, Locale locale, String devicePattern) {
+        return format(pattern, date, locale);
+    }
 }
