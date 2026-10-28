@@ -29,7 +29,18 @@ public final class CompanionRestartHint {
     public static void show(Activity activity, Collection<String> keys, Runnable after) {
         Consumer<Collection<String>> watching = observer;
         if (watching != null) watching.accept(keys);
-        Snackbar bar = bar(activity, keys);
+        if (activity == null || keys == null || keys.isEmpty() || activity.isFinishing()) {
+            if (after != null) after.run();
+            return;
+        }
+        String pkg = InstagramRestarter.activePackage(activity, InstagramRestarter.installedPackages(activity));
+        if (!InstagramRestarter.ping(activity, pkg, running -> present(activity, running, after))) {
+            present(activity, true, after);
+        }
+    }
+
+    private static void present(Activity activity, boolean running, Runnable after) {
+        Snackbar bar = bar(activity, running);
         if (bar == null) {
             if (after != null) after.run();
             return;
@@ -45,12 +56,14 @@ public final class CompanionRestartHint {
         bar.show();
     }
 
-    private static Snackbar bar(Activity activity, Collection<String> keys) {
-        if (activity == null || keys == null || keys.isEmpty() || activity.isFinishing()) return null;
+    private static Snackbar bar(Activity activity, boolean running) {
+        if (activity.isFinishing() || activity.isDestroyed()) return null;
         View root = activity.findViewById(android.R.id.content);
         if (root == null) return null;
-        Snackbar bar = Snackbar.make(root, R.string.cat_restart_snackbar, Snackbar.LENGTH_LONG)
-                .setAction(R.string.home_action_restart, v -> restart(activity));
+        Snackbar bar = running
+                ? Snackbar.make(root, R.string.cat_restart_snackbar, Snackbar.LENGTH_LONG)
+                        .setAction(R.string.home_action_restart, v -> restart(activity))
+                : Snackbar.make(root, R.string.home_restart_applies_on_open, Snackbar.LENGTH_LONG);
         View anchor = activity.findViewById(R.id.bottom_navigation);
         if (anchor != null && anchor.isShown()) bar.setAnchorView(anchor);
         return bar;

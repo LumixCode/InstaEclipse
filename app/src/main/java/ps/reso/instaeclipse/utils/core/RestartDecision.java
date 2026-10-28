@@ -4,11 +4,14 @@ public final class RestartDecision {
 
     public enum Outcome { NOT_INSTALLED, RELAUNCH, APP_INFO, NOT_RUNNING }
 
-    public static final long RELAUNCH_DELAY_MS = 400;
+    public static final long RELAUNCH_DELAY_MS = 700;
 
     private RestartDecision() {}
 
     public static Outcome decide(String pkg, boolean ack, boolean stillRunning, boolean suAvailable, Integer suExit) {
+        if (pkg == null) return Outcome.NOT_INSTALLED;
+        if (!ack) return Outcome.NOT_RUNNING;
+        if (!stillRunning) return Outcome.RELAUNCH;
         return unreachable(pkg, suAvailable, suExit);
     }
 

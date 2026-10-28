@@ -439,6 +439,9 @@ public class Module {
                 } else if (CommonUtils.ACTION_CLEAR_LOGS.equals(action)) {
                     Logging.clear();
 
+                } else if (CommonUtils.ACTION_RESTART_INSTAGRAM.equals(action)) {
+                    ps.reso.instaeclipse.utils.core.IgSelfRestart.handle(ctx, intent);
+
                 } else if ("ps.reso.instaeclipse.ACTION_REQUEST_PREFS".equals(action)) {
                     ModuleLog.detail("(InstaEclipse) Sync: Companion app requested current preferences.");
 
@@ -510,6 +513,7 @@ public class Module {
         filter.addAction(CommonUtils.ACTION_APPLY_SETTINGS);
         filter.addAction(CommonUtils.ACTION_REQUEST_LOGS);
         filter.addAction(CommonUtils.ACTION_CLEAR_LOGS);
+        filter.addAction(CommonUtils.ACTION_RESTART_INSTAGRAM);
         filter.addAction("ps.reso.instaeclipse.ACTION_REQUEST_PREFS");
         filter.addAction("ps.reso.instaeclipse.ACTION_EXPORT_CONFIG");
 

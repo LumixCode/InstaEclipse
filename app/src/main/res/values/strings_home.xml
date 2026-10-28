@@ -45,4 +45,6 @@
     <string name="home_setup_got_it" tools:ignore="MissingTranslation">Got it</string>
     <string name="home_restarting" tools:ignore="MissingTranslation">Restarting…</string>
     <string name="home_shortcuts_needs_setting" tools:ignore="MissingTranslation">Turn on a setting it needs first</string>
+    <string name="home_restart_applies_on_open" tools:ignore="MissingTranslation">Applies when Instagram opens. It asks to restart if needed.</string>
+    <string name="home_tool_restart_sub" tools:ignore="MissingTranslation">Closes and reopens Instagram</string>
 </resources>

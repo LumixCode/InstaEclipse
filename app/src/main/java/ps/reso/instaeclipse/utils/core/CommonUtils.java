@@ -18,6 +18,10 @@ public class CommonUtils {
     public static final String EXTRA_LOG_ERROR = "error";
 
     public static final String ACTION_APPLY_SETTINGS = "ps.reso.instaeclipse.ACTION_APPLY_SETTINGS";
+    public static final String ACTION_RESTART_INSTAGRAM = "ps.reso.instaeclipse.ACTION_RESTART_INSTAGRAM";
+    public static final String ACTION_RESTART_ACK = "ps.reso.instaeclipse.ACTION_RESTART_ACK";
+    public static final String ACTION_REQUEST_PREFS = "ps.reso.instaeclipse.ACTION_REQUEST_PREFS";
+    public static final String EXTRA_REQUEST_TIME = "request_time";
 
     /** All Instagram packages this module hooks into. */
     public static final List<String> SUPPORTED_PACKAGES = Arrays.asList(

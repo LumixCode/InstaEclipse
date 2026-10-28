@@ -1065,7 +1065,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         String title = getString(cat.title);
         int accent = cat.group.accent;
         if ("restart".equals(cat.key)) {
-            return createTool(cat.icon, accent, title, getString(R.string.tool_restart_sub), this::restartInstagram);
+            return createTool(cat.icon, accent, title, getString(R.string.home_tool_restart_sub), this::restartInstagram);
         }
         if ("about".equals(cat.key)) {
             return createTool(cat.icon, accent, title, getString(R.string.tool_about_sub), this::openHelpAbout);
