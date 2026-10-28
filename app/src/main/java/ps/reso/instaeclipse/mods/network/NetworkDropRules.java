@@ -83,7 +83,15 @@ public final class NetworkDropRules {
                 || path.contains("/async_ads/")
                 || path.contains("/feed/injected_reels_media")
                 || path.equals("/api/v1/ads/graphql/")
-                || path.contains("/ads/comment_sheet_ads/");
+                || path.contains("/ads/comment_sheet_ads/")
+                || path.contains("/ads/intent_aware_ads/reels/")
+                || path.contains("/stories/stories_intent_aware_ads/")
+                || path.contains("/stories/stories_high_intent_discovery_ads/")
+                || path.contains("/discover/chaining_experience_contextual_ads/")
+                || path.contains("/discover/feed_style_feed_of_ads/")
+                || path.contains("/discover/chaining_experience_notification_ads/")
+                || path.contains("/feed/contextual_multi_ads/")
+                || path.contains("/feed/user_interests_contextual_feed_of_ads/");
     }
 
     static boolean isAnalyticsRequest(String path) {

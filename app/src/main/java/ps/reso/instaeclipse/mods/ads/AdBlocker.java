@@ -27,6 +27,11 @@ public class AdBlocker {
     };
 
     public void disableSponsoredContent(ClassLoader classLoader) {
+        blockAdPods(classLoader);
+        ReelsAdFilter.install(classLoader);
+    }
+
+    private void blockAdPods(ClassLoader classLoader) {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
