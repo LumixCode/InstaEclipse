@@ -22,12 +22,10 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.ClassData;
 import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Constructor;
@@ -57,6 +55,8 @@ import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.ui.IePalette;
 import ps.reso.instaeclipse.utils.ui.ResIds;
@@ -108,7 +108,7 @@ public final class BulkUnsend {
     private static final Map<Class<?>, Field[]> HOLDER_FIELDS = new ConcurrentHashMap<>();
     private static final Executor BACKGROUND = r -> new Thread(r, "IE-BulkUnsend").start();
     private static final LazyResolve LAZY = new LazyResolve(BulkUnsend::ready,
-            () -> resolve(ModuleBridge.get(), loader, messageClass));
+            () -> resolve(loader, messageClass));
 
     private static Selection active;
 
@@ -130,10 +130,10 @@ public final class BulkUnsend {
         return "ready=" + ready() + " source=" + source;
     }
 
-    public static void install(DexKitBridge bridge, ClassLoader cl, Class<?> message) {
+    public static void install(ClassLoader cl, Class<?> message) {
         loader = cl;
         messageClass = message;
-        if (FeatureFlags.bulkUnsend) resolve(bridge, cl, message);
+        if (FeatureFlags.bulkUnsend) resolve(cl, message);
     }
 
     public static void switched() {
@@ -168,7 +168,7 @@ public final class BulkUnsend {
         }
     }
 
-    private static synchronized void resolve(DexKitBridge bridge, ClassLoader cl, Class<?> message) {
+    private static synchronized void resolve(ClassLoader cl, Class<?> message) {
         if (ready() || cl == null) return;
         if (message == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: not supported by this Instagram version (no message class)"); return; }
         try {
@@ -181,10 +181,10 @@ public final class BulkUnsend {
                 source = "cache";
             } else {
                 source = "search";
-                if (bridge == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: Instagram's code can't be searched right now"); return; }
-                um = findUnsend(bridge, cl, dtk);
+                if (ModuleBridge.get() == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: Instagram's code can't be searched right now"); return; }
+                um = findUnsend(cl, dtk);
                 if (um == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: not supported by this Instagram version (unsend method not found)"); return; }
-                rc = findRef(bridge, cl, um, message, dtk);
+                rc = findRef(cl, um, message, dtk);
                 if (rc == null) { ModuleLog.error(TAG + "Could not turn on bulk unsend: not supported by this Instagram version (message reference not found)"); return; }
                 DexKitCache.saveMethod(UNSEND_KEY, um);
                 DexKitCache.saveConstructor(REF_KEY, rc);
@@ -216,11 +216,11 @@ public final class BulkUnsend {
         return p.length == 2 && p[0] == message && p[1] == dtk;
     }
 
-    private static Method findUnsend(DexKitBridge bridge, ClassLoader cl, Class<?> dtk) {
-        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+    private static Method findUnsend(ClassLoader cl, Class<?> dtk) {
+        for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("DirectUnsendMessageInteractor")))) {
             String owner = md.getClassName();
-            for (MethodData m : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found m : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass(owner)))) {
                 for (MethodData inv : DexKitQueryCache.invokes(m)) {
                     if (!FUTURE.equals(inv.getReturnTypeName())) continue;
@@ -236,10 +236,10 @@ public final class BulkUnsend {
         return null;
     }
 
-    private static Constructor<?> findRef(DexKitBridge bridge, ClassLoader cl, Method unsend, Class<?> message, Class<?> dtk)
+    private static Constructor<?> findRef(ClassLoader cl, Method unsend, Class<?> message, Class<?> dtk)
             throws ClassNotFoundException {
         Class<?> refBase = unsend.getParameterTypes()[0];
-        for (ClassData cd : DexKitQueryCache.findClass(bridge, FindClass.create().matcher(ClassMatcher.create()
+        for (FoundClass cd : DexKitQueryCache.classes(FindClass.create().matcher(ClassMatcher.create()
                 .superClass(refBase.getName())))) {
             Class<?> c = cd.getInstance(cl);
             for (Constructor<?> k : ps.reso.instaeclipse.utils.core.SafeReflect.constructors(c)) {

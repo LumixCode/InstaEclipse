@@ -1,6 +1,5 @@
 package ps.reso.instaeclipse.mods.ghost;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
@@ -18,6 +17,7 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.CachedLookup;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -81,10 +81,10 @@ public class EditHistoryHook {
         Tap(List<String> ids, String account) { this.ids = ids; this.account = account; }
     }
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         try {
             Class<?> msgClass = null;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings(": null_direct_message")))) {
                 msgClass = md.getMethodInstance(cl).getReturnType();
                 break;
@@ -102,15 +102,15 @@ public class EditHistoryHook {
             historyBody.setAccessible(true);
             if (historyTime != null) historyTime.setAccessible(true);
 
-            body = cachedField("body", cl, () -> bodyField(bridge, cl, message));
+            body = cachedField("body", cl, () -> bodyField(cl, message));
             if (body == null) { ModuleLog.error(TAG + "Could not turn on edit history: not supported by this Instagram version (message text not found)"); return; }
             body.setAccessible(true);
 
             // The toggle is only read for the members it uses on the message; it is not hooked.
             String bodyDesc = "L" + HISTORY.replace('.', '/') + ";->" + historyBody.getName() + ":Ljava/lang/String;";
-            CachedLookup.Search<MethodData> toggle = () -> {
-                MethodData found = null;
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            CachedLookup.Search<Found> toggle = () -> {
+                Found found = null;
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .addUsingField(bodyDesc).paramTypes("java.lang.String", "boolean").returnType("void")))) {
                     if (found != null) return null; // ambiguous
                     found = md;
@@ -123,8 +123,8 @@ public class EditHistoryHook {
             if (sentTime != null) sentTime.setAccessible(true);
             if (editCount != null) editCount.setAccessible(true);
 
-            String recording = hookRecording(bridge, cl, message);
-            boolean tap = getter != null && hookTap(bridge, cl, getter);
+            String recording = hookRecording(cl, message);
+            boolean tap = getter != null && hookTap(cl, getter);
             CurrentThreadTracker.install(cl);
             ModuleLog.line(TAG + (tap ? "✅ ready"
                     : "❌ Could not turn on edit history: tapping \"Edited\" is not supported by this Instagram version"));
@@ -140,7 +140,7 @@ public class EditHistoryHook {
 
     // ── Recording ────────────────────────────────────────────────────────────
 
-    private static String hookRecording(DexKitBridge bridge, ClassLoader cl, Class<?> message) {
+    private static String hookRecording(ClassLoader cl, Class<?> message) {
         List<String> hooked = new ArrayList<>();
         try {
             Method merge = cachedMethod("merge", cl, () -> {
@@ -172,7 +172,7 @@ public class EditHistoryHook {
         try {
             Method setter = cachedMethod("setter", cl, () -> {
                 Method found = null;
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(message.getName()).usingStrings("unsupported message type: ")
                         .paramCount(2).returnType("void")))) {
                     Method m = md.getMethodInstance(cl);
@@ -237,9 +237,9 @@ public class EditHistoryHook {
 
     // ── Tap on "Edited" ──────────────────────────────────────────────────────
 
-    private static boolean hookTap(DexKitBridge bridge, ClassLoader cl, Method getter) throws Throwable {
+    private static boolean hookTap(ClassLoader cl, Method getter) throws Throwable {
         Method tap = null;
-        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("show_edit_history", "hide_edit_history").paramTypes(IDENTIFIER, "boolean").returnType("void")))) {
             Method m = md.getMethodInstance(cl);
             if (Modifier.isStatic(m.getModifiers())) continue;
@@ -339,11 +339,11 @@ public class EditHistoryHook {
     // ── Lookups ──────────────────────────────────────────────────────────────
 
     /** The message's own String field read by its "is emoji" check: the text. */
-    private static Field bodyField(DexKitBridge bridge, ClassLoader cl, Class<?> message) throws Throwable {
+    private static Field bodyField(ClassLoader cl, Class<?> message) throws Throwable {
         Field found = null;
-        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("DirectMessage.updateIsMessageEmoji").paramCount(0).returnType("void")))) {
-            for (var use : md.getUsingFields()) {
+            for (var use : md.data().getUsingFields()) {
                 if (!use.getField().getTypeName().equals("java.lang.String")) continue;
                 Field f = use.getField().getFieldInstance(cl);
                 // The same method also reads avatar text; only the message's own field is its body.
@@ -356,10 +356,10 @@ public class EditHistoryHook {
     }
 
     /** The one no-arg method returning {@code type} that {@code caller} invokes on the message. */
-    private static Method invoked(MethodData caller, ClassLoader cl, Class<?> message, Class<?> type) throws Throwable {
+    private static Method invoked(Found caller, ClassLoader cl, Class<?> message, Class<?> type) throws Throwable {
         if (caller == null) return null;
         Method found = null;
-        for (MethodData inv : caller.getInvokes()) {
+        for (MethodData inv : caller.data().getInvokes()) {
             if (!inv.isMethod() || inv.getParamCount() != 0) continue;
             Method m = inv.getMethodInstance(cl);
             if (m.getReturnType() != type || Modifier.isStatic(m.getModifiers())
@@ -371,10 +371,10 @@ public class EditHistoryHook {
     }
 
     /** The one int field of the message that {@code caller} reads. */
-    private static Field intRead(MethodData caller, ClassLoader cl, Class<?> message) throws Throwable {
+    private static Field intRead(Found caller, ClassLoader cl, Class<?> message) throws Throwable {
         if (caller == null) return null;
         Field found = null;
-        for (var use : caller.getUsingFields()) {
+        for (var use : caller.data().getUsingFields()) {
             if (!use.getUsingType().isRead() || !use.getField().getTypeName().equals("int")) continue;
             Field f = use.getField().getFieldInstance(cl);
             if (Modifier.isStatic(f.getModifiers()) || !f.getDeclaringClass().isAssignableFrom(message)) continue;

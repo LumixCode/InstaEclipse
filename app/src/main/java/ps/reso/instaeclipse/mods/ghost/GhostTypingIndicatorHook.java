@@ -1,10 +1,7 @@
 package ps.reso.instaeclipse.mods.ghost;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.ClassDataList;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -18,10 +15,11 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class GhostTypingIndicatorHook {
 
-    public void handleTypingBlock(DexKitBridge bridge) {
+    public void handleTypingBlock() {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -42,7 +40,7 @@ public class GhostTypingIndicatorHook {
 
         try {
             // Step 1: Find methods containing the string "is_typing_indicator_enabled"
-            List<MethodData> methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> methods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create().usingStrings("is_typing_indicator_enabled")));
 
             if (methods.isEmpty()) {
@@ -51,9 +49,9 @@ public class GhostTypingIndicatorHook {
                 return;
             }
 
-            for (MethodData method : methods) {
-                ClassDataList paramTypes = method.getParamTypes();
-                String returnType = String.valueOf(method.getReturnType());
+            for (Found method : methods) {
+                List<String> paramTypes = method.getParamTypeNames();
+                String returnType = method.getReturnTypeName();
 
                 Method reflectMethod;
                 try {
@@ -69,7 +67,7 @@ public class GhostTypingIndicatorHook {
                 boolean matchesShape = !Modifier.isStatic(modifiers) &&
                         Modifier.isFinal(modifiers) &&
                         paramTypes.size() == 1 &&
-                        String.valueOf(paramTypes.get(0)).contains("boolean");
+                        paramTypes.get(0).contains("boolean");
 
                 if (matchesShape) {
                     try {

@@ -6,7 +6,6 @@ import android.content.Context;
 import android.os.SystemClock;
 import android.widget.Toast;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
@@ -35,7 +34,9 @@ import ps.reso.instaeclipse.mods.misc.StoryMenu;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.HookFrames;
+import ps.reso.instaeclipse.utils.core.ModuleBridge;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
@@ -89,9 +90,9 @@ public final class ManualStorySeenHook {
 
     private static final Map<String, WeakReference<Context>> notifications = new LinkedHashMap<>();
 
-    public void install(DexKitBridge bridge, ClassLoader loader) {
+    public void install(ClassLoader loader) {
         try {
-            resolveReceiptPipeline(bridge, loader);
+            resolveReceiptPipeline(loader);
             receiptPipelineReady = true;
             ModuleLog.detail("(IE|ManualStorySeen) receipt pipeline installed");
         } catch (Throwable t) {
@@ -100,7 +101,7 @@ public final class ManualStorySeenHook {
                     + ": " + t.getClass().getSimpleName());
         }
         try {
-            if (!StoryMenu.install(bridge, loader)) throw new NoSuchMethodException("Story options menu");
+            if (!StoryMenu.install(ModuleBridge.get(), loader)) throw new NoSuchMethodException("Story options menu");
             StoryMenu.register(MENU_ORDER, new SeenRow());
             if (receiptPipelineReady) FeatureStatusTracker.setHooked("ManualStorySeen");
             else if (enabled()) FeatureStatusTracker.setBroken("ManualStorySeen");
@@ -152,11 +153,11 @@ public final class ManualStorySeenHook {
         if (context != null) toast(context, message);
     }
 
-    private void resolveReceiptPipeline(DexKitBridge bridge, ClassLoader loader) throws Exception {
+    private void resolveReceiptPipeline(ClassLoader loader) throws Exception {
         // The call-graph queries below are costly and every warm launch installs inline, so a
         // previous scan of this Instagram build is reused whenever all of its members still load.
         if (!loadCachedPipeline(loader)) {
-            discoverReceiptPipeline(bridge, loader);
+            discoverReceiptPipeline(loader);
             DexKitCache.saveMethods(CACHE_PIPELINE, List.of(populateItem, sendItem, getStore, pathSetter));
             DexKitCache.saveMethods(CACHE_TRACKERS, trackers);
         }
@@ -185,12 +186,12 @@ public final class ManualStorySeenHook {
         return true;
     }
 
-    private void discoverReceiptPipeline(DexKitBridge bridge, ClassLoader loader) throws Exception {
+    private void discoverReceiptPipeline(ClassLoader loader) throws Exception {
         resolutionStage = "builder";
-        List<MethodData> builders = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        List<Found> builders = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("media/seen/", "reels", "force_seen_story_ids")));
-        List<MethodData> eligible = new ArrayList<>();
-        for (MethodData data : builders) {
+        List<Found> eligible = new ArrayList<>();
+        for (Found data : builders) {
             if (!data.getParamTypeNames().equals(List.of(SESSION)) || data.getReturnTypeName().equals("void")) continue;
             Method method = data.getMethodInstance(loader);
             if (!Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == 1
@@ -198,7 +199,7 @@ public final class ManualStorySeenHook {
         }
         if (eligible.size() != 1) throw new IllegalStateException("Ambiguous story request builder");
         resolutionStage = "empty receipt constructor";
-        MethodData builderData = eligible.get(0);
+        Found builderData = eligible.get(0);
         Class<?> itemClass = builderData.getMethodInstance(loader).getDeclaringClass();
         itemConstructor = itemClass.getDeclaredConstructor();
         itemConstructor.setAccessible(true);
@@ -248,7 +249,7 @@ public final class ManualStorySeenHook {
         if (getStore == null) throw new NoSuchMethodException("Account story store");
 
         resolutionStage = "request path setter";
-        for (MethodData data : builderData.getInvokes()) {
+        for (MethodData data : builderData.data().getInvokes()) {
             // Inspect metadata before resolving reflection. Constructors and unrelated request
             // helpers are not methods we intend to hook and can change independently of this API.
             if (!data.getReturnTypeName().equals("void")
@@ -265,7 +266,7 @@ public final class ManualStorySeenHook {
 
         resolutionStage = "per-story tracking";
         List<Method> found = new ArrayList<>();
-        MethodData populationData = bridge.getMethodData(populateItem);
+        MethodData populationData = DexKitQueryCache.methodData(populateItem);
         if (populationData == null) throw new NoSuchMethodException("Population method metadata");
         for (MethodData data : DexKitQueryCache.callersUncached(populationData)) {
             if (!data.getParamTypeNames().contains(REEL_ITEM)) continue;

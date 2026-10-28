@@ -1,13 +1,9 @@
 package ps.reso.instaeclipse.mods.ghost;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.ClassData;
-import org.luckypray.dexkit.result.ClassDataList;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -20,10 +16,12 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 
 public class GhostScreenshotDetectionHook {
 
-    public void handleScreenshotBlock(DexKitBridge bridge) {
+    public void handleScreenshotBlock() {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -44,7 +42,7 @@ public class GhostScreenshotDetectionHook {
 
         try {
             // Step 1: Find class referencing "ScreenshotNotificationManager"
-            List<ClassData> classes = DexKitQueryCache.findClass(bridge, FindClass.create()
+            List<FoundClass> classes = DexKitQueryCache.classes(FindClass.create()
                     .matcher(ClassMatcher.create().usingStrings("ScreenshotNotificationManager")));
 
             if (classes.isEmpty()) {
@@ -52,21 +50,21 @@ public class GhostScreenshotDetectionHook {
                 return;
             }
 
-            for (ClassData classData : classes) {
+            for (FoundClass classData : classes) {
                 String className = classData.getName();
 
                 // Step 2: Find all methods in that class
-                List<MethodData> methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                List<Found> methods = DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create().declaredClass(className)));
 
-                for (MethodData method : methods) {
-                    ClassDataList paramTypes = method.getParamTypes();
-                    String returnType = String.valueOf(method.getReturnType());
+                for (Found method : methods) {
+                    List<String> paramTypes = method.getParamTypeNames();
+                    String returnType = method.getReturnTypeName();
 
                     // Match: void method(long)
                     if (returnType.contains("void") &&
                             paramTypes.size() == 1 &&
-                            String.valueOf(paramTypes.get(0)).contains("long")) {
+                            paramTypes.get(0).contains("long")) {
 
                         try {
                             Method targetMethod = method.getMethodInstance(Module.hostClassLoader);

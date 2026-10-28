@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.ghost;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -16,15 +14,16 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class GhostEphemeralKeepHook {
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
-        hookVanishLocalDelete(bridge, classLoader);
-        hookServerPing(bridge);
+    public void install(ClassLoader classLoader) {
+        hookVanishLocalDelete(classLoader);
+        hookServerPing();
     }
 
-    private void hookVanishLocalDelete(DexKitBridge bridge, ClassLoader classLoader) {
+    private void hookVanishLocalDelete(ClassLoader classLoader) {
         // IG 447+ (verified 447/451/452): the removal itself lives in two methods of the thread
         // model (X.01eV on 452, X.04r2 on 451, X.01gH on 447), called on chat exit, by the
         // per-thread expiry timer and when a thread is loaded from disk:
@@ -48,7 +47,7 @@ public class GhostEphemeralKeepHook {
         }
         try {
             List<Method> found = new java.util.ArrayList<>();
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .usingStrings("Unexpected null timestamp for disappearing message, removed message")
                             .paramTypes("boolean")
@@ -90,7 +89,7 @@ public class GhostEphemeralKeepHook {
      * DM mutation processor (X.05uj.Gx1) on the chat's "thread-<id>" queue, which text sends share,
      * so the skip also completes the mutation (see GhostViewOnceHook.skipMutation).
      */
-    private void hookServerPing(DexKitBridge bridge) {
+    private void hookServerPing() {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -104,11 +103,11 @@ public class GhostEphemeralKeepHook {
         }
 
         try {
-            List<MethodData> methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> methods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .usingStrings("mark_ephemeral_item_ranges_viewed")));
 
-            for (MethodData md : methods) {
+            for (Found md : methods) {
                 Method method;
                 try {
                     method = md.getMethodInstance(Module.hostClassLoader);

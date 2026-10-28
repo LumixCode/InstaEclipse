@@ -6,7 +6,6 @@ import android.os.Build;
 import android.view.View;
 import android.view.ViewTreeObserver;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
@@ -25,6 +24,7 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.HookFrames;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -54,11 +54,11 @@ final class UnsentIndicatorHook {
     };
     private static final UnsentBubbleHook bubbles = new UnsentBubbleHook();
 
-    void install(DexKitBridge bridge, ClassLoader loader) {
+    void install(ClassLoader loader) {
         try {
-            Class<?> model = findMessageClass(bridge, loader);
+            Class<?> model = findMessageClass(loader);
             List<Method> binders = KeepUnsentMessagesHook.cachedMethods("UnsentIndicator_binders2", loader,
-                    () -> findBinders(bridge, loader));
+                    () -> findBinders(loader));
             int installed = 0;
             boolean bubbleInstalled = false;
             for (Method bind : binders) {
@@ -68,7 +68,7 @@ final class UnsentIndicatorHook {
                 if (itemView == null) continue;
                 itemView.setAccessible(true);
                 Field viewField = itemView;
-                bubbleInstalled |= bubbles.install(bridge, loader, viewField);
+                bubbleInstalled |= bubbles.install(loader, viewField);
                 XposedBridge.hookMethod(bind, new XC_MethodHook() {
                     private final HookFrames.Slot frames = new HookFrames.Slot();
 
@@ -131,11 +131,11 @@ final class UnsentIndicatorHook {
      * The DM adapter's (holder, position) bind. 446 logs the unseen-message impression inside it;
      * 451 moved that logging into a row helper the bind calls, so the bind is the anchor or its caller.
      */
-    private static List<Method> findBinders(DexKitBridge bridge, ClassLoader loader) throws NoSuchMethodException {
+    private static List<Method> findBinders(ClassLoader loader) throws NoSuchMethodException {
         Set<Method> binders = new LinkedHashSet<>();
-        for (MethodData anchor : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (Found anchor : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("direct_thread_unseen_message_impression", "open_thread_id").returnType("void")))) {
-            if (isBind(anchor)) binders.add(anchor.getMethodInstance(loader));
+            if (isBind(anchor.data())) binders.add(anchor.getMethodInstance(loader));
             else for (MethodData caller : DexKitQueryCache.callersUncached(anchor)) {
                 if (isBind(caller)) binders.add(caller.getMethodInstance(loader));
             }
@@ -162,9 +162,9 @@ final class UnsentIndicatorHook {
         return found;
     }
 
-    private static Class<?> findMessageClass(DexKitBridge bridge, ClassLoader loader) throws Throwable {
+    private static Class<?> findMessageClass(ClassLoader loader) throws Throwable {
         for (Method method : KeepUnsentMessagesHook.cachedMethods("UnsentIndicator_messageModel", loader,
-                () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(
+                () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.methods(FindMethod.create().matcher(
                         MethodMatcher.create().usingStrings("item_id", "hide_in_thread"))), loader))) {
             for (Class<?> parameter : method.getParameterTypes()) {
                 for (Class<?> cls = parameter; cls != null && cls != Object.class; cls = cls.getSuperclass()) {

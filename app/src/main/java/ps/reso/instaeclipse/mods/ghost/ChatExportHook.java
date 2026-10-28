@@ -14,10 +14,8 @@ import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -62,6 +60,7 @@ import ps.reso.instaeclipse.utils.text.HtmlExport;
 import ps.reso.instaeclipse.utils.text.TimestampFormat;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Export a DM chat to an HTML file (#225): header button in the open chat.
@@ -87,10 +86,10 @@ public class ChatExportHook {
     private static final Map<Class<?>, Optional<Method>> entryGetters = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Optional<Method>> lazyChecks = new ConcurrentHashMap<>();
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         try {
             Class<?> store = null;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("getUnseenMessageCount directMessage is null")))) {
                 store = cl.loadClass(md.getClassName());
                 break;
@@ -101,14 +100,14 @@ public class ChatExportHook {
                 Class<?>[] p = m.getParameterTypes();
                 if (p.length == 1 && p[0] == boolean.class && m.getReturnType() == java.util.ArrayList.class) messagesMethod = m;
             }
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("timestamp_in_micro", "client_context").returnType("void").paramCount(2)))) {
                 Method m = md.getMethodInstance(cl);
                 if (Modifier.isStatic(m.getModifiers())) { serializer = m; break; }
             }
             if (serializer != null) {
                 Class<?> gen = serializer.getParameterTypes()[0];
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .paramTypes("java.io.Writer").returnType(gen.getName())))) {
                     Method m = md.getMethodInstance(cl);
                     if (Modifier.isStatic(m.getModifiers())) continue;

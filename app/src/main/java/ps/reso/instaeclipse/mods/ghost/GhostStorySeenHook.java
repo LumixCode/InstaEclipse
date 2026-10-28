@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.ghost;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -20,6 +18,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Hide Story / Reel Views.
@@ -37,7 +36,7 @@ public class GhostStorySeenHook {
 
     private static final String CACHE_KEY = "GhostStorySeen_v3";
 
-    public void handleStorySeenBlock(DexKitBridge bridge) {
+    public void handleStorySeenBlock() {
         // Fast path: whichever path was resolved+cached last (per IG version).
         if (DexKitCache.isCacheValid()) {
             String storeName = DexKitCache.loadString(CACHE_KEY);
@@ -57,21 +56,21 @@ public class GhostStorySeenHook {
             }
         }
 
-        if (tryModernBatchBlock(bridge)) return;
+        if (tryModernBatchBlock()) return;
         ModuleLog.error("(InstaEclipse | StoryBlock): Could not turn on hiding story views: not supported by this Instagram version");
     }
 
     /** IG 442+/447: block the reel-seen store's inserts + immediate sender. */
-    private boolean tryModernBatchBlock(DexKitBridge bridge) {
+    private boolean tryModernBatchBlock() {
         try {
-            List<MethodData> seenMethods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> seenMethods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create().usingStrings("media/seen/")));
             if (seenMethods.isEmpty()) return false;
 
             // The (1-arg, object-returning) builder — its declaring class is the pending ITEM.
-            MethodData builder = null;
-            for (MethodData m : seenMethods) {
-                if (m.getParamTypes().size() == 1 && !"void".equals(String.valueOf(m.getReturnType()))) {
+            Found builder = null;
+            for (Found m : seenMethods) {
+                if (m.getParamCount() == 1 && !"void".equals(m.getReturnTypeName())) {
                     builder = m;
                     break;
                 }
@@ -80,7 +79,7 @@ public class GhostStorySeenHook {
 
             String itemClassName = builder.getClassName();
             Set<String> names = new LinkedHashSet<>();
-            for (MethodData caller : DexKitQueryCache.callers(bridge, builder)) {
+            for (Found caller : DexKitQueryCache.callers(builder)) {
                 if (caller.getClassName() != null) names.add(caller.getClassName());
             }
             List<StorySeenStorePick.Caller> callers = new ArrayList<>();

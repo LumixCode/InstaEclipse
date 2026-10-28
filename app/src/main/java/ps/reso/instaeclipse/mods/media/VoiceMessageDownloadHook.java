@@ -488,7 +488,7 @@ public class VoiceMessageDownloadHook {
             else if (FeatureFlags.enableDmMediaDownload) FeatureStatusTracker.setBroken("DmMediaDownload");
             if (factories > 0 && labelFieldRef != null) FeatureStatusTracker.setHooked("ChatTranslate");
             else if (FeatureFlags.translateMessages) FeatureStatusTracker.setBroken("ChatTranslate");
-            ps.reso.instaeclipse.mods.ghost.BulkUnsend.install(bridge, cl, messageClass);
+            ps.reso.instaeclipse.mods.ghost.BulkUnsend.install(cl, messageClass);
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not turn on downloads from chats", t);
             if (FeatureFlags.enableVoiceDownload) FeatureStatusTracker.setBroken("VoiceDownload");

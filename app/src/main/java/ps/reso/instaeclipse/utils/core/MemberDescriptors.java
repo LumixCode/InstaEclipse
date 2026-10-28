@@ -97,6 +97,46 @@ public final class MemberDescriptors {
         return CODES.containsKey(c) ? i + 1 : -1;
     }
 
+    public static Constructor<?> decodeConstructor(String className, String desc, ClassLoader loader) {
+        try {
+            Class<?>[] types = methodTypes(desc, loader);
+            if (types == null || types[types.length - 1] != void.class) return null;
+            Constructor<?> constructor = Class.forName(className, false, loader)
+                    .getDeclaredConstructor(Arrays.copyOf(types, types.length - 1));
+            constructor.setAccessible(true);
+            return constructor;
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    public static List<String> typeNames(String desc) {
+        int close = desc.indexOf(')');
+        if (!desc.startsWith("(") || close < 0) return null;
+        List<String> names = new ArrayList<>();
+        int i = 1;
+        while (i < close) {
+            int end = typeEnd(desc, i, close);
+            if (end < 0 || desc.charAt(end - 1) == 'V') return null;
+            names.add(typeName(desc.substring(i, end)));
+            i = end;
+        }
+        if (typeEnd(desc, close + 1, desc.length()) != desc.length()) return null;
+        names.add(typeName(desc.substring(close + 1)));
+        return names;
+    }
+
+    public static String typeName(String desc) {
+        int dims = 0;
+        while (desc.charAt(dims) == '[') dims++;
+        char c = desc.charAt(dims);
+        StringBuilder sb = new StringBuilder(c == 'L'
+                ? desc.substring(dims + 1, desc.length() - 1).replace('/', '.')
+                : CODES.get(c).getName());
+        for (int d = 0; d < dims; d++) sb.append("[]");
+        return sb.toString();
+    }
+
     private static Class<?> typeOf(String desc, ClassLoader loader) throws ClassNotFoundException {
         char c = desc.charAt(0);
         if (c == '[') return Class.forName(desc.replace('/', '.'), false, loader);

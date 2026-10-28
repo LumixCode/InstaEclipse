@@ -425,7 +425,7 @@ public class InstallPlan {
                 new DevOptionsUnlockHook().handleDevOptions(ctx.bridge);
                 return;
             case GHOST_DM_SEEN_HOOK:
-                new GhostDMSeenHook().handleSeenBlock(ctx.bridge);
+                new GhostDMSeenHook().handleSeenBlock();
                 return;
             case GHOST_DM_MARK_AS_READ_HOOK:
                 new GhostDMMarkAsReadHook().install(ctx.lpparam.classLoader);
@@ -434,28 +434,28 @@ public class InstallPlan {
                 new GhostChannelMarkAsReadHook().install(ctx.lpparam.classLoader);
                 return;
             case GHOST_TYPING_INDICATOR_HOOK:
-                new GhostTypingIndicatorHook().handleTypingBlock(ctx.bridge);
+                new GhostTypingIndicatorHook().handleTypingBlock();
                 return;
             case GHOST_SCREENSHOT_DETECTION_HOOK:
-                new GhostScreenshotDetectionHook().handleScreenshotBlock(ctx.bridge);
+                new GhostScreenshotDetectionHook().handleScreenshotBlock();
                 return;
             case SCREENSHOT_PERMISSION_HOOK:
                 new ScreenshotPermissionHook().install(ctx.lpparam.classLoader);
                 return;
             case GHOST_VIEW_ONCE_HOOK:
-                new GhostViewOnceHook().handleViewOnceBlock(ctx.bridge);
+                new GhostViewOnceHook().handleViewOnceBlock();
                 return;
             case GHOST_STORY_SEEN_HOOK:
-                new GhostStorySeenHook().handleStorySeenBlock(ctx.bridge);
+                new GhostStorySeenHook().handleStorySeenBlock();
                 return;
             case KEEP_UNSENT_MESSAGES_HOOK:
-                new KeepUnsentMessagesHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new KeepUnsentMessagesHook().install(ctx.lpparam.classLoader);
                 return;
             case UNSENT_THREAD_BUTTON_HOOK:
                 new UnsentThreadButtonHook().install(ctx.lpparam.classLoader);
                 return;
             case HIDE_CHATS_HOOK:
-                new HideChatsHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new HideChatsHook().install(ctx.lpparam.classLoader);
                 return;
             case INBOX_DISCOVER_PEOPLE_HOOK:
                 new InboxDiscoverPeopleHook().install(ctx.bridge, ctx.lpparam.classLoader);
@@ -551,7 +551,7 @@ public class InstallPlan {
                 new VoiceMessageDownloadHook().install(ctx.bridge, ctx.loader);
                 return;
             case EDIT_HISTORY_HOOK:
-                new EditHistoryHook().install(ctx.bridge, ctx.loader);
+                new EditHistoryHook().install(ctx.loader);
                 return;
             case JUMP_TO_FIRST_MESSAGE_HOOK:
                 new JumpToFirstMessageHook().install();
@@ -569,7 +569,7 @@ public class InstallPlan {
                 new CommentSearchHook().install(ctx.bridge, ctx.loader);
                 return;
             case CHAT_EXPORT_HOOK:
-                new ChatExportHook().install(ctx.bridge, ctx.loader);
+                new ChatExportHook().install(ctx.loader);
                 return;
             case FOLLOW_LIST_EXPORT_HOOK:
                 new FollowListExportHook().install(ctx.bridge, ctx.loader);
@@ -617,7 +617,7 @@ public class InstallPlan {
                 new StoryInfoHook().install(ctx.bridge, ctx.lpparam.classLoader);
                 return;
             case MANUAL_STORY_SEEN_HOOK:
-                new ManualStorySeenHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new ManualStorySeenHook().install(ctx.lpparam.classLoader);
                 return;
             case COMMENT_COPY_HOOK:
                 new CommentCopyHook().install(ctx.lpparam.classLoader);
@@ -671,13 +671,13 @@ public class InstallPlan {
                 new InstantUploadHook().install(ctx.lpparam.classLoader);
                 return;
             case GHOST_EPHEMERAL_KEEP_HOOK:
-                new GhostEphemeralKeepHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new GhostEphemeralKeepHook().install(ctx.lpparam.classLoader);
                 return;
             case GHOST_PERMANENT_VIEW_HOOK:
-                new GhostPermanentViewHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new GhostPermanentViewHook().install(ctx.lpparam.classLoader);
                 return;
             case VIEW_ONCE_BADGE_HOOK:
-                new ViewOnceBadgeHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new ViewOnceBadgeHook().install(ctx.lpparam.classLoader);
                 return;
             case LOCKED_COLLECTIONS_HOOK:
                 new LockedCollectionsHook().install(ctx.loader);
@@ -695,7 +695,7 @@ public class InstallPlan {
                 CallConfirmHook.install();
                 return;
             case SEARCH_HISTORY_HOOK:
-                SearchHistoryHook.install(ctx.bridge, ctx.loader);
+                SearchHistoryHook.install(ctx.loader);
                 return;
             case FEED_REFRESH_CONFIRM_HOOK:
                 FeedRefreshConfirmHook.install(ctx.loader);

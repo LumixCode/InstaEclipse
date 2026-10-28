@@ -2,7 +2,6 @@ package ps.reso.instaeclipse.mods.ghost;
 
 import android.view.View;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.enums.StringMatchType;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
@@ -23,6 +22,7 @@ import java.util.WeakHashMap;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.HookFrames;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
@@ -51,12 +51,12 @@ final class UnsentBubbleHook {
     private Method readState, writeState, consumeLocal, nativeFill;
     private boolean installed, reportedFailure;
 
-    boolean install(DexKitBridge bridge, ClassLoader loader, Field itemView) {
+    boolean install(ClassLoader loader, Field itemView) {
         if (installed) return true;
         try {
-            resolveState(bridge, loader);
+            resolveState(loader);
             List<Method> text = KeepUnsentMessagesHook.cachedMethods("UnsentBubble_text2", loader,
-                    () -> findText(bridge, loader));
+                    () -> findText(loader));
             if (text.size() != 3) throw new IllegalStateException("Text bubble surfaces ambiguous");
             Method item = text.get(0);
             if (Modifier.isStatic(item.getModifiers())
@@ -64,7 +64,7 @@ final class UnsentBubbleHook {
                 throw new IllegalStateException("Text bubble holder changed");
             }
             textHolder = item.getDeclaringClass();
-            resolveLocalView(bridge, loader, item);
+            resolveLocalView(loader, item);
             installBackground(text.get(1), text.get(2));
             XposedBridge.hookMethod(item, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -77,7 +77,7 @@ final class UnsentBubbleHook {
             });
             installed = true;
             ModuleLog.detail("(IE|UnsentBubble) native text bubble background installed");
-            installMedia(bridge, loader);
+            installMedia(loader);
             return true;
         } catch (Throwable error) {
             ModuleLog.detail("(IE|UnsentBubble) unavailable: " + error);
@@ -86,24 +86,24 @@ final class UnsentBubbleHook {
     }
 
     /** [text holder Item, text bubble background lambda, its native fill]; empty when any is missing. */
-    private static List<Method> findText(DexKitBridge bridge, ClassLoader loader) throws Exception {
-        List<MethodData> items = anchored(bridge, ITEM, true, m -> m.returnType("void"));
+    private static List<Method> findText(ClassLoader loader) throws Exception {
+        List<Found> items = anchored(ITEM, true, m -> m.returnType("void"));
         // This native text lambda handles both gradients and solid fills. The other
         // bubbleBackground overload belongs to media/voice/XMA, including quoted media, and has
         // the same shape and trace prefix, so the text one is the lambda whose factory
         // TextMessageInternal calls (line 73 on 446, 78 on 451).
         Set<String> textCalls = new LinkedHashSet<>();
-        for (MethodData composable : anchored(bridge, TEXT, true, m -> m)) {
-            for (MethodData call : composable.getInvokes()) textCalls.add(call.getDescriptor());
+        for (Found composable : anchored(TEXT, true, m -> m)) {
+            for (MethodData call : composable.data().getInvokes()) textCalls.add(call.getDescriptor());
         }
-        List<MethodData> backgrounds = new ArrayList<>();
-        for (MethodData lambda : anchored(bridge, BACKGROUND, false,
+        List<Found> backgrounds = new ArrayList<>();
+        for (Found lambda : anchored(BACKGROUND, false,
                 m -> m.paramTypes(Object.class, Object.class, Object.class).returnType(Object.class))) {
-            if (builtBy(bridge, lambda.getMethodInstance(loader).getDeclaringClass(), textCalls)) backgrounds.add(lambda);
+            if (builtBy(lambda.getMethodInstance(loader).getDeclaringClass(), textCalls)) backgrounds.add(lambda);
         }
         if (items.size() != 1 || backgrounds.size() != 1) return List.of();
         Method fill = null;
-        for (MethodData call : backgrounds.get(0).getInvokes()) {
+        for (MethodData call : backgrounds.get(0).data().getInvokes()) {
             List<String> types = call.getParamTypeNames();
             if (call.isConstructor() || !Modifier.isStatic(call.getModifiers()) || types.size() != 3
                     || !types.get(2).equals("long") || !call.getReturnTypeName().equals(types.get(0))) continue;
@@ -114,21 +114,21 @@ final class UnsentBubbleHook {
         return List.of(items.get(0).getMethodInstance(loader), backgrounds.get(0).getMethodInstance(loader), fill);
     }
 
-    private static boolean builtBy(DexKitBridge bridge, Class<?> lambda, Set<String> factories) {
+    private static boolean builtBy(Class<?> lambda, Set<String> factories) {
         for (Constructor<?> constructor : lambda.getDeclaredConstructors()) {
-            for (MethodData caller : DexKitQueryCache.callersUncached(bridge.getMethodData(constructor))) {
+            for (MethodData caller : DexKitQueryCache.callersUncached(DexKitQueryCache.methodData(constructor))) {
                 if (factories.contains(caller.getDescriptor())) return true;
             }
         }
         return false;
     }
 
-    private void resolveLocalView(DexKitBridge bridge, ClassLoader loader, Method item) throws Throwable {
+    private void resolveLocalView(ClassLoader loader, Method item) throws Throwable {
         Field field = KeepUnsentMessagesHook.cachedField("UnsentBubble_localView", loader, () -> {
             Set<Field> locals = new LinkedHashSet<>();
-            for (MethodData provider : anchored(bridge, PROVIDED_VALUES, true,
+            for (Found provider : anchored(PROVIDED_VALUES, true,
                     m -> m.declaredClass(item.getDeclaringClass().getName()))) {
-                for (var usage : provider.getUsingFields()) {
+                for (var usage : provider.data().getUsingFields()) {
                     Field local = usage.getField().getFieldInstance(loader);
                     if (Modifier.isStatic(local.getModifiers()) && local.getDeclaringClass().getName()
                             .equals("androidx.compose.ui.platform.AndroidCompositionLocals_androidKt")) locals.add(local);
@@ -148,7 +148,7 @@ final class UnsentBubbleHook {
         if (consumeLocal == null) throw new NoSuchMethodException("Composition local reader");
     }
 
-    private void resolveState(DexKitBridge bridge, ClassLoader loader) throws Throwable {
+    private void resolveState(ClassLoader loader) throws Throwable {
         Class<?> state = Class.forName("androidx.compose.runtime.ParcelableSnapshotMutableState", false, loader);
         Class<?> mutable = Class.forName("androidx.compose.runtime.MutableState", false, loader);
         for (Constructor<?> constructor : state.getConstructors()) {
@@ -160,7 +160,7 @@ final class UnsentBubbleHook {
         }
         if (stateConstructor == null) throw new NoSuchMethodException("Native mutable state");
         List<Method> policies = KeepUnsentMessagesHook.cachedMethods("UnsentBubble_policy", loader,
-                () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("StructuralEqualityPolicy").name("toString").paramCount(0)
                         .returnType(String.class))), loader));
         if (policies.size() != 1) throw new IllegalStateException("State equality policy ambiguous");
@@ -270,11 +270,11 @@ final class UnsentBubbleHook {
         }
     }
 
-    private void installMedia(DexKitBridge bridge, ClassLoader loader) {
+    private void installMedia(ClassLoader loader) {
         try {
             Class<?> identifier = Class.forName(UnsentIdentity.IDENTIFIER, false, loader);
             List<Method> surfaces = KeepUnsentMessagesHook.cachedMethods("UnsentBubble_voice", loader,
-                    () -> findVoice(bridge, loader));
+                    () -> findVoice(loader));
             if (surfaces.size() != 3) throw new IllegalStateException("Voice surface ambiguous");
             Method voice = surfaces.get(0), content = surfaces.get(1), factory = surfaces.get(2);
             Class<?> voiceModel = voice.getParameterTypes()[2];
@@ -303,7 +303,7 @@ final class UnsentBubbleHook {
 
         try {
             List<Method> preview = KeepUnsentMessagesHook.cachedMethods("UnsentBubble_preview", loader,
-                    () -> findPreview(bridge, loader));
+                    () -> findPreview(loader));
             if (preview.size() != 1 + 3 * PREVIEWS.size()) throw new IllegalStateException("Preview shape boundary ambiguous");
             Method border = preview.get(0);
             Set<Method> clips = new LinkedHashSet<>(), shapes = new LinkedHashSet<>();
@@ -346,12 +346,12 @@ final class UnsentBubbleHook {
     }
 
     /** [VoiceMessage, its content lambda, the voice surface factory]; empty when any is missing. */
-    private List<Method> findVoice(DexKitBridge bridge, ClassLoader loader) throws Exception {
-        List<MethodData> voices = anchored(bridge, VOICE, true, m -> m);
-        List<MethodData> contents = anchored(bridge, VOICE_CONTENT, true, m -> m);
+    private List<Method> findVoice(ClassLoader loader) throws Exception {
+        List<Found> voices = anchored(VOICE, true, m -> m);
+        List<Found> contents = anchored(VOICE_CONTENT, true, m -> m);
         if (voices.size() != 1 || contents.size() != 1) return List.of();
         Method factory = null;
-        for (MethodData call : contents.get(0).getInvokes()) {
+        for (MethodData call : contents.get(0).data().getInvokes()) {
             if (call.isConstructor()) continue;
             Method method = call.getMethodInstance(loader);
             Class<?>[] types = method.getParameterTypes();
@@ -367,17 +367,17 @@ final class UnsentBubbleHook {
     }
 
     /** [border, then render, clip and shape for each of PREVIEWS]; empty when any is missing. */
-    private List<Method> findPreview(DexKitBridge bridge, ClassLoader loader) throws Exception {
-        Method border = resolveBorder(bridge, loader);
+    private List<Method> findPreview(ClassLoader loader) throws Exception {
+        Method border = resolveBorder(loader);
         if (border == null) return List.of();
         List<Method> parts = new ArrayList<>(List.of(border));
         for (String anchor : PREVIEWS) {
-            List<MethodData> renders = anchored(bridge, anchor, true, m -> m);
+            List<Found> renders = anchored(anchor, true, m -> m);
             if (renders.size() != 1) return List.of();
-            MethodData data = renders.get(0);
+            Found data = renders.get(0);
             Method render = data.getMethodInstance(loader);
             Set<Method> renderClips = new LinkedHashSet<>(), renderShapes = new LinkedHashSet<>();
-            for (MethodData call : data.getInvokes()) {
+            for (MethodData call : data.data().getInvokes()) {
                 if (call.isConstructor()) continue;
                 Method method = call.getMethodInstance(loader);
                 if (!Modifier.isStatic(method.getModifiers())) continue;
@@ -449,13 +449,13 @@ final class UnsentBubbleHook {
         }
     }
 
-    private Method resolveBorder(DexKitBridge bridge, ClassLoader loader) throws Exception {
-        List<MethodData> elements = anchored(bridge, "BorderModifierNodeElement(width=", false, m -> m);
+    private Method resolveBorder(ClassLoader loader) throws Exception {
+        List<Found> elements = anchored("BorderModifierNodeElement(width=", false, m -> m);
         if (elements.size() != 1) return null;
         Class<?> element = elements.get(0).getMethodInstance(loader).getDeclaringClass();
         Set<Class<?>> factories = new LinkedHashSet<>();
         for (Constructor<?> constructor : element.getDeclaredConstructors()) {
-            for (MethodData caller : DexKitQueryCache.callersUncached(bridge.getMethodData(constructor))) {
+            for (MethodData caller : DexKitQueryCache.callersUncached(DexKitQueryCache.methodData(constructor))) {
                 if (caller.getReturnTypeName().equals(nativeFill.getReturnType().getName())) {
                     factories.add(caller.getMethodInstance(loader).getDeclaringClass());
                 }
@@ -472,13 +472,13 @@ final class UnsentBubbleHook {
 
     /** Methods using {@code anchor}. Compose trace strings end in a source line number that drifts
      *  between builds, so with no exact hit {@code byPrefix} retries on the text before ".kt:". */
-    private static List<MethodData> anchored(DexKitBridge bridge, String anchor, boolean byPrefix,
-                                             java.util.function.UnaryOperator<MethodMatcher> shape) {
-        List<MethodData> exact = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(
+    private static List<Found> anchored(String anchor, boolean byPrefix,
+                                        java.util.function.UnaryOperator<MethodMatcher> shape) {
+        List<Found> exact = DexKitQueryCache.methods(FindMethod.create().matcher(
                 shape.apply(MethodMatcher.create().usingStrings(anchor))));
         int line = anchor.lastIndexOf(".kt:");
         if (!exact.isEmpty() || !byPrefix || line < 0) return exact;
-        return DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(shape.apply(MethodMatcher.create()
+        return DexKitQueryCache.methods(FindMethod.create().matcher(shape.apply(MethodMatcher.create()
                 .addUsingString(anchor.substring(0, line + 4), StringMatchType.StartsWith))));
     }
 

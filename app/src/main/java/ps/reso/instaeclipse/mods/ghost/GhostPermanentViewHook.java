@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.ghost;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -17,6 +15,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Makes view-once and view-twice (replayable) media behave like permanent media.
@@ -42,7 +41,7 @@ public class GhostPermanentViewHook {
     private static final String MEDIA = "com.instagram.feed.media.Media";
     static final ViewOnceStash STASH = new ViewOnceStash(ViewOnceStash.CAPACITY);
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
+    public void install(ClassLoader classLoader) {
         if (DexKitCache.isCacheValid()) {
             Method cached = DexKitCache.loadMethod("ViewOnceMedia", classLoader);
             if (cached != null) {
@@ -54,7 +53,7 @@ public class GhostPermanentViewHook {
         }
 
         try {
-            List<MethodData> methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> methods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .usingStrings("archived_media_timestamp", "view_mode")
                             .paramCount(1)));
@@ -68,7 +67,7 @@ public class GhostPermanentViewHook {
             // Pick the method whose return type is not void (the parser returns the model object;
             // the serializer returns void). Fall back to the first candidate if none match.
             Method target = null;
-            for (MethodData md : methods) {
+            for (Found md : methods) {
                 try {
                     Method m = md.getMethodInstance(classLoader);
                     if (m.getReturnType() != void.class) {

@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.ghost;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.util.List;
 
@@ -13,6 +11,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.ghost.IdKeys;
 
 /**
@@ -33,13 +32,13 @@ import ps.reso.instaeclipse.utils.ghost.IdKeys;
  */
 public class ViewOnceBadgeHook {
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
+    public void install(ClassLoader classLoader) {
         XC_MethodHook hook = buildHook();
 
         try {
             // The render-props ctor inlines BOTH "once" and "replayable" to compute its
             // "isRaven" flag. RavenCornerIcon (0YKc.A00) also references both, so require <init>.
-            List<MethodData> methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> methods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .name("<init>")
                             .usingStrings("once", "replayable")));
@@ -50,7 +49,7 @@ public class ViewOnceBadgeHook {
                 return;
             }
             int hooked = 0;
-            for (MethodData md : methods) {
+            for (Found md : methods) {
                 if (!md.isConstructor()) continue;
                 try {
                     XposedBridge.hookMethod(md.getConstructorInstance(classLoader), hook);

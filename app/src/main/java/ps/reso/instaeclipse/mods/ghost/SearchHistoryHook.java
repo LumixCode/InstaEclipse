@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.ghost;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -16,6 +14,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Don't save searches (#280): profiles, tags and places you open from Search stay out of Recent.
@@ -33,18 +32,18 @@ public final class SearchHistoryHook {
 
     private SearchHistoryHook() {}
 
-    public static void install(DexKitBridge bridge, ClassLoader cl) {
+    public static void install(ClassLoader cl) {
         try {
             Method add = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(CACHE_KEY, cl) : null;
             if (add == null) {
-                List<MethodData> owners = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                List<Found> owners = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("Error saving recent searches. Clearing results.")));
                 if (owners.isEmpty()) {
                     ModuleLog.error(TAG + "Could not stop Instagram from saving searches: not supported by this Instagram version (recent search cache not found)");
                     return;
                 }
                 // The add: (Object) -> void that puts the new entry at the top (List.add(0, entry)).
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(owners.get(0).getClassName())
                         .paramCount(1).returnType("void")
                         .addInvoke("Ljava/util/List;->add(ILjava/lang/Object;)V")))) {

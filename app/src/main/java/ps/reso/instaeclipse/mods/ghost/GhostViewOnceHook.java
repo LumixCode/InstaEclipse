@@ -1,10 +1,7 @@
 package ps.reso.instaeclipse.mods.ghost;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.ClassDataList;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 
@@ -16,10 +13,11 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class GhostViewOnceHook {
 
-    public void handleViewOnceBlock(DexKitBridge bridge) {
+    public void handleViewOnceBlock() {
         if (DexKitCache.isCacheValid()) {
             Method cached = DexKitCache.loadMethod("GhostViewOnce", Module.hostClassLoader);
             if (cached != null && isReporter(cached)) {
@@ -36,7 +34,7 @@ public class GhostViewOnceHook {
         // into the handler. It contains BOTH the stable REST path and the visual media type
         // "raven_media". The voice sibling uses the SAME path but "voice_media", so ANDing
         // "raven_media" selects only the view-once (visual) reporter — never voice.
-        if (tryHookViewOnce(bridge,
+        if (tryHookViewOnce(
                 FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("direct_v2/visual_threads/%s/item_seen/", "raven_media")),
                 "endpoint+raven_media")) {
@@ -46,10 +44,10 @@ public class GhostViewOnceHook {
         ModuleLog.error("(InstaEclipse | ViewOnce): Could not turn on hiding view-once opens: not supported by this Instagram version");
     }
 
-    private boolean tryHookViewOnce(DexKitBridge bridge, FindMethod query, String tag) {
+    private boolean tryHookViewOnce(FindMethod query, String tag) {
         try {
             Method reporter = null;
-            for (MethodData method : DexKitQueryCache.findMethod(bridge, query)) {
+            for (Found method : DexKitQueryCache.methods(query)) {
                 Method candidate;
                 try {
                     candidate = method.getMethodInstance(Module.hostClassLoader);

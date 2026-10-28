@@ -19,11 +19,9 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
-import org.luckypray.dexkit.result.MethodDataList;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
@@ -46,6 +44,7 @@ import ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.mods.ui.utils.LifecycleHookUtil;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.LegacyPaths;
 import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.dialog.LockFlows;
@@ -181,15 +180,15 @@ public class HideChatsHook {
 
     }
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
+    public void install(ClassLoader classLoader) {
         activeHook = this;
-        resolveTitleFormatter(bridge, classLoader);
-        installInboxPresentation(bridge, classLoader);
-        installInboxFilter(bridge, classLoader);
-        installForegroundTracker(bridge, classLoader);
+        resolveTitleFormatter(classLoader);
+        installInboxPresentation(classLoader);
+        installInboxFilter(classLoader);
+        installForegroundTracker(classLoader);
         installHeaderMenu(classLoader);
         installInboxGesture(classLoader);
-        int inboxResumes = hookDirectLifecycle(bridge, classLoader, "DirectInboxController.onResume", new XC_MethodHook() {
+        int inboxResumes = hookDirectLifecycle(classLoader, "DirectInboxController.onResume", new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 Activity activity = fragmentActivity(param.thisObject);
                 if (activity != null) foregroundInboxes.put(activity, new WeakReference<>(param.thisObject));
@@ -198,7 +197,7 @@ public class HideChatsHook {
                 LockDirectMessagesHook.watchActivity(activity);
             }
         });
-        hookDirectLifecycle(bridge, classLoader, "DirectInboxController.onPause", new XC_MethodHook() {
+        hookDirectLifecycle(classLoader, "DirectInboxController.onPause", new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 Activity activity = fragmentActivity(param.thisObject);
                 WeakReference<Object> current = foregroundInboxes.get(activity);
@@ -328,7 +327,7 @@ public class HideChatsHook {
         return bounds;
     }
 
-    private void installInboxFilter(DexKitBridge bridge, ClassLoader classLoader) {
+    private void installInboxFilter(ClassLoader classLoader) {
         XC_MethodHook filter = new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                 Object result = param.getResult();
@@ -349,7 +348,7 @@ public class HideChatsHook {
         try {
             int count = 0;
             for (Method method : KeepUnsentMessagesHook.cachedMethods("HideChats_inbox", classLoader,
-                    () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                    () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.methods(FindMethod.create()
                             .matcher(MethodMatcher.create().usingStrings(INBOX_ANCHOR))), classLoader))) {
                 try {
                     XposedBridge.hookMethod(method, filter);
@@ -370,11 +369,11 @@ public class HideChatsHook {
      * inbox diff (446 X.0AJc as X.05Ho.A0J, 451 X.09TE as X.07Ln.A0L). Resolved from the
      * generator's trace string and class shapes only; see {@link NativeInboxPath}.
      */
-    private static void installInboxPresentation(DexKitBridge bridge, ClassLoader loader) {
+    private static void installInboxPresentation(ClassLoader loader) {
         try {
             Class<?> generator = null;
             for (Method method : KeepUnsentMessagesHook.cachedMethods("HideChats_inboxGenerator", loader,
-                    () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                    () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.methods(FindMethod.create()
                             .matcher(MethodMatcher.create().usingStrings(GENERATOR_ANCHOR))), loader))) {
                 if (generator != null && generator != method.getDeclaringClass()) {
                     throw new IllegalStateException("inbox generator ambiguous");
@@ -384,7 +383,7 @@ public class HideChatsHook {
             if (generator == null) throw new IllegalStateException("inbox generator anchor missing");
             Class<?> model = generator;
             List<Method> callbacks = KeepUnsentMessagesHook.cachedMethods("HideChats_inboxConsumer", loader,
-                    () -> NativeInboxPath.callbacks(model, constructedBy(bridge, loader, model)));
+                    () -> NativeInboxPath.callbacks(model, constructedBy(loader, model)));
             NativeInboxPath path = callbacks.size() == 1 ? NativeInboxPath.of(model, callbacks.get(0)) : null;
             if (path == null) throw new IllegalStateException(callbacks.size() + " inbox consumer callback(s)");
             XposedBridge.hookMethod(path.submit, new XC_MethodHook() {
@@ -413,10 +412,10 @@ public class HideChatsHook {
     }
 
     /** Classes the constructors of {@code type} instantiate, read from its bytecode by DexKit. */
-    private static List<Class<?>> constructedBy(DexKitBridge bridge, ClassLoader loader, Class<?> type) {
+    private static List<Class<?>> constructedBy(ClassLoader loader, Class<?> type) {
         List<Class<?>> types = new ArrayList<>();
         for (Constructor<?> init : type.getDeclaredConstructors()) {
-            MethodData data = bridge.getMethodData(init);
+            MethodData data = DexKitQueryCache.methodData(init);
             if (data == null) continue;
             for (MethodData call : data.getInvokes()) {
                 if (!call.isConstructor()) continue;
@@ -428,18 +427,18 @@ public class HideChatsHook {
         return types;
     }
 
-    private void installForegroundTracker(DexKitBridge bridge, ClassLoader classLoader) {
+    private void installForegroundTracker(ClassLoader classLoader) {
         if (!LegacyPaths.has(LegacyPaths.HEADER)) {
-            for (Method method : directLifecycle(bridge, classLoader, "DirectThreadController.onResume")) {
+            for (Method method : directLifecycle(classLoader, "DirectThreadController.onResume")) {
                 chatScreens.add(method.getDeclaringClass());
             }
-            int pauses = directLifecycle(bridge, classLoader, "DirectThreadController.onPause").size();
+            int pauses = directLifecycle(classLoader, "DirectThreadController.onPause").size();
             threadsTracked = true;
             ModuleLog.detail("(IE|HideChats) open chat read from the chat tracker screens=" + chatScreens.size()
                     + " pause=" + pauses);
             return;
         }
-        int resumes = hookDirectLifecycle(bridge, classLoader,
+        int resumes = hookDirectLifecycle(classLoader,
                 "DirectThreadController.onResume", new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                         Object fragment = param.thisObject;
@@ -453,7 +452,7 @@ public class HideChatsHook {
                         LockDirectMessagesHook.watchActivity(activity);
                     }
                 });
-        int pauses = hookDirectLifecycle(bridge, classLoader,
+        int pauses = hookDirectLifecycle(classLoader,
                 "DirectThreadController.onPause", new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                         Object fragment = param.thisObject;
@@ -472,10 +471,10 @@ public class HideChatsHook {
                 + " pause=" + pauses);
     }
 
-    private static int hookDirectLifecycle(DexKitBridge bridge, ClassLoader classLoader,
+    private static int hookDirectLifecycle(ClassLoader classLoader,
                                            String anchor, XC_MethodHook hook) {
         int count = 0;
-        for (Method method : directLifecycle(bridge, classLoader, anchor)) {
+        for (Method method : directLifecycle(classLoader, anchor)) {
             try {
                 XposedBridge.hookMethod(method, hook);
                 count++;
@@ -484,10 +483,10 @@ public class HideChatsHook {
         return count;
     }
 
-    private static List<Method> directLifecycle(DexKitBridge bridge, ClassLoader classLoader, String anchor) {
+    private static List<Method> directLifecycle(ClassLoader classLoader, String anchor) {
         try {
             return KeepUnsentMessagesHook.cachedMethods("HideChats_" + anchor, classLoader,
-                    () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(
+                    () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.methods(FindMethod.create().matcher(
                             MethodMatcher.create().usingStrings(anchor).paramCount(0).returnType("void"))), classLoader));
         } catch (Throwable t) {
             ModuleLog.detail("(IE|HideChats) lifecycle " + anchor + " failed: " + t.getMessage());
@@ -555,10 +554,10 @@ public class HideChatsHook {
         return null;
     }
 
-    private static void resolveTitleFormatter(DexKitBridge bridge, ClassLoader loader) {
+    private static void resolveTitleFormatter(ClassLoader loader) {
         try {
             List<Method> found = KeepUnsentMessagesHook.cachedMethods("HideChats_titleFormatter_v1", loader, () -> {
-                MethodDataList formatters = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                List<Found> formatters = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .paramTypes("android.content.Context", UnsentIdentity.SESSION, "java.lang.String", "java.util.List", "boolean")
                         .returnType("java.lang.String")));
                 List<Method> callers = new ArrayList<>();

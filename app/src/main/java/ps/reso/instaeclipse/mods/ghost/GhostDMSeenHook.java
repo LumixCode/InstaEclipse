@@ -1,10 +1,7 @@
 package ps.reso.instaeclipse.mods.ghost;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.ClassDataList;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -20,12 +17,13 @@ import ps.reso.instaeclipse.utils.ghost.ReadReceiptWhitelist;
 import ps.reso.instaeclipse.utils.ghost.SeenPause;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Handles Ghost Mode for Direct Messages (DM) in Instagram.
  */
 public class GhostDMSeenHook {
-    public void handleSeenBlock(DexKitBridge bridge) {
+    public void handleSeenBlock() {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -56,7 +54,7 @@ public class GhostDMSeenHook {
 
         try {
             // Step 1: Find all methods containing "mark_thread_seen-"
-            List<MethodData> methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> methods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create().usingStrings("mark_thread_seen-")));
 
             if (methods.isEmpty()) {
@@ -64,7 +62,7 @@ public class GhostDMSeenHook {
                 return;
             }
 
-            for (MethodData method : methods) {
+            for (Found method : methods) {
                 Method reflectMethod;
                 try {
                     reflectMethod = method.getMethodInstance(Module.hostClassLoader);
@@ -73,8 +71,8 @@ public class GhostDMSeenHook {
                 }
 
                 int modifiers = reflectMethod.getModifiers();
-                String returnType = String.valueOf(method.getReturnType());
-                ClassDataList paramTypes = method.getParamTypes();
+                String returnType = method.getReturnTypeName();
+                List<String> paramTypes = method.getParamTypeNames();
 
                 // Step 2: Match: static final void method(?, ?, ?, ...)
                 if (Modifier.isStatic(modifiers)
