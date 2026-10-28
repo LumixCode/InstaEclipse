@@ -351,7 +351,11 @@ public final class DataBackup {
         if (name.equals(UNSENT)) return mergeUnsent(current, backup);
         if (name.equals(HIDDEN) || name.equals(NAMES) || name.equals(READ_RECEIPTS)) return mergeKeepCurrent(current, backup);
         if (name.equals(EDITS)) return mergeEditHistory(current, backup);
-        return backup;
+        if (!DataRestoreMerge.merges(name)) return backup;
+        byte[] onPhone;
+        try { onPhone = current.exists() ? java.nio.file.Files.readAllBytes(current.toPath()) : null; }
+        catch (java.io.IOException unreadable) { return null; }
+        return DataRestoreMerge.merge(name, onPhone, backup);
     }
 
     private static void confirm(Intent request, String error) {
