@@ -24,6 +24,7 @@
     <string name="cat_sec_seen_online">Seen and online</string>
     <string name="cat_manualStorySeen_desc">Adds “Mark as seen” to the story ⋮ menu</string>
     <string name="cat_readReceiptChats_desc">Chats you pick in their chat menu still get Seen while Hide Seen is on</string>
+    <string name="cat_readReceiptChats_desc_list">Chosen chats still get Seen. Manage them in Chats that get read receipts</string>
     <string name="cat_airplaneMode">Appear offline</string>
     <string name="cat_airplaneMode_desc">Hides “Active now”; messages and calls stop arriving live</string>
     <string name="cat_quickToggle_desc">Long-press the Messages button to turn your picks on or off</string>

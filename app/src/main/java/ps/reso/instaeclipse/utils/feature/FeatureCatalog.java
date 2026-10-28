@@ -247,8 +247,10 @@ public final class FeatureCatalog {
                                     .desc(R.string.cat_manualStorySeen_desc).requires("isGhostStory")
                                     .status("ManualStorySeen"),
                             sw("readReceiptChats", R.string.ig_dialog_ghost_read_receipt_chats, R.drawable.ic_eye)
-                                    .desc(R.string.cat_readReceiptChats_desc).requires("isGhostSeen")
+                                    .desc(R.string.cat_readReceiptChats_desc_list).requires("isGhostSeen")
                                     .status("ReadReceiptChats"),
+                            action("readReceiptChatList", R.string.ig_read_receipt_list_title, R.drawable.ic_chat)
+                                    .requires("readReceiptChats").side(Side.IG_ONLY),
                             sw("airplaneMode", R.string.cat_airplaneMode, R.drawable.ic_eye_off)
                                     .desc(R.string.cat_airplaneMode_desc).status("airplaneMode")
                                     .aliases(R.string.ig_dialog_extras_airplane_mode).words("airplane", "offline"),

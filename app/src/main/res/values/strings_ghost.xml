@@ -62,4 +62,9 @@
     <string name="ig_quick_toggle_name_disappearing">disappearing messages</string>
     <string name="ig_quick_toggle_name_permanent_view">permanent view</string>
     <string name="ig_quick_toggle_name_screenshots">screenshots</string>
+    <string name="ig_read_receipt_list_title">Chats that get read receipts</string>
+    <string name="ig_read_receipt_list_add">Add chats</string>
+    <string name="ig_read_receipt_pick_title">Choose chats that get read receipts</string>
+    <string name="ig_read_receipt_list_empty">No chats get read receipts yet. Add chats here, or open a chat and pick Send read receipts in this chat from its menu.</string>
+    <string name="ig_read_receipt_list_seen_off">Hide Seen in chats is off, so every chat gets read receipts right now.</string>
 </resources>

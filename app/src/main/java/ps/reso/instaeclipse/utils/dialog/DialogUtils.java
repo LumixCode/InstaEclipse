@@ -703,6 +703,8 @@ public class DialogUtils {
                 return catalogAction(context, item, accent, refresh, v -> showCachedStories(context));
             case "unsentLog":
                 return catalogAction(context, item, accent, refresh, v -> showUnsentMessages(context));
+            case "readReceiptChatList":
+                return catalogAction(context, item, accent, refresh, v -> showReadReceiptChats(context));
             case "watchlist":
                 return catalogAction(context, item, accent, refresh,
                         v -> ps.reso.instaeclipse.mods.misc.ProfileAnalyzer.showWatchlist(context));
@@ -2199,7 +2201,7 @@ public class DialogUtils {
         FeatureCatalog.Item chooseChats = FeatureCatalog.item("lockChooseChats");
         LinearLayout chooseRow = detailRow(context, chooseChats.icon, accent, I18n.t(context, chooseChats.label), v ->
                 LockFlows.authenticate(activityOf(context), I18n.t(context, R.string.ig_lock_change_locks_prompt),
-                        "settings", () -> showChatPicker(context, true)));
+                        "settings", () -> showChatPicker(context, ChatList.LOCK)));
         chooseRow.setTag(chooseChats.key);
         cardView.addView(chooseRow);
         cardView.addView(lockSwitch(context, "lockDirectAlways", accent, refresh, changed));
@@ -2359,25 +2361,33 @@ public class DialogUtils {
 
     /** Lists local inbox threads. Each switch explicitly sets hidden state; it never toggles blindly. */
     private static void showChatPicker(Context context) {
-        showChatPicker(context, false);
+        showChatPicker(context, ChatList.HIDE);
     }
 
-    /** Inbox chats plus the already hidden (or locked) ones, each with an explicit on/off switch. */
-    private static void showChatPicker(Context context, boolean locking) {
+    private enum ChatList { HIDE, LOCK, READ_RECEIPTS }
+
+    private static void showChatPicker(Context context, ChatList list) {
         LinearLayout layout = createSwitchLayout(context);
         java.util.Map<String, String> chats =
                 ps.reso.instaeclipse.mods.ghost.HideChatsHook.knownThreads();
-        java.util.Map<String, String> selectedChats = locking
-                ? ps.reso.instaeclipse.utils.ghost.LockedThreads.all()
-                : ps.reso.instaeclipse.utils.ghost.HiddenThreads.all();
-        int pickerTitle = locking ? R.string.ig_lock_select_chats : R.string.ig_hide_chats_select;
+        java.util.Map<String, String> selectedChats = switch (list) {
+            case LOCK -> ps.reso.instaeclipse.utils.ghost.LockedThreads.all();
+            case READ_RECEIPTS -> ps.reso.instaeclipse.utils.ghost.ReadReceiptWhitelist.all();
+            default -> ps.reso.instaeclipse.utils.ghost.HiddenThreads.all();
+        };
+        int pickerTitle = switch (list) {
+            case LOCK -> R.string.ig_lock_select_chats;
+            case READ_RECEIPTS -> R.string.ig_read_receipt_pick_title;
+            default -> R.string.ig_hide_chats_select;
+        };
         for (java.util.Map.Entry<String, String> entry : selectedChats.entrySet()) {
             String knownTitle = chats.get(entry.getKey());
             if (knownTitle == null || knownTitle.isEmpty()) chats.put(entry.getKey(), entry.getValue());
         }
+        if (list == ChatList.READ_RECEIPTS) chats.keySet().removeIf(DialogUtils::hiddenFromLists);
         if (chats.isEmpty()) {
-            layout.addView(IeRows.helpText(context,
-                    I18n.t(context, locking ? R.string.ig_lock_selected_empty : R.string.ig_hide_chats_picker_empty)));
+            layout.addView(IeRows.helpText(context, I18n.t(context,
+                    list == ChatList.LOCK ? R.string.ig_lock_selected_empty : R.string.ig_hide_chats_picker_empty)));
             showSectionDialog(context, I18n.t(context, pickerTitle), layout);
             return;
         }
@@ -2392,8 +2402,12 @@ public class DialogUtils {
             ToggleRow row = createSwitch(context, R.drawable.ic_chat, accentHex(FeatureCatalog.Group.PRIVACY), label,
                     selectedChats.containsKey(id));
             row.setOnCheckedChangeListener((button, checked) -> {
-                if (locking) {
+                if (list == ChatList.LOCK) {
                     ps.reso.instaeclipse.utils.ghost.LockedThreads.set(id, storedTitle, checked);
+                    return;
+                }
+                if (list == ChatList.READ_RECEIPTS) {
+                    ps.reso.instaeclipse.utils.ghost.ReadReceiptWhitelist.set(id, storedTitle, checked);
                     return;
                 }
                 ps.reso.instaeclipse.utils.ghost.HiddenThreads.setHidden(id, storedTitle, checked);
@@ -2406,6 +2420,47 @@ public class DialogUtils {
         }
         layout.addView(cardView);
         showSectionDialog(context, I18n.t(context, pickerTitle), layout);
+    }
+
+    private static boolean hiddenFromLists(String threadId) {
+        return FeatureFlags.hideSpecificChats && ps.reso.instaeclipse.utils.ghost.HiddenThreads.isHidden(threadId);
+    }
+
+    private static void showReadReceiptChats(Context context) {
+        showSection(context, readReceiptListPage(context));
+    }
+
+    private static IeSheet.Page readReceiptListPage(Context context) {
+        LinearLayout layout = createSwitchLayout(context);
+        String accent = accentHex(FeatureCatalog.Group.PRIVACY);
+        if (!FeatureFlags.isGhostSeen) {
+            layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_read_receipt_list_seen_off)));
+        }
+        ps.reso.instaeclipse.utils.ghost.ReadReceiptListModel model = new ps.reso.instaeclipse.utils.ghost.ReadReceiptListModel(
+                ps.reso.instaeclipse.utils.ghost.ReadReceiptWhitelist.all(),
+                ps.reso.instaeclipse.mods.ghost.HideChatsHook::knownThreadTitle,
+                ps.reso.instaeclipse.utils.ghost.ThreadNames::get, DialogUtils::hiddenFromLists);
+        String unknown = I18n.t(context, R.string.ig_hide_chats_unknown);
+        if (model.rows().isEmpty()) {
+            layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_read_receipt_list_empty)));
+        } else {
+            LinearLayout chatsCard = IeRows.card(context, 5);
+            for (ps.reso.instaeclipse.utils.ghost.ReadReceiptListModel.Row chat : model.rows()) {
+                ToggleRow row = createSwitch(context, R.drawable.ic_chat, accent, chat.label(unknown), chat.on());
+                row.setOnCheckedChangeListener((button, checked) ->
+                        ps.reso.instaeclipse.utils.ghost.ReadReceiptWhitelist.set(chat.id, model.set(chat.id, checked).saved, checked));
+                chatsCard.addView(row);
+            }
+            layout.addView(chatsCard);
+        }
+        LinearLayout addCard = IeRows.card(context, 5);
+        LinearLayout add = detailRow(context, R.drawable.ic_chat, accent, I18n.t(context, R.string.ig_read_receipt_list_add),
+                v -> showChatPicker(context, ChatList.READ_RECEIPTS));
+        add.setTag("readReceiptChatsAdd");
+        addCard.addView(add);
+        layout.addView(addCard);
+        return new IeSheet.Page(I18n.t(context, R.string.ig_read_receipt_list_title), layout)
+                .onReturn(() -> replaceTop(context, readReceiptListPage(context)));
     }
 
     private static boolean suppressLockToggle = false;
