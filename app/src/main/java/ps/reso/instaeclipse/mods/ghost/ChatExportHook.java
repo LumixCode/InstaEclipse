@@ -147,6 +147,8 @@ public class ChatExportHook {
     /** Export dialog: optionally scroll to the first message first so the whole chat is loaded, and
      *  optionally download photos/videos/voice/GIFs/shared previews into the export's own folder. */
     private static void ask(Activity a) {
+        String threadId = openThread(a);
+        Object session = threadId != null ? openChatSession(a) : null;
         SharedPreferences prefs = prefs(a);
         ps.reso.instaeclipse.utils.dialog.IeDialog dlg = new ps.reso.instaeclipse.utils.dialog.IeDialog(a)
                 .title(I18n.t(a, R.string.ig_chat_export));
@@ -157,21 +159,26 @@ public class ChatExportHook {
             boolean loadAll = box.isChecked();
             boolean withMedia = mediaBox.isChecked();
             prefs.edit().putBoolean("loadAll", loadAll).putBoolean("media", withMedia).apply();
-            if (loadAll) JumpToFirstMessageHook.run(a, () -> export(a, withMedia));
-            else export(a, withMedia);
+            if (loadAll && ready() && session != null) {
+                JumpToFirstMessageHook.run(a, threadId, thread -> export(a, thread, session, withMedia));
+            } else {
+                export(a, threadId, session, withMedia);
+            }
         });
         dlg.show();
     }
 
-    private static void export(Activity a, boolean withMedia) {
+    private static String openThread(Activity a) {
+        String tracked = UnsentThreadButtonHook.openChat(a);
+        if (tracked == null) try { tracked = UnsentThreadButtonHook.openThread.get(); } catch (Throwable ignored) {}
+        return tracked;
+    }
+
+    private static void export(Activity a, String threadId, Object session, boolean withMedia) {
         if (!ready()) {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_unsupported), Toast.LENGTH_LONG).show();
             return;
         }
-        String tracked = UnsentThreadButtonHook.openChat(a);
-        if (tracked == null) try { tracked = UnsentThreadButtonHook.openThread.get(); } catch (Throwable ignored) {}
-        final String threadId = tracked;
-        final Object session = threadId != null ? openChatSession(a) : null;
         if (session == null) {
             ModuleLog.detail(TAG + "export thread=" + threadId + " session=false");
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_chat_export_none), Toast.LENGTH_SHORT).show();

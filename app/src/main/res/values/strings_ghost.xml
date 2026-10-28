@@ -26,4 +26,13 @@
         <item quantity="one">Unsent %1$d of %2$d message</item>
         <item quantity="other">Unsent %1$d of %2$d messages</item>
     </plurals>
+    <string name="ig_jump_first_stop_menu">Stop loading older messages</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="one">Loading older messages · %1$d loaded</item>
+        <item quantity="other">Loading older messages · %1$d loaded</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">Loading older messages</string>
+    <string name="ig_jump_first_stop">Stop</string>
+    <string name="ig_jump_first_reached">Reached the first message of this chat</string>
+    <string name="ig_jump_first_stopped_loading">Stopped loading older messages</string>
 </resources>
