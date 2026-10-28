@@ -52,4 +52,6 @@
     <string name="ig_lock_recovered_title">Passcode removed</string>
     <string name="ig_lock_recovered_body">Your InstaEclipse passcode is gone and every lock is off. Your locked chat and collection lists and hidden chats are kept, so you can turn the locks back on whenever you like.</string>
     <string name="ig_lock_set_new_passcode">Set a new passcode</string>
+    <string name="ig_locked_coll_set_passcode_body">A locked collection opens with your InstaEclipse passcode. Set one to lock this collection.</string>
+    <string name="cat_lockSavedCollections_desc_all_posts">Saved &gt; All posts and collection covers stay visible.</string>
 </resources>

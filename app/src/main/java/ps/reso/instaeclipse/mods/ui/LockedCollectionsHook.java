@@ -50,17 +50,24 @@ public class LockedCollectionsHook {
     private static final java.util.Map<View, Object> hidden = new java.util.WeakHashMap<>();
     /** fragments unlocked by a prompt (stay unlocked until they are gone, e.g. back from a post) */
     private static final Set<Object> unlockedFrags = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    private static Field argumentsField;
+    private static Field parentField;
+    private static java.lang.reflect.Method viewMethod;
 
     public void install(ClassLoader cl) {
         try {
-            XposedHelpers.findAndHookMethod(cl.loadClass("androidx.fragment.app.Fragment"), "onResume", new XC_MethodHook() {
+            Class<?> fragment = cl.loadClass("androidx.fragment.app.Fragment");
+            argumentsField = fragmentField(fragment, "mArguments");
+            parentField = fragmentField(fragment, "mParentFragment");
+            viewMethod = fragment.getMethod("getView");
+            XposedHelpers.findAndHookMethod(fragment, "onResume", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) { JitGuard.tick(param.method);
                     if (!FeatureFlags.lockSavedCollections) return;
                     Bundle args = arguments(param.thisObject);
                     String id = args != null ? collectionId(args) : null;
                     View root;
-                    try { root = (View) param.thisObject.getClass().getMethod("getView").invoke(param.thisObject); } catch (Throwable t) { return; }
+                    try { root = (View) viewMethod.invoke(param.thisObject); } catch (Throwable t) { return; }
                     if (id == null) {
                         // another screen came up (e.g. back to the Saved list): the action bar is
                         // shared, so take our button off once the collection is no longer shown.
@@ -72,7 +79,7 @@ public class LockedCollectionsHook {
                     Activity a = activityOf(root);
                     if (a == null) return;
                     // ask once per opening: coming back from a post inside it doesn't ask again
-                    if (isLocked(id) && !isUnlocked(param.thisObject)) gate(a, param.thisObject, root);
+                    if (isLocked(id) && hasPasscode() && !isUnlocked(param.thisObject)) gate(a, param.thisObject, root);
                     active = new java.lang.ref.WeakReference<>(root);
                     activeId = id;
                     root.postDelayed(() -> addButton(a, id), 400);
@@ -88,27 +95,29 @@ public class LockedCollectionsHook {
     /** True if this fragment, or one it is nested in, was unlocked by a prompt. */
     private static boolean isUnlocked(Object frag) {
         try {
-            Field pf = null;
-            for (Class<?> c = frag.getClass(); c != null && c != Object.class; c = c.getSuperclass())
-                if (c.getName().equals("androidx.fragment.app.Fragment")) { pf = c.getDeclaredField("mParentFragment"); break; }
-            if (pf != null) pf.setAccessible(true);
+            Field pf = parentField;
             for (Object f = frag; f != null; f = pf != null ? pf.get(f) : null) if (unlockedFrags.contains(f)) return true;
         } catch (Throwable ignored) {}
         return false;
     }
 
     private static Bundle arguments(Object frag) {
-        for (Class<?> c = frag.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
-            if (!c.getName().equals("androidx.fragment.app.Fragment")) continue;
-            try {
-                Field f = c.getDeclaredField("mArguments");
-                f.setAccessible(true);
-                return (Bundle) f.get(frag);
-            } catch (Throwable t) {
-                return null;
-            }
+        try {
+            return argumentsField != null ? (Bundle) argumentsField.get(frag) : null;
+        } catch (Throwable t) {
+            return null;
         }
-        return null;
+    }
+
+    private static Field fragmentField(Class<?> fragment, String name) {
+        try {
+            Field f = fragment.getDeclaredField(name);
+            f.setAccessible(true);
+            return f;
+        } catch (Throwable t) {
+            ModuleLog.warn(TAG + "Could not find Fragment." + name + ": " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            return null;
+        }
     }
 
     /** The saved collection this fragment shows, or null when it isn't a collection screen. */
@@ -207,6 +216,7 @@ public class LockedCollectionsHook {
             android.widget.ImageView btn = new android.widget.ImageView(a);
             btn.setTag(BTN_TAG);
             btn.setScaleType(android.widget.ImageView.ScaleType.CENTER);
+            ps.reso.instaeclipse.utils.ui.IgTint.copy(options, btn);
             showState(a, btn, isLocked(id));
             btn.setContentDescription(I18n.t(a, isLocked(id) ? R.string.ig_locked_coll_unlock : R.string.ig_locked_coll_lock));
             int w = options.getWidth() > 0 ? options.getWidth() : LockDirectMessagesHook.dp(a, 48);
@@ -233,20 +243,13 @@ public class LockedCollectionsHook {
         }
     }
 
-    /** Locked: solid white lock. Unlocked: dimmed outline lock (Instagram has no unlock icon). */
     private static void showState(Activity a, android.widget.ImageView btn, boolean locked) {
         int icon = ResIds.drawable(a, locked ? "instagram_lock_pano_filled_24" : "instagram_lock_pano_outline_24");
         if (icon != 0) btn.setImageResource(icon);
-        btn.setColorFilter(android.graphics.Color.WHITE);
-        btn.setAlpha(locked ? 1f : 0.45f);
         btn.setContentDescription(I18n.t(a, locked ? R.string.ig_locked_coll_unlock : R.string.ig_locked_coll_lock));
     }
 
     private static void toggle(Activity a, String id, android.widget.ImageView btn) {
-        if (!hasPasscode()) {
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_locked_coll_need_passcode), Toast.LENGTH_LONG).show();
-            return;
-        }
         Runnable flip = () -> {
             Set<String> s = locked();
             boolean nowLocked = !s.remove(id);
@@ -257,8 +260,21 @@ public class LockedCollectionsHook {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, nowLocked ? R.string.ig_locked_coll_locked : R.string.ig_locked_coll_unlocked),
                     Toast.LENGTH_SHORT).show();
         };
-        if (isLocked(id)) ask(a, flip, null, null);
+        if (!hasPasscode()) askForPasscode(a, () -> {
+            if (!isLocked(id)) flip.run();
+        });
+        else if (isLocked(id)) ask(a, flip, null, null);
         else flip.run();
+    }
+
+    private static void askForPasscode(Activity a, Runnable onSaved) {
+        ps.reso.instaeclipse.utils.dialog.IeDialog d = new ps.reso.instaeclipse.utils.dialog.IeDialog(a)
+                .title(I18n.t(a, R.string.ig_locked_coll_lock))
+                .message(I18n.t(a, R.string.ig_locked_coll_set_passcode_body));
+        d.secondary(I18n.t(a, R.string.ig_dialog_cancel), null);
+        d.primary(I18n.t(a, R.string.ig_lock_set_passcode),
+                () -> ps.reso.instaeclipse.utils.dialog.LockFlows.setPasscode(a, onSaved, null));
+        d.show();
     }
 
     /** Covers a locked collection until unlocked; cancelling leaves it. */
@@ -317,8 +333,7 @@ public class LockedCollectionsHook {
         d.onClose(cancel); // ✕ = Cancel (never leaves the locked content showing)
         d.primaryKeepOpen(I18n.t(a, R.string.ig_locked_coll_open), () -> {
             if (LockDirectMessagesHook.checkPass(code.getText().toString())) success.run();
-            else { code.setText(""); code.setError(LockDirectMessagesHook.lockoutSecondsLeft() > 0
-                    ? LockDirectMessagesHook.failureText(a) : "✗"); }
+            else { code.setText(""); code.setError(LockDirectMessagesHook.failureText(a)); }
         });
         d.show();
         if (FeatureFlags.lockUseFingerprint && LockDirectMessagesHook.canAuthenticate(a))

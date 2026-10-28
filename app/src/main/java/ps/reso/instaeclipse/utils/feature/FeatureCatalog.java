@@ -276,7 +276,7 @@ public final class FeatureCatalog {
                                     .desc(R.string.cat_lockDirectAlways_desc).countRequiresAnyOf(LOCKS)
                                     .aliases(R.string.ig_lock_relock_hint),
                             sw("lockSavedCollections", R.string.cat_lockSavedCollections, R.drawable.ic_shield)
-                                    .desc(R.string.cat_lockSavedCollections_desc).status("LockSavedCollections")
+                                    .desc(R.string.cat_lockSavedCollections_desc_all_posts).status("LockSavedCollections")
                                     .aliases(R.string.ig_locked_coll_setting, R.string.ig_locked_coll_setting_short)),
                     section(R.string.cat_sec_hidden_chats,
                             sw("hideSpecificChats", R.string.ig_dialog_misc_hide_chats, R.drawable.ic_eye_off)
