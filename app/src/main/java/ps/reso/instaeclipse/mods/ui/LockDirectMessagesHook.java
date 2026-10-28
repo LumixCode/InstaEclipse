@@ -862,7 +862,7 @@ public class LockDirectMessagesHook {
 
     private static synchronized PasscodeLockout lockout() {
         if (lockout == null) bindLockout(ps.reso.instaeclipse.Xposed.Module.appContext());
-        if (lockout == null) lockout = new PasscodeLockout(null, System::currentTimeMillis);
+        if (lockout == null) lockout = new PasscodeLockout(null, android.os.SystemClock::elapsedRealtime);
         return lockout;
     }
 
@@ -870,7 +870,7 @@ public class LockDirectMessagesHook {
         if (lockout != null || context == null) return;
         android.content.Context app = context.getApplicationContext() != null ? context.getApplicationContext() : context;
         lockout = new PasscodeLockout(app.getSharedPreferences(LOCKOUT_PREFS, android.content.Context.MODE_PRIVATE),
-                System::currentTimeMillis);
+                android.os.SystemClock::elapsedRealtime);
     }
 
     /** Seconds left in the lockout after too many wrong passcodes, or 0. */
