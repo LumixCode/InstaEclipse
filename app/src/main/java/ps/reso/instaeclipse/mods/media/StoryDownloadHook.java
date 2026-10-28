@@ -349,14 +349,8 @@ public class StoryDownloadHook {
                         Object h = trayHelper.get();
                         if (h == null || !(p.args[0] instanceof List<?>)) return;
                         try {
-                            Object click = java.lang.reflect.Proxy.newProxyInstance(cl, new Class<?>[]{iface}, (proxy, m, a) -> {
-                                if (m.getReturnType() == boolean.class) return true;
-                                if (m.getReturnType() == void.class && m.getDeclaringClass() == iface) { mainHandler.post(() -> trayDownload(h)); return null; }
-                                if (m.getName().equals("hashCode")) return System.identityHashCode(proxy);
-                                if (m.getName().equals("equals")) return proxy == a[0];
-                                if (m.getName().equals("toString")) return "IEHighlightRow";
-                                return null;
-                            });
+                            Object click = java.lang.reflect.Proxy.newProxyInstance(cl, new Class<?>[]{iface},
+                                    TrayRowHandler.row(iface, mainHandler::post, () -> trayDownload(h)));
                             List<?> rows = (List<?>) factory.invoke(null, click, I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_highlight_download_all));
                             @SuppressWarnings("unchecked") List<Object> list = (List<Object>) p.args[0];
                             try { list.addAll(rows); }
@@ -448,36 +442,26 @@ public class StoryDownloadHook {
             Object loader = loaderGetter.invoke(null, session);
             Class<?> cbType = loaderRegister.getParameterTypes()[0];
             Object[] self = new Object[1];
-            Object cb = java.lang.reflect.Proxy.newProxyInstance(cbType.getClassLoader(), new Class<?>[]{cbType}, (proxy, m, a) -> {
-                switch (m.getName()) {
-                    case "hashCode": return System.identityHashCode(proxy);
-                    case "equals": return proxy == a[0];
-                    case "toString": return "IEHighlightLoad";
-                }
-                if (a == null || a.length == 0 || !id.equals(a[0])) return null;
-                boolean success = a.length == 2;
-                mainHandler.post(() -> {
-                    if (!pendingLoads.remove(self[0])) return; // fire once
-                    try { if (loaderUnregister != null) loaderUnregister.invoke(loader, self[0], id); } catch (Throwable ignored) {}
-                    List<?> items = success ? highlightItemsWith(reel, session) : null;
-                    if (!success) ModuleLog.error("(IE|HighlightTray) Could not download the highlight: Instagram could not load it");
-                    ModuleLog.detail("(IE|HighlightTray) load " + (success ? "ok" : "failed") + ": " + (items != null ? items.size() : -1) + " items");
-                    downloadHighlightItems(ctx, items);
-                });
-                return null;
+            TrayRowHandler.Load load = new TrayRowHandler.Load(id, mainHandler::post, pendingLoads, success -> {
+                try { if (loaderUnregister != null) loaderUnregister.invoke(loader, self[0], id); } catch (Throwable ignored) {}
+                List<?> items = success ? highlightItemsWith(reel, session) : null;
+                if (!success) ModuleLog.error("(IE|HighlightTray) Could not download the highlight: Instagram could not load it");
+                ModuleLog.detail("(IE|HighlightTray) load " + (success ? "ok" : "failed") + ": " + (items != null ? items.size() : -1) + " items");
+                downloadHighlightItems(ctx, items);
             });
+            Object cb = java.lang.reflect.Proxy.newProxyInstance(cbType.getClassLoader(), new Class<?>[]{cbType}, load);
             self[0] = cb;
             pendingLoads.add(cb);
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_highlight_loading), Toast.LENGTH_SHORT).show();
             loaderRegister.invoke(loader, cb, id, "profile", false);
-            if (!pendingLoads.contains(cb)) return; // was already loaded: callback ran
+            if (!load.waiting(cb)) return;
             Class<? extends Enum> reason = (Class<? extends Enum>) loaderFetch.getParameterTypes()[0];
             Object why;
             try { why = Enum.valueOf(reason, "PROFILE_HIGHLIGHTS_TRAY"); } catch (Throwable e) { why = Enum.valueOf(reason, "ON_TAP"); }
             loaderFetch.invoke(loader, why, id, "profile", null);
             ModuleLog.detail("(IE|HighlightTray) fetching " + id);
-            mainHandler.postDelayed(() -> { // give up after 20 s
-                if (pendingLoads.remove(cb)) ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_no_media_for_post), Toast.LENGTH_SHORT).show();
+            mainHandler.postDelayed(() -> {
+                if (load.cancel(cb)) ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_no_media_for_post), Toast.LENGTH_SHORT).show();
             }, 20000);
         } catch (Throwable t) {
             ModuleLog.error("(IE|HighlightTray) Could not download the highlight: " + t);
