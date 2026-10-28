@@ -39,15 +39,10 @@ public class StoryDownloadHook {
 
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    private static final class StoryMediaOptions {
-        final String imageUrl;
-        final String videoUrl;
-
-        StoryMediaOptions(String imageUrl, String videoUrl) {
-            this.imageUrl = imageUrl;
-            this.videoUrl = videoUrl;
-        }
-    }
+    private static final String REEL = "StoryReel_class_v1";
+    private static final String HIGHLIGHT_MENU = "StoryHighlightMenu_v1";
+    private static final String TRAY = "StoryTray_members_v1";
+    private static final String CAPTURE = "StoryCapture_v1";
 
     // ── Entry point ──────────────────────────────────────────────────────────
 
@@ -82,44 +77,55 @@ public class StoryDownloadHook {
 
     private static void downloadHighlightItems(Context ctx, List<?> items) {
         if (items == null || items.isEmpty()) {
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_no_media_for_post), Toast.LENGTH_SHORT).show();
+            highlightFailed(ctx);
             return;
         }
-        final List<Object> copy = new ArrayList<>(items);
+        List<Object> copy = new ArrayList<>(items);
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_highlight_downloading, copy.size()), Toast.LENGTH_LONG).show();
         ModuleLog.line("(IE|Highlight) Downloading " + copy.size() + " highlight items");
-        new Thread(() -> {
-            int ok = 0;
-            for (Object item : copy) {
-                try {
-                    StoryMediaOptions m = extractStoryMediaOptions(ctx, item, true);
-                    if (m == null) continue;
-                    boolean video = m.videoUrl != null;
-                    String url = video ? m.videoUrl : m.imageUrl;
-                    String user = extractUsernameFromReelItemHolder(item);
-                    String id = extractMediaIdFromReelItemHolder(item);
-                    String fn = FeedVideoDownloadHook.buildFilename(user, "highlight", id, video);
-                    FeedVideoDownloadHook.downloadAndSave(ctx, url, fn, video, user);
-                    ok++;
-                    Thread.sleep(400);
-                } catch (Throwable t) {
-                    ModuleLog.warn("(IE|Highlight) Skipped one highlight item that could not be downloaded: " + t);
-                }
+        BatchTally batch = SelectedMediaDownloads.batch(copy.size(), R.string.ig_highlight_done, R.string.ig_highlight_failed);
+        for (Object item : copy) mainHandler.post(() -> downloadHighlightItem(ctx, item, batch));
+    }
+
+    private static void downloadHighlightItem(Context ctx, Object item, BatchTally batch) {
+        try {
+            Object media = SelectedMediaAdapter.storyItemMedia(item);
+            if (media == null) throw new IllegalStateException("the item has no media");
+            SelectedMediaDownloads.Captured captured = SelectedMediaDownloads.capture(ctx, media, "story");
+            if (captured.children.isEmpty()) startHighlightItem(ctx, captured, batch);
+            else {
+                batch.add(captured.children.size() - 1);
+                for (SelectedMediaDownloads.Captured child : captured.children) startHighlightItem(ctx, child, batch);
             }
-            final int done = ok;
-            mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_highlight_done, done, copy.size()), Toast.LENGTH_LONG).show());
-        }).start();
+        } catch (Throwable t) {
+            ModuleLog.warn("(IE|Highlight) Skipped one highlight item that could not be downloaded: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            SelectedMediaDownloads.reportFailed(ctx, batch);
+        }
+    }
+
+    private static void startHighlightItem(Context ctx, SelectedMediaDownloads.Captured captured, BatchTally batch) {
+        SelectedMediaDownloads.start(ctx, captured, captured.batchKind() == DownloadChoices.Choice.VIDEO, batch);
+    }
+
+    private static void highlightFailed(Context ctx) {
+        ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_highlight_failed), Toast.LENGTH_SHORT).show();
     }
 
     public void install(DexKitBridge bridge, ClassLoader classLoader) {
         ps.reso.instaeclipse.utils.media.StoryCache.pruneAfterStart();
         SelectedMediaAdapter.install(bridge, classLoader);
         try {
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                    .usingStrings("Reel with pending media should have an owner.")))) {
-                reelClass = classLoader.loadClass(md.getClassName());
-                break;
+            String reel = DexKitCache.loadString(REEL);
+            if (reel == null) {
+                reel = "";
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                        .usingStrings("Reel with pending media should have an owner.")))) {
+                    reel = md.getClassName();
+                    break;
+                }
+                DexKitCache.saveString(REEL, reel);
             }
+            if (!reel.isEmpty()) reelClass = classLoader.loadClass(reel);
             if (reelClass == null)
                 ModuleLog.warn("(IE|Highlight) Downloading a whole highlight (Download all) is not available in this Instagram version; single stories still download");
             else reelIdGetter = idGetter(reelClass);
@@ -296,32 +302,16 @@ public class StoryDownloadHook {
 
     private void installHighlightTrayHook(DexKitBridge bridge, ClassLoader cl) {
         try {
-            MethodData builder = null;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                    .usingStrings("HighlightsTrayDialogHelper").paramCount(4)))) { builder = md; break; }
-            if (builder == null) { ModuleLog.warn("(IE|HighlightTray) Download all is not available in the highlight menu in this Instagram version"); return; }
-            Method build = builder.getMethodInstance(cl);
-            final Class<?> helper = build.getDeclaringClass();
-            Method addRow = null, legacyItems = null, popupSet = null, rowFactory = null;
-            for (MethodData inv : builder.getInvokes()) {
-                try {
-                    if (inv.isConstructor()) continue;
-                    Method m = inv.getMethodInstance(cl);
-                    Class<?>[] p = m.getParameterTypes();
-                    if (p.length == 2 && p[0] == String.class && p[1] == View.OnClickListener.class && m.getReturnType() == void.class) addRow = m;
-                    else if (p.length == 1 && p[0] == List.class && m.getReturnType() == void.class && m.getDeclaringClass().getName().startsWith("X.")) popupSet = m;
-                    else if (java.lang.reflect.Modifier.isStatic(m.getModifiers()) && m.getDeclaringClass() == helper && p.length == 2
-                            && p[0].isInterface() && p[1] == String.class && m.getReturnType() == List.class) rowFactory = m;
-                } catch (Throwable ignored) {}
+            List<Method> members = DexKitCache.loadMethods(TRAY, cl);
+            if (members == null) {
+                members = trayMembers(bridge, cl);
+                DexKitCache.saveMethods(TRAY, members);
             }
-            if (addRow != null)
-                for (MethodData inv : builder.getInvokes()) {
-                    try {
-                        if (inv.isConstructor() || !inv.getClassName().equals(addRow.getDeclaringClass().getName())) continue;
-                        Method m = inv.getMethodInstance(cl);
-                        if (m.getParameterCount() == 0 && m.getReturnType() == List.class) legacyItems = m;
-                    } catch (Throwable ignored) {}
-                }
+            if (members.isEmpty()) { ModuleLog.warn("(IE|HighlightTray) Download all is not available in the highlight menu in this Instagram version"); return; }
+            Method build = members.get(0);
+            final Class<?> helper = build.getDeclaringClass();
+            Method[] roles = trayRoles(helper, members.subList(1, members.size()));
+            Method addRow = roles[0], legacyItems = roles[1], popupSet = roles[2], rowFactory = roles[3];
             XposedBridge.hookMethod(build, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                     if (FeatureFlags.enableStoryDownload) trayHelper.set(p.thisObject);
@@ -359,16 +349,48 @@ public class StoryDownloadHook {
                     }
                 });
             }
-            findReelLoader(bridge, cl);
             if ((addRow != null && legacyItems != null) || (popupSet != null && rowFactory != null))
                 ModuleLog.ok("(IE|HighlightTray) ready");
             else
                 ModuleLog.warn("(IE|HighlightTray) Download all is not available in the highlight menu in this Instagram version");
             ModuleLog.detail("(IE|HighlightTray) " + helper.getName() + " legacy=" + (addRow != null && legacyItems != null)
-                    + " popup=" + (popupSet != null && rowFactory != null) + " loader=" + (loaderGetter != null && loaderFetch != null));
+                    + " popup=" + (popupSet != null && rowFactory != null));
         } catch (Throwable t) {
             ModuleLog.warn("(IE|HighlightTray) Download all is not available in the highlight menu: " + t);
         }
+    }
+
+    private static List<Method> trayMembers(DexKitBridge bridge, ClassLoader cl) throws ReflectiveOperationException {
+        MethodData builder = null;
+        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                .usingStrings("HighlightsTrayDialogHelper").paramCount(4)))) { builder = md; break; }
+        List<Method> out = new ArrayList<>();
+        if (builder == null) return out;
+        Method build = builder.getMethodInstance(cl);
+        List<Method> invoked = new ArrayList<>();
+        for (MethodData inv : builder.getInvokes()) {
+            try {
+                if (!inv.isConstructor()) invoked.add(inv.getMethodInstance(cl));
+            } catch (Throwable ignored) {}
+        }
+        out.add(build);
+        for (Method m : trayRoles(build.getDeclaringClass(), invoked)) if (m != null) out.add(m);
+        return out;
+    }
+
+    private static Method[] trayRoles(Class<?> helper, List<Method> invoked) {
+        Method addRow = null, legacyItems = null, popupSet = null, rowFactory = null;
+        for (Method m : invoked) {
+            Class<?>[] p = m.getParameterTypes();
+            if (p.length == 2 && p[0] == String.class && p[1] == View.OnClickListener.class && m.getReturnType() == void.class) addRow = m;
+            else if (p.length == 1 && p[0] == List.class && m.getReturnType() == void.class && m.getDeclaringClass().getName().startsWith("X.")) popupSet = m;
+            else if (java.lang.reflect.Modifier.isStatic(m.getModifiers()) && m.getDeclaringClass() == helper && p.length == 2
+                    && p[0].isInterface() && p[1] == String.class && m.getReturnType() == List.class) rowFactory = m;
+        }
+        if (addRow != null)
+            for (Method m : invoked)
+                if (m.getDeclaringClass() == addRow.getDeclaringClass() && m.getParameterCount() == 0 && m.getReturnType() == List.class) legacyItems = m;
+        return new Method[]{addRow, legacyItems, popupSet, rowFactory};
     }
 
     /** Long-press row tapped: download every item of the highlight the helper was built for. */
@@ -377,7 +399,11 @@ public class StoryDownloadHook {
         Object session = readFieldByTypeName(helper, "com.instagram.common.session.UserSession");
         Context ctx = (Context) readFieldByTypeName(helper, "android.app.Activity");
         if (ctx == null) ctx = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
-        if (ctx == null || reel == null) { ModuleLog.error("(IE|HighlightTray) Could not download the highlight: it was not found on screen"); return; }
+        if (ctx == null || reel == null) {
+            ModuleLog.error("(IE|HighlightTray) Could not download the highlight: it was not found on screen");
+            if (ctx != null) highlightFailed(ctx);
+            return;
+        }
         List<?> items = highlightItemsWith(reel, session);
         ModuleLog.detail("(IE|HighlightTray) items loaded: " + (items != null ? items.size() : -1));
         if (items != null && !items.isEmpty()) { downloadHighlightItems(ctx, items); return; }
@@ -390,10 +416,14 @@ public class StoryDownloadHook {
     // module, Map) completes; callback = success(String id, boolean) / failure(String id). The loader
     // only keeps a WeakReference to the callback, so a strong one is held here until it fires.
     private static Method loaderGetter, loaderRegister, loaderUnregister, loaderFetch;
+    private static volatile boolean loaderSearched;
     private static final Set<Object> pendingLoads = Collections.synchronizedSet(new java.util.HashSet<>());
 
-    private static void findReelLoader(DexKitBridge bridge, ClassLoader cl) {
+    private static synchronized void findReelLoader(ClassLoader cl) {
+        if (loaderSearched) return;
         try {
+            DexKitBridge bridge = ps.reso.instaeclipse.utils.core.ModuleBridge.get();
+            if (bridge == null) return;
             Class<?> loader = null;
             for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("reel_store_on_story_unavailable")))) {
@@ -419,6 +449,9 @@ public class StoryDownloadHook {
                 }
         } catch (Throwable t) {
             ModuleLog.warn("(IE|HighlightTray) Highlights that were never opened cannot be downloaded with Download all: " + t);
+        } finally {
+            loaderSearched = true;
+            ModuleLog.detail("(IE|HighlightTray) loader=" + (loaderGetter != null && loaderRegister != null && loaderFetch != null));
         }
     }
 
@@ -433,39 +466,65 @@ public class StoryDownloadHook {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static void loadThenDownload(Context ctx, Object reel, Object session) {
-        String id = highlightId(reel);
-        if (id == null || session == null || loaderGetter == null || loaderRegister == null || loaderFetch == null) {
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_no_media_for_post), Toast.LENGTH_SHORT).show();
+        if (!loaderSearched) {
+            ClassLoader cl = reel.getClass().getClassLoader();
+            FeedVideoDownloadHook.executor.execute(() -> {
+                findReelLoader(cl);
+                mainHandler.post(() -> loadThenDownload(ctx, reel, session));
+            });
             return;
         }
+        String id = highlightId(reel);
+        if (id == null || session == null || loaderGetter == null || loaderRegister == null || loaderFetch == null) {
+            highlightFailed(ctx);
+            return;
+        }
+        Object loader;
         try {
-            Object loader = loaderGetter.invoke(null, session);
+            loader = loaderGetter.invoke(null, session);
+        } catch (Throwable t) {
+            ModuleLog.error("(IE|HighlightTray) Could not download the highlight: " + t);
+            highlightFailed(ctx);
+            return;
+        }
+        Object[] self = new Object[1];
+        TrayRowHandler.Load load = new TrayRowHandler.Load(id, mainHandler::post, pendingLoads, success -> {
+            unregister(loader, self[0], id);
+            List<?> items = success ? highlightItemsWith(reel, session) : null;
+            if (!success) ModuleLog.error("(IE|HighlightTray) Could not download the highlight: Instagram could not load it");
+            ModuleLog.detail("(IE|HighlightTray) load " + (success ? "ok" : "failed") + ": " + (items != null ? items.size() : -1) + " items");
+            downloadHighlightItems(ctx, items);
+        });
+        try {
             Class<?> cbType = loaderRegister.getParameterTypes()[0];
-            Object[] self = new Object[1];
-            TrayRowHandler.Load load = new TrayRowHandler.Load(id, mainHandler::post, pendingLoads, success -> {
-                try { if (loaderUnregister != null) loaderUnregister.invoke(loader, self[0], id); } catch (Throwable ignored) {}
-                List<?> items = success ? highlightItemsWith(reel, session) : null;
-                if (!success) ModuleLog.error("(IE|HighlightTray) Could not download the highlight: Instagram could not load it");
-                ModuleLog.detail("(IE|HighlightTray) load " + (success ? "ok" : "failed") + ": " + (items != null ? items.size() : -1) + " items");
-                downloadHighlightItems(ctx, items);
-            });
-            Object cb = java.lang.reflect.Proxy.newProxyInstance(cbType.getClassLoader(), new Class<?>[]{cbType}, load);
-            self[0] = cb;
-            pendingLoads.add(cb);
+            self[0] = java.lang.reflect.Proxy.newProxyInstance(cbType.getClassLoader(), new Class<?>[]{cbType}, load);
+            pendingLoads.add(self[0]);
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_highlight_loading), Toast.LENGTH_SHORT).show();
-            loaderRegister.invoke(loader, cb, id, "profile", false);
-            if (!load.waiting(cb)) return;
+            loaderRegister.invoke(loader, self[0], id, "profile", false);
+            if (!load.waiting(self[0])) return;
             Class<? extends Enum> reason = (Class<? extends Enum>) loaderFetch.getParameterTypes()[0];
             Object why;
             try { why = Enum.valueOf(reason, "PROFILE_HIGHLIGHTS_TRAY"); } catch (Throwable e) { why = Enum.valueOf(reason, "ON_TAP"); }
             loaderFetch.invoke(loader, why, id, "profile", null);
             ModuleLog.detail("(IE|HighlightTray) fetching " + id);
-            mainHandler.postDelayed(() -> {
-                if (load.cancel(cb)) ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_no_media_for_post), Toast.LENGTH_SHORT).show();
-            }, 20000);
+            mainHandler.postDelayed(() -> giveUp(ctx, load, loader, self[0], id), 20000);
         } catch (Throwable t) {
             ModuleLog.error("(IE|HighlightTray) Could not download the highlight: " + t);
+            if (self[0] == null) highlightFailed(ctx);
+            else giveUp(ctx, load, loader, self[0], id);
         }
+    }
+
+    private static void giveUp(Context ctx, TrayRowHandler.Load load, Object loader, Object cb, String id) {
+        if (!load.cancel(cb)) return;
+        unregister(loader, cb, id);
+        highlightFailed(ctx);
+    }
+
+    private static void unregister(Object loader, Object cb, String id) {
+        try {
+            if (loaderUnregister != null) loaderUnregister.invoke(loader, cb, id);
+        } catch (Throwable ignored) {}
     }
 
     // ── Story cache: capture each VIEWED story (per-page bind, fires for every story shown) ──
@@ -507,10 +566,18 @@ public class StoryDownloadHook {
             }
         };
         try {
+            List<Method> binds = DexKitCache.loadMethods(CAPTURE, cl);
+            if (binds == null) {
+                binds = new ArrayList<>();
+                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                        .usingStrings("ReelViewerFragment.onCurrentActiveItemBound")))) {
+                    try { binds.add(md.getMethodInstance(cl)); } catch (Throwable ignored) {}
+                }
+                DexKitCache.saveMethods(CAPTURE, binds);
+            }
             int n = 0;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                    .usingStrings("ReelViewerFragment.onCurrentActiveItemBound")))) {
-                try { XposedBridge.hookMethod(md.getMethodInstance(cl), capture); n++; } catch (Throwable ignored) {}
+            for (Method bind : binds) {
+                try { XposedBridge.hookMethod(bind, capture); n++; } catch (Throwable ignored) {}
             }
             if (n > 0) FeatureStatusTracker.setHooked("CacheStories");
             if (n > 0) ModuleLog.ok("(IE|StoryCache) ready");
@@ -593,38 +660,16 @@ public class StoryDownloadHook {
     }
 
     private void installHighlightButtonInjectorHook(DexKitBridge bridge, ClassLoader loader) {
-        // The native Highlight sheet iterates two alternative ArrayList builders. Only one
-        // carries the semantic anchor; discover its paired builder through that sheet's
-        // call graph. Both must belong to the same exact ReelItem owner as the dispatcher.
         try {
-            Class<?> itemType = loader.loadClass("com.instagram.model.reels.ReelItem");
-            List<MethodData> anchors = new ArrayList<>();
-            for (MethodData data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
-                    .returnType("java.util.ArrayList").usingStrings("story_highlight_action_sheet")))) {
-                if (StoryMenuOptions.isOwnedListBuilder(data.getMethodInstance(loader), itemType)) {
-                    anchors.add(data);
-                }
+            List<Method> builders = DexKitCache.loadMethods(HIGHLIGHT_MENU, loader);
+            if (builders == null) {
+                builders = highlightMenuBuilders(bridge, loader);
+                DexKitCache.saveMethods(HIGHLIGHT_MENU, builders);
             }
-            if (anchors.size() != 1) {
+            if (builders.isEmpty()) {
                 ModuleLog.warn("(IE|Story) Download is not available in the highlight menu in this Instagram version; stories still have it");
-                ModuleLog.detail("(IE|Story) Highlight menu anchor unavailable or ambiguous (" + anchors.size() + " matches)");
                 return;
             }
-            MethodData anchor = anchors.get(0);
-            String ownerName = anchor.getDeclaredClassName();
-            Set<Method> builders = new LinkedHashSet<>();
-            for (MethodData caller : DexKitQueryCache.callers(bridge, anchor)) {
-                if (!ownerName.equals(caller.getDeclaredClassName())
-                        || !"void".equals(caller.getReturnTypeName())) continue;
-                for (MethodData invoked : caller.getInvokes()) {
-                    if (!ownerName.equals(invoked.getDeclaredClassName())
-                            || !"java.util.ArrayList".equals(invoked.getReturnTypeName())) continue;
-                    Method method = invoked.getMethodInstance(loader);
-                    if (StoryMenuOptions.isOwnedListBuilder(method, itemType)) builders.add(method);
-                }
-            }
-            // No independent/global menu injection when the native sheet cannot be identified.
-            if (!builders.contains(anchor.getMethodInstance(loader))) return;
             XC_MethodHook injector = menuButtonInjector();
             int hooked = 0;
             for (Method builder : builders) {
@@ -636,6 +681,35 @@ public class StoryDownloadHook {
             ModuleLog.warn("(IE|Story) Download is not available in the highlight menu; stories still have it: "
                     + error.getClass().getSimpleName() + ": " + error.getMessage());
         }
+    }
+
+    private static List<Method> highlightMenuBuilders(DexKitBridge bridge, ClassLoader loader) throws ReflectiveOperationException {
+        Class<?> itemType = loader.loadClass("com.instagram.model.reels.ReelItem");
+        List<MethodData> anchors = new ArrayList<>();
+        for (MethodData data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                .returnType("java.util.ArrayList").usingStrings("story_highlight_action_sheet")))) {
+            if (StoryMenuOptions.isOwnedListBuilder(data.getMethodInstance(loader), itemType)) anchors.add(data);
+        }
+        List<Method> out = new ArrayList<>();
+        if (anchors.size() != 1) {
+            ModuleLog.detail("(IE|Story) Highlight menu anchor unavailable or ambiguous (" + anchors.size() + " matches)");
+            return out;
+        }
+        MethodData anchor = anchors.get(0);
+        String ownerName = anchor.getDeclaredClassName();
+        Set<Method> builders = new LinkedHashSet<>();
+        for (MethodData caller : DexKitQueryCache.callers(bridge, anchor)) {
+            if (!ownerName.equals(caller.getDeclaredClassName())
+                    || !"void".equals(caller.getReturnTypeName())) continue;
+            for (MethodData invoked : caller.getInvokes()) {
+                if (!ownerName.equals(invoked.getDeclaredClassName())
+                        || !"java.util.ArrayList".equals(invoked.getReturnTypeName())) continue;
+                Method method = invoked.getMethodInstance(loader);
+                if (StoryMenuOptions.isOwnedListBuilder(method, itemType)) builders.add(method);
+            }
+        }
+        if (builders.contains(anchor.getMethodInstance(loader))) out.addAll(builders);
+        return out;
     }
 
     /** The original Story selectors, restricted to the already resolved selected Media. */
@@ -660,75 +734,6 @@ public class StoryDownloadHook {
     }
 
     // ── URL extraction ────────────────────────────────────────────────────────
-
-    /** {@code direct}: holder IS the ReelItem (don't look for a nested ReelItem field). */
-    private static StoryMediaOptions extractStoryMediaOptions(Context ctx, Object holder, boolean direct) {
-        if (holder == null) return null;
-        try {
-            Object reelItem = direct ? holder : readFieldByTypeName(holder, "com.instagram.model.reels.ReelItem");
-            ModuleLog.probe("(IE|Story) reelItem=" +
-                    (reelItem != null ? reelItem.getClass().getName() : "null"));
-
-            Object target = reelItem != null ? reelItem : holder;
-            Object mediaObject = findMediaObject(target);
-            // Every walk below stays inside the item's own Media when there is one: the
-            // ReelItem's other Media field (A08) is the feed post a story ring was opened from.
-            Object modelTarget = mediaObject != null ? mediaObject : target;
-
-            // Use the same source-aware extractor as feed/reels first. It understands
-            // Pando video_versions getters whose URLs no longer expose a video-looking path.
-            String videoUrl = FeedVideoDownloadHook.bestVideoUrlFromMedia(modelTarget);
-
-            // MediaExtKt knows the canonical image_versions2 URL and avoids choosing a
-            // smaller music-sticker/album-art image when a Media object is available.
-            String imageUrl = mediaObject != null
-                    ? FeedVideoDownloadHook.imageUrlFromMedia(ctx, mediaObject) : null;
-            if (imageUrl != null && FeedVideoDownloadHook.isVideoUrl(imageUrl)) {
-                imageUrl = null;
-            }
-
-            // Walk the graph looking for image Candidate objects when the canonical
-            // Media helper is unavailable.
-            // A Candidate has a CDN URL string field + at least two int fields with
-            // plausible pixel dimensions. Field names are obfuscated so we match by type
-            // and value range. Pick the candidate with the largest width×height area.
-            if (imageUrl == null) {
-                List<CandidateInfo> candidates = new ArrayList<>();
-                collectImageCandidates(modelTarget, candidates,
-                        Collections.newSetFromMap(new IdentityHashMap<>()), 0);
-                ModuleLog.probe("(IE|Story) imageCandidates=" + candidates.size());
-                if (!candidates.isEmpty()) {
-                    candidates.sort((a, b) -> Integer.compare(b.area, a.area));
-                    imageUrl = candidates.get(0).url;
-                    ModuleLog.probe("(IE|Story) bestCandidate area=" + candidates.get(0).area);
-                }
-            }
-
-            // Last resort: split a raw CDN scan into image and video candidates. This
-            // never silently labels an image cover as a video (the issue #204 failure).
-            List<String> cdnUrls = new ArrayList<>();
-            scanCdnUrls(modelTarget, cdnUrls, 0, Collections.newSetFromMap(new IdentityHashMap<>()));
-            List<String> imageUrls = new ArrayList<>();
-            for (String candidate : cdnUrls) {
-                if (FeedVideoDownloadHook.isVideoUrl(candidate)) {
-                    if (videoUrl == null) {
-                        videoUrl = candidate;
-                        FeedVideoDownloadHook.rememberVideoUrl(candidate);
-                    }
-                } else {
-                    imageUrls.add(candidate);
-                }
-            }
-            if (imageUrl == null && !imageUrls.isEmpty()) imageUrl = pickBestUrl(imageUrls);
-
-            if (imageUrl == null && videoUrl == null) return null;
-            return new StoryMediaOptions(imageUrl, videoUrl);
-
-        } catch (Throwable t) {
-            ModuleLog.warn("(IE|Story) Could not read one story item: " + t);
-        }
-        return null;
-    }
 
     private static volatile boolean loggedMediaProbe;
 
@@ -1103,21 +1108,6 @@ public class StoryDownloadHook {
         } catch (Throwable t) {
             ModuleLog.detail("(IE|Story|Username) username lookup failed: " + t);
         }
-        return null;
-    }
-
-    /** Extracts the short media ID from the ReelItem held by the holder (first segment of getId()). */
-    private static String extractMediaIdFromReelItemHolder(Object holder) {
-        if (holder == null) return null;
-        try {
-            Object reelItem = readFieldByTypeName(holder, "com.instagram.model.reels.ReelItem");
-            if (reelItem == null && holder.getClass().getName().equals("com.instagram.model.reels.ReelItem")) {
-                reelItem = holder;
-            }
-            if (reelItem == null) return null;
-            Object id = reelItem.getClass().getMethod("getId").invoke(reelItem);
-            if (id instanceof String s && !s.isEmpty()) return s.split("_")[0];
-        } catch (Throwable ignored) {}
         return null;
     }
 }

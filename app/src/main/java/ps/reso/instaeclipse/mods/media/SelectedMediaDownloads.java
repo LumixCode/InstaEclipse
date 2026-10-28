@@ -11,6 +11,8 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.CountDownLatch;
@@ -369,11 +371,19 @@ public final class SelectedMediaDownloads {
         if (batch != null && batch.delegated()) batchDone(ctx, batch);
     }
 
+    static BatchTally batch(int total, int done, int failed) {
+        BatchTally batch = new BatchTally(total);
+        SUMMARIES.put(batch, new int[]{done, failed});
+        return batch;
+    }
+
     private static void batchDone(Context ctx, BatchTally batch) {
         int total = batch.total();
+        int saved = batch.savedCount();
+        int[] summary = SUMMARIES.remove(batch);
         try {
-            toast(ctx, I18n.moduleResources(ctx).getQuantityString(R.plurals.ie_download_batch_done, total,
-                    batch.savedCount(), total));
+            if (summary != null) toast(ctx, saved == 0 ? I18n.t(ctx, summary[1]) : I18n.t(ctx, summary[0], saved, total));
+            else toast(ctx, I18n.moduleResources(ctx).getQuantityString(R.plurals.ie_download_batch_done, total, saved, total));
         } catch (Throwable error) {
             ModuleLog.warn("(IE|Download) The batch summary could not be shown: " + error.getClass().getSimpleName());
         }
@@ -419,6 +429,7 @@ public final class SelectedMediaDownloads {
     /** Downloads run quietly behind a toast at the start and one at the end, as in 0.8.0 (#287). */
     private static final DownloadEngine.Progress NO_PROGRESS = (phase, done, total) -> { };
     private static final Runnable NOTHING = () -> { };
+    private static final Map<BatchTally, int[]> SUMMARIES = Collections.synchronizedMap(new WeakHashMap<>());
 
     static DownloadRequest allowFallback(DownloadRequest original, DownloadEngine.Failure failure) {
         return DownloadEngine.fallback(original, failure);

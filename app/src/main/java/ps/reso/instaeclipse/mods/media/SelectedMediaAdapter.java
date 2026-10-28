@@ -213,6 +213,12 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
         return item == null ? null : adapter.reelItemMedia.invoke(item);
     }
 
+    static Object storyItemMedia(Object item) throws Exception {
+        SelectedMediaAdapter adapter = installed;
+        if (adapter == null || adapter.reelItemMedia == null || !adapter.reelItemClass.isInstance(item)) return null;
+        return adapter.reelItemMedia.invoke(item);
+    }
+
     static Object ownedStoryItem(Method dispatcher, Object receiver, Object[] args, Class<?> itemType) {
         if (dispatcher == null || args == null || itemType == null) return null;
         Class<?> ownerType = dispatcher.getDeclaringClass();
