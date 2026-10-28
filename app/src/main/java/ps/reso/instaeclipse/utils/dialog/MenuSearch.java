@@ -32,18 +32,28 @@ public final class MenuSearch {
     public static final Set<String> SHOWN_IN_INSTAGRAM = set("downloadFolder", "profilePhoto");
     public static final Set<String> OPEN_ON_PAGE = set("isExtremeMode", "customThemeEnabled");
     public static final Set<String> LIVE_TEXT = set("reelUsage", "nightReelStatus", "autoClearCacheSizeMb");
+    private static final String DARK_ONLY = "themePresetId";
+    private static final String LIGHT_ONLY = "themeLightPresetId";
     private static final Set<String> OFF_WITHOUT_REELS = set("dailyReelLimitEnabled", "dailyReelLimitAllowDM",
             "nightReelBlockEnabled", "nightReelBlockAllowDM");
 
     private MenuSearch() {}
 
     public static List<Group> find(String query, IntFunction<String> text) {
+        return find(query, text, MenuSearch::shown);
+    }
+
+    public static List<Group> find(String query, IntFunction<String> text, boolean night) {
+        return find(query, text, item -> shownAt(item, night));
+    }
+
+    private static List<Group> find(String query, IntFunction<String> text, Predicate<FeatureCatalog.Item> shown) {
         List<Group> out = new ArrayList<>();
         if (SearchText.fold(query == null ? "" : query.trim()).isEmpty()) return out;
         for (FeatureCatalog.Category category : FeatureCatalog.CATEGORIES) {
             List<FeatureCatalog.Item> hits = new ArrayList<>();
             for (FeatureCatalog.Item item : category.items()) {
-                if (shown(item) && FeatureCatalog.matches(item, category, query, text)) hits.add(item);
+                if (shown.test(item) && FeatureCatalog.matches(item, category, query, text)) hits.add(item);
             }
             if (!hits.isEmpty()) out.add(new Group(category, hits));
         }
@@ -59,6 +69,12 @@ public final class MenuSearch {
     public static boolean shown(FeatureCatalog.Item item) {
         if (item.kind == FeatureCatalog.Kind.MASTER) return false;
         return item.side != FeatureCatalog.Side.COMPANION_ONLY || SHOWN_IN_INSTAGRAM.contains(item.key);
+    }
+
+    public static boolean shownAt(FeatureCatalog.Item item, boolean night) {
+        if (DARK_ONLY.equals(item.key)) return night;
+        if (LIGHT_ONLY.equals(item.key)) return !night;
+        return shown(item);
     }
 
     public static Action action(FeatureCatalog.Item item) {

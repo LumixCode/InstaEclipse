@@ -222,7 +222,8 @@ public class DialogUtils {
             }
             menu.setVisibility(View.GONE);
             results.setVisibility(View.VISIBLE);
-            java.util.List<MenuSearch.Group> groups = MenuSearch.find(raw, id -> I18n.t(context, id));
+            java.util.List<MenuSearch.Group> groups = MenuSearch.find(raw, id -> I18n.t(context, id),
+                    ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine.isNightNow());
             if (groups.isEmpty()) results.addView(noResults(context));
             for (MenuSearch.Group group : groups) {
                 results.addView(IeRows.sectionHeader(context, I18n.t(context, group.category.title)));
