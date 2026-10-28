@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.misc;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -18,6 +16,7 @@ import ps.reso.instaeclipse.utils.core.HookTargetGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Extends "Disable double-tap to like" ({@link DisableDoubleTapLikeHook}: feed and reels) to
@@ -66,14 +65,14 @@ public class DoubleTapExtrasHook {
         }
     };
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         List<Method> comments = cached("Extras_DoubleTapComments_v2", cl, () -> {
             Set<Method> out = new LinkedHashSet<>();
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .name("onDoubleTap").returnType("boolean").usingStrings("fb_comment_double_tap")))) {
                 out.add(md.getMethodInstance(cl));
             }
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .name("onDoubleTap").returnType("boolean").usingEqStrings("like_comment")))) {
                 out.add(md.getMethodInstance(cl));
             }
@@ -83,10 +82,10 @@ public class DoubleTapExtrasHook {
 
         List<Method> direct = cached("Extras_DoubleTapDirect_v2", cl, () -> {
             List<Method> out = new ArrayList<>();
-            for (MethodData getter : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found getter : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .returnType("java.lang.String").paramTypes("com.instagram.common.session.UserSession", "int")
                     .usingStrings("❤")))) {
-                for (MethodData caller : DoubleTapCache.senders(DexKitQueryCache.callers(bridge, getter),
+                for (Found caller : DoubleTapCache.senders(DexKitQueryCache.callers(getter),
                         c -> c.isMethod() && "void".equals(c.getReturnTypeName()), c -> mergedLambda(c, cl))) {
                     out.add(caller.getMethodInstance(cl));
                 }
@@ -97,7 +96,7 @@ public class DoubleTapExtrasHook {
 
         List<Method> composeDirect = cached("Extras_DoubleTapDirectCompose", cl, () -> {
             List<Method> out = new ArrayList<>();
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .returnType("void").usingStrings("double_tap", "should_show_like_direct_message_count")))) {
                 if (md.isMethod()) out.add(md.getMethodInstance(cl));
             }
@@ -135,9 +134,9 @@ public class DoubleTapExtrasHook {
         return found;
     }
 
-    private static boolean mergedLambda(MethodData method, ClassLoader cl) {
+    private static boolean mergedLambda(Found method, ClassLoader cl) {
         try {
-            return HookTargetGuard.isMergedLambda(cl.loadClass(method.getClassName()), method.getOpCodes());
+            return HookTargetGuard.isMergedLambda(cl.loadClass(method.getClassName()), method.data().getOpCodes());
         } catch (Throwable t) {
             return false;
         }

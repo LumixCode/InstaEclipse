@@ -18,11 +18,8 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
-import org.luckypray.dexkit.result.MethodDataList;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -41,6 +38,7 @@ import java.util.WeakHashMap;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -117,13 +115,13 @@ public final class ProfileCountDeltaHook {
     private static boolean loading; // main thread
     private static final Set<View> hosts = Collections.newSetFromMap(new WeakHashMap<>()); // main thread
 
-    public void install(DexKitBridge bridge, ClassLoader loader) {
+    public void install(ClassLoader loader) {
         try {
             userId = Class.forName(SESSION, false, loader).getMethod("getUserId");
             List<Method> methods = cached(loader);
             if (methods == null) {
-                MethodData step = single(bridge, "bindUserMetrics");
-                MethodData helper = single(bridge, "UserMetricsBinderHelper.shrinkVanityMetrics");
+                Found step = single("bindUserMetrics");
+                Found helper = single("UserMetricsBinderHelper.shrinkVanityMetrics");
                 methods = List.of(step.getMethodInstance(loader), helper.getMethodInstance(loader));
                 resolveMetrics(step, methods.get(0), loader);
                 save(methods);
@@ -182,8 +180,8 @@ public final class ProfileCountDeltaHook {
         DexKitCache.saveString(STATE_KEY, stateArg + " " + metrics.getName());
     }
 
-    private static MethodData single(DexKitBridge bridge, String trace) {
-        MethodDataList found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+    private static Found single(String trace) {
+        List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingEqStrings(List.of(trace)).returnType(void.class)));
         if (found.size() != 1 || !found.get(0).isMethod())
             throw new IllegalStateException("'" + trace + "' matched " + found.size() + " methods");
@@ -192,10 +190,10 @@ public final class ProfileCountDeltaHook {
 
     /** The metrics: the one class with three Integer fields the step reads (posts, followers,
      *  following); its only String field is the profile id. Then the step argument holding it. */
-    private static void resolveMetrics(MethodData step, Method stepMethod, ClassLoader loader) throws Exception {
+    private static void resolveMetrics(Found step, Method stepMethod, ClassLoader loader) throws Exception {
         if (!Modifier.isStatic(stepMethod.getModifiers())) throw new IllegalStateException("metrics step is not static");
         Map<Class<?>, Set<Field>> integers = new LinkedHashMap<>();
-        for (var usage : step.getUsingFields()) {
+        for (var usage : step.data().getUsingFields()) {
             if (!"java.lang.Integer".equals(usage.getField().getTypeName())) continue;
             Field field = usage.getField().getFieldInstance(loader);
             if (Modifier.isStatic(field.getModifiers())) continue;

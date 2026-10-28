@@ -142,7 +142,7 @@ public class StoryDownloadHook {
     }
 
     private static void installMenuRows(ClassLoader classLoader) {
-        if (!StoryMenu.install(ps.reso.instaeclipse.utils.core.ModuleBridge.get(), classLoader)) {
+        if (!StoryMenu.install(classLoader)) {
             ModuleLog.error("(IE|Story) Download will not appear in the story menu: the menu was not found in this Instagram version");
             if (FeatureFlags.enableStoryDownload) FeatureStatusTracker.setBroken("StoryDownload");
             return;
@@ -631,10 +631,10 @@ public class StoryDownloadHook {
      * for other people's stories (A0t) no longer contains the anchor string itself; taking all
      * CharSequence[] methods of the anchor's declaring class(es) catches it again.
      */
-    public static java.util.Set<Method> storyOptionBuilders(List<MethodData> anchorMethods, ClassLoader classLoader) {
+    public static java.util.Set<Method> storyOptionBuilders(List<Found> anchorMethods, ClassLoader classLoader) {
         java.util.Set<Method> out = new java.util.LinkedHashSet<>();
         java.util.Set<Class<?>> owners = new java.util.LinkedHashSet<>();
-        for (MethodData md : anchorMethods) {
+        for (Found md : anchorMethods) {
             try {
                 Method m = md.getMethodInstance(classLoader);
                 owners.add(m.getDeclaringClass());

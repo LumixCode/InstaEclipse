@@ -6,10 +6,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -25,6 +23,7 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -66,16 +65,16 @@ public final class FollowStatusHook {
     /** Boolean fields still null when the parser starts on "followed_by" (learning only) */
     private static final ThreadLocal<List<Field>> unset = new ThreadLocal<>();
 
-    public void install(DexKitBridge bridge, ClassLoader loader) {
+    public void install(ClassLoader loader) {
         try {
-            Method parseField = resolve(bridge, loader, "FollowToast_parseField_v1", MethodMatcher.create()
+            Method parseField = resolve(loader, "FollowToast_parseField_v1", MethodMatcher.create()
                     .paramCount(3).returnType(void.class)
                     .usingStrings(FOLLOWED_BY, "outgoing_request", "incoming_request"));
             Class<?>[] params = parseField.getParameterTypes();
             if (!Modifier.isStatic(parseField.getModifiers()) || params[2] != String.class || params[1].isPrimitive())
                 throw new IllegalStateException("Friendship field parser has an unexpected shape");
             Class<?> status = params[1];
-            Method apply = resolve(bridge, loader, "FollowToast_apply_v1", MethodMatcher.create()
+            Method apply = resolve(loader, "FollowToast_apply_v1", MethodMatcher.create()
                     .paramTypes(status.getName(), USER, String.class.getName()).returnType(void.class));
             followedBy = cachedField(status);
             if (followedBy == null) learnField(parseField, status);
@@ -139,11 +138,11 @@ public final class FollowStatusHook {
         showFollowToast(userId, UserUtils.callUsernameGetter(user), value);
     }
 
-    private static Method resolve(DexKitBridge bridge, ClassLoader loader, String key,
+    private static Method resolve(ClassLoader loader, String key,
                                   MethodMatcher matcher) throws Exception {
         Method method = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(key, loader) : null;
         if (method == null) {
-            List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(matcher));
+            List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(matcher));
             if (found.size() != 1) throw new IllegalStateException(key + " matched " + found.size() + " methods");
             method = found.get(0).getMethodInstance(loader);
             DexKitCache.saveMethod(key, method);

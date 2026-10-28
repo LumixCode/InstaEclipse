@@ -17,10 +17,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -52,6 +50,7 @@ import ps.reso.instaeclipse.utils.ui.IePalette;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Search inside the comments sheet (#230).
@@ -97,10 +96,10 @@ public class CommentSearchHook {
     /** ids / tracking tokens (long, no spaces, base64-ish) are never the comment text */
     private static final java.util.regex.Pattern TOKEN = java.util.regex.Pattern.compile("[A-Za-z0-9+/=_-]{32,}");
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         try {
             Class<?> vm = null;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("select_comment_screen_pin_comment_tap")))) {
                 vm = cl.loadClass(md.getClassName());
                 break;
@@ -131,14 +130,14 @@ public class CommentSearchHook {
                 builders++;
             }
             try {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("parent_comment_id", "child_comment_count").returnType("void").paramCount(2)))) {
                     Method m = md.getMethodInstance(cl);
                     if (Modifier.isStatic(m.getModifiers())) { commentSerializer = m; break; }
                 }
                 if (commentSerializer != null) {
                     Class<?> gen = commentSerializer.getParameterTypes()[0];
-                    for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                    for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                             .paramTypes("java.io.Writer").returnType(gen.getName())))) {
                         Method m = md.getMethodInstance(cl);
                         if (Modifier.isStatic(m.getModifiers())) continue;
@@ -155,7 +154,7 @@ public class CommentSearchHook {
             try {
                 // The sort selector row's model takes the sort-order enum, whose int field is the label.
                 // Both sort-row queries are cached: no full-dex scan on later starts.
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingEqStrings("sort_order_selector_row")))) {
                     Class<?> model = cl.loadClass(md.getClassName());
                     for (java.lang.reflect.Constructor<?> c : model.getDeclaredConstructors())
@@ -169,7 +168,7 @@ public class CommentSearchHook {
             try {
                 // The sort row's composable: the moment it composes, look for it on screen.
                 int selectors = 0;
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("CommentSortOrderSelector.kt")))) {
                     Method m = md.getMethodInstance(cl);
                     if (!Modifier.isStatic(m.getModifiers()) || m.getReturnType() != void.class) continue;
@@ -186,7 +185,7 @@ public class CommentSearchHook {
                 ModuleLog.detail(TAG + "sort row composable: " + t);
             }
             int frags = 0;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("Failed to ingest comments close signal")))) {
                 Class<?> frag = cl.loadClass(md.getClassName());
                 try {

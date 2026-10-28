@@ -12,12 +12,10 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.enums.StringMatchType;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
@@ -38,6 +36,7 @@ import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.HookFrames;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -85,9 +84,9 @@ public class CaptionCopyHook {
     private static final ArrayDeque<String> recentReelCaptions = new ArrayDeque<>();
     private static final int RECENT_REEL_CAPTIONS = 16;
 
-    public void install(DexKitBridge bridge, ClassLoader loader) {
-        resolveCaptionGetter(bridge, loader);
-        resolveCaptionText(bridge, loader);
+    public void install(ClassLoader loader) {
+        resolveCaptionGetter(loader);
+        resolveCaptionText(loader);
         if (captionText == null) {
             if (FeatureFlags.enableCaptionCopy) FeatureStatusTracker.setBroken("CaptionCopy", R.string.ig_dialog_misc_copy_caption);
             return;
@@ -114,7 +113,7 @@ public class CaptionCopyHook {
         ModuleLog.line("(IE|Caption) " + (hooked > 0 ? "✅ Ready"
                 : "❌ Could not turn on hold to copy captions: caption views are not supported in this Instagram version"));
         ModuleLog.detail("(IE|Caption) hold-to-copy on " + hooked + " caption view type(s)");
-        markBuiltCaptions(bridge, loader);
+        markBuiltCaptions(loader);
     }
 
     // ── Caption text → post ──────────────────────────────────────────────────
@@ -151,11 +150,11 @@ public class CaptionCopyHook {
      * on 451) returns: the collapsed, expanded and short forms all come from its methods that take
      * the caption config, which reaches the Media in two hops (08jO -> 05Af -> Media).
      */
-    private static void markBuiltCaptions(DexKitBridge bridge, ClassLoader loader) {
+    private static void markBuiltCaptions(ClassLoader loader) {
         try {
             Method builder = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("CaptionCopy_builder", loader) : null;
             if (builder == null) {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings(" [...]").paramCount(7)))) {
                     Method m = md.getMethodInstance(loader);
                     if (Modifier.isStatic(m.getModifiers()) && m.getReturnType() != void.class) { builder = m; break; }
@@ -245,7 +244,7 @@ public class CaptionCopyHook {
 
     // ── Caption text ─────────────────────────────────────────────────────────
 
-    private static void resolveCaptionGetter(DexKitBridge bridge, ClassLoader classLoader) {
+    private static void resolveCaptionGetter(ClassLoader classLoader) {
         if (DexKitCache.isCacheValid()) {
             Method cached = DexKitCache.loadMethod("CaptionGetter", classLoader);
             if (cached != null) {
@@ -255,12 +254,12 @@ public class CaptionCopyHook {
         }
 
         try {
-            List<MethodData> results = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> results = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .declaredClass(MEDIA)
                             .paramCount(0)
                             .usingEqStrings(List.of("caption"))));
-            for (MethodData md : results) {
+            for (Found md : results) {
                 if (md.getName().equals("<clinit>")) continue;
                 try {
                     Method m = md.getMethodInstance(classLoader);
@@ -279,13 +278,13 @@ public class CaptionCopyHook {
         }
     }
 
-    private static void resolveCaptionText(DexKitBridge bridge, ClassLoader classLoader) {
+    private static void resolveCaptionText(ClassLoader classLoader) {
         if (captionGetter == null) return;
         Class<?> captionType = captionGetter.getReturnType();
         try {
             Method impl = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("CaptionText", classLoader) : null;
             if (impl == null) {
-                List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(ClassMatcher.create()
                                 .addInterface(captionType.getName(), StringMatchType.Equals, false))
                         .usingNumbers("text".hashCode()).paramCount(0).returnType(String.class)));

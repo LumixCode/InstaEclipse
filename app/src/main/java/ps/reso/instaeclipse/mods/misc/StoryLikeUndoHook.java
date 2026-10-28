@@ -4,7 +4,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.widget.ImageView;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
@@ -21,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -89,14 +89,14 @@ public class StoryLikeUndoHook {
         }
     }
 
-    public void install(DexKitBridge bridge) {
+    public void install() {
         ClassLoader loader = Module.hostClassLoader;
         List<Method> found = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(CACHE_KEY, loader) : null;
         try {
             mediaClass = Class.forName(MEDIA, false, loader);
             mediaId = mediaClass.getMethod("getId");
             if (found == null || found.size() != 3) {
-                found = find(bridge, loader);
+                found = find(loader);
                 DexKitCache.saveMethods(CACHE_KEY, found);
             }
         } catch (Throwable t) {
@@ -117,12 +117,12 @@ public class StoryLikeUndoHook {
     }
 
     /** The repository's like call, the store's liked check and the like button's bind, in that order. */
-    private static List<Method> find(DexKitBridge bridge, ClassLoader loader) throws Throwable {
+    private static List<Method> find(ClassLoader loader) throws Throwable {
         // StoryLikeRepository.performStoryLike: the repository's like call is what builds it.
-        MethodData perform = only(DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        Found perform = only(DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .name("invokeSuspend").usingStrings("on_story_like_success", "transient_retry_queued"))), "story like coroutine");
         Method like = null;
-        for (MethodData init : perform.getDeclaredClass().getMethods()) {
+        for (MethodData init : perform.data().getDeclaredClass().getMethods()) {
             if (!init.isConstructor()) continue;
             for (MethodData caller : DexKitQueryCache.callersUncached(init)) {
                 if (!caller.isMethod() || caller.getClassName().equals(perform.getClassName())) continue;
@@ -134,10 +134,10 @@ public class StoryLikeUndoHook {
         }
         if (like == null) throw new IllegalStateException("story like call not found");
         // The pending-story-likes store's "is this story liked" check.
-        MethodData check = only(DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        Found check = only(DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("send_story_like").returnType("boolean").paramCount(1))), "story liked check");
         // The like button: its name, and its bind (its one (Object)V method).
-        MethodData named = only(DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        Found named = only(DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("StoryLikeButtonViewComponent").returnType("java.lang.String").paramCount(0))), "story like button");
         Method bind = null;
         for (Method m : named.getMethodInstance(loader).getDeclaringClass().getDeclaredMethods()) {
@@ -154,9 +154,9 @@ public class StoryLikeUndoHook {
         return methods;
     }
 
-    private static MethodData only(List<MethodData> found, String what) {
-        List<MethodData> methods = new ArrayList<>();
-        for (MethodData md : found) if (md.isMethod()) methods.add(md);
+    private static Found only(List<Found> found, String what) {
+        List<Found> methods = new ArrayList<>();
+        for (Found md : found) if (md.isMethod()) methods.add(md);
         if (methods.size() != 1) throw new IllegalStateException(what + ": " + methods.size() + " candidates");
         return methods.get(0);
     }

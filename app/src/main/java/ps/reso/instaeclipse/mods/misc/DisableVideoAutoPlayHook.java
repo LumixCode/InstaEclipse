@@ -5,10 +5,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -21,11 +19,12 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class DisableVideoAutoPlayHook {
     private static volatile boolean sOverlayLifecycleHooked = false;
 
-    public void handleAutoPlayDisable(DexKitBridge bridge) {
+    public void handleAutoPlayDisable() {
         if (FeatureFlags.disableVideoAutoPlay) hookManualPlayOverlayLifecycle();
         if (DexKitCache.isCacheValid()) {
             Method cached = DexKitCache.loadMethod("AutoPlayDisable", Module.hostClassLoader);
@@ -37,16 +36,16 @@ public class DisableVideoAutoPlayHook {
             }
         }
         try {
-            findAndHookDynamicMethod(bridge);
+            findAndHookDynamicMethod();
         } catch (Exception e) {
             ModuleLog.error("(InstaEclipse | AutoPlayDisable): Could not turn on disable autoplay: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
-    private void findAndHookDynamicMethod(DexKitBridge bridge) {
+    private void findAndHookDynamicMethod() {
         try {
             // Step 1: Find methods referencing "ig_disable_video_autoplay"
-            List<MethodData> methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> methods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .usingStrings("ig_disable_video_autoplay")
                     )
@@ -58,9 +57,9 @@ public class DisableVideoAutoPlayHook {
             }
 
             // Step 2: Find the correct method: boolean return type, 1 parameter
-            for (MethodData method : methods) {
-                boolean returnTypeMatch = String.valueOf(method.getReturnType()).contains("boolean");
-                boolean paramTypesMatch = method.getParamTypes().size() == 1;
+            for (Found method : methods) {
+                boolean returnTypeMatch = method.getReturnTypeName().contains("boolean");
+                boolean paramTypesMatch = method.getParamCount() == 1;
 
                 if (returnTypeMatch && paramTypesMatch) {
                     hookMethod(method);
@@ -75,7 +74,7 @@ public class DisableVideoAutoPlayHook {
         }
     }
 
-    private void hookMethod(MethodData method) {
+    private void hookMethod(Found method) {
         try {
             Method targetMethod = method.getMethodInstance(Module.hostClassLoader);
             DexKitCache.saveMethod("AutoPlayDisable", targetMethod);

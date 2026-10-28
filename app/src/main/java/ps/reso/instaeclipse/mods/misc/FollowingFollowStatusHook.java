@@ -9,7 +9,6 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 
@@ -52,11 +51,11 @@ public final class FollowingFollowStatusHook {
     /** {@code context} is Instagram's: the row's subtitle id is looked up here so a renamed
      *  resource marks the feature broken instead of leaving it "attached" with no labels. */
     @SuppressLint("DiscouragedApi")
-    public void install(android.content.Context context, DexKitBridge bridge, ClassLoader loader) {
+    public void install(android.content.Context context, ClassLoader loader) {
         try {
             subtitleResId = subtitleId(context);
             if (subtitleResId == 0) throw new android.content.res.Resources.NotFoundException(SUBTITLE_ID);
-            Method binder = resolve(bridge, loader, "FollowingRowBind_v1", MethodMatcher.create()
+            Method binder = resolve(loader, "FollowingRowBind_v1", MethodMatcher.create()
                     .usingStrings("FollowListFragment.ShouldShowUnfollow", "least_interacted_with_followers")
                     .paramCount(19).returnType(void.class));
             Class<?>[] parameters = binder.getParameterTypes();
@@ -65,18 +64,18 @@ public final class FollowingFollowStatusHook {
                 throw new IllegalStateException("Following row signature changed");
             }
             Field listData = uniqueField(parameters[10], LIST_DATA);
-            Field owner = listOwner(bridge, parameters[10], listData.getType());
+            Field owner = listOwner(parameters[10], listData.getType());
             Field listType = uniqueField(listData.getType(), parameters[4].getName());
             List<Field> texts = textFields(parameters[9]);
             Method viewerId = parameters[3].getMethod("getUserId");
-            Method userId = userIdGetter(bridge, loader, parameters[6]);
-            Method directFollowedBy = resolve(bridge, loader, "FollowingUserFollowedBy_v1", MethodMatcher.create()
+            Method userId = userIdGetter(loader, parameters[6]);
+            Method directFollowedBy = resolve(loader, "FollowingUserFollowedBy_v1", MethodMatcher.create()
                     .declaredClass(USER).usingStrings("followed_by").paramCount(0).returnType(Boolean.class));
-            Method friendship = resolve(bridge, loader, "FollowingUserFriendship_v1", MethodMatcher.create()
+            Method friendship = resolve(loader, "FollowingUserFriendship_v1", MethodMatcher.create()
                     .declaredClass(USER).usingStrings("friendship_status").paramCount(0).returnType(RELATIONSHIP));
             Class<?> relationship = Class.forName(RELATIONSHIP, false, loader);
-            Method followedBy = relationshipGetter(bridge, loader, relationship, "followed_by");
-            Method following = relationshipGetter(bridge, loader, relationship, "following");
+            Method followedBy = relationshipGetter(loader, relationship, "followed_by");
+            Method following = relationshipGetter(loader, relationship, "following");
 
             XposedBridge.hookMethod(binder, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
@@ -139,12 +138,12 @@ public final class FollowingFollowStatusHook {
     }
 
     /** User.getId() is gone after 446; toString() still delegates to the same id accessor on 446 and 451. */
-    private static Method userIdGetter(DexKitBridge bridge, ClassLoader loader, Class<?> user) throws Exception {
+    private static Method userIdGetter(ClassLoader loader, Class<?> user) throws Exception {
         String key = "FollowingUserId_v1";
         Method cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(key, loader) : null;
         if (cached != null) return cached;
         Set<Method> getters = new HashSet<>();
-        for (var call : bridge.getMethodData(user.getDeclaredMethod("toString")).getInvokes()) {
+        for (var call : DexKitQueryCache.methodData(user.getDeclaredMethod("toString")).getInvokes()) {
             if (call.isMethod() && call.getClassName().equals(user.getName()) && call.getParamTypeNames().isEmpty()
                     && call.getReturnTypeName().equals(String.class.getName())) getters.add(call.getMethodInstance(loader));
         }
@@ -156,13 +155,13 @@ public final class FollowingFollowStatusHook {
     }
 
     /** The list parameters decide "this is my list" in their constructor from exactly this FollowListData id. */
-    private static Field listOwner(DexKitBridge bridge, Class<?> parameters, Class<?> data) throws Exception {
+    private static Field listOwner(Class<?> parameters, Class<?> data) throws Exception {
         String key = "FollowingListOwner_v1";
         String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(key) : null;
         if (cached != null) return field(data, cached, String.class);
         Set<String> names = new HashSet<>();
         for (Constructor<?> constructor : parameters.getDeclaredConstructors()) {
-            for (var usage : bridge.getMethodData(constructor).getUsingFields()) {
+            for (var usage : DexKitQueryCache.methodData(constructor).getUsingFields()) {
                 var field = usage.getField();
                 if (usage.getUsingType().isRead() && field.getClassName().equals(data.getName())
                         && field.getTypeName().equals(String.class.getName())) names.add(field.getFieldName());
@@ -208,19 +207,19 @@ public final class FollowingFollowStatusHook {
         return null;
     }
 
-    private static Method relationshipGetter(DexKitBridge bridge, ClassLoader loader, Class<?> type,
+    private static Method relationshipGetter(ClassLoader loader, Class<?> type,
                                               String property) throws Exception {
-        Method implementation = resolve(bridge, loader, "FollowingRelationship_" + property + "_v1",
+        Method implementation = resolve(loader, "FollowingRelationship_" + property + "_v1",
                 MethodMatcher.create().declaredClass(PANDO_RELATIONSHIP)
                         .usingNumbers(property.hashCode()).paramCount(0).returnType(Boolean.class));
         return type.getMethod(implementation.getName());
     }
 
-    private static Method resolve(DexKitBridge bridge, ClassLoader loader, String key,
+    private static Method resolve(ClassLoader loader, String key,
                                   MethodMatcher matcher) throws Exception {
         Method cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(key, loader) : null;
         if (cached != null) return cached;
-        var matches = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(matcher));
+        var matches = DexKitQueryCache.methods(FindMethod.create().matcher(matcher));
         if (matches.size() != 1) throw new IllegalStateException(key + " matched " + matches.size() + " methods");
         Method method = matches.get(0).getMethodInstance(loader);
         method.setAccessible(true);

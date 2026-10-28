@@ -5,13 +5,11 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.text.format.DateFormat;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.enums.StringMatchType;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.ClassData;
 import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
@@ -27,6 +25,8 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 import ps.reso.instaeclipse.utils.core.HookFrames;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -46,27 +46,27 @@ public final class ExactTimestampHook {
     private final ExactTimestampScope composeStoryScope = new ExactTimestampScope();
     private boolean reportedFormatFailure;
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
+    public void install(ClassLoader classLoader) {
         try {
             List<Method> methods = DexKitCache.isCacheValid()
                     ? DexKitCache.loadMethods(CACHE_KEY, classLoader) : null;
             if (methods == null || methods.isEmpty()) {
-                methods = discover(bridge, classLoader);
+                methods = discover(classLoader);
                 DexKitCache.saveMethods(CACHE_KEY, methods);
             }
             if (methods.isEmpty()) throw new IllegalStateException("Absolute date formatter not found");
-            installContentScopes(bridge, classLoader, methods);
+            installContentScopes(classLoader, methods);
             for (Method method : methods) installFormatter(method);
             // The content formatters are already live, so neither optional surface may mark the
             // whole feature broken or stop the other from installing.
             try {
-                installDmTime(bridge, classLoader);
+                installDmTime(classLoader);
             } catch (Throwable error) {
                 ModuleLog.warn("(ExactTimestamps) Exact times in chats are not available in this Instagram version; other dates still work");
                 ModuleLog.detail("(ExactTimestamps) DM seconds unavailable: " + error);
             }
             try {
-                installComposeStoryLayout(bridge, classLoader);
+                installComposeStoryLayout(classLoader);
             } catch (Throwable error) {
                 ModuleLog.warn("(ExactTimestamps) Long dates in stories may be cut off: the story date layout was not found in this Instagram version");
                 ModuleLog.detail("(ExactTimestamps) Story layout adjustment unavailable: " + error);
@@ -80,7 +80,7 @@ public final class ExactTimestampHook {
         }
     }
 
-    private void installContentScopes(DexKitBridge bridge, ClassLoader loader, List<Method> formatters)
+    private void installContentScopes(ClassLoader loader, List<Method> formatters)
             throws Exception {
         List<Method> entries = DexKitCache.isCacheValid()
                 ? DexKitCache.loadMethods(CONTENT_SCOPE_CACHE, loader) : null;
@@ -88,7 +88,7 @@ public final class ExactTimestampHook {
             if (knownAbsent(CONTENT_SCOPE_CACHE)) throw new IllegalStateException("Content timestamp scopes missing");
             Map<String, Method> found = new LinkedHashMap<>();
             for (Method formatter : formatters) {
-                for (MethodData caller : DexKitQueryCache.callersUncached(bridge.getMethodData(formatter))) {
+                for (MethodData caller : DexKitQueryCache.callersUncached(DexKitQueryCache.methodData(formatter))) {
                     if (ExactTimestampScope.isContentCaller(caller.getClassName(),
                             caller.getParamTypeNames(), caller.getUsingStrings())) {
                         found.put(caller.getDescriptor(), caller.getMethodInstance(loader));
@@ -126,15 +126,15 @@ public final class ExactTimestampHook {
         });
     }
 
-    private void installDmTime(DexKitBridge bridge, ClassLoader loader) throws Exception {
+    private void installDmTime(ClassLoader loader) throws Exception {
         Method formatter = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(DM_TIME_CACHE, loader) : null;
         List<Method> scopes = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(DM_SCOPE_CACHE, loader) : null;
         if (formatter == null || scopes == null || scopes.isEmpty()) {
             if (knownAbsent(DM_TIME_CACHE)) throw new IllegalStateException("DM metadata time formatter missing");
             Map<String, MethodData> candidates = new LinkedHashMap<>();
-            for (MethodData builder : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found builder : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings(DM_METADATA_ANCHOR)))) {
-                for (MethodData call : builder.getInvokes()) {
+                for (MethodData call : builder.data().getInvokes()) {
                     if (signature(call, "android.content.Context", "com.instagram.common.session.UserSession", "long")) {
                         candidates.put(call.getDescriptor(), call);
                     }
@@ -179,21 +179,21 @@ public final class ExactTimestampHook {
         });
     }
 
-    private void installComposeStoryLayout(DexKitBridge bridge, ClassLoader loader) throws Exception {
+    private void installComposeStoryLayout(ClassLoader loader) throws Exception {
         List<Method> methods = DexKitCache.isCacheValid()
                 ? DexKitCache.loadMethods(COMPOSE_STORY_CACHE, loader) : null;
         if (methods == null || methods.size() != 2) {
             if (knownAbsent(COMPOSE_STORY_CACHE)) throw new IllegalStateException("Compose story timestamp entry missing");
             // Compose source markers carry a line number that moves between versions (446
             // Timestamp.kt:12, 451 :13), so match the file prefix; the shape check stays exact.
-            List<MethodData> entries = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            List<Found> entries = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .returnType("void").addUsingString(
                             "instagram.features.stories.mvvm.feature.header.compose.Timestamp (Timestamp.kt:",
                             StringMatchType.StartsWith)));
             if (entries.size() != 1) throw absent(COMPOSE_STORY_CACHE, "Compose story timestamp entry missing");
-            MethodData entry = entries.get(0);
+            Found entry = entries.get(0);
             MethodData text = null;
-            for (MethodData call : entry.getInvokes()) {
+            for (MethodData call : entry.data().getInvokes()) {
                 boolean igText = false;
                 for (String marker : call.getUsingStrings()) {
                     igText |= marker.startsWith("com.instagram.compose.core.ui.IgText (IgText.kt:");
@@ -231,11 +231,11 @@ public final class ExactTimestampHook {
         return new IllegalStateException(message);
     }
 
-    private static List<Method> discover(DexKitBridge bridge, ClassLoader classLoader) throws Exception {
+    private static List<Method> discover(ClassLoader classLoader) throws Exception {
         MethodData storyFormatter = null;
         MethodData relativeCore, dateCore;
         try {
-            storyFormatter = storyDateFormatter(bridge);
+            storyFormatter = storyDateFormatter();
             relativeCore = onlyStringDelegate(storyFormatter, storyFormatter.getClassName());
             dateCore = onlyStringDelegate(relativeCore, storyFormatter.getClassName());
         } catch (IllegalStateException entryChanged) {
@@ -244,7 +244,7 @@ public final class ExactTimestampHook {
             ModuleLog.detail("(ExactTimestamps) Story entry unusable (" + entryChanged.getMessage()
                     + "), using the date utility anchor");
             storyFormatter = null;
-            MethodData[] cores = anchoredCores(bridge, classLoader);
+            MethodData[] cores = anchoredCores(classLoader);
             relativeCore = cores[0];
             dateCore = cores[1];
         }
@@ -255,9 +255,9 @@ public final class ExactTimestampHook {
         // obfuscated name. The utility also contains elapsed-time and future-countdown helpers;
         // those have different signatures and must retain their original behavior.
         Map<String, Method> methods = new LinkedHashMap<>();
-        List<MethodData> candidates = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+        List<Found> candidates = DexKitQueryCache.methods(FindMethod.create()
                 .matcher(MethodMatcher.create().declaredClass(owner).returnType("java.lang.String")));
-        for (MethodData candidate : candidates) {
+        for (Found candidate : candidates) {
             List<String> types = candidate.getParamTypeNames();
             boolean simpleAbsolute = (types.size() == 2 || (types.size() == 3
                     && types.get(2).equals("boolean")))
@@ -281,14 +281,14 @@ public final class ExactTimestampHook {
         return new ArrayList<>(methods.values());
     }
 
-    private static MethodData storyDateFormatter(DexKitBridge bridge) {
-        List<MethodData> storyMethods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+    private static MethodData storyDateFormatter() {
+        List<Found> storyMethods = DexKitQueryCache.methods(FindMethod.create()
                 .matcher(MethodMatcher.create().declaredClass(STORY_ITEM)
                         .returnType("java.lang.String").paramTypes("android.content.Context")));
         if (storyMethods.size() != 1) throw new IllegalStateException("Ambiguous story timestamp entry");
 
         MethodData storyFormatter = null;
-        for (MethodData call : storyMethods.get(0).getInvokes()) {
+        for (MethodData call : storyMethods.get(0).data().getInvokes()) {
             if (signature(call, "android.content.res.Resources", "double")) {
                 if (storyFormatter != null) throw new IllegalStateException("Ambiguous date utility");
                 storyFormatter = call;
@@ -304,9 +304,9 @@ public final class ExactTimestampHook {
      * taking the utility itself and a single time, so countdown helpers (no utility parameter) and
      * the date core (two times) are never picked.
      */
-    private static MethodData[] anchoredCores(DexKitBridge bridge, ClassLoader loader) throws Exception {
+    private static MethodData[] anchoredCores(ClassLoader loader) throws Exception {
         Method core = null;
-        for (ClassData utility : DexKitQueryCache.findClass(bridge, FindClass.create().matcher(ClassMatcher.create()
+        for (FoundClass utility : DexKitQueryCache.classes(FindClass.create().matcher(ClassMatcher.create()
                 .usingStrings("%d:%02d:%02d", "MMMM d", "MMM d")))) {
             Method found = findFormatter(utility.getInstance(loader));
             if (found == null) continue;
@@ -314,10 +314,10 @@ public final class ExactTimestampHook {
             core = found;
         }
         if (core == null) throw new IllegalStateException("Date utility anchor missing");
-        MethodData dateCore = bridge.getMethodData(core);
+        MethodData dateCore = DexKitQueryCache.methodData(core);
         String owner = dateCore.getClassName();
         MethodData relativeCore = null;
-        for (MethodData candidate : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (Found candidate : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .declaredClass(owner).returnType("java.lang.String")))) {
             List<String> types = candidate.getParamTypeNames();
             if (types.size() != 6 || !types.get(0).equals("android.content.res.Resources")
@@ -325,7 +325,7 @@ public final class ExactTimestampHook {
                     || !types.get(4).equals("double") || !types.get(5).equals("boolean")
                     || !invokes(candidate, dateCore)) continue;
             if (relativeCore != null) throw new IllegalStateException("Ambiguous relative date core");
-            relativeCore = candidate;
+            relativeCore = candidate.data();
         }
         if (relativeCore == null) throw new IllegalStateException("Relative date core missing");
         return new MethodData[]{relativeCore, dateCore};
@@ -363,8 +363,8 @@ public final class ExactTimestampHook {
                 && method.getParamTypeNames().equals(java.util.Arrays.asList(parameters));
     }
 
-    private static boolean invokes(MethodData source, MethodData target) {
-        for (MethodData call : source.getInvokes()) {
+    private static boolean invokes(Found source, MethodData target) {
+        for (MethodData call : source.data().getInvokes()) {
             if (call.getDescriptor().equals(target.getDescriptor())) return true;
         }
         return false;

@@ -16,7 +16,6 @@ import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.widget.ImageView;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
@@ -40,6 +39,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
 import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -210,34 +210,34 @@ final class LikeHeartTint {
     }
 
     /** Hooks the like buttons' renders and the components they draw the heart with. */
-    static void install(DexKitBridge bridge) {
+    static void install() {
         try {
             ClassLoader loader = Module.hostClassLoader;
             mediaId = Class.forName("com.instagram.feed.media.Media", false, loader).getMethod("getId");
             List<Method> renders = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(CACHE_KEY, loader) : null;
             if (renders == null) {
-                renders = likeRenders(bridge, loader);
+                renders = likeRenders(loader);
                 DexKitCache.saveMethods(CACHE_KEY, renders);
             }
             if (renders.isEmpty()) {
                 ModuleLog.warn(TAG + "The heart will not turn blue while a like is held: like buttons not found in this Instagram version");
             } else {
-                installRenders(bridge, loader, renders);
+                installRenders(loader, renders);
             }
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "The heart will not turn blue while a like is held (undo still works)", t);
         }
-        installCompose(bridge);
+        installCompose();
     }
 
-    private static void installRenders(DexKitBridge bridge, ClassLoader loader, List<Method> renders) throws Throwable {
+    private static void installRenders(ClassLoader loader, List<Method> renders) throws Throwable {
         List<Constructor<?>> animated = DexKitCache.isCacheValid() ? DexKitCache.loadConstructors(ANIMATED_KEY, loader) : null;
         List<Constructor<?>> images = DexKitCache.isCacheValid() ? DexKitCache.loadConstructors(IMAGES_KEY, loader) : null;
         List<Constructor<?>> iconMakers = DexKitCache.isCacheValid() ? DexKitCache.loadConstructors(ICONS_KEY, loader) : null;
         if (animated == null || images == null || iconMakers == null) {
             Set<Constructor<?>> foundAnimated = new LinkedHashSet<>(), foundImages = new LinkedHashSet<>(), foundIcons = new LinkedHashSet<>();
             for (Method render : renders) {
-                MethodData data = bridge.getMethodData(render);
+                MethodData data = DexKitQueryCache.methodData(render);
                 if (data == null) continue;
                 for (MethodData call : data.getInvokes()) {
                     if (!call.isConstructor()) continue;
@@ -256,7 +256,7 @@ final class LikeHeartTint {
             DexKitCache.saveConstructors(IMAGES_KEY, images);
             DexKitCache.saveConstructors(ICONS_KEY, iconMakers);
         }
-        if (!animated.isEmpty()) filled = filledField(bridge, loader, animated.get(0).getParameterTypes()[1]);
+        if (!animated.isEmpty()) filled = filledField(loader, animated.get(0).getParameterTypes()[1]);
 
         int hooked = 0;
         for (Method render : renders) {
@@ -343,20 +343,20 @@ final class LikeHeartTint {
                 + ", images " + names(images) + ", icons " + names(iconMakers));
     }
 
-    private static Field filledField(DexKitBridge bridge, ClassLoader loader, Class<?> heart) throws Throwable {
+    private static Field filledField(ClassLoader loader, Class<?> heart) throws Throwable {
         if (DexKitCache.isCacheValid()) {
             Field cached = DexKitCache.loadField(FILLED_KEY, loader);
             if (cached != null) return cached;
             if (AbsentMarker.knownAbsent(true, DexKitCache.loadString(AbsentMarker.key(FILLED_KEY)))) return null;
         }
-        Field layer = filledLayer(bridge, heart);
+        Field layer = filledLayer(heart);
         if (layer != null) DexKitCache.saveField(FILLED_KEY, layer);
         else DexKitCache.saveString(AbsentMarker.key(FILLED_KEY), AbsentMarker.ABSENT);
         return layer;
     }
 
     /** Hooks the feed's Compose like row: the composable, and the icon spec it builds the heart with. */
-    private static void installCompose(DexKitBridge bridge) {
+    private static void installCompose() {
         try {
             ClassLoader loader = Module.hostClassLoader;
             Method row = null;
@@ -375,14 +375,14 @@ final class LikeHeartTint {
                 row = null;
                 spec = null;
                 colorAt = -1;
-                MethodData ufi = null;
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                Found ufi = null;
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("row.ufi.ui.Ufi (MediaUfiComposeBinder.kt:")))) {
                     if (md.isMethod()) { ufi = md; break; }
                 }
                 if (ufi != null) {
                     row = ufi.getMethodInstance(loader);
-                    for (MethodData call : ufi.getInvokes()) {
+                    for (MethodData call : ufi.data().getInvokes()) {
                         if (!call.isConstructor()) continue;
                         Constructor<?> c = call.getConstructorInstance(loader);
                         Class<?>[] p = c.getParameterTypes();
@@ -527,12 +527,12 @@ final class LikeHeartTint {
     }
 
     /** The like buttons' renders: every caller of the animated heart the reels button builds. */
-    private static List<Method> likeRenders(DexKitBridge bridge, ClassLoader loader) throws NoSuchMethodException {
+    private static List<Method> likeRenders(ClassLoader loader) throws NoSuchMethodException {
         List<Method> renders = new ArrayList<>();
-        for (MethodData reels : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (Found reels : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("clips_ufi_like_button_component").paramCount(1)))) {
             if (!reels.isMethod()) continue;
-            for (MethodData call : reels.getInvokes()) {
+            for (MethodData call : reels.data().getInvokes()) {
                 if (!call.isConstructor() || !animatedHeart(call.getConstructorInstance(loader))) continue;
                 for (MethodData caller : DexKitQueryCache.callersUncached(call)) {
                     if (caller.isMethod()) renders.add(caller.getMethodInstance(loader));
@@ -570,13 +570,13 @@ final class LikeHeartTint {
      * The animated heart's filled layer: of its two Drawable fields, the one its size does not come
      * from (the outline sets the size and is always drawn; the filled heart fades in over it).
      */
-    private static Field filledLayer(DexKitBridge bridge, Class<?> heart) throws Throwable {
+    private static Field filledLayer(Class<?> heart) throws Throwable {
         List<Field> drawables = new ArrayList<>();
         for (Field f : heart.getDeclaredFields()) {
             if (!Modifier.isStatic(f.getModifiers()) && f.getType() == Drawable.class) drawables.add(f);
         }
         if (drawables.size() != 2) return null;
-        MethodData size = bridge.getMethodData(heart.getDeclaredMethod("getIntrinsicWidth"));
+        MethodData size = DexKitQueryCache.methodData(heart.getDeclaredMethod("getIntrinsicWidth"));
         if (size == null) return null;
         Field outline = null;
         for (var use : size.getUsingFields()) {

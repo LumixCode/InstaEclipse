@@ -8,10 +8,8 @@ import android.os.Looper;
 import android.util.TypedValue;
 import android.widget.TextView;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -27,6 +25,7 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.text.CopyFeedback;
 
 public class StoryMentionHook {
@@ -36,9 +35,9 @@ public class StoryMentionHook {
 
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
-        resolveMentionPipeline(bridge, classLoader);
-        boolean menu = StoryMenu.install(bridge, classLoader);
+    public void install(ClassLoader classLoader) {
+        resolveMentionPipeline(classLoader);
+        boolean menu = StoryMenu.install(classLoader);
         if (!menu || rawMentionsGetter == null || mentionsConverter == null) {
             if (!menu) ModuleLog.error("(IE|Mention) Could not turn on story mentions: the story menu was not found in this Instagram version");
             if (FeatureFlags.enableStoryMentions) FeatureStatusTracker.setBroken("StoryMentions");
@@ -76,7 +75,7 @@ public class StoryMentionHook {
 
     // ── DexKit: resolve the two-step mention pipeline ────────────────────────
 
-    private static void resolveMentionPipeline(DexKitBridge bridge, ClassLoader classLoader) {
+    private static void resolveMentionPipeline(ClassLoader classLoader) {
         if (DexKitCache.isCacheValid()) {
             Method g = DexKitCache.loadMethod("MentionsRawGetter", classLoader);
             Method c = DexKitCache.loadMethod("MentionsConverter", classLoader);
@@ -89,12 +88,12 @@ public class StoryMentionHook {
         }
 
         try {
-            List<MethodData> getters = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> getters = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .declaredClass("com.instagram.feed.media.Media")
                             .paramCount(0)
                             .usingEqStrings(List.of("reel_mentions"))));
-            for (MethodData md : getters) {
+            for (Found md : getters) {
                 if (md.getName().equals("<clinit>")) continue;
                 try {
                     Method m = md.getMethodInstance(classLoader);
@@ -111,11 +110,11 @@ public class StoryMentionHook {
         }
 
         try {
-            List<MethodData> converters = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> converters = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .paramCount(1)
                             .usingEqStrings(List.of("MentionTappableObject.user is null; dropping mention sticker"))));
-            for (MethodData md : converters) {
+            for (Found md : converters) {
                 try {
                     Method m = md.getMethodInstance(classLoader);
                     if (!List.class.isAssignableFrom(m.getReturnType())) continue;

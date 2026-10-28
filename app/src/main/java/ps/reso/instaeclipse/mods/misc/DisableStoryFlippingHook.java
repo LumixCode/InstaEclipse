@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.misc;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -16,6 +14,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class DisableStoryFlippingHook {
 
@@ -29,7 +28,7 @@ public class DisableStoryFlippingHook {
         }
     };
 
-    public void handleStoryFlippingDisable(DexKitBridge bridge) {
+    public void handleStoryFlippingDisable() {
         if (DexKitCache.isCacheValid()) {
             Method cached = DexKitCache.loadMethod("StoryFlipping", Module.hostClassLoader);
             if (cached != null) {
@@ -42,20 +41,20 @@ public class DisableStoryFlippingHook {
         }
         boolean hooked = false;
         try {
-            hooked = findAndHookMethod(bridge);
+            hooked = findAndHookMethod();
         } catch (Exception e) {
             ModuleLog.error("(InstaEclipse | StoryFlipping): Could not turn on disable story flipping: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
         if (!hooked && FeatureFlags.disableStoryFlipping) FeatureStatusTracker.setBroken("DisableStoryFlipping");
     }
 
-    private boolean findAndHookMethod(DexKitBridge bridge) {
-        List<MethodData> methods = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+    private boolean findAndHookMethod() {
+        List<Found> methods = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .declaredClass(REEL_VIEWER)
                 .returnType("void")
                 .usingEqStrings("end_scene")));
-        MethodData target = null;
-        for (MethodData method : methods) {
+        Found target = null;
+        for (Found method : methods) {
             List<String> params = method.getParamTypeNames();
             if (params.size() != 1) continue;
             if (params.get(0).equals(REEL_ITEM)) {

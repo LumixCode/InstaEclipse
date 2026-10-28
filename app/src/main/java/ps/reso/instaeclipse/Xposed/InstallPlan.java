@@ -482,7 +482,7 @@ public class InstallPlan {
                 new TrackingLinkDisable().disableTrackingLinks(ctx.loader);
                 return;
             case EXACT_TIMESTAMP_HOOK:
-                new ExactTimestampHook().install(ctx.bridge, ctx.loader);
+                new ExactTimestampHook().install(ctx.loader);
                 return;
             case EXPAND_CAPTIONS_HOOK:
                 new ExpandCaptionsHook().install(ctx.bridge);
@@ -524,19 +524,19 @@ public class InstallPlan {
                 new FollowingOnlyFeedHook().install(ctx.bridge, ctx.loader);
                 return;
             case PROFILE_FOLLOW_STATUS_HOOK:
-                new ProfileFollowStatusHook().install(ctx.bridge, ctx.loader);
+                new ProfileFollowStatusHook().install(ctx.loader);
                 return;
             case PROFILE_FOLLOWS_YOU_HOOK:
                 new ProfileFollowsYouHook().install(ctx.bridge, ctx.loader);
                 return;
             case PROFILE_COUNT_DELTA_HOOK:
-                new ProfileCountDeltaHook().install(ctx.bridge, ctx.loader);
+                new ProfileCountDeltaHook().install(ctx.loader);
                 return;
             case FOLLOW_STATUS_HOOK:
-                new FollowStatusHook().install(ctx.bridge, ctx.loader);
+                new FollowStatusHook().install(ctx.loader);
                 return;
             case FOLLOWING_FOLLOW_STATUS_HOOK:
-                new FollowingFollowStatusHook().install(ctx.context, ctx.bridge, ctx.loader);
+                new FollowingFollowStatusHook().install(ctx.context, ctx.loader);
                 return;
             case PLAYBACK_SPEED_HOOK:
                 new PlaybackSpeedHook().install(ctx.loader);
@@ -563,25 +563,25 @@ public class InstallPlan {
                 new StoryViewerSearchHook().install(ctx.bridge, ctx.loader);
                 return;
             case UNLOCK_PLUS_BENEFITS_HOOK:
-                new UnlockPlusBenefitsHook().install(ctx.bridge, ctx.loader);
+                new UnlockPlusBenefitsHook().install(ctx.loader);
                 return;
             case COMMENT_SEARCH_HOOK:
-                new CommentSearchHook().install(ctx.bridge, ctx.loader);
+                new CommentSearchHook().install(ctx.loader);
                 return;
             case CHAT_EXPORT_HOOK:
                 new ChatExportHook().install(ctx.loader);
                 return;
             case FOLLOW_LIST_EXPORT_HOOK:
-                new FollowListExportHook().install(ctx.bridge, ctx.loader);
+                new FollowListExportHook().install(ctx.loader);
                 return;
             case LIKE_UNDO_HOOK:
-                new LikeUndoHook().install(ctx.bridge);
+                new LikeUndoHook().install();
                 return;
             case STORY_LIKE_UNDO_HOOK:
-                new StoryLikeUndoHook().install(ctx.bridge);
+                new StoryLikeUndoHook().install();
                 return;
             case FOLLOW_CONFIRM_HOOK:
-                new FollowConfirmHook().install(ctx.bridge);
+                new FollowConfirmHook().install();
                 return;
             case PROFILE_MENU_HOOK:
                 new ProfileMenuHook().install(ctx.bridge, ctx.loader);
@@ -602,19 +602,19 @@ public class InstallPlan {
                 new ExternalBrowserHook().install();
                 return;
             case OPEN_LINKS_EXTERNALLY_HOOK:
-                new OpenLinksExternallyHook().install(ctx.bridge, ctx.loader);
+                new OpenLinksExternallyHook().install(ctx.loader);
                 return;
             case DISABLE_STORY_FLIPPING_HOOK:
-                new DisableStoryFlippingHook().handleStoryFlippingDisable(ctx.bridge);
+                new DisableStoryFlippingHook().handleStoryFlippingDisable();
                 return;
             case STORY_MENTION_HOOK:
-                new StoryMentionHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new StoryMentionHook().install(ctx.lpparam.classLoader);
                 return;
             case STORY_LINKS_HOOK:
-                new StoryLinksHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new StoryLinksHook().install(ctx.lpparam.classLoader);
                 return;
             case STORY_INFO_HOOK:
-                new StoryInfoHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new StoryInfoHook().install(ctx.lpparam.classLoader);
                 return;
             case MANUAL_STORY_SEEN_HOOK:
                 new ManualStorySeenHook().install(ctx.lpparam.classLoader);
@@ -623,13 +623,13 @@ public class InstallPlan {
                 new CommentCopyHook().install(ctx.lpparam.classLoader);
                 return;
             case CAPTION_COPY_HOOK:
-                new CaptionCopyHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new CaptionCopyHook().install(ctx.lpparam.classLoader);
                 return;
             case DISABLE_DOUBLE_TAP_LIKE_HOOK:
-                new DisableDoubleTapLikeHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new DisableDoubleTapLikeHook().install(ctx.lpparam.classLoader);
                 return;
             case DOUBLE_TAP_EXTRAS_HOOK:
-                new DoubleTapExtrasHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new DoubleTapExtrasHook().install(ctx.lpparam.classLoader);
                 return;
             case FEED_PHOTO_ZOOM_HOOK:
                 new FeedPhotoZoomHook().install(ctx.lpparam.classLoader);
@@ -647,7 +647,7 @@ public class InstallPlan {
                 new MaxUploadQualityHook().install(ctx.lpparam.classLoader);
                 return;
             case DISABLE_VIDEO_AUTO_PLAY_HOOK:
-                new DisableVideoAutoPlayHook().handleAutoPlayDisable(ctx.bridge);
+                new DisableVideoAutoPlayHook().handleAutoPlayDisable();
                 return;
             case BUILD_EXPIRED_POPUP_HOOK:
                 new BuildExpiredPopupHook().install(ctx.bridge, ctx.lpparam.classLoader);

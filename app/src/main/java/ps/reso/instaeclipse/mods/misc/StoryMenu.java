@@ -10,10 +10,8 @@ import android.os.Looper;
 import android.view.View;
 import android.widget.Toast;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
@@ -39,6 +37,7 @@ import ps.reso.instaeclipse.mods.media.StoryDownloadHook;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -112,7 +111,7 @@ public final class StoryMenu {
 
     private StoryMenu() {}
 
-    public static synchronized boolean install(DexKitBridge bridge, ClassLoader classLoader) {
+    public static synchronized boolean install(ClassLoader classLoader) {
         if (installed != null) return installed;
         installed = false;
         try {
@@ -120,7 +119,7 @@ public final class StoryMenu {
             List<Method> d = b == null || b.isEmpty() ? null : DexKitCache.loadMethods(DISPATCHERS, classLoader);
             boolean searched = b == null || b.isEmpty() || d == null || d.isEmpty();
             if (searched) {
-                b = new ArrayList<>(StoryDownloadHook.storyOptionBuilders(DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                b = new ArrayList<>(StoryDownloadHook.storyOptionBuilders(DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create().usingStrings(ANCHOR))), classLoader));
                 b.sort(BY_NAME);
                 d = dispatchersOf(b);
@@ -135,7 +134,7 @@ public final class StoryMenu {
                 return false;
             }
             resolveShape(b);
-            resumes = resumesOf(bridge, classLoader, d, searched);
+            resumes = resumesOf(classLoader, d, searched);
             int rows = hookAll(b, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) { JitGuard.tick(param.method);
@@ -177,12 +176,12 @@ public final class StoryMenu {
         return installed;
     }
 
-    private static List<Method> resumesOf(DexKitBridge bridge, ClassLoader classLoader, List<Method> d, boolean searched) {
+    private static List<Method> resumesOf(ClassLoader classLoader, List<Method> d, boolean searched) {
         List<Method> r = searched || !DexKitCache.isCacheValid() ? null : DexKitCache.loadMethods(RESUMES, classLoader);
         if (r != null) return r;
         List<Method> users = new ArrayList<>();
         try {
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create().usingStrings(StoryMenuRows.RESUME)))) {
                 try {
                     users.add(md.getMethodInstance(classLoader));

@@ -7,10 +7,8 @@ import android.net.Uri;
 import android.util.TypedValue;
 import android.widget.TextView;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -31,6 +29,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.text.CopyFeedback;
 
 /**
@@ -46,10 +45,10 @@ public class StoryLinksHook {
     private static final String[] KEYS = {"story_link_stickers", "story_cta"};
     private static final List<Method> getters = new ArrayList<>();
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
-        resolveGetters(bridge, classLoader);
+    public void install(ClassLoader classLoader) {
+        resolveGetters(classLoader);
         if (getters.isEmpty()) ModuleLog.error("(IE|StoryLinks) Could not turn on story links: link stickers were not found in this Instagram version");
-        boolean menu = StoryMenu.install(bridge, classLoader);
+        boolean menu = StoryMenu.install(classLoader);
         if (!menu) ModuleLog.error("(IE|StoryLinks) Could not turn on story links: the story menu was not found in this Instagram version");
         if (!menu || getters.isEmpty()) {
             if (FeatureFlags.storyLinks) FeatureStatusTracker.setBroken("StoryLinks");
@@ -88,7 +87,7 @@ public class StoryLinksHook {
 
     // ── DexKit ────────────────────────────────────────────────────────────────
 
-    private static void resolveGetters(DexKitBridge bridge, ClassLoader classLoader) {
+    private static void resolveGetters(ClassLoader classLoader) {
         if (DexKitCache.isCacheValid()) {
             List<Method> cached = DexKitCache.loadMethods("StoryLinkGetters", classLoader);
             if (cached != null && !cached.isEmpty()) {
@@ -99,12 +98,12 @@ public class StoryLinksHook {
         }
         for (String key : KEYS) {
             try {
-                List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                List<Found> found = DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create()
                                 .declaredClass("com.instagram.feed.media.Media")
                                 .paramCount(0)
                                 .usingEqStrings(List.of(key))));
-                for (MethodData md : found) {
+                for (Found md : found) {
                     if (md.getName().equals("<clinit>")) continue;
                     Method m = md.getMethodInstance(classLoader);
                     if (!List.class.isAssignableFrom(m.getReturnType())) continue;

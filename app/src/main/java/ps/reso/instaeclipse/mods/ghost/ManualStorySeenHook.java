@@ -36,7 +36,6 @@ import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.HookFrames;
-import ps.reso.instaeclipse.utils.core.ModuleBridge;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
@@ -101,7 +100,7 @@ public final class ManualStorySeenHook {
                     + ": " + t.getClass().getSimpleName());
         }
         try {
-            if (!StoryMenu.install(ModuleBridge.get(), loader)) throw new NoSuchMethodException("Story options menu");
+            if (!StoryMenu.install(loader)) throw new NoSuchMethodException("Story options menu");
             StoryMenu.register(MENU_ORDER, new SeenRow());
             if (receiptPipelineReady) FeatureStatusTracker.setHooked("ManualStorySeen");
             else if (enabled()) FeatureStatusTracker.setBroken("ManualStorySeen");

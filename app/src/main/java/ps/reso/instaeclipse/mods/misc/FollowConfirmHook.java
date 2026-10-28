@@ -4,12 +4,10 @@ import android.app.Activity;
 import android.os.Handler;
 import android.os.Looper;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.ClassData;
 import org.luckypray.dexkit.result.MethodData;
 
 import java.io.Serializable;
@@ -27,6 +25,8 @@ import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -75,7 +75,7 @@ public class FollowConfirmHook {
     private static boolean replayingClick;
     private static final String DATA_SOURCE = "com.instagram.user.follow.mvvm.data.FollowUserDataSourceImpl";
 
-    public void install(DexKitBridge bridge) {
+    public void install() {
         boolean cached = DexKitCache.isCacheValid();
         Method sender = null;
         if (cached) {
@@ -85,7 +85,7 @@ public class FollowConfirmHook {
         if (sender == null) {
             try {
                 List<Method> candidates = new ArrayList<>();
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(ClassMatcher.create().usingStrings("follow_unknown", "last_follow_status"))
                         .returnType("void")))) {
                     if (!md.isMethod()) continue;
@@ -125,7 +125,7 @@ public class FollowConfirmHook {
         resetMethod = statusSetter != null && cached ? DexKitCache.loadMethod(RESET_KEY, Module.hostClassLoader) : null;
         if (statusSetter != null && resetMethod == null) {
             try {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(sender.getDeclaringClass().getName()).paramCount(1).returnType("void")
                         .addInvoke(MethodMatcher.create().declaredClass(sender.getDeclaringClass().getName())
                                 .name(statusSetter.getName()).paramCount(3))))) {
@@ -140,13 +140,13 @@ public class FollowConfirmHook {
                 ModuleLog.warn(TAG + "After Cancel, a profile's Follow button may show the wrong state until refreshed: " + t);
             }
         }
-        hookDataSource(bridge, sender.getDeclaringClass());
+        hookDataSource(sender.getDeclaringClass());
         statusGetter = statusSetter != null && cached ? DexKitCache.loadMethod(GETTER_KEY, Module.hostClassLoader) : null;
         if (statusSetter != null && statusGetter == null) {
             try {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(statusSetter.getDeclaringClass().getName()).name(statusSetter.getName()).paramCount(3)))) {
-                    for (MethodData c : md.getInvokes()) {
+                    for (MethodData c : md.data().getInvokes()) {
                         if (!c.isMethod() || !c.getClassName().equals(USER) || c.getParamCount() != 0) continue;
                         Method m = c.getMethodInstance(Module.hostClassLoader);
                         if (m.getReturnType() == statusSetter.getParameterTypes()[0]) { statusGetter = m; break; }
@@ -158,7 +158,7 @@ public class FollowConfirmHook {
             }
         }
         hookProfileButton();
-        if (statusSetter != null) resolveStatusEvent(bridge, statusSetter.getParameterTypes()[0], cached);
+        if (statusSetter != null) resolveStatusEvent(statusSetter.getParameterTypes()[0], cached);
         ModuleLog.ok(TAG + "Ready");
         ModuleLog.detail(TAG + "Hooked " + sender.getDeclaringClass().getName() + "." + sender.getName()
                 + (statusSetter != null ? ", undo " + statusSetter.getName() : ", no undo")
@@ -218,7 +218,7 @@ public class FollowConfirmHook {
     }
 
     /** The profile header's follow: FollowUserDataSourceImpl's suspend method taking the action enum. */
-    private static void hookDataSource(DexKitBridge bridge, Class<?> managerClass) {
+    private static void hookDataSource(Class<?> managerClass) {
         try {
             Class<?> ds = Module.hostClassLoader.loadClass(DATA_SOURCE);
             for (Method m : SafeReflect.methods(ds)) {
@@ -226,7 +226,7 @@ public class FollowConfirmHook {
                 if (Modifier.isStatic(m.getModifiers()) || m.getReturnType() != Object.class || p.length < 5) continue;
                 int ci = FollowConfirmPolicy.continuationIndex(p);
                 if (ci < 0 || !FollowConfirmPolicy.hasEnum(p)) continue;
-                boolean resumes = resolveCoroutine(bridge, p[ci]);
+                boolean resumes = resolveCoroutine(p[ci]);
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -257,7 +257,7 @@ public class FollowConfirmHook {
         }
     }
 
-    private static boolean resolveCoroutine(DexKitBridge bridge, Class<?> continuationType) {
+    private static boolean resolveCoroutine(Class<?> continuationType) {
         ClassLoader loader = Module.hostClassLoader;
         boolean cached = DexKitCache.isCacheValid();
         try {
@@ -268,7 +268,7 @@ public class FollowConfirmHook {
             }
             Constructor<?> failure = cached ? DexKitCache.loadConstructor(FAILURE_KEY, loader) : null;
             if (failure == null) {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .name("toString").usingEqStrings("Failure(")))) {
                     Constructor<?> c = failureConstructor(Class.forName(md.getClassName(), false, loader));
                     if (c == null) continue;
@@ -282,7 +282,7 @@ public class FollowConfirmHook {
             }
             String markerClass = cached ? DexKitCache.loadString(SUSPENDED_KEY) : null;
             if (markerClass == null) {
-                for (ClassData cd : DexKitQueryCache.findClass(bridge, FindClass.create().matcher(ClassMatcher.create()
+                for (FoundClass cd : DexKitQueryCache.classes(FindClass.create().matcher(ClassMatcher.create()
                         .superClass("java.lang.Enum").usingEqStrings(SUSPENDED)))) {
                     if (marker(Class.forName(cd.getName(), false, loader)) == null) continue;
                     markerClass = cd.getName();
@@ -487,7 +487,7 @@ public class FollowConfirmHook {
     private static Constructor<?> statusEvent;
     private static Method busFactory, busPost;
 
-    private static void resolveStatusEvent(DexKitBridge bridge, Class<?> statusType, boolean cached) {
+    private static void resolveStatusEvent(Class<?> statusType, boolean cached) {
         if (cached) {
             Constructor<?> event = DexKitCache.loadConstructor(EVENT_KEY, Module.hostClassLoader);
             Method factory = DexKitCache.loadMethod(BUS_FACTORY_KEY, Module.hostClassLoader);
@@ -500,12 +500,12 @@ public class FollowConfirmHook {
             }
         }
         try {
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .name("<init>").paramTypes(statusType.getName(), "java.lang.String")))) {
                 Class<?> c = Class.forName(md.getClassName(), false, Module.hostClassLoader);
                 if (c.getInterfaces().length != 1 || c.getInterfaces()[0].getDeclaredMethods().length != 0) continue;
                 Class<?> marker = c.getInterfaces()[0];
-                for (MethodData post : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found post : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .paramTypes(marker.getName()).returnType("void")))) {
                     if (!post.isMethod()) continue;
                     Class<?> bus = Class.forName(post.getClassName(), false, Module.hostClassLoader);

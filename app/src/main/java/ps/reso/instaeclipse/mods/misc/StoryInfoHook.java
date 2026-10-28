@@ -10,10 +10,8 @@ import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -40,6 +38,7 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.text.CopyFeedback;
 import ps.reso.instaeclipse.utils.text.TimestampFormat;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 import static ps.reso.instaeclipse.mods.misc.StoryInfoPolicy.find;
 import static ps.reso.instaeclipse.mods.misc.StoryInfoPolicy.num;
@@ -71,10 +70,10 @@ public class StoryInfoHook {
     private static String[] pendingKeys;
     private static ClassLoader pendingLoader;
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
-        boolean resolved = resolveGetters(bridge, classLoader);
+    public void install(ClassLoader classLoader) {
+        boolean resolved = resolveGetters(classLoader);
         if (!resolved) ModuleLog.error("(IE|StoryInfo) Could not turn on story info: the story details were not found in this Instagram version");
-        boolean menu = StoryMenu.install(bridge, classLoader);
+        boolean menu = StoryMenu.install(classLoader);
         if (!menu) ModuleLog.error("(IE|StoryInfo) Could not turn on story info: the story menu was not found in this Instagram version");
         if (!menu || !resolved) {
             if (FeatureFlags.storyInfo) FeatureStatusTracker.setBroken("StoryInfo");
@@ -138,7 +137,7 @@ public class StoryInfoHook {
         if (getters.isEmpty()) ModuleLog.error("(IE|StoryInfo) Could not show the story info: the saved story details no longer match this Instagram version");
     }
 
-    private static synchronized boolean resolveGetters(DexKitBridge bridge, ClassLoader classLoader) {
+    private static synchronized boolean resolveGetters(ClassLoader classLoader) {
         String queried = String.join(",", KEYS);
         if (DexKitCache.isCacheValid() && queried.equals(DexKitCache.loadString("StoryInfoQueried"))) {
             String found = DexKitCache.loadString("StoryInfoKeys");
@@ -151,12 +150,12 @@ public class StoryInfoHook {
         StringBuilder keys = new StringBuilder();
         for (String key : KEYS) {
             try {
-                List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                List<Found> found = DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create()
                                 .declaredClass("com.instagram.feed.media.Media")
                                 .paramCount(0)
                                 .usingEqStrings(List.of(key))));
-                for (MethodData md : found) {
+                for (Found md : found) {
                     if (md.getName().startsWith("<")) continue;
                     Method m = md.getMethodInstance(classLoader);
                     if (m.getReturnType() == void.class || Modifier.isStatic(m.getModifiers())) continue;

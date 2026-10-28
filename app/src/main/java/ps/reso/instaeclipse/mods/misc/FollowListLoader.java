@@ -14,13 +14,10 @@ import android.widget.Adapter;
 import android.widget.HeaderViewListAdapter;
 import android.widget.ProgressBar;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.enums.StringMatchType;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
-import org.luckypray.dexkit.result.MethodDataList;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -43,6 +40,7 @@ import java.util.function.Consumer;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -276,20 +274,20 @@ final class FollowListLoader {
     // ---- install-time resolution ----
 
     /** Finds the pager members on the FollowListFragment class and the User getters. */
-    static boolean resolve(DexKitBridge bridge, ClassLoader cl, Class<?> fragClass) {
+    static boolean resolve(ClassLoader cl, Class<?> fragClass) {
         try {
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass(USER).paramCount(0).returnType("java.lang.String").usingNumbers("full_name".hashCode())))) {
                 fullNameGetter = md.getMethodInstance(cl);
                 break;
             }
             // username: the getter reading "username" (-265713450) but not "full_name" (the display-name getter)
             Set<String> displayName = new HashSet<>();
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass(USER).paramCount(0).returnType("java.lang.String")
                     .usingNumbers("username".hashCode(), "full_name".hashCode()))))
                 displayName.add(md.toString());
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass(USER).paramCount(0).returnType("java.lang.String").usingNumbers("username".hashCode())))) {
                 if (displayName.contains(md.toString())) continue;
                 Method m = md.getMethodInstance(cl);
@@ -297,20 +295,20 @@ final class FollowListLoader {
                 usernameGetter = m;
                 break;
             }
-            followerCountGetter = countGetter(bridge, cl, "follower_count");
-            followingCountGetter = countGetter(bridge, cl, "following_count");
+            followerCountGetter = countGetter(cl, "follower_count");
+            followingCountGetter = countGetter(cl, "following_count");
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "Loaded lists may miss usernames, names and Instagram's counts: " + t);
         }
         try {
-            findPager(bridge, cl, fragClass);
+            findPager(cl, fragClass);
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not load whole lists: the list loader was not found in this Instagram version", t);
         }
         boolean pages = false;
         try {
             listFragClass = fragClass;
-            hookPages(bridge, cl);
+            hookPages(cl);
             pages = true;
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "Lists still load, but a list Instagram limits may not be recognised: " + t);
@@ -327,13 +325,13 @@ final class FollowListLoader {
         }
         boolean builders = false;
         try {
-            hookListBuilders(bridge, cl);
+            hookListBuilders(cl);
             builders = listBuilders.size() == 2;
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "Lists still load, but may come partly from Instagram's cache: " + t);
         }
         try {
-            hookFailures(bridge, cl, fragClass);
+            hookFailures(cl, fragClass);
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "Lists still load, but a block by Instagram while loading may not be recognised: " + t);
         }
@@ -359,8 +357,8 @@ final class FollowListLoader {
 
     /** Hooks Instagram's page handler: the no-arg method using "fetch_suggested_users_optimized" and
      *  "ui_render_start" (451: X.0key.invoke), then finds the page's getters (see the class comment). */
-    private static void hookPages(DexKitBridge bridge, ClassLoader cl) throws Throwable {
-        MethodDataList found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+    private static void hookPages(ClassLoader cl) throws Throwable {
+        List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingEqStrings(List.of("fetch_suggested_users_optimized", "ui_render_start")).paramCount(0)));
         if (found.size() != 1) throw new IllegalStateException("page handler: " + found.size() + " matches");
         Method handler = found.get(0).getMethodInstance(cl);
@@ -374,24 +372,24 @@ final class FollowListLoader {
         if (pageField == null || pageOwnerField == null) throw new IllegalStateException("page handler fields");
         ClassMatcher page = ClassMatcher.create().addInterface(pageField.getType().getName(), StringMatchType.Equals, false);
         // should_limit_list_of_followers: the page implementations' boolean getter loading its hash
-        pageLimited = pageGetter(bridge, MethodMatcher.create().declaredClass(page).paramCount(0).returnType("boolean")
+        pageLimited = pageGetter(MethodMatcher.create().declaredClass(page).paramCount(0).returnType("boolean")
                 .usingNumbers(LIMIT_KEY.hashCode()));
         // the page's accounts: the List getter whose REST implementation returns the response's getItems()
-        pageUsers = pageGetter(bridge, MethodMatcher.create().declaredClass(page).paramCount(0).returnType("java.util.List")
+        pageUsers = pageGetter(MethodMatcher.create().declaredClass(page).paramCount(0).returnType("java.util.List")
                 .addInvoke(MethodMatcher.create().name("getItems")));
-        pageLimitedFollowing = pageGetter(bridge, MethodMatcher.create().declaredClass(page).paramCount(0).returnType("boolean")
+        pageLimitedFollowing = pageGetter(MethodMatcher.create().declaredClass(page).paramCount(0).returnType("boolean")
                 .usingNumbers("should_limit_list_of_followings".hashCode()));
-        pageHiddenFollowing = pageGetter(bridge, MethodMatcher.create().declaredClass(page).paramCount(0).returnType("int")
+        pageHiddenFollowing = pageGetter(MethodMatcher.create().declaredClass(page).paramCount(0).returnType("int")
                 .usingNumbers("hidden_following_account_count".hashCode()));
-        if (pageLimited == null) resolveResponse(bridge, cl);
+        if (pageLimited == null) resolveResponse(cl);
         XposedBridge.hookMethod(handler, PAGE_HOOK);
     }
 
     /** The page interface's method that {@code m} finds in its implementations (one name), or null. */
-    private static Method pageGetter(DexKitBridge bridge, MethodMatcher m) {
+    private static Method pageGetter(MethodMatcher m) {
         try {
             String name = null;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(m))) {
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(m))) {
                 if (name != null && !name.equals(md.getName())) return null;
                 name = md.getName();
             }
@@ -405,8 +403,8 @@ final class FollowListLoader {
         }
     }
 
-    private static void resolveResponse(DexKitBridge bridge, ClassLoader cl) throws Throwable {
-        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+    private static void resolveResponse(ClassLoader cl) throws Throwable {
+        for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .paramCount(0).returnType("java.lang.Boolean").usingNumbers(LIMIT_KEY.hashCode())))) {
             Class<?> model = cl.loadClass(md.getClassName()), type = model;
             for (Class<?> i : model.getInterfaces()) if (declares(i, md.getName())) { type = i; break; }
@@ -637,10 +635,10 @@ final class FollowListLoader {
 
     /** Hooks Instagram's GraphQL follow list request builders (see the class comment) by their root
      *  field, "follow_list_page" and "rank_token" (451: X.0a23.A00 / A01). */
-    private static void hookListBuilders(DexKitBridge bridge, ClassLoader cl) throws Throwable {
+    private static void hookListBuilders(ClassLoader cl) throws Throwable {
         for (String[] k : new String[][]{{FollowListExportHook.FOLLOWERS, "xdt_api__v1__friendships__followers"},
                 {FollowListExportHook.FOLLOWING, "xdt_api__v1__friendships__following"}}) {
-            MethodDataList found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingEqStrings(List.of(k[1], SURFACE, "rank_token")).returnType(PANDO_REQUEST)));
             if (found.size() != 1) {
                 ModuleLog.warn(TAG + (FollowListExportHook.FOLLOWERS.equals(k[0]) ? "Followers" : "Following")
@@ -681,8 +679,8 @@ final class FollowListLoader {
      *  list fragment (X.0fdp.A00), the result's no-arg getters for the server's answer (Object, X.06As.A01)
      *  and the exception (Throwable, .A02), and the error model's getters by the keys they read
      *  (in the classes whose String getter reads checkpoint_url: X.088M Pando, X.088e REST). */
-    private static void hookFailures(DexKitBridge bridge, ClassLoader cl, Class<?> fragClass) throws Throwable {
-        MethodDataList found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+    private static void hookFailures(ClassLoader cl, Class<?> fragClass) throws Throwable {
+        List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingEqStrings(List.of("UserList onRequestFail", "fetch_request_fail")).paramCount(2)));
         if (found.size() != 1) throw new IllegalStateException(found.size() + " matches");
         Method cb = found.get(0).getMethodInstance(cl);
@@ -700,7 +698,7 @@ final class FollowListLoader {
         payload.setAccessible(true);
         error.setAccessible(true);
         Set<String> models = new TreeSet<>();
-        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .paramCount(0).returnType("java.lang.String").usingEqStrings("checkpoint_url"))))
             models.add(md.getClassName());
         List<Class<?>> others = new ArrayList<>();
@@ -716,7 +714,7 @@ final class FollowListLoader {
             MethodMatcher mm = MethodMatcher.create().declaredClass(first).paramCount(0).usingEqStrings(k[0]);
             if (k[1] != null) mm.returnType(k[1]);
             Set<String> names = new HashSet<>();
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(mm))) {
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(mm))) {
                 String rt = md.getReturnTypeName();
                 if (md.getName().equals("toString")
                         || (k[1] == null && (rt.equals("java.lang.String") || rt.equals("boolean") || rt.equals("void")))) continue;
@@ -797,8 +795,8 @@ final class FollowListLoader {
     private static String keyName(String key) { return key == null ? "?" : key.isEmpty() ? "default" : key; }
 
     /** User's Integer getter for {@code field} (451: A6M follower_count, A6N following_count). */
-    private static Method countGetter(DexKitBridge bridge, ClassLoader cl, String field) throws Throwable {
-        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+    private static Method countGetter(ClassLoader cl, String field) throws Throwable {
+        for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .declaredClass(USER).paramCount(0).returnType("java.lang.Integer").usingNumbers(field.hashCode())))) {
             Method m = md.getMethodInstance(cl);
             if (!Modifier.isStatic(m.getModifiers())) return m;
@@ -812,7 +810,7 @@ final class FollowListLoader {
      *  "in flight, or more pages and not failed" (X.0E2b: A02 || (A00 != null && !A01)), and the
      *  follow list never sets the in-flight flag, so isLoading() false while a next max_id is set
      *  means the last page failed. */
-    private static void findPager(DexKitBridge bridge, ClassLoader cl, Class<?> fragClass) throws Throwable {
+    private static void findPager(ClassLoader cl, Class<?> fragClass) throws Throwable {
         for (Class<?> c = fragClass; c != null && pagerField == null; c = c.getSuperclass())
             for (Field f : SafeReflect.fields(c)) {
                 try {
@@ -833,7 +831,7 @@ final class FollowListLoader {
                 } catch (NoSuchMethodException ignored) {}
             }
         if (pagerField == null) return;
-        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .declaredClass(pagerField.getType().getName()).paramCount(0).returnType("void")
                 .addInvoke(MethodMatcher.create().name("getLifecycle"))))) {
             pagerLoadMore = md.getMethodInstance(cl);

@@ -11,7 +11,6 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 
@@ -32,10 +31,10 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 public final class OpenLinksExternallyHook {
     private static final String CACHE_KEY = "OpenLinks_launcher_v1";
 
-    public void install(DexKitBridge bridge, ClassLoader loader) {
+    public void install(ClassLoader loader) {
         int installed = 0;
         try {
-            for (Method method : resolveLaunchers(bridge, loader)) {
+            for (Method method : resolveLaunchers(loader)) {
                 Class<?> owner = method.getDeclaringClass();
                 Field url = uniqueFinalField(owner, String.class);
                 Field context = uniqueFinalField(owner, Context.class);
@@ -81,13 +80,13 @@ public final class OpenLinksExternallyHook {
         }
     }
 
-    private static List<Method> resolveLaunchers(DexKitBridge bridge, ClassLoader loader) throws NoSuchMethodException {
+    private static List<Method> resolveLaunchers(ClassLoader loader) throws NoSuchMethodException {
         List<Method> cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(CACHE_KEY, loader) : null;
         if (cached != null) return cached;
         List<Method> methods = new ArrayList<>();
         // IG 451 moved "TrackingInfo.ARG_MODULE_NAME" into a shared string-pool class; the launcher
         // (446 X.0Pi6.A0G, 451 X.0kfN.A0G) still uses both of these itself.
-        for (var data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (var data : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("Tracking.ARG_CLICK_SOURCE", "in_app_browser_v2")
                 .returnType("boolean")))) {
             methods.add(data.getMethodInstance(loader));

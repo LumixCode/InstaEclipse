@@ -4,12 +4,10 @@ import android.view.GestureDetector;
 import android.view.View;
 import android.view.ViewParent;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.ClassData;
 import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
@@ -31,6 +29,8 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 
 public class DisableDoubleTapLikeHook {
@@ -71,11 +71,11 @@ public class DisableDoubleTapLikeHook {
         }
     };
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
+    public void install(ClassLoader classLoader) {
         boolean cachedFeedHooked = false;
         // Prefer the proven action boundary: suppressing the gesture callback itself can
         // also swallow native skip/forward actions and gesture bookkeeping.
-        boolean cachedReelsHooked = installReelsLikeAction(bridge, classLoader);
+        boolean cachedReelsHooked = installReelsLikeAction(classLoader);
         if (DexKitCache.isCacheValid()) {
             Method feedCached = DexKitCache.loadMethod("DoubleTapLike", classLoader);
             Method reelsCached = DexKitCache.loadMethod("DoubleTapLikeReels", classLoader);
@@ -97,19 +97,19 @@ public class DisableDoubleTapLikeHook {
             }
         }
         try {
-            findAndHook(bridge, classLoader, cachedFeedHooked, cachedReelsHooked);
+            findAndHook(classLoader, cachedFeedHooked, cachedReelsHooked);
         } catch (Exception e) {
             ModuleLog.error("(InstaEclipse | DoubleTapLike): Could not turn on blocking double-tap likes: " + e.getClass().getSimpleName() + ": " + e.getMessage());
             if (FeatureFlags.disableDoubleTapLike) FeatureStatusTracker.setBroken("DisableDoubleTapLike");
         }
     }
 
-    private void findAndHook(DexKitBridge bridge, ClassLoader classLoader, boolean feedAlreadyHooked, boolean reelsAlreadyHooked) {
+    private void findAndHook(ClassLoader classLoader, boolean feedAlreadyHooked, boolean reelsAlreadyHooked) {
         boolean feedHooked = feedAlreadyHooked;
         boolean reelsHooked = reelsAlreadyHooked;
 
         if (!feedHooked) {
-            List<MethodData> feedMethods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> feedMethods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .usingStrings("double_tap_on_liked", "used_double_tap")
                     )
@@ -123,23 +123,23 @@ public class DisableDoubleTapLikeHook {
                 // synchronously under GestureDetector.onDoubleTap, so the same stack-gated HOOK
                 // blocks only double-tap likes; button likes still go through.
                 feedMethods = new ArrayList<>();
-                feedMethods.addAll(DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                feedMethods.addAll(DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create()
                                 .usingStrings("double_tap_on_liked", "like", "unlike")
                                 .returnType("void"))));
-                feedMethods.addAll(DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                feedMethods.addAll(DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create()
                                 .usingStrings("used_double_tap", "used_double_tap_hint_impressions")
                                 .returnType("void"))));
             }
             List<Method> splitHooked = new ArrayList<>();
-            for (MethodData md : feedMethods) {
+            for (Found md : feedMethods) {
                 try {
                     Method method = md.getMethodInstance(classLoader);
                     if (!splitAnchors) DexKitCache.saveMethod("DoubleTapLike", method);
                     if (hookMethod(method, HOOK)) {
                         feedHooked = true;
-                        ModuleLog.detail("(InstaEclipse | DoubleTapLike): Feed hooked on " + md.getClassName() + "." + md.getMethodName());
+                        ModuleLog.detail("(InstaEclipse | DoubleTapLike): Feed hooked on " + md.getClassName() + "." + md.getName());
                         if (!splitAnchors) break;
                         splitHooked.add(method);
                     }
@@ -156,12 +156,12 @@ public class DisableDoubleTapLikeHook {
         if (!reelsHooked) {
             try {
                 List<Method> reelLike = new ArrayList<>();
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create().usingStrings("LIKE_FIRED", "DOUBLE_TAP_MEDIA")))) {
                     Method m = md.getMethodInstance(classLoader);
                     if (hookMethod(m, HOOK)) {
                         reelLike.add(m);
-                        ModuleLog.detail("(InstaEclipse | DoubleTapLike): Reels like action hooked on " + md.getClassName() + "." + md.getMethodName());
+                        ModuleLog.detail("(InstaEclipse | DoubleTapLike): Reels like action hooked on " + md.getClassName() + "." + md.getName());
                     }
                 }
                 if (!reelLike.isEmpty()) {
@@ -174,7 +174,7 @@ public class DisableDoubleTapLikeHook {
         }
 
         if (!reelsHooked) {
-            List<Method> reelsGestureMethods = findReelsGestureMethods(bridge, classLoader);
+            List<Method> reelsGestureMethods = findReelsGestureMethods(classLoader);
             if (hookMethods(reelsGestureMethods, REELS_GESTURE_HOOK) > 0) {
                 DexKitCache.saveMethods("DoubleTapLikeReelsGestures", reelsGestureMethods);
                 reelsHooked = true;
@@ -183,25 +183,25 @@ public class DisableDoubleTapLikeHook {
         }
 
         if (!reelsHooked) {
-            List<ClassData> reelsClasses = DexKitQueryCache.findClass(bridge, FindClass.create()
+            List<FoundClass> reelsClasses = DexKitQueryCache.classes(FindClass.create()
                     .matcher(ClassMatcher.create()
                             .usingStrings("clips_doubletap", "LIKE_FIRED")
                     )
             );
-            for (ClassData cd : reelsClasses) {
-                List<MethodData> ecgMethods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            for (FoundClass cd : reelsClasses) {
+                List<Found> ecgMethods = DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create()
                                 .declaredClass(cd.getName())
                                 .usingStrings("clips_doubletap")
                         )
                 );
-                for (MethodData md : ecgMethods) {
+                for (Found md : ecgMethods) {
                     try {
                         Method method = md.getMethodInstance(classLoader);
                         if (hookMethod(method, HOOK)) {
                             DexKitCache.saveMethod("DoubleTapLikeReels", method);
                             reelsHooked = true;
-                            ModuleLog.detail("(InstaEclipse | DoubleTapLike): Reels legacy hooked on " + cd.getName() + "." + md.getMethodName());
+                            ModuleLog.detail("(InstaEclipse | DoubleTapLike): Reels legacy hooked on " + cd.getName() + "." + md.getName());
                         }
                     } catch (Exception e) {
                         ModuleLog.detail("(InstaEclipse | DoubleTapLike): Reels: " + e.getMessage());
@@ -220,7 +220,7 @@ public class DisableDoubleTapLikeHook {
         }
     }
 
-    private boolean installReelsLikeAction(DexKitBridge bridge, ClassLoader loader) {
+    private boolean installReelsLikeAction(ClassLoader loader) {
         try {
             List<Method> proof = DexKitCache.isCacheValid()
                     ? DexKitCache.loadMethods(CACHE_BOUND_ACTION, loader) : null;
@@ -229,11 +229,11 @@ public class DisableDoubleTapLikeHook {
                 // A negative result is version-scoped by DexKitCache, just like method entries.
                 if (DexKitCache.isCacheValid() && "absent".equals(DexKitCache.loadString(CACHE_BOUND_ACTION)))
                     return false;
-                List<MethodData> setters = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                List<Found> setters = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("android_purge_26_q3_GestureActionHandler_setOnLikeMediaAction")));
-                List<MethodData> dispatchers = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                List<Found> dispatchers = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("android_purge_26_q3_GestureActionHandler_handleDoubleTapMedia")));
-                List<MethodData> actions = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                List<Found> actions = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .name("invoke").usingStrings("android_purge_26_q3_LikeNavigator_onLikeMedia",
                                 "DOUBLE_TAP_MEDIA", "LIKE_FIRED")));
                 if (setters.size() != 1 || dispatchers.size() != 1 || actions.size() != 1) {
@@ -244,7 +244,7 @@ public class DisableDoubleTapLikeHook {
                 Method dispatcher = dispatchers.get(0).getMethodInstance(loader);
                 Method action = actions.get(0).getMethodInstance(loader);
                 List<Method> invoked = new ArrayList<>();
-                for (MethodData data : dispatchers.get(0).getInvokes()) {
+                for (MethodData data : dispatchers.get(0).data().getInvokes()) {
                     try { invoked.add(data.getMethodInstance(loader)); }
                     catch (ReflectiveOperationException | LinkageError ignored) { }
                 }
@@ -363,17 +363,17 @@ public class DisableDoubleTapLikeHook {
         }
     }
 
-    private List<Method> findReelsGestureMethods(DexKitBridge bridge, ClassLoader classLoader) {
+    private List<Method> findReelsGestureMethods(ClassLoader classLoader) {
         List<Method> methods = new ArrayList<>();
         try {
-            List<MethodData> callbacks = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> callbacks = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .name("onDoubleTap")
                             .paramTypes("android.view.MotionEvent")
                             .returnType("boolean")
                     )
             );
-            for (MethodData md : callbacks) {
+            for (Found md : callbacks) {
                 try {
                     Method method = md.getMethodInstance(classLoader);
                     if (isLikelyClipsGestureClass(method.getDeclaringClass())) {

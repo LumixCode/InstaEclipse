@@ -8,10 +8,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
@@ -29,6 +27,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.toast.IeToast;
 
 /**
@@ -78,14 +77,14 @@ public class LikeUndoHook {
         }
     }
 
-    public void install(DexKitBridge bridge) {
+    public void install() {
         Method target = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(CACHE_KEY, Module.hostClassLoader) : null;
         if (target == null) {
             try {
-                List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("source_of_like", "fetchLikeCount")
                         .returnType("void")));
-                for (MethodData md : found) {
+                for (Found md : found) {
                     Method m = md.getMethodInstance(Module.hostClassLoader);
                     for (Class<?> p : m.getParameterTypes()) {
                         if (p.getName().equals("com.instagram.feed.media.Media")) { target = m; break; }
@@ -151,7 +150,7 @@ public class LikeUndoHook {
         report("LikeUndo", FeatureFlags.likeUndo, ready);
         installed = true;
         onLikeUndoChanged();
-        LikeHeartTint.install(bridge);
+        LikeHeartTint.install();
         // View.performClick is a very hot framework method; hooking it app-wide triggers ART's JIT
         // SIGSEGV on IG 451+ / Android 13, so the heart tap hook is only installed when Ask before
         // liking is on (turning it on later holds heart taps after an Instagram restart; until

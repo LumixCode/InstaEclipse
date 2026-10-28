@@ -12,7 +12,6 @@ import android.view.ViewTreeObserver;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 
@@ -52,10 +51,10 @@ public final class ProfileFollowStatusHook {
     private static volatile int secondaryTextAttr = -1;
 
     /** Returns whether the header binder was hooked; ProfileFollowsYouHook runs either way. */
-    public boolean install(DexKitBridge bridge, ClassLoader loader) {
+    public boolean install(ClassLoader loader) {
         try {
             final Method viewerId = Class.forName(SESSION, false, loader).getMethod("getUserId");
-            List<Method> binders = resolveBinders(bridge, loader);
+            List<Method> binders = resolveBinders(loader);
             int installed = 0;
             for (int index = 0; index < binders.size(); index++) {
                 Method binder = binders.get(index);
@@ -67,7 +66,7 @@ public final class ProfileFollowStatusHook {
                 }
                 final Field session = uniqueField(binder.getDeclaringClass(), SESSION);
                 if (viewIndex < 0 || session == null) continue;
-                final ProfileReader reader = resolveReader(bridge, loader, binder, index);
+                final ProfileReader reader = resolveReader(loader, binder, index);
                 final int rootArg = viewIndex;
                 XposedBridge.hookMethod(binder, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) {
@@ -130,11 +129,11 @@ public final class ProfileFollowStatusHook {
         String profileId(Object[] arguments) throws Exception;
     }
 
-    private static ProfileReader resolveReader(DexKitBridge bridge, ClassLoader loader, Method binder, int index) throws Exception {
+    private static ProfileReader resolveReader(ClassLoader loader, Method binder, int index) throws Exception {
         String boundKey = BOUND_KEY + index;
         Schema schema = cachedSchema(loader, boundKey);
         if (schema == null) {
-            schema = findSchema(bridge, loader, binder);
+            schema = findSchema(loader, binder);
             DexKitCache.saveMethods(READER_KEY, List.of(schema.strings, schema.booleans));
             DexKitCache.saveField(READER_KEY, schema.nested);
             DexKitCache.saveFields(boundKey, schema.fields);
@@ -142,7 +141,7 @@ public final class ProfileFollowStatusHook {
         Method strings = schema.strings, booleans = schema.booleans;
         Field nested = schema.nested;
         List<Field> fields = schema.fields;
-        Method children = resolveSchemaChild(bridge, loader, strings.getDeclaringClass());
+        Method children = resolveSchemaChild(loader, strings.getDeclaringClass());
         diagnostic("Using bound profile schema projections");
         return new ProfileReader() {
             @Override public ProfileFollowStatus.Status read(String viewerId, Object[] args) throws Exception {
@@ -178,10 +177,10 @@ public final class ProfileFollowStatusHook {
         return new Schema(methods.get(0), methods.get(1), nested, fields);
     }
 
-    private static Schema findSchema(DexKitBridge bridge, ClassLoader loader, Method binder) throws Exception {
-        Method username = resolve(bridge, loader, "ProfileFollowUsername_v3", MethodMatcher.create()
+    private static Schema findSchema(ClassLoader loader, Method binder) throws Exception {
+        Method username = resolve(loader, "ProfileFollowUsername_v3", MethodMatcher.create()
                 .declaredClass(VIEW_MODEL).usingStrings("INVALID_USER_NAME").paramCount(0).returnType(String.class));
-        for (var invocation : bridge.getMethodData(username).getInvokes()) {
+        for (var invocation : DexKitQueryCache.methodData(username).getInvokes()) {
             if (invocation.isConstructor() || !invocation.getReturnTypeName().equals(String.class.getName())
                     || !invocation.getParamTypeNames().equals(List.of("int"))
                     || Modifier.isStatic(invocation.getModifiers())) continue;
@@ -189,11 +188,11 @@ public final class ProfileFollowStatusHook {
             Class<?> schema = strings.getDeclaringClass();
             try { schema.getMethod("getTypeName"); }
             catch (NoSuchMethodException unsupported) { continue; }
-            for (var usage : bridge.getMethodData(username).getUsingFields()) {
+            for (var usage : DexKitQueryCache.methodData(username).getUsingFields()) {
                 Field nested = usage.getField().getFieldInstance(loader);
                 if (nested.getType() != schema || Modifier.isStatic(nested.getModifiers())) continue;
                 nested.setAccessible(true);
-                List<Field> fields = boundFields(bridge, loader, binder, nested.getDeclaringClass());
+                List<Field> fields = boundFields(loader, binder, nested.getDeclaringClass());
                 if (fields.isEmpty()) continue;
                 strings.setAccessible(true);
                 return new Schema(strings, uniqueIntGetter(schema, Boolean.class), nested, fields);
@@ -202,10 +201,10 @@ public final class ProfileFollowStatusHook {
         throw new NoSuchFieldException("Bound profile schema missing");
     }
 
-    private static List<Field> boundFields(DexKitBridge bridge, ClassLoader loader, Method binder, Class<?> type)
+    private static List<Field> boundFields(ClassLoader loader, Method binder, Class<?> type)
             throws Exception {
         List<Field> fields = new ArrayList<>();
-        for (var usage : bridge.getMethodData(binder).getUsingFields()) {
+        for (var usage : DexKitQueryCache.methodData(binder).getUsingFields()) {
             Field field = usage.getField().getFieldInstance(loader);
             if (!type.isAssignableFrom(field.getType()) || Modifier.isStatic(field.getModifiers())
                     || field.getDeclaringClass() == binder.getDeclaringClass() || fields.contains(field)) continue;
@@ -215,17 +214,17 @@ public final class ProfileFollowStatusHook {
         return fields;
     }
 
-    private static Method resolveSchemaChild(DexKitBridge bridge, ClassLoader loader, Class<?> schema) throws Exception {
+    private static Method resolveSchemaChild(ClassLoader loader, Class<?> schema) throws Exception {
         String key = "ProfileFollowSchemaChild_v3";
         Method cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(key, loader) : null;
         if (cached != null) return cached;
         Set<Method> common = null;
         // Required child accessors differ across native callers. Their shared accessor is the
         // nullable friendship_status child, so absent relationship data never becomes false.
-        for (var caller : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (var caller : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingNumbers("friendship_status".hashCode(), "followed_by".hashCode())))) {
             Set<Method> children = new HashSet<>();
-            for (var invocation : caller.getInvokes()) {
+            for (var invocation : caller.data().getInvokes()) {
                 if (invocation.isConstructor() || !invocation.getClassName().equals(schema.getName())
                         || !invocation.getReturnTypeName().equals(schema.getName())
                         || !invocation.getParamTypeNames().equals(List.of("int"))
@@ -257,11 +256,11 @@ public final class ProfileFollowStatusHook {
         return found;
     }
 
-    private static Method resolve(DexKitBridge bridge, ClassLoader loader, String key,
+    private static Method resolve(ClassLoader loader, String key,
                                   MethodMatcher matcher) throws Exception {
         Method cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(key, loader) : null;
         if (cached != null) return cached;
-        var matches = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(matcher));
+        var matches = DexKitQueryCache.methods(FindMethod.create().matcher(matcher));
         if (matches.size() != 1) throw new IllegalStateException(key + " matched " + matches.size() + " methods");
         Method method = matches.get(0).getMethodInstance(loader);
         method.setAccessible(true);
@@ -269,11 +268,11 @@ public final class ProfileFollowStatusHook {
         return method;
     }
 
-    private static List<Method> resolveBinders(DexKitBridge bridge, ClassLoader loader) throws Exception {
+    private static List<Method> resolveBinders(ClassLoader loader) throws Exception {
         List<Method> cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethods("ProfileFollowBind_v2", loader) : null;
         if (cached != null && !cached.isEmpty()) return cached;
         List<Method> methods = new ArrayList<>();
-        for (var match : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (var match : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("ProfileHeaderBinderGroup.bindView").returnType(void.class)))) {
             methods.add(match.getMethodInstance(loader));
         }

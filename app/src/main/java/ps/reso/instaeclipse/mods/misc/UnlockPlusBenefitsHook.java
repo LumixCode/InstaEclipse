@@ -4,7 +4,6 @@ import java.lang.reflect.Method;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 
@@ -21,7 +20,7 @@ public final class UnlockPlusBenefitsHook {
     private static final String CACHE_KEY = "UnlockPlus_benefitCheck_v1";
     private static final String ABSENT_KEY = "UnlockPlus_benefitCheck_absent";
 
-    public void install(DexKitBridge bridge, ClassLoader loader) {
+    public void install(ClassLoader loader) {
         try {
             Method method = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(CACHE_KEY, loader) : null;
             if (method == null) {
@@ -31,7 +30,7 @@ public final class UnlockPlusBenefitsHook {
                     return;
                 }
                 Set<Method> candidates = new LinkedHashSet<>();
-                for (var logger : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (var logger : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("is_benefit_active", "SUBSBenefitDataProvider")
                         .paramTypes(String.class, String.class).returnType(void.class)))) {
                     for (var caller : DexKitQueryCache.callersUncached(logger)) {
@@ -41,7 +40,7 @@ public final class UnlockPlusBenefitsHook {
                     }
                 }
                 if (candidates.isEmpty()) {
-                    for (var data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                    for (var data : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                             .usingStrings("is_benefit_active").paramTypes(String.class).returnType(boolean.class)))) {
                         candidates.add(data.getMethodInstance(loader));
                     }
