@@ -43,7 +43,7 @@
     <string name="ig_hide_chats_needs_passcode">Set a passcode to open hidden chats</string>
     <string name="ig_lock_forgot">Forgot passcode?</string>
     <string name="ig_lock_forgot_explainer">Confirm with your phone\'s screen lock. Your InstaEclipse passcode and all locks are removed; your chat and collection lock lists and hidden chats are kept.</string>
-    <string name="ig_lock_forgot_needs_android_10">Passcode recovery needs Android 10 or newer.</string>
+    <string name="ig_lock_forgot_needs_android_11">Passcode recovery needs Android 11 or newer.</string>
     <string name="ig_lock_forgot_needs_screen_lock">Set a screen lock in Android settings, then try again.</string>
     <string name="ig_lock_forgot_last_resort">Clearing Instagram\'s data also removes this lock, but it signs you out and deletes what InstaEclipse keeps inside Instagram (kept messages, cached stories, edit history, chat lists). If you can still open the InstaEclipse menu, back up data first.</string>
     <string name="ig_lock_forgot_continue">Continue</string>

@@ -780,8 +780,8 @@ public class LockDirectMessagesHook {
             d.secondary(I18n.t(a, R.string.ig_dialog_cancel), null);
             d.primary(I18n.t(a, R.string.ig_lock_forgot_continue), () -> confirmCredential(a, path, onRecovered));
         } else {
-            d.message(I18n.t(a, path == PasscodeRecovery.Path.NEEDS_ANDROID_10
-                    ? R.string.ig_lock_forgot_needs_android_10 : R.string.ig_lock_forgot_needs_screen_lock)
+            d.message(I18n.t(a, path == PasscodeRecovery.Path.NEEDS_ANDROID_11
+                    ? R.string.ig_lock_forgot_needs_android_11 : R.string.ig_lock_forgot_needs_screen_lock)
                     + "\n\n" + I18n.t(a, R.string.ig_lock_forgot_last_resort));
             d.primary(I18n.t(a, R.string.ig_dialog_ok), null);
         }
@@ -790,20 +790,15 @@ public class LockDirectMessagesHook {
 
     @SuppressLint("MissingPermission")
     private static void confirmCredential(Activity a, PasscodeRecovery.Path path, Runnable onRecovered) {
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return;
+        if (path != PasscodeRecovery.Path.DEVICE_CREDENTIAL
+                || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) return;
         try {
-            android.hardware.biometrics.BiometricPrompt.Builder builder =
-                    new android.hardware.biometrics.BiometricPrompt.Builder(a)
-                            .setTitle(I18n.t(a, R.string.ig_lock_forgot_prompt_title))
-                            .setDescription(I18n.t(a, R.string.ig_lock_forgot_prompt_body));
-            if (path == PasscodeRecovery.Path.DEVICE_CREDENTIAL
-                    && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                builder.setAllowedAuthenticators(
-                        android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL);
-            } else {
-                builder.setDeviceCredentialAllowed(true);
-            }
-            builder.build().authenticate(new android.os.CancellationSignal(), a.getMainExecutor(),
+            new android.hardware.biometrics.BiometricPrompt.Builder(a)
+                    .setTitle(I18n.t(a, R.string.ig_lock_forgot_prompt_title))
+                    .setDescription(I18n.t(a, R.string.ig_lock_forgot_prompt_body))
+                    .setAllowedAuthenticators(
+                            android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                    .build().authenticate(new android.os.CancellationSignal(), a.getMainExecutor(),
                     new android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
                         @Override public void onAuthenticationSucceeded(
                                 android.hardware.biometrics.BiometricPrompt.AuthenticationResult result) {
