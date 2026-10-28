@@ -143,8 +143,7 @@ public class InstantSaveHook {
         return null;
     }
 
-    // Debounce so both preloaded viewer instances (and any duplicate invoke) don't double-save.
-    private static volatile long lastSaveMs = 0;
+    private static final InstantSavePolicy POLICY = new InstantSavePolicy();
 
     /**
      * Hook the viewer pointer handler and wrap its onLongPress callback (A0A on 452 — verified
@@ -169,7 +168,10 @@ public class InstantSaveHook {
                             Object wrapper = Proxy.newProxyInstance(cl, new Class[]{function1}, (proxy, method, a) -> {
                                 if ("invoke".equals(method.getName()) && FeatureFlags.saveInstants) {
                                     long now = android.os.SystemClock.uptimeMillis();
-                                    if (now - lastSaveMs > 1000) { lastSaveMs = now; saveCurrent(); }
+                                    if (POLICY.hold(null, now) == InstantSavePolicy.Decision.SAVE) {
+                                        POLICY.saved(null, now);
+                                        saveCurrent();
+                                    }
                                 }
                                 return orig != null ? method.invoke(orig, a) : null;
                             });
