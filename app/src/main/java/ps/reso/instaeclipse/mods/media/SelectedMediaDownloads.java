@@ -175,7 +175,7 @@ public final class SelectedMediaDownloads {
     }
 
     /** Every slide, with one toast for the batch instead of one per item. */
-    private static void startAll(Context ctx, Captured captured) {
+    static void startAll(Context ctx, Captured captured) {
         toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_all_n_items, captured.children.size()));
         BatchTally batch = new BatchTally(captured.children.size());
         for (Captured child : captured.children)

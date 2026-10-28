@@ -1,6 +1,7 @@
 package ps.reso.instaeclipse.mods.media;
 
 import android.app.Activity;
+import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -9,7 +10,6 @@ import android.os.SystemClock;
 import android.widget.Toast;
 
 import java.lang.reflect.Field;
-import java.util.List;
 import java.util.Map;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -83,6 +83,7 @@ public class ShareLinkDownloadHook {
         toast(a, I18n.t(a, R.string.ig_share_dl_loading));
         final long end = System.currentTimeMillis() + TIMEOUT_MS;
         final Context app = a.getApplicationContext();
+        final Application application = a.getApplication();
         Runnable poll = new Runnable() {
             @Override public void run() {
                 if (!pk.equals(pendingPk)) return; // a newer link took over
@@ -90,7 +91,7 @@ public class ShareLinkDownloadHook {
                 if (media != null) {
                     pendingPk = null;
                     save(app, media, pk);
-                    moveBack(new ShareMoveBackPolicy());
+                    moveBack(application, new ShareMoveBackPolicy());
                 } else if (System.currentTimeMillis() < end) {
                     FeedVideoDownloadHook.mainHandler.postDelayed(this, STEP_MS);
                 } else {
@@ -104,15 +105,38 @@ public class ShareLinkDownloadHook {
         FeedVideoDownloadHook.mainHandler.postDelayed(poll, STEP_MS);
     }
 
-    private static void moveBack(ShareMoveBackPolicy policy) {
-        for (int i = 0; i < ShareMoveBackPolicy.CHECKS_MS.length; i++) {
+    private static void moveBack(Application application, ShareMoveBackPolicy policy) {
+        Application.ActivityLifecycleCallbacks watch = new Application.ActivityLifecycleCallbacks() {
+            @Override public void onActivityResumed(Activity activity) { policy.resumed(SystemClock.uptimeMillis()); }
+            @Override public void onActivityCreated(Activity activity, Bundle state) { }
+            @Override public void onActivityStarted(Activity activity) { }
+            @Override public void onActivityPaused(Activity activity) { }
+            @Override public void onActivityStopped(Activity activity) { }
+            @Override public void onActivitySaveInstanceState(Activity activity, Bundle state) { }
+            @Override public void onActivityDestroyed(Activity activity) { }
+        };
+        boolean watching = false;
+        try {
+            if (application != null) {
+                application.registerActivityLifecycleCallbacks(watch);
+                watching = true;
+            }
+        } catch (Throwable t) {
+            ModuleLog.detail(TAG + "resume watch: " + t);
+        }
+        final boolean watched = watching;
+        final int last = ShareMoveBackPolicy.CHECKS_MS.length - 1;
+        for (int i = 0; i <= last; i++) {
             final int check = i;
             FeedVideoDownloadHook.mainHandler.postDelayed(() -> {
-                if (!policy.shouldMove(check, SystemClock.uptimeMillis())) return;
-                Activity front = resumedActivity();
-                if (front == null) return;
-                front.moveTaskToBack(true);
-                policy.moved(SystemClock.uptimeMillis());
+                try {
+                    if (!policy.shouldMove(check, SystemClock.uptimeMillis())) return;
+                    Activity front = resumedActivity();
+                    if (front != null) front.moveTaskToBack(true);
+                    policy.moved(SystemClock.uptimeMillis());
+                } finally {
+                    if (check == last && watched) application.unregisterActivityLifecycleCallbacks(watch);
+                }
             }, ShareMoveBackPolicy.CHECKS_MS[i]);
         }
     }
@@ -166,28 +190,15 @@ public class ShareLinkDownloadHook {
     }
 
     private static void save(Context ctx, Object media, String pk) {
-        FeedVideoDownloadHook.executor.submit(() -> {
-            try {
-                List<String> urls = FeedVideoDownloadHook.extractAllUrlsFromMedia(ctx, media);
-                ModuleLog.detail(TAG + "pk=" + pk + " urls=" + (urls == null ? 0 : urls.size()));
-                if (urls == null || urls.isEmpty()) {
-                    toast(ctx, I18n.t(ctx, R.string.ig_share_dl_not_found));
-                    return;
-                }
-                String user = FeedVideoDownloadHook.extractUsernameFromMediaObject(media);
-                if (user == null) user = "instagram";
-                toast(ctx, I18n.t(ctx, R.string.ig_share_dl_saving, urls.size()));
-                for (int i = 0; i < urls.size(); i++) {
-                    String url = urls.get(i);
-                    boolean vid = FeedVideoDownloadHook.isVideoUrl(url);
-                    String id = urls.size() > 1 ? pk + "_" + (i + 1) : pk;
-                    FeedVideoDownloadHook.downloadAndSave(ctx, url,
-                            FeedVideoDownloadHook.buildFilename(user, vid ? "video" : "photo", id, vid), vid, user);
-                }
-            } catch (Throwable t) {
-                ModuleLog.error(TAG + "Could not download the shared link: " + t.getClass().getSimpleName() + ": " + t.getMessage());
-            }
-        });
+        try {
+            SelectedMediaDownloads.Captured captured = SelectedMediaDownloads.capture(ctx, media, "post");
+            ModuleLog.detail(TAG + "pk=" + pk + " items=" + Math.max(1, captured.children.size()));
+            if (captured.children.isEmpty())
+                SelectedMediaDownloads.start(ctx, captured, captured.batchKind() == DownloadChoices.Choice.VIDEO);
+            else SelectedMediaDownloads.startAll(ctx, captured);
+        } catch (Throwable error) {
+            SelectedMediaDownloads.unavailable(ctx, error);
+        }
     }
 
     private static void toast(Context c, String msg) {
