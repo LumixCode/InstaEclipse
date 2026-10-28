@@ -7,11 +7,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
-import android.widget.Toast;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
-import ps.reso.instaeclipse.utils.ghost.SeenPause;
+import ps.reso.instaeclipse.utils.ghost.MarkSeen;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.IgTint;
@@ -21,10 +20,6 @@ import ps.reso.instaeclipse.utils.ui.ViewAttachHooks;
 public class GhostDMMarkAsReadHook {
 
     static final String GHOST_BTN_TAG = "ie_ghost_seen_btn";
-
-    /** {@code moduleSourceDir} is unused now that icons come from ModuleResources; kept for Module's call. */
-    public GhostDMMarkAsReadHook(String moduleSourceDir) {
-    }
 
     // Cached once on first use — resource IDs are constant for a given app install.
     private static volatile int sCachedContainerId = 0;
@@ -70,7 +65,8 @@ public class GhostDMMarkAsReadHook {
         lp.setMargins(dp(ctx, 5), dp(ctx, 8), 0, 0);
 
         ghostBtn.setLayoutParams(lp);
-        ghostBtn.setOnClickListener(v -> triggerSeenLogic(parent));
+        ghostBtn.setOnClickListener(v -> MarkSeen.scroll(parent, messageList(parent), 300, 200,
+                R.string.ig_toast_marked_as_seen));
 
         parent.post(() -> {
             try {
@@ -82,26 +78,8 @@ public class GhostDMMarkAsReadHook {
         });
     }
 
-    private static void triggerSeenLogic(View view) {
-        try {
-            Context ctx = view.getContext();
-            View messageList = ThreadHeaderMenu.findShown(view.getRootView(), ResIds.id(ctx, "message_list"));
-
-            if (messageList instanceof ViewGroup group) {
-                // scrollBy with a large value is capped synchronously by RecyclerView's
-                // LayoutManager to the actual bottom
-                group.scrollBy(0, 100_000);
-
-                SeenPause.pause(300);
-                group.scrollBy(0, -200);
-
-                view.postDelayed(() -> {
-                    group.scrollBy(0, 200);
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_marked_as_seen), Toast.LENGTH_SHORT).show();
-                }, 300);
-            }
-        } catch (Exception ignored) {
-        }
+    static View messageList(View view) {
+        return ThreadHeaderMenu.findShown(view.getRootView(), ResIds.id(view.getContext(), "message_list"));
     }
 
     private static int dp(Context ctx, int v) {

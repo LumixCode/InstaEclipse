@@ -5,7 +5,6 @@ import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
 
-import java.lang.reflect.Field;
 import java.util.List;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -14,6 +13,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.ghost.IdKeys;
 
 /**
  * Restores Instagram's NATIVE view-once / view-twice corner icon that the "Show View-Once/Twice
@@ -93,44 +93,12 @@ public class ViewOnceBadgeHook {
                     }
                     if (modeIdx < 0) return; // not a rewritten view-once bubble
 
-                    java.util.List<Long> candidates = new java.util.ArrayList<>();
-                    collectLongs(args, candidates, 0,
-                            java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
+                    List<Long> candidates = IdKeys.collect(args, ViewOnceStash::mediaKey);
                     ViewOnceBadgeMode.rewrite(GhostPermanentViewHook.STASH.find(candidates), args, modeIdx);
                 } catch (Throwable t) {
                     ModuleLog.detail("(IE|VOBadge) badge update failed: " + t);
                 }
             }
         };
-    }
-
-    /** Collect id/timestamp longs from the ctor args graph (shallow) as join-key candidates. */
-    private static void collectLongs(Object obj, java.util.List<Long> out, int depth, java.util.Set<Object> seen) {
-        if (obj == null || depth > 4 || out.size() > 60 || !seen.add(obj)) return;
-        if (obj instanceof Object[]) {
-            for (Object e : (Object[]) obj) collectLongs(e, out, depth + 1, seen);
-            return;
-        }
-        String cn = obj.getClass().getName();
-        if (!cn.startsWith("X.") && !cn.startsWith("com.instagram.")) return;
-        for (Class<?> c = obj.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
-            for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(c)) {
-                if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
-                f.setAccessible(true);
-                Class<?> t = f.getType();
-                try {
-                    if (t == long.class) {
-                        long v = f.getLong(obj);
-                        if (v != 0 && v != Long.MAX_VALUE && !out.contains(v)) out.add(v);
-                    } else if (t == String.class) {
-                        // media ids often arrive as numeric strings (e.g. ExtendedImageUrl.A07)
-                        Long v = ViewOnceStash.mediaKey((String) f.get(obj));
-                        if (v != null && !out.contains(v)) out.add(v);
-                    } else if (!t.isPrimitive()) {
-                        collectLongs(f.get(obj), out, depth + 1, seen);
-                    }
-                } catch (Throwable ignored) {}
-            }
-        }
     }
 }

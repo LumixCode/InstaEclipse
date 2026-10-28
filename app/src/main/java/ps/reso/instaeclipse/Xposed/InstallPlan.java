@@ -428,7 +428,7 @@ public class InstallPlan {
                 new GhostDMSeenHook().handleSeenBlock(ctx.bridge);
                 return;
             case GHOST_DM_MARK_AS_READ_HOOK:
-                new GhostDMMarkAsReadHook(Module.moduleSourceDir).install(ctx.lpparam.classLoader);
+                new GhostDMMarkAsReadHook().install(ctx.lpparam.classLoader);
                 return;
             case GHOST_CHANNEL_MARK_AS_READ_HOOK:
                 new GhostChannelMarkAsReadHook().install(ctx.lpparam.classLoader);

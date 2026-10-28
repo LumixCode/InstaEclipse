@@ -40,7 +40,7 @@ import java.util.function.Predicate;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
-import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.CachedLookup;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -70,7 +70,6 @@ public class KeepUnsentMessagesHook {
             " is not in cache, may need to double check if this message is deleted locally or not";
     private static final String DTK = "com.instagram.model.direct.DirectThreadKey";
     private static final String USER_CACHE = "com.instagram.user.model.UserCache";
-    private static final String MISSING = "missing";
     private static final long EXPIRY_MARGIN_MS = 60_000;
 
     static final UnsentMessageIndex protectedIds = new UnsentMessageIndex(1000);
@@ -110,45 +109,12 @@ public class KeepUnsentMessagesHook {
 
     // ── DexKit results cached per Instagram build ───────────────────────────────
 
-    /** A DexKit search whose result {@link #cachedMethods} keeps per Instagram build. */
-    interface MethodLookup { List<Method> find() throws Throwable; }
-
-    interface FieldLookup { Field find() throws Throwable; }
-
-    /**
-     * The methods {@code lookup} finds, searched once per Instagram build and then read from
-     * DexKitCache: warm launches install hooks inline in Application.attach, where a DexKit scan
-     * would stall startup. A miss is cached too; a lookup that throws runs again next launch.
-     */
-    static List<Method> cachedMethods(String key, ClassLoader loader, MethodLookup lookup) throws Throwable {
-        if (DexKitCache.isCacheValid()) {
-            if (MISSING.equals(DexKitCache.loadString(key))) return Collections.emptyList();
-            List<Method> cached = DexKitCache.loadMethods(key, loader);
-            if (cached != null) return cached;
-        }
-        List<Method> found = lookup.find();
-        if (found.isEmpty()) DexKitCache.saveString(key, MISSING);
-        else DexKitCache.saveMethods(key, found);
-        return found;
+    static List<Method> cachedMethods(String key, ClassLoader loader, CachedLookup.Search<List<Method>> lookup) throws Throwable {
+        return CachedLookup.methods(key, loader, lookup);
     }
 
-    /** {@link #cachedMethods} for one field, kept as "declaringClass#name"; null when not found. */
-    static Field cachedField(String key, ClassLoader loader, FieldLookup lookup) throws Throwable {
-        String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(key) : null;
-        if (MISSING.equals(cached)) return null;
-        if (cached != null) {
-            int split = cached.lastIndexOf('#');
-            try {
-                Field field = Class.forName(cached.substring(0, split), false, loader)
-                        .getDeclaredField(cached.substring(split + 1));
-                field.setAccessible(true);
-                return field;
-            } catch (ReflectiveOperationException | RuntimeException ignored) {} // stale entry: search again
-        }
-        Field found = lookup.find();
-        DexKitCache.saveString(key, found == null ? MISSING
-                : found.getDeclaringClass().getName() + "#" + found.getName());
-        return found;
+    static Field cachedField(String key, ClassLoader loader, CachedLookup.Search<Field> lookup) throws Throwable {
+        return CachedLookup.field(key, loader, lookup);
     }
 
     static List<Method> methodsOf(List<MethodData> found, ClassLoader loader) throws NoSuchMethodException {

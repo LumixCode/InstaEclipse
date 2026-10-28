@@ -5,13 +5,11 @@ import android.graphics.drawable.Drawable;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.ghost.HeaderButtonKind;
-import ps.reso.instaeclipse.utils.ghost.SeenPause;
-import ps.reso.instaeclipse.utils.i18n.I18n;
+import ps.reso.instaeclipse.utils.ghost.MarkSeen;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.ui.ViewAttachHooks;
@@ -71,7 +69,8 @@ public class GhostChannelMarkAsReadHook {
             seen.setCompoundDrawablesRelative(eye.icon(), d[1], d[2], d[3]);
             seen.setCompoundDrawablePadding((int) (4 * seen.getResources().getDisplayMetrics().density));
         }
-        seen.setOnClickListener(v -> triggerChannelSeen(seen));
+        seen.setOnClickListener(v -> MarkSeen.scroll(seen, GhostDMMarkAsReadHook.messageList(seen), 400, 300,
+                R.string.ig_toast_channel_marked_as_seen));
     }
 
     private static void remove(TextView seen, Eye eye) {
@@ -83,25 +82,5 @@ public class GhostChannelMarkAsReadHook {
         seen.setOnClickListener(null);
         seen.setClickable(eye.clickable());
         seen.setTag(EYE_TAG, null);
-    }
-
-    private static void triggerChannelSeen(View view) {
-        try {
-            Context ctx = view.getContext();
-            View messageList = ThreadHeaderMenu.findShown(view.getRootView(), ResIds.id(ctx, "message_list"));
-
-            if (messageList instanceof ViewGroup group) {
-                group.scrollBy(0, 100_000);
-
-                SeenPause.pause(400);
-                group.scrollBy(0, -300);
-
-                view.postDelayed(() -> {
-                    group.scrollBy(0, 300);
-                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_channel_marked_as_seen), Toast.LENGTH_SHORT).show();
-                }, 400);
-            }
-        } catch (Exception ignored) {
-        }
     }
 }

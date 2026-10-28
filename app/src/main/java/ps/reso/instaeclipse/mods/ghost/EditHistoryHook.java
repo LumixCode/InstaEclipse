@@ -16,7 +16,7 @@ import java.util.List;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
-import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.CachedLookup;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -62,7 +62,6 @@ public class EditHistoryHook {
     private static final String SESSION = "com.instagram.common.session.UserSession";
     /** DexKitCache keys; bump when the lookups change. */
     private static final String CACHE = "EditHistory_v2_";
-    private static final String MISSING = "missing";
 
     private static Field body, editCount, historyBody, historyTime;
     private static Method sentTime;
@@ -81,8 +80,6 @@ public class EditHistoryHook {
 
         Tap(List<String> ids, String account) { this.ids = ids; this.account = account; }
     }
-
-    private interface Lookup<T> { T find() throws Throwable; }
 
     public void install(DexKitBridge bridge, ClassLoader cl) {
         try {
@@ -111,7 +108,7 @@ public class EditHistoryHook {
 
             // The toggle is only read for the members it uses on the message; it is not hooked.
             String bodyDesc = "L" + HISTORY.replace('.', '/') + ";->" + historyBody.getName() + ":Ljava/lang/String;";
-            Lookup<MethodData> toggle = () -> {
+            CachedLookup.Search<MethodData> toggle = () -> {
                 MethodData found = null;
                 for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
                         .addUsingField(bodyDesc).paramTypes("java.lang.String", "boolean").returnType("void")))) {
@@ -387,40 +384,18 @@ public class EditHistoryHook {
         return found;
     }
 
-    /** {@code lookup}'s method, found once per Instagram build and then read from DexKitCache. */
-    private static Method cachedMethod(String key, ClassLoader cl, Lookup<Method> lookup) {
-        String k = CACHE + key;
+    private static Method cachedMethod(String key, ClassLoader cl, CachedLookup.Search<Method> lookup) {
         try {
-            if (DexKitCache.isCacheValid()) {
-                if (MISSING.equals(DexKitCache.loadString(k))) return null;
-                Method cached = DexKitCache.loadMethod(k, cl);
-                if (cached != null) return cached;
-            }
-            Method found = lookup.find();
-            if (found == null) DexKitCache.saveString(k, MISSING);
-            else DexKitCache.saveMethod(k, found);
-            return found;
+            return CachedLookup.method(CACHE + key, cl, lookup);
         } catch (Throwable t) {
             ModuleLog.detail(TAG + "lookup " + key + " failed: " + t);
             return null;
         }
     }
 
-    /** {@link #cachedMethod} for a field, kept as "declaringClass#name". */
-    private static Field cachedField(String key, ClassLoader cl, Lookup<Field> lookup) {
-        String k = CACHE + key;
+    private static Field cachedField(String key, ClassLoader cl, CachedLookup.Search<Field> lookup) {
         try {
-            String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(k) : null;
-            if (MISSING.equals(cached)) return null;
-            if (cached != null) {
-                int split = cached.lastIndexOf('#');
-                try {
-                    return Class.forName(cached.substring(0, split), false, cl).getDeclaredField(cached.substring(split + 1));
-                } catch (ReflectiveOperationException | RuntimeException ignored) {} // stale: search again
-            }
-            Field found = lookup.find();
-            DexKitCache.saveString(k, found == null ? MISSING : found.getDeclaringClass().getName() + "#" + found.getName());
-            return found;
+            return CachedLookup.field(CACHE + key, cl, lookup);
         } catch (Throwable t) {
             ModuleLog.detail(TAG + "lookup " + key + " failed: " + t);
             return null;
