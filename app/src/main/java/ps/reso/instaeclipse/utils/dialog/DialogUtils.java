@@ -1014,9 +1014,18 @@ public class DialogUtils {
     }
 
 
+    public static void showGhostQuickTogglePicker(Context context) {
+        showGhostQuickToggleOptions(context, true);
+    }
+
     private static void showGhostQuickToggleOptions(Context context) {
+        showGhostQuickToggleOptions(context, false);
+    }
+
+    private static void showGhostQuickToggleOptions(Context context, boolean nothingChosen) {
         FeatureCatalog.Category cat = FeatureCatalog.category("qt");
         LinearLayout layout = categoryLayout(context, cat);
+        if (nothingChosen) layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_quick_toggle_none_chosen)), 0);
         layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_quick_toggle_hint)));
         showSectionDialog(context, I18n.t(context, cat.title), layout);
     }

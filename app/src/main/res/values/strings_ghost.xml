@@ -50,4 +50,16 @@
     <string name="ig_lock_chat_unlocked">Chat unlocked</string>
     <string name="ig_lock_selected_menu_desc">Pick chats here or with Lock this chat in a chat\'s menu</string>
     <string name="ig_ghost_messages_tab_label">Messages, ghost mode on</string>
+    <string name="ig_toast_ghost_on">Ghost mode on: %1$s</string>
+    <string name="ig_toast_ghost_off">Ghost mode off: %1$s</string>
+    <string name="ig_quick_toggle_none_chosen">Nothing is chosen yet. Pick what holding the Messages icon switches.</string>
+    <string name="ig_quick_toggle_name_seen">seen</string>
+    <string name="ig_quick_toggle_name_typing">typing</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">screenshot alerts</string>
+    <string name="ig_quick_toggle_name_view_once">view-once</string>
+    <string name="ig_quick_toggle_name_stories">stories</string>
+    <string name="ig_quick_toggle_name_live">live</string>
+    <string name="ig_quick_toggle_name_disappearing">disappearing messages</string>
+    <string name="ig_quick_toggle_name_permanent_view">permanent view</string>
+    <string name="ig_quick_toggle_name_screenshots">screenshots</string>
 </resources>
