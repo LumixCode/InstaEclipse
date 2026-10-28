@@ -14,6 +14,7 @@ import ps.reso.instaeclipse.mods.ghost.BulkUnsend;
 import ps.reso.instaeclipse.mods.ghost.HideChatsHook;
 import ps.reso.instaeclipse.mods.ghost.ui.GhostEmojiManager;
 import ps.reso.instaeclipse.mods.misc.LikeUndoHook;
+import ps.reso.instaeclipse.mods.ui.FancyBioFontHook;
 import ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.mods.ui.theme.IgThemeEngine;
@@ -59,6 +60,7 @@ public final class SettingsEvents {
         boolean ghost = false;
         boolean bulkUnsend = false;
         boolean locks = false;
+        boolean fancyBio = false;
         boolean restart = false;
         for (String key : keys) {
             if (key == null) continue;
@@ -70,6 +72,7 @@ public final class SettingsEvents {
             ghost |= GHOST_KEYS.contains(key);
             bulkUnsend |= "bulkUnsend".equals(key);
             locks |= LOCK_KEYS.contains(key);
+            fancyBio |= "fancyBioFont".equals(key);
             restart |= RestartPending.captured(key);
         }
         boolean recreating = false;
@@ -79,6 +82,7 @@ public final class SettingsEvents {
         if (likeUndo) LikeUndoHook.onLikeUndoChanged();
         if (bulkUnsend) BulkUnsend.switched();
         if (locks) LockDirectMessagesHook.locksChanged();
+        if (fancyBio) FancyBioFontHook.switched();
         if (theme) {
             IgThemeEngine.invalidate();
             recreating = IgThemeHook.refreshCurrentActivity();

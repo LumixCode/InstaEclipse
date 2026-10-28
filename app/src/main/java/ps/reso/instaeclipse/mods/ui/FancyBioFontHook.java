@@ -19,6 +19,8 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.text.FancyText;
+import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
+import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 
 /**
  * Edit profile: the bio's "Change font" button (an Instagram Plus upsell) opens the module's
@@ -28,29 +30,48 @@ import ps.reso.instaeclipse.utils.text.FancyText;
  */
 public final class FancyBioFontHook {
 
-    private static final Map<Activity, Boolean> WATCHED = Collections.synchronizedMap(new WeakHashMap<>());
     private static int bioId, cardId, labelId;
+    static volatile Runnable rewire = FancyBioFontHook::rewireTopScreen;
 
     private FancyBioFontHook() {}
 
-    public static void watchActivity(Activity a) {
-        // watched even while off, so switching it on works without leaving the screen
-        if (WATCHED.containsKey(a)) return;
-        if (bioId == 0) {
+    public static void install(ClassLoader loader) {
+        try {
+            XposedHelpers.findAndHookMethod("com.instagram.igds.components.form.IgFormField", loader,
+                    "setupSecondRightAddOnButton", CharSequence.class, boolean.class, "kotlin.jvm.functions.Function0",
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                            if (!FeatureFlags.fancyBioFont || !(param.thisObject instanceof View field)) return;
+                            if (UIHookManager.dialogHost(field.getContext()) instanceof Activity a && ids(a)) wire(a, field);
+                        }
+                    });
+            FeatureStatusTracker.setHooked("FancyBioFont");
+        } catch (Throwable t) {
+            ModuleLog.warn("(IE|FancyFont) The bio's font button keeps Instagram's own action", t);
+            if (FeatureFlags.fancyBioFont) FeatureStatusTracker.setBroken("FancyBioFont");
+        }
+    }
+
+    public static void switched() {
+        if (FeatureFlags.fancyBioFont) rewire.run();
+    }
+
+    private static void rewireTopScreen() {
+        Activity a = UIHookManager.topActivity();
+        if (a == null || a.isFinishing() || !ids(a)) return;
+        View bio = a.getWindow().getDecorView().findViewById(bioId);
+        if (bio != null) wire(a, bio);
+    }
+
+    private static boolean ids(Activity a) {
+        if (bioId == 0 || cardId == 0) {
             String pkg = a.getPackageName();
             bioId = a.getResources().getIdentifier("bio", "id", pkg);
             cardId = a.getResources().getIdentifier("form_field_second_right_add_on_button_card", "id", pkg);
             labelId = a.getResources().getIdentifier("form_field_second_right_add_on_button_text", "id", pkg);
-            if (bioId == 0 || cardId == 0) return;
         }
-        WATCHED.put(a, true);
-        View decor = a.getWindow().getDecorView();
-        decor.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
-            if (!FeatureFlags.fancyBioFont) return;
-            View bio = decor.findViewById(bioId);
-            if (bio != null) wire(a, bio);
-        });
-        FeatureStatusTracker.setHooked("FancyBioFont");
+        return bioId != 0 && cardId != 0;
     }
 
     private static void wire(Activity a, View bio) {

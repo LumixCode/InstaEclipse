@@ -141,9 +141,6 @@ public class UIHookManager {
         ps.reso.instaeclipse.mods.ui.DistractionFreeUIHook.watchActivity(activity);
         ps.reso.instaeclipse.mods.ui.StoryTrayHook.watchActivity(activity);
 
-        // Fancy bio fonts: the bio's "Change font" button opens the module's font picker.
-        ps.reso.instaeclipse.mods.ui.FancyBioFontHook.watchActivity(activity);
-
         // Cache resource IDs once per IG install (string table lookup is non-trivial).
         ensureIdsCached(activity);
 
@@ -285,6 +282,8 @@ public class UIHookManager {
             ModuleLog.warn("(InstaEclipse): InstaEclipse's buttons may be missing on pop-up screens: "
                     + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
+
+        FancyBioFontHook.install(classLoader);
     }
 
     static void armGestureHint(Activity activity) {
