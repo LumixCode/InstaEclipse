@@ -1,19 +1,29 @@
 package ps.reso.instaeclipse.utils.users;
 
+import android.app.Activity;
 import android.content.Context;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
+import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.mods.ghost.HideChatsHook;
+import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.core.AtomicFiles;
+import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.toast.IeToast;
 
 /**
  * Profile analyzer watchlist: other profiles whose Followers and Following lists you check.
@@ -60,6 +70,8 @@ public final class WatchlistStore {
     static final int MAX_EVENTS = 3000;
     static final int MAX_PROFILES = 100;
     static final int MAX_CHECKS = 500;
+    static final String SET_ASIDE_SUFFIX = ".corrupt";
+    private static final String TAG = "(IE|Watchlist) ";
 
     /** How many events a profile's log keeps (the newest); older ones are dropped. */
     public static int maxEvents() {
@@ -238,6 +250,7 @@ public final class WatchlistStore {
         /** Analyses whose changes the user marked unreliable (removed from the log), by time. */
         public List<Long> unreliable = new ArrayList<>();
         public long importedHistoryMtime;
+        boolean unreadable;
     }
 
     /** Instagram's {followers, following} counts for a profile id as its header showed them
@@ -483,7 +496,7 @@ public final class WatchlistStore {
     }
 
     /** Index row for {@code p} (keeps the date it was added). */
-    public static void touch(List<Entry> index, Profile p, long now) {
+    public static List<String> touch(List<Entry> index, Profile p, long now) {
         Entry e = find(index, p.id);
         if (e == null) {
             e = new Entry();
@@ -499,7 +512,13 @@ public final class WatchlistStore {
         e.baseAt = p.baseAt;
         e.events = changeCount(p.events);
         index.add(0, e); // most recently analyzed first
-        while (index.size() > MAX_PROFILES) index.remove(index.size() - 1);
+        return trim(index);
+    }
+
+    private static List<String> trim(List<Entry> index) {
+        List<String> evicted = new ArrayList<>();
+        while (index.size() > MAX_PROFILES) evicted.add(index.remove(index.size() - 1).id);
+        return evicted;
     }
 
     /** Updates {@code p}'s index row after its log changed without an analysis (keeps its place). */
@@ -520,7 +539,11 @@ public final class WatchlistStore {
     }
 
     private static File profileFile(Context ctx, String self, String id) {
-        return new File(ctx.getFilesDir(), "ie_watch_" + self + "_" + id + ".json");
+        return profileFile(ctx.getFilesDir(), self, id);
+    }
+
+    static File profileFile(File dir, String self, String id) {
+        return new File(dir, "ie_watch_" + self + "_" + id + ".json");
     }
 
     private static File selfFile(Context ctx) {
@@ -529,6 +552,7 @@ public final class WatchlistStore {
 
     private static volatile String lastSelf;
     private static volatile long indexVersion;
+    private static final Set<String> held = ConcurrentHashMap.newKeySet();
 
     /** Bumped whenever an index file is written or a profile removed, so in-memory copies of
      *  the index (ProfileCountDeltaHook's baselines) know to reload it. */
@@ -541,32 +565,52 @@ public final class WatchlistStore {
     public static void setSelf(Context ctx, String self) {
         if (self == null || self.equals(lastSelf)) return;
         lastSelf = self;
-        new Thread(() -> {
-            try { write(selfFile(ctx), self); } catch (Throwable ignored) {}
-        }).start();
+        AtomicFiles.writeAsync(selfFile(ctx), self);
     }
 
     public static String self(Context ctx) {
+        String live = liveAccount(ctx);
+        if (live != null && !live.isEmpty()) setSelf(ctx, live);
+        return pickSelf(live, rememberedSelf(ctx));
+    }
+
+    static String pickSelf(String live, String remembered) {
+        if (live != null && !live.isEmpty()) return live;
+        return remembered != null && !remembered.isEmpty() ? remembered : null;
+    }
+
+    private static String rememberedSelf(Context ctx) {
         if (lastSelf != null) return lastSelf;
         try {
             File f = selfFile(ctx);
             if (f.exists()) lastSelf = new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8).trim();
         } catch (Throwable ignored) {}
-        return lastSelf != null && !lastSelf.isEmpty() ? lastSelf : null;
+        return lastSelf;
+    }
+
+    private static String liveAccount(Context ctx) {
+        try {
+            Activity a = ctx instanceof Activity activity ? activity : UIHookManager.topActivity();
+            return a == null ? null : HideChatsHook.currentAccount(a);
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     public static synchronized List<Entry> loadIndex(Context ctx, String self) {
+        return readIndex(indexFile(ctx, self));
+    }
+
+    static synchronized List<Entry> readIndex(File f) {
         List<Entry> out = new ArrayList<>();
+        if (!f.exists()) return out;
         try {
-            File f = indexFile(ctx, self);
-            if (!f.exists()) return out;
             JSONArray a = new JSONObject(read(f)).optJSONArray("profiles");
-            if (a == null) return out;
-            for (int i = 0; i < a.length(); i++) {
+            for (int i = 0; a != null && i < a.length(); i++) {
                 JSONObject o = a.getJSONObject(i);
                 Entry e = new Entry();
                 e.id = o.optString("id");
-                e.username = o.optString("u", null);
+                e.username = UsersCodec.text(o, "u");
                 e.added = o.optLong("added");
                 e.lastCheck = o.optLong("last");
                 e.followers = o.optInt("fc", -1);
@@ -578,12 +622,19 @@ public final class WatchlistStore {
                 e.events = o.optInt("ev");
                 if (!e.id.isEmpty()) out.add(e);
             }
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
+            setAside(f, t);
+            return new ArrayList<>();
         }
+        held.remove(f.getPath());
         return out;
     }
 
     public static synchronized void saveIndex(Context ctx, String self, List<Entry> index) throws Exception {
+        writeIndex(indexFile(ctx, self), index);
+    }
+
+    static synchronized void writeIndex(File f, List<Entry> index) throws Exception {
         JSONArray a = new JSONArray();
         for (Entry e : index) {
             JSONObject o = new JSONObject();
@@ -603,27 +654,47 @@ public final class WatchlistStore {
         }
         JSONObject root = new JSONObject();
         root.put("profiles", a);
-        write(indexFile(ctx, self), root.toString());
+        write(f, root.toString());
         indexVersion++;
     }
 
     /** Adds {@code id} to the watchlist (no snapshot yet) if it isn't there. */
-    public static synchronized void add(Context ctx, String self, String id, String username) {
+    public static synchronized List<String> add(Context ctx, String self, String id, String username) {
         try {
             List<Entry> index = loadIndex(ctx, self);
             Entry e = find(index, id);
             if (e != null) {
                 if (username != null && !username.equals(e.username)) { e.username = username; saveIndex(ctx, self, index); }
-                return;
+                return new ArrayList<>();
             }
             e = new Entry();
             e.id = id;
             e.username = username;
             e.added = System.currentTimeMillis();
             index.add(0, e);
-            while (index.size() > MAX_PROFILES) index.remove(index.size() - 1);
+            List<String> evicted = trim(index);
             saveIndex(ctx, self, index);
+            removeEvicted(ctx, self, evicted);
+            return evicted;
         } catch (Throwable ignored) {
+            return new ArrayList<>();
+        }
+    }
+
+    public static synchronized void removeEvicted(Context ctx, String self, List<String> evicted) {
+        if (evicted == null || evicted.isEmpty()) return;
+        deleteProfiles(ctx.getFilesDir(), self, evicted);
+        ModuleLog.warn(TAG + "Watchlist full: the oldest profile was removed (" + String.join(", ", evicted) + ")");
+        try {
+            IeToast.makeText(ctx, R.string.ig_pa_watch_full, Toast.LENGTH_LONG).show();
+        } catch (Throwable ignored) {
+        }
+    }
+
+    static synchronized void deleteProfiles(File dir, String self, List<String> ids) {
+        for (String id : ids) {
+            //noinspection ResultOfMethodCallIgnored
+            profileFile(dir, self, id).delete();
         }
     }
 
@@ -640,19 +711,22 @@ public final class WatchlistStore {
     }
 
     public static synchronized Profile loadProfile(Context ctx, String self, String id) {
+        return readProfile(profileFile(ctx, self, id), id);
+    }
+
+    static synchronized Profile readProfile(File f, String id) {
         Profile p = new Profile();
         p.id = id;
+        if (!f.exists()) return p;
         try {
-            File f = profileFile(ctx, self, id);
-            if (!f.exists()) return p;
             JSONObject o = new JSONObject(read(f));
-            p.username = o.optString("u", null);
+            p.username = UsersCodec.text(o, "u");
             p.lastCheck = o.optLong("last");
             p.baseFollowers = o.optInt("bf", -1);
             p.baseFollowing = o.optInt("bg", -1);
             p.baseAt = o.optLong("bt");
-            readUsers(o.optJSONObject("followers"), p.followers);
-            readUsers(o.optJSONObject("following"), p.following);
+            UsersCodec.read(o.optJSONObject("followers"), p.followers);
+            UsersCodec.read(o.optJSONObject("following"), p.following);
             // the not-listed accounts and what the saved lists are: absent in profiles saved before
             readMissing(o.optJSONObject("mf"), p.missingFollowers);
             readMissing(o.optJSONObject("mg"), p.missingFollowing);
@@ -663,7 +737,7 @@ public final class WatchlistStore {
                 for (int i = 0; i < ev.length(); i++) {
                     JSONObject e = ev.getJSONObject(i);
                     p.events.add(new Event(e.optLong("ts"), e.optLong("since"), e.optString("type"),
-                            e.optString("id"), e.optString("u", null), e.optString("n", null), e.optInt("q") == 1));
+                            e.optString("id"), UsersCodec.text(e, "u"), UsersCodec.text(e, "n"), e.optInt("q") == 1));
                 }
             }
             // absent in profiles saved before the changelog
@@ -682,12 +756,23 @@ public final class WatchlistStore {
             JSONArray ur = o.optJSONArray("ur");
             if (ur != null) for (int i = 0; i < ur.length(); i++) if (ur.optLong(i) > 0) p.unreliable.add(ur.optLong(i));
             p.importedHistoryMtime = o.optLong("ih");
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
+            setAside(f, t);
+            Profile unread = new Profile();
+            unread.id = id;
+            unread.unreadable = true;
+            return unread;
         }
+        held.remove(f.getPath());
         return p;
     }
 
     public static synchronized void saveProfile(Context ctx, String self, Profile p) throws Exception {
+        writeProfile(profileFile(ctx, self, p.id), p);
+    }
+
+    static synchronized void writeProfile(File f, Profile p) throws Exception {
+        if (p.unreadable) throw new IOException("not saved, " + f.getName() + " could not be read");
         JSONArray ev = new JSONArray();
         for (Event e : p.events) {
             JSONObject o = new JSONObject();
@@ -709,8 +794,8 @@ public final class WatchlistStore {
             root.put("bg", p.baseFollowing);
             root.put("bt", p.baseAt);
         }
-        root.put("followers", writeUsers(p.followers));
-        root.put("following", writeUsers(p.following));
+        root.put("followers", UsersCodec.write(p.followers));
+        root.put("following", UsersCodec.write(p.following));
         root.put("mf", writeMissing(p.missingFollowers));
         root.put("mg", writeMissing(p.missingFollowing));
         root.put("sf", writeState(p.followersState));
@@ -738,7 +823,7 @@ public final class WatchlistStore {
             root.put("ur", ur);
         }
         if (p.importedHistoryMtime > 0) root.put("ih", p.importedHistoryMtime);
-        write(profileFile(ctx, self, p.id), root.toString());
+        write(f, root.toString());
     }
 
     /**
@@ -766,7 +851,7 @@ public final class WatchlistStore {
             String id = it.next();
             JSONObject m = o.optJSONObject(id);
             if (m == null) continue;
-            Missing x = new Missing(m.optString("u", null), m.optString("n", null), m.optLong("ls"), m.optLong("fm"));
+            Missing x = new Missing(UsersCodec.text(m, "u"), UsersCodec.text(m, "n"), m.optLong("ls"), m.optLong("fm"));
             x.strikes = m.optInt("s");
             x.checks = m.optInt("c");
             into.put(id, x);
@@ -867,33 +952,26 @@ public final class WatchlistStore {
         return o;
     }
 
-    private static void readUsers(JSONObject users, Map<String, String[]> into) {
-        if (users == null) return;
-        for (java.util.Iterator<String> it = users.keys(); it.hasNext(); ) {
-            String id = it.next();
-            JSONArray u = users.optJSONArray(id);
-            into.put(id, new String[]{u != null && !u.isNull(0) ? u.optString(0, null) : null,
-                    u != null && !u.isNull(1) ? u.optString(1, null) : null});
-        }
-    }
-
-    private static JSONObject writeUsers(Map<String, String[]> users) throws Exception {
-        JSONObject o = new JSONObject();
-        for (Map.Entry<String, String[]> e : users.entrySet()) {
-            JSONArray u = new JSONArray();
-            String[] v = e.getValue();
-            u.put(v != null && v.length > 0 && v[0] != null ? v[0] : JSONObject.NULL);
-            u.put(v != null && v.length > 1 && v[1] != null ? v[1] : JSONObject.NULL);
-            o.put(e.getKey(), u);
-        }
-        return o;
-    }
-
     private static String read(File f) throws Exception {
         return new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8);
     }
 
     private static void write(File f, String s) throws Exception {
+        if (held.contains(f.getPath()) && f.exists()) throw new IOException("not saved over the unreadable " + f.getName());
         AtomicFiles.write(f, s);
+    }
+
+    private static void setAside(File f, Throwable t) {
+        File aside = new File(f.getPath() + SET_ASIDE_SUFFIX);
+        if (aside.exists()) aside = new File(f.getPath() + "." + System.currentTimeMillis() + SET_ASIDE_SUFFIX);
+        String why = t.getClass().getSimpleName() + ": " + t.getMessage();
+        if (f.renameTo(aside)) {
+            held.remove(f.getPath());
+            ModuleLog.warn(TAG + "Could not read " + f.getName() + ", so it was set aside as " + aside.getName()
+                    + " and is not saved over: " + why);
+        } else {
+            held.add(f.getPath());
+            ModuleLog.warn(TAG + "Could not read " + f.getName() + " or set it aside, so it is not saved over: " + why);
+        }
     }
 }

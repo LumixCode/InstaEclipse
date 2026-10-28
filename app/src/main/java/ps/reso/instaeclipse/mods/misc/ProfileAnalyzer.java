@@ -183,8 +183,9 @@ public final class ProfileAnalyzer {
                     profile -> WatchlistStore.saveProfile(app, self, profile));
             if (result == FollowersHistory.Import.IMPORTED) {
                 List<WatchlistStore.Entry> index = WatchlistStore.loadIndex(app, self);
-                WatchlistStore.touch(index, p, System.currentTimeMillis());
+                List<String> evicted = WatchlistStore.touch(index, p, System.currentTimeMillis());
                 WatchlistStore.saveIndex(app, self, index);
+                WatchlistStore.removeEvicted(app, self, evicted);
                 ModuleLog.line(TAG + "Your followers history was carried over into the analyzer (" + p.events.size() + " entries)");
             } else if (result == FollowersHistory.Import.ERROR) {
                 ModuleLog.warn(TAG + "Your old followers history could not be read, so it was not carried over");
@@ -349,8 +350,9 @@ public final class ProfileAnalyzer {
             try {
                 WatchlistStore.saveProfile(app, self, p);
                 List<WatchlistStore.Entry> index = WatchlistStore.loadIndex(app, self);
-                WatchlistStore.touch(index, p, now);
+                List<String> evicted = WatchlistStore.touch(index, p, now);
                 WatchlistStore.saveIndex(app, self, index);
+                WatchlistStore.removeEvicted(app, self, evicted);
             } catch (Throwable t) {
                 saveFailed = true;
                 ModuleLog.error(TAG + "Could not save the analysis", t);
