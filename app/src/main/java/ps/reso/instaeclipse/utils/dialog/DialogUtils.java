@@ -70,6 +70,13 @@ public class DialogUtils {
         IePalette p = IePalette.of(context);
         java.util.List<Runnable> counts = new java.util.ArrayList<>();
         LinearLayout mainLayout = buildMainMenuLayout(context, counts);
+        LinearLayout results = new LinearLayout(context);
+        results.setOrientation(LinearLayout.VERTICAL);
+        results.setVisibility(View.GONE);
+        LinearLayout content = new LinearLayout(context);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.addView(mainLayout);
+        content.addView(results);
 
         TextView closeButton = new TextView(context);
         closeButton.setText(I18n.t(context, R.string.ig_dialog_close));
@@ -93,12 +100,214 @@ public class DialogUtils {
 
         TextView health = healthChip(context);
         health.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        IeSheet.open(context, new IeSheet.Page(I18n.t(context, R.string.ig_dialog_title), mainLayout)
+        IeSheet.Page root = new IeSheet.Page(I18n.t(context, R.string.ig_dialog_title), content);
+        SearchPanel search = new SearchPanel(context, root, mainLayout, results, counts);
+        IeSheet.open(context, root
                 .end(health)
+                .pinned(search.box)
                 .footer(closeButton)
+                .onBack(search::clear)
                 .onReturn(() -> {
                     for (Runnable count : counts) count.run();
+                    search.refresh();
                 }), null);
+    }
+
+    private static final class SearchPanel {
+        final View box;
+        private final Context context;
+        private final IeSheet.Page page;
+        private final View menu;
+        private final LinearLayout results;
+        private final java.util.List<Runnable> counts;
+        private final java.util.List<Runnable> refresh = new java.util.ArrayList<>();
+        private final android.widget.EditText field;
+        private String shown = "";
+
+        SearchPanel(Context context, IeSheet.Page page, View menu, LinearLayout results, java.util.List<Runnable> counts) {
+            this.context = context;
+            this.page = page;
+            this.menu = menu;
+            this.results = results;
+            this.counts = counts;
+            IePalette p = IePalette.of(context);
+            field = new android.widget.EditText(context);
+            field.setSingleLine(true);
+            field.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
+            field.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+                    | android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI);
+            field.setHint(I18n.t(context, R.string.menu_search_hint));
+            field.setTextColor(p.text);
+            field.setHintTextColor(p.sub);
+            field.setTextSize(16);
+            field.setMinHeight(dp(context, 48));
+            field.setGravity(Gravity.CENTER_VERTICAL);
+            Drawable glass = IeRows.icon(context, R.drawable.ic_search, p.sub);
+            if (glass != null) {
+                glass.setBounds(0, 0, dp(context, 20), dp(context, 20));
+                field.setCompoundDrawablesRelative(glass, null, null, null);
+            }
+            field.setCompoundDrawablePadding(dp(context, 10));
+            field.setPaddingRelative(dp(context, 14), dp(context, 6), dp(context, 48), dp(context, 6));
+            GradientDrawable background = new GradientDrawable();
+            background.setColor(p.field);
+            background.setCornerRadius(dp(context, 24));
+            background.setStroke(hairline(context), p.line);
+            field.setBackground(background);
+
+            ImageView clear = new ImageView(context);
+            Drawable cross = IeRows.icon(context, R.drawable.ic_close, p.sub);
+            if (cross != null) clear.setImageDrawable(cross);
+            clear.setScaleType(ImageView.ScaleType.CENTER);
+            clear.setContentDescription(I18n.t(context, R.string.menu_search_clear));
+            clear.setBackground(IeRows.ripple(context, 24));
+            clear.setVisibility(View.GONE);
+            clear.setOnClickListener(v -> field.setText(""));
+
+            field.addTextChangedListener(new android.text.TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+                @Override public void afterTextChanged(android.text.Editable s) {
+                    clear.setVisibility(s.length() == 0 ? View.GONE : View.VISIBLE);
+                    run(s.toString());
+                }
+            });
+            field.setOnEditorActionListener((v, actionId, event) -> {
+                if (actionId != android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) return false;
+                hideKeyboard();
+                return true;
+            });
+
+            android.widget.FrameLayout holder = new android.widget.FrameLayout(context);
+            holder.setFocusableInTouchMode(true);
+            holder.setPadding(dp(context, 12), dp(context, 2), dp(context, 12), dp(context, 6));
+            holder.addView(field, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT));
+            holder.addView(clear, new android.widget.FrameLayout.LayoutParams(dp(context, 48), dp(context, 48),
+                    Gravity.END | Gravity.CENTER_VERTICAL));
+            box = holder;
+        }
+
+        boolean clear() {
+            if (field.getText().length() == 0) return false;
+            field.setText("");
+            hideKeyboard();
+            return true;
+        }
+
+        void refresh() {
+            runAll(refresh);
+        }
+
+        private void hideKeyboard() {
+            android.view.inputmethod.InputMethodManager keyboard = (android.view.inputmethod.InputMethodManager)
+                    context.getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (keyboard != null) keyboard.hideSoftInputFromWindow(field.getWindowToken(), 0);
+            field.clearFocus();
+        }
+
+        private void run(String raw) {
+            String folded = ps.reso.instaeclipse.utils.text.SearchText.fold(raw.trim());
+            if (folded.equals(shown)) return;
+            shown = folded;
+            results.removeAllViews();
+            refresh.clear();
+            if (folded.isEmpty()) {
+                results.setVisibility(View.GONE);
+                menu.setVisibility(View.VISIBLE);
+                runAll(counts);
+                return;
+            }
+            menu.setVisibility(View.GONE);
+            results.setVisibility(View.VISIBLE);
+            java.util.List<MenuSearch.Group> groups = MenuSearch.find(raw, id -> I18n.t(context, id));
+            if (groups.isEmpty()) results.addView(noResults(context));
+            for (MenuSearch.Group group : groups) {
+                results.addView(IeRows.sectionHeader(context, I18n.t(context, group.category.title)));
+                String accent = accentHex(group.category.group);
+                java.util.List<View> rows = new java.util.ArrayList<>();
+                for (FeatureCatalog.Item item : group.items) {
+                    rows.add(searchResult(context, group.category, item, accent, refresh, this::hideKeyboard));
+                }
+                results.addView(cardOf(context, rows.toArray(new View[0])));
+            }
+            runAll(refresh);
+            if (page.scroll != null) page.scroll.scrollTo(0, 0);
+        }
+    }
+
+    private static View searchResult(Context context, FeatureCatalog.Category category, FeatureCatalog.Item item,
+                                     String accent, java.util.List<Runnable> refresh, Runnable beforeOpen) {
+        if (MenuSearch.action(item) == MenuSearch.Action.TOGGLE) {
+            ToggleRow row = catalogSwitch(context, item, accent, refresh);
+            if ("spoofLocation".equals(item.key)) pickPlaceFirst(context, row);
+            refresh.add(() -> {
+                setQuietly(row, ExtrasFeatures.get(item.key));
+                row.setEnabled(MenuSearch.editable(item, ExtrasFeatures::get, FeatureFlags.isExtremeMode));
+                if (PasscodeRules.isLock(item.key) && ExtrasFeatures.get(item.key) && !LockFlows.hasPasscode()) {
+                    row.setSubtitle(I18n.t(context, R.string.ig_lock_on_needs_passcode));
+                }
+            });
+            return row;
+        }
+        LinearLayout row = detailRow(context, item.icon != 0 ? item.icon : category.icon, accent,
+                searchLabel(context, item), v -> {
+                    beforeOpen.run();
+                    openResult(context, category, item);
+                });
+        row.setTag(item.key);
+        refresh.add(() -> {
+            boolean enabled = MenuSearch.requiresMet(item, ExtrasFeatures::get);
+            setRowEnabled(row, enabled);
+            setDetailSubtitle(row, enabled ? subtitleOf(context, item) : requirement(context, item));
+        });
+        return row;
+    }
+
+    private static CharSequence searchLabel(Context context, FeatureCatalog.Item item) {
+        switch (item.key) {
+            case "reelUsage":
+                return reelUsageText(context);
+            case "nightReelStatus":
+                return nightReelStatusText(context);
+            case "autoClearCacheSizeMb":
+                return autoClearSizeLabel(context);
+            default:
+                return I18n.t(context, item.label);
+        }
+    }
+
+    private static void openResult(Context context, FeatureCatalog.Category category, FeatureCatalog.Item item) {
+        IeSheet before = IeSheet.showing(context);
+        int depth = before == null ? 0 : before.depth();
+        showCategory(context, category.key);
+        IeSheet sheet = IeSheet.showing(context);
+        if (sheet != null && sheet.depth() > depth) sheet.reveal(item.key);
+    }
+
+    private static View noResults(Context context) {
+        IePalette p = IePalette.of(context);
+        LinearLayout box = new LinearLayout(context);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER_HORIZONTAL);
+        box.setPadding(dp(context, 16), dp(context, 32), dp(context, 16), dp(context, 32));
+        TextView title = new TextView(context);
+        title.setText(I18n.t(context, R.string.menu_search_empty));
+        title.setTextColor(p.text);
+        title.setTextSize(16);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        box.addView(title);
+        TextView hint = new TextView(context);
+        hint.setText(I18n.t(context, R.string.menu_search_try_another));
+        hint.setTextColor(p.sub);
+        hint.setTextSize(14);
+        hint.setGravity(Gravity.CENTER);
+        hint.setPadding(0, dp(context, 4), 0, 0);
+        box.addView(hint);
+        return box;
     }
 
     public static void showSimpleDialog(Context context, String title, String message) {
@@ -290,13 +499,26 @@ public class DialogUtils {
             if (suppressLockToggle) return;
             if (!SettingsGuard.request(context, flag, checked, () -> {
                 setQuietly(row, checked);
-                ExtrasFeatures.set(flag, checked);
+                java.util.List<String> changed = applyWrites(flag, checked);
                 SAVES.request();
-                SettingsEvents.afterChange(flag);
+                SettingsEvents.afterChange(changed);
                 if (after != null) after.run();
             })) setQuietly(row, !checked);
         });
         return row;
+    }
+
+    private static java.util.List<String> applyWrites(String flag, boolean checked) {
+        java.util.List<String> changed = new java.util.ArrayList<>();
+        for (java.util.Map.Entry<String, Boolean> write
+                : MenuSearch.writes(flag, checked, FeatureFlags.isExtremeMode).entrySet()) {
+            String key = write.getKey();
+            boolean value = write.getValue();
+            if (!key.equals(flag) && ExtrasFeatures.get(key) == value) continue;
+            ExtrasFeatures.set(key, value);
+            changed.add(key);
+        }
+        return changed;
     }
 
     private static ToggleRow catalogSwitch(Context context, FeatureCatalog.Item item, String accentHex,
@@ -1307,10 +1529,7 @@ public class DialogUtils {
             String end = formatNightReelTime(context, FeatureFlags.nightReelBlockEndMinutes);
             nightStartValue.setText(start);
             nightEndValue.setText(end);
-            boolean active = NightReelSchedule.isActiveAt(NightReelSchedule.currentMinutes(),
-                    FeatureFlags.nightReelBlockStartMinutes, FeatureFlags.nightReelBlockEndMinutes);
-            nightStatus.setText(I18n.t(context, active ? R.string.ig_night_reels_status_active
-                    : R.string.ig_night_reels_status_inactive, active ? end : start));
+            nightStatus.setText(nightReelStatusText(context));
         };
         nightStart.setOnClickListener(v -> showNightReelTimePicker(context,
                 FeatureFlags.nightReelBlockStartMinutes, selected -> {
@@ -1449,18 +1668,28 @@ public class DialogUtils {
         usage.setMinimumHeight(dp(context, 48));
         usage.setFocusable(true);
         usage.setBackground(IeRows.ripple(context, 5));
-        Runnable refreshUsage = () -> {
-            int watched = DailyReelLimit.watchedToday();
-            usage.setText(FeatureFlags.dailyReelLimitEnabled
-                    ? I18n.t(context, R.string.ig_reel_limit_usage, watched, FeatureFlags.dailyReelLimit)
-                    : I18n.t(context, R.string.ig_reel_usage_count, watched));
-        };
+        Runnable refreshUsage = () -> usage.setText(reelUsageText(context));
         refreshUsage.run();
         usage.setOnClickListener(v -> refreshUsage.run());
         group.addView(usage);
 
         layout.addView(group);
         return refreshUsage;
+    }
+
+    private static String reelUsageText(Context context) {
+        int watched = DailyReelLimit.watchedToday();
+        return FeatureFlags.dailyReelLimitEnabled
+                ? I18n.t(context, R.string.ig_reel_limit_usage, watched, FeatureFlags.dailyReelLimit)
+                : I18n.t(context, R.string.ig_reel_usage_count, watched);
+    }
+
+    private static String nightReelStatusText(Context context) {
+        boolean active = NightReelSchedule.isActiveAt(NightReelSchedule.currentMinutes(),
+                FeatureFlags.nightReelBlockStartMinutes, FeatureFlags.nightReelBlockEndMinutes);
+        return I18n.t(context, active ? R.string.ig_night_reels_status_active : R.string.ig_night_reels_status_inactive,
+                formatNightReelTime(context, active ? FeatureFlags.nightReelBlockEndMinutes
+                        : FeatureFlags.nightReelBlockStartMinutes));
     }
 
     /** Also used by the companion app's Distraction-Free menu. */
@@ -2313,13 +2542,7 @@ public class DialogUtils {
         java.util.List<Runnable> refresh = new java.util.ArrayList<>();
         LinearLayout toggleCard = IeRows.card(context, 5);
         ToggleRow spoof = catalogSwitch(context, FeatureCatalog.item("spoofLocation"), accent, refresh);
-        if (!set && !FeatureFlags.spoofLocation) {
-            spoof.setOnCheckedChangeListener((b, checked) -> {
-                if (suppressLockToggle || !checked) return;
-                setQuietly(spoof, false);
-                openLocationPicker(context, true);
-            });
-        }
+        pickPlaceFirst(context, spoof);
         toggleCard.addView(spoof);
         runAll(refresh);
         layout.addView(toggleCard);
@@ -2369,6 +2592,18 @@ public class DialogUtils {
         layout.addView(recentCard);
 
         return new IeSheet.Page(I18n.t(context, cat.title), layout);
+    }
+
+    private static void pickPlaceFirst(Context context, ToggleRow spoof) {
+        if (FeatureFlags.spoofLocation
+                || ps.reso.instaeclipse.mods.location.LocationPresets.valid(FeatureFlags.spoofLat, FeatureFlags.spoofLng)) {
+            return;
+        }
+        spoof.setOnCheckedChangeListener((b, checked) -> {
+            if (suppressLockToggle || !checked) return;
+            setQuietly(spoof, false);
+            openLocationPicker(context, true);
+        });
     }
 
     private static void openLocationPicker(Context context, boolean enableOnPick) {

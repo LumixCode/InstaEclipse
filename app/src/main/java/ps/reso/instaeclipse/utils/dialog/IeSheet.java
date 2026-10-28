@@ -1,5 +1,8 @@
 package ps.reso.instaeclipse.utils.dialog;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.Application;
 import android.app.Dialog;
@@ -31,6 +34,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.util.ArrayDeque;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import ps.reso.instaeclipse.R;
@@ -46,6 +50,8 @@ public final class IeSheet {
     private static final float MAX_HEIGHT = 0.82f;
     private static final float DRAG_TO_CLOSE = 0.3f;
     private static final long SLIDE_MS = 220;
+    private static final long FLASH_MS = 1400;
+    private static final int REVEAL_TRIES = 6;
 
     private static IeSheet current;
     private static Application reopenApp;
@@ -56,7 +62,9 @@ public final class IeSheet {
         final View content;
         View end;
         View footer;
+        View pinned;
         Runnable onReturn;
+        BooleanSupplier onBack;
         ScrollView scroll;
 
         public Page(String title, View content) {
@@ -78,6 +86,16 @@ public final class IeSheet {
             onReturn = action;
             return this;
         }
+
+        public Page pinned(View view) {
+            pinned = view;
+            return this;
+        }
+
+        public Page onBack(BooleanSupplier handled) {
+            onBack = handled;
+            return this;
+        }
     }
 
     private final Context context;
@@ -87,6 +105,7 @@ public final class IeSheet {
     private final ImageView back;
     private final TextView title;
     private final FrameLayout end;
+    private final FrameLayout pinned;
     private final FrameLayout pages;
     private final FrameLayout pageFooter;
     private final FrameLayout slot;
@@ -160,6 +179,9 @@ public final class IeSheet {
         header.addView(end, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         chrome.addView(header);
         sheet.addView(chrome, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        pinned = new FrameLayout(context);
+        pinned.setVisibility(View.GONE);
+        sheet.addView(pinned, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         sheet.addView(IeRows.divider(context));
 
         pages = new FrameLayout(context);
@@ -211,6 +233,8 @@ public final class IeSheet {
             window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             window.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
             window.getAttributes().windowAnimations = android.R.style.Animation_InputMethod;
+            window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+                    | WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
         }
         fitWindow();
     }
@@ -362,6 +386,8 @@ public final class IeSheet {
     }
 
     void back() {
+        Page top = stack.peek();
+        if (top != null && top.onBack != null && top.onBack.getAsBoolean()) return;
         if (stack.size() > 1) {
             pop();
             return;
@@ -439,7 +465,55 @@ public final class IeSheet {
         back.setVisibility(hasBack ? View.VISIBLE : View.GONE);
         title.setPaddingRelative(hasBack ? dp(context, 4) : dp(context, 9), 0, dp(context, 4), 0);
         swap(end, page.end);
+        swap(pinned, page.pinned);
         swap(pageFooter, page.footer);
+    }
+
+    public boolean reveal(Object tag) {
+        Page page = stack.peek();
+        if (page == null || page.content == null || page.scroll == null || tag == null) return false;
+        View target = page.content.findViewWithTag(tag);
+        if (target == null) return false;
+        reveal(page.scroll, target, 0);
+        return true;
+    }
+
+    private void reveal(ScrollView scroll, View target, int tries) {
+        main.post(() -> {
+            if (!target.isShown() || target.getHeight() == 0) {
+                if (tries < REVEAL_TRIES) main.postDelayed(() -> reveal(scroll, target, tries + 1), 50);
+                return;
+            }
+            int y = 0;
+            for (View v = target; v != null && v != scroll; v = v.getParent() instanceof View parent ? parent : null) {
+                y += v.getTop();
+            }
+            scroll.scrollTo(0, Math.max(0, y - dp(context, 24)));
+            flash(target);
+        });
+    }
+
+    private void flash(View target) {
+        IePalette p = IePalette.of(context);
+        GradientDrawable glow = new GradientDrawable();
+        glow.setColor((p.accent & 0x00FFFFFF) | 0x38000000);
+        glow.setCornerRadius(dp(context, 5));
+        glow.setBounds(0, 0, target.getWidth(), target.getHeight());
+        glow.setAlpha(0);
+        target.getOverlay().add(glow);
+        ValueAnimator fade = ValueAnimator.ofInt(0, 255, 255, 0);
+        fade.setDuration(FLASH_MS);
+        fade.addUpdateListener(a -> {
+            glow.setAlpha((Integer) a.getAnimatedValue());
+            target.invalidate();
+        });
+        fade.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                target.getOverlay().remove(glow);
+            }
+        });
+        fade.start();
     }
 
     private static void swap(FrameLayout holder, View view) {

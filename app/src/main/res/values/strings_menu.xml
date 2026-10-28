@@ -39,4 +39,8 @@
     <string name="ig_extreme_refused" tools:ignore="MissingTranslation">Extreme mode can\'t be undone, so this can only get stricter</string>
     <string name="ig_startup_tab_default" tools:ignore="MissingTranslation">Instagram\'s default</string>
     <string name="ig_startup_tab_hidden" tools:ignore="MissingTranslation">%1$s (hidden)</string>
+    <string name="menu_search_hint" tools:ignore="MissingTranslation">Search options</string>
+    <string name="menu_search_clear" tools:ignore="MissingTranslation">Clear search</string>
+    <string name="menu_search_empty" tools:ignore="MissingTranslation">No matching options</string>
+    <string name="menu_search_try_another" tools:ignore="MissingTranslation">Try another word</string>
 </resources>
