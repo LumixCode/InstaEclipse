@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.widget.Toast;
 
 import java.lang.reflect.Field;
@@ -89,13 +90,7 @@ public class ShareLinkDownloadHook {
                 if (media != null) {
                     pendingPk = null;
                     save(app, media, pk);
-                    // back to the app the link came from: a bit later and re-checked, since the link
-                    // handler may still be opening the post/reel viewer, bringing Instagram back up
-                    for (long delay : new long[]{1500, 3500, 6000})
-                        FeedVideoDownloadHook.mainHandler.postDelayed(() -> {
-                            Activity front = resumedActivity();
-                            if (front != null) front.moveTaskToBack(true);
-                        }, delay);
+                    moveBack(new ShareMoveBackPolicy());
                 } else if (System.currentTimeMillis() < end) {
                     FeedVideoDownloadHook.mainHandler.postDelayed(this, STEP_MS);
                 } else {
@@ -107,6 +102,19 @@ public class ShareLinkDownloadHook {
             }
         };
         FeedVideoDownloadHook.mainHandler.postDelayed(poll, STEP_MS);
+    }
+
+    private static void moveBack(ShareMoveBackPolicy policy) {
+        for (int i = 0; i < ShareMoveBackPolicy.CHECKS_MS.length; i++) {
+            final int check = i;
+            FeedVideoDownloadHook.mainHandler.postDelayed(() -> {
+                if (!policy.shouldMove(check, SystemClock.uptimeMillis())) return;
+                Activity front = resumedActivity();
+                if (front == null) return;
+                front.moveTaskToBack(true);
+                policy.moved(SystemClock.uptimeMillis());
+            }, ShareMoveBackPolicy.CHECKS_MS[i]);
+        }
     }
 
     /** This process's resumed activity, from ActivityThread's records (the link handler hands off
