@@ -46,20 +46,22 @@ public final class InstagramRestarter {
     public static void restart(Activity activity, String pkg, Callback callback) {
         Handler main = new Handler(Looper.getMainLooper());
         if (pkg == null || !isInstalled(activity.getPackageManager(), pkg)) {
-            finish(activity, null, RestartDecision.decide(null, null), callback, main);
+            finish(activity, null, RestartDecision.unreachable(null, false, null), callback, main);
             return;
         }
         new Thread(() -> {
+            boolean su = false;
             Integer exit = null;
             try {
                 Process p = Runtime.getRuntime().exec(new String[]{"su", "-c", "am force-stop " + pkg});
+                su = true;
                 if (p.waitFor(FORCE_STOP_TIMEOUT_S, TimeUnit.SECONDS)) {
                     exit = p.exitValue();
                 } else {
                     p.destroy();
                 }
             } catch (Throwable ignored) { }
-            RestartDecision.Outcome outcome = RestartDecision.decide(pkg, exit);
+            RestartDecision.Outcome outcome = RestartDecision.unreachable(pkg, su, exit);
             main.post(() -> finish(activity, pkg, outcome, callback, main));
         }, "ie-restart-ig").start();
     }
