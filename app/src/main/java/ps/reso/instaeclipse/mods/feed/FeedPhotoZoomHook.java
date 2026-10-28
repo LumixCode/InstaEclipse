@@ -42,11 +42,8 @@ import ps.reso.instaeclipse.utils.ui.ResIds;
 public class FeedPhotoZoomHook {
 
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
-    // IG 448+ moved the view to common.ui.widget.imageview; the legacy feed.widget name is kept
-    // as a fallback for older builds. Same API in both (onAttachedToWindow + getIgImageView).
     private static final String[] VIEW_CLASSES = {
             "com.instagram.common.ui.widget.imageview.IgProgressImageView",
-            "com.instagram.feed.widget.IgProgressImageView",
     };
 
     private static final int FEED_ROW_TAG = 0x7e1e0290;

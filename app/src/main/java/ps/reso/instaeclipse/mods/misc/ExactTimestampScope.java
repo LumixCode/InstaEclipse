@@ -24,8 +24,7 @@ final class ExactTimestampScope {
         }
         if (owner.equals("com.instagram.model.reels.ReelItem")
                 || parameters.contains("com.instagram.feed.media.Media")
-                || parameters.contains("com.instagram.model.reels.ReelItem")
-                || parameters.contains("com.instagram.feed.media.Comment")) return true;
+                || parameters.contains("com.instagram.model.reels.ReelItem")) return true;
         for (String value : strings) {
             if (value.equals("row_comment_textview_time_ago")
                     || value.contains("com.instagram.comments.mvvm.view.compose.CommentAuthorHeader")

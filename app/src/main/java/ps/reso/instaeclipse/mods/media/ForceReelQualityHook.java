@@ -39,16 +39,11 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
  */
 public class ForceReelQualityHook {
 
-    // IG 442+ renamed both model classes. Central media class: LiveTreeMediaDict -> Media.
-    // Per-version class: model.mediasize.ImmutablePandoVideoVersion -> api.schemas.ImmutablePandoVideoVersion.
-    // Try the new name first, fall back to the old one so 436 and 447 both resolve.
     private static final String[] DICT_CLASS_CANDIDATES = {
             "com.instagram.feed.media.Media",             // IG 442+ (447)
-            "com.instagram.feed.media.LiveTreeMediaDict"  // IG <=441 (436)
     };
     private static final String[] VIDEO_VERSION_CLASS_CANDIDATES = {
             "com.instagram.api.schemas.ImmutablePandoVideoVersion",      // IG 442+ (447)
-            "com.instagram.model.mediasize.ImmutablePandoVideoVersion"   // IG <=441 (436)
     };
     // The height getter embeds getOptional...ByHashCode / A2E(hash, idx) where hash is the
     // JDK-fixed String.hashCode("height") (== -0x48c76ed9). Identical const in 436 and 447,

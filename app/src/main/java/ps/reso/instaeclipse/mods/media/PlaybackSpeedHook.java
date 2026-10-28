@@ -475,16 +475,7 @@ public class PlaybackSpeedHook {
                 List<FoundClass> players = DexKitQueryCache.classes(FindClass.create().matcher(ClassMatcher.create()
                         .usingStrings("IgFeedVideoPlayer: Persistent Visible Cover Image")));
                 start = null;
-                // 452.0.0.22+ moved the (Media, …)boolean start method into a subclass of the class
-                // that holds the string, so look there too.
-                List<FoundClass> scan = new ArrayList<>(players);
                 for (FoundClass cd : players) {
-                    try {
-                        scan.addAll(DexKitQueryCache.classes(FindClass.create().matcher(ClassMatcher.create()
-                                .superClass(cd.getName()))));
-                    } catch (Throwable ignored) {}
-                }
-                for (FoundClass cd : scan) {
                     for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(cd.getInstance(cl))) {
                         Class<?>[] p = m.getParameterTypes();
                         if (p.length > 0 && p[0].getName().equals("com.instagram.feed.media.Media")

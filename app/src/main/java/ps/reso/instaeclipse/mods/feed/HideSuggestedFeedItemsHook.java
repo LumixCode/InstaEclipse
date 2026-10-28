@@ -29,8 +29,6 @@ public class HideSuggestedFeedItemsHook {
     private static final String MEDIA_CLASS = "com.instagram.feed.media.Media";
     private static final String CACHE_KEY_HAS_LIKED = "MediaHasLikedGetter";
 
-    // "has_liked" getter: Media.()Boolean on IG 447+, LiveTreeMediaDict.()Boolean on <= 446 (436)
-    // — reached through the Media field of that type. Resolved once at install (#249).
     private static volatile Method hasLikedGetter;
 
     public void install(ClassLoader classLoader) {
@@ -163,8 +161,7 @@ public class HideSuggestedFeedItemsHook {
                 Method cached = DexKitCache.loadMethod(CACHE_KEY_HAS_LIKED, classLoader);
                 if (cached != null) { hasLikedGetter = cached; return; }
             }
-            for (String owner : new String[]{"com.instagram.feed.media.Media",
-                    "com.instagram.feed.media.LiveTreeMediaDict"}) {
+            for (String owner : new String[]{MEDIA_CLASS}) {
                 List<Found> found;
                 try {
                     found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()

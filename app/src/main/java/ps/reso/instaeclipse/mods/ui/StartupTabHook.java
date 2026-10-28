@@ -39,7 +39,7 @@ public class StartupTabHook {
 
     private static boolean isMainActivity(Activity activity) {
         String cls = activity.getClass().getName();
-        if (MAIN_CLASS.equals(cls) || MAIN.equals(cls)) return true;
+        if (MAIN_CLASS.equals(cls)) return true;
         android.content.ComponentName cn = activity.getComponentName();
         return cn != null && MAIN.equals(cn.getClassName());
     }

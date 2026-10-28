@@ -281,15 +281,8 @@ final class FollowListLoader {
                 fullNameGetter = md.getMethodInstance(cl);
                 break;
             }
-            // username: the getter reading "username" (-265713450) but not "full_name" (the display-name getter)
-            Set<String> displayName = new HashSet<>();
-            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
-                    .declaredClass(USER).paramCount(0).returnType("java.lang.String")
-                    .usingNumbers("username".hashCode(), "full_name".hashCode()))))
-                displayName.add(md.toString());
             for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass(USER).paramCount(0).returnType("java.lang.String").usingNumbers("username".hashCode())))) {
-                if (displayName.contains(md.toString())) continue;
                 Method m = md.getMethodInstance(cl);
                 if (Modifier.isStatic(m.getModifiers())) continue;
                 usernameGetter = m;

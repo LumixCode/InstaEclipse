@@ -77,12 +77,10 @@ public class DisableDoubleTapLikeHook {
         // also swallow native skip/forward actions and gesture bookkeeping.
         boolean cachedReelsHooked = installReelsLikeAction(classLoader);
         if (DexKitCache.isCacheValid()) {
-            Method feedCached = DexKitCache.loadMethod("DoubleTapLike", classLoader);
             Method reelsCached = DexKitCache.loadMethod("DoubleTapLikeReels", classLoader);
             List<Method> reelsGestureCached = DexKitCache.loadMethods("DoubleTapLikeReelsGestures", classLoader);
 
-            cachedFeedHooked = hookMethod(feedCached, HOOK)
-                    | hookMethods(DexKitCache.loadMethods(CACHE_FEED_SPLIT, classLoader), HOOK) > 0;
+            cachedFeedHooked = hookMethods(DexKitCache.loadMethods(CACHE_FEED_SPLIT, classLoader), HOOK) > 0;
             if (!cachedReelsHooked)
                 cachedReelsHooked = hookMethods(DexKitCache.loadMethods(CACHE_REELS_LIKE, classLoader), HOOK) > 0;
             if (!cachedReelsHooked) cachedReelsHooked = hookMethod(reelsCached, HOOK);
@@ -109,38 +107,22 @@ public class DisableDoubleTapLikeHook {
         boolean reelsHooked = reelsAlreadyHooked;
 
         if (!feedHooked) {
-            List<Found> feedMethods = DexKitQueryCache.methods(FindMethod.create()
+            List<Found> feedMethods = new ArrayList<>();
+            feedMethods.addAll(DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
-                            .usingStrings("double_tap_on_liked", "used_double_tap")
-                    )
-            );
-            boolean splitAnchors = false;
-            if (feedMethods.isEmpty()) {
-                splitAnchors = true;
-                // IG 447+/451: the two strings were split across two methods — the like/unlike
-                // toggle (X.0GAJ.A01 on 451: "like","unlike","double_tap_on_liked") and the like
-                // request builder (X.0A0e.A04 on 451: "used_double_tap"). Both are void and run
-                // synchronously under GestureDetector.onDoubleTap, so the same stack-gated HOOK
-                // blocks only double-tap likes; button likes still go through.
-                feedMethods = new ArrayList<>();
-                feedMethods.addAll(DexKitQueryCache.methods(FindMethod.create()
-                        .matcher(MethodMatcher.create()
-                                .usingStrings("double_tap_on_liked", "like", "unlike")
-                                .returnType("void"))));
-                feedMethods.addAll(DexKitQueryCache.methods(FindMethod.create()
-                        .matcher(MethodMatcher.create()
-                                .usingStrings("used_double_tap", "used_double_tap_hint_impressions")
-                                .returnType("void"))));
-            }
+                            .usingStrings("double_tap_on_liked", "like", "unlike")
+                            .returnType("void"))));
+            feedMethods.addAll(DexKitQueryCache.methods(FindMethod.create()
+                    .matcher(MethodMatcher.create()
+                            .usingStrings("used_double_tap", "used_double_tap_hint_impressions")
+                            .returnType("void"))));
             List<Method> splitHooked = new ArrayList<>();
             for (Found md : feedMethods) {
                 try {
                     Method method = md.getMethodInstance(classLoader);
-                    if (!splitAnchors) DexKitCache.saveMethod("DoubleTapLike", method);
                     if (hookMethod(method, HOOK)) {
                         feedHooked = true;
                         ModuleLog.detail("(InstaEclipse | DoubleTapLike): Feed hooked on " + md.getClassName() + "." + md.getName());
-                        if (!splitAnchors) break;
                         splitHooked.add(method);
                     }
                 } catch (Exception e) {

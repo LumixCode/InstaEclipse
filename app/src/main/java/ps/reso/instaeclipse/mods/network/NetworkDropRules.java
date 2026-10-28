@@ -25,7 +25,7 @@ public final class NetworkDropRules {
             shouldDrop |= path.contains("/mark_ephemeral_item_ranges_viewed");
         }
         if (FeatureFlags.isGhostScreenshot) {
-            shouldDrop |= path.endsWith("/screenshot/") || path.endsWith("/ephemeral_screenshot/");
+            shouldDrop |= path.endsWith("/ephemeral_screenshot/");
         }
         if (FeatureFlags.isGhostViewOnce) {
             shouldDrop |= path.endsWith("/item_replayed/");

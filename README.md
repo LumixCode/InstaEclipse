@@ -403,11 +403,11 @@ Disable Reels overrides the daily limit and the nighttime block.
 
 | | |
 |---|---|
-| **Supported version** | Instagram `451.0.0.20.80` only; older versions are not supported. Tested with JingMatrix LSPatch in local patch mode |
+| **Supported version** | Instagram `451.0.0.20.80` only; older and newer versions are not supported. Tested with JingMatrix LSPatch in local patch mode |
 | **Get this version** | [Instagram 451.0.0.20.80 on APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-451-0-0-20-80-release/) |
 | **Android** | 9 and newer |
 | **Frameworks** | The new Xposed API (102): [JingMatrix LSPatch](https://github.com/JingMatrix/LSPatch) 1.0 or newer (no root), or [Vector](https://github.com/JingMatrix/Vector) 2.2 or newer (root; supported upstream, not tested with this fork) |
-| **Survives Instagram updates** | Mostly: DexKit finds what it needs at runtime, but a big Instagram update can still knock a feature out |
+| **Survives Instagram updates** | No: every feature is built and checked for 451.0.0.20.80 only, so on another Instagram build some features may not turn on |
 
 The menu inside Instagram shows how many features are active (for example "62/62 active"). Tap it to see which ones could not attach.
 

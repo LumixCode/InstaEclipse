@@ -857,14 +857,6 @@ public class FeedVideoDownloadHook {
 
             // Resolve the username getter on User via the stable GraphQL field ID -265713450
             // (== "username".hashCode(), a JDK-fixed constant → valid across builds).
-            //
-            // NOTE: that same id matches TWO zero-arg String getters on User — the real
-            // `username` getter, AND a display-name getter that reads `username` first and falls
-            // back to `full_name`. Picking get(0) can land on the display-name one, so downloads
-            // get filed under the display name instead of the handle (only visible when the
-            // display name is all-lowercase, so it passes the handle regex). Disambiguate by
-            // dropping any candidate that ALSO references the `full_name` field id — the pure
-            // username getter never reads full_name. (Fix ported from PR #200 by izadiegizabal.)
             try {
                 List<Found> ugMethods = DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create()
@@ -873,29 +865,10 @@ public class FeedVideoDownloadHook {
                                 .paramCount(0)
                                 .usingNumbers(-265713450)));
                 if (!ugMethods.isEmpty()) {
-                    // Candidates that ALSO read full_name = the display-name getter → exclude.
-                    java.util.Set<String> readsFullName = new java.util.HashSet<>();
-                    try {
-                        for (Found md : DexKitQueryCache.methods(FindMethod.create()
-                                .matcher(MethodMatcher.create()
-                                        .declaredClass("com.instagram.user.model.User")
-                                        .returnType("java.lang.String")
-                                        .paramCount(0)
-                                        .usingNumbers(-265713450, "full_name".hashCode())))) {
-                            readsFullName.add(md.toString());
-                        }
-                    } catch (Throwable ignored) {}
-
-                    Found chosen = null;
-                    for (Found md : ugMethods) {
-                        if (!readsFullName.contains(md.toString())) { chosen = md; break; }
-                    }
-                    if (chosen == null) chosen = ugMethods.get(0); // fallback: better than nothing
-                    UserUtils.userUsernameGetter = chosen.getMethodInstance(classLoader);
+                    UserUtils.userUsernameGetter = ugMethods.get(0).getMethodInstance(classLoader);
                     UserUtils.userUsernameGetter.setAccessible(true);
                     DexKitCache.saveMethod("UsernameGetter", UserUtils.userUsernameGetter);
-                    ModuleLog.detail("(IE|DL|Username) userUsernameGetter=" + UserUtils.userUsernameGetter.getName()
-                            + " (excluded " + readsFullName.size() + " full_name getter(s))");
+                    ModuleLog.detail("(IE|DL|Username) userUsernameGetter=" + UserUtils.userUsernameGetter.getName());
                 } else {
                     ModuleLog.warn("(IE|DL|Username) Usernames may be missing from download file names: the username field was not found in this Instagram version");
                     ModuleLog.detail("(IE|DL|Username) userUsernameGetter not found via -265713450");

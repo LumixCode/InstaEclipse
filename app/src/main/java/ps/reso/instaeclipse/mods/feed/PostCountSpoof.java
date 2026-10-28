@@ -64,7 +64,7 @@ public final class PostCountSpoof {
         try { getId = cl.loadClass(MEDIA).getMethod("getId"); } catch (Throwable t) { log.append(" no getId"); }
         for (int i = 0; i < KEYS.length; i++) {
             final int which = i;
-            List<Method> found = lookup(cl, KEYS[i], m -> isCount(m.getReturnType()), true);
+            List<Method> found = lookup(cl, KEYS[i], m -> isCount(m.getReturnType()), "like_count".equals(KEYS[i]));
             if (!found.isEmpty()) log.append(" ").append(KEYS[i]);
             for (Method m : found) {
                 XposedBridge.hookMethod(m, new XC_MethodHook() {

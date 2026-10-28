@@ -43,7 +43,6 @@ public class InstantSaveHook {
             "com.instagram.quicksnap.viewer.compose.QuickSnapMediaViewerScreenKt$QuickSnapMediaViewerScreen$";
     private static final String[] VIEWER_LAMBDAS = {
             VIEWER_PREFIX + "16$1$11$1",
-            VIEWER_PREFIX + "16$1$8$1",
     };
     private static final String LONGPRESS_LAMBDA =
             "com.instagram.quicksnap.viewer.compose.PointerTouchKt$handleTapAndLongPressWithRelease$2$1$1$1";

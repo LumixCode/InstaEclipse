@@ -126,7 +126,7 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
         } catch (Throwable absent) {
             return Queries.NONE;
         }
-        return type.substring(type.lastIndexOf('.') + 1).startsWith("ImmutablePando") ? Queries.NUMERIC : Queries.BOTH;
+        return MEDIA.equals(type) ? Queries.BOTH : Queries.NUMERIC;
     }
 
     static Object findPostMenuMedia(Object handler, Class<?> creatorType) {
