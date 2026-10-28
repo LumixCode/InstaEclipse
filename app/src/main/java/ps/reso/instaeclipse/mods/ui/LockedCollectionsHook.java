@@ -19,6 +19,7 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.JitGuard;
+import ps.reso.instaeclipse.utils.core.PasscodeCheck;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -331,10 +332,16 @@ public class LockedCollectionsHook {
         }));
         d.secondary(I18n.t(a, R.string.ig_dialog_cancel), cancel);
         d.onClose(cancel); // ✕ = Cancel (never leaves the locked content showing)
-        d.primaryKeepOpen(I18n.t(a, R.string.ig_locked_coll_open), () -> {
-            if (LockDirectMessagesHook.checkPass(code.getText().toString())) success.run();
-            else { code.setText(""); code.setError(LockDirectMessagesHook.failureText(a)); }
-        });
+        final boolean[] closed = {false};
+        d.onDismiss(() -> closed[0] = true);
+        final View[] openButton = new View[1];
+        final PasscodeCheck.Prompt checking = new PasscodeCheck.Prompt(() -> !closed[0] && !done[0],
+                busy -> PasscodeCheck.dim(openButton[0], busy));
+        openButton[0] = d.primaryKeepOpen(I18n.t(a, R.string.ig_locked_coll_open), () ->
+                checking.check(code.getText().toString(), ok -> {
+                    if (ok) success.run();
+                    else { code.setText(""); code.setError(LockDirectMessagesHook.failureText(a)); }
+                }));
         d.show();
         if (FeatureFlags.lockUseFingerprint && LockDirectMessagesHook.canAuthenticate(a))
             LockDirectMessagesHook.promptBiometric(a, I18n.t(a, R.string.ig_locked_coll_title), success);

@@ -15,6 +15,7 @@ import android.widget.Toast;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook;
+import ps.reso.instaeclipse.utils.core.PasscodeCheck;
 import ps.reso.instaeclipse.utils.core.PasscodeRules;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -65,7 +66,12 @@ public final class LockFlows {
             dlg.view(error);
             dlg.onClose(onCancel);
             dlg.secondary(activity.getString(android.R.string.cancel), onCancel);
-            dlg.primaryKeepOpen(I18n.t(activity, R.string.ig_lock_save), () -> {
+            boolean[] closed = {false};
+            dlg.onDismiss(() -> closed[0] = true);
+            View[] saveButton = new View[1];
+            PasscodeCheck.Prompt hashing = new PasscodeCheck.Prompt(() -> !closed[0],
+                    busy -> PasscodeCheck.dim(saveButton[0], busy));
+            saveButton[0] = dlg.primaryKeepOpen(I18n.t(activity, R.string.ig_lock_save), () -> {
                 PasscodeRules.Result result = PasscodeRules.checkNew(first.getText().toString(), second.getText().toString());
                 if (result != PasscodeRules.Result.OK) {
                     error.setText(I18n.t(activity, errorText(result)));
@@ -73,14 +79,16 @@ public final class LockFlows {
                     if (result == PasscodeRules.Result.MISMATCH) second.setText("");
                     return;
                 }
-                Runnable save = () -> {
-                    LockDirectMessagesHook.newSalt();
-                    FeatureFlags.lockDirectPasscode = LockDirectMessagesHook.hashPass(first.getText().toString());
+                String salt = LockDirectMessagesHook.freshSalt();
+                Runnable save = () -> hashing.hash(first.getText().toString(), salt, hash -> {
+                    if (hash == null) return;
+                    FeatureFlags.lockDirectSalt = salt;
+                    FeatureFlags.lockDirectPasscode = hash;
                     SettingsManager.saveAllFlags();
                     IeToast.makeText(activity, I18n.t(activity, R.string.ig_dialog_misc_lock_dms_saved), Toast.LENGTH_SHORT).show();
                     dlg.dismiss();
                     if (onSaved != null) onSaved.run();
-                };
+                });
                 if (!verified && hasPasscode()) {
                     authenticate(activity, I18n.t(activity, R.string.ig_lock_settings_prompt), "settings", save);
                 } else {

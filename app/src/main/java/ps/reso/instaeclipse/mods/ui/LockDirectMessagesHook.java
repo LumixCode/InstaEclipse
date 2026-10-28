@@ -14,6 +14,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.utils.core.PasscodeCheck;
 import ps.reso.instaeclipse.utils.core.PasscodeHasher;
 import ps.reso.instaeclipse.utils.core.PasscodeLockout;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -45,7 +46,6 @@ public class LockDirectMessagesHook {
     private static String currentAccount;
     private static int inboxId, listId, threadId;
     private static long outsideDirectSince;
-    private static final android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
     /**
      * The hidden-inbox gate opens on the third of several quick taps, and the system biometric
      * prompt closes itself on any tap outside its panel: a fourth tap can close it as it appears.
@@ -144,7 +144,7 @@ public class LockDirectMessagesHook {
                 if (a != null && resumed.contains(a)) {
                     long delay = throttle.preDraw(android.os.SystemClock.uptimeMillis());
                     if (delay == 0L) checkGate(a);
-                    else if (delay > 0L) main.postDelayed(this, delay);
+                    else if (delay > 0L) main().postDelayed(this, delay);
                 }
             } catch (Throwable t) {
                 ModuleLog.warn("(IE|LockDMs) Could not check whether to show the lock: "
@@ -183,7 +183,7 @@ public class LockDirectMessagesHook {
     }
 
     public static void locksChanged() {
-        main.post(() -> {
+        main().post(() -> {
             for (Activity a : new java.util.ArrayList<>(resumed)) {
                 if (a.isFinishing() || a.isDestroyed()) continue;
                 if (locksOn()) arm(a);
@@ -213,7 +213,7 @@ public class LockDirectMessagesHook {
         android.view.ViewTreeObserver observer = decor.getViewTreeObserver();
         observer.removeOnGlobalLayoutListener(watch);
         observer.removeOnPreDrawListener(watch);
-        main.removeCallbacks(watch);
+        main().removeCallbacks(watch);
     }
 
     public static boolean locksNeedPasscode() {
@@ -333,7 +333,7 @@ public class LockDirectMessagesHook {
                 long now = android.os.SystemClock.elapsedRealtime();
                 if (outsideDirectSince == 0L) {
                     outsideDirectSince = now;
-                    main.postDelayed(() -> { if (resumed.contains(a)) checkGate(a); }, 250L);
+                    main().postDelayed(() -> { if (resumed.contains(a)) checkGate(a); }, 250L);
                 }
                 if (now - outsideDirectSince < 250L) screen = DirectLockSession.Screen.UNKNOWN;
             } else if (screen != DirectLockSession.Screen.UNKNOWN) outsideDirectSince = 0L;
@@ -468,7 +468,7 @@ public class LockDirectMessagesHook {
                 }
                 if (!active.focusLost) return;
                 int id = active.promptId;
-                main.postDelayed(() -> {
+                main().postDelayed(() -> {
                     if (gates.get(a) != active || active.promptId != id || !active.promptOpen) return;
                     active.promptOpen = false;
                     repromptAfterStrayTap(active);
@@ -575,15 +575,17 @@ public class LockDirectMessagesHook {
             gate.biometric.cancel();
             dialog.dismiss();
         };
-        final Runnable attempt = () -> {
-            if (checkPass(code.getText().toString())) {
+        final PasscodeCheck.Prompt checking = new PasscodeCheck.Prompt(
+                () -> gates.get(a) == gate && !gate.completed.get(), busy -> PasscodeCheck.dim(unlock, busy));
+        final Runnable attempt = () -> checking.check(code.getText().toString(), ok -> {
+            if (ok) {
                 succeed.run();
             } else {
                 code.setText("");
                 error.setText(failureText(a));
                 error.setVisibility(View.VISIBLE);
             }
-        };
+        });
         unlock.setOnClickListener(v -> attempt.run());
         // Keyboard "Done" also submits — so the unlock never depends on a button the keyboard hides.
         code.setOnEditorActionListener((v, actionId, ev) -> {
@@ -675,7 +677,7 @@ public class LockDirectMessagesHook {
         ModuleLog.detail("(IE|LockDMs) biometric prompt closed right away: shown again if the gate is still in front");
         // A moment later, once focus has settled: back on the gate after a stray tap, elsewhere
         // after Home or Recents.
-        main.postDelayed(reprompt, REPROMPT_SETTLE_MS);
+        main().postDelayed(reprompt, REPROMPT_SETTLE_MS);
     }
 
     /** True when the device has biometric hardware with something enrolled. */
@@ -858,19 +860,26 @@ public class LockDirectMessagesHook {
         return PasscodeHasher.hash(passcode, salt);
     }
 
-    private static PasscodeLockout lockout;
+    private static volatile PasscodeLockout lockout;
 
-    private static synchronized PasscodeLockout lockout() {
-        if (lockout == null) bindLockout(ps.reso.instaeclipse.Xposed.Module.appContext());
-        if (lockout == null) lockout = new PasscodeLockout(null, android.os.SystemClock::elapsedRealtime);
-        return lockout;
+    private static PasscodeLockout lockout() {
+        PasscodeLockout bound = lockout;
+        if (bound != null) return bound;
+        synchronized (LockDirectMessagesHook.class) {
+            if (lockout == null) bindLockout(ps.reso.instaeclipse.Xposed.Module.appContext());
+            if (lockout == null) lockout = new PasscodeLockout(null, android.os.SystemClock::elapsedRealtime);
+            return lockout;
+        }
     }
 
-    static synchronized void bindLockout(android.content.Context context) {
+    static void bindLockout(android.content.Context context) {
         if (lockout != null || context == null) return;
-        android.content.Context app = context.getApplicationContext() != null ? context.getApplicationContext() : context;
-        lockout = new PasscodeLockout(app.getSharedPreferences(LOCKOUT_PREFS, android.content.Context.MODE_PRIVATE),
-                android.os.SystemClock::elapsedRealtime);
+        synchronized (LockDirectMessagesHook.class) {
+            if (lockout != null) return;
+            android.content.Context app = context.getApplicationContext() != null ? context.getApplicationContext() : context;
+            lockout = new PasscodeLockout(app.getSharedPreferences(LOCKOUT_PREFS, android.content.Context.MODE_PRIVATE),
+                    android.os.SystemClock::elapsedRealtime);
+        }
     }
 
     /** Seconds left in the lockout after too many wrong passcodes, or 0. */
@@ -907,10 +916,22 @@ public class LockDirectMessagesHook {
 
     /** Generate + store a fresh random salt (call right before hashing a NEW passcode). */
     public static void newSalt() {
+        FeatureFlags.lockDirectSalt = freshSalt();
+    }
+
+    public static String freshSalt() {
         byte[] b = new byte[16];
         new java.security.SecureRandom().nextBytes(b);
         StringBuilder sb = new StringBuilder();
         for (byte x : b) sb.append(String.format("%02x", x));
-        FeatureFlags.lockDirectSalt = sb.toString();
+        return sb.toString();
+    }
+
+    private static android.os.Handler main() {
+        return MainThread.HANDLER;
+    }
+
+    private static final class MainThread {
+        static final android.os.Handler HANDLER = new android.os.Handler(android.os.Looper.getMainLooper());
     }
 }
