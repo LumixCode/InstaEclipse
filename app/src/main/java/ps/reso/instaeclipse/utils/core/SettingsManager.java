@@ -19,14 +19,6 @@ public class SettingsManager {
     private static final String PREF_NAME = "instaeclipse_prefs";
     public static final String PASSCODE_SET = "lockPasscodeSet";
 
-    /** Extreme Mode keeps these on: turning one off from outside the locked menus is refused. */
-    private static final Set<String> EXTREME_KEEP_ON = new HashSet<>(Arrays.asList(
-            "disableStories", "disableFeed", "disableReels", "disableExplore", "disableComments",
-            "dailyReelLimitEnabled", "nightReelBlockEnabled"));
-    /** Extreme Mode freezes these entirely (any new value could loosen the reel limits). */
-    private static final Set<String> EXTREME_FROZEN = new HashSet<>(Arrays.asList(
-            "isExtremeMode", "disableReelsExceptDM", "dailyReelLimitAllowDM", "nightReelBlockAllowDM",
-            "dailyReelLimit", "nightReelBlockStartMinutes", "nightReelBlockEndMinutes"));
     /** While a passcode is set, only Instagram's Lock menu (it asks for the passcode) turns these off. */
     private static final Set<String> PASSCODE_LOCKS = new HashSet<>(Arrays.asList(
             "lockWholeApp", "lockDirectMessages", "lockSpecificMessages", "lockDirectAlways",
@@ -645,10 +637,7 @@ public class SettingsManager {
         return PASSCODE_LOCKS.contains(key) && !Boolean.TRUE.equals(value);
     }
 
-    /** True when Extreme Mode is on and {@code value} would loosen one of its locked settings. */
     public static boolean isLockedByExtreme(String key, Object value) {
-        if (!FeatureFlags.isExtremeMode || key == null) return false;
-        if (EXTREME_FROZEN.contains(key)) return true;
-        return EXTREME_KEEP_ON.contains(key) && !Boolean.TRUE.equals(value);
+        return FeatureFlags.isExtremeMode && key != null && !ExtremeRules.allows(key, value);
     }
 }

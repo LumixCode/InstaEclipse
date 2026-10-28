@@ -43,7 +43,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -58,6 +57,7 @@ import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.core.CompanionSettings;
 import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
 import ps.reso.instaeclipse.utils.core.ExportBrand;
+import ps.reso.instaeclipse.utils.core.ExtremeRules;
 import ps.reso.instaeclipse.utils.core.InstagramCompat;
 import ps.reso.instaeclipse.utils.core.InstagramRestarter;
 import ps.reso.instaeclipse.utils.core.PermissionAsk;
@@ -75,12 +75,6 @@ public class HomeFragment extends Fragment implements TabFragment {
     private static final int COLOR_WARN = 0xFFFF9F0A;
     private static final int COLOR_ERROR = 0xFFFF453A;
     private static final int COLOR_INSTAGRAM = 0xFFFF375F;
-
-    /** Distraction keys FeaturesFragment locks while Extreme Mode is on. */
-    private static final List<String> EXTREME_LOCKED = Arrays.asList(
-            "disableStories", "disableFeed", "disableReels", "disableReelsExceptDM",
-            "disableExplore", "disableComments", "dailyReelLimitEnabled", "dailyReelLimitAllowDM",
-            "nightReelBlockEnabled", "nightReelBlockAllowDM");
 
     private static final long SYNC_DELAY_MS = 200;
 
@@ -613,7 +607,7 @@ public class HomeFragment extends Fragment implements TabFragment {
     private String lockReason(FeatureCatalog.Item item, Map<String, ?> all) {
         boolean on = isOn(item.key, all);
         if ("isExtremeMode".equals(item.key) && on) return getString(R.string.ig_extreme_active);
-        if (isOn("isExtremeMode", all) && EXTREME_LOCKED.contains(item.key)) {
+        if (isOn("isExtremeMode", all) && !ExtremeRules.canToggle(item.key, on)) {
             return getString(R.string.home_shortcuts_locked_extreme);
         }
         if (on && SettingsGuard.decideInApp(item.key, false, all) == SettingsGuard.Decision.REFUSE) {
@@ -752,10 +746,11 @@ public class HomeFragment extends Fragment implements TabFragment {
             startActivity(picker);
             return;
         }
-        if (SettingsGuard.decideInApp(entry.key, checked, localCache.getAll()) == SettingsGuard.Decision.REFUSE) {
+        Map<String, ?> all = localCache.getAll();
+        if (SettingsGuard.decideInApp(entry.key, checked, all) == SettingsGuard.Decision.REFUSE) {
             setQuietly(entry, !checked);
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(),
-                    getString(R.string.ig_lock_turn_off_in_ig), Toast.LENGTH_LONG).show();
+                    getString(SettingsGuard.refusalHint(entry.key, checked, all)), Toast.LENGTH_LONG).show();
             return;
         }
         setFeature(entry.key, checked);
@@ -785,11 +780,16 @@ public class HomeFragment extends Fragment implements TabFragment {
     }
 
     private void setFeature(String key, boolean value) {
-        Set<String> restart;
-        if (!value && "disableReels".equals(key) && localCache.getBoolean("disableReelsExceptDM", false)) {
-            LinkedHashMap<String, Object> values = new LinkedHashMap<>();
-            values.put(key, false);
+        Map<String, ?> all = localCache.getAll();
+        LinkedHashMap<String, Object> values = new LinkedHashMap<>();
+        values.put(key, value);
+        if (!value && "disableReels".equals(key) && isOn("disableReelsExceptDM", all)) {
             values.put("disableReelsExceptDM", false);
+        }
+        String exception = value && isOn("isExtremeMode", all) ? ExtremeRules.exceptionOf(key) : null;
+        if (exception != null && isOn(exception, all)) values.put(exception, false);
+        Set<String> restart;
+        if (values.size() > 1) {
             restart = CompanionSettings.putAll(requireContext(), values);
         } else {
             restart = CompanionSettings.put(requireContext(), key, value);

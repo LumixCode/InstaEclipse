@@ -35,6 +35,7 @@ import ps.reso.instaeclipse.mods.location.LocationPickerActivity;
 import ps.reso.instaeclipse.mods.reels.DailyReelLimit;
 import ps.reso.instaeclipse.mods.reels.NightReelSchedule;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
+import ps.reso.instaeclipse.utils.core.ExtremeRules;
 import ps.reso.instaeclipse.utils.core.ModuleActivityLauncher;
 import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.core.PasscodeRules;
@@ -1295,7 +1296,8 @@ public class DialogUtils {
             nightStatus.setVisibility(visible ? View.VISIBLE : View.GONE);
             nightStart.setEnabled(editable);
             nightEnd.setEnabled(editable);
-            nightDM.setEnabled(editable);
+            nightDM.setEnabled(visible && !reels.isChecked() && (!FeatureFlags.isExtremeMode
+                    || ExtremeRules.canToggle("nightReelBlockAllowDM", nightDM.isChecked())));
             float alpha = editable ? 1f : 0.38f;
             nightStart.setAlpha(alpha);
             nightEnd.setAlpha(alpha);
@@ -1341,19 +1343,21 @@ public class DialogUtils {
             boolean any = false;
             for (ToggleRow row : switches) {
                 any |= row.isChecked();
-                row.setEnabled(!locked || !row.isChecked());
+                row.setEnabled(!locked || ExtremeRules.canToggle((String) row.getTag(), row.isChecked()));
             }
             master.setEnabled(!locked);
             if (locked) extreme.setLocked(I18n.t(context, R.string.ig_extreme_active));
             else extreme.setEnabled(any);
             exceptDM.setVisibility(reels.isChecked() ? View.VISIBLE : View.GONE);
-            exceptDM.setEnabled(reels.isChecked() && (!locked || exceptDM.isChecked()));
-            daily.setEnabled(!locked && !reels.isChecked());
+            exceptDM.setEnabled(reels.isChecked()
+                    && (!locked || ExtremeRules.canToggle("disableReelsExceptDM", exceptDM.isChecked())));
+            daily.setEnabled(!reels.isChecked() && (!locked || ExtremeRules.canToggle("dailyReelLimitEnabled", daily.isChecked())));
             dailyDM.setVisibility(daily.isChecked() ? View.VISIBLE : View.GONE);
-            dailyDM.setEnabled(daily.isEnabled() && daily.isChecked());
-            night.setEnabled(!locked && !reels.isChecked());
+            dailyDM.setEnabled(daily.isChecked() && !reels.isChecked()
+                    && (!locked || ExtremeRules.canToggle("dailyReelLimitAllowDM", dailyDM.isChecked())));
+            night.setEnabled(!reels.isChecked() && (!locked || ExtremeRules.canToggle("nightReelBlockEnabled", night.isChecked())));
             amount.setVisibility(daily.isChecked() ? View.VISIBLE : View.GONE);
-            amount.setEnabled(dailyDM.isEnabled());
+            amount.setEnabled(!locked && daily.isChecked() && !reels.isChecked());
             amount.setAlpha(amount.isEnabled() ? 1f : 0.38f);
             refreshUsage.run();
             refreshNight.run();
@@ -1363,6 +1367,10 @@ public class DialogUtils {
             row.setOnCheckedChangeListener((button, checked) -> {
                 ExtrasFeatures.set(key, checked);
                 if (row == reels && !checked) exceptDM.setChecked(false);
+                String exception = checked && FeatureFlags.isExtremeMode ? ExtremeRules.exceptionOf(key) : null;
+                for (ToggleRow dm : new ToggleRow[]{exceptDM, dailyDM, nightDM}) {
+                    if (dm.getTag().equals(exception) && dm.isChecked()) dm.setChecked(false);
+                }
                 if (!updatingMaster[0]) refresh.run();
                 SAVES.request();
                 SettingsEvents.afterChange(key);
@@ -1374,6 +1382,7 @@ public class DialogUtils {
                 ExtrasFeatures.set(key, checked);
                 SettingsManager.saveAllFlags();
                 SettingsEvents.afterChange(key);
+                if (FeatureFlags.isExtremeMode) refresh.run();
             });
         }
         master.setOnCheckedChangeListener((button, checked) -> {

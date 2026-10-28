@@ -73,6 +73,7 @@ import ps.reso.instaeclipse.mods.devops.config.DevConfigReply;
 import ps.reso.instaeclipse.mods.media.MediaStoreTarget;
 import ps.reso.instaeclipse.utils.backup.CompanionRestorePlan;
 import ps.reso.instaeclipse.utils.core.CompanionUiPrefs;
+import ps.reso.instaeclipse.utils.core.ExtremeRules;
 import ps.reso.instaeclipse.utils.core.PermissionAsk;
 import ps.reso.instaeclipse.utils.core.SettingsGuard;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
@@ -669,6 +670,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                             changes.put(item.prefKey, checked);
                             if (checked && item.dependsOn != null) changes.put(item.dependsOn, true);
                             if (!checked && item.cascadeOffKey != null) changes.put(item.cascadeOffKey, false);
+                            String exception = checked && getCurrentState("isExtremeMode")
+                                    ? ExtremeRules.exceptionOf(item.prefKey) : null;
+                            if (exception != null) changes.put(exception, false);
                             stageChanges(changes);
                             if (checked && item.dependsOn != null) refreshRowByKey(item.dependsOn);
                             if (!checked && item.cascadeOffKey != null) refreshRowByKey(item.cascadeOffKey);
@@ -1442,7 +1446,14 @@ public class FeaturesFragment extends Fragment implements TabFragment {
             row.enabled = !getCurrentState(item.overriddenBy);
             row.overrideReason = getString(R.string.feat_reason_overridden, labelOf(item.overriddenBy));
         }
-        if (FOCUS_LOCKED.contains(item.key)) lockedByExtreme(row);
+        if (ExtremeRules.KEEP_ON.contains(item.key) || ExtremeRules.EXCEPTIONS.contains(item.key)) {
+            if (getCurrentState("isExtremeMode") && !ExtremeRules.canToggle(item.key, getCurrentState(item.key))) {
+                row.enabled = false;
+                row.overrideReason = getString(R.string.home_shortcuts_locked_extreme);
+            }
+        } else if (FOCUS_LOCKED.contains(item.key)) {
+            lockedByExtreme(row);
+        }
         return row;
     }
 
@@ -2410,18 +2421,18 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private void stageChanges(LinkedHashMap<String, Boolean> wanted) {
         LinkedHashMap<String, Object> changed = new LinkedHashMap<>();
         Map<String, ?> current = localCache.getAll();
-        boolean refused = false;
+        int refusedHint = 0;
         for (Map.Entry<String, Boolean> entry : wanted.entrySet()) {
             if (localCache.getBoolean(entry.getKey(), defaultState(entry.getKey())) == entry.getValue()) continue;
             if (SettingsGuard.decideInApp(entry.getKey(), entry.getValue(), current) == SettingsGuard.Decision.REFUSE) {
-                refused = true;
+                if (refusedHint == 0) refusedHint = SettingsGuard.refusalHint(entry.getKey(), entry.getValue(), current);
                 continue;
             }
             changed.put(entry.getKey(), entry.getValue());
         }
-        if (refused) {
+        if (refusedHint != 0) {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(requireContext(),
-                    getString(R.string.ig_lock_turn_off_in_ig), Toast.LENGTH_LONG).show();
+                    getString(refusedHint), Toast.LENGTH_LONG).show();
             recyclerFeatures.post(this::reloadCurrentMenu);
         }
         if (changed.size() == 1) {

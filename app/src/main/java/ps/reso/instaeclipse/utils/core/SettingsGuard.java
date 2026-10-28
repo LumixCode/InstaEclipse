@@ -1,6 +1,7 @@
 package ps.reso.instaeclipse.utils.core;
 
 import android.content.Context;
+import android.widget.Toast;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -11,6 +12,7 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.dialog.LockFlows;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.i18n.I18n;
+import ps.reso.instaeclipse.utils.toast.IeToast;
 
 public final class SettingsGuard {
 
@@ -38,7 +40,16 @@ public final class SettingsGuard {
         return Decision.APPLY;
     }
 
+    public static boolean extremeRefuses(String key, Object value, boolean extremeOn) {
+        return extremeOn && !ExtremeRules.allows(key, value);
+    }
+
+    public static int refusalHint(String key, Object value, Map<String, ?> companion) {
+        return extremeRefuses(key, value, extremeOn(companion)) ? R.string.ig_extreme_refused : R.string.ig_lock_turn_off_in_ig;
+    }
+
     public static Decision decideInApp(String key, Object value, Map<String, ?> companion) {
+        if (extremeRefuses(key, value, extremeOn(companion))) return Decision.REFUSE;
         if (!weakens(key, value)) return Decision.APPLY;
         Object signal = companion == null ? null : companion.get(SettingsManager.PASSCODE_SET);
         if (Boolean.FALSE.equals(signal)) return Decision.APPLY;
@@ -47,6 +58,10 @@ public final class SettingsGuard {
     }
 
     public static boolean request(Context context, String key, Object value, Runnable apply) {
+        if (extremeRefuses(key, value, FeatureFlags.isExtremeMode)) {
+            IeToast.makeText(context, I18n.t(context, R.string.ig_extreme_refused), Toast.LENGTH_LONG).show();
+            return false;
+        }
         switch (decide(key, value, SettingsManager.passcodeSet(FeatureFlags.lockDirectPasscode))) {
             case AUTHENTICATE:
                 LockFlows.authenticate(LockFlows.activity(context), I18n.t(context, R.string.ig_lock_settings_prompt),
@@ -61,5 +76,9 @@ public final class SettingsGuard {
                 apply.run();
                 return true;
         }
+    }
+
+    private static boolean extremeOn(Map<String, ?> companion) {
+        return companion != null && Boolean.TRUE.equals(companion.get("isExtremeMode"));
     }
 }
