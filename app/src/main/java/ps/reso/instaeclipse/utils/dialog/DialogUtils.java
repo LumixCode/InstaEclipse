@@ -50,6 +50,7 @@ import ps.reso.instaeclipse.utils.feature.RestartPending;
 import ps.reso.instaeclipse.utils.ghost.GhostModeUtils;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.ui.Gestures;
 import ps.reso.instaeclipse.utils.ui.IePalette;
 import ps.reso.instaeclipse.utils.dialog.IeRows.RadioRow;
 import ps.reso.instaeclipse.utils.dialog.IeRows.ToggleRow;
@@ -3173,6 +3174,11 @@ public class DialogUtils {
         View chips = buildStatusChips(context);
         layout.addView(chips);
 
+        LinearLayout gestures = IeRows.card(context, 5);
+        gestures.addView(IeRows.actionRow(context, R.drawable.ic_help, I18n.t(context, R.string.ig_gestures), "#0A84FF",
+                v -> showGestures(context)));
+        layout.addView(gestures);
+
         LinearLayout links = IeRows.card(context, 5);
         links.addView(IeRows.actionRow(context, R.drawable.ic_github_logo, I18n.t(context, R.string.about_report_issue), "#8E8E93",
                 v -> openLink(context, ps.reso.instaeclipse.utils.core.ExportBrand.GITHUB + "/issues")));
@@ -3208,12 +3214,61 @@ public class DialogUtils {
                 .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
         int i = 0;
         float d = context.getResources().getDisplayMetrics().density;
-        for (View v : new View[]{title, tagline, chips, links, footer}) {
+        for (View v : new View[]{title, tagline, chips, gestures, links, footer}) {
             v.setAlpha(0f);
             v.setTranslationY(12 * d);
             v.animate().alpha(1f).translationY(0f).setStartDelay(120 + 60L * i++).setDuration(260)
                     .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
         }
+    }
+
+    private static LinearLayout gestureRows(Context context, java.util.List<Gestures.Gesture> list) {
+        IePalette p = IePalette.of(context);
+        LinearLayout rows = new LinearLayout(context);
+        rows.setOrientation(LinearLayout.VERTICAL);
+        for (Gestures.Gesture g : list) {
+            LinearLayout row = new LinearLayout(context);
+            row.setOrientation(LinearLayout.VERTICAL);
+            row.setPadding(dp(context, 13), dp(context, 9), dp(context, 11), dp(context, 9));
+            row.setTag(g.key());
+            TextView name = new TextView(context);
+            name.setText(I18n.t(context, g.title()));
+            name.setTextColor(p.text);
+            name.setTextSize(16f);
+            name.setTypeface(null, Typeface.BOLD);
+            TextView what = new TextView(context);
+            what.setText(I18n.t(context, g.description()));
+            what.setTextColor(p.sub);
+            what.setTextSize(14f);
+            what.setPadding(0, dp(context, 2), 0, 0);
+            row.addView(name);
+            row.addView(what);
+            rows.addView(row);
+        }
+        return rows;
+    }
+
+    public static void showGestures(Context context) {
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dp(context, 8), dp(context, 8), dp(context, 8), dp(context, 8));
+        LinearLayout card = IeRows.card(context, 0);
+        card.addView(gestureRows(context, Gestures.ALL));
+        layout.addView(card);
+        showSectionDialog(context, I18n.t(context, R.string.ig_gestures), layout);
+    }
+
+    public static boolean showGesturesHint(Activity a) {
+        java.util.List<Gestures.Gesture> list = Gestures.hint(Gestures::flag);
+        if (list.isEmpty()) return false;
+        IeDialog dlg = new IeDialog(a)
+                .title(I18n.t(a, R.string.ig_gestures_hint_title))
+                .message(I18n.t(a, R.string.ig_gestures_hint_intro))
+                .view(gestureRows(a, list));
+        dlg.primary(I18n.t(a, R.string.ig_dialog_ok), null);
+        dlg.show();
+        Gestures.markHintShown(a);
+        return true;
     }
 
     private static void openLink(Context context, String url) {

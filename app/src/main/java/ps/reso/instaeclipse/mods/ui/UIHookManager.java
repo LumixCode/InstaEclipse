@@ -29,6 +29,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.ghost.GhostModeUtils;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.toast.CustomToast;
+import ps.reso.instaeclipse.utils.ui.Gestures;
 import ps.reso.instaeclipse.utils.ui.TopActivityTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.log.StartupTrace;
@@ -42,6 +43,7 @@ public class UIHookManager {
     private static final TopActivityTracker<Activity> topActivities =
             new TopActivityTracker<>(a -> a.isFinishing() || a.isDestroyed());
     private static volatile boolean trackingActivities;
+    private static Gestures.HintRule gestureHint = new Gestures.HintRule();
 
     public static Activity getCurrentActivity() {
         return currentActivity;
@@ -233,6 +235,7 @@ public class UIHookManager {
                                 ModuleLog.warn("(InstaEclipse) Could not set up InstaEclipse's buttons on this screen: "
                                         + e.getClass().getSimpleName() + ": " + e.getMessage());
                             }
+                            armGestureHint(activity);
                         });
                     });
             ModuleLog.detail("(InstaEclipse): main onResume hooked via " + where);
@@ -281,6 +284,20 @@ public class UIHookManager {
             ModuleLog.warn("(InstaEclipse): InstaEclipse's buttons may be missing on pop-up screens: "
                     + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
+    }
+
+    static void armGestureHint(Activity activity) {
+        if (!gestureHint.arm()) return;
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            try {
+                boolean inFront = currentActivity == activity && !activity.isFinishing() && !activity.isDestroyed()
+                        && activity.hasWindowFocus();
+                if (gestureHint.fire(Gestures.hintShown(activity), inFront)) DialogUtils.showGesturesHint(activity);
+            } catch (Exception e) {
+                ModuleLog.warn("(InstaEclipse) Could not show the gestures hint: "
+                        + e.getClass().getSimpleName() + ": " + e.getMessage());
+            }
+        }, Gestures.HINT_DELAY_MS);
     }
 
     private static void onMainActivityCreated(Activity activity) {

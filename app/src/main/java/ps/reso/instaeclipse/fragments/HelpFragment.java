@@ -48,6 +48,7 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.Contributor;
 import ps.reso.instaeclipse.utils.core.Credits;
 import ps.reso.instaeclipse.utils.core.ExportBrand;
+import ps.reso.instaeclipse.utils.ui.Gestures;
 import ps.reso.instaeclipse.utils.ui.Links;
 
 public class HelpFragment extends Fragment implements TabFragment {
@@ -97,10 +98,45 @@ public class HelpFragment extends Fragment implements TabFragment {
         TextView tested = view.findViewById(R.id.about_tested_with);
         tested.setText(getString(R.string.help_tested_with, ExportBrand.TESTED_INSTAGRAM));
 
+        buildGestures(view.findViewById(R.id.credits_contributors_title));
         buildCredits(view.findViewById(R.id.credits_contributors), Credits.CONTRIBUTORS);
         buildCredits(view.findViewById(R.id.credits_special_thanks), Credits.SPECIAL_THANKS);
 
         return view;
+    }
+
+    private void buildGestures(View before) {
+        ViewGroup about = (ViewGroup) before.getParent();
+        Context ctx = about.getContext();
+        int at = about.indexOfChild(before);
+        TextView title = new TextView(ctx);
+        title.setTextAppearance(resolveResId(ctx, com.google.android.material.R.attr.textAppearanceTitleSmall));
+        title.setTextColor(MaterialColors.getColor(about, com.google.android.material.R.attr.colorOnSurface));
+        title.setText(R.string.ig_gestures);
+        ViewCompat.setAccessibilityHeading(title, true);
+        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        titleLp.topMargin = dp(20);
+        titleLp.bottomMargin = dp(4);
+        about.addView(title, at++, titleLp);
+        for (Gestures.Gesture g : Gestures.ALL) {
+            LinearLayout row = new LinearLayout(ctx);
+            row.setOrientation(LinearLayout.VERTICAL);
+            row.setPadding(0, dp(6), 0, dp(6));
+            row.setTag(g.key());
+            TextView name = new TextView(ctx);
+            name.setTextAppearance(resolveResId(ctx, com.google.android.material.R.attr.textAppearanceBodyLarge));
+            name.setTextColor(MaterialColors.getColor(about, com.google.android.material.R.attr.colorOnSurface));
+            name.setText(g.title());
+            TextView what = new TextView(ctx);
+            what.setTextAppearance(resolveResId(ctx, com.google.android.material.R.attr.textAppearanceBodyMedium));
+            what.setTextColor(MaterialColors.getColor(about, com.google.android.material.R.attr.colorOnSurfaceVariant));
+            what.setText(g.description());
+            row.addView(name);
+            row.addView(what);
+            about.addView(row, at++, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
     }
 
     private static final int[] MONOGRAM_COLORS = {
