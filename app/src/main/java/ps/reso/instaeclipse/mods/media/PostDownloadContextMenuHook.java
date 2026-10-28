@@ -4,14 +4,11 @@ import ps.reso.instaeclipse.xposedcompat.AndroidAppHelper;
 import android.content.Context;
 import android.widget.Toast;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.enums.StringMatchType;
 import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.ClassData;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -33,6 +30,8 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 
 /**
  * Injects a "Download" entry into the feed-post three-dots (⋮) menu.
@@ -84,12 +83,12 @@ public class PostDownloadContextMenuHook {
 
     // ── Entry point ──────────────────────────────────────────────────────────
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
+    public void install(ClassLoader classLoader) {
         loadMediaOptionEnum(classLoader);
-        findCreatorClassAndAddButtonMethod(bridge, classLoader);
+        findCreatorClassAndAddButtonMethod(classLoader);
         installAddButtonHook();
-        installClickHandlerHook(bridge, classLoader);
-        installAllowlistPatchHook(bridge, classLoader);
+        installClickHandlerHook(classLoader);
+        installAllowlistPatchHook(classLoader);
     }
 
     // ── Step 1: MediaOption$Option.DOWNLOAD ──────────────────────────────────
@@ -134,8 +133,7 @@ public class PostDownloadContextMenuHook {
     // Pass 2: findMethod(declaredClass, returnType=void) → filter for the static method
     //         that takes MediaOption$Option + ArrayList as params.
 
-    private static void findCreatorClassAndAddButtonMethod(DexKitBridge bridge,
-                                                            ClassLoader classLoader) {
+    private static void findCreatorClassAndAddButtonMethod(ClassLoader classLoader) {
         // Cache hit: restore addButtonMethod and parameter indices without DexKit
         if (DexKitCache.isCacheValid()) {
             Method cached = DexKitCache.loadMethod("PostDownload_addButton", classLoader);
@@ -178,7 +176,7 @@ public class PostDownloadContextMenuHook {
         }
 
         try {
-            List<ClassData> pass1 = DexKitQueryCache.findClass(bridge, FindClass.create()
+            List<FoundClass> pass1 = DexKitQueryCache.classes(FindClass.create()
                     .matcher(ClassMatcher.create()
                             .usingStrings("MediaOptionsOverflowMenuCreator")));
 
@@ -190,12 +188,12 @@ public class PostDownloadContextMenuHook {
             String creatorClassName = pass1.get(0).getName();
             menuCreatorClass = classLoader.loadClass(creatorClassName);
 
-            List<MethodData> pass2 = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> pass2 = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .declaredClass(creatorClassName)
                             .returnType("void")));
 
-            for (MethodData md : pass2) {
+            for (Found md : pass2) {
                 try {
                     Method m = md.getMethodInstance(classLoader);
                     if (!Modifier.isStatic(m.getModifiers())) continue;
@@ -381,16 +379,16 @@ public class PostDownloadContextMenuHook {
 
     private static Method reelClickDispatcher;
 
-    private static void resolveReelClickDispatcher(DexKitBridge bridge, ClassLoader loader) {
+    private static void resolveReelClickDispatcher(ClassLoader loader) {
         reelClickDispatcher = null;
         try {
-            List<MethodData> matches = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            List<Found> matches = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .returnType("void")
                     .paramTypes("com.instagram.feed.media.mediaoption.MediaOption$Option")
                     .usingStrings(List.of("ClipsOrganicMoreOptionsHelper_handleOptionSelected"),
                             StringMatchType.Contains, false)));
             Set<Method> methods = new java.util.LinkedHashSet<>();
-            for (MethodData data : matches) {
+            for (Found data : matches) {
                 Method method = data.getMethodInstance(loader);
                 if (!Modifier.isStatic(method.getModifiers())) methods.add(method);
             }
@@ -399,8 +397,8 @@ public class PostDownloadContextMenuHook {
         ModuleLog.detail("(IE|Post) selected Reel dispatcher bound=" + (reelClickDispatcher != null));
     }
 
-    private static void installClickHandlerHook(DexKitBridge bridge, ClassLoader classLoader) {
-        resolveReelClickDispatcher(bridge, classLoader);
+    private static void installClickHandlerHook(ClassLoader classLoader) {
+        resolveReelClickDispatcher(classLoader);
         XC_MethodHook clickHook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -423,7 +421,7 @@ public class PostDownloadContextMenuHook {
         try {
             String optionClassName = "com.instagram.feed.media.mediaoption.MediaOption$Option";
 
-            List<MethodData> results = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> results = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .returnType("void")
                             .paramTypes(optionClassName)));
@@ -431,7 +429,7 @@ public class PostDownloadContextMenuHook {
             // Resolve all non-static candidates first so we can decide the private-exclusion
             // policy from the whole set, rather than filtering as we go.
             List<Method> candidates = new ArrayList<>();
-            for (MethodData md : results) {
+            for (Found md : results) {
                 try {
                     Method m = md.getMethodInstance(classLoader);
                     if (Modifier.isStatic(m.getModifiers())) continue;
@@ -485,7 +483,7 @@ public class PostDownloadContextMenuHook {
     // references these three particular MediaOption$Option constants together.
     // We patch its return value to also include DOWNLOAD so our entry survives.
 
-    private static void installAllowlistPatchHook(DexKitBridge bridge, ClassLoader classLoader) {
+    private static void installAllowlistPatchHook(ClassLoader classLoader) {
         XC_MethodHook allowlistHook = new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -531,7 +529,7 @@ public class PostDownloadContextMenuHook {
             String typeDesc = "L" + optionClassName.replace('.', '/') + ";";
             String prefix = typeDesc + "->";
 
-            List<MethodData> results = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> results = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .paramTypes("boolean")
                             .returnType("java.util.List")

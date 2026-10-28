@@ -8,10 +8,8 @@ import android.os.Looper;
 import android.widget.Button;
 import android.widget.Toast;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -44,6 +42,7 @@ import ps.reso.instaeclipse.utils.text.CopyFeedback;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class FeedVideoDownloadHook {
 
@@ -495,8 +494,8 @@ public class FeedVideoDownloadHook {
         return false;
     }
 
-    public static void installVideoUrlCaptureHook(DexKitBridge bridge, ClassLoader classLoader) {
-        SelectedMediaAdapter.install(bridge, classLoader);
+    public static void installVideoUrlCaptureHook(ClassLoader classLoader) {
+        SelectedMediaAdapter.install(classLoader);
         resolvedVideoVersionsGetters.clear();
         resolvedVideoVersionsGetters.addAll(SelectedMediaAdapter.getters(MEDIA, "video_versions"));
         carouselMediaGetter = adapterGetter("carousel_media");
@@ -508,10 +507,10 @@ public class FeedVideoDownloadHook {
                 + " has_audio=" + (hasAudioGetter != null) + " author=" + (mediaAuthorGetter != null));
         if (hasAudioGetter != null && dashManifestGetter != null) FeatureStatusTracker.setHooked("AudioDownload");
         else if (FeatureFlags.offerAudioDownload) FeatureStatusTracker.setBroken("AudioDownload");
-        musicMetadataGetter = resolveMediaGetter(bridge, classLoader, "music_metadata");
-        clipsMetadataGetter = resolveMediaGetter(bridge, classLoader, "clips_metadata");
-        resolveMediaTypeMethod(bridge, classLoader);
-        resolveUsernameGetter(bridge, classLoader);
+        musicMetadataGetter = resolveMediaGetter(classLoader, "music_metadata");
+        clipsMetadataGetter = resolveMediaGetter(classLoader, "clips_metadata");
+        resolveMediaTypeMethod(classLoader);
+        resolveUsernameGetter(classLoader);
     }
 
     private static Method adapterGetter(String key) {
@@ -705,9 +704,9 @@ public class FeedVideoDownloadHook {
     }
 
     /** A no-arg getter on Media that reads the given JSON field (matched by its field-name string). */
-    private static Method resolveMediaGetter(DexKitBridge bridge, ClassLoader classLoader, String field) {
+    private static Method resolveMediaGetter(ClassLoader classLoader, String field) {
         try {
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass("com.instagram.feed.media.Media")
                     .paramCount(0)
                     .usingEqStrings(List.of(field))))) {
@@ -794,13 +793,13 @@ public class FeedVideoDownloadHook {
         });
     }
 
-    private static void resolveMediaTypeMethod(DexKitBridge bridge, ClassLoader classLoader) {
+    private static void resolveMediaTypeMethod(ClassLoader classLoader) {
         try {
             if (DexKitCache.isCacheValid()) {
                 Method cached = DexKitCache.loadMethod("MediaDownload_MediaType_v1", classLoader);
                 if (cached != null) { cached.setAccessible(true); resolvedMediaTypeMethod = cached; return; }
             }
-            List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass("com.instagram.feed.media.Media")
                     .paramCount(0)
                     .returnType("java.lang.Integer")
@@ -824,7 +823,7 @@ public class FeedVideoDownloadHook {
      * returns an instance of that class. This gives us a stable way to get the post author
      * from the LiveTreeMediaDict without guessing obfuscated method names.
      */
-    private static void resolveUsernameGetter(DexKitBridge bridge, ClassLoader classLoader) {
+    private static void resolveUsernameGetter(ClassLoader classLoader) {
         // Cache hit: restore userClass and userUsernameGetter without DexKit
         if (DexKitCache.isCacheValid()) {
             String cachedClassName = DexKitCache.loadString("UserClass");
@@ -842,7 +841,7 @@ public class FeedVideoDownloadHook {
 
         try {
             // Step 1: find the user class via the stable validation string
-            List<MethodData> userMethods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> userMethods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .usingStrings("username_missing_during_update")));
 
@@ -867,7 +866,7 @@ public class FeedVideoDownloadHook {
             // dropping any candidate that ALSO references the `full_name` field id — the pure
             // username getter never reads full_name. (Fix ported from PR #200 by izadiegizabal.)
             try {
-                List<MethodData> ugMethods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                List<Found> ugMethods = DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create()
                                 .declaredClass("com.instagram.user.model.User")
                                 .returnType("java.lang.String")
@@ -877,7 +876,7 @@ public class FeedVideoDownloadHook {
                     // Candidates that ALSO read full_name = the display-name getter → exclude.
                     java.util.Set<String> readsFullName = new java.util.HashSet<>();
                     try {
-                        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                        for (Found md : DexKitQueryCache.methods(FindMethod.create()
                                 .matcher(MethodMatcher.create()
                                         .declaredClass("com.instagram.user.model.User")
                                         .returnType("java.lang.String")
@@ -887,8 +886,8 @@ public class FeedVideoDownloadHook {
                         }
                     } catch (Throwable ignored) {}
 
-                    MethodData chosen = null;
-                    for (MethodData md : ugMethods) {
+                    Found chosen = null;
+                    for (Found md : ugMethods) {
                         if (!readsFullName.contains(md.toString())) { chosen = md; break; }
                     }
                     if (chosen == null) chosen = ugMethods.get(0); // fallback: better than nothing

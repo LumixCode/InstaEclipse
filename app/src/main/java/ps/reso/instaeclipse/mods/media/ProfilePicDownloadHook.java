@@ -21,10 +21,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
@@ -47,6 +45,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.ui.ViewAttachHooks;
 
@@ -80,8 +79,8 @@ public class ProfilePicDownloadHook {
     private static volatile Method hdGetter;
     private static volatile WeakReference<Object> lastProfile;
 
-    public static void install(DexKitBridge bridge, ClassLoader cl) {
-        resolveHdGetter(bridge, cl);
+    public static void install(ClassLoader cl) {
+        resolveHdGetter(cl);
         try {
             XposedHelpers.findAndHookMethod(cl.loadClass("androidx.fragment.app.Fragment"), "onResume", new XC_MethodHook() {
                 @Override
@@ -101,11 +100,11 @@ public class ProfilePicDownloadHook {
         install();
     }
 
-    private static void resolveHdGetter(DexKitBridge bridge, ClassLoader cl) {
+    private static void resolveHdGetter(ClassLoader cl) {
         try {
             Method m = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("ProfilePic_hdGetter", cl) : null;
             if (m == null) {
-                List<MethodData> found = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(USER)
                         .usingEqStrings(List.of("hd_profile_pic_url_info"))
                         .returnType("com.instagram.api.schemas.ProfilePicUrlInfo")

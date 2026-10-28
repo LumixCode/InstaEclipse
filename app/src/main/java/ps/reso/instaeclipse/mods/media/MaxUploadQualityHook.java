@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.media;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.util.List;
 
@@ -13,6 +11,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Force "Upload at highest quality" always on.
@@ -34,16 +33,16 @@ public class MaxUploadQualityHook {
     private static final String TAG = "(IE|MaxUploadQuality) ";
     private static final String PREF_KEY = "high_quality_media_upload";
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
+    public void install(ClassLoader classLoader) {
         try {
-            List<MethodData> results = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> results = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .usingEqStrings(List.of(PREF_KEY))
                             .returnType("boolean")
                             .paramCount(1)));
 
             int n = 0;
-            for (MethodData md : results) {
+            for (Found md : results) {
                 try {
                     XposedBridge.hookMethod(md.getMethodInstance(classLoader), new XC_MethodHook() {
                         @Override

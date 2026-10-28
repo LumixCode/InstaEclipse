@@ -9,7 +9,6 @@ import android.widget.TextView;
 import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
@@ -29,6 +28,7 @@ import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * "Media info" (#231): resolution, duration, codec, audio, the available video qualities (from the
@@ -234,7 +234,7 @@ public final class MediaInfo {
                 m = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("MediaInfo_" + key, Module.hostClassLoader) : null;
                 if (m == null) {
                     DexKitBridge bridge = Module.dexKitBridge;
-                    List<MethodData> found = bridge == null ? List.of() : DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                    List<Found> found = bridge == null ? List.of() : DexKitQueryCache.methods(FindMethod.create()
                             .matcher(MethodMatcher.create().declaredClass(MEDIA).paramCount(0)
                                     .usingEqStrings(List.of(key)).returnType(rt.getName())));
                     if (found.size() != 1) {

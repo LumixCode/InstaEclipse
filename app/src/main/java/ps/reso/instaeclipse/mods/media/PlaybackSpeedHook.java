@@ -7,13 +7,10 @@ import android.view.MotionEvent;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.ClassData;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
@@ -36,6 +33,8 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 
 /**
  * Playback speed for feed videos and a forced reel seek bar (#247).
@@ -161,10 +160,10 @@ public class PlaybackSpeedHook {
         return ok;
     }
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
-        installFeed(bridge, cl);
-        installHero(bridge, cl);
-        installReelScrubber(bridge, cl);
+    public void install(ClassLoader cl) {
+        installFeed(cl);
+        installHero(cl);
+        installReelScrubber(cl);
         // The hold-side hooks sit on very hot framework methods (Activity.dispatchTouchEvent,
         // TextView.setText, StaticLayout/BoringLayout); hooking those app-wide triggers ART's JIT
         // SIGSEGV on IG 451+ / Android 13, so they are only installed when the feature is on
@@ -223,10 +222,10 @@ public class PlaybackSpeedHook {
     private static final java.util.Map<Object, Boolean> HEROES =
             java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
 
-    private static Method findStatic(DexKitBridge bridge, ClassLoader cl, String key, String str, int params) throws Throwable {
+    private static Method findStatic(ClassLoader cl, String key, String str, int params) throws Throwable {
         Method m = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(key, cl) : null;
         if (m != null) return m;
-        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings(str).returnType("void")))) {
             Method c = md.getMethodInstance(cl);
             if (Modifier.isStatic(c.getModifiers()) && c.getParameterTypes().length == params) {
@@ -237,10 +236,10 @@ public class PlaybackSpeedHook {
         return null;
     }
 
-    private void installHero(DexKitBridge bridge, ClassLoader cl) {
+    private void installHero(ClassLoader cl) {
         try {
-            Method set = findStatic(bridge, cl, "PlaybackSpeed_heroSet", "HeroManager.setPlaybackSpeed", 3);
-            Method prepare = findStatic(bridge, cl, "PlaybackSpeed_heroPrepare", "HeroManager.prepareAndMayPlay", 1);
+            Method set = findStatic(cl, "PlaybackSpeed_heroSet", "HeroManager.setPlaybackSpeed", 3);
+            Method prepare = findStatic(cl, "PlaybackSpeed_heroPrepare", "HeroManager.prepareAndMayPlay", 1);
             if (set == null || prepare == null) {
                 ModuleLog.warn(TAG + "Speed changes will not reach stories and highlights in this Instagram version; feed and reels still work");
                 ModuleLog.detail(TAG + "hero set=" + set + " prepare=" + prepare);
@@ -468,24 +467,24 @@ public class PlaybackSpeedHook {
         return names;
     }
 
-    private void installFeed(DexKitBridge bridge, ClassLoader cl) {
+    private void installFeed(ClassLoader cl) {
         try {
             List<Method> cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethods("PlaybackSpeed_setters_v2", cl) : null;
             Method start = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("PlaybackSpeed_start", cl) : null;
             if (cached == null || cached.isEmpty() || start == null) {
-                List<ClassData> players = DexKitQueryCache.findClass(bridge, FindClass.create().matcher(ClassMatcher.create()
+                List<FoundClass> players = DexKitQueryCache.classes(FindClass.create().matcher(ClassMatcher.create()
                         .usingStrings("IgFeedVideoPlayer: Persistent Visible Cover Image")));
                 start = null;
                 // 452.0.0.22+ moved the (Media, …)boolean start method into a subclass of the class
                 // that holds the string, so look there too.
-                List<ClassData> scan = new ArrayList<>(players);
-                for (ClassData cd : players) {
+                List<FoundClass> scan = new ArrayList<>(players);
+                for (FoundClass cd : players) {
                     try {
-                        scan.addAll(DexKitQueryCache.findClass(bridge, FindClass.create().matcher(ClassMatcher.create()
+                        scan.addAll(DexKitQueryCache.classes(FindClass.create().matcher(ClassMatcher.create()
                                 .superClass(cd.getName()))));
                     } catch (Throwable ignored) {}
                 }
-                for (ClassData cd : scan) {
+                for (FoundClass cd : scan) {
                     for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(cd.getInstance(cl))) {
                         Class<?>[] p = m.getParameterTypes();
                         if (p.length > 0 && p[0].getName().equals("com.instagram.feed.media.Media")
@@ -497,7 +496,7 @@ public class PlaybackSpeedHook {
                     if (start != null) break;
                 }
                 cached = new ArrayList<>();
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .paramTypes("float").returnType("void")
                         .addInvoke(MethodMatcher.create().usingStrings("setPlaybackSpeed"))))) {
                     try {
@@ -528,7 +527,7 @@ public class PlaybackSpeedHook {
             // impl's "Playback started " callback fires for whichever video actually starts.
             Method started = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("PlaybackSpeed_started", cl) : null;
             if (started == null) {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("Playback started ")))) {
                     Method m = md.getMethodInstance(cl);
                     if (!Modifier.isStatic(m.getModifiers())) { started = m; break; }
@@ -549,7 +548,7 @@ public class PlaybackSpeedHook {
             // speed is chosen, apply it there too (and override IG's own 1x calls).
             int storyHooks = 0;
             for (Method setter : SETTERS) {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .paramTypes("float").returnType("void").addInvoke(MethodMatcher.create(setter))))) {
                     Method m;
                     try { m = md.getMethodInstance(cl); } catch (Throwable t) { continue; }
@@ -591,11 +590,11 @@ public class PlaybackSpeedHook {
         }
     }
 
-    private void installReelScrubber(DexKitBridge bridge, ClassLoader cl) {
+    private void installReelScrubber(ClassLoader cl) {
         try {
             Method gate = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("PlaybackSpeed_scrubberGate", cl) : null;
             if (gate == null) {
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("android_purge_26_q2_ClipsExperimentUtil_shouldShowAttachedScrubber")
                         .returnType("boolean")))) {
                     Method m = md.getMethodInstance(cl);

@@ -6,10 +6,8 @@ package ps.reso.instaeclipse.mods.media;
 
 import android.content.Context;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -25,6 +23,7 @@ import java.util.Set;
 
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
     enum Queries { NONE, NUMERIC, BOTH }
@@ -39,19 +38,19 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
 
     private SelectedMediaAdapter(Class<?> mediaClass) { this.mediaClass = mediaClass; }
 
-    static synchronized void install(DexKitBridge bridge, ClassLoader loader) {
+    static synchronized void install(ClassLoader loader) {
         if (installed != null && installed.mediaClass.getClassLoader() == loader) return;
         try {
             SelectedMediaAdapter adapter = new SelectedMediaAdapter(loader.loadClass(MEDIA));
             for (String key : new String[]{"video_dash_manifest", "video_versions", "image_versions2",
                     "carousel_media", "user", "has_audio", "media_type", "original_media_type",
-                    "is_story_image_with_music"}) adapter.resolve(bridge, loader, MEDIA, key);
-            adapter.resolve(bridge, loader, "com.instagram.user.model.User", "username");
+                    "is_story_image_with_music"}) adapter.resolve(loader, MEDIA, key);
+            adapter.resolve(loader, "com.instagram.user.model.User", "username");
             for (String key : new String[]{"url", "width", "height"})
-                adapter.resolve(bridge, loader, "com.instagram.api.schemas.ImmutablePandoVideoVersion", key);
-            adapter.resolve(bridge, loader, "com.instagram.model.mediasize.ImmutablePandoImageInfo", "candidates");
+                adapter.resolve(loader, "com.instagram.api.schemas.ImmutablePandoVideoVersion", key);
+            adapter.resolve(loader, "com.instagram.model.mediasize.ImmutablePandoImageInfo", "candidates");
             adapter.named(loader, MEDIA, "id", "getId");
-            adapter.resolveStoryItem(bridge, loader);
+            adapter.resolveStoryItem(loader);
             String imageUrl = "com.instagram.common.typedurl.ImageUrl";
             adapter.named(loader, imageUrl, "url", "getUrl");
             adapter.named(loader, imageUrl, "width", "getWidth");
@@ -297,12 +296,12 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
         } catch (Throwable ignored) { return null; }
         return targets.size() == 1 ? targets.iterator().next() : null;
     }
-    private void resolveStoryItem(DexKitBridge bridge, ClassLoader loader) {
+    private void resolveStoryItem(ClassLoader loader) {
         try {
             String type = "com.instagram.model.reels.ReelItem";
             if (queries(loader, type) == Queries.NONE) return;
             Set<Method> matches = new LinkedHashSet<>();
-            for (MethodData data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found data : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass(type).paramCount(0).returnType(MEDIA)
                     .usingEqStrings(List.of("Required value was null."))))) {
                 Method method = data.getMethodInstance(loader);
@@ -323,14 +322,14 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
         } catch (Throwable ignored) { }
     }
 
-    private void resolve(DexKitBridge bridge, ClassLoader loader, String type, String key) {
+    private void resolve(ClassLoader loader, String type, String key) {
         // Schema-key tables also match <clinit>()V. Filter its DEX metadata BEFORE trying
         // Java reflection: DexKit cannot turn a class initializer into a java.lang.Method.
         Queries queries = queries(loader, type);
         if (queries == Queries.NONE) return;
         Resolution result = new Resolution();
-        if (queries == Queries.BOTH) collectCandidates(bridge, loader, type, key, false, result);
-        collectCandidates(bridge, loader, type, key, true, result);
+        if (queries == Queries.BOTH) collectCandidates(loader, type, key, false, result);
+        collectCandidates(loader, type, key, true, result);
         if (result.errors != 0 || result.matches.size() != 1) return;
         try {
             Method method = result.matches.iterator().next();
@@ -348,17 +347,17 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
         int errors;
     }
 
-    private void collectCandidates(DexKitBridge bridge, ClassLoader loader, String type,
+    private void collectCandidates(ClassLoader loader, String type,
             String key, boolean numeric, Resolution result) {
         try {
             MethodMatcher matcher = MethodMatcher.create().declaredClass(type).paramCount(0);
             if (numeric) matcher.usingNumbers(key.hashCode());
             else matcher.usingEqStrings(List.of(key));
-            List<MethodData> candidates = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(matcher));
-            for (MethodData data : candidates) {
+            List<Found> candidates = DexKitQueryCache.methods(FindMethod.create().matcher(matcher));
+            for (Found data : candidates) {
                 try {
                     Method method = getterCandidate(key, data.getName(), data.getReturnTypeName(),
-                            data.getParamCount(), data.getModifiers(), () -> data.getMethodInstance(loader));
+                            data.getParamCount(), 0, () -> data.getMethodInstance(loader));
                     if (method != null) result.matches.add(method);
                 } catch (Throwable ignored) {
                     result.errors++;

@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.media;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -19,6 +17,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Forces reel/video playback to a specific quality by hooking LiveTreeMediaDict's
@@ -124,7 +123,7 @@ public class ForceReelQualityHook {
         }
     }
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
+    public void install(ClassLoader classLoader) {
         try {
             Method videoVersionsGetter;
             String heightGetterName;
@@ -138,8 +137,8 @@ public class ForceReelQualityHook {
             }
 
             if (videoVersionsGetter == null || heightGetterName == null) {
-                videoVersionsGetter = resolveVideoVersionsGetter(bridge, classLoader);
-                heightGetterName = resolveHeightGetterName(bridge, classLoader);
+                videoVersionsGetter = resolveVideoVersionsGetter(classLoader);
+                heightGetterName = resolveHeightGetterName(classLoader);
 
                 if (videoVersionsGetter == null || heightGetterName == null) {
                     ModuleLog.error("(InstaEclipse | ForceReelQuality): Could not turn on reel quality: the video quality list was not found in this Instagram version");
@@ -188,16 +187,16 @@ public class ForceReelQualityHook {
         }
     }
 
-    private static Method resolveVideoVersionsGetter(DexKitBridge bridge, ClassLoader classLoader) {
+    private static Method resolveVideoVersionsGetter(ClassLoader classLoader) {
         for (String dictClass : DICT_CLASS_CANDIDATES) {
             try {
-                List<MethodData> results = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                List<Found> results = DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create()
                                 .declaredClass(dictClass)
                                 .paramCount(0)
                                 .usingEqStrings(List.of("video_versions"))));
 
-                for (MethodData md : results) {
+                for (Found md : results) {
                     try {
                         Method m = md.getMethodInstance(classLoader);
                         if (m.getReturnType() != List.class) continue;
@@ -211,10 +210,10 @@ public class ForceReelQualityHook {
         return null;
     }
 
-    private static String resolveHeightGetterName(DexKitBridge bridge, ClassLoader classLoader) {
+    private static String resolveHeightGetterName(ClassLoader classLoader) {
         for (String versionClass : VIDEO_VERSION_CLASS_CANDIDATES) {
             try {
-                List<MethodData> results = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+                List<Found> results = DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create()
                                 .declaredClass(versionClass)
                                 .paramCount(0)

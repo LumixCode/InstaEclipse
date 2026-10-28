@@ -5,7 +5,6 @@ import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 
@@ -24,6 +23,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class ReelDownloadHook {
 
@@ -33,8 +33,8 @@ public class ReelDownloadHook {
     private static Method buttonAdderMethod;
     private static Field  activityField;
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
-        installReduceOptionsListPatch(bridge, classLoader);
+    public void install(ClassLoader classLoader) {
+        installReduceOptionsListPatch(classLoader);
 
         if (DexKitCache.isCacheValid()) {
             Method cached = DexKitCache.loadMethod("ReelDownload_v2", classLoader);
@@ -56,7 +56,7 @@ public class ReelDownloadHook {
         }
 
         try {
-            var methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            var methods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .usingStrings("ClipsOrganicMediaItemViewMoreOptionsController")));
 
@@ -151,7 +151,7 @@ public class ReelDownloadHook {
     // (LX/5RY;->A0Q -> LX/QIy;->A04) used for every other option here — same
     // shared row primitive the post menu uses, so PostDownloadContextMenuHook's
     // app-wide click-handler hook already covers whatever dispatches its click.
-    private static void installReduceOptionsListPatch(DexKitBridge bridge, ClassLoader classLoader) {
+    private static void installReduceOptionsListPatch(ClassLoader classLoader) {
         try {
             Object downloadOption = null, copyLinkOption = null, infoOption = null, speedOption = null;
             Class<?> optionClass = classLoader.loadClass("com.instagram.feed.media.mediaoption.MediaOption$Option");
@@ -204,7 +204,7 @@ public class ReelDownloadHook {
             }
 
             String optionDesc = "Lcom/instagram/feed/media/mediaoption/MediaOption$Option;";
-            var methods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            var methods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .returnType("java.util.ArrayList")
                             .addUsingField(optionDesc + "->PLAYBACK_CONTROLS:" + optionDesc)

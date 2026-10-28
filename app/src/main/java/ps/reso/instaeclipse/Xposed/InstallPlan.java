@@ -539,7 +539,7 @@ public class InstallPlan {
                 new FollowingFollowStatusHook().install(ctx.context, ctx.bridge, ctx.loader);
                 return;
             case PLAYBACK_SPEED_HOOK:
-                new PlaybackSpeedHook().install(ctx.bridge, ctx.loader);
+                new PlaybackSpeedHook().install(ctx.loader);
                 return;
             case HIDE_NOTES_TRAY_HOOK:
                 new HideNotesTrayHook().install(ctx.bridge);
@@ -548,7 +548,7 @@ public class InstallPlan {
                 VoiceMessageDownloadHook.installUserCacheTracker(ctx.loader);
                 return;
             case VOICE_MESSAGE_DOWNLOAD_HOOK:
-                new VoiceMessageDownloadHook().install(ctx.bridge, ctx.loader);
+                new VoiceMessageDownloadHook().install(ctx.loader);
                 return;
             case EDIT_HISTORY_HOOK:
                 new EditHistoryHook().install(ctx.loader);
@@ -641,10 +641,10 @@ public class InstallPlan {
                 new IgThemeHook().install(ctx.loader);
                 return;
             case FORCE_REEL_QUALITY_HOOK:
-                new ForceReelQualityHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new ForceReelQualityHook().install(ctx.lpparam.classLoader);
                 return;
             case MAX_UPLOAD_QUALITY_HOOK:
-                new MaxUploadQualityHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new MaxUploadQualityHook().install(ctx.lpparam.classLoader);
                 return;
             case DISABLE_VIDEO_AUTO_PLAY_HOOK:
                 new DisableVideoAutoPlayHook().handleAutoPlayDisable(ctx.bridge);
@@ -656,10 +656,10 @@ public class InstallPlan {
                 new FeedVideoDownloadHook().install(ctx.lpparam.classLoader);
                 return;
             case FEED_VIDEO_DOWNLOAD_CAPTURE:
-                FeedVideoDownloadHook.installVideoUrlCaptureHook(ctx.bridge, ctx.lpparam.classLoader);
+                FeedVideoDownloadHook.installVideoUrlCaptureHook(ctx.lpparam.classLoader);
                 return;
             case POST_DOWNLOAD_CONTEXT_MENU_HOOK:
-                new PostDownloadContextMenuHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new PostDownloadContextMenuHook().install(ctx.lpparam.classLoader);
                 return;
             case REEL_MENU_LABELS:
                 ReelMenuLabels.install(ctx.bridge, ctx.lpparam.classLoader);
@@ -707,13 +707,13 @@ public class InstallPlan {
                 StoryTrayHook.install(ctx.loader);
                 return;
             case STORY_DOWNLOAD_HOOK:
-                new StoryDownloadHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new StoryDownloadHook().install(ctx.lpparam.classLoader);
                 return;
             case REEL_DOWNLOAD_HOOK:
-                new ReelDownloadHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new ReelDownloadHook().install(ctx.lpparam.classLoader);
                 return;
             case PROFILE_PIC_DOWNLOAD_HOOK:
-                ProfilePicDownloadHook.install(ctx.bridge, ctx.loader);
+                ProfilePicDownloadHook.install(ctx.loader);
                 return;
             case INTERCEPTOR:
                 new IGNetworkInterceptor().installTigon(ctx.lpparam);

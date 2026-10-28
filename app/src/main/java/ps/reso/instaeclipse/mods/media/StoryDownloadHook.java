@@ -34,6 +34,7 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class StoryDownloadHook {
 
@@ -111,14 +112,14 @@ public class StoryDownloadHook {
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_highlight_failed), Toast.LENGTH_SHORT).show();
     }
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
+    public void install(ClassLoader classLoader) {
         ps.reso.instaeclipse.utils.media.StoryCache.pruneAfterStart();
-        SelectedMediaAdapter.install(bridge, classLoader);
+        SelectedMediaAdapter.install(classLoader);
         try {
             String reel = DexKitCache.loadString(REEL);
             if (reel == null) {
                 reel = "";
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("Reel with pending media should have an owner.")))) {
                     reel = md.getClassName();
                     break;
@@ -133,15 +134,15 @@ public class StoryDownloadHook {
         } catch (Throwable t) {
             ModuleLog.warn("(IE|Highlight) Downloading a whole highlight (Download all) is not available; single stories still download: " + t);
         }
-        installMenuRows(bridge, classLoader);
-        installHighlightButtonInjectorHook(bridge, classLoader);
-        installHighlightTrayHook(bridge, classLoader);
-        resolveExpiringGetter(bridge, classLoader);
-        installStoryCaptureHook(bridge, classLoader);
+        installMenuRows(classLoader);
+        installHighlightButtonInjectorHook(classLoader);
+        installHighlightTrayHook(classLoader);
+        resolveExpiringGetter(classLoader);
+        installStoryCaptureHook(classLoader);
     }
 
-    private static void installMenuRows(DexKitBridge bridge, ClassLoader classLoader) {
-        if (!StoryMenu.install(bridge, classLoader)) {
+    private static void installMenuRows(ClassLoader classLoader) {
+        if (!StoryMenu.install(ps.reso.instaeclipse.utils.core.ModuleBridge.get(), classLoader)) {
             ModuleLog.error("(IE|Story) Download will not appear in the story menu: the menu was not found in this Instagram version");
             if (FeatureFlags.enableStoryDownload) FeatureStatusTracker.setBroken("StoryDownload");
             return;
@@ -300,11 +301,11 @@ public class StoryDownloadHook {
     private static final ThreadLocal<Object> trayHelper = new ThreadLocal<>();
     private static final Set<Object> trayDialogsDone = Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
-    private void installHighlightTrayHook(DexKitBridge bridge, ClassLoader cl) {
+    private void installHighlightTrayHook(ClassLoader cl) {
         try {
             List<Method> members = DexKitCache.loadMethods(TRAY, cl);
             if (members == null) {
-                members = trayMembers(bridge, cl);
+                members = trayMembers(cl);
                 DexKitCache.saveMethods(TRAY, members);
             }
             if (members.isEmpty()) { ModuleLog.warn("(IE|HighlightTray) Download all is not available in the highlight menu in this Instagram version"); return; }
@@ -360,15 +361,15 @@ public class StoryDownloadHook {
         }
     }
 
-    private static List<Method> trayMembers(DexKitBridge bridge, ClassLoader cl) throws ReflectiveOperationException {
-        MethodData builder = null;
-        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+    private static List<Method> trayMembers(ClassLoader cl) throws ReflectiveOperationException {
+        Found builder = null;
+        for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("HighlightsTrayDialogHelper").paramCount(4)))) { builder = md; break; }
         List<Method> out = new ArrayList<>();
         if (builder == null) return out;
         Method build = builder.getMethodInstance(cl);
         List<Method> invoked = new ArrayList<>();
-        for (MethodData inv : builder.getInvokes()) {
+        for (MethodData inv : builder.data().getInvokes()) {
             try {
                 if (!inv.isConstructor()) invoked.add(inv.getMethodInstance(cl));
             } catch (Throwable ignored) {}
@@ -425,14 +426,14 @@ public class StoryDownloadHook {
             DexKitBridge bridge = ps.reso.instaeclipse.utils.core.ModuleBridge.get();
             if (bridge == null) return;
             Class<?> loader = null;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("reel_store_on_story_unavailable")))) {
                 for (java.lang.reflect.Constructor<?> c : ps.reso.instaeclipse.utils.core.SafeReflect.constructors(cl.loadClass(md.getClassName())))
                     if (c.getParameterCount() > 0 && c.getParameterTypes()[0].getName().startsWith("X.")) { loader = c.getParameterTypes()[0]; break; }
                 if (loader != null) break;
             }
             if (loader == null) return;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .returnType(loader.getName()).paramTypes("com.instagram.common.session.UserSession")))) {
                 Method m = md.getMethodInstance(cl);
                 if (java.lang.reflect.Modifier.isStatic(m.getModifiers())) { m.setAccessible(true); loaderGetter = m; break; }
@@ -530,13 +531,13 @@ public class StoryDownloadHook {
     // ── Story cache: capture each VIEWED story (per-page bind, fires for every story shown) ──
     private static java.lang.reflect.Method expiringGetter; // Media."expiring_at" getter, () -> Long
 
-    private void resolveExpiringGetter(DexKitBridge bridge, ClassLoader cl) {
+    private void resolveExpiringGetter(ClassLoader cl) {
         try {
             if (DexKitCache.isCacheValid()) {
                 java.lang.reflect.Method c = DexKitCache.loadMethod("StoryCache_expiring", cl);
                 if (c != null) { c.setAccessible(true); expiringGetter = c; return; }
             }
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass("com.instagram.feed.media.Media").paramCount(0)
                     .returnType("java.lang.Long").usingStrings("expiring_at")))) {
                 try {
@@ -554,7 +555,7 @@ public class StoryDownloadHook {
      * by that stable string; the method name is obfuscated) which fires for EVERY story shown. Its
      * first ReelItem param is the current story; we record it to the story cache.
      */
-    private void installStoryCaptureHook(DexKitBridge bridge, ClassLoader cl) {
+    private void installStoryCaptureHook(ClassLoader cl) {
         XC_MethodHook capture = new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
                 if (!FeatureFlags.cacheStories) return;
@@ -569,7 +570,7 @@ public class StoryDownloadHook {
             List<Method> binds = DexKitCache.loadMethods(CAPTURE, cl);
             if (binds == null) {
                 binds = new ArrayList<>();
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("ReelViewerFragment.onCurrentActiveItemBound")))) {
                     try { binds.add(md.getMethodInstance(cl)); } catch (Throwable ignored) {}
                 }
@@ -665,11 +666,11 @@ public class StoryDownloadHook {
         };
     }
 
-    private void installHighlightButtonInjectorHook(DexKitBridge bridge, ClassLoader loader) {
+    private void installHighlightButtonInjectorHook(ClassLoader loader) {
         try {
             List<Method> builders = DexKitCache.loadMethods(HIGHLIGHT_MENU, loader);
             if (builders == null) {
-                builders = highlightMenuBuilders(bridge, loader);
+                builders = highlightMenuBuilders(loader);
                 DexKitCache.saveMethods(HIGHLIGHT_MENU, builders);
             }
             if (builders.isEmpty()) {
@@ -689,10 +690,10 @@ public class StoryDownloadHook {
         }
     }
 
-    private static List<Method> highlightMenuBuilders(DexKitBridge bridge, ClassLoader loader) throws ReflectiveOperationException {
+    private static List<Method> highlightMenuBuilders(ClassLoader loader) throws ReflectiveOperationException {
         Class<?> itemType = loader.loadClass("com.instagram.model.reels.ReelItem");
-        List<MethodData> anchors = new ArrayList<>();
-        for (MethodData data : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        List<Found> anchors = new ArrayList<>();
+        for (Found data : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .returnType("java.util.ArrayList").usingStrings("story_highlight_action_sheet")))) {
             if (StoryMenuOptions.isOwnedListBuilder(data.getMethodInstance(loader), itemType)) anchors.add(data);
         }
@@ -701,13 +702,13 @@ public class StoryDownloadHook {
             ModuleLog.detail("(IE|Story) Highlight menu anchor unavailable or ambiguous (" + anchors.size() + " matches)");
             return out;
         }
-        MethodData anchor = anchors.get(0);
+        Found anchor = anchors.get(0);
         String ownerName = anchor.getDeclaredClassName();
         Set<Method> builders = new LinkedHashSet<>();
-        for (MethodData caller : DexKitQueryCache.callers(bridge, anchor)) {
+        for (Found caller : DexKitQueryCache.callers(anchor)) {
             if (!ownerName.equals(caller.getDeclaredClassName())
                     || !"void".equals(caller.getReturnTypeName())) continue;
-            for (MethodData invoked : caller.getInvokes()) {
+            for (MethodData invoked : caller.data().getInvokes()) {
                 if (!ownerName.equals(invoked.getDeclaredClassName())
                         || !"java.util.ArrayList".equals(invoked.getReturnTypeName())) continue;
                 Method method = invoked.getMethodInstance(loader);

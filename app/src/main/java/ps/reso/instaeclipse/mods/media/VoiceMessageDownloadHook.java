@@ -4,10 +4,8 @@ import android.app.Activity;
 import android.content.Context;
 import android.widget.Toast;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -36,6 +34,7 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.toast.IeToast;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * Download voice messages from the DM long-press menu (#223).
@@ -110,7 +109,7 @@ public class VoiceMessageDownloadHook {
         });
     }
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         try {
             audioInfoClass = cl.loadClass(AUDIO_INFO);
             try {
@@ -123,18 +122,18 @@ public class VoiceMessageDownloadHook {
                 ModuleLog.error(TAG + "Downloading stickers and GIFs from chats will not work: " + t);
             }
             try { messageIdClass = cl.loadClass(MESSAGE_ID); } catch (Throwable ignored) {}
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("audio_src_expiration_timestamp_us", "waveform_sampling_frequency_hz")
                     .returnType("java.util.Map")))) {
                 Method m = md.getMethodInstance(cl);
                 if (Modifier.isStatic(m.getModifiers()) && m.getParameterCount() == 1
                         && m.getParameterTypes()[0] == audioInfoClass) { audioMapper = m; break; }
             }
-            resolveVoiceModel(bridge, cl);
+            resolveVoiceModel(cl);
 
             // message lookup → remember the long-pressed message
             int lookups = 0;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings(": null_direct_message")))) {
                 Class<?> owner = md.getMethodInstance(cl).getDeclaringClass();
                 messageClass = md.getMethodInstance(cl).getReturnType();
@@ -248,7 +247,7 @@ public class VoiceMessageDownloadHook {
 
             // tap dispatcher
             int dispatchers = 0, saveDispatchers = 0;
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("DirectReportDailyPromptInteractor.reportDailyPrompt")))) {
                 Method m = md.getMethodInstance(cl);
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
@@ -314,7 +313,7 @@ public class VoiceMessageDownloadHook {
             }
             // Row taps of the long-press menu go through the static method of the menu controller
             // that takes a LongPressActionData (MessageActionsController.A02 on 452).
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .paramTypes(ACTION_DATA, null, "java.lang.String")))) {
                 Method m = md.getMethodInstance(cl);
                 if (!Modifier.isStatic(m.getModifiers())) continue;
@@ -347,7 +346,7 @@ public class VoiceMessageDownloadHook {
             // "Action selected" listeners: (ActionEnum, String) -> void, e.g. X.0lMj.E5t on 452.
             if (ctor != null) {
                 String actionEnum = ctor.getParameterTypes()[2].getName();
-                for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .paramTypes(actionEnum, "java.lang.String").returnType("void")))) {
                     Method m;
                     try { m = md.getMethodInstance(cl); } catch (Throwable t) { continue; }
@@ -418,7 +417,7 @@ public class VoiceMessageDownloadHook {
                     final Field lf = labelField;
                     String desc = "L" + ACTION_DATA.replace('.', '/') + ";->" + lf.getName() + ":Ljava/lang/String;";
                     Class<?> fn1 = cl.loadClass("kotlin.jvm.functions.Function1");
-                    for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                    for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                             .addUsingField(desc)))) {
                         if (!md.isMethod()) continue;
                         Method m;
@@ -502,7 +501,7 @@ public class VoiceMessageDownloadHook {
      * The voice payload class and its Media field, from the payload's JSON parser. Optional: when
      * it can't be resolved uniquely, audioUrl() falls back to the graph walk.
      */
-    private static void resolveVoiceModel(DexKitBridge bridge, ClassLoader cl) {
+    private static void resolveVoiceModel(ClassLoader cl) {
         try {
             String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(VOICE_CACHE) : null;
             if ("missing".equals(cached)) return;
@@ -511,12 +510,12 @@ public class VoiceMessageDownloadHook {
                 int hash = cached.indexOf('#');
                 media = cl.loadClass(cached.substring(0, hash)).getDeclaredField(cached.substring(hash + 1));
             } else {
-                List<MethodData> parsers = DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+                List<Found> parsers = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .name("unsafeParseFromJson").usingStrings("url_expire_at_secs", "waveform_data",
                                 "current_playback_position_ms", "duration_ms")));
                 Set<Field> mediaFields = new LinkedHashSet<>();
                 if (parsers.size() == 1) {
-                    for (var used : parsers.get(0).getUsingFields()) {
+                    for (var used : parsers.get(0).data().getUsingFields()) {
                         if (MEDIA.equals(used.getField().getTypeName())) {
                             mediaFields.add(used.getField().getFieldInstance(cl));
                         }

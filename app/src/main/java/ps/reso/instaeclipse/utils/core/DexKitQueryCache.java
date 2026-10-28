@@ -70,6 +70,10 @@ public final class DexKitQueryCache {
             return className;
         }
 
+        public String getDeclaredClassName() {
+            return className;
+        }
+
         public String getName() {
             return name;
         }
