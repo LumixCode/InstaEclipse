@@ -27,6 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
+import ps.reso.instaeclipse.mods.media.DataBackup;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
@@ -425,7 +426,7 @@ public class UnsentLog {
     }
 
     private static void persist() {
-        if (!loaded || disk == null || writeQueued) return;
+        if (!loaded || disk == null || writeQueued || DataBackup.restoring()) return;
         writeQueued = true;
         Disk target = disk;
         executor.execute(() -> writeNow(target));
@@ -442,6 +443,7 @@ public class UnsentLog {
             aliases = aliasesOf(entries, deletions, clearedIds);
         }
         try {
+            if (DataBackup.restoring()) return;
             target.write(entries, aliases);
         } catch (Throwable t) {
             ModuleLog.warn("(IE|UnsentLog) Could not save the unsent messages log: " + t.getClass().getSimpleName() + ": " + t.getMessage());
@@ -769,6 +771,7 @@ public class UnsentLog {
             changed = true;
         }
         if (changed) {
+            if (DataBackup.restoring()) return null;
             try {
                 disk.write(updated, aliasesOf(updated, deletions, updatedCleared));
             } catch (Exception e) {

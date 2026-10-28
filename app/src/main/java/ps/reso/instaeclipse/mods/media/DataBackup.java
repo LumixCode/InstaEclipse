@@ -8,10 +8,11 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Base64;
+import android.os.SystemClock;
 import android.widget.Toast;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
@@ -23,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
@@ -40,22 +42,11 @@ import java.util.zip.ZipOutputStream;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.download.DownloadEngine;
+import ps.reso.instaeclipse.utils.ghost.EditHistoryStore;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.toast.IeToast;
 
-/**
- * Back up / restore the module's own data kept in Instagram's private files, so it survives a
- * reinstall: deleted (unsent) messages, analyzed profiles (watchlist), followers history, hidden
- * chats and chat names.
- *
- * <p>Backup: one zip saved from Instagram's process to Download/InstaEclipse (no size limit).
- * Restore: the companion's picker (DataImportActivity) reads the zip and sends it here in Base64
- * pieces, since one broadcast can't carry more than about a megabyte. Deleted messages, hidden
- * chats and chat names are merged with what's on the phone, so a restore never brings back a
- * cleared message or unhides a chat; the other files are put back as they were. Instagram then
- * restarts so every store reloads from disk.
- */
 public final class DataBackup {
 
     private static final String TAG = "(IE|DataBackup) ";
@@ -64,18 +55,33 @@ public final class DataBackup {
     private static final String UNSENT = "ie_unsent_log.json";
     private static final String HIDDEN = "ie_hidden_threads.json";
     private static final String NAMES = "ie_thread_names.json";
+    private static final String EDITS = "ie_edit_history.json";
+    private static final String READ_RECEIPTS = "ie_read_receipt_whitelist.json";
+    private static final String SET_ASIDE = ".corrupt";
     private static final int MAX_UNSENT = 1000; // UnsentLog keeps the same number of entries
     private static final long MAX_BYTES = 64L << 20;
+    static final int PIECE_CHARS = 120_000;
+    static final long TIMEOUT_MS = 60_000;
+    private static final String FAILED = "Backup could not be restored";
+    private static volatile boolean restoring;
 
     private DataBackup() {}
 
-    /**
-     * Files that belong in a backup: our stores only (not caches or logs). Top-level files only, so
-     * the saved copies of unsent messages' media (ie_unsent_messages/) stay out.
-     */
-    private static boolean included(String name) {
-        return name.equals(UNSENT) || name.equals(HIDDEN) || name.equals(NAMES) || name.equals("ie_post_counts.json")
-                || name.startsWith("ie_watch") || name.startsWith("ie_followers_history_");
+    public static boolean restoring() {
+        return restoring;
+    }
+
+    static void setRestoring(boolean on) {
+        restoring = on;
+    }
+
+    static boolean included(String name) {
+        if (name == null || name.contains("/") || name.contains("\\")) return false;
+        if (name.endsWith(".tmp") || name.endsWith(".bak") || name.endsWith(".new")) return false;
+        String base = name.endsWith(SET_ASIDE) ? name.substring(0, name.length() - SET_ASIDE.length()) : name;
+        return base.equals(UNSENT) || base.equals(HIDDEN) || base.equals(NAMES) || base.equals(EDITS)
+                || base.equals(READ_RECEIPTS) || base.equals("ie_post_counts.json")
+                || base.startsWith("ie_watch") || base.startsWith("ie_followers_history_");
     }
 
     // ----- backup -----
@@ -131,36 +137,17 @@ public final class DataBackup {
 
     // ----- restore -----
 
-    private static final Map<String, String[]> PENDING = new HashMap<>();
-    private static final Map<String, Intent> LAST_PIECE = new HashMap<>();
+    private static final Object LOCK = new Object();
+    private static final Runnable EXPIRE = DataBackup::expire;
+    private static Pieces pending;
+    private static Intent pendingRequest;
+    private static String failedId;
+    private static Handler main;
 
     public static void registerRestoreReceiver(Context context) {
         BroadcastReceiver receiver = new BroadcastReceiver() {
             @Override public void onReceive(Context ctx, Intent intent) {
-                String id = intent.getStringExtra("id");
-                String piece = intent.getStringExtra("piece");
-                int index = intent.getIntExtra("index", -1), total = intent.getIntExtra("total", 0);
-                if (id == null || piece == null || total <= 0 || total > 2000 || index < 0 || index >= total) return;
-                String[] parts;
-                Intent request;
-                synchronized (PENDING) {
-                    parts = PENDING.get(id);
-                    if (parts == null) {
-                        PENDING.clear(); // one restore at a time
-                        LAST_PIECE.clear();
-                        parts = new String[total];
-                        PENDING.put(id, parts);
-                    }
-                    if (parts.length != total) return;
-                    parts[index] = piece;
-                    if (index == total - 1) LAST_PIECE.put(id, intent);
-                    for (String p : parts) if (p == null) return;
-                    PENDING.remove(id);
-                    request = LAST_PIECE.remove(id);
-                }
-                final String[] all = parts;
-                Context app = ctx.getApplicationContext();
-                new Thread(() -> restore(app, all, request), "IE-DataRestore").start();
+                received(ctx.getApplicationContext(), intent);
             }
         };
         try {
@@ -170,40 +157,201 @@ public final class DataBackup {
         }
     }
 
-    private static void restore(Context app, String[] parts, Intent request) {
-        try {
-            StringBuilder b64 = new StringBuilder();
-            for (String p : parts) b64.append(p);
-            byte[] zip = Base64.decode(b64.toString(), Base64.NO_WRAP);
-            Map<String, byte[]> files = unzip(zip);
-            if (!files.containsKey(MANIFEST) || !"data".equals(new JSONObject(new String(files.get(MANIFEST), StandardCharsets.UTF_8)).optString("type")))
-                throw new IllegalArgumentException("not an InstaEclipse data backup");
-            File dir = app.getFilesDir();
-            int restored = 0;
-            for (Map.Entry<String, byte[]> e : files.entrySet()) {
-                String name = e.getKey();
-                if (!included(name) || name.contains("/") || name.contains("\\")) continue;
-                File target = new File(dir, name);
-                byte[] data = name.equals(UNSENT) ? mergeUnsent(target, e.getValue())
-                        : name.equals(HIDDEN) || name.equals(NAMES) ? mergeKeepCurrent(target, e.getValue())
-                        : e.getValue();
-                if (data == null) {
-                    ModuleLog.warn(TAG + "Kept this phone's " + name + " instead of the backup copy: the phone's file could not be read");
-                    continue;
+    private static void received(Context app, Intent intent) {
+        String id = intent.getStringExtra("id");
+        String piece = intent.getStringExtra("piece");
+        int index = intent.getIntExtra("index", -1), total = intent.getIntExtra("total", 0);
+        if (id == null || piece == null || total <= 0 || total > 2000 || index < 0 || index >= total) return;
+        boolean last = index == total - 1;
+        Pieces done = null;
+        Intent request;
+        String failure = null;
+        boolean failedBefore = false;
+        synchronized (LOCK) {
+            if (id.equals(failedId)) {
+                if (!last) return;
+                failedId = null;
+                request = intent;
+                failedBefore = true;
+            } else {
+                long now = SystemClock.uptimeMillis();
+                if (pending != null && (!pending.id.equals(id) || pending.expired(now))) {
+                    pending = null;
+                    pendingRequest = null;
                 }
-                write(target, data);
-                restored++;
+                if (pending == null) {
+                    pending = new Pieces(id, total, MAX_BYTES);
+                    failedId = null;
+                }
+                if (pending.total != total) return;
+                if (last) pendingRequest = intent;
+                try {
+                    pending.add(index, piece, now);
+                } catch (IllegalArgumentException e) {
+                    failure = e.getMessage();
+                }
+                if (failure == null && !pending.complete()) {
+                    expireLater();
+                    return;
+                }
+                if (failure == null) done = pending;
+                request = pendingRequest;
+                if (failure != null && request == null) failedId = id;
+                pending = null;
+                pendingRequest = null;
             }
+        }
+        if (failedBefore) {
+            confirm(request, FAILED);
+            return;
+        }
+        if (failure != null) {
+            ModuleLog.error(TAG + "Could not restore the backup: " + failure);
+            confirm(request, FAILED);
+            toast(app, I18n.t(app, R.string.ig_data_restore_failed), true);
+            return;
+        }
+        Pieces all = done;
+        new Thread(() -> restore(app, all, request), "IE-DataRestore").start();
+    }
+
+    private static void expireLater() {
+        if (main == null) main = new Handler(Looper.getMainLooper());
+        main.removeCallbacks(EXPIRE);
+        main.postDelayed(EXPIRE, TIMEOUT_MS + 1000);
+    }
+
+    private static void expire() {
+        Intent request;
+        synchronized (LOCK) {
+            if (pending == null || !pending.expired(SystemClock.uptimeMillis())) return;
+            ModuleLog.warn(TAG + "Stopped waiting for the rest of a backup: " + pending.received() + " of "
+                    + pending.total + " pieces arrived");
+            request = pendingRequest;
+            pending = null;
+            pendingRequest = null;
+        }
+        confirm(request, FAILED);
+    }
+
+    static final class Pieces {
+        final String id;
+        final int total;
+        private final long maxBytes;
+        private final String[] waiting;
+        private int next, received, size;
+        private String carry = "";
+        private byte[] bytes;
+        private long last;
+
+        Pieces(String id, int total, long maxBytes) {
+            this.id = id;
+            this.total = total;
+            this.maxBytes = maxBytes;
+            waiting = new String[total];
+            bytes = new byte[(int) Math.min(maxBytes, (long) total * (PIECE_CHARS / 4 * 3))];
+        }
+
+        boolean add(int index, String piece, long now) {
+            if (index < 0 || index >= total) throw new IllegalArgumentException("piece " + index + " of " + total);
+            last = now;
+            if (index < next || waiting[index] != null) return false;
+            waiting[index] = piece;
+            received++;
+            while (next < total && waiting[next] != null) {
+                String chars = waiting[next];
+                waiting[next] = null;
+                next++;
+                decode(chars, next == total);
+            }
+            return true;
+        }
+
+        private void decode(String chars, boolean end) {
+            String text = carry.isEmpty() ? chars : carry + chars;
+            int usable = end ? text.length() : text.length() - text.length() % 4;
+            carry = text.substring(usable);
+            if (usable == 0) return;
+            byte[] out = Base64.getDecoder().decode(usable == text.length() ? text : text.substring(0, usable));
+            if (size + (long) out.length > maxBytes) throw new IllegalArgumentException("backup too large");
+            if (size + out.length > bytes.length)
+                bytes = Arrays.copyOf(bytes, (int) Math.min(maxBytes, Math.max(size + (long) out.length, bytes.length * 2L)));
+            System.arraycopy(out, 0, bytes, size, out.length);
+            size += out.length;
+        }
+
+        boolean complete() {
+            return next == total;
+        }
+
+        int received() {
+            return received;
+        }
+
+        boolean expired(long now) {
+            return now - last >= TIMEOUT_MS;
+        }
+
+        InputStream stream() {
+            return new ByteArrayInputStream(bytes, 0, size);
+        }
+    }
+
+    private static void restore(Context app, Pieces pieces, Intent request) {
+        try {
+            Map<String, byte[]> files = unzip(pieces.stream());
+            if (!isDataBackup(files)) throw new IllegalArgumentException("not an InstaEclipse data backup");
+            setRestoring(true);
+            int restored = put(app.getFilesDir(), files);
             ModuleLog.line(TAG + "Backup restored (" + restored + " files); restarting Instagram");
             confirm(request, null);
             toast(app, I18n.t(app, R.string.ig_data_restore_done, restored), false);
-            // Every store keeps a copy in memory: restart so they all read the restored files.
             new Handler(Looper.getMainLooper()).postDelayed(() -> restart(app), 1800);
         } catch (Throwable t) {
+            setRestoring(false);
             ModuleLog.error(TAG + "Could not restore the backup: " + t.getClass().getSimpleName() + ": " + t.getMessage());
-            confirm(request, "Backup could not be restored");
+            confirm(request, FAILED);
             toast(app, I18n.t(app, R.string.ig_data_restore_failed), true);
         }
+    }
+
+    static boolean isDataBackup(Map<String, byte[]> files) throws JSONException {
+        byte[] manifest = files.get(MANIFEST);
+        return manifest != null && "data".equals(new JSONObject(new String(manifest, StandardCharsets.UTF_8)).optString("type"));
+    }
+
+    private static int put(File dir, Map<String, byte[]> files) throws Exception {
+        int restored = 0;
+        for (Map.Entry<String, byte[]> e : files.entrySet()) {
+            String name = e.getKey();
+            if (!included(name)) continue;
+            File target = new File(dir, name);
+            if (name.endsWith(SET_ASIDE) && target.exists()) {
+                ModuleLog.detail(TAG + "kept this phone's " + name + " over the backup's");
+                continue;
+            }
+            byte[] data;
+            try {
+                data = merged(name, target, e.getValue());
+            } catch (JSONException damaged) {
+                ModuleLog.warn(TAG + "Skipped the backup's " + name + ": it could not be read: " + damaged.getMessage());
+                continue;
+            }
+            if (data == null) {
+                ModuleLog.warn(TAG + "Kept this phone's " + name + " instead of the backup copy: the phone's file could not be read");
+                continue;
+            }
+            write(target, data);
+            restored++;
+        }
+        return restored;
+    }
+
+    private static byte[] merged(String name, File current, byte[] backup) throws Exception {
+        if (name.equals(UNSENT)) return mergeUnsent(current, backup);
+        if (name.equals(HIDDEN) || name.equals(NAMES) || name.equals(READ_RECEIPTS)) return mergeKeepCurrent(current, backup);
+        if (name.equals(EDITS)) return mergeEditHistory(current, backup);
+        return backup;
     }
 
     private static void confirm(Intent request, String error) {
@@ -214,10 +362,10 @@ public final class DataBackup {
         ps.reso.instaeclipse.utils.ipc.ModuleReplies.reply(request, reply.getExtras());
     }
 
-    private static Map<String, byte[]> unzip(byte[] zip) throws Exception {
+    static Map<String, byte[]> unzip(InputStream zip) throws Exception {
         Map<String, byte[]> out = new LinkedHashMap<>();
         long total = 0;
-        try (ZipInputStream in = new ZipInputStream(new ByteArrayInputStream(zip))) {
+        try (ZipInputStream in = new ZipInputStream(zip)) {
             ZipEntry e;
             byte[] buf = new byte[16384];
             while ((e = in.getNextEntry()) != null) {
@@ -233,6 +381,19 @@ public final class DataBackup {
             }
         }
         return out;
+    }
+
+    static byte[] mergeEditHistory(File current, byte[] backup) throws Exception {
+        JSONObject fromBackup = new JSONObject(new String(backup, StandardCharsets.UTF_8));
+        JSONObject onPhone = null;
+        if (current.exists()) {
+            byte[] bytes;
+            try { bytes = java.nio.file.Files.readAllBytes(current.toPath()); }
+            catch (java.io.IOException unreadable) { return null; }
+            try { onPhone = new JSONObject(new String(bytes, StandardCharsets.UTF_8)); }
+            catch (JSONException damaged) { ModuleLog.detail(TAG + "phone's edit history unreadable, using the backup's: " + damaged.getMessage()); }
+        }
+        return EditHistoryStore.merged(onPhone, fromBackup).getBytes(StandardCharsets.UTF_8);
     }
 
     /**
@@ -442,15 +603,20 @@ public final class DataBackup {
     }
 
     private static void restart(Context app) {
-        Intent launch = app.getPackageManager().getLaunchIntentForPackage(app.getPackageName());
-        if (launch != null) {
-            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            android.app.PendingIntent pi = android.app.PendingIntent.getActivity(app, 0x1EB, launch,
-                    android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_CANCEL_CURRENT);
-            android.app.AlarmManager am = (android.app.AlarmManager) app.getSystemService(Context.ALARM_SERVICE);
-            if (am != null) am.set(android.app.AlarmManager.RTC, System.currentTimeMillis() + 400, pi);
+        try {
+            Intent launch = app.getPackageManager().getLaunchIntentForPackage(app.getPackageName());
+            if (launch != null) {
+                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                android.app.PendingIntent pi = android.app.PendingIntent.getActivity(app, 0x1EB, launch,
+                        android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_CANCEL_CURRENT);
+                android.app.AlarmManager am = (android.app.AlarmManager) app.getSystemService(Context.ALARM_SERVICE);
+                if (am != null) am.set(android.app.AlarmManager.RTC, System.currentTimeMillis() + 400, pi);
+            }
+        } catch (Throwable t) {
+            ModuleLog.warn(TAG + "Could not reopen Instagram after the restore: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+        } finally {
+            android.os.Process.killProcess(android.os.Process.myPid());
         }
-        android.os.Process.killProcess(android.os.Process.myPid());
     }
 
     private static void toast(Context ctx, String text, boolean longer) {
@@ -469,10 +635,9 @@ public final class DataBackup {
             if (total > MAX_BYTES) throw new ps.reso.instaeclipse.utils.ipc.BrokerPayload.TooLarge("backup too large");
             bytes.write(buf, 0, n);
         }
-        String b64 = Base64.encodeToString(bytes.toByteArray(), Base64.NO_WRAP);
+        String b64 = Base64.getEncoder().encodeToString(bytes.toByteArray());
         List<String> out = new ArrayList<>();
-        int size = 120_000;
-        for (int i = 0; i < b64.length(); i += size) out.add(b64.substring(i, Math.min(b64.length(), i + size)));
+        for (int i = 0; i < b64.length(); i += PIECE_CHARS) out.add(b64.substring(i, Math.min(b64.length(), i + PIECE_CHARS)));
         return out;
     }
 }

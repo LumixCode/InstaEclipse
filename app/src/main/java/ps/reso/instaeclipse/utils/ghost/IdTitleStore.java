@@ -17,6 +17,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import ps.reso.instaeclipse.mods.media.DataBackup;
 import ps.reso.instaeclipse.utils.core.AtomicFiles;
 import ps.reso.instaeclipse.xposedcompat.AndroidAppHelper;
 
@@ -80,7 +81,7 @@ final class IdTitleStore {
     }
 
     private synchronized void persist() {
-        if (!loaded) return;
+        if (!loaded || DataBackup.restoring()) return;
         try {
             File f = file.get();
             if (f == null) return;

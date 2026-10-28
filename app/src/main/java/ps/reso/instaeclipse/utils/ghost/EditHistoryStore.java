@@ -11,9 +11,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 
+import ps.reso.instaeclipse.mods.media.DataBackup;
 import ps.reso.instaeclipse.utils.core.AtomicFiles;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.AndroidAppHelper;
@@ -251,6 +253,7 @@ public final class EditHistoryStore {
 
     /** Writes the shared store off the caller's thread. */
     public static void persist() {
+        if (DataBackup.restoring()) return;
         String json;
         synchronized (SHARED) {
             if (!loaded) load();
@@ -290,6 +293,19 @@ public final class EditHistoryStore {
         } catch (Throwable t) {
             ModuleLog.warn("(IE|EditHistoryStore) Could not read the saved edit history: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
+    }
+
+    public static String merged(JSONObject phone, JSONObject backup) throws Exception {
+        EditHistoryStore out = new EditHistoryStore(MAX_MESSAGES, MAX_VERSIONS);
+        if (phone != null) out.fromJson(phone);
+        EditHistoryStore saved = new EditHistoryStore(MAX_MESSAGES, MAX_VERSIONS);
+        saved.fromJson(backup);
+        List<Entry> added = new ArrayList<>();
+        for (Entry e : saved.entries) if (!e.ids.isEmpty() && out.match(e.account, e.thread, e.ids) == null) added.add(e);
+        out.entries.addAll(added);
+        out.entries.sort(Comparator.comparingLong(e -> e.updated));
+        if (out.entries.size() > out.capacity) out.entries.subList(0, out.entries.size() - out.capacity).clear();
+        return out.toJson().toString();
     }
 
     private JSONObject toJson() throws Exception {
