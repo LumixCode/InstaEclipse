@@ -2927,14 +2927,13 @@ public class DialogUtils {
                                 .title(I18n.t(context, R.string.ig_story_cache_clear))
                                 .message(I18n.t(context, R.string.ig_story_cache_clear_confirm));
                         dlg.secondary(context.getString(android.R.string.cancel), null);
-                        dlg.primary(I18n.t(context, R.string.ig_story_cache_clear), () -> MenuWorker.load(() -> {
-                            ps.reso.instaeclipse.utils.media.StoryCache.clearAll();
-                            return ps.reso.instaeclipse.utils.media.StoryCache.entries();
-                        }, left -> {
+                        dlg.primary(I18n.t(context, R.string.ig_story_cache_clear), () ->
+                                ps.reso.instaeclipse.utils.media.StoryCache.clearAllAsync(() -> MenuWorker.load(
+                                        ps.reso.instaeclipse.utils.media.StoryCache::entries, left -> {
                             ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_story_cache_cleared), Toast.LENGTH_SHORT).show();
                             IeSheet sheet = IeSheet.showing(context);
                             if (sheet != null && sheet.top() == self[0]) sheet.replaceTop(cachedStoriesPage(context, left));
-                        }));
+                        })));
                         dlg.show();
                     } catch (Throwable ignored) {}
                 }));
@@ -2950,12 +2949,16 @@ public class DialogUtils {
         IePalette p = IePalette.of(context);
         for (ps.reso.instaeclipse.utils.media.StoryCache.Entry e : list) {
             LinearLayout row = (LinearLayout) IeRows.actionRow(context, e.video ? R.drawable.ic_movie : R.drawable.ic_gallery,
-                    shortDate(context, e.at), "#FF9F0A", v -> openCachedStory(context, e));
+                    viewedAt(context, e), "#FF9F0A", v -> openCachedStory(context, e));
             if (e.isExpired()) row.addView(trailingLabel(context, I18n.t(context, R.string.ig_story_cache_expired), p.danger));
             cardView.addView(row);
         }
         layout.addView(cardView);
         showSectionDialog(context, author, layout);
+    }
+
+    private static String viewedAt(Context context, ps.reso.instaeclipse.utils.media.StoryCache.Entry e) {
+        return I18n.t(context, R.string.ig_story_cache_viewed_at, shortDate(context, e.at));
     }
 
     /** Opens one cached story full-screen: ImageView for photos, VideoView for videos. */
@@ -3017,7 +3020,7 @@ public class DialogUtils {
 
             TextView name = new TextView(context);
             String who = (e.author == null || e.author.isEmpty()) ? I18n.t(context, R.string.ig_story_cache_unknown_author) : e.author;
-            name.setText(who + "   " + shortDate(context, e.at));
+            name.setText(who + "   " + viewedAt(context, e));
             name.setTextColor(Color.WHITE);
             name.setTextSize(14);
             name.setTypeface(null, android.graphics.Typeface.BOLD);
