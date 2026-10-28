@@ -186,7 +186,8 @@ public class ReelDownloadHook {
                             if (wantDl && !mutable.contains(download)) mutable.add(download);
                             if (wantCl && !mutable.contains(copyLink)) mutable.add(copyLink);
                             if (wantInfo && !mutable.contains(info)) mutable.add(info);
-                            if (wantSpeed && !mutable.contains(speedRow)) mutable.add(speedRow);
+                            if (wantSpeed && !mutable.contains(speedRow) && !PlaybackScope.instagramOffersSpeed(mutable))
+                                mutable.add(speedRow);
                         }
                     } catch (Throwable t) {
                         ModuleLog.warn("(IE|Reel) Could not add the rows to this reel menu: " + t);

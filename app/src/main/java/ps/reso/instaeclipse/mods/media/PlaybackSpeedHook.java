@@ -28,6 +28,7 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -66,6 +67,7 @@ public class PlaybackSpeedHook {
     static final float SLOW = 0.5f;
     private static final HoldGate HOLD = new HoldGate();
     private static volatile WeakReference<Activity> touchActivity;
+    private static final PlaybackScope SCOPE = new PlaybackScope();
 
     /**
      * Hold-for-2x from the left half becomes slow motion; IG's 1x reset or the finger lifting
@@ -117,6 +119,10 @@ public class PlaybackSpeedHook {
             ownUntil = now + OWN_MS;
         }
 
+        synchronized boolean fromInstagram(float s, long now) {
+            return !slow && !(s == ownSpeed && now <= ownUntil);
+        }
+
         /** The speed a player gets for a request of {@code f}; {@code hero} = at the Hero setter. */
         synchronized float speedFor(float f, boolean hero, long now) {
             if (f == 2f && leftHeld && !(hero && f == ownSpeed && now <= ownUntil)) {
@@ -164,6 +170,10 @@ public class PlaybackSpeedHook {
 
     public static boolean offered() {
         return FeatureFlags.offerPlaybackSpeed && speedHooks;
+    }
+
+    static void instagramRowTapped(String option) {
+        SCOPE.menuTapped(option);
     }
 
     public void install(ClassLoader cl) {
@@ -265,9 +275,13 @@ public class PlaybackSpeedHook {
                         param.args[1] = holdSpeed(f0, true);
                         return;
                     }
-                    if (param.args[1] instanceof Float f1) holdSpeed(f1, true);
+                    if (param.args[1] instanceof Float f1) {
+                        holdSpeed(f1, true);
+                        if (HOLD.fromInstagram(f1, android.os.SystemClock.uptimeMillis())) SCOPE.instagramSet(param.args[0], f1);
+                    }
                     // IG resets to 1x on its own (e.g. after hold-for-2x); keep the chosen speed.
-                    if (FeatureFlags.offerPlaybackSpeed && speed != 1f && param.args[1] instanceof Float f && f == 1f)
+                    if (FeatureFlags.offerPlaybackSpeed && param.args[1] instanceof Float f && f == 1f
+                            && SCOPE.applies(PlaybackScope.Surface.SHARED_PLAYER, param.args[0], speed))
                         param.args[1] = speed;
                 }
             });
@@ -277,7 +291,8 @@ public class PlaybackSpeedHook {
                     Object p = param.args[0];
                     if (p == null) return;
                     HEROES.put(p, Boolean.TRUE);
-                    if (FeatureFlags.offerPlaybackSpeed && speed != 1f) setHero(p, speed);
+                    if (FeatureFlags.offerPlaybackSpeed && SCOPE.applies(PlaybackScope.Surface.SHARED_PLAYER, p, speed))
+                        setHero(p, speed);
                 }
             });
             ModuleLog.detail(TAG + "hero " + set.getDeclaringClass().getName() + "." + set.getName()
@@ -344,7 +359,7 @@ public class PlaybackSpeedHook {
                 boolean was = rightActive;
                 cancelRight();
                 if (was) {
-                    float back = FeatureFlags.offerPlaybackSpeed ? speed : 1f;
+                    float back = SCOPE.restoreSpeed(speed, FeatureFlags.offerPlaybackSpeed);
                     applyToPlayers(back);
                     applyToHeroes(back);
                 }
@@ -517,7 +532,7 @@ public class PlaybackSpeedHook {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                     lastPlayer = new WeakReference<>(param.thisObject);
-                    if (FeatureFlags.offerPlaybackSpeed && speed != 1f) {
+                    if (FeatureFlags.offerPlaybackSpeed && SCOPE.applies(PlaybackScope.Surface.FEED, param.thisObject, speed)) {
                         Object p = param.thisObject;
                         FeedVideoDownloadHook.mainHandler.postDelayed(() -> apply(p, speed), 400);
                     }
@@ -539,7 +554,8 @@ public class PlaybackSpeedHook {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                         lastPlayer = new WeakReference<>(param.thisObject);
-                        if (FeatureFlags.offerPlaybackSpeed && speed != 1f) apply(param.thisObject, speed);
+                        if (FeatureFlags.offerPlaybackSpeed && SCOPE.applies(PlaybackScope.Surface.FEED, param.thisObject, speed))
+                            apply(param.thisObject, speed);
                     }
                 });
             }
@@ -565,9 +581,15 @@ public class PlaybackSpeedHook {
                                 param.args[0] = holdSpeed(f0, false);
                                 return;
                             }
-                            if (param.args[0] instanceof Float f1) holdSpeed(f1, false);
-                            if (FeatureFlags.offerPlaybackSpeed && speed != 1f && param.args[0] instanceof Float f && f == 1f)
+                            if (param.args[0] instanceof Float f1) {
+                                holdSpeed(f1, false);
+                                if (HOLD.fromInstagram(f1, android.os.SystemClock.uptimeMillis())) SCOPE.instagramSet(param.thisObject, f1);
+                            }
+                            if (FeatureFlags.offerPlaybackSpeed && param.args[0] instanceof Float f && f == 1f
+                                    && SCOPE.applies(PlaybackScope.Surface.REEL, param.thisObject, speed)) {
+                                HOLD.own(speed, android.os.SystemClock.uptimeMillis());
                                 param.args[0] = speed;
+                            }
                         }
                     });
                     for (java.lang.reflect.Constructor<?> c : ps.reso.instaeclipse.utils.core.SafeReflect.constructors(m.getDeclaringClass())) {
@@ -631,7 +653,8 @@ public class PlaybackSpeedHook {
         String[] labels = new String[SPEEDS.length];
         int checked = 1;
         for (int i = 0; i < SPEEDS.length; i++) {
-            labels[i] = (SPEEDS[i] == (int) SPEEDS[i] ? String.valueOf((int) SPEEDS[i]) : String.valueOf(SPEEDS[i])) + "×";
+            labels[i] = SPEEDS[i] == 1f ? I18n.t(ctx, R.string.ig_playback_speed_normal)
+                    : (SPEEDS[i] == (int) SPEEDS[i] ? String.valueOf((int) SPEEDS[i]) : String.valueOf(SPEEDS[i])) + "×";
             if (SPEEDS[i] == speed) checked = i;
         }
         Context host = ps.reso.instaeclipse.mods.ui.UIHookManager.dialogHost(ctx);
@@ -639,13 +662,19 @@ public class PlaybackSpeedHook {
                 .title(I18n.t(ctx, R.string.ig_playback_speed_title))
                 .choices(labels, checked, which -> {
                     speed = SPEEDS[which];
+                    SCOPE.moduleChose();
                     WeakReference<Object> ref = lastPlayer;
                     Object p = ref != null ? ref.get() : null;
                     boolean ok = applyToHeroes(speed);
                     ok |= applyToPlayers(speed);
                     ok |= p != null && apply(p, speed);
                     ModuleLog.line(TAG + "Speed set to " + speed + "x" + (ok ? "" : " (applies from the next video)"));
-                    if (!ok) ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_playback_speed_next), Toast.LENGTH_SHORT).show();
+                    if (PlaybackScope.takeStaysNotice(SettingsManager.prefs(), speed)) {
+                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
+                                I18n.t(ctx, R.string.ig_playback_speed_stays, labels[which]), Toast.LENGTH_LONG).show();
+                    } else if (!ok) {
+                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_playback_speed_next), Toast.LENGTH_SHORT).show();
+                    }
                 })
                 .onDismiss(onClosed)
                 .show();

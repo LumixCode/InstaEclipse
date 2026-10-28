@@ -579,6 +579,7 @@ public class PostDownloadContextMenuHook {
             if (clicked == null) return;
 
             String option = clicked.toString();
+            PlaybackSpeedHook.instagramRowTapped(option);
             // ReelDownloadHook adds DOWNLOAD to the reel menu (and unlocks IG's native row) when
             // REEL download is on. If we only consumed the tap for POST download, a reel tap with
             // only Reel download enabled fell through to Instagram's own save flow, which burns in
