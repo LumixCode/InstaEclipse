@@ -9,9 +9,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongSupplier;
-import java.util.function.Supplier;
-
-import org.luckypray.dexkit.DexKitBridge;
 
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitStats;
@@ -54,21 +51,14 @@ public final class InstallRunner {
     private final Set<String> skipped;
     private final LongSupplier clock;
     private final String segment;
-    private final Supplier<DexKitBridge> bridges;
     private final List<Object[]> marks = Collections.synchronizedList(new ArrayList<>());
-    private InstallPlan.InstallCtx bridged;
     private int withoutBridge;
     private volatile Ledger ledger;
 
     public InstallRunner(Set<String> skipped, LongSupplier clock, String segment) {
-        this(skipped, clock, segment, ModuleBridge::get);
-    }
-
-    public InstallRunner(Set<String> skipped, LongSupplier clock, String segment, Supplier<DexKitBridge> bridges) {
         this.skipped = skipped == null ? Collections.emptySet() : skipped;
         this.clock = clock;
         this.segment = segment;
-        this.bridges = bridges;
     }
 
     public void setLedger(Ledger ledger) {
@@ -86,6 +76,11 @@ public final class InstallRunner {
 
     public void run(InstallPlan plan, List<InstallStep> steps, String segment, InstallPlan.InstallCtx ctx, Reporter reporter,
                     int pauseAt, Runnable pause) {
+        run(plan, steps, segment, ctx, reporter, pauseAt, pause, null);
+    }
+
+    public void run(InstallPlan plan, List<InstallStep> steps, String segment, InstallPlan.InstallCtx ctx, Reporter reporter,
+                    int pauseAt, Runnable pause, Runnable last) {
         String previous = DexKitStats.segment();
         DexKitStats.setSegment(segment);
         DexKitCache.beginBatch();
@@ -93,6 +88,13 @@ public final class InstallRunner {
             for (int i = 0; i <= steps.size(); i++) {
                 if (i == pauseAt && pause != null) pause.run();
                 if (i < steps.size()) runStep(plan, steps.get(i), segment, ctx, reporter);
+            }
+            if (last != null) {
+                try {
+                    last.run();
+                } catch (Throwable t) {
+                    ModuleLog.detail("(IE|Startup) Could not note whether the next start needs the code search: " + t);
+                }
             }
         } finally {
             DexKitCache.flushBatch();
@@ -116,14 +118,9 @@ public final class InstallRunner {
             if (step.gateKey != null && !plan.gateOpen(step.gateKey)) return;
             mark(step.name);
             if (step.skippedBy(skipped)) return;
-            InstallPlan.InstallCtx stepCtx = ctx;
-            if (step.dexKit) {
-                DexKitBridge bridge = bridges.get();
-                if (bridge == null) {
-                    withoutBridge++;
-                    return;
-                }
-                stepCtx = withBridge(ctx, bridge);
+            if (step.dexKit && ModuleBridge.failed()) {
+                withoutBridge++;
+                return;
             }
             span = StartupTrace.step(step.name);
             DexKitStats.enterStep(step.name);
@@ -134,10 +131,11 @@ public final class InstallRunner {
                 }
                 searches = DexKitStats.totals().queryMisses;
             }
-            plan.run(step, stepCtx);
+            plan.run(step, ctx);
             RAN.add(step.name);
         } catch (Throwable t) {
-            reporter.error(step.failTag + step.failText, t);
+            if (step.dexKit && ModuleBridge.failed()) withoutBridge++;
+            else reporter.error(step.failTag + step.failText, t);
         } finally {
             if (span != null) {
                 if (keys != null) DexKitStats.collectKeys(null);
@@ -152,14 +150,6 @@ public final class InstallRunner {
                 }
             }
         }
-    }
-
-    private InstallPlan.InstallCtx withBridge(InstallPlan.InstallCtx ctx, DexKitBridge bridge) {
-        if (ctx == null || ctx.bridge == bridge) return ctx;
-        if (bridged == null || bridged.bridge != bridge) {
-            bridged = new InstallPlan.InstallCtx(ctx.context, ctx.lpparam, ctx.loader, bridge);
-        }
-        return bridged;
     }
 
     public static boolean ran(String stepName) {

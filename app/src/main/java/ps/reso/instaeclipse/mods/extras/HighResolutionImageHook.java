@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.extras;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -16,6 +14,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public final class HighResolutionImageHook {
 
@@ -23,11 +22,11 @@ public final class HighResolutionImageHook {
     private static final String CACHE = "Extras_HighResImage";
     private static final String IMAGE = "com.instagram.model.mediasize.ExtendedImageUrl";
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         List<Method> pickers = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(CACHE, cl) : null;
         if (pickers == null || pickers.isEmpty()) {
             pickers = new ArrayList<>();
-            for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .returnType(IMAGE).paramTypes("java.lang.Integer", "java.util.List", "int")))) {
                 try {
                     pickers.add(md.getMethodInstance(cl));

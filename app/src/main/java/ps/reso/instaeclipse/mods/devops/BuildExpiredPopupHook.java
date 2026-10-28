@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.devops;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -15,6 +13,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class BuildExpiredPopupHook {
 
@@ -22,7 +21,7 @@ public class BuildExpiredPopupHook {
     private static final String CACHE_SNOOZE = "BuildExpiredSnooze_v1";
     private static final String CACHE_SNOOZE_DISABLED = "BuildExpiredSnoozeDisabled_v1";
 
-    public void install(DexKitBridge bridge, ClassLoader classLoader) {
+    public void install(ClassLoader classLoader) {
 
         // No-op the method that shows the popup — blocks all three internal paths:
         //   1. lockout_active pref = true  → shows immediately
@@ -68,12 +67,12 @@ public class BuildExpiredPopupHook {
         // ── DexKit path ───────────────────────────────────────────────────────
         try {
             // Primary: find the show-popup method via "lockout_active" string.
-            List<MethodData> showMethods = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> showMethods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .usingStrings("lockout_active")
                             .returnType("void")));
 
-            for (MethodData md : showMethods) {
+            for (Found md : showMethods) {
                 Method method;
                 try { method = md.getMethodInstance(classLoader); } catch (Throwable e) { continue; }
 
@@ -96,18 +95,18 @@ public class BuildExpiredPopupHook {
                 ModuleLog.warn("(IE|BuildExpired) The popup itself was not found in this Instagram version; only its expiry check is turned off");
             }
 
-            boolean snooze = hookCheck(bridge, classLoader, "snooze_expiration_lockout_manager", CACHE_SNOOZE, falseHook);
-            hookCheck(bridge, classLoader, "disabled_snooze_expiration_lockout_manager", CACHE_SNOOZE_DISABLED, falseHook);
+            boolean snooze = hookCheck(classLoader, "snooze_expiration_lockout_manager", CACHE_SNOOZE, falseHook);
+            hookCheck(classLoader, "disabled_snooze_expiration_lockout_manager", CACHE_SNOOZE_DISABLED, falseHook);
             if (!hookedMain && snooze) FeatureStatusTracker.setHooked("RemoveBuildExpiredPopup");
         } catch (Throwable t) {
             ModuleLog.error("(IE|BuildExpired) Could not block the expired-version popup", t);
         }
     }
 
-    private static boolean hookCheck(DexKitBridge bridge, ClassLoader classLoader, String key, String cacheKey,
+    private static boolean hookCheck(ClassLoader classLoader, String key, String cacheKey,
                                      XC_MethodHook hook) {
         try {
-            List<MethodData> checks = DexKitQueryCache.findMethod(bridge, FindMethod.create()
+            List<Found> checks = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create().usingEqStrings(key).returnType("boolean")));
             if (checks.size() != 1) {
                 ModuleLog.detail("(IE|BuildExpired) " + key + " check: " + checks.size() + " match(es), not hooked");

@@ -1,6 +1,5 @@
 package ps.reso.instaeclipse.mods.devops;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
@@ -20,6 +19,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class DevOptionsUnlockHook {
 
@@ -27,7 +27,7 @@ public class DevOptionsUnlockHook {
     private static final String GATE_ANCHOR = "caller is not an employee";
     private static final String CROSS_CHECK_ANCHOR = "Enabling rageshake for employee";
 
-    public void handleDevOptions(DexKitBridge bridge) {
+    public void handleDevOptions() {
         if (DexKitCache.isCacheValid()) {
             Method cachedMethod = DexKitCache.loadMethod(CACHE_KEY, Module.hostClassLoader);
             if (cachedMethod != null) {
@@ -36,7 +36,7 @@ public class DevOptionsUnlockHook {
             }
         }
         try {
-            Method gate = findEmployeeGate(bridge);
+            Method gate = findEmployeeGate();
             if (gate == null) return;
             DexKitCache.saveMethod(CACHE_KEY, gate);
             hookExactMethod(gate);
@@ -45,9 +45,9 @@ public class DevOptionsUnlockHook {
         }
     }
 
-    private Method findEmployeeGate(DexKitBridge bridge) throws NoSuchMethodException {
+    private Method findEmployeeGate() throws NoSuchMethodException {
         Map<String, MethodData> invoked = new LinkedHashMap<>();
-        for (MethodData anchor : usingString(bridge, GATE_ANCHOR)) {
+        for (Found anchor : usingString(GATE_ANCHOR)) {
             for (MethodData call : DexKitQueryCache.invokes(anchor)) invoked.put(call.getDescriptor(), call);
         }
         String gate = DevGatePick.choose(new ArrayList<>(invoked.keySet()), descriptor -> isStatic(invoked.get(descriptor)));
@@ -55,13 +55,13 @@ public class DevOptionsUnlockHook {
             ModuleLog.error("(InstaEclipse | DevOptionsEnable): Could not unlock developer options: the check was not found in this Instagram version");
             return null;
         }
-        crossCheck(bridge, gate);
+        crossCheck(gate);
         return invoked.get(gate).getMethodInstance(Module.hostClassLoader);
     }
 
-    private void crossCheck(DexKitBridge bridge, String gate) {
+    private void crossCheck(String gate) {
         try {
-            for (MethodData other : usingString(bridge, CROSS_CHECK_ANCHOR)) {
+            for (Found other : usingString(CROSS_CHECK_ANCHOR)) {
                 for (MethodData call : DexKitQueryCache.invokes(other)) {
                     if (gate.equals(call.getDescriptor())) {
                         ModuleLog.detail("(InstaEclipse | DevOptionsEnable): " + gate + " is also checked by " + other.getClassName() + "." + other.getName());
@@ -75,8 +75,8 @@ public class DevOptionsUnlockHook {
         }
     }
 
-    private static List<MethodData> usingString(DexKitBridge bridge, String text) {
-        return DexKitQueryCache.findMethod(bridge, FindMethod.create()
+    private static List<Found> usingString(String text) {
+        return DexKitQueryCache.methods(FindMethod.create()
                 .matcher(MethodMatcher.create().usingStrings(text)));
     }
 

@@ -7,7 +7,6 @@ import android.os.Looper;
 import android.view.View;
 import android.widget.Toast;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
@@ -420,21 +419,30 @@ public class StoryDownloadHook {
     private static volatile boolean loaderSearched;
     private static final Set<Object> pendingLoads = Collections.synchronizedSet(new java.util.HashSet<>());
 
-    private static synchronized void findReelLoader(ClassLoader cl) {
-        if (loaderSearched) return;
+    private static synchronized boolean findReelLoader(ClassLoader cl) {
+        if (loaderSearched) return true;
+        boolean ready = true;
         try {
-            DexKitBridge bridge = ps.reso.instaeclipse.utils.core.ModuleBridge.get();
-            if (bridge == null) return;
+            List<Found> owners = DexKitQueryCache.methodsIfReady(FindMethod.create().matcher(MethodMatcher.create()
+                    .usingStrings("reel_store_on_story_unavailable")));
+            if (owners == null) {
+                ready = false;
+                return false;
+            }
             Class<?> loader = null;
-            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
-                    .usingStrings("reel_store_on_story_unavailable")))) {
+            for (Found md : owners) {
                 for (java.lang.reflect.Constructor<?> c : ps.reso.instaeclipse.utils.core.SafeReflect.constructors(cl.loadClass(md.getClassName())))
                     if (c.getParameterCount() > 0 && c.getParameterTypes()[0].getName().startsWith("X.")) { loader = c.getParameterTypes()[0]; break; }
                 if (loader != null) break;
             }
-            if (loader == null) return;
-            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
-                    .returnType(loader.getName()).paramTypes("com.instagram.common.session.UserSession")))) {
+            if (loader == null) return true;
+            List<Found> getters = DexKitQueryCache.methodsIfReady(FindMethod.create().matcher(MethodMatcher.create()
+                    .returnType(loader.getName()).paramTypes("com.instagram.common.session.UserSession")));
+            if (getters == null) {
+                ready = false;
+                return false;
+            }
+            for (Found md : getters) {
                 Method m = md.getMethodInstance(cl);
                 if (java.lang.reflect.Modifier.isStatic(m.getModifiers())) { m.setAccessible(true); loaderGetter = m; break; }
             }
@@ -451,9 +459,12 @@ public class StoryDownloadHook {
         } catch (Throwable t) {
             ModuleLog.warn("(IE|HighlightTray) Highlights that were never opened cannot be downloaded with Download all: " + t);
         } finally {
-            loaderSearched = true;
-            ModuleLog.detail("(IE|HighlightTray) loader=" + (loaderGetter != null && loaderRegister != null && loaderFetch != null));
+            if (ready) {
+                loaderSearched = true;
+                ModuleLog.detail("(IE|HighlightTray) loader=" + (loaderGetter != null && loaderRegister != null && loaderFetch != null));
+            }
         }
+        return true;
     }
 
     private static String highlightId(Object reel) {
@@ -470,8 +481,11 @@ public class StoryDownloadHook {
         if (!loaderSearched) {
             ClassLoader cl = reel.getClass().getClassLoader();
             FeedVideoDownloadHook.executor.execute(() -> {
-                findReelLoader(cl);
-                mainHandler.post(() -> loadThenDownload(ctx, reel, session));
+                boolean searched = findReelLoader(cl);
+                mainHandler.post(() -> {
+                    if (searched) loadThenDownload(ctx, reel, session);
+                    else highlightFailed(ctx);
+                });
             });
             return;
         }

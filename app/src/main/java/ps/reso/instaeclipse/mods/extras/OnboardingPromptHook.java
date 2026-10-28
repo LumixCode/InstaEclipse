@@ -7,10 +7,8 @@ import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.Looper;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -23,6 +21,7 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -58,12 +57,12 @@ public final class OnboardingPromptHook {
     private static volatile boolean installed;
     private static final ThreadLocal<Boolean> answeringSilently = new ThreadLocal<>();
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
+    public void install(ClassLoader cl) {
         if (installed) return;
         installed = true;
         List<Method> targets = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(CACHE, cl) : null;
         if (targets == null || targets.isEmpty()) {
-            targets = findTargets(bridge, cl);
+            targets = findTargets(cl);
             if (!targets.isEmpty()) DexKitCache.saveMethods(CACHE, targets);
         }
         int hooked = 0;
@@ -105,9 +104,9 @@ public final class OnboardingPromptHook {
         }
     };
 
-    private static List<Method> findTargets(DexKitBridge bridge, ClassLoader cl) {
+    private static List<Method> findTargets(ClassLoader cl) {
         List<Method> targets = new ArrayList<>();
-        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("BKDataFetcher.fetch")
                 .paramTypes("android.content.Context", BLOKS_CONFIG)
                 .returnType("void")))) {
@@ -117,7 +116,7 @@ public final class OnboardingPromptHook {
                 }
             } catch (Throwable ignored) {}
         }
-        for (MethodData md : DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create()
+        for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("FragmentActivity is required to open CDS bottom sheet", "cds_bloks")
                 .returnType("void")))) {
             try {

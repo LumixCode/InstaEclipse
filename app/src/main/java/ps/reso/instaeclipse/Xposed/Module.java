@@ -8,8 +8,6 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 
-import org.luckypray.dexkit.DexKitBridge;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
@@ -50,7 +48,6 @@ import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 public class Module {
     // List of supported Instagram package names (maintained in CommonUtils)
     private static final List<String> SUPPORTED_PACKAGES = CommonUtils.SUPPORTED_PACKAGES;
-    public static volatile DexKitBridge dexKitBridge;
     public static ClassLoader hostClassLoader;
     public static String moduleSourceDir;
     private static String moduleLibDir;
@@ -95,7 +92,8 @@ public class Module {
             ModuleLog.line("(InstaEclipse): Xposed backend: " + ps.reso.instaeclipse.xposedcompat.XposedBridge.backend().name());
             hostClassLoader = lpparam.classLoader;
             hookInstagram(lpparam);
-            ModuleBridge.start(moduleLibDir, lpparam.appInfo.sourceDir);
+            ModuleBridge.prepare(moduleLibDir, lpparam.appInfo.sourceDir);
+            if (LegacyPaths.has(LegacyPaths.WARMBRIDGE)) ModuleBridge.start(ModuleBridge.LOAD);
         }
     }
 
@@ -135,6 +133,8 @@ public class Module {
     private static volatile Consumer<Runnable> backgroundStarter = Module::startInitThread;
 
     private static volatile Context appContext;
+    private static volatile InstallPlan keptPlan;
+    private static volatile InstallSchedule.Split keptSplit;
 
     public static Context appContext() {
         return appContext;
@@ -232,7 +232,37 @@ public class Module {
         } catch (Throwable e) {
             ModuleLog.warn("(DexKitCache) Could not read the saved lookups, so this start takes longer: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
+        startBridgeIfNeeded();
         StartupTrace.end(span);
+    }
+
+    private static void startBridgeIfNeeded() {
+        boolean scheduleNeedsBridge;
+        try {
+            InstallPlan plan = new InstallPlan();
+            InstallSchedule.Split split = schedule(plan);
+            keptPlan = plan;
+            keptSplit = split;
+            scheduleNeedsBridge = backgroundNeedsBridge(split);
+        } catch (Throwable t) {
+            keptPlan = null;
+            keptSplit = null;
+            scheduleNeedsBridge = true;
+        }
+        boolean start = true;
+        try {
+            start = ModuleBridge.shouldStart(LegacyPaths.has(LegacyPaths.WARMBRIDGE), ModuleBridge.stamp(), scheduleNeedsBridge);
+        } catch (Throwable ignored) {
+        }
+        if (start) ModuleBridge.start(ModuleBridge.ATTACH);
+    }
+
+    static boolean backgroundNeedsBridge(InstallSchedule.Split split) {
+        if (split == null) return false;
+        for (InstallStep step : split.background) {
+            if (step.dexKit && split.backgroundOpen.contains(step.name)) return true;
+        }
+        return false;
     }
 
     public static void attachAfter(Object application, Context context, XC_LoadPackage.LoadPackageParam lpparam) {
@@ -241,7 +271,10 @@ public class Module {
         // Setup context, preferences
         SettingsManager.init(context);
         // Settings changed in the companion while Instagram wasn't running.
-        CompanionSync.pull(context);
+        if (CompanionSync.pull(context)) {
+            keptPlan = null;
+            keptSplit = null;
+        }
         // ...and the other way: bring the companion's copy up to date with changes
         // made in this menu (newer side wins per key, see PrefsMerge).
         if (LegacyPaths.has(LegacyPaths.IDLE) || !CompanionSync.remotePrefsAvailable()) {
@@ -314,8 +347,14 @@ public class Module {
     public static void installFeatureHooks(Context context, XC_LoadPackage.LoadPackageParam lpparam) {
         appContext = context;
         StartupTrace.Span span = StartupTrace.begin(StartupTrace.INSTALL);
-        InstallPlan plan = new InstallPlan();
-        InstallSchedule.Split split = schedule(plan);
+        InstallPlan kept = keptPlan;
+        InstallSchedule.Split keptSchedule = keptSplit;
+        keptPlan = null;
+        keptSplit = null;
+        boolean reuse = kept != null && keptSchedule != null;
+        InstallPlan plan = reuse ? kept : new InstallPlan();
+        InstallSchedule.Split split = reuse ? keptSchedule : schedule(plan);
+        if (!reuse && backgroundNeedsBridge(split)) ModuleBridge.start(ModuleBridge.INSTALL);
         lastSchedule = split;
         InstallRunner runner = new InstallRunner(skipSet(), android.os.SystemClock::elapsedRealtimeNanos, DexKitStats.INLINE);
         lastRunner = runner;
@@ -323,9 +362,10 @@ public class Module {
             runner.setLedger(new InstallSchedule.Book(CACHE_STORE, split,
                     step -> InstallSchedule.lookupState(step, plan::flag), moduleBuild(), ModuleLog::detail));
         }
-        InstallPlan.InstallCtx ctx = new InstallPlan.InstallCtx(context, lpparam, hostClassLoader, ModuleBridge.peek());
+        InstallPlan.InstallCtx ctx = new InstallPlan.InstallCtx(context, lpparam, hostClassLoader);
         inlineOnMainThread = DexKitStats.onMainThread();
-        runner.run(plan, split.inline, DexKitStats.INLINE, ctx, InstallRunner.LOG);
+        runner.run(plan, split.inline, DexKitStats.INLINE, ctx, InstallRunner.LOG, -1, null,
+                split.background.isEmpty() ? ModuleBridge::saveStamp : null);
         if (split.background.isEmpty()) {
             finishInstall(context, runner, span, true);
             return;
@@ -348,7 +388,7 @@ public class Module {
                 if (INIT_THREAD.equals(Thread.currentThread().getName())) {
                     Thread.currentThread().setPriority(Thread.NORM_PRIORITY - 1);
                 }
-            });
+            }, ModuleBridge::saveStamp);
             finishInstall(context, runner, span, false);
             ModuleLog.ok("(InstaEclipse): Features are ready (background setup took "
                     + (android.os.SystemClock.elapsedRealtime() - start) + " ms, "

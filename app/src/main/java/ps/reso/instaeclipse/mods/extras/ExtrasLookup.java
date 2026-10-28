@@ -1,6 +1,5 @@
 package ps.reso.instaeclipse.mods.extras;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
@@ -14,6 +13,7 @@ import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 /**
  * DexKit lookups shared by the "Extras" hooks: resolve once, cache the result per IG version,
@@ -56,12 +56,12 @@ final class ExtrasLookup {
     }
 
     /** Methods whose body references every given string. */
-    static List<MethodData> byStrings(DexKitBridge bridge, String... strings) {
-        return DexKitQueryCache.findMethod(bridge, FindMethod.create().matcher(MethodMatcher.create().usingStrings(strings)));
+    static List<Found> byStrings(String... strings) {
+        return DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create().usingStrings(strings)));
     }
 
     /** First method invoked by {@code owner} that is static and satisfies {@code test}. */
-    static Method firstStaticInvoke(MethodData owner, ClassLoader cl, Predicate<Method> test) {
+    static Method firstStaticInvoke(Found owner, ClassLoader cl, Predicate<Method> test) {
         for (MethodData inv : DexKitQueryCache.invokes(owner)) {
             if (!inv.isMethod()) continue;
             try {

@@ -6,7 +6,6 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 
@@ -233,10 +232,10 @@ public final class MediaInfo {
             if (m == null) {
                 m = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("MediaInfo_" + key, Module.hostClassLoader) : null;
                 if (m == null) {
-                    DexKitBridge bridge = Module.dexKitBridge;
-                    List<Found> found = bridge == null ? List.of() : DexKitQueryCache.methods(FindMethod.create()
+                    List<Found> found = DexKitQueryCache.methodsIfReady(FindMethod.create()
                             .matcher(MethodMatcher.create().declaredClass(MEDIA).paramCount(0)
                                     .usingEqStrings(List.of(key)).returnType(rt.getName())));
+                    if (found == null) return null;
                     if (found.size() != 1) {
                         MISSING.put(key, true);
                         return null;

@@ -4,14 +4,22 @@ import android.annotation.SuppressLint;
 
 import org.luckypray.dexkit.DexKitBridge;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
-import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.utils.log.StartupTrace;
 
 public final class ModuleBridge {
 
     public static final String WAIT = "dexkit.wait";
+    public static final String STAMP = "q__bridgeAtStartup";
+    public static final String LOAD = "load";
+    public static final String ATTACH = "attach";
+    public static final String INSTALL = "install";
+    public static final String RUNTIME = "runtime";
     static final String THREAD = "IE-DexKit";
     static final String LIB = "/libdexkit.so";
 
@@ -35,53 +43,90 @@ public final class ModuleBridge {
     };
 
     private static final Object LOCK = new Object();
+    private static final Object STAMP_LOCK = new Object();
+    private static final Set<String> REQUESTERS = new LinkedHashSet<>();
     private static Factory factory = NATIVE;
+    private static String libDir;
+    private static String apkPath;
     private static boolean started;
+    private static String startedBy;
     private static volatile boolean done;
     private static volatile DexKitBridge bridge;
     private static volatile Throwable failure;
+    private static volatile boolean needed;
+    private static boolean runtimeNoted;
 
     private ModuleBridge() {}
 
-    public static void start(String libDir, String apkPath) {
-        Factory f;
+    public static void prepare(String moduleLibDir, String hostApkPath) {
         synchronized (LOCK) {
-            if (started) return;
-            started = true;
-            f = factory;
-        }
-        if (LegacyPaths.has(LegacyPaths.BRIDGE)) {
-            create(f, libDir, apkPath);
-            return;
-        }
-        try {
-            Thread t = new Thread(() -> create(f, libDir, apkPath), THREAD);
-            t.setPriority(Thread.NORM_PRIORITY);
-            t.start();
-        } catch (Throwable e) {
-            finish(null, e);
+            libDir = moduleLibDir;
+            apkPath = hostApkPath;
         }
     }
 
+    public static void start(String moduleLibDir, String hostApkPath) {
+        prepare(moduleLibDir, hostApkPath);
+        start(LOAD);
+    }
+
+    public static boolean start(String reason) {
+        return begin(reason, true);
+    }
+
+    public static boolean shouldStart(boolean legacyWarmbridge, String stamp, boolean scheduleNeedsBridge) {
+        return legacyWarmbridge || stamp == null || "1".equals(stamp) || scheduleNeedsBridge;
+    }
+
+    public static String stamp() {
+        return DexKitCache.loadSaved(STAMP);
+    }
+
     public static DexKitBridge get() {
+        String segment = DexKitStats.segment();
+        boolean install = !DexKitStats.NONE.equals(segment);
+        if (!install && DexKitStats.onMainThread()) return request();
+        if (install) noteInstall(segment);
+        else noteRuntime();
         if (done) return bridge;
-        synchronized (LOCK) {
-            if (!started) return null;
+        if (!begin(install ? INSTALL : RUNTIME, true)) return null;
+        return await();
+    }
+
+    public static DexKitBridge request() {
+        noteRuntime();
+        if (done) return bridge;
+        begin(RUNTIME, false);
+        return done ? bridge : null;
+    }
+
+    public static void saveStamp() {
+        synchronized (STAMP_LOCK) {
+            String value = needed ? "1" : "0";
+            if (!value.equals(DexKitCache.loadSaved(STAMP))) DexKitCache.saveString(STAMP, value);
         }
-        StartupTrace.Span span = StartupTrace.begin(WAIT);
-        boolean interrupted = false;
+    }
+
+    public static List<String> requesters() {
         synchronized (LOCK) {
-            while (!done) {
-                try {
-                    LOCK.wait();
-                } catch (InterruptedException e) {
-                    interrupted = true;
-                }
-            }
+            return new ArrayList<>(REQUESTERS);
         }
-        StartupTrace.end(span);
-        if (interrupted) Thread.currentThread().interrupt();
-        return bridge;
+    }
+
+    public static boolean started() {
+        synchronized (LOCK) {
+            return started;
+        }
+    }
+
+    public static String startedBy() {
+        synchronized (LOCK) {
+            return startedBy;
+        }
+    }
+
+    public static boolean needed() {
+        return needed;
     }
 
     public static DexKitBridge peek() {
@@ -123,6 +168,7 @@ public final class ModuleBridge {
         synchronized (LOCK) {
             factory = NATIVE;
             started = true;
+            startedBy = "test";
         }
         finish(testBridge, null);
     }
@@ -148,22 +194,91 @@ public final class ModuleBridge {
     static void resetForTest(Factory testFactory) {
         synchronized (LOCK) {
             factory = testFactory;
+            libDir = null;
+            apkPath = null;
             started = false;
+            startedBy = null;
             done = false;
             bridge = null;
             failure = null;
-            Module.dexKitBridge = null;
+            REQUESTERS.clear();
+        }
+        synchronized (STAMP_LOCK) {
+            needed = false;
+            runtimeNoted = false;
         }
     }
 
-    private static void create(Factory f, String libDir, String apkPath) {
+    private static void noteInstall(String segment) {
+        String step = DexKitStats.currentStep();
+        synchronized (LOCK) {
+            if (!DexKitStats.NONE.equals(step)) REQUESTERS.add(step);
+        }
+        if (!DexKitStats.BACKGROUND.equals(segment)) needed = true;
+    }
+
+    private static void noteRuntime() {
+        synchronized (STAMP_LOCK) {
+            needed = true;
+            if (runtimeNoted) return;
+            runtimeNoted = true;
+            if (!"1".equals(DexKitCache.loadSaved(STAMP))) DexKitCache.saveString(STAMP, "1");
+        }
+    }
+
+    private static boolean begin(String reason, boolean allowSync) {
+        Factory f;
+        String lib;
+        String apk;
+        synchronized (LOCK) {
+            if (started) return true;
+            if (apkPath == null) return false;
+            started = true;
+            startedBy = reason;
+            f = factory;
+            lib = libDir;
+            apk = apkPath;
+        }
+        if (allowSync && LegacyPaths.has(LegacyPaths.BRIDGE)) {
+            create(f, lib, apk);
+            return true;
+        }
+        try {
+            Thread t = new Thread(() -> create(f, lib, apk), THREAD);
+            t.setPriority(Thread.NORM_PRIORITY);
+            t.start();
+        } catch (Throwable e) {
+            finish(null, e);
+        }
+        return true;
+    }
+
+    private static DexKitBridge await() {
+        if (done) return bridge;
+        StartupTrace.Span span = StartupTrace.begin(WAIT);
+        boolean interrupted = false;
+        synchronized (LOCK) {
+            while (!done) {
+                try {
+                    LOCK.wait();
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+        }
+        StartupTrace.end(span);
+        if (interrupted) Thread.currentThread().interrupt();
+        return bridge;
+    }
+
+    private static void create(Factory f, String lib, String apk) {
         StartupTrace.Span span = StartupTrace.begin(StartupTrace.DEXKIT);
         DexKitBridge created = null;
         Throwable error = null;
         try {
-            f.load(libDir + LIB);
+            f.load(lib + LIB);
             DexKitStats.libraryLoaded();
-            created = f.create(apkPath);
+            created = f.create(apk);
             if (created == null) error = new IllegalStateException("DexKitBridge.create returned nothing");
             else DexKitStats.bridgeCreated();
         } catch (Throwable t) {
@@ -178,7 +293,6 @@ public final class ModuleBridge {
         synchronized (LOCK) {
             bridge = created;
             failure = created == null ? error : null;
-            if (created != null) Module.dexKitBridge = created;
             done = true;
             LOCK.notifyAll();
         }

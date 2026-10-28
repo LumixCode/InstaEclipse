@@ -1,9 +1,7 @@
 package ps.reso.instaeclipse.mods.ads;
 
-import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -15,6 +13,7 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class AdBlocker {
 
@@ -27,7 +26,7 @@ public class AdBlocker {
             "SponsoredContentController.insertItem"
     };
 
-    public void disableSponsoredContent(DexKitBridge bridge, ClassLoader classLoader) {
+    public void disableSponsoredContent(ClassLoader classLoader) {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
@@ -47,7 +46,7 @@ public class AdBlocker {
 
         try {
             for (String marker : INSERT_ITEM_MARKERS) {
-                List<MethodData> methods = DexKitQueryCache.findMethod(bridge, 
+                List<Found> methods = DexKitQueryCache.methods(
                         FindMethod.create().matcher(
                                 MethodMatcher.create().usingStrings(marker)
                         )
@@ -58,8 +57,8 @@ public class AdBlocker {
                     continue;
                 }
 
-                for (MethodData method : methods) {
-                    String returnType = String.valueOf(method.getReturnType());
+                for (Found method : methods) {
+                    String returnType = method.getReturnTypeName();
                     if (!returnType.contains("boolean")) continue;
 
                     try {

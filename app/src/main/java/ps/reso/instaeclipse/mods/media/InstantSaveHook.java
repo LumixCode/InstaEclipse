@@ -102,8 +102,6 @@ public class InstantSaveHook {
             } catch (Throwable ignored) {}
         }
         try {
-            org.luckypray.dexkit.DexKitBridge bridge = ps.reso.instaeclipse.utils.core.ModuleBridge.get();
-            if (bridge == null) return null;
             for (FoundClass cd : DexKitQueryCache.classes(
                     org.luckypray.dexkit.query.FindClass.create().matcher(
                             org.luckypray.dexkit.query.matchers.ClassMatcher.create().className(

@@ -10,6 +10,8 @@ import java.lang.reflect.Modifier;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
+import ps.reso.instaeclipse.utils.core.ModuleBridge;
 
 /**
  * ViewPager2's user-input ("swipe enabled") flag, resolved without hardcoded obfuscated names.
@@ -59,9 +61,12 @@ public final class ViewPager2Input {
                     for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(c)) if (f.getType() == vp) { inner = c; break; }
                 }
             }
-            org.luckypray.dexkit.DexKitBridge bridge = ps.reso.instaeclipse.Xposed.Module.dexKitBridge;
-            if (inner == null || bridge == null) return null;
-            for (org.luckypray.dexkit.result.MethodData md : DexKitQueryCache.findMethod(bridge, org.luckypray.dexkit.query.FindMethod.create()
+            if (inner == null) return null;
+            if (ModuleBridge.request() == null) {
+                userInputFieldTried = false;
+                return null;
+            }
+            for (Found md : DexKitQueryCache.methods(org.luckypray.dexkit.query.FindMethod.create()
                     .matcher(org.luckypray.dexkit.query.matchers.MethodMatcher.create()
                             .declaredClass(inner.getName()).name("onInterceptTouchEvent")))) {
                 for (org.luckypray.dexkit.result.UsingFieldData uf : DexKitQueryCache.usingFields(md)) {

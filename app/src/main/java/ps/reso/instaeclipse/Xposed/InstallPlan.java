@@ -2,7 +2,6 @@ package ps.reso.instaeclipse.Xposed;
 
 import android.content.Context;
 
-import org.luckypray.dexkit.DexKitBridge;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -422,7 +421,7 @@ public class InstallPlan {
                 new ReelViewerHook().install(ctx.loader);
                 return;
             case DEV_OPTIONS_UNLOCK_HOOK:
-                new DevOptionsUnlockHook().handleDevOptions(ctx.bridge);
+                new DevOptionsUnlockHook().handleDevOptions();
                 return;
             case GHOST_DM_SEEN_HOOK:
                 new GhostDMSeenHook().handleSeenBlock();
@@ -476,7 +475,7 @@ public class InstallPlan {
                 new HideSuggestedFeedItemsHook().install(ctx.loader);
                 return;
             case AD_BLOCKER:
-                new AdBlocker().disableSponsoredContent(ctx.bridge, ctx.loader);
+                new AdBlocker().disableSponsoredContent(ctx.loader);
                 return;
             case TRACKING_LINK_DISABLE:
                 new TrackingLinkDisable().disableTrackingLinks(ctx.loader);
@@ -491,19 +490,19 @@ public class InstallPlan {
                 new HideCommunityNotesHook().install(ctx.loader);
                 return;
             case REELS_CONTROLS_HOOK:
-                new ReelsControlsHook().install(ctx.bridge, ctx.loader);
+                new ReelsControlsHook().install(ctx.loader);
                 return;
             case ACCOUNT_LIMIT_HOOK:
-                new AccountLimitHook().install(ctx.bridge, ctx.loader);
+                new AccountLimitHook().install(ctx.loader);
                 return;
             case AIRPLANE_MODE_HOOK:
                 new AirplaneModeHook().install(ctx.loader);
                 return;
             case HIGH_RESOLUTION_IMAGE_HOOK:
-                new HighResolutionImageHook().install(ctx.bridge, ctx.loader);
+                new HighResolutionImageHook().install(ctx.loader);
                 return;
             case ONBOARDING_PROMPT_HOOK:
-                new OnboardingPromptHook().install(ctx.bridge, ctx.loader);
+                new OnboardingPromptHook().install(ctx.loader);
                 return;
             case NOTIFICATION_REGISTRATION_HOOK:
                 new NotificationRegistrationHook().install();
@@ -650,7 +649,7 @@ public class InstallPlan {
                 new DisableVideoAutoPlayHook().handleAutoPlayDisable();
                 return;
             case BUILD_EXPIRED_POPUP_HOOK:
-                new BuildExpiredPopupHook().install(ctx.bridge, ctx.lpparam.classLoader);
+                new BuildExpiredPopupHook().install(ctx.lpparam.classLoader);
                 return;
             case FEED_VIDEO_DOWNLOAD_HOOK:
                 new FeedVideoDownloadHook().install(ctx.lpparam.classLoader);
@@ -725,7 +724,7 @@ public class InstallPlan {
                 new TerminatedExecutorGuard().install(ctx.lpparam.classLoader);
                 return;
             case EXEC_GUARD_DISPATCHERS:
-                ExecGuardDispatchers.install(ctx.bridge);
+                ExecGuardDispatchers.install();
                 return;
             default:
                 throw new IllegalArgumentException("Unknown install step: " + step.name);
@@ -737,13 +736,11 @@ public class InstallPlan {
         public final Context context;
         public final XC_LoadPackage.LoadPackageParam lpparam;
         public final ClassLoader loader;
-        public final DexKitBridge bridge;
 
-        public InstallCtx(Context context, XC_LoadPackage.LoadPackageParam lpparam, ClassLoader loader, DexKitBridge bridge) {
+        public InstallCtx(Context context, XC_LoadPackage.LoadPackageParam lpparam, ClassLoader loader) {
             this.context = context;
             this.lpparam = lpparam;
             this.loader = loader;
-            this.bridge = bridge;
         }
     }
 }

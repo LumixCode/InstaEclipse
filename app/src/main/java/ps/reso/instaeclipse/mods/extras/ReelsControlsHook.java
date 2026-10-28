@@ -1,12 +1,10 @@
 package ps.reso.instaeclipse.mods.extras;
 
-import org.luckypray.dexkit.DexKitBridge;
-import org.luckypray.dexkit.result.MethodData;
-
 import java.lang.reflect.Method;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -22,14 +20,14 @@ public class ReelsControlsHook {
 
     private static final String TAG = "(InstaEclipse | Reels): ";
 
-    public void install(DexKitBridge bridge, ClassLoader cl) {
-        installAutoScroll(bridge, cl);
+    public void install(ClassLoader cl) {
+        installAutoScroll(cl);
     }
 
 
-    private void installAutoScroll(DexKitBridge bridge, ClassLoader cl) {
+    private void installAutoScroll(ClassLoader cl) {
         Method gate = ExtrasLookup.method("Extras_ReelsAutoScroll", "reelsAutoScroll", FeatureFlags.reelsAutoScroll, cl, () -> {
-            for (MethodData md : ExtrasLookup.byStrings(bridge,
+            for (Found md : ExtrasLookup.byStrings(
                     "android_purge_26_q2_ClipsViewerExperimentUtil_isOptInAutoscrollEnabled")) {
                 if ("boolean".equals(md.getReturnTypeName())) return md.getMethodInstance(cl);
             }
