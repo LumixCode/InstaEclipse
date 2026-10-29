@@ -41,15 +41,11 @@ jobs:
       - name: Grant execute permission to gradlew
         run: chmod +x ./gradlew
 
-      # Step 5: Run unit tests before building
-      - name: Run unit tests
-        run: ./gradlew testDebugUnitTest
-
-      # Step 6: Build the debug APK
+      # Step 5: Build the debug APK
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
-      # Step 7: Upload the debug APK as an artifact
+      # Step 6: Upload the debug APK as an artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:

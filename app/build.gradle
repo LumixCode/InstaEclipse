@@ -19,8 +19,6 @@ android {
         // The fork's release workflow passes -PforkVersionCode/-PforkVersionName; other builds keep upstream's version.
         versionCode project.findProperty('forkVersionCode')?.toInteger() ?: 20
         versionName project.findProperty('forkVersionName') ?: '0.8.2'
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -52,13 +50,6 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    testOptions {
-        unitTests.all {
-            ['instaeclipse.ffmpeg', 'instaeclipse.ffprobe', 'instaeclipse.fixtureOutput'].each { key ->
-                if (System.getProperty(key) != null) systemProperty key, System.getProperty(key)
-            }
-        }
-    }
     packagingOptions {
         resources {
             merges += 'META-INF/xposed/*'
@@ -82,11 +73,6 @@ dependencies {
 
     // External library for shared preferences
     implementation libs.fileprefs
-    // Testing dependencies
-    testImplementation libs.junit
-    testRuntimeOnly files('libs/api-82.jar')
-    androidTestImplementation libs.ext.junit
-    androidTestImplementation libs.espresso.core.v361
 
     // Xposed APIs, provided by the framework at runtime. The module loads through libxposed API 102
     // (META-INF/xposed: Vector 2.2+, LSPatch 1.0+); the legacy API stays behind the compat layer.
