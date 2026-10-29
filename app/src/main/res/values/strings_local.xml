@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Strings this fork adds. Kept out of strings.xml so upstream's file and its
      translations stay byte-identical; these fall back to English in every locale. -->
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <!-- Hide specific chats -->
     <string name="ig_hide_chats_show_button">Show “Hide chat” in the chat menu</string>
     <string name="ig_hide_chats_unknown">Chat</string>

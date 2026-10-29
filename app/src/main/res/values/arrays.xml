@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <string-array name="target_app" translatable="false">
         <item>com.instagram.android</item>
     </string-array>
-    <string-array name="ig_fancy_font_names" tools:ignore="MissingTranslation">
+    <string-array name="ig_fancy_font_names">
         <item>Normal</item>
         <item>Bold</item>
         <item>Italic</item>

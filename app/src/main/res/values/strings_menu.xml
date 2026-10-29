@@ -1,77 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- In-Instagram menu: version and health chips -->
     <string name="menu_chip_instagram">Instagram %1$s</string>
     <string name="menu_chip_active">%1$d/%2$d active</string>
     <string name="menu_inactive_all_good">Every enabled feature is active on this Instagram version.</string>
-    <string name="ie_ghost_activity_status_hint" tools:ignore="MissingTranslation">To hide when you\'re active, turn off Activity status in Instagram\'s settings.</string>
-    <string name="ig_extreme_active" tools:ignore="MissingTranslation">On · can\'t be turned off</string>
-    <string name="ig_quick_toggle_hint" tools:ignore="MissingTranslation">Hold the Messages icon to switch these on or off together.</string>
-    <string name="ig_dialog_restart_message_v2" tools:ignore="MissingTranslation">Instagram closes and opens again. Your settings stay.</string>
-    <string name="ig_dialog_restart_clear_cache" tools:ignore="MissingTranslation">Clear Instagram\'s cache and restart</string>
-    <string name="ig_dialog_auto_clear_cache_size_v2" tools:ignore="MissingTranslation">Clear above: %1$d MB</string>
-    <string name="ig_ring_stop_desc" tools:ignore="MissingTranslation">Colour %1$d of %2$d, %3$s</string>
-    <string name="ig_ring_add_colour" tools:ignore="MissingTranslation">Add colour</string>
-    <string name="ig_ring_reverse" tools:ignore="MissingTranslation">Reverse colours</string>
-    <string name="about_report_issue" tools:ignore="MissingTranslation">Report an issue</string>
-    <string name="ig_unsent_export_failed" tools:ignore="MissingTranslation">Couldn\'t export: %1$s</string>
-    <string name="ig_story_cache_unknown_author" tools:ignore="MissingTranslation">Unknown account</string>
-    <string name="ig_story_cache_expired" tools:ignore="MissingTranslation">Expired</string>
-    <string name="ig_story_cache_open_failed" tools:ignore="MissingTranslation">Couldn\'t open this story</string>
-    <string name="ig_story_cache_save" tools:ignore="MissingTranslation">Save</string>
-    <string name="ie_rescan_restart" tools:ignore="MissingTranslation">Rescan and restart</string>
-    <string name="ie_toast_not_working" tools:ignore="MissingTranslation">Not working: %1$s</string>
-    <string name="ie_toast_more" tools:ignore="MissingTranslation">+%1$d more</string>
-    <string name="ie_toast_starting" tools:ignore="MissingTranslation">%1$d still starting</string>
-    <string name="ig_restart_to_apply_both" tools:ignore="MissingTranslation">Applies after restarting Instagram</string>
-    <string name="ig_restart_bar" tools:ignore="MissingTranslation">Restart Instagram to apply</string>
-    <string name="ig_restart_bar_action" tools:ignore="MissingTranslation">Restart</string>
-    <string name="menu_health_broken" tools:ignore="MissingTranslation">Could not attach to this Instagram version</string>
-    <string name="menu_health_restart" tools:ignore="MissingTranslation">Turned on after Instagram started – restart to apply</string>
-    <string name="menu_health_locks" tools:ignore="MissingTranslation">Locks need a passcode</string>
-    <string name="menu_health_unconfirmed" tools:ignore="MissingTranslation">Not confirmed yet</string>
-    <string name="ie_font_saved" tools:ignore="MissingTranslation">Font saved. Restart Instagram to use it</string>
-    <string name="ie_emoji_saved" tools:ignore="MissingTranslation">Emoji font saved. Restart Instagram to use it</string>
-    <string name="ie_font_load_failed" tools:ignore="MissingTranslation">Couldn\'t load that font file</string>
-    <string name="ie_picker_unavailable" tools:ignore="MissingTranslation">Can\'t open the file picker here</string>
-    <string name="ig_extreme_refused" tools:ignore="MissingTranslation">Extreme mode can\'t be undone, so this can only get stricter</string>
-    <string name="ig_startup_tab_default" tools:ignore="MissingTranslation">Instagram\'s default</string>
-    <string name="ig_startup_tab_hidden" tools:ignore="MissingTranslation">%1$s (hidden)</string>
-    <string name="menu_search_hint" tools:ignore="MissingTranslation">Search options</string>
-    <string name="menu_search_clear" tools:ignore="MissingTranslation">Clear search</string>
-    <string name="menu_search_empty" tools:ignore="MissingTranslation">No matching options</string>
-    <string name="menu_search_try_another" tools:ignore="MissingTranslation">Try another word</string>
-    <string name="ig_data_restore_confirm" tools:ignore="MissingTranslation">Instagram restarts; newer data on this phone is kept.</string>
-    <string name="ig_data_restore_choose" tools:ignore="MissingTranslation">Choose backup</string>
-    <string name="ig_gestures" tools:ignore="MissingTranslation">Gestures</string>
-    <string name="ig_gestures_hint_title" tools:ignore="MissingTranslation">Shortcuts in Instagram</string>
-    <string name="ig_gestures_hint_intro" tools:ignore="MissingTranslation">InstaEclipse adds these. You can find every gesture again in About › Gestures.</string>
-    <string name="ig_gesture_menu" tools:ignore="MissingTranslation">Hold the Search tab</string>
-    <string name="ig_gesture_menu_desc" tools:ignore="MissingTranslation">Opens the InstaEclipse menu.</string>
-    <string name="ig_gesture_quick_toggle" tools:ignore="MissingTranslation">Hold the Messages icon</string>
-    <string name="ig_gesture_quick_toggle_desc" tools:ignore="MissingTranslation">Switches the ghost mode options you chose on or off together.</string>
-    <string name="ig_gesture_hidden_chats" tools:ignore="MissingTranslation">Triple-tap your name in Messages</string>
-    <string name="ig_gesture_hidden_chats_desc" tools:ignore="MissingTranslation">Shows your hidden chats after you enter your passcode.</string>
-    <string name="ig_gesture_chat_menu" tools:ignore="MissingTranslation">Tap the InstaEclipse button in a chat</string>
-    <string name="ig_gesture_chat_menu_desc" tools:ignore="MissingTranslation">Opens the chat menu. When the button is hidden, triple-tap between the chat name and the call buttons.</string>
-    <string name="ig_gesture_reel_speed" tools:ignore="MissingTranslation">Hold the left side of a reel</string>
-    <string name="ig_gesture_reel_speed_desc" tools:ignore="MissingTranslation">Plays it at 0.5×; the right side still plays at 2×.</string>
-    <string name="ig_gesture_caption" tools:ignore="MissingTranslation">Hold a caption</string>
-    <string name="ig_gesture_caption_desc" tools:ignore="MissingTranslation">Copies its text.</string>
-    <string name="ig_gesture_comment" tools:ignore="MissingTranslation">Hold a comment</string>
-    <string name="ig_gesture_comment_desc" tools:ignore="MissingTranslation">Copies it; GIFs and images in comments can be saved too.</string>
-    <string name="ig_story_cache_viewed_at" tools:ignore="MissingTranslation">Viewed %1$s</string>
-    <string name="ig_restart_prompt" tools:ignore="MissingTranslation">Restart Instagram to apply: %1$s</string>
-    <string name="ig_restart_prompt_more" tools:ignore="MissingTranslation">+%1$d</string>
-    <plurals name="ig_story_cache_delete_prompt" tools:ignore="MissingTranslation">
+    <string name="ie_ghost_activity_status_hint">To hide when you\'re active, turn off Activity status in Instagram\'s settings.</string>
+    <string name="ig_extreme_active">On · can\'t be turned off</string>
+    <string name="ig_quick_toggle_hint">Hold the Messages icon to switch these on or off together.</string>
+    <string name="ig_dialog_restart_message_v2">Instagram closes and opens again. Your settings stay.</string>
+    <string name="ig_dialog_restart_clear_cache">Clear Instagram\'s cache and restart</string>
+    <string name="ig_dialog_auto_clear_cache_size_v2">Clear above: %1$d MB</string>
+    <string name="ig_ring_stop_desc">Colour %1$d of %2$d, %3$s</string>
+    <string name="ig_ring_add_colour">Add colour</string>
+    <string name="ig_ring_reverse">Reverse colours</string>
+    <string name="about_report_issue">Report an issue</string>
+    <string name="ig_unsent_export_failed">Couldn\'t export: %1$s</string>
+    <string name="ig_story_cache_unknown_author">Unknown account</string>
+    <string name="ig_story_cache_expired">Expired</string>
+    <string name="ig_story_cache_open_failed">Couldn\'t open this story</string>
+    <string name="ig_story_cache_save">Save</string>
+    <string name="ie_rescan_restart">Rescan and restart</string>
+    <string name="ie_toast_not_working">Not working: %1$s</string>
+    <string name="ie_toast_more">+%1$d more</string>
+    <string name="ie_toast_starting">%1$d still starting</string>
+    <string name="ig_restart_to_apply_both">Applies after restarting Instagram</string>
+    <string name="ig_restart_bar">Restart Instagram to apply</string>
+    <string name="ig_restart_bar_action">Restart</string>
+    <string name="menu_health_broken">Could not attach to this Instagram version</string>
+    <string name="menu_health_restart">Turned on after Instagram started – restart to apply</string>
+    <string name="menu_health_locks">Locks need a passcode</string>
+    <string name="menu_health_unconfirmed">Not confirmed yet</string>
+    <string name="ie_font_saved">Font saved. Restart Instagram to use it</string>
+    <string name="ie_emoji_saved">Emoji font saved. Restart Instagram to use it</string>
+    <string name="ie_font_load_failed">Couldn\'t load that font file</string>
+    <string name="ie_picker_unavailable">Can\'t open the file picker here</string>
+    <string name="ig_extreme_refused">Extreme mode can\'t be undone, so this can only get stricter</string>
+    <string name="ig_startup_tab_default">Instagram\'s default</string>
+    <string name="ig_startup_tab_hidden">%1$s (hidden)</string>
+    <string name="menu_search_hint">Search options</string>
+    <string name="menu_search_clear">Clear search</string>
+    <string name="menu_search_empty">No matching options</string>
+    <string name="menu_search_try_another">Try another word</string>
+    <string name="ig_data_restore_confirm">Instagram restarts; newer data on this phone is kept.</string>
+    <string name="ig_data_restore_choose">Choose backup</string>
+    <string name="ig_gestures">Gestures</string>
+    <string name="ig_gestures_hint_title">Shortcuts in Instagram</string>
+    <string name="ig_gestures_hint_intro">InstaEclipse adds these. You can find every gesture again in About › Gestures.</string>
+    <string name="ig_gesture_menu">Hold the Search tab</string>
+    <string name="ig_gesture_menu_desc">Opens the InstaEclipse menu.</string>
+    <string name="ig_gesture_quick_toggle">Hold the Messages icon</string>
+    <string name="ig_gesture_quick_toggle_desc">Switches the ghost mode options you chose on or off together.</string>
+    <string name="ig_gesture_hidden_chats">Triple-tap your name in Messages</string>
+    <string name="ig_gesture_hidden_chats_desc">Shows your hidden chats after you enter your passcode.</string>
+    <string name="ig_gesture_chat_menu">Tap the InstaEclipse button in a chat</string>
+    <string name="ig_gesture_chat_menu_desc">Opens the chat menu. When the button is hidden, triple-tap between the chat name and the call buttons.</string>
+    <string name="ig_gesture_reel_speed">Hold the left side of a reel</string>
+    <string name="ig_gesture_reel_speed_desc">Plays it at 0.5×; the right side still plays at 2×.</string>
+    <string name="ig_gesture_caption">Hold a caption</string>
+    <string name="ig_gesture_caption_desc">Copies its text.</string>
+    <string name="ig_gesture_comment">Hold a comment</string>
+    <string name="ig_gesture_comment_desc">Copies it; GIFs and images in comments can be saved too.</string>
+    <string name="ig_story_cache_viewed_at">Viewed %1$s</string>
+    <string name="ig_restart_prompt">Restart Instagram to apply: %1$s</string>
+    <string name="ig_restart_prompt_more">+%1$d</string>
+    <plurals name="ig_story_cache_delete_prompt">
         <item quantity="one">Delete %1$d cached story now?</item>
         <item quantity="other">Delete %1$d cached stories now?</item>
     </plurals>
-    <string name="ig_story_cache_delete_prompt_body" tools:ignore="MissingTranslation">Stories you keep are deleted when their keep time ends.</string>
-    <string name="ig_story_cache_delete" tools:ignore="MissingTranslation">Delete</string>
-    <string name="ig_story_cache_keep" tools:ignore="MissingTranslation">Keep</string>
-    <string name="ig_what_changed_title" tools:ignore="MissingTranslation">What changed</string>
-    <string name="ig_what_changed_menu" tools:ignore="MissingTranslation">The menu is reorganised: Distraction-Free Instagram is now Focus mode, Lock and Hide specific chats share Lock &amp; hidden chats, Downloader is Downloads, Airplane mode is Appear offline and Clear hooks cache is Rescan Instagram. Search also finds the old names.</string>
-    <string name="ig_what_changed_spoof" tools:ignore="MissingTranslation">Spoof last seen was removed: it didn\'t work on Instagram 451. To hide when you\'re active, turn off Activity status in Instagram\'s settings.</string>
-    <string name="ig_what_changed_followers" tools:ignore="MissingTranslation">Followers history is now part of the Profile analyzer.</string>
+    <string name="ig_story_cache_delete_prompt_body">Stories you keep are deleted when their keep time ends.</string>
+    <string name="ig_story_cache_delete">Delete</string>
+    <string name="ig_story_cache_keep">Keep</string>
+    <string name="ig_what_changed_title">What changed</string>
+    <string name="ig_what_changed_menu">The menu is reorganised: Distraction-Free Instagram is now Focus mode, Lock and Hide specific chats share Lock &amp; hidden chats, Downloader is Downloads, Airplane mode is Appear offline and Clear hooks cache is Rescan Instagram. Search also finds the old names.</string>
+    <string name="ig_what_changed_spoof">Spoof last seen was removed: it didn\'t work on Instagram 451. To hide when you\'re active, turn off Activity status in Instagram\'s settings.</string>
+    <string name="ig_what_changed_followers">Followers history is now part of the Profile analyzer.</string>
 </resources>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- Logs tab (0.8) -->
     <string name="logs_filter_all">All</string>
     <string name="logs_filter_hooked">Ready</string>
@@ -27,23 +27,23 @@
     <string name="logs_entry_copied">Entry copied</string>
     <string name="logs_cleared">Logs cleared</string>
     <string name="logs_source_companion">[app]</string>
-    <string name="logs_latest" tools:ignore="MissingTranslation">Latest</string>
-    <string name="logs_clear_confirm_title" tools:ignore="MissingTranslation">Clear logs?</string>
-    <string name="logs_clear_confirm_body" tools:ignore="MissingTranslation">Removes the logs saved on this phone, including Instagram\'s.</string>
-    <string name="logs_share_no_app" tools:ignore="MissingTranslation">No app available to share</string>
-    <string name="logs_status_unsynced" tools:ignore="MissingTranslation">Saved log · live sync unavailable</string>
-    <string name="logs_copy_entry" tools:ignore="MissingTranslation">Copy entry</string>
-    <string name="logs_crash_share" tools:ignore="MissingTranslation">Share crash report</string>
-    <string name="logs_crash_delete" tools:ignore="MissingTranslation">Delete crash reports</string>
-    <string name="logs_crash_share_warning" tools:ignore="MissingTranslation">Crash reports can contain parts of what Instagram had in memory, such as messages or login data. Share them privately, not in a public issue.</string>
-    <string name="logs_crash_share_summary" tools:ignore="MissingTranslation">Share summary</string>
-    <string name="logs_crash_share_full" tools:ignore="MissingTranslation">Share full report</string>
-    <string name="logs_crash_share_subject" tools:ignore="MissingTranslation">InstaEclipse crash report</string>
-    <string name="logs_crash_share_failed" tools:ignore="MissingTranslation">Couldn\'t create the crash report</string>
-    <plurals name="logs_crash_delete_confirm" tools:ignore="MissingTranslation">
+    <string name="logs_latest">Latest</string>
+    <string name="logs_clear_confirm_title">Clear logs?</string>
+    <string name="logs_clear_confirm_body">Removes the logs saved on this phone, including Instagram\'s.</string>
+    <string name="logs_share_no_app">No app available to share</string>
+    <string name="logs_status_unsynced">Saved log · live sync unavailable</string>
+    <string name="logs_copy_entry">Copy entry</string>
+    <string name="logs_crash_share">Share crash report</string>
+    <string name="logs_crash_delete">Delete crash reports</string>
+    <string name="logs_crash_share_warning">Crash reports can contain parts of what Instagram had in memory, such as messages or login data. Share them privately, not in a public issue.</string>
+    <string name="logs_crash_share_summary">Share summary</string>
+    <string name="logs_crash_share_full">Share full report</string>
+    <string name="logs_crash_share_subject">InstaEclipse crash report</string>
+    <string name="logs_crash_share_failed">Couldn\'t create the crash report</string>
+    <plurals name="logs_crash_delete_confirm">
         <item quantity="one">Delete %d crash report?</item>
         <item quantity="other">Delete %d crash reports?</item>
     </plurals>
-    <string name="logs_crash_delete_action" tools:ignore="MissingTranslation">Delete</string>
-    <string name="logs_crash_deleted" tools:ignore="MissingTranslation">Crash reports deleted</string>
+    <string name="logs_crash_delete_action">Delete</string>
+    <string name="logs_crash_deleted">Crash reports deleted</string>
 </resources>

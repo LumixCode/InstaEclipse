@@ -1,41 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="ig_comment_search_maybe_more" tools:ignore="MissingTranslation">%1$d comments loaded · there may be more</string>
-    <string name="ig_toast_story_unavailable" tools:ignore="MissingTranslation">Story details are not available</string>
-    <string name="ig_toast_like_not_sent" tools:ignore="MissingTranslation">Like not sent</string>
-    <string name="ig_toast_user_follows_you" tools:ignore="MissingTranslation">\@%1$s follows you</string>
-    <string name="ig_toast_user_not_follows_you" tools:ignore="MissingTranslation">\@%1$s doesn\'t follow you</string>
-    <string name="ig_pa_remove_confirm" tools:ignore="MissingTranslation">Remove @%1$s from the watchlist? Its %2$d saved analyses and changelog are deleted. This can\'t be undone.</string>
-    <string name="ig_pa_remove_confirm_action" tools:ignore="MissingTranslation">Remove</string>
-    <string name="ig_pa_save_failed" tools:ignore="MissingTranslation">This analysis could not be saved, so the next one is compared with the last saved analysis.</string>
-    <string name="ig_follow_tools" tools:ignore="MissingTranslation">List tools</string>
-    <string name="ig_follow_tools_title" tools:ignore="MissingTranslation">\@%1$s · %2$s: %3$s</string>
-    <string name="ig_follow_load_stop" tools:ignore="MissingTranslation">Stop</string>
-    <string name="ig_follow_export_failed" tools:ignore="MissingTranslation">Could not save the export: %1$s</string>
-    <string name="ig_pa_check_mine" tools:ignore="MissingTranslation">Check my followers</string>
-    <string name="ig_pa_watch_row_followers" tools:ignore="MissingTranslation">%1$d followers · %2$s</string>
-    <string name="ig_pa_watch_full" tools:ignore="MissingTranslation">Watchlist full: the oldest profile was removed</string>
-    <plurals name="ig_list_more" tools:ignore="MissingTranslation">
+<resources>
+    <string name="ig_comment_search_maybe_more">%1$d comments loaded · there may be more</string>
+    <string name="ig_toast_story_unavailable">Story details are not available</string>
+    <string name="ig_toast_like_not_sent">Like not sent</string>
+    <string name="ig_toast_user_follows_you">\@%1$s follows you</string>
+    <string name="ig_toast_user_not_follows_you">\@%1$s doesn\'t follow you</string>
+    <string name="ig_pa_remove_confirm">Remove @%1$s from the watchlist? Its %2$d saved analyses and changelog are deleted. This can\'t be undone.</string>
+    <string name="ig_pa_remove_confirm_action">Remove</string>
+    <string name="ig_pa_save_failed">This analysis could not be saved, so the next one is compared with the last saved analysis.</string>
+    <string name="ig_follow_tools">List tools</string>
+    <string name="ig_follow_tools_title">\@%1$s · %2$s: %3$s</string>
+    <string name="ig_follow_load_stop">Stop</string>
+    <string name="ig_follow_export_failed">Could not save the export: %1$s</string>
+    <string name="ig_pa_check_mine">Check my followers</string>
+    <string name="ig_pa_watch_row_followers">%1$d followers · %2$s</string>
+    <string name="ig_pa_watch_full">Watchlist full: the oldest profile was removed</string>
+    <plurals name="ig_list_more">
         <item quantity="one">+%1$d more · see Changelog</item>
         <item quantity="other">+%1$d more · see Changelog</item>
     </plurals>
-    <string name="ig_comment_search_clear" tools:ignore="MissingTranslation">Clear search</string>
-    <string name="ig_comment_export_none" tools:ignore="MissingTranslation">No comments loaded yet</string>
-    <string name="ig_comment_export_title" tools:ignore="MissingTranslation">Comments</string>
-    <string name="ig_comment_export_on_post" tools:ignore="MissingTranslation">Comments on @%1$s\'s post</string>
-    <string name="ig_comment_export_banner" tools:ignore="MissingTranslation">Comments export</string>
-    <string name="ig_comment_export_exported" tools:ignore="MissingTranslation">Exported %1$s</string>
-    <string name="ig_comment_export_loaded_only" tools:ignore="MissingTranslation">Only comments loaded in the app are included</string>
-    <string name="ig_comment_media_gif" tools:ignore="MissingTranslation">GIF</string>
-    <string name="ig_comment_media_image" tools:ignore="MissingTranslation">Image</string>
-    <string name="ig_comment_media_unavailable" tools:ignore="MissingTranslation">%1$s (unavailable)</string>
-    <plurals name="ig_comment_export_comments" tools:ignore="MissingTranslation">
+    <string name="ig_comment_search_clear">Clear search</string>
+    <string name="ig_comment_export_none">No comments loaded yet</string>
+    <string name="ig_comment_export_title">Comments</string>
+    <string name="ig_comment_export_on_post">Comments on @%1$s\'s post</string>
+    <string name="ig_comment_export_banner">Comments export</string>
+    <string name="ig_comment_export_exported">Exported %1$s</string>
+    <string name="ig_comment_export_loaded_only">Only comments loaded in the app are included</string>
+    <string name="ig_comment_media_gif">GIF</string>
+    <string name="ig_comment_media_image">Image</string>
+    <string name="ig_comment_media_unavailable">%1$s (unavailable)</string>
+    <plurals name="ig_comment_export_comments">
         <item quantity="one">%1$d comment</item>
         <item quantity="other">%1$d comments</item>
     </plurals>
-    <plurals name="ig_comment_export_replies" tools:ignore="MissingTranslation">
+    <plurals name="ig_comment_export_replies">
         <item quantity="one">%1$d reply</item>
         <item quantity="other">%1$d replies</item>
     </plurals>
-    <string name="ig_confirm_follow_title_v2" tools:ignore="MissingTranslation">Follow @%1$s?</string>
+    <string name="ig_confirm_follow_title_v2">Follow @%1$s?</string>
 </resources>

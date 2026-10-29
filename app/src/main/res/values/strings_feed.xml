@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <string name="theme_preset_light">%1$s Light</string>
     <string name="theme_preset_dark">%1$s Dark</string>
     <string name="ig_reel_block_off_title">Reels are turned off</string>

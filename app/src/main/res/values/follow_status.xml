@@ -2,7 +2,7 @@
 <!-- New optional features use English until localized resources are available.
      "Follows you" / "Doesn't follow you" are upstream's translated ig_profile_follows_you and
      ig_profile_not_following_you in strings.xml. -->
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <item type="id" name="ie_follow_status_state" />
     <item type="id" name="ie_follow_status_inline_row" />
     <item type="id" name="ie_follow_status_row_visibility" />

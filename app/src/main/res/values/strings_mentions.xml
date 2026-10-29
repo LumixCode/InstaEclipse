@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <plurals name="ig_mention_count" tools:ignore="MissingTranslation">
+<resources>
+    <plurals name="ig_mention_count">
         <item quantity="one">%1$d mention · tap to open, hold to copy</item>
         <item quantity="other">%1$d mentions · tap to open, hold to copy</item>
     </plurals>

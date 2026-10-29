@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <string name="share_dl_opened_in_instagram">Opened in Instagram. Save this one from its menu.</string>
     <string name="ie_companion_unreachable">The InstaEclipse app didn\'t answer. Open it once, then try again.</string>
     <string name="ie_companion_timeout">The InstaEclipse app took too long to answer. Try again.</string>

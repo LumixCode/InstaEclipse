@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- New controls use English until localized resources are available. -->
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <string name="ig_story_cache_enable">Cache viewed stories</string>
     <string name="ig_story_cache_duration">Cache duration</string>
     <string name="ig_story_cache_hours">%1$d h</string>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- New optional features use English until localized resources are available. -->
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <string name="ig_feature_unsent_indicator">Mark unsent messages</string>
     <string name="ig_feature_show_unsent_button">Show “Unsent messages” in the chat menu</string>
     <string name="ig_feature_following_follow_status">Show who follows you back</string>

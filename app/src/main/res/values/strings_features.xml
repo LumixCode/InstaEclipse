@@ -1,44 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- Features tab: search + per-category counts -->
     <string name="feat_search_hint">Search features</string>
     <string name="feat_search_no_results">No matching features</string>
     <string name="feat_count_on">%1$d on</string>
     <string name="feat_count_off">Off</string>
-    <string name="feat_cache_size_limit" tools:ignore="MissingTranslation">Cache size limit</string>
-    <string name="feat_tab_move_up" tools:ignore="MissingTranslation">Move %1$s up</string>
-    <string name="feat_tab_move_down" tools:ignore="MissingTranslation">Move %1$s down</string>
-    <string name="feat_tab_hidden" tools:ignore="MissingTranslation">%1$s · Hidden</string>
-    <plurals name="feat_restore_confirm" tools:ignore="MissingTranslation">
+    <string name="feat_cache_size_limit">Cache size limit</string>
+    <string name="feat_tab_move_up">Move %1$s up</string>
+    <string name="feat_tab_move_down">Move %1$s down</string>
+    <string name="feat_tab_hidden">%1$s · Hidden</string>
+    <plurals name="feat_restore_confirm">
         <item quantity="one">Restore %d setting from this backup? Settings in the file replace the current ones; locks are only turned on.</item>
         <item quantity="other">Restore %d settings from this backup? Settings in the file replace the current ones; locks are only turned on.</item>
     </plurals>
-    <plurals name="feat_restore_skipped" tools:ignore="MissingTranslation">
+    <plurals name="feat_restore_skipped">
         <item quantity="one">%d entry is skipped.</item>
         <item quantity="other">%d entries are skipped.</item>
     </plurals>
-    <string name="feat_restore_needs_passcode" tools:ignore="MissingTranslation">Locks need a passcode set in Instagram.</string>
-    <string name="feat_restore_action" tools:ignore="MissingTranslation">Restore</string>
-    <string name="feat_restore_invalid_file" tools:ignore="MissingTranslation">not a valid backup file</string>
-    <string name="feat_backup_unreadable" tools:ignore="MissingTranslation">the settings couldn\'t be read</string>
-    <string name="feat_notification_rationale_title" tools:ignore="MissingTranslation">Show download progress?</string>
-    <string name="feat_notification_rationale_message" tools:ignore="MissingTranslation">InstaEclipse shows a notification while it saves your downloads.</string>
-    <string name="feat_storage_rationale_title" tools:ignore="MissingTranslation">Allow saving downloads?</string>
-    <string name="feat_storage_rationale_message" tools:ignore="MissingTranslation">On this Android version InstaEclipse needs storage access to save your downloads.</string>
-    <string name="feat_permission_not_now" tools:ignore="MissingTranslation">Not now</string>
-    <string name="feat_use_default_folder" tools:ignore="MissingTranslation">Use default folder</string>
-    <string name="feat_download_folder_default" tools:ignore="MissingTranslation">%1$s (default)</string>
-    <string name="feat_reset_folder_confirm" tools:ignore="MissingTranslation">Use the default folder? New downloads go to %1$s.</string>
-    <string name="feat_search_try_another" tools:ignore="MissingTranslation">Try another word</string>
-    <string name="feat_reason_best_only" tools:ignore="MissingTranslation">Only with Best quality</string>
-    <string name="feat_reason_overridden" tools:ignore="MissingTranslation">Off while “%1$s” is on</string>
-    <string name="feat_requires_lock" tools:ignore="MissingTranslation">Turn on a lock first</string>
-    <string name="feat_requires_above" tools:ignore="MissingTranslation">Turn on one option above first</string>
-    <string name="feat_corner_small" tools:ignore="MissingTranslation">Small</string>
-    <string name="feat_corner_medium" tools:ignore="MissingTranslation">Medium</string>
-    <string name="feat_corner_large" tools:ignore="MissingTranslation">Large</string>
-    <string name="feat_corner_extra_large" tools:ignore="MissingTranslation">Extra large</string>
-    <string name="feat_corner_round" tools:ignore="MissingTranslation">Round</string>
-    <string name="feat_lock_needs_passcode" tools:ignore="MissingTranslation">On · needs a passcode in Instagram</string>
-    <string name="feat_restart_waiting" tools:ignore="MissingTranslation">Waiting for an Instagram restart</string>
+    <string name="feat_restore_needs_passcode">Locks need a passcode set in Instagram.</string>
+    <string name="feat_restore_action">Restore</string>
+    <string name="feat_restore_invalid_file">not a valid backup file</string>
+    <string name="feat_backup_unreadable">the settings couldn\'t be read</string>
+    <string name="feat_notification_rationale_title">Show download progress?</string>
+    <string name="feat_notification_rationale_message">InstaEclipse shows a notification while it saves your downloads.</string>
+    <string name="feat_storage_rationale_title">Allow saving downloads?</string>
+    <string name="feat_storage_rationale_message">On this Android version InstaEclipse needs storage access to save your downloads.</string>
+    <string name="feat_permission_not_now">Not now</string>
+    <string name="feat_use_default_folder">Use default folder</string>
+    <string name="feat_download_folder_default">%1$s (default)</string>
+    <string name="feat_reset_folder_confirm">Use the default folder? New downloads go to %1$s.</string>
+    <string name="feat_search_try_another">Try another word</string>
+    <string name="feat_reason_best_only">Only with Best quality</string>
+    <string name="feat_reason_overridden">Off while “%1$s” is on</string>
+    <string name="feat_requires_lock">Turn on a lock first</string>
+    <string name="feat_requires_above">Turn on one option above first</string>
+    <string name="feat_corner_small">Small</string>
+    <string name="feat_corner_medium">Medium</string>
+    <string name="feat_corner_large">Large</string>
+    <string name="feat_corner_extra_large">Extra large</string>
+    <string name="feat_corner_round">Round</string>
+    <string name="feat_lock_needs_passcode">On · needs a passcode in Instagram</string>
+    <string name="feat_restart_waiting">Waiting for an Instagram restart</string>
 </resources>

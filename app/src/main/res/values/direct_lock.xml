@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- New optional features use English until localized resources are available. -->
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <string name="ig_lock_selected_enable">Lock chosen chats</string>
     <string name="ig_lock_select_chats">Choose chats to lock</string>
     <string name="ig_lock_relock_hint">Lock Messages stays unlocked while you browse messages and conversations. With Lock again when you leave on, it locks again after you leave Messages. Chosen chats lock again after you leave that conversation.</string>

@@ -1,29 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="theme_hex_invalid" tools:ignore="MissingTranslation">Enter 6 or 8 hex digits</string>
-    <string name="theme_custom_reset" tools:ignore="MissingTranslation">Custom colours reset</string>
-    <string name="theme_undo" tools:ignore="MissingTranslation">Undo</string>
-    <string name="theme_preset_selected" tools:ignore="MissingTranslation">Selected</string>
-    <string name="theme_custom_dark_only" tools:ignore="MissingTranslation">Custom colours are for dark mode. Switch your phone to dark mode to edit them</string>
+<resources>
+    <string name="theme_hex_invalid">Enter 6 or 8 hex digits</string>
+    <string name="theme_custom_reset">Custom colours reset</string>
+    <string name="theme_undo">Undo</string>
+    <string name="theme_preset_selected">Selected</string>
+    <string name="theme_custom_dark_only">Custom colours are for dark mode. Switch your phone to dark mode to edit them</string>
     <string name="loc_osm_attribution" translatable="false">© OpenStreetMap contributors</string>
-    <string name="loc_picker_clear_search" tools:ignore="MissingTranslation">Clear search</string>
-    <string name="dev_config_open_instagram" tools:ignore="MissingTranslation">Open Instagram first, then try again</string>
-    <string name="dev_config_export_failed" tools:ignore="MissingTranslation">Instagram couldn\'t export its config</string>
-    <string name="ie_frame_previous" tools:ignore="MissingTranslation">Previous frame</string>
-    <string name="ie_frame_next" tools:ignore="MissingTranslation">Next frame</string>
-    <string name="ie_frame_cleanup_pending_open" tools:ignore="MissingTranslation">Temporary cleanup is incomplete. Open InstaEclipse to retry cleanup.</string>
-    <string name="credits_on_github" tools:ignore="MissingTranslation">%1$s on GitHub</string>
-    <string name="credits_on_telegram" tools:ignore="MissingTranslation">%1$s on Telegram</string>
-    <string name="credits_on_linkedin" tools:ignore="MissingTranslation">%1$s on LinkedIn</string>
-    <string name="import_sending" tools:ignore="MissingTranslation">Sending to Instagram…</string>
-    <string name="import_too_large" tools:ignore="MissingTranslation">This file is too large to import</string>
-    <string name="import_cant_receive" tools:ignore="MissingTranslation">Instagram can\'t receive this file</string>
-    <string name="import_no_reply" tools:ignore="MissingTranslation">Instagram didn\'t confirm. Open Instagram (restart it after an InstaEclipse update), then try again.</string>
-    <string name="loc_picker_spoof_off" tools:ignore="MissingTranslation">The fake location is off, so Instagram still sees your real location.</string>
-    <string name="loc_picker_needs_restart" tools:ignore="MissingTranslation">Instagram needs one restart to use it.</string>
-    <string name="loc_picker_turn_on" tools:ignore="MissingTranslation">Turn on</string>
-    <string name="loc_picker_only_save" tools:ignore="MissingTranslation">Only save</string>
-    <string name="loc_saved_spoof_off" tools:ignore="MissingTranslation">Saved. Turn on the fake location to use it.</string>
-    <string name="loc_picker_no_connection" tools:ignore="MissingTranslation">No connection</string>
-    <string name="loc_picker_search_unavailable" tools:ignore="MissingTranslation">Search isn\'t available right now</string>
+    <string name="loc_picker_clear_search">Clear search</string>
+    <string name="dev_config_open_instagram">Open Instagram first, then try again</string>
+    <string name="dev_config_export_failed">Instagram couldn\'t export its config</string>
+    <string name="ie_frame_previous">Previous frame</string>
+    <string name="ie_frame_next">Next frame</string>
+    <string name="ie_frame_cleanup_pending_open">Temporary cleanup is incomplete. Open InstaEclipse to retry cleanup.</string>
+    <string name="credits_on_github">%1$s on GitHub</string>
+    <string name="credits_on_telegram">%1$s on Telegram</string>
+    <string name="credits_on_linkedin">%1$s on LinkedIn</string>
+    <string name="import_sending">Sending to Instagram…</string>
+    <string name="import_too_large">This file is too large to import</string>
+    <string name="import_cant_receive">Instagram can\'t receive this file</string>
+    <string name="import_no_reply">Instagram didn\'t confirm. Open Instagram (restart it after an InstaEclipse update), then try again.</string>
+    <string name="loc_picker_spoof_off">The fake location is off, so Instagram still sees your real location.</string>
+    <string name="loc_picker_needs_restart">Instagram needs one restart to use it.</string>
+    <string name="loc_picker_turn_on">Turn on</string>
+    <string name="loc_picker_only_save">Only save</string>
+    <string name="loc_saved_spoof_off">Saved. Turn on the fake location to use it.</string>
+    <string name="loc_picker_no_connection">No connection</string>
+    <string name="loc_picker_search_unavailable">Search isn\'t available right now</string>
 </resources>

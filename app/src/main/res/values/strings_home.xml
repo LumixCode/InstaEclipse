@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- Home dashboard (HomeFragment) -->
     <string name="home_section_quick_actions">Quick actions</string>
     <string name="home_section_shortcuts">Quick shortcuts</string>
@@ -24,25 +24,25 @@
     <string name="home_shortcuts_limit">You can pin up to %1$d shortcuts</string>
     <string name="home_shortcuts_locked_extreme">Locked by Extreme Mode</string>
 
-    <string name="home_instagram_version" tools:ignore="MissingTranslation">Instagram %1$s</string>
-    <string name="home_tested_version" tools:ignore="MissingTranslation">Tested version</string>
-    <string name="home_untested_version" tools:ignore="MissingTranslation">Not the tested version (%1$s): some features may not work</string>
-    <string name="home_status_worked" tools:ignore="MissingTranslation">Worked in Instagram: %1$s</string>
-    <string name="home_status_not_confirmed" tools:ignore="MissingTranslation">Not confirmed yet</string>
-    <string name="home_status_open_to_check" tools:ignore="MissingTranslation">Open Instagram to check</string>
-    <string name="home_status_clone" tools:ignore="MissingTranslation">Clone · no live sync</string>
-    <string name="home_instagram_app_info" tools:ignore="MissingTranslation">Instagram app info</string>
-    <string name="home_detected_versions" tools:ignore="MissingTranslation">Detected versions</string>
-    <string name="home_detected_version_row" tools:ignore="MissingTranslation">%1$s — v%2$s</string>
-    <string name="home_use_this" tools:ignore="MissingTranslation">Use this</string>
-    <string name="home_variant_official" tools:ignore="MissingTranslation">Official</string>
-    <string name="home_setup_step_1" tools:ignore="MissingTranslation">Patch Instagram with LSPatch, or enable InstaEclipse for it in Vector.</string>
-    <string name="home_setup_step_2" tools:ignore="MissingTranslation">Force stop and reopen Instagram.</string>
-    <string name="home_setup_step_3" tools:ignore="MissingTranslation">In Instagram, press and hold the Search tab at the bottom.</string>
-    <string name="home_setup_open_instagram" tools:ignore="MissingTranslation">Open Instagram</string>
-    <string name="home_setup_got_it" tools:ignore="MissingTranslation">Got it</string>
-    <string name="home_restarting" tools:ignore="MissingTranslation">Restarting…</string>
-    <string name="home_shortcuts_needs_setting" tools:ignore="MissingTranslation">Turn on a setting it needs first</string>
-    <string name="home_restart_applies_on_open" tools:ignore="MissingTranslation">Applies when Instagram opens. It asks to restart if needed.</string>
-    <string name="home_tool_restart_sub" tools:ignore="MissingTranslation">Closes and reopens Instagram</string>
+    <string name="home_instagram_version">Instagram %1$s</string>
+    <string name="home_tested_version">Tested version</string>
+    <string name="home_untested_version">Not the tested version (%1$s): some features may not work</string>
+    <string name="home_status_worked">Worked in Instagram: %1$s</string>
+    <string name="home_status_not_confirmed">Not confirmed yet</string>
+    <string name="home_status_open_to_check">Open Instagram to check</string>
+    <string name="home_status_clone">Clone · no live sync</string>
+    <string name="home_instagram_app_info">Instagram app info</string>
+    <string name="home_detected_versions">Detected versions</string>
+    <string name="home_detected_version_row">%1$s — v%2$s</string>
+    <string name="home_use_this">Use this</string>
+    <string name="home_variant_official">Official</string>
+    <string name="home_setup_step_1">Patch Instagram with LSPatch, or enable InstaEclipse for it in Vector.</string>
+    <string name="home_setup_step_2">Force stop and reopen Instagram.</string>
+    <string name="home_setup_step_3">In Instagram, press and hold the Search tab at the bottom.</string>
+    <string name="home_setup_open_instagram">Open Instagram</string>
+    <string name="home_setup_got_it">Got it</string>
+    <string name="home_restarting">Restarting…</string>
+    <string name="home_shortcuts_needs_setting">Turn on a setting it needs first</string>
+    <string name="home_restart_applies_on_open">Applies when Instagram opens. It asks to restart if needed.</string>
+    <string name="home_tool_restart_sub">Closes and reopens Instagram</string>
 </resources>
