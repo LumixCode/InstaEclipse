@@ -304,7 +304,7 @@ public class LockedCollectionsHook {
     private static void ask(Activity a, Runnable onOk, Runnable onCancel, Runnable onRecovered) {
         LockDirectMessagesHook.bindLockout(a);
         final ps.reso.instaeclipse.utils.dialog.IeDialog d = new ps.reso.instaeclipse.utils.dialog.IeDialog(a)
-                .title("🔒 " + I18n.t(a, R.string.ig_locked_coll_title))
+                .title(I18n.t(a, R.string.ig_locked_coll_title))
                 .cancelable(false);
         final EditText code = d.input(I18n.t(a, R.string.ig_locked_coll_hint));
         code.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
