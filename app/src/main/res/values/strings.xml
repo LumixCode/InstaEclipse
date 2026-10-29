@@ -493,8 +493,7 @@
     <string name="ig_follow_export">Export CSV</string>
     <string name="ig_follow_export_done">Exported %1$d accounts to %2$s</string>
     <string name="ig_follow_export_none">No accounts loaded yet</string>
-    <string name="ig_follow_export_loading">Loading accounts… %1$d so far.
-Stay on this screen until it finishes.</string>
+    <string name="ig_follow_export_loading">Loading accounts… %1$d so far.\nStay on this screen until it finishes.</string>
     <string name="ig_follow_export_stop">Stop &amp; save</string>
     <string name="ig_follow_export_loading_of">Loading accounts… %1$d of %2$d.\nStay on this screen until it finishes.</string>
     <string name="ig_follow_export_retry">Instagram didn\'t send the next page. Trying again in %1$d s…</string>
