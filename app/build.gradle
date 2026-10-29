@@ -90,3 +90,7 @@ dependencies {
     // XposedProvider is declared in AndroidManifest.xml.
     implementation files('libs/modern/libxposed-service-102.0.0.jar', 'libs/modern/libxposed-interface-102.0.0.jar')
 }
+
+// Tests aren't part of the public fork. A local, git-ignored local-tests.gradle adds their setup when present.
+def localTests = file('local-tests.gradle')
+if (localTests.exists()) apply from: localTests
