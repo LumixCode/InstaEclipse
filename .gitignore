@@ -32,11 +32,6 @@ signing.properties
 .env
 .env.*
 
-# Private notes: only these shared docs belong in the repo
-/docs/*
-!/docs/remaining-fork-improvements.md
-!/docs/xposed-api-102/
-
 # Device logs, crash and heap dumps, and data exported from Instagram (accounts, chats, follower lists)
 *.log
 logcat*.txt
