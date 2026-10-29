@@ -2932,7 +2932,7 @@ public class DialogUtils {
         folderHint.setPadding(dp(context, 13), 0, dp(context, 11), dp(context, 7));
         LinearLayout folderBlock = new LinearLayout(context);
         folderBlock.setOrientation(LinearLayout.VERTICAL);
-        folderBlock.addView(IeRows.valueRow(context, I18n.t(context, item.label), folderDisplay));
+        folderBlock.addView(IeRows.pathRow(context, I18n.t(context, item.label), folderDisplay));
         folderBlock.addView(folderHint);
         folderBlock.setTag(item.key);
         return folderBlock;

@@ -170,7 +170,7 @@ public final class IeSheet {
         title.setTextSize(21);
         title.setTypeface(null, Typeface.BOLD);
         title.setLetterSpacing(0.01f);
-        title.setSingleLine(true);
+        title.setMaxLines(2);
         title.setEllipsize(TextUtils.TruncateAt.END);
         header.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 

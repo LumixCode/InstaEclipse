@@ -114,6 +114,14 @@ final class IeRows {
     }
 
     static View valueRow(Context context, String label, String value) {
+        return valueRow(context, label, value, false);
+    }
+
+    static View pathRow(Context context, String label, String path) {
+        return valueRow(context, label, path, true);
+    }
+
+    private static View valueRow(Context context, String label, String value, boolean path) {
         IePalette p = IePalette.of(context);
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -131,8 +139,8 @@ final class IeRows {
         valueView.setText(value);
         valueView.setTextSize(13);
         valueView.setTextColor(p.sub);
-        valueView.setMaxLines(1);
-        valueView.setEllipsize(TextUtils.TruncateAt.START);
+        valueView.setMaxLines(path ? 1 : 2);
+        valueView.setEllipsize(path ? TextUtils.TruncateAt.START : TextUtils.TruncateAt.END);
         valueView.setPadding(dp(context, 5), 0, 0, 0);
         valueView.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
