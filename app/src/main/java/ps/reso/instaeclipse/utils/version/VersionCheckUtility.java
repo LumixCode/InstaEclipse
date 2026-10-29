@@ -2,8 +2,12 @@ package ps.reso.instaeclipse.utils.version;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
+import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.StyleSpan;
 
 import androidx.appcompat.app.AlertDialog;
 
@@ -105,14 +109,15 @@ public class VersionCheckUtility {
     }
 
     private static void showUpdateDialog(Activity activity, SharedPreferences ui, ReleaseInfo release) {
-        StringBuilder message = new StringBuilder(activity.getString(R.string.ig_update_message, release.version));
-        String body = release.body == null ? "" : release.body.trim();
-        if (!body.isEmpty()) {
-            if (body.length() > WHATS_NEW_CHARS) {
-                int end = Character.isHighSurrogate(body.charAt(WHATS_NEW_CHARS - 1)) ? WHATS_NEW_CHARS - 1 : WHATS_NEW_CHARS;
-                body = body.substring(0, end).trim() + "…";
+        SpannableStringBuilder message = new SpannableStringBuilder(activity.getString(R.string.ig_update_message, release.version));
+        ReleaseNotes notes = ReleaseNotes.render(release.body, WHATS_NEW_CHARS);
+        if (!notes.text.isEmpty()) {
+            message.append("\n\n").append(activity.getString(R.string.update_whats_new)).append('\n');
+            int start = message.length();
+            message.append(notes.text);
+            for (int[] b : notes.bold) {
+                message.setSpan(new StyleSpan(Typeface.BOLD), start + b[0], start + b[1], Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
-            message.append("\n\n").append(activity.getString(R.string.update_whats_new)).append('\n').append(body);
         }
         AlertDialog dialog = new MaterialAlertDialogBuilder(activity)
                 .setTitle(activity.getString(R.string.ig_update_title))

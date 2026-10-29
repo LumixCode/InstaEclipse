@@ -619,7 +619,7 @@
     <string name="ig_mention_copy_all">Copy All</string>
 
     <!-- Update check dialog -->
-    <string name="ig_update_title">Update Available</string>
+    <string name="ig_update_title">Update available</string>
     <string name="ig_update_message">A new version (%1$s) is available. Would you like to update now?</string>
     <string name="ig_update_button">Update</string>
     <string name="ig_update_later">Later</string>

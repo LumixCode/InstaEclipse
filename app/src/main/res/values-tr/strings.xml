@@ -326,7 +326,7 @@
     <string name="ig_mention_copy_all">Tümünü Kopyala</string>
 
     <!-- Update check dialog -->
-    <string name="ig_update_title">Güncelleme Mevcut</string>
+    <string name="ig_update_title">Güncelleme mevcut</string>
     <string name="ig_update_message">Yeni bir sürüm (%1$s) mevcut. Şimdi güncellemek ister misiniz?</string>
     <string name="ig_update_button">Güncelle</string>
     <string name="ig_update_later">Daha sonra</string>

@@ -391,7 +391,7 @@
 
 
     <!-- Update check dialog -->
-    <string name="ig_update_title">Pembaruan Tersedia</string>
+    <string name="ig_update_title">Pembaruan tersedia</string>
     <string name="ig_update_message">Versi baru (%1$s) tersedia. Apakah Anda ingin memperbarui sekarang?</string>
     <string name="ig_update_button">Perbarui</string>
     <string name="ig_update_later">Nanti</string>
