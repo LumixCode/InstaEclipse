@@ -603,6 +603,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 itemHolder.cardView.setShapeAppearanceModel(shapeBuilder.build());
 
                 itemHolder.tvTitle.setText(item.title);
+                itemHolder.tvTitle.requestLayout();
+                itemHolder.tvSubtitle.requestLayout();
                 itemHolder.itemView.setEnabled(switchEnabled);
                 itemHolder.swToggle.setEnabled(switchEnabled);
                 float faded = switchEnabled ? 1f : 0.38f;
