@@ -39,7 +39,7 @@ public final class CompanionSettings {
         String action = actionFor(value);
         long now = System.currentTimeMillis();
         SharedPreferences cache = CommonUtils.companionCache(context);
-        Map<String, Object> before = current(cache, Collections.singleton(key));
+        Map<String, Object> before = current(cache, FeatureCatalog.restartInputs(Collections.singleton(key)));
         SharedPreferences.Editor editor = cache.edit();
         write(editor, key, value);
         editor.putLong(PrefsMerge.TS + key, now).apply();
@@ -56,7 +56,7 @@ public final class CompanionSettings {
         if (values.isEmpty()) return Collections.emptySet();
         long now = System.currentTimeMillis();
         SharedPreferences cache = CommonUtils.companionCache(context);
-        Map<String, Object> before = current(cache, values.keySet());
+        Map<String, Object> before = current(cache, FeatureCatalog.restartInputs(values.keySet()));
         SharedPreferences.Editor editor = cache.edit();
         Bundle bundle = new Bundle();
         for (Map.Entry<String, ?> entry : values.entrySet()) {

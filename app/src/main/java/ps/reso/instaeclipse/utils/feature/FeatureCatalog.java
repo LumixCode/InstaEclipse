@@ -2,7 +2,9 @@ package ps.reso.instaeclipse.utils.feature;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -766,18 +768,54 @@ public final class FeatureCatalog {
     }
 
     public static Set<String> restartKeys(Map<String, ?> before, Map<String, ?> after) {
+        Map<String, Object> merged = new HashMap<>(before);
+        merged.putAll(after);
         Set<String> out = new LinkedHashSet<>();
-        for (Map.Entry<String, ?> entry : after.entrySet()) {
-            Item item = ITEMS.get(entry.getKey());
+        for (String key : restartInputs(after.keySet())) {
+            Item item = ITEMS.get(key);
             if (item == null || item.restartOn == Restart.NONE) continue;
-            Object now = entry.getValue();
-            Object was = before.containsKey(item.key) ? before.get(item.key)
-                    : item.kind == Kind.SWITCH ? (Object) item.defaultOn : null;
+            if (!after.containsKey(key) && item.requires.length == 0) continue;
+            Object was = restartState(item, before);
+            Object now = restartState(item, merged);
             if (Objects.equals(was, now)) continue;
             if (item.restartOn == Restart.ON_ONLY && (!on(now) || on(was))) continue;
             out.add(item.key);
         }
         return out;
+    }
+
+    public static String[] restartParents(String key) {
+        Item item = ITEMS.get(key);
+        return item == null || item.restartOn == Restart.NONE ? new String[0] : item.requires.clone();
+    }
+
+    public static Set<String> restartInputs(Collection<String> keys) {
+        Set<String> out = new LinkedHashSet<>(keys);
+        for (Item item : ITEMS.values()) {
+            if (item.restartOn == Restart.NONE || item.requires.length == 0) continue;
+            boolean touched = keys.contains(item.key);
+            for (String parent : item.requires) touched |= keys.contains(parent);
+            if (!touched) continue;
+            out.add(item.key);
+            out.addAll(Arrays.asList(item.requires));
+        }
+        return out;
+    }
+
+    private static Object restartState(Item item, Map<String, ?> values) {
+        Object own = stored(item, values);
+        if (item.requires.length == 0) return own;
+        boolean parent = false;
+        for (String key : item.requires) {
+            Item p = ITEMS.get(key);
+            parent |= on(p != null ? stored(p, values) : values.get(key));
+        }
+        return on(own) && parent;
+    }
+
+    private static Object stored(Item item, Map<String, ?> values) {
+        return values.containsKey(item.key) ? values.get(item.key)
+                : item.kind == Kind.SWITCH ? (Object) item.defaultOn : null;
     }
 
     private static boolean on(Object value) {

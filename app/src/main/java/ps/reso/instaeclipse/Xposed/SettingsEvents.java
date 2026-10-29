@@ -102,7 +102,7 @@ public final class SettingsEvents {
 
     private static void promptRestart(Collection<String> applied, boolean recreating) {
         SettingsManager.publishRestartPending();
-        List<String> prompt = RestartPromptRule.toPrompt(applied, RestartPending.pending(), RestartPrompt.shown());
+        List<String> prompt = RestartPromptRule.toPrompt(RestartPending.affected(applied), RestartPending.pending(), RestartPrompt.shown());
         if (!prompt.isEmpty()) RestartPrompt.show(recreating ? null : UIHookManager.topActivity(), prompt);
     }
 

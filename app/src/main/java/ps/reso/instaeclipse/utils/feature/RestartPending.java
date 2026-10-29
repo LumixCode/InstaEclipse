@@ -1,7 +1,9 @@
 package ps.reso.instaeclipse.utils.feature;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -60,11 +62,36 @@ public final class RestartPending {
             String was = SEEN.get(rule.getKey());
             if (was == null) continue;
             String now = String.valueOf(current.apply(rule.getKey()));
+            String[] parents = FeatureCatalog.restartParents(rule.getKey());
+            if (parents.length > 0 && capturedAll(parents)) {
+                was = String.valueOf(on(was) && anyOn(parents, SEEN::get));
+                now = String.valueOf(on(now) && anyOn(parents, key -> String.valueOf(current.apply(key))));
+            }
             if (was.equals(now)) continue;
             if (Boolean.TRUE.equals(rule.getValue()) && (!on(now) || on(was))) continue;
             out.add(rule.getKey());
         }
         return out;
+    }
+
+    public static Set<String> affected(Collection<String> applied) {
+        Set<String> out = new LinkedHashSet<>(applied);
+        for (String key : rules().keySet()) {
+            for (String parent : FeatureCatalog.restartParents(key)) {
+                if (applied.contains(parent)) out.add(key);
+            }
+        }
+        return out;
+    }
+
+    private static boolean capturedAll(String[] keys) {
+        for (String key : keys) if (!SEEN.containsKey(key)) return false;
+        return true;
+    }
+
+    private static boolean anyOn(String[] keys, Function<String, String> values) {
+        for (String key : keys) if (on(values.apply(key))) return true;
+        return false;
     }
 
     private static boolean on(String value) {

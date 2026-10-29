@@ -14,6 +14,7 @@ import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitSeed;
 import ps.reso.instaeclipse.utils.core.DexKitStats;
 import ps.reso.instaeclipse.utils.core.ModuleBridge;
+import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
 import ps.reso.instaeclipse.utils.feature.RestartPending;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.log.StartupTrace;
@@ -125,7 +126,10 @@ public final class InstallRunner {
         List<String> keys = null;
         long searches = -1;
         try {
-            for (String key : step.restartKeys()) RestartPending.capture(key, plan.flag(key));
+            for (String key : step.restartKeys()) {
+                RestartPending.capture(key, plan.flag(key));
+                for (String parent : FeatureCatalog.restartParents(key)) RestartPending.capture(parent, plan.flag(parent));
+            }
             if (step.gateKey != null && !plan.gateOpen(step.gateKey)) return;
             mark(step.name);
             if (step.skippedBy(skipped)) return;
