@@ -27,4 +27,23 @@
     <string name="logs_entry_copied">Qeyd kopyalandı</string>
     <string name="logs_cleared">Loglar təmizləndi</string>
     <string name="logs_source_companion">[tətbiq]</string>
+    <string name="logs_latest">Ən son</string>
+    <string name="logs_clear_confirm_title">Loglar təmizlənsin?</string>
+    <string name="logs_clear_confirm_body">Bu telefonda saxlanılan logları, o cümlədən Instagram-ın loglarını silir.</string>
+    <string name="logs_share_no_app">Paylaşmaq üçün tətbiq yoxdur</string>
+    <string name="logs_status_unsynced">Saxlanmış log · canlı sinxronlaşma yoxdur</string>
+    <string name="logs_copy_entry">Qeydi kopyala</string>
+    <string name="logs_crash_share">Çökmə hesabatını paylaş</string>
+    <string name="logs_crash_delete">Çökmə hesabatlarını sil</string>
+    <string name="logs_crash_share_warning">Çökmə hesabatlarında Instagram-ın yaddaşında olanların hissələri, məsələn, mesajlar və ya giriş məlumatları ola bilər. Onları açıq issue-da deyil, şəxsi olaraq paylaşın.</string>
+    <string name="logs_crash_share_summary">Xülasəni paylaş</string>
+    <string name="logs_crash_share_full">Tam hesabatı paylaş</string>
+    <string name="logs_crash_share_subject">InstaEclipse çökmə hesabatı</string>
+    <string name="logs_crash_share_failed">Çökmə hesabatı yaradıla bilmədi</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="one">%d çökmə hesabatı silinsin?</item>
+        <item quantity="other">%d çökmə hesabatı silinsin?</item>
+    </plurals>
+    <string name="logs_crash_delete_action">Sil</string>
+    <string name="logs_crash_deleted">Çökmə hesabatları silindi</string>
 </resources>

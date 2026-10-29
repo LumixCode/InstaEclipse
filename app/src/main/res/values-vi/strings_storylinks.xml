@@ -2,6 +2,8 @@
 <resources>
     <string name="ig_story_links_hint">Chạm để sao chép · nhấn giữ để mở</string>
     <string name="ig_toast_link_copied">Đã sao chép liên kết</string>
-    <string name="ig_toast_links_copied">Đã sao chép tất cả liên kết</string>
-    <string name="ig_dialog_misc_story_links">Sao chép liên kết trong tin</string>
+    <string name="ig_toast_links_copied">Đã sao chép mọi liên kết</string>
+    <string name="ig_dialog_misc_story_links">Sao chép liên kết tin</string>
+    <string name="ig_btn_copy_sticker_link">Sao chép liên kết nhãn dán</string>
+    <string name="ig_sticker_links_title">Liên kết nhãn dán</string>
 </resources>

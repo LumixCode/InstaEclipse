@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ig_fancy_font_names">
+        <item>Normal</item>
+        <item>Kalın</item>
+        <item>İtalik</item>
+        <item>Kalın italik</item>
+        <item>Sans kalın</item>
+        <item>Sans italik</item>
+        <item>El yazısı</item>
+        <item>Fraktur</item>
+        <item>Çift çizgili</item>
+        <item>Eş aralıklı</item>
+        <item>Daire içinde</item>
+        <item>Tam genişlik</item>
+        <item>Küçük büyük harf</item>
+        <item>Üstü çizili</item>
+        <item>Altı çizili</item>
+    </string-array>
+</resources>

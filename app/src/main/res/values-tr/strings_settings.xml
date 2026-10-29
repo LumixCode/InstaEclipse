@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_toast_restored_some_skipped">Ayarlar geri yüklendi; geçersiz olan veya Aşırı mod tarafından kilitlenen %1$d ayar hariç.</string>
+</resources>

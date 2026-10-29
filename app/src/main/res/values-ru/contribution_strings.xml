@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">Загрузки InstaEclipse</string>
     <string name="ie_download_quality">Качество загрузки</string>
     <string name="ie_downloader_original">Стандартное</string>
     <string name="ie_download_best">Лучшее</string>
     <string name="ie_download_ceiling">Лучшее, до %1$dp</string>
+    <string name="ie_save_video_frame">Сохранить кадр видео</string>
+    <string name="ie_download_video">Скачать видео</string>
+    <string name="ie_frame_help">Выберите кадр ползунком. Сохраняется только PNG в полном разрешении; временное видео удаляется при сохранении или закрытии.</string>
+    <string name="ie_frame_preparing">Подготовка видео в наилучшем качестве…</string>
+    <string name="ie_frame_preparing_progress">Подготовка видео в наилучшем качестве… %1$d%%</string>
+    <string name="ie_frame_loading">Загрузка превью…</string>
+    <string name="ie_frame_preview">Превью выбранного кадра видео</string>
+    <string name="ie_frame_position">Позиция кадра</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · Полное разрешение</string>
+    <string name="ie_frame_save">Сохранить PNG</string>
+    <string name="ie_frame_saving">Сохранение кадра в полном разрешении…</string>
+    <string name="ie_frame_saved">PNG сохранён: %1$d × %2$d. Временное видео удалено.</string>
+    <string name="ie_frame_failed">Не удалось подготовить или сохранить кадр. Версия худшего качества не подставлялась.</string>
+    <string name="ie_frame_reopen">Чтобы выбрать кадр, снова откройте «Скачать» в Instagram.</string>
     <string name="ie_download_compatibility">Предпочитать видео, которые везде воспроизводятся</string>
-    <string name="ie_download_fallback">Брать качество ниже, если Лучшее не получилось</string>
-    <string name="ie_downloader_original_unavailable">Стандартное не смогло это сохранить. Переключитесь на Лучшее.</string>
-    <string name="ie_download_fallback_prompt">Лучшее не смогло это сохранить. Попробовать качество ниже?</string>
+    <string name="ie_download_fallback">Понижать качество, если «Лучшее» не сработает</string>
+    <string name="ie_download_unavailable">Не удалось найти выбранное медиа в этой версии Instagram.</string>
+    <string name="ie_download_retry_lower">Повторить в качестве ниже</string>
+    <string name="ie_downloader_original_unavailable">В качестве «Стандартное» сохранить не удалось. Переключитесь на «Лучшее», чтобы скачать.</string>
+    <string name="ie_download_fallback_prompt">В качестве «Лучшее» сохранить не удалось. Попробовать качество ниже?</string>
+    <string name="ie_download_cancelled">Скачивание отменено</string>
+    <string name="ie_download_select_item">Выберите элемент карусели</string>
+    <string name="ie_download_item">Элемент %1$d</string>
 </resources>

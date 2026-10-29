@@ -5,4 +5,38 @@
     <string name="feat_search_no_results">Không có tính năng phù hợp</string>
     <string name="feat_count_on">Bật %1$d</string>
     <string name="feat_count_off">Tắt</string>
+    <string name="feat_cache_size_limit">Giới hạn bộ nhớ đệm</string>
+    <string name="feat_tab_move_up">Di chuyển %1$s lên</string>
+    <string name="feat_tab_move_down">Di chuyển %1$s xuống</string>
+    <string name="feat_tab_hidden">%1$s · Đã ẩn</string>
+    <plurals name="feat_restore_confirm">
+        <item quantity="other">Khôi phục %d cài đặt từ bản sao lưu này? Cài đặt trong tệp sẽ thay thế cài đặt hiện tại; các khóa chỉ được bật, không bị tắt.</item>
+    </plurals>
+    <plurals name="feat_restore_skipped">
+        <item quantity="other">%d mục bị bỏ qua.</item>
+    </plurals>
+    <string name="feat_restore_needs_passcode">Khóa cần mã khóa được đặt trong Instagram.</string>
+    <string name="feat_restore_action">Khôi phục</string>
+    <string name="feat_restore_invalid_file">không phải tệp sao lưu hợp lệ</string>
+    <string name="feat_backup_unreadable">không đọc được cài đặt</string>
+    <string name="feat_notification_rationale_title">Hiện tiến trình tải xuống?</string>
+    <string name="feat_notification_rationale_message">InstaEclipse hiện một thông báo trong khi lưu các tệp bạn tải xuống.</string>
+    <string name="feat_storage_rationale_title">Cho phép lưu tệp tải xuống?</string>
+    <string name="feat_storage_rationale_message">Trên phiên bản Android này, InstaEclipse cần quyền truy cập bộ nhớ để lưu tệp bạn tải xuống.</string>
+    <string name="feat_permission_not_now">Để sau</string>
+    <string name="feat_use_default_folder">Dùng thư mục mặc định</string>
+    <string name="feat_download_folder_default">%1$s (mặc định)</string>
+    <string name="feat_reset_folder_confirm">Dùng thư mục mặc định? Tệp tải mới sẽ vào %1$s.</string>
+    <string name="feat_search_try_another">Thử từ khác</string>
+    <string name="feat_reason_best_only">Chỉ với chất lượng Tốt nhất</string>
+    <string name="feat_reason_overridden">Tắt khi “%1$s” đang bật</string>
+    <string name="feat_requires_lock">Hãy bật một khóa trước</string>
+    <string name="feat_requires_above">Hãy bật một tùy chọn ở trên trước</string>
+    <string name="feat_corner_small">Nhỏ</string>
+    <string name="feat_corner_medium">Vừa</string>
+    <string name="feat_corner_large">Lớn</string>
+    <string name="feat_corner_extra_large">Rất lớn</string>
+    <string name="feat_corner_round">Tròn</string>
+    <string name="feat_lock_needs_passcode">Bật · cần mã khóa trong Instagram</string>
+    <string name="feat_restart_waiting">Đang chờ khởi động lại Instagram</string>
 </resources>

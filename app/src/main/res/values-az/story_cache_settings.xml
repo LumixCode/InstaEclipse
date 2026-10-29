@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">Baxılan hekayələri keşlə</string>
+    <string name="ig_story_cache_duration">Keş müddəti</string>
+    <string name="ig_story_cache_hours">%1$d saat</string>
+    <string name="ig_story_cache_picker_help">Hekayələri 1–720 saat (30 günə qədər) saxlayın. Keş 500 MB-a çatsa, ən köhnə hekayələr daha tez silinə bilər.</string>
+    <string name="ig_story_cache_picker_unit">saat, baxdıqdan sonra</string>
+    <string name="ig_story_cache_invalid">1-dən 720-yə qədər rəqəm daxil edin.</string>
+    <string name="ig_story_cache_empty_current">Hələ keşlənmiş hekayə yoxdur. Keşləməni aktiv edin, sonra seçdiyiniz müddət ərzində burada saxlamaq üçün bir neçə hekayəyə baxın.</string>
+</resources>

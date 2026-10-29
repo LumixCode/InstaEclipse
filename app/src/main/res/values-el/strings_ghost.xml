@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_unsent_log_set_aside">Η αποθηκευμένη λίστα δεν διαβάστηκε· φυλάχτηκε ξεχωριστά.</string>
+    <string name="ig_toast_marked_as_seen">Σημάνθηκε ως αναγνωσμένο</string>
+    <string name="ig_toast_channel_marked_as_seen">Το κανάλι σημάνθηκε ως αναγνωσμένο</string>
+    <string name="ig_chat_export_banner">Εξαγωγή συνομιλίας</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="one">%1$d μήνυμα</item>
+        <item quantity="other">%1$d μηνύματα</item>
+    </plurals>
+    <string name="ig_chat_export_edited">επεξεργάστηκε</string>
+    <string name="ig_chat_export_pinned">καρφιτσωμένο</string>
+    <string name="ig_chat_export_forwarded">προωθημένο</string>
+    <string name="ig_chat_export_story_reply">Απάντηση σε ιστορία</string>
+    <string name="ig_chat_export_reply_to">προς @%1$s</string>
+    <string name="ig_chat_export_shared_story">Κοινοποιημένη ιστορία</string>
+    <string name="ig_chat_export_shared_reel">Κοινοποιημένο reel</string>
+    <string name="ig_chat_export_shared_post">Κοινοποιημένη δημοσίευση</string>
+    <string name="ig_chat_export_shared_profile">Κοινοποιημένο προφίλ</string>
+    <string name="ig_chat_export_mention_by_you">Κάνατε αναφορά στην ιστορία σας</string>
+    <string name="ig_chat_export_mention_of_you">Σας ανέφερε σε ιστορία</string>
+    <string name="ig_chat_export_unsupported">Η εξαγωγή συνομιλίας δεν λειτουργεί σε αυτή την έκδοση του Instagram</string>
+    <string name="ig_bulk_unsend_not_ready">Συνομιλία μη έτοιμη, δοκιμάστε ξανά</string>
+    <plurals name="ig_bulk_unsend_result">
+        <item quantity="one">Αναιρέθηκε: %1$d από %2$d μήνυμα</item>
+        <item quantity="other">Αναιρέθηκαν: %1$d από %2$d μηνύματα</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="one">Αναίρεση αποστολής για %1$d μήνυμα; Η ενέργεια είναι οριστική.</item>
+        <item quantity="other">Αναίρεση αποστολής για %1$d μηνύματα; Η ενέργεια είναι οριστική.</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="one">Αναίρεση αποστολής %1$d/%2$d</item>
+        <item quantity="other">Αναίρεση αποστολής %1$d/%2$d</item>
+    </plurals>
+    <string name="ig_jump_first_stop_menu">Διακοπή φόρτωσης παλαιότερων μηνυμάτων</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="one">Φόρτωση παλαιότερων μηνυμάτων · φορτώθηκε %1$d</item>
+        <item quantity="other">Φόρτωση παλαιότερων μηνυμάτων · φορτώθηκαν %1$d</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">Φόρτωση παλαιότερων μηνυμάτων</string>
+    <string name="ig_jump_first_stop">Διακοπή</string>
+    <string name="ig_jump_first_reached">Φτάσατε στο πρώτο μήνυμα της συνομιλίας</string>
+    <string name="ig_jump_first_stopped_loading">Η φόρτωση παλαιότερων μηνυμάτων σταμάτησε</string>
+    <string name="ig_lock_chat">Κλείδωμα συνομιλίας</string>
+    <string name="ig_lock_chat_unlock">Ξεκλείδωμα συνομιλίας</string>
+    <string name="ig_lock_chat_locked">Η συνομιλία κλειδώθηκε</string>
+    <string name="ig_lock_chat_locked_on">Η συνομιλία κλειδώθηκε. Ενεργό πλέον το «Κλείδωμα επιλεγμένων συνομιλιών».</string>
+    <string name="ig_lock_chat_unlocked">Η συνομιλία ξεκλειδώθηκε</string>
+    <string name="ig_lock_selected_menu_desc">Επιλέξτε συνομιλίες εδώ ή με το «Κλείδωμα συνομιλίας» στο μενού μιας συνομιλίας</string>
+    <string name="ig_ghost_messages_tab_label">Μηνύματα, αόρατη λειτουργία ενεργή</string>
+    <string name="ig_toast_ghost_on">Αόρατη λειτουργία ενεργή: %1$s</string>
+    <string name="ig_toast_ghost_off">Αόρατη λειτουργία ανενεργή: %1$s</string>
+    <string name="ig_quick_toggle_none_chosen">Δεν έχει επιλεγεί τίποτα. Επιλέξτε τι εναλλάσσει το κράτημα του εικονιδίου Μηνύματα.</string>
+    <string name="ig_quick_toggle_name_seen">ανάγνωση</string>
+    <string name="ig_quick_toggle_name_typing">πληκτρολόγηση</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">ειδοποιήσεις στιγμιοτύπων</string>
+    <string name="ig_quick_toggle_name_view_once">άνοιγμα μίας προβολής</string>
+    <string name="ig_quick_toggle_name_stories">ιστορίες</string>
+    <string name="ig_quick_toggle_name_live">live</string>
+    <string name="ig_quick_toggle_name_disappearing">εξαφανιζόμενα μηνύματα</string>
+    <string name="ig_quick_toggle_name_permanent_view">μόνιμη προβολή</string>
+    <string name="ig_quick_toggle_name_screenshots">στιγμιότυπα</string>
+    <string name="ig_read_receipt_list_title">Συνομιλίες με επιβεβαιώσεις ανάγνωσης</string>
+    <string name="ig_read_receipt_list_add">Προσθήκη συνομιλιών</string>
+    <string name="ig_read_receipt_pick_title">Επιλογή συνομιλιών με επιβεβαιώσεις ανάγνωσης</string>
+    <string name="ig_read_receipt_list_empty">Καμία συνομιλία δεν λαμβάνει ακόμα επιβεβαιώσεις ανάγνωσης. Προσθέστε εδώ ή ανοίξτε μια συνομιλία και επιλέξτε «Αποστολή επιβεβαιώσεων ανάγνωσης εδώ» από το μενού της.</string>
+    <string name="ig_read_receipt_list_seen_off">Η «Κρυφή ανάγνωση μηνυμάτων» είναι ανενεργή, οπότε κάθε συνομιλία λαμβάνει τώρα επιβεβαιώσεις ανάγνωσης.</string>
+</resources>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_unsent_log_set_aside">Tidak dapat membaca daftar tersimpan; daftar itu disisihkan.</string>
+    <string name="ig_toast_marked_as_seen">Ditandai dilihat</string>
+    <string name="ig_toast_channel_marked_as_seen">Saluran ditandai sudah dilihat</string>
+    <string name="ig_chat_export_banner">Ekspor obrolan</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="other">%1$d pesan</item>
+    </plurals>
+    <string name="ig_chat_export_edited">diedit</string>
+    <string name="ig_chat_export_pinned">disematkan</string>
+    <string name="ig_chat_export_forwarded">diteruskan</string>
+    <string name="ig_chat_export_story_reply">Balasan cerita</string>
+    <string name="ig_chat_export_reply_to">ke @%1$s</string>
+    <string name="ig_chat_export_shared_story">Cerita dibagikan</string>
+    <string name="ig_chat_export_shared_reel">Reel dibagikan</string>
+    <string name="ig_chat_export_shared_post">Postingan dibagikan</string>
+    <string name="ig_chat_export_shared_profile">Profil dibagikan</string>
+    <string name="ig_chat_export_mention_by_you">Anda menyebut mereka di cerita Anda</string>
+    <string name="ig_chat_export_mention_of_you">Menyebut Anda di cerita mereka</string>
+    <string name="ig_chat_export_unsupported">Ekspor obrolan tidak berfungsi di versi Instagram ini</string>
+    <string name="ig_bulk_unsend_not_ready">Obrolan belum siap, coba lagi</string>
+    <plurals name="ig_bulk_unsend_result">
+        <item quantity="other">%1$d dari %2$d pesan dibatalkan</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="other">Batalkan kirim %1$d pesan? Tindakan ini tidak dapat diurungkan.</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="other">Membatalkan kirim %1$d/%2$d</item>
+    </plurals>
+    <string name="ig_jump_first_stop_menu">Berhenti memuat pesan lama</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="other">Memuat pesan lama · %1$d dimuat</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">Memuat pesan lama</string>
+    <string name="ig_jump_first_stop">Hentikan</string>
+    <string name="ig_jump_first_reached">Sudah sampai di pesan pertama obrolan ini</string>
+    <string name="ig_jump_first_stopped_loading">Pemuatan pesan lama dihentikan</string>
+    <string name="ig_lock_chat">Kunci obrolan ini</string>
+    <string name="ig_lock_chat_unlock">Buka kunci obrolan ini</string>
+    <string name="ig_lock_chat_locked">Obrolan dikunci</string>
+    <string name="ig_lock_chat_locked_on">Obrolan dikunci. Kunci obrolan pilihan kini aktif.</string>
+    <string name="ig_lock_chat_unlocked">Kunci obrolan dibuka</string>
+    <string name="ig_lock_selected_menu_desc">Pilih obrolan di sini atau dengan Kunci obrolan ini di menu obrolan</string>
+    <string name="ig_ghost_messages_tab_label">Pesan, mode hantu aktif</string>
+    <string name="ig_toast_ghost_on">Mode hantu aktif: %1$s</string>
+    <string name="ig_toast_ghost_off">Mode hantu nonaktif: %1$s</string>
+    <string name="ig_quick_toggle_none_chosen">Belum ada yang dipilih. Pilih apa yang diaktifkan atau dinonaktifkan saat menahan ikon Pesan.</string>
+    <string name="ig_quick_toggle_name_seen">tanda baca</string>
+    <string name="ig_quick_toggle_name_typing">mengetik</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">peringatan tangkapan layar</string>
+    <string name="ig_quick_toggle_name_view_once">sekali lihat</string>
+    <string name="ig_quick_toggle_name_stories">cerita</string>
+    <string name="ig_quick_toggle_name_live">live</string>
+    <string name="ig_quick_toggle_name_disappearing">pesan yang menghilang</string>
+    <string name="ig_quick_toggle_name_permanent_view">lihat permanen</string>
+    <string name="ig_quick_toggle_name_screenshots">tangkapan layar</string>
+    <string name="ig_read_receipt_list_title">Obrolan yang dikirimi tanda baca</string>
+    <string name="ig_read_receipt_list_add">Tambahkan obrolan</string>
+    <string name="ig_read_receipt_pick_title">Pilih obrolan yang dikirimi tanda baca</string>
+    <string name="ig_read_receipt_list_empty">Belum ada obrolan yang dikirimi tanda baca. Tambahkan obrolan di sini, atau buka obrolan dan pilih Kirim tanda baca di obrolan ini dari menunya.</string>
+    <string name="ig_read_receipt_list_seen_off">Sembunyikan tanda baca DM nonaktif, jadi saat ini semua obrolan dikirimi tanda baca.</string>
+</resources>

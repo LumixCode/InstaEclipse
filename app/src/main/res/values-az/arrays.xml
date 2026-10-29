@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ig_fancy_font_names">
+        <item>Adi</item>
+        <item>Qalın</item>
+        <item>Kursiv</item>
+        <item>Qalın kursiv</item>
+        <item>Sans qalın</item>
+        <item>Sans kursiv</item>
+        <item>Əlyazma</item>
+        <item>Qotik</item>
+        <item>İkixətli</item>
+        <item>Bərabər enli</item>
+        <item>Dairəli</item>
+        <item>Tam enli</item>
+        <item>Kiçik baş hərflər</item>
+        <item>Üstündən xətt</item>
+        <item>Alt xətt</item>
+    </string-array>
+</resources>

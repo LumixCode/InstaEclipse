@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="ig_dialog_ghost_read_receipt_chats">Gửi xác nhận đã đọc cho đoạn chat cụ thể</string>
+    <string name="ig_dialog_ghost_read_receipt_chats">Gửi Đã xem cho đoạn chat đã chọn</string>
     <string name="ig_read_receipt_chat_on">Gửi xác nhận đã đọc trong đoạn chat này</string>
     <string name="ig_read_receipt_chat_off">Ngừng gửi xác nhận đã đọc trong đoạn chat này</string>
     <string name="ig_toast_read_receipt_on">Đã bật xác nhận đã đọc cho đoạn chat này</string>

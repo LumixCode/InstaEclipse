@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_comment_search_maybe_more">Đã tải %1$d bình luận · có thể còn nữa</string>
+    <string name="ig_toast_story_unavailable">Không có chi tiết của tin</string>
+    <string name="ig_toast_like_not_sent">Chưa gửi lượt thích</string>
+    <string name="ig_toast_user_follows_you">\@%1$s theo dõi bạn</string>
+    <string name="ig_toast_user_not_follows_you">\@%1$s không theo dõi bạn</string>
+    <string name="ig_pa_remove_confirm">Xóa @%1$s khỏi danh sách theo dõi? %2$d lần phân tích đã lưu và lịch sử thay đổi của hồ sơ này sẽ bị xóa. Không thể hoàn tác.</string>
+    <string name="ig_pa_remove_confirm_action">Xóa</string>
+    <string name="ig_pa_save_failed">Không lưu được lần phân tích này, nên lần sau sẽ được so sánh với lần phân tích đã lưu gần nhất.</string>
+    <string name="ig_follow_tools">Công cụ danh sách</string>
+    <string name="ig_follow_tools_title">\@%1$s · %2$s: %3$s</string>
+    <string name="ig_follow_load_stop">Dừng</string>
+    <string name="ig_follow_export_failed">Không lưu được bản xuất: %1$s</string>
+    <string name="ig_pa_check_mine">Kiểm tra người theo dõi</string>
+    <string name="ig_pa_watch_row_followers">%1$d người theo dõi · %2$s</string>
+    <string name="ig_pa_watch_full">Danh sách theo dõi đã đầy: hồ sơ cũ nhất đã bị xóa</string>
+    <plurals name="ig_list_more">
+        <item quantity="other">+%1$d nữa · xem Lịch sử thay đổi</item>
+    </plurals>
+    <string name="ig_comment_search_clear">Xóa tìm kiếm</string>
+    <string name="ig_comment_export_none">Chưa tải bình luận nào</string>
+    <string name="ig_comment_export_title">Bình luận</string>
+    <string name="ig_comment_export_on_post">Bình luận trên bài viết của @%1$s</string>
+    <string name="ig_comment_export_banner">Bản xuất bình luận</string>
+    <string name="ig_comment_export_exported">Đã xuất %1$s</string>
+    <string name="ig_comment_export_loaded_only">Chỉ gồm các bình luận đã tải trong ứng dụng</string>
+    <string name="ig_comment_media_gif">GIF</string>
+    <string name="ig_comment_media_image">Ảnh</string>
+    <string name="ig_comment_media_unavailable">%1$s (không khả dụng)</string>
+    <plurals name="ig_comment_export_comments">
+        <item quantity="other">%1$d bình luận</item>
+    </plurals>
+    <plurals name="ig_comment_export_replies">
+        <item quantity="other">%1$d câu trả lời</item>
+    </plurals>
+    <string name="ig_confirm_follow_title_v2">Theo dõi @%1$s?</string>
+</resources>

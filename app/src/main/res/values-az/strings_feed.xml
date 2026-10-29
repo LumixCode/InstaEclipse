@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_preset_light">%1$s İşıqlı</string>
+    <string name="theme_preset_dark">%1$s Qaranlıq</string>
+    <string name="ig_reel_block_off_title">Reels söndürülüb</string>
+    <string name="ig_reel_block_off_detail">Onları InstaEclipse › %1$s bölməsində yenidən aktiv edin</string>
+    <string name="ig_reel_block_night_title">Reels gecə üçün dayandırılıb</string>
+    <string name="ig_reel_block_night_detail">Qayıdış: %1$s</string>
+    <string name="ig_reel_block_limit_title">Bugünkü Reels limitinə çatdınız</string>
+    <string name="ig_reel_block_limit_detail">%1$d / %2$d reels · gecə yarısı sıfırlanır</string>
+    <string name="ig_reel_block_go_back">Geri qayıt</string>
+</resources>

@@ -12,4 +12,16 @@
     <string name="help_lspatch_title">LSPatch (JingMatrix)</string>
     <string name="help_lspatch_sub">Root yok mu? Bunu kurun</string>
     <string name="help_lspatch_guide">Kurulum rehberini izleyin</string>
+    <string name="about_based_on">%1$s yapımı InstaEclipse\'e dayanır</string>
+    <string name="update_check_note">Yeni InstaEclipse sürümleri için github.com\'u en fazla günde bir kez kontrol eder.</string>
+    <string name="update_whats_new">Yenilikler</string>
+    <string name="update_skip_version">Bu sürümü atla</string>
+    <string name="links_no_app">Bu bağlantıyı açabilecek uygulama yok</string>
+    <string name="help_faq_2"><b>2. Modül etkin değil mi?</b>\n- LSPatch veya Vector\'de InstaEclipse\'in Instagram için etkin olduğunu kontrol edin, ardından Instagram\'ı zorla durdurup yeniden açın.</string>
+    <string name="help_faq_4"><b>4. Geliştirici seçenekleri çökmelere mi neden oluyor?</b>\n- Bunları kapatın ve Geliştirici seçenekleri → Varsayılan yapılandırmayı geri yükle seçeneğini kullanın.</string>
+    <string name="help_faq_5"><b>5. Geliştirici seçeneklerinde garip adlar veya sayılar mı var?</b>\n- Kararlı Instagram sürümü seçenek adlarını gizler. InstaEclipse, Instagram %1$s ile test edilmiştir.</string>
+    <string name="help_troubleshooting">Sorun giderme</string>
+    <string name="help_faq_expanded">Genişletildi</string>
+    <string name="help_faq_collapsed">Daraltıldı</string>
+    <string name="help_tested_with">Instagram %1$s ile test edildi</string>
 </resources>

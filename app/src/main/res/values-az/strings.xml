@@ -2,43 +2,44 @@
 <resources>
     <!-- app wide -->
     <string name="app_name">InstaEclipse</string>
-    <string name="home">Ana Səhifə</string>
+    <string name="module_description">Instagram təcrübənizi zənginləşdirin</string>
+    <string name="home">Ana səhifə</string>
     <string name="features">Funksiyalar</string>
     <string name="help">Kömək</string>
 
     <!-- home -->
 
-    <string name="checking_instagram">Instagram Yoxlanılır</string>
-    <string name="installed_instagram_version">Quraşdırılmış Instagram Versiyası: </string>
+    <string name="checking_instagram">Instagram yoxlanılır</string>
+    <string name="installed_instagram_version">Instagram quraşdırılıb</string>
     <string name="not_installed_instagram">Instagram quraşdırılmayıb.</string>
     
     <string name="launch_instagram">Instagram-ı işə sal</string>
     <string name="download_apk">APK-ni yüklə</string>
     <string name="how_to_use">Necə istifadə etməli</string>
 
-    <string name="contributors">Təhfə Verənlər</string>
-    <string name="special_thanks">Xüsusi Təşəkkürlər</string>
+    <string name="contributors">Töhfə verənlər</string>
+    <string name="special_thanks">Xüsusi təşəkkürlər</string>
 
     <!-- Don’t translate! -->
 
     <!-- help -->
-    <string name="go_to_github">GitHub\'a Keç</string>
-    <string name="go_to_telegram">Telegram\'a Keç</string>
+    <string name="go_to_github">GitHub-a keç</string>
+    <string name="go_to_telegram">Telegram-a keç</string>
 
     <!-- Don’t translate! -->
     <string name="telegram">Telegram</string>
 
     <!-- faq -->
-    <string name="frequently_asked_questions">Tez-tez Soruşulan Suallar</string>
-    <string name="faq_1">1. Google Play Versiyasındı işləmir və ya xəta verir?\n- APKMirror APK\'lərindən istifadə edin.</string>
-    <string name="faq_3">3. Funksiyalar işləmir?\n- Instagram\'ı zorla dayandırıb keşini təmizləyin.</string>
-    <string name="faq_6">6. "Dikkat Dağıtıcıları Bağla" funksiyası aktiv amma məzmun hələ də görünür?\n- Instagram\'ı zorla dayandırın və keşini təmizləyin.</string>
+    <string name="frequently_asked_questions">Tez-tez soruşulan suallar</string>
+    <string name="faq_1"><b>1. Google Play versiyası işləmir və ya çökür?</b>\n- APK-ni APKMirror-dan yükləyin.</string>
+    <string name="faq_3"><b>3. Funksiyalar işləmir?</b>\n- Instagram-ı məcburi dayandırıb yenidən açın.</string>
+    <string name="faq_6"><b>6. «Diqqəti dağıtmayan Instagram» aktivdir, amma məzmun hələ də görünür?</b>\n- Instagram-ı məcburi dayandırın və keşini təmizləyin.</string>
 
     <!-- Don’t translate! -->
 
     <!-- ghost -->
     <string name="story">Hekayə</string>
-    <string name="live">Canlı Yayım</string>
+    <string name="live">Canlı yayım</string>
 
     <!-- Dialog strings -->
     <string name="ig_dialog_close">Bağla</string>
@@ -46,22 +47,22 @@
     <string name="ig_dialog_ok">Tamam</string>
     <string name="ig_dialog_yes">Bəli</string>
     <string name="ig_dialog_cancel">Ləğv et</string>
-    <string name="ig_dialog_menu_dev_options">Tərtibatçı Seçimləri</string>
-    <string name="ig_dialog_menu_clean_feed">Təmiz Lent</string>
-    <string name="ig_dialog_menu_distraction_free">Diqqəti Dağıtmayan Instagram</string>
-    <string name="ig_dialog_menu_downloader">Yükləyici</string>
-    <string name="ig_dialog_menu_backup_restore">Yedəkləmə və Bərpa</string>
+    <string name="ig_dialog_menu_dev_options">Tərtibatçı seçimləri</string>
+    <string name="ig_dialog_menu_clean_feed">Təmiz lent</string>
+    <string name="ig_dialog_menu_distraction_free">Diqqəti dağıtmayan Instagram</string>
+    <string name="ig_dialog_menu_downloader">Yükləmələr</string>
+    <string name="ig_dialog_menu_backup_restore">Yedəkləmə və bərpa</string>
     <string name="ig_dialog_menu_about">Haqqında</string>
-    <string name="ig_dialog_menu_restart">Tətbiqi Yenidən Başlat</string>
-    <string name="ig_dialog_section_ghost_mode">Kölgə Rejimi</string>
+    <string name="ig_dialog_menu_restart">Instagram-ı yenidən başlat</string>
+    <string name="ig_dialog_section_ghost_mode">Kölgə rejimi</string>
     <string name="ig_dialog_section_about">Haqqında</string>
-    <string name="ig_dialog_dev_enable">Tərtibatçı Rejimini Aktiv Et</string>
-    <string name="ig_dialog_dev_import">Tərtibatçı Konfiqurasiyasını İdxal Et</string>
-    <string name="ig_dialog_dev_export">Tərtibatçı Konfiqurasiyasını İxrac Et</string>
-    <string name="ig_dialog_dev_restore_default_config">Standart Konfiqurasiyaya Qayıt</string>
-    <string name="ig_dialog_dev_restore_default_config_confirm">Bu, cari Tərtibatçı Konfiqurasiyasını daxil edilmiş standart ilə əvəz edəcəkdir. Davam etmək istəyirsiniz?</string>
+    <string name="ig_dialog_dev_enable">Instagram tərtibatçı seçimləri</string>
+    <string name="ig_dialog_dev_import">Konfiqurasiyanı idxal et</string>
+    <string name="ig_dialog_dev_export">Konfiqurasiyanı ixrac et</string>
+    <string name="ig_dialog_dev_restore_default_config">Standart konfiqurasiyanı bərpa et</string>
+    <string name="ig_dialog_dev_restore_default_config_confirm">Bu, cari tərtibatçı konfiqurasiyasını tətbiqlə gələn standart konfiqurasiya ilə əvəz edəcək. Davam edilsin?</string>
     <string name="ig_toast_default_config_restored">✅ Standart konfiqurasiya bərpa edildi.</string>
-    <string name="ig_dialog_dev_remove_build_expired">Sürüm Vaxtı Keçmiş Bildirişini Sil</string>
+    <string name="ig_dialog_dev_remove_build_expired">Versiya köhnəlib pəncərəsini sil</string>
     <string name="ig_dialog_unable_open_ui">InstaEclipse interfeysi açıla bilmir.</string>
     <string name="ig_dialog_instagram_not_ready">Instagram açıq deyil və ya hazır deyil.</string>
     <string name="ig_dialog_mc_overrides_not_found">mc_overrides.json tapılmadı.</string>
@@ -78,30 +79,30 @@
     <string name="json_sent">✅ Instagram\'a göndərildi.</string>
     <string name="json_not_valid">❌ Etibarlı JSON faylı deyil.</string>
     <string name="json_read_failed">❌ Fayl oxuna bilmədi: %1$s</string>
-    <string name="ig_dialog_ghost_hide_dm_seen">DM Oxundu Bildirişini Gizlət</string>
-    <string name="ig_dialog_ghost_hide_typing">Yazma Göstərgesini Gizlət</string>
-    <string name="ig_dialog_ghost_hide_story_views">Hekayə Baxışlarını Gizlət</string>
-    <string name="ig_dialog_ghost_hide_live_presence">Canlı Yayın Varlığını Gizlət</string>
+    <string name="ig_dialog_ghost_hide_dm_seen">Oxunma bildirişini gizlət</string>
+    <string name="ig_dialog_ghost_hide_typing">Yazma göstəricisini gizlət</string>
+    <string name="ig_dialog_ghost_hide_story_views">Hekayələrə anonim bax</string>
+    <string name="ig_dialog_ghost_hide_live_presence">Canlı yayımlara anonim bax</string>
     <string name="ig_dialog_ghost_allow_screenshots_dms">DM-lərdə Ekran Görüntüsünə İcazə Ver</string>
-    <string name="ig_dialog_ghost_bypass_screenshot">Ekran Görüntüsü Aşkarlanmasını Atla</string>
-    <string name="ig_dialog_ghost_hide_view_once">Bir Dəfəlik Baxış Açılmasını Gizlət</string>
-    <string name="ig_dialog_ghost_permanent_view_once">Müvəqqəti Medianı Daimi Et (Qeyri-sabit)</string>
-    <string name="ig_dialog_ghost_keep_disappearing">Yox Olan Mesajları Saxla</string>
+    <string name="ig_dialog_ghost_bypass_screenshot">Ekran görüntüsünü bildirmə</string>
+    <string name="ig_dialog_ghost_hide_view_once">Bir dəfəlik baxışı gizli aç</string>
+    <string name="ig_dialog_ghost_permanent_view_once">Bir/iki dəfəlik medianı daimi et</string>
+    <string name="ig_dialog_ghost_keep_disappearing">Yox olan mesajları saxla</string>
     <string name="ig_dialog_customize_quick_toggle">Sürətli Keçidi Fərdiləşdir</string>
-    <string name="ig_dialog_quick_hide_seen">DM Oxundu Bildirişini Gizlətməni Daxil Et</string>
-    <string name="ig_dialog_quick_hide_typing">Yazma Göstərgesini Gizlətməni Daxil Et</string>
-    <string name="ig_dialog_quick_disable_screenshot">Ekran Görüntüsü Aşkarlanmasını Atlamağı Daxil Et</string>
-    <string name="ig_dialog_quick_hide_view_once">Bir Dəfəlik Baxış Açılmasını Gizlətməni Daxil Et</string>
-    <string name="ig_dialog_quick_hide_story_seen">Hekayə Baxışlarını Gizlətməni Daxil Et</string>
-    <string name="ig_dialog_quick_hide_live_seen">Canlı Yayın Varlığını Gizlətməni Daxil Et</string>
-    <string name="ig_dialog_quick_keep_ephemeral">Yox Olan Mesajları Saxlamağı Daxil Et</string>
-    <string name="ig_dialog_quick_permanent_view">Müvəqqəti Medianı Daimi Etməyi Daxil Et (Qeyri-sabit)</string>
-    <string name="ig_dialog_quick_allow_screenshots">DM-lərdə Ekran Görüntüsünə İcazə Verməyi Daxil Et</string>
-    <string name="ig_dialog_ad_block_ads">Reklamları Blokla</string>
-    <string name="ig_dialog_ad_block_analytics">Analitikanı Blokla</string>
+    <string name="ig_dialog_quick_hide_seen">Daxil et: oxunmanı gizlət</string>
+    <string name="ig_dialog_quick_hide_typing">Daxil et: yazma göstəricisini gizlət</string>
+    <string name="ig_dialog_quick_disable_screenshot">Daxil et: ekran görüntüsü aşkarlanmasını keç</string>
+    <string name="ig_dialog_quick_hide_view_once">Daxil et: bir dəfəlik baxışı gizlət</string>
+    <string name="ig_dialog_quick_hide_story_seen">Daxil et: hekayə baxışlarını gizlət</string>
+    <string name="ig_dialog_quick_hide_live_seen">Daxil et: canlı yayımda görünmə</string>
+    <string name="ig_dialog_quick_keep_ephemeral">Daxil et: yox olan mesajları saxla</string>
+    <string name="ig_dialog_quick_permanent_view">Daxil et: bir/iki dəfəlik medianı aç</string>
+    <string name="ig_dialog_quick_allow_screenshots">Daxil et: DM-də ekran görüntüsünə icazə</string>
+    <string name="ig_dialog_ad_block_ads">Reklamları blokla</string>
+    <string name="ig_dialog_ad_block_analytics">Analitikanı blokla</string>
     <string name="ig_dialog_clean_feed_hide_suggested">Lentdəki tövsiyələri gizlət</string>
-    <string name="ig_dialog_ad_disable_tracking">İzləmə Bağlantılarını Deaktiv Et</string>
-    <string name="ig_dialog_open_links_externally">Bağlantıları Xarici Brauzerdə Aç</string>
+    <string name="ig_dialog_ad_disable_tracking">Linklərdən izləməni sil</string>
+    <string name="ig_dialog_open_links_externally">Linkləri brauzerdə aç</string>
     <string name="theme_light_mode">İşıqlı rejim</string>
     <string name="theme_dark_mode">Qaranlıq rejim</string>
     <string name="ig_dialog_translate_messages">Söhbətlərdə tərcümə düyməsi</string>
@@ -116,39 +117,39 @@
     <string name="theme_light_same">Qaranlıq rejimlə eyni tema</string>
     <string name="theme_light_stock">Standart Instagram (tema yalnız qaranlıq rejimdə)</string>
     <string name="ig_dialog_distraction_extreme_mode">Ekstremal Rejim (Yenidən quraşdıranadək geri alınmaz)</string>
-    <string name="ig_dialog_distraction_disable_stories">Hekayələri Deaktiv Et</string>
-    <string name="ig_dialog_distraction_disable_feed">Lenti Deaktiv Et</string>
-    <string name="ig_dialog_distraction_disable_reels">Reels\'i Deaktiv Et</string>
-    <string name="ig_dialog_distraction_disable_reels_except_dm">DM-lər istisna olmaqla Reels\'i Deaktiv Et</string>
-    <string name="ig_dialog_distraction_disable_explore">Kəşfi Deaktiv Et</string>
-    <string name="ig_dialog_distraction_disable_comments">Şərhləri Deaktiv Et</string>
-    <string name="ig_dialog_distraction_extreme_title">Ekstremal Rejimi Aktiv Et?</string>
-    <string name="ig_dialog_misc_disable_story_autoswipe">Hekayə Avtomatik Keçişini Deaktiv Et</string>
-    <string name="ig_dialog_misc_disable_video_autoplay">Video Avtomatik Oynatmanı Deaktiv Et</string>
-    <string name="ig_dialog_misc_disable_repost">Yenidən Paylaşımı Deaktiv Et</string>
+    <string name="ig_dialog_distraction_disable_stories">Hekayələri söndür</string>
+    <string name="ig_dialog_distraction_disable_feed">Lenti söndür</string>
+    <string name="ig_dialog_distraction_disable_reels">Reels-i söndür</string>
+    <string name="ig_dialog_distraction_disable_reels_except_dm">DM-lər xaric Reels-i söndür</string>
+    <string name="ig_dialog_distraction_disable_explore">Kəşfi söndür</string>
+    <string name="ig_dialog_distraction_disable_comments">Şərhləri söndür</string>
+    <string name="ig_dialog_distraction_extreme_title">Ekstremal rejim aktiv edilsin?</string>
+    <string name="ig_dialog_misc_disable_story_autoswipe">Hekayələri avtomatik keçirmə</string>
+    <string name="ig_dialog_misc_disable_video_autoplay">Videoları avtomatik oynatma</string>
+    <string name="ig_dialog_misc_disable_repost">Yenidən paylaş düyməsini gizlət</string>
     <string name="ig_dialog_clean_feed_expand_captions">Tam Açıqlamaları Həmişə Göstər (IG-ni yenidən başladın)</string>
-    <string name="ig_dialog_clean_feed_hide_plus">Instagram Plus Təkliflərini Gizlət</string>
-    <string name="ig_dialog_clean_feed_hide_community_notes">İcma Qeydlərini Gizlət</string>
+    <string name="ig_dialog_clean_feed_hide_plus">Instagram Plus təkliflərini gizlət</string>
+    <string name="ig_dialog_clean_feed_hide_community_notes">İcma qeydlərini gizlət</string>
     <string name="ig_dialog_misc_profile_follows_label">Profillərdə \"Sizi izləyir\" Göstər</string>
-    <string name="ig_dialog_fancy_bio_font">Bioda dekorativ şriftlər</string>
+    <string name="ig_dialog_fancy_bio_font">Bioda dekorativ şriftlərdən istifadə et</string>
     <string name="ig_fancy_font_button">Dekorativ şrift</string>
     <string name="ig_fancy_font_title">Bio şrifti</string>
-    <string name="ig_fancy_font_note">İngilis və yunan hərflərini və rəqəmləri hamının görəcəyi şəkildə bəzəyir. Üstündən xətt və alt xətt bütün dillərdə işləyir.</string>
+    <string name="ig_fancy_font_note">Üslub seçin, sonra yazdığınız mətn həmin üslubda olacaq; artıq yazılmış mətn olduğu kimi qalır. Latın və yunan hərfləri və rəqəmlər bütün üslubları alır, üstündən xətt və alt xətt isə bütün dillərdə işləyir.</string>
     <string name="ig_profile_follows_you">Sizi izləyir</string>
     <string name="ig_profile_not_following_you">Sizi izləmir</string>
-    <string name="ig_dialog_downloader_offer_media_info">Paylaşım Menyusuna Media Məlumatı Əlavə Et</string>
+    <string name="ig_dialog_downloader_offer_media_info">Media məlumatını göstər</string>
     <string name="ig_dialog_downloader_offer_speed">Paylaşım Menyusuna Oynatma Sürəti Əlavə Et</string>
-    <string name="ig_dialog_downloader_reel_scrubber">Reels İrəliləmə Zolağını Həmişə Göstər</string>
+    <string name="ig_dialog_downloader_reel_scrubber">İrəliləmə zolağını həmişə göstər</string>
     <string name="ig_dialog_reels_hold_left_slow">Yavaş hərəkət üçün sol tərəfi basılı saxla (0.5×)</string>
     <string name="ig_media_info_title">Media məlumatı</string>
     <string name="ig_playback_speed_title">Oynatma sürəti</string>
     <string name="ig_playback_speed_next">Sürət təyin edildi — başlayan növbəti videoya tətbiq olunur</string>
-    <string name="ig_dialog_distraction_hide_notes_tray">Mesajlarda Qeydləri Gizlət</string>
-    <string name="ig_hide_dm_suggestions">Mesajlarda təklif olunan hesabları gizlət</string>
+    <string name="ig_dialog_distraction_hide_notes_tray">Qeydləri gizlət</string>
+    <string name="ig_hide_dm_suggestions">Təklif olunan hesabları gizlət</string>
     <string name="ig_data_backup">Məlumatların ehtiyat nüsxəsi (silinmiş mesajlar, təhlil edilən profillər…)</string>
     <string name="ig_data_restore">Məlumatları bərpa et</string>
-    <string name="ig_data_backup_saved">Ehtiyat nüsxə saxlanıldı: %1$s</string>
-    <string name="ig_data_backup_failed">Ehtiyat nüsxə alınmadı</string>
+    <string name="ig_data_backup_saved">Yedəkləndi: %1$s</string>
+    <string name="ig_data_backup_failed">Yedəkləmə alınmadı</string>
     <string name="ig_data_restore_done">%1$d fayl bərpa edildi. Instagram yenidən başladılır…</string>
     <string name="ig_data_restore_failed">Bu ehtiyat nüsxə bərpa edilə bilmədi</string>
     <string name="ig_post_counts_feature">Paylaşımlarınızda sayları dəyiş (yalnız siz)</string>
@@ -161,7 +162,7 @@
     <string name="ig_post_counts_keep">Həqiqini saxla</string>
     <string name="ig_post_counts_reset">Sıfırla</string>
     <string name="ig_post_counts_saved">Saylar saxlanıldı</string>
-    <string name="ig_dl_companion_fallback">InstaEclipse tətbiqinə qoşulmaq olmadı, ona görə Download-ə saxlanıldı. Öz qovluğunuz üçün InstaEclipse-ə avtomatik başlama / arxa fonda işləmə icazəsi verin.</string>
+    <string name="ig_dl_companion_fallback">InstaEclipse tətbiqinə qoşulmaq olmadı, ona görə fayl Download qovluğuna saxlanıldı. Öz qovluğunuz üçün InstaEclipse-in arxa fonda işləməsinə icazə verin: Yuxu tətbiqlərində olmasın (Samsung), avtomatik başlatma açıq olsun (Xiaomi), batareya məhdudiyyətsiz olsun.</string>
     <string name="background_access_title">InstaEclipse-ə arxa fonda işləməyə icazə verin</string>
     <string name="background_access_message">Qovluğunuza yükləmələri Instagram-dan başladılan bu tətbiq saxlayır. Telefon onu yuxuda saxlasa, Download-a düşür. Məhdudiyyətsiz işləməyə icazə verin. Samsung-da Yuxu tətbiqlərindən çıxarın, Xiaomi-də Avtomatik başlamanı açın.</string>
     <string name="background_access_allow">İcazə ver</string>
@@ -169,15 +170,15 @@
     <string name="folder_access_lost_title">Yükləmə qovluğunu yenidən seçin</string>
     <string name="folder_access_lost_message">InstaEclipse-in yükləmə qovluğunuza girişi yoxdur (yenidən quraşdırma və ya məlumat silinməsindən sonra olur), ona görə yükləmələr Download-a gedir. Düzəltmək üçün qovluğu yenidən seçin.</string>
     <string name="folder_access_lost_choose">Qovluq seç</string>
-    <string name="ig_profile_menu_tools">Profil: kopyalamaq üçün istifadəçi adını və ya bionu basılı saxla, ⋮ menyu: hamısını yüklə</string>
+    <string name="ig_profile_menu_tools">Profil: istifadəçi adını və ya bionu basıb kopyala, ⋮ menyu: hamısını yüklə</string>
     <string name="ig_profile_spoofer">Profil saxtalaşdırıcı (yalnız bu telefonda)</string>
-    <string name="ig_profile_spoofer_edit">Saxta profili redaktə et</string>
+    <string name="ig_profile_spoofer_edit">Profil görünüşünü redaktə et</string>
     <string name="ig_profile_spoofer_followers">İzləyicilər</string>
     <string name="ig_profile_spoofer_following">İzlənilənlər</string>
     <string name="ig_profile_spoofer_posts">Paylaşımlar</string>
     <string name="ig_profile_spoofer_verified">Təsdiq nişanını göstər</string>
-    <string name="ig_profile_spoofer_editor_title">Profilinin sənə necə göründüyünü dəyiş</string>
-    <string name="ig_profile_spoofer_note">Bunu yalnız sən görürsən, bu telefonda və öz profilində. Instagram-a heç nə göndərilmir. Real dəyəri saxlamaq üçün sahəni boş burax.</string>
+    <string name="ig_profile_spoofer_editor_title">Profilinizin sizə necə göründüyünü dəyişin</string>
+    <string name="ig_profile_spoofer_note">Bunu yalnız siz, bu telefonda, öz profilinizdə görürsünüz. Instagram-a heç nə göndərilmir. Real dəyəri saxlamaq üçün sahəni boş buraxın.</string>
     <string name="ig_profile_spoofer_section_identity">Kimlik</string>
     <string name="ig_profile_spoofer_section_stats">Statistika</string>
     <string name="ig_profile_spoofer_section_badge">Nişan</string>
@@ -273,48 +274,48 @@
     <string name="ig_pa_cl_unreliable_remove">Dəyişiklikləri sil</string>
     <string name="ig_pa_cl_unreliable">Dəyişikliklər etibarsız kimi işarələndi və silindi (siyahılar saxlanıldı).</string>
     <string name="ig_hide_instants">Instants-ı gizlət</string>
-    <string name="ig_back_leaves_home">Ana səhifədə Geri düyməsi Instagram-dan çıxır</string>
+    <string name="ig_back_leaves_home">Əsas səhifədə Geri Instagram-dan çıxır</string>
     <string name="ig_dialog_downloader_voice">Səsli Mesajları Yüklə (uzun basma)</string>
     <string name="ig_dialog_downloader_dm_media">Mesajlardakı şəkil və videoları yüklə (uzun basma)</string>
-    <string name="ig_dialog_misc_viewer_search">Hekayə Baxanlarınızda Axtar</string>
+    <string name="ig_dialog_misc_viewer_search">Hekayənizə baxanlarda axtar</string>
     <string name="ig_viewer_search_hint">Baxanlarda axtar</string>
-    <string name="ig_dialog_misc_like_undo">Bəyənmələr üçün Geri Alma Pəncərəsi (4 san)</string>
-    <string name="ig_dialog_misc_exact_timestamps">\"2 saat əvvəl\" Əvəzinə Dəqiq Tarixləri Göstər</string>
+    <string name="ig_dialog_misc_like_undo">Bəyənməni geri alma pəncərəsi (4 san)</string>
+    <string name="ig_dialog_misc_exact_timestamps">Dəqiq tarix və vaxtı göstər</string>
     <string name="ig_timestamp_format">Tarix formatı</string>
     <string name="ig_timestamp_format_default">Cihaz standartı</string>
     <string name="ig_timestamp_format_custom">Fərdi…</string>
     <string name="ig_timestamp_format_custom_hint">Hərflər: yyyy il · MM ay · MMM ayın adı · dd gün · EEE həftənin günü · HH saat (24) · h saat (12) · mm dəqiqə · ss saniyə · a AM/PM. Başqa mətni \'tək dırnaqlara\' yazın.</string>
     <string name="ig_timestamp_format_invalid">Format düzgün deyil</string>
-    <string name="ig_dialog_misc_hide_share_create_group">Paylaşım Pəncərəsində \"Qrup yarat\" Düyməsini Gizlət</string>
-    <string name="ig_dialog_misc_show_feature_toasts">Xüsusiyyət Bildirişlərini Göstər</string>
-    <string name="ig_dialog_misc_show_follower_toast">İzləyici Bildirişini Göstər</string>
-    <string name="ig_dialog_misc_view_story_mentions">Hekayə Qeydlərini Gör</string>
-    <string name="ig_dialog_misc_disable_discover_people">Tanış Tapma Xüsusiyyətini Deaktiv Et</string>
-    <string name="ig_dialog_misc_copy_comment">Şərhi Kopyala</string>
-    <string name="ig_dialog_misc_disable_double_tap_like">İkiqat toxunuşla bəyənməni deaktiv et</string>
+    <string name="ig_dialog_misc_hide_share_create_group">Paylaşarkən «Qrup yarat» düyməsini gizlət</string>
+    <string name="ig_dialog_misc_show_feature_toasts">Funksiya bildirişləri</string>
+    <string name="ig_dialog_misc_show_follower_toast">İzləmə statusu bildirişini göstər</string>
+    <string name="ig_dialog_misc_view_story_mentions">Hekayə qeydlərini göstər</string>
+    <string name="ig_dialog_misc_disable_discover_people">İnsan təkliflərini gizlət</string>
+    <string name="ig_dialog_misc_copy_comment">Şərhləri kopyala</string>
+    <string name="ig_dialog_misc_disable_double_tap_like">İkiqat toxunuşla bəyənməni söndür</string>
 
     <!-- Comment Copy dialog -->
-    <string name="ig_comment_copy_title">Şərhi Kopyala</string>
+    <string name="ig_comment_copy_title">Şərhi kopyala</string>
     <string name="ig_toast_comment_copied">✅ Mübadilə buferinə kopyalandı!</string>
-    <string name="ig_dialog_downloader_posts">Paylaşımları Yüklə</string>
-    <string name="ig_dialog_downloader_stories">Hekayələri Yüklə</string>
-    <string name="ig_dialog_downloader_reels">Reels\'i Yüklə</string>
-    <string name="ig_dialog_downloader_profiles">Profil Şəkillərini Yüklə</string>
-    <string name="ig_dialog_downloader_folder">Yükləmə Qovluğu</string>
+    <string name="ig_dialog_downloader_posts">Paylaşımları yüklə</string>
+    <string name="ig_dialog_downloader_stories">Hekayələri yüklə</string>
+    <string name="ig_dialog_downloader_reels">Reels-i yüklə</string>
+    <string name="ig_dialog_downloader_profiles">Profil şəkillərini yüklə</string>
+    <string name="ig_dialog_downloader_folder">Yükləmə qovluğu</string>
     <string name="ig_dialog_downloader_username_subfolder">İstifadəçi adı alt qovluğuna saxla</string>
-    <string name="ig_dialog_downloader_add_timestamp">Fayl adına vaxt damgası əlavə et</string>
+    <string name="ig_dialog_downloader_add_timestamp">Fayl adlarına tarix və vaxt əlavə et</string>
     <string name="ig_dialog_downloader_cannot_open_picker">Burada qovluq seçici açıla bilmir</string>
-    <string name="ig_dialog_backup_settings">Parametrləri Yedəklə</string>
-    <string name="ig_dialog_restore_settings">Parametrləri Bərpa Et</string>
+    <string name="ig_dialog_backup_settings">Ayarları yedəklə</string>
+    <string name="ig_dialog_restore_settings">Ayarları bərpa et</string>
     <string name="ig_dialog_backup_failed">Yedəkləmə yaradıla bilmədi: %1$s</string>
-    <string name="ig_dialog_clear_cache">Hook Önbelleğini Temizle</string>
-    <string name="ig_dialog_restart_now">İndi Yenidən Başlat</string>
+    <string name="ig_dialog_clear_cache">Hook keşini təmizlə</string>
+    <string name="ig_dialog_restart_now">İndi yenidən başlat</string>
     <string name="ig_dialog_restart_not_found">Yenidən başlatmaq üçün tətbiq tapılmadı.</string>
-    <string name="ig_dialog_restart_failed">Yenidən başlatma uğursuz oldu: %1$s</string>
+    <string name="ig_dialog_restart_failed">Yenidən başlatmaq olmadı: %1$s</string>
 
     <!-- Toast: App settings -->
     <string name="ig_toast_restart_manual">Dəyişikliklərin qüvvəyə minməsi üçün Instagram-ı əl ilə bağlayın.</string>
-    <string name="ig_toast_settings_restored">Parametrlər uğurla bərpa edildi.</string>
+    <string name="ig_toast_settings_restored">Ayarlar uğurla bərpa edildi.</string>
     <string name="ig_toast_restore_failed">Bərpa uğursuz oldu: %1$s</string>
 
     <!-- Toast: Download folder -->
@@ -345,12 +346,12 @@
 
     <!-- features fragment section headers -->
     <string name="feat_config">Konfiqurasiya</string>
-    <string name="feat_quick_toggle">Sürətli Keçid</string>
-    <string name="feat_danger_zone">Təhlükəli Zona</string>
-    <string name="feat_downloader_reset_folder">Yükləmə Qovluğunu Sıfırla</string>
+    <string name="feat_quick_toggle">Sürətli keçid</string>
+    <string name="feat_danger_zone">Təhlükəli zona</string>
+    <string name="feat_downloader_reset_folder">Standart qovluğa qaytar</string>
 
     <!-- multiple versions -->
-    <string name="multiple_versions_detected">⚠️ Birdən çox versiya aşkarlandı</string>
+    <string name="multiple_versions_detected">Birdən çox versiya aşkarlandı</string>
 
     <!-- Story mentions dialog -->
     <string name="ig_mention_dialog_title">Hekayə Qeydləri</string>
@@ -368,14 +369,14 @@
     <string name="ig_update_button">Yenilə</string>
     <string name="ig_update_later">Sonra</string>
     <!-- Custom Theme -->
-    <string name="ig_dialog_menu_theme">Xüsusi Tema</string>
-    <string name="theme_title">Xüsusi Tema</string>
-    <string name="theme_enable">Xüsusi Temanı Aktivləşdir</string>
-    <string name="theme_customize">Temanı Fərdiləşdir…</string>
-    <string name="theme_section_presets">Hazır Şablonlar</string>
+    <string name="ig_dialog_menu_theme">Xüsusi tema</string>
+    <string name="theme_title">Xüsusi tema</string>
+    <string name="theme_enable">Xüsusi temadan istifadə et</string>
+    <string name="theme_customize">Temanı fərdiləşdir…</string>
+    <string name="theme_section_presets">Hazır şablonlar</string>
     <string name="theme_section_custom">Xüsusi Rənglər</string>
-    <string name="theme_collapse_section">Bölməni Yığ</string>
-    <string name="theme_expand_section">Bölməni Aç</string>
+    <string name="theme_collapse_section">Bölməni yığ</string>
+    <string name="theme_expand_section">Bölməni aç</string>
     <string name="theme_reset_custom">Defolta Sıfırla</string>
     <string name="theme_pick_color">Rəng seçin</string>
     <string name="theme_apply_color">Tətbiq et</string>
@@ -405,25 +406,25 @@
     <string name="feat_group_tools">Alətlər</string>
     <string name="ig_dialog_menu_location">Məkan</string>
     <string name="logging">Loglar</string>
-    <string name="ig_dialog_quality_force_reels">Reels Keyfiyyətini Məcbur Et</string>
+    <string name="ig_dialog_quality_force_reels">Reels oynatma keyfiyyəti</string>
     <string name="ig_dialog_quality_auto">Avtomatik</string>
     <string name="ig_dialog_quality_360">360p</string>
     <string name="ig_dialog_quality_480">480p</string>
     <string name="ig_dialog_quality_720">720p</string>
     <string name="ig_dialog_quality_1080">1080p</string>
     <string name="theme_section_colors">Rənglər</string>
-    <string name="theme_section_fonts">Şriftlər &amp; Emoji</string>
+    <string name="theme_section_fonts">Şriftlər və emoji</string>
     <string name="ig_dialog_quality_max">Maksimum Mövcud</string>
     <string name="ig_dialog_max_upload_quality">Həmişə ən yüksək keyfiyyətdə yüklə</string>
-    <string name="ig_dialog_location_spoof_enable">GPS Məkanını Saxtalaşdır</string>
-    <string name="ig_dialog_location_pick">Xəritədə Məkan Seç</string>
+    <string name="ig_dialog_location_spoof_enable">Saxta məkandan istifadə et</string>
+    <string name="ig_dialog_location_pick">Xəritədə məkan seç</string>
     <string name="ig_dialog_location_unset">Məkan təyin edilməyib</string>
     <string name="loc_picker_search_hint">Şəhər, ünvan və ya yer axtarın</string>
-    <string name="loc_picker_use">Bu Məkanı İstifadə Et</string>
+    <string name="loc_picker_use">Bu məkandan istifadə et</string>
     <string name="loc_picker_search_failed">Məkan tapılmadı</string>
     <string name="ig_dialog_ghost_jump_first">Söhbətlərdə İlk Mesaja Keçid Düyməsi</string>
     <string name="ig_jump_first_message">İlk mesaja keç</string>
-    <string name="ig_dialog_ghost_edit_history">Mesajların Redaktə Tarixçəsini Saxla</string>
+    <string name="ig_dialog_ghost_edit_history">Redaktələrin əvvəlki versiyalarını saxla</string>
     <string name="ig_edit_history_title">Redaktə tarixçəsi</string>
     <string name="ig_edit_history_original">Orijinal</string>
     <string name="ig_edit_history_earlier">Əvvəlki versiya</string>
@@ -432,49 +433,49 @@
     <string name="ig_edit_history_noticed">%1$s qeydə alınıb</string>
     <string name="ig_edit_history_missing">%1$d əvvəlki versiya bu telefonda saxlanmayıb.</string>
     <string name="ig_edit_history_none">Bu mesajın əvvəlki versiyası bu telefonda saxlanmayıb</string>
-    <string name="ig_dialog_unsent_title">Geri Götürülən Mesajlar</string>
+    <string name="ig_dialog_unsent_title">Geri götürülən mesajlar</string>
     <string name="ig_dialog_unsent_export">JSON kimi ixrac et</string>
-    <string name="ig_dialog_unsent_exported">%1$s ünvanına saxlanıldı</string>
+    <string name="ig_dialog_unsent_exported">Saxlanıldı: %1$s</string>
     <string name="ig_dialog_auto_clear_cache">Böyük olduqda keşi avtomatik təmizlə</string>
     <string name="ig_dialog_section_auto_clear_cache">Keşi Avtomatik Təmizlə</string>
-    <string name="ig_dialog_misc_remove_meta_ai">Meta AI-ni Sil</string>
-    <string name="ig_dialog_misc_lock_dms">DM-ləri Kilidlə</string>
-    <string name="ig_dialog_misc_lock_dms_set">Kodu təyin et / dəyiş</string>
-    <string name="ig_dialog_misc_lock_dms_saved">Kod saxlanıldı</string>
-    <string name="ig_dialog_misc_lock_dms_always">Hər çıxışda yenidən kilidlə</string>
-    <string name="ig_dialog_misc_lock_whole_app">Bütün tətbiqi kilidlə</string>
+    <string name="ig_dialog_misc_remove_meta_ai">Meta AI-ni sil</string>
+    <string name="ig_dialog_misc_lock_dms">Mesajları kilidlə</string>
+    <string name="ig_dialog_misc_lock_dms_set">Parolu təyin et və ya dəyiş</string>
+    <string name="ig_dialog_misc_lock_dms_saved">Parol saxlanıldı</string>
+    <string name="ig_dialog_misc_lock_dms_always">Çıxanda yenidən kilidlə</string>
+    <string name="ig_dialog_misc_lock_whole_app">Instagram-ı kilidlə</string>
     <string name="ig_dialog_misc_lock_section">Kilid</string>
-    <string name="ig_dialog_misc_lock_fingerprint">Kilidi açmaq üçün barmaq izindən istifadə et</string>
-    <string name="ig_hide_chats_title">Müəyyən Söhbətləri Gizlət</string>
+    <string name="ig_dialog_misc_lock_fingerprint">Barmaq izi ilə kilidi aç</string>
+    <string name="ig_hide_chats_title">Müəyyən söhbətləri gizlət</string>
     <string name="ig_translate_text">Tərcümə et</string>
-    <string name="ig_dialog_downloader_offer_audio">Videolar üçün Yalnız Səs Yükləməsini Təklif Et</string>
+    <string name="ig_dialog_downloader_offer_audio">Yalnız səs yükləməsini təklif et</string>
     <string name="ig_download_choice_title">Yüklə</string>
     <string name="ig_download_choice_audio">Yalnız səs (.m4a)</string>
     <string name="ig_download_choice_copy_image">Şəkli kopyala</string>
-    <string name="ig_dialog_downloader_offer_copy_image">Paylaşım Menyusuna Şəkli Kopyala Əlavə Et</string>
+    <string name="ig_dialog_downloader_offer_copy_image">Şəkli kopyala</string>
     <string name="ig_toast_copy_image_video">Bu slayd videodur — kopyalanacaq heç nə yoxdur</string>
     <string name="ig_toast_copying_image">Şəkil kopyalanır…</string>
     <string name="ig_toast_image_copied">Şəkil mübadilə buferinə kopyalandı</string>
     <string name="ig_toast_downloading_audio">Səs yüklənir…</string>
     <string name="ig_toast_audio_saved">Səs saxlanıldı</string>
-    <string name="ig_dialog_misc_hide_chats">Müəyyən Söhbətləri Gizlət</string>
+    <string name="ig_dialog_misc_hide_chats">Seçilən söhbətləri gizlət</string>
     <string name="ig_hide_chat_hidden">Söhbət gizlədildi — gələnlər qutunuzdan yox olacaq</string>
-    <string name="ig_hide_chat_unhidden">Söhbət yenidən göstərildi</string>
+    <string name="ig_hide_chat_unhidden">Söhbət göstərilir</string>
     <string name="ig_hide_chat_no_thread">Bu söhbəti müəyyən etmək mümkün olmadı</string>
     <string name="ig_story_cache_view">Keşlənmiş hekayələrə bax</string>
     <string name="ig_story_cache_clear">Keşlənmiş hekayələri təmizlə</string>
     <string name="ig_story_cache_saving">Keşlənmiş hekayə saxlanılır…</string>
     <string name="ig_story_cache_saved">Keşlənmiş hekayə saxlanıldı</string>
-    <string name="ig_story_cache_save_fail">Keşlənmiş hekayəni saxlamaq mümkün olmadı</string>
-    <string name="ig_dialog_misc_custom_font">Xüsusi Şrift</string>
+    <string name="ig_story_cache_save_fail">Keşlənmiş hekayə saxlanmadı</string>
+    <string name="ig_dialog_misc_custom_font">Xüsusi şrift</string>
     <string name="ig_custom_font_pick">Şrift faylı seç (.ttf / .otf)</string>
-    <string name="ig_dialog_misc_custom_emoji">Xüsusi Emoji</string>
+    <string name="ig_dialog_misc_custom_emoji">Xüsusi emoji</string>
     <string name="ig_custom_emoji_pick">Emoji şrifti seç (.ttf / .otf)</string>
     <string name="ig_dialog_unsent_clear_yes">Təmizlə</string>
     <string name="ig_dialog_unsent_empty">Hələ geri götürülən mesaj tutulmayıb</string>
     <string name="ig_dialog_unsent_unknown_chat">Naməlum söhbət</string>
-    <string name="ig_dialog_clean_feed_hide_threads">Threads Təkliflərini Gizlət</string>
-    <string name="ig_dialog_clean_feed_hide_liked">Artıq Bəyəndiyiniz Paylaşımları Gizlət</string>
+    <string name="ig_dialog_clean_feed_hide_threads">Threads-i lentdən gizlət</string>
+    <string name="ig_dialog_clean_feed_hide_liked">Artıq bəyəndiyiniz paylaşımları gizlət</string>
     <string name="ig_nav_name_home">Əsas səhifə</string>
     <string name="ig_nav_name_reels">Reels</string>
     <string name="ig_nav_name_create">Yarat</string>
@@ -488,10 +489,10 @@
     <string name="ig_nav_tab_messages">Mesajlar tabını gizlət</string>
     <string name="ig_nav_tab_activity">Fəaliyyət tabını gizlət</string>
     <string name="ig_nav_tab_profile">Profil tabını gizlət</string>
-    <string name="ig_dialog_misc_copy_caption">Başlığı Kopyala</string>
+    <string name="ig_dialog_misc_copy_caption">Açıqlamaları kopyala</string>
     <string name="ig_dialog_misc_photo_zoom">Foto Yaxınlaşdırma (Uzun Basma)</string>
-    <string name="ig_caption_copied">✅ Başlıq mübadilə buferinə kopyalandı!</string>
-    <string name="ig_dialog_downloader_copy_link">Media Linkini Kopyala</string>
+    <string name="ig_caption_copied">✅ Açıqlama mübadilə buferinə kopyalandı!</string>
+    <string name="ig_dialog_downloader_copy_link">Media linkini kopyala</string>
     <string name="ig_copy_link_copied">Media linki mübadilə buferinə kopyalandı</string>
     <string name="ig_copy_link_none">Bu paylaşım üçün media linki tapılmadı</string>
     <string name="ig_copy_link_slide">Slayd %1$d / %2$d</string>
@@ -499,17 +500,17 @@
     <string name="ig_copy_link_copied_all">%1$d media linki kopyalandı</string>
     <string name="ig_dialog_misc_save_instants">Instants\'ı Saxla (saxlamaq üçün uzun basın)</string>
     <string name="ig_instant_save_none">Instant media tapılmadı</string>
-    <string name="ig_dialog_misc_upload_instants">Qalereyadan Instant Yüklə</string>
-    <string name="ig_instant_upload_chip">🖼 Qalereya</string>
-    <string name="ig_instant_upload_chip_ready">✓ Hazır — deklanşora toxun</string>
-    <string name="ig_instant_upload_ready">Seçildi! Instant kimi göndərmək üçün deklanşora toxun</string>
+    <string name="ig_dialog_misc_upload_instants">Qalereyadan Instants göndər</string>
+    <string name="ig_instant_upload_chip">Qalereya</string>
+    <string name="ig_instant_upload_chip_ready">Hazır — deklanşora toxunun</string>
+    <string name="ig_instant_upload_ready">Seçildi! Instant kimi göndərmək üçün deklanşora toxunun</string>
     <string name="ig_instant_upload_fail">Həmin şəkli yükləmək mümkün olmadı</string>
     <string name="ig_story_download_photo">Fotonu yüklə</string>
     <string name="ig_story_cache_clear_confirm">Bütün keşlənmiş hekayələr silinsin? Bu geri qaytarıla bilməz.</string>
     <string name="ig_story_cache_cleared">Keşlənmiş hekayələr silindi</string>
     <string name="ig_dialog_ghost_chat_export">Söhbətlərdə Söhbəti İxrac Et Düyməsi</string>
     <string name="ig_chat_export">Söhbəti ixrac et</string>
-    <string name="ig_locked_coll_setting">Kilidlənə bilən Saxlanılan kolleksiyalar (kolleksiyadakı 🔒 düyməsi; Instagram\'da təyin edilən parolu istifadə edir)</string>
+    <string name="ig_locked_coll_setting">Kilidlənə bilən Saxlanılan kolleksiyalar (kolleksiyadakı 🔒 düyməsi; Instagram-da təyin edilən paroldan istifadə edir)</string>
     <string name="ig_locked_coll_setting_short">Kilidlənə bilən Saxlanılan kolleksiyalar (kolleksiyada 🔒)</string>
     <string name="ig_locked_coll_title">Kilidli kolleksiya</string>
     <string name="ig_locked_coll_open">Aç</string>
@@ -518,7 +519,7 @@
     <string name="ig_locked_coll_unlock">Bu kolleksiyanın kilidini aç</string>
     <string name="ig_locked_coll_locked">Kolleksiya kilidləndi: parolunuz soruşulacaq</string>
     <string name="ig_locked_coll_unlocked">Kolleksiyanın kilidi açıldı</string>
-    <string name="ig_saved_on_profile">Profilinizdə Saxlanılanlar düyməsi (Instagram\'ı yenidən başladın)</string>
+    <string name="ig_saved_on_profile">Profilinizdə Saxlanılanlar düyməsi</string>
     <string name="ig_saved_on_profile_button">Saxlanılanlar</string>
     <string name="ig_nav_tab_order">Tab sırası</string>
     <string name="ig_nav_tab_order_hint">Aşağı paneli yenidən sıralamaq üçün oxlardan istifadə edin. Gizli tablar yerini saxlayır. Instagram\'a qayıtdığınızda tətbiq olunur.</string>
@@ -539,7 +540,7 @@
     <string name="ig_feat_photo_zoom">Foto yaxınlaşdırma</string>
     <string name="ig_chat_export_none">Bu söhbət üçün hələ mesaj yüklənməyib</string>
     <string name="ig_media_info_copy">Kopyala</string>
-    <string name="ig_dialog_misc_comment_search">Şərhlərdə Axtar</string>
+    <string name="ig_dialog_misc_comment_search">Şərhlərdə axtar</string>
     <string name="ig_comment_search">Şərhlərdə axtar</string>
     <string name="ig_comment_search_load_all">Hamısını yüklə</string>
     <string name="ig_comment_search_stop">Dayandır</string>
@@ -554,7 +555,7 @@
     <string name="ig_comment_export_working">Yüklənmiş şərhlər ixrac edilir…</string>
     <string name="ig_comment_export_post_media">Paylaşımın foto/videolarını da saxla</string>
     <string name="ig_comment_export_done">%1$d şərh %2$s ünvanına ixrac edildi</string>
-    <string name="ig_dialog_misc_follow_export">İzləyiciləri/İzlənilənləri CSV olaraq ixrac et</string>
+    <string name="ig_dialog_misc_follow_export">İzləyici siyahılarını CSV-yə ixrac et</string>
     <string name="ig_feat_followers_history">İzləyici tarixçəsi (kim izləməni dayandırdı)</string>
     <string name="ig_followers_history_first">İlk siyahınız saxlanıldı: %1$d izləyici. Kimin izləməni dayandırdığını və ya izlədiyini görmək üçün sonra yenidən yoxlayın.</string>
     <string name="ig_followers_history_note">Dəyişikliklər yoxlayanda tapılır, ona görə tarix dəyişikliyin görüldüyü vaxtdır.</string>
@@ -582,7 +583,7 @@
     <string name="ig_highlight_download_all">Bütün seçilmişi yüklə</string>
     <string name="ig_highlight_loading">Seçilmiş yüklənir…</string>
     <string name="ig_highlight_downloading">%1$d seçilmiş element yüklənir…</string>
-    <string name="ig_highlight_done">Seçilmiş saxlanıldı: %2$d elementdən %1$d tanesi</string>
+    <string name="ig_highlight_done">Seçilmiş saxlanıldı: %2$d elementdən %1$d</string>
     <string name="ig_spoof_device">Cihazı saxtalaşdır (HDR video)</string>
     <string name="ig_spoof_device_note">Instagram bu telefonu seçilmiş cihaz kimi görür. Bu, HDR videonu və Instagram-ın həmin telefonlarla məhdudlaşdırdığı digər funksiyaları açır və uyğun tərtibatçı seçimlərini əlavə edir. Tətbiq etmək üçün Instagram-ı yenidən başladın. Instagram hesabınızı bir dəfə təsdiqləməyi istəyə bilər.</string>
     <string name="ig_dialog_downloader_stickers">DM-lərdə stikerləri və GIF-ləri yüklə (uzun basma)</string>
@@ -592,13 +593,13 @@
     <string name="ig_story_ring_solid">Tək rəng</string>
     <string name="ig_story_ring_gradient">Qradiyent</string>
     <string name="ig_story_ring_stops_hint">Dəyişmək üçün rəngə toxunun, silmək üçün basıb saxlayın</string>
-    <string name="ig_feed_corner_radius">Paylaşımların yuvarlaq küncləri</string>
+    <string name="ig_feed_corner_radius">Yuvarlaq paylaşım küncləri</string>
     <string name="ig_disable_search_history">Axtarışları saxlama</string>
     <string name="ig_call_confirm">Zəngdən əvvəl soruş</string>
     <string name="ig_call_confirm_audio">Səsli zəng başlasın?</string>
     <string name="ig_call_confirm_video">Video zəng başlasın?</string>
     <string name="ig_call_confirm_call">Zəng et</string>
-    <string name="ig_confirm_refresh">Lentni yeniləmədən əvvəl soruş</string>
+    <string name="ig_confirm_refresh">Yeniləmədən əvvəl soruş</string>
     <string name="ig_confirm_refresh_question">Lent yenilənsin?</string>
     <string name="ig_confirm_refresh_action">Yenilə</string>
 </resources>

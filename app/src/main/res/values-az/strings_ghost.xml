@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_unsent_log_set_aside">Saxlanılmış siyahı oxuna bilmədi; kənara qoyuldu.</string>
+    <string name="ig_toast_marked_as_seen">Baxılmış kimi işarələndi</string>
+    <string name="ig_toast_channel_marked_as_seen">Kanal baxılmış kimi işarələndi</string>
+    <string name="ig_chat_export_banner">Söhbət ixracı</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="one">%1$d mesaj</item>
+        <item quantity="other">%1$d mesaj</item>
+    </plurals>
+    <string name="ig_chat_export_edited">redaktə olunub</string>
+    <string name="ig_chat_export_pinned">bərkidilib</string>
+    <string name="ig_chat_export_forwarded">yönləndirilib</string>
+    <string name="ig_chat_export_story_reply">Hekayəyə cavab</string>
+    <string name="ig_chat_export_reply_to">\@%1$s istifadəçisinə</string>
+    <string name="ig_chat_export_shared_story">Göndərilən hekayə</string>
+    <string name="ig_chat_export_shared_reel">Göndərilən reel</string>
+    <string name="ig_chat_export_shared_post">Göndərilən paylaşım</string>
+    <string name="ig_chat_export_shared_profile">Göndərilən profil</string>
+    <string name="ig_chat_export_mention_by_you">Onu hekayənizdə qeyd etdiniz</string>
+    <string name="ig_chat_export_mention_of_you">Sizi hekayəsində qeyd etdi</string>
+    <string name="ig_chat_export_unsupported">Söhbət ixracı bu Instagram versiyasında işləmir</string>
+    <string name="ig_bulk_unsend_not_ready">Söhbət hazır deyil, yenidən cəhd edin</string>
+    <plurals name="ig_bulk_unsend_result">
+        <item quantity="one">%2$d mesajdan %1$d geri götürüldü</item>
+        <item quantity="other">%2$d mesajdan %1$d geri götürüldü</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="one">%1$d mesaj geri götürülsün? Bunu geri qaytarmaq olmaz.</item>
+        <item quantity="other">%1$d mesaj geri götürülsün? Bunu geri qaytarmaq olmaz.</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="one">Geri götürülür: %1$d/%2$d</item>
+        <item quantity="other">Geri götürülür: %1$d/%2$d</item>
+    </plurals>
+    <string name="ig_jump_first_stop_menu">Köhnə mesajların yüklənməsini dayandır</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="one">Köhnə mesajlar yüklənir · %1$d yükləndi</item>
+        <item quantity="other">Köhnə mesajlar yüklənir · %1$d yükləndi</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">Köhnə mesajlar yüklənir</string>
+    <string name="ig_jump_first_stop">Dayandır</string>
+    <string name="ig_jump_first_reached">Bu söhbətin ilk mesajına çatıldı</string>
+    <string name="ig_jump_first_stopped_loading">Köhnə mesajların yüklənməsi dayandırıldı</string>
+    <string name="ig_lock_chat">Bu söhbəti kilidlə</string>
+    <string name="ig_lock_chat_unlock">Bu söhbətin kilidini aç</string>
+    <string name="ig_lock_chat_locked">Söhbət kilidləndi</string>
+    <string name="ig_lock_chat_locked_on">Söhbət kilidləndi. «Seçilən söhbətləri kilidlə» aktivdir.</string>
+    <string name="ig_lock_chat_unlocked">Söhbətin kilidi açıldı</string>
+    <string name="ig_lock_selected_menu_desc">Söhbətləri burada və ya söhbət menyusundakı «Bu söhbəti kilidlə» ilə seçin</string>
+    <string name="ig_ghost_messages_tab_label">Mesajlar, kölgə rejimi aktivdir</string>
+    <string name="ig_toast_ghost_on">Kölgə rejimi aktivdir: %1$s</string>
+    <string name="ig_toast_ghost_off">Kölgə rejimi deaktivdir: %1$s</string>
+    <string name="ig_quick_toggle_none_chosen">Hələ heç nə seçilməyib. Mesajlar ikonunu basıb saxlayanda nəyin açılıb-bağlanacağını seçin.</string>
+    <string name="ig_quick_toggle_name_seen">oxunma</string>
+    <string name="ig_quick_toggle_name_typing">yazma</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">ekran görüntüsü bildirişləri</string>
+    <string name="ig_quick_toggle_name_view_once">bir dəfəlik baxış</string>
+    <string name="ig_quick_toggle_name_stories">hekayələr</string>
+    <string name="ig_quick_toggle_name_live">canlı yayım</string>
+    <string name="ig_quick_toggle_name_disappearing">yox olan mesajlar</string>
+    <string name="ig_quick_toggle_name_permanent_view">daimi baxış</string>
+    <string name="ig_quick_toggle_name_screenshots">ekran görüntüləri</string>
+    <string name="ig_read_receipt_list_title">Oxunma bildirişi alan söhbətlər</string>
+    <string name="ig_read_receipt_list_add">Söhbət əlavə et</string>
+    <string name="ig_read_receipt_pick_title">Oxunma bildirişi alacaq söhbətləri seçin</string>
+    <string name="ig_read_receipt_list_empty">Hələ heç bir söhbət oxunma bildirişi almır. Söhbətləri burada əlavə edin və ya söhbəti açıb menyusundan «Bu söhbətdə oxunma bildirişi göndər» seçin.</string>
+    <string name="ig_read_receipt_list_seen_off">«Oxunma bildirişini gizlət» deaktivdir, ona görə hazırda bütün söhbətlər oxunma bildirişi alır.</string>
+</resources>

@@ -19,5 +19,26 @@
     <string name="home_shortcuts_empty">Sabitlenmiş kısayol yok. En sık kullandığınız 8 seçeneğe kadar sabitlemek için kaleme dokunun.</string>
     <string name="home_shortcuts_hint">Değişiklikler Instagram\'a anında gönderilir.</string>
     <string name="home_shortcuts_limit">En fazla %1$d kısayol sabitleyebilirsiniz</string>
-    <string name="home_shortcuts_locked_extreme">Aşırı Mod tarafından kilitlendi</string>
+    <string name="home_shortcuts_locked_extreme">Aşırı mod tarafından kilitlendi</string>
+    <string name="home_instagram_version">Instagram %1$s</string>
+    <string name="home_tested_version">Test edilen sürüm</string>
+    <string name="home_untested_version">Test edilen sürüm değil (%1$s): bazı özellikler çalışmayabilir</string>
+    <string name="home_status_worked">Instagram\'da çalıştı: %1$s</string>
+    <string name="home_status_not_confirmed">Henüz doğrulanmadı</string>
+    <string name="home_status_open_to_check">Kontrol için Instagram\'ı açın</string>
+    <string name="home_status_clone">Klon · canlı eşitleme yok</string>
+    <string name="home_instagram_app_info">Instagram uygulama bilgisi</string>
+    <string name="home_detected_versions">Tespit edilen sürümler</string>
+    <string name="home_detected_version_row">%1$s — v%2$s</string>
+    <string name="home_use_this">Bunu kullan</string>
+    <string name="home_variant_official">Resmi</string>
+    <string name="home_setup_step_1">Instagram\'ı LSPatch ile yamalayın veya Vector\'de InstaEclipse\'i Instagram için etkinleştirin.</string>
+    <string name="home_setup_step_2">Instagram\'ı zorla durdurup yeniden açın.</string>
+    <string name="home_setup_step_3">Instagram\'da alttaki Ara sekmesini basılı tutun.</string>
+    <string name="home_setup_open_instagram">Instagram\'ı aç</string>
+    <string name="home_setup_got_it">Anladım</string>
+    <string name="home_restarting">Yeniden başlatılıyor…</string>
+    <string name="home_shortcuts_needs_setting">Önce gerektirdiği bir ayarı açın</string>
+    <string name="home_restart_applies_on_open">Instagram açılınca uygulanır. Gerekirse yeniden başlatmayı sorar.</string>
+    <string name="home_tool_restart_sub">Instagram\'ı kapatıp yeniden açar</string>
 </resources>

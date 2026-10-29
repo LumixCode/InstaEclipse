@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">Lưu tạm tin đã xem</string>
+    <string name="ig_story_cache_duration">Thời gian lưu tạm</string>
+    <string name="ig_story_cache_hours">%1$d giờ</string>
+    <string name="ig_story_cache_picker_help">Giữ tin từ 1–720 giờ (tối đa 30 ngày). Tin cũ nhất có thể bị xóa sớm hơn nếu bộ nhớ đệm đạt 500 MB.</string>
+    <string name="ig_story_cache_picker_unit">giờ sau khi xem</string>
+    <string name="ig_story_cache_invalid">Nhập số từ 1 đến 720.</string>
+    <string name="ig_story_cache_empty_current">Chưa có tin nào được lưu tạm. Hãy bật lưu tạm rồi xem vài tin để giữ chúng ở đây trong thời gian bạn chọn.</string>
+</resources>

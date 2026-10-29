@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_manual_story_seen_action">Σήμανση ως προβεβλημένης</string>
+    <string name="ig_manual_story_seen_sent">Η προβολή της ιστορίας στάλθηκε</string>
+    <string name="ig_manual_story_seen_unavailable">Η προβολή της ιστορίας δεν στάλθηκε. Η αόρατη λειτουργία παραμένει ενεργή.</string>
+    <string name="ig_manual_story_seen_unsupported">Η σήμανση ως προβεβλημένης δεν υπάρχει σε αυτή την έκδοση του Instagram. Η αόρατη λειτουργία παραμένει ενεργή.</string>
+</resources>

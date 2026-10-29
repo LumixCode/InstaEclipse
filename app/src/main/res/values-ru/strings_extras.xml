@@ -2,15 +2,15 @@
 <resources>
     <string name="ig_dialog_clean_feed_following_only">Лента только подписок</string>
     <string name="ig_dialog_extras_no_swipe_camera">Отключить свайп к камере</string>
-    <string name="ig_dialog_extras_reels_auto_scroll">Опция автопрокрутки Reels</string>
+    <string name="ig_dialog_extras_reels_auto_scroll">Разблокировать автопрокрутку Reels</string>
     <string name="ig_dialog_extras_reels_lock_scroll">Заблокировать прокрутку Reels</string>
-    <string name="ig_dialog_extras_unlimited_accounts">Неограниченно аккаунтов</string>
+    <string name="ig_dialog_extras_unlimited_accounts">Разрешить больше 5 аккаунтов</string>
     <string name="ig_dialog_extras_airplane_mode">Режим полёта (быть не в сети)</string>
-    <string name="ig_dialog_extras_high_res_images">Загружать изображения в максимальном разрешении</string>
+    <string name="ig_dialog_extras_high_res_images">Загружать самые чёткие фото</string>
     <string name="ig_dialog_extras_hide_onboarding">Скрыть запросы контактов и геолокации</string>
     <string name="ig_dialog_extras_fix_notifications">Исправить старую регистрацию уведомлений на Android 12+</string>
-    <string name="ig_dialog_extras_hide_stories_tray">Скрыть только ленту историй</string>
-    <string name="ig_dialog_extras_share_domain">Свой домен для ссылок</string>
+    <string name="ig_dialog_extras_hide_stories_tray">Скрыть ленту историй</string>
+    <string name="ig_dialog_extras_share_domain">Домен для ссылок</string>
     <string name="ig_dialog_extras_share_domain_off">Выкл.</string>
     <string name="ig_dialog_extras_share_domain_hint">Заменяет instagram.com в копируемых и отправляемых ссылках, например для превью. Оставьте пустым, чтобы отключить.</string>
     <string name="ig_dialog_extras_share_domain_invalid">Неверный домен</string>

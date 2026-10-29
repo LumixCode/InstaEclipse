@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_hex_invalid">Nhập 6 hoặc 8 chữ số hex</string>
+    <string name="theme_custom_reset">Đã đặt lại màu tùy chỉnh</string>
+    <string name="theme_undo">Hoàn tác</string>
+    <string name="theme_preset_selected">Đã chọn</string>
+    <string name="theme_custom_dark_only">Màu tùy chỉnh dành cho chế độ tối. Hãy chuyển điện thoại sang chế độ tối để chỉnh sửa</string>
+    <string name="loc_picker_clear_search">Xóa tìm kiếm</string>
+    <string name="dev_config_open_instagram">Hãy mở Instagram trước, rồi thử lại</string>
+    <string name="dev_config_export_failed">Instagram không xuất được cấu hình</string>
+    <string name="ie_frame_previous">Khung hình trước</string>
+    <string name="ie_frame_next">Khung hình tiếp theo</string>
+    <string name="ie_frame_cleanup_pending_open">Chưa dọn xong tệp tạm. Hãy mở InstaEclipse để dọn lại.</string>
+    <string name="credits_on_github">%1$s trên GitHub</string>
+    <string name="credits_on_telegram">%1$s trên Telegram</string>
+    <string name="credits_on_linkedin">%1$s trên LinkedIn</string>
+    <string name="import_sending">Đang gửi tới Instagram…</string>
+    <string name="import_too_large">Tệp này quá lớn để nhập</string>
+    <string name="import_cant_receive">Instagram không nhận được tệp này</string>
+    <string name="import_no_reply">Instagram không xác nhận. Hãy mở Instagram (khởi động lại sau khi cập nhật InstaEclipse), rồi thử lại.</string>
+    <string name="loc_picker_spoof_off">Vị trí giả đang tắt, nên Instagram vẫn thấy vị trí thật của bạn.</string>
+    <string name="loc_picker_needs_restart">Instagram cần khởi động lại một lần để dùng vị trí này.</string>
+    <string name="loc_picker_turn_on">Bật</string>
+    <string name="loc_picker_only_save">Chỉ lưu</string>
+    <string name="loc_saved_spoof_off">Đã lưu. Hãy bật vị trí giả để dùng.</string>
+    <string name="loc_picker_no_connection">Không có kết nối</string>
+    <string name="loc_picker_search_unavailable">Hiện không thể tìm kiếm</string>
+</resources>

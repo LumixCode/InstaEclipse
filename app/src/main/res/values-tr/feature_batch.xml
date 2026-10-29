@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_feature_unsent_indicator">Geri alınan mesajları işaretle</string>
+    <string name="ig_feature_show_unsent_button">Sohbet menüsünde “Geri alınan mesajlar”ı göster</string>
+    <string name="ig_feature_following_follow_status">Sizi geri takip edenleri göster</string>
+    <string name="ig_feature_manual_story_seen">Hikayeleri elle görüldü işaretle</string>
+</resources>

@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="ig_story_links_hint">Kopyalamak için dokun · açmak için basılı tut</string>
+    <string name="ig_story_links_hint">Kopyalamak için dokunun · açmak için uzun basın</string>
     <string name="ig_toast_link_copied">Bağlantı kopyalandı</string>
     <string name="ig_toast_links_copied">Tüm bağlantılar kopyalandı</string>
-    <string name="ig_dialog_misc_story_links">Hikâye bağlantılarını kopyala</string>
+    <string name="ig_dialog_misc_story_links">Hikaye bağlantılarını kopyala</string>
+    <string name="ig_btn_copy_sticker_link">Çıkartma bağlantısını kopyala</string>
+    <string name="ig_sticker_links_title">Çıkartma bağlantıları</string>
 </resources>

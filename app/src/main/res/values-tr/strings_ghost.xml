@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_unsent_log_set_aside">Kayıtlı liste okunamadı; bir kenara ayrıldı.</string>
+    <string name="ig_toast_marked_as_seen">Görüldü olarak işaretlendi</string>
+    <string name="ig_toast_channel_marked_as_seen">Kanal görüldü olarak işaretlendi</string>
+    <string name="ig_chat_export_banner">Sohbet dışa aktarımı</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="one">%1$d mesaj</item>
+        <item quantity="other">%1$d mesaj</item>
+    </plurals>
+    <string name="ig_chat_export_edited">düzenlendi</string>
+    <string name="ig_chat_export_pinned">sabitlendi</string>
+    <string name="ig_chat_export_forwarded">iletildi</string>
+    <string name="ig_chat_export_story_reply">Hikaye yanıtı</string>
+    <string name="ig_chat_export_reply_to">\@%1$s hesabına</string>
+    <string name="ig_chat_export_shared_story">Paylaşılan hikaye</string>
+    <string name="ig_chat_export_shared_reel">Paylaşılan Reels videosu</string>
+    <string name="ig_chat_export_shared_post">Paylaşılan gönderi</string>
+    <string name="ig_chat_export_shared_profile">Paylaşılan profil</string>
+    <string name="ig_chat_export_mention_by_you">Hikayenizde ondan bahsettiniz</string>
+    <string name="ig_chat_export_mention_of_you">Hikayesinde sizden bahsetti</string>
+    <string name="ig_chat_export_unsupported">Sohbeti dışa aktarma bu Instagram sürümünde çalışmıyor</string>
+    <string name="ig_bulk_unsend_not_ready">Sohbet hazır değil, tekrar deneyin</string>
+    <plurals name="ig_bulk_unsend_result">
+        <item quantity="one">%2$d mesajdan %1$d tanesi geri alındı</item>
+        <item quantity="other">%2$d mesajdan %1$d tanesi geri alındı</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="one">%1$d mesajın gönderimi geri alınsın mı? Bu işlemden dönülemez.</item>
+        <item quantity="other">%1$d mesajın gönderimi geri alınsın mı? Bu işlemden dönülemez.</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="one">Geri alınıyor %1$d/%2$d</item>
+        <item quantity="other">Geri alınıyor %1$d/%2$d</item>
+    </plurals>
+    <string name="ig_jump_first_stop_menu">Eski mesajları yüklemeyi durdur</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="one">Eski mesajlar yükleniyor · %1$d yüklendi</item>
+        <item quantity="other">Eski mesajlar yükleniyor · %1$d yüklendi</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">Eski mesajlar yükleniyor</string>
+    <string name="ig_jump_first_stop">Durdur</string>
+    <string name="ig_jump_first_reached">Bu sohbetin ilk mesajına ulaşıldı</string>
+    <string name="ig_jump_first_stopped_loading">Eski mesajları yükleme durduruldu</string>
+    <string name="ig_lock_chat">Bu sohbeti kilitle</string>
+    <string name="ig_lock_chat_unlock">Bu sohbetin kilidini aç</string>
+    <string name="ig_lock_chat_locked">Sohbet kilitlendi</string>
+    <string name="ig_lock_chat_locked_on">Sohbet kilitlendi. “Seçili sohbetleri kilitle” artık açık.</string>
+    <string name="ig_lock_chat_unlocked">Sohbetin kilidi açıldı</string>
+    <string name="ig_lock_selected_menu_desc">Sohbetleri buradan veya bir sohbetin menüsündeki “Bu sohbeti kilitle” ile seçin</string>
+    <string name="ig_ghost_messages_tab_label">Mesajlar, hayalet modu açık</string>
+    <string name="ig_toast_ghost_on">Hayalet modu açık: %1$s</string>
+    <string name="ig_toast_ghost_off">Hayalet modu kapalı: %1$s</string>
+    <string name="ig_quick_toggle_none_chosen">Henüz hiçbir şey seçilmedi. Mesajlar simgesini basılı tutunca nelerin açılıp kapanacağını seçin.</string>
+    <string name="ig_quick_toggle_name_seen">görüldü</string>
+    <string name="ig_quick_toggle_name_typing">yazıyor</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">ekran görüntüsü uyarıları</string>
+    <string name="ig_quick_toggle_name_view_once">bir kez görüntüle</string>
+    <string name="ig_quick_toggle_name_stories">hikayeler</string>
+    <string name="ig_quick_toggle_name_live">canlı yayın</string>
+    <string name="ig_quick_toggle_name_disappearing">kaybolan mesajlar</string>
+    <string name="ig_quick_toggle_name_permanent_view">kalıcı görüntüleme</string>
+    <string name="ig_quick_toggle_name_screenshots">ekran görüntüleri</string>
+    <string name="ig_read_receipt_list_title">Okundu bilgisi alan sohbetler</string>
+    <string name="ig_read_receipt_list_add">Sohbet ekle</string>
+    <string name="ig_read_receipt_pick_title">Okundu bilgisi alacak sohbetleri seçin</string>
+    <string name="ig_read_receipt_list_empty">Henüz okundu bilgisi alan sohbet yok. Sohbetleri buradan ekleyin veya bir sohbeti açıp menüsünden “Bu sohbette okundu bilgisi gönder” seçeneğine dokunun.</string>
+    <string name="ig_read_receipt_list_seen_off">“Görüldü bilgisini gizle” kapalı, bu yüzden şu anda tüm sohbetler okundu bilgisi alıyor.</string>
+</resources>

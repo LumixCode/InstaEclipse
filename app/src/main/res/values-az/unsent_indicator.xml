@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">Geri götürülüb</string>
+    <string name="ig_unsent_clear_failed">Saxlanılmış mesajlar təmizlənə bilmədi. Bu söhbəti yenidən açıb təkrar cəhd edin.</string>
+    <string name="ig_unsent_clear_saved">Saxlanan geri götürülənləri təmizlə</string>
+    <string name="ig_unsent_clear_saved_confirm">Saxlanılan bu mesajlar zibil qutusundan və yerli söhbət tarixçəsindən silinsin? Bunu geri qaytarmaq olmaz.</string>
+    <string name="ig_unsent_cleared_saved">Saxlanan geri götürülənlər təmizləndi</string>
+</resources>

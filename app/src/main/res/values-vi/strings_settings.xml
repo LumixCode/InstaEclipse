@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_toast_restored_some_skipped">Đã khôi phục cài đặt, trừ %1$d mục không hợp lệ hoặc bị chế độ nghiêm ngặt khóa.</string>
+</resources>

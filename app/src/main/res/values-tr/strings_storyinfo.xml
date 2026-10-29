@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="ig_btn_story_info">Hikâye bilgisi</string>
+    <string name="ig_btn_story_info">Hikaye bilgisi</string>
     <string name="ig_btn_quiz_answer">Test cevabı</string>
     <string name="ig_btn_poll_results">Anket sonuçları</string>
-    <string name="ig_story_info_hint">Kopyalamak için bir satıra dokun</string>
+    <string name="ig_story_info_hint">Kopyalamak için satıra dokunun</string>
     <string name="ig_si_posted">Paylaşıldı</string>
     <string name="ig_si_expires">Bitiş</string>
     <string name="ig_si_edited">Düzenlendi</string>
@@ -12,7 +12,7 @@
     <string name="ig_si_location">Konum</string>
     <string name="ig_si_hashtags">Hashtag\'ler</string>
     <string name="ig_si_shared_from">Paylaşan</string>
-    <string name="ig_si_original_post">Orijinal gönderi (açmak için basılı tut)</string>
+    <string name="ig_si_original_post">Orijinal gönderi (açmak için uzun basın)</string>
     <string name="ig_si_posted_with">Paylaşılan uygulama</string>
     <string name="ig_si_alt_text">Alternatif metin</string>
     <string name="ig_si_size">Boyut</string>
@@ -21,15 +21,16 @@
     <string name="ig_si_countdown">Geri sayım</string>
     <string name="ig_si_question">Soru</string>
     <string name="ig_si_mention_request">Bahsetme isteği</string>
-    <string name="ig_si_none">Bu hikâyede ek bilgi yok.</string>
-    <string name="ig_si_your_answer">senin cevabın</string>
+    <string name="ig_si_none">Bu hikayede ek bilgi yok.</string>
+    <string name="ig_si_your_answer">cevabınız</string>
     <string name="ig_si_average">Ortalama</string>
     <string name="ig_si_copied">Kopyalandı</string>
-    <string name="ig_dialog_misc_story_info">Hikâye bilgisi, test ve anket cevapları</string>
-    <string name="ig_si_add_yours">Seninkini ekle</string>
+    <string name="ig_dialog_misc_story_info">Hikaye ayrıntılarını ve cevapları göster</string>
+    <string name="ig_si_add_yours">Sıra sende</string>
     <string name="ig_si_joined">katıldı</string>
-    <string name="ig_si_paid_partnership">Ücretli iş ortaklığı (açmak için basılı tut)</string>
-    <string name="ig_si_collaborators">Ortak çalışan (açmak için basılı tut)</string>
+    <string name="ig_si_paid_partnership">Ücretli iş ortaklığı (açmak için basılı tutun)</string>
+    <string name="ig_si_collaborators">Ortak çalışan (açmak için basılı tutun)</string>
     <string name="ig_btn_slider_results">Kaydırıcı sonuçları</string>
     <string name="ig_si_votes">oy</string>
+    <string name="ig_poll_your_vote">oyunuz</string>
 </resources>

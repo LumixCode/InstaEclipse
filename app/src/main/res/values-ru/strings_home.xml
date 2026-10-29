@@ -22,4 +22,25 @@
     <string name="home_shortcuts_hint">Изменения сразу применяются в Instagram.</string>
     <string name="home_shortcuts_limit">Можно закрепить не более %1$d ярлыков</string>
     <string name="home_shortcuts_locked_extreme">Заблокировано экстремальным режимом</string>
+    <string name="home_instagram_version">Instagram %1$s</string>
+    <string name="home_tested_version">Проверенная версия</string>
+    <string name="home_untested_version">Версия отличается от проверенной (%1$s): некоторые функции могут не работать</string>
+    <string name="home_status_worked">Работало в Instagram: %1$s</string>
+    <string name="home_status_not_confirmed">Ещё не подтверждено</string>
+    <string name="home_status_open_to_check">Откройте Instagram для проверки</string>
+    <string name="home_status_clone">Клон · без синхронизации</string>
+    <string name="home_instagram_app_info">О приложении Instagram</string>
+    <string name="home_detected_versions">Найденные версии</string>
+    <string name="home_detected_version_row">%1$s — v%2$s</string>
+    <string name="home_use_this">Использовать</string>
+    <string name="home_variant_official">Официальный</string>
+    <string name="home_setup_step_1">Пропатчите Instagram через LSPatch или включите для него InstaEclipse в Vector.</string>
+    <string name="home_setup_step_2">Остановите и снова откройте Instagram.</string>
+    <string name="home_setup_step_3">В Instagram нажмите и удерживайте вкладку «Поиск» внизу.</string>
+    <string name="home_setup_open_instagram">Открыть Instagram</string>
+    <string name="home_setup_got_it">Понятно</string>
+    <string name="home_restarting">Перезапуск…</string>
+    <string name="home_shortcuts_needs_setting">Сначала включите нужную настройку</string>
+    <string name="home_restart_applies_on_open">Применится при открытии Instagram. При необходимости он попросит перезапуск.</string>
+    <string name="home_tool_restart_sub">Закрывает и снова открывает Instagram</string>
 </resources>

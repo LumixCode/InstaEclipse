@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_unsent_log_set_aside">Không đọc được danh sách đã lưu; danh sách đã được để riêng.</string>
+    <string name="ig_toast_marked_as_seen">Đã đánh dấu đã xem</string>
+    <string name="ig_toast_channel_marked_as_seen">Đã đánh dấu kênh là đã xem</string>
+    <string name="ig_chat_export_banner">Bản xuất đoạn chat</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="other">%1$d tin nhắn</item>
+    </plurals>
+    <string name="ig_chat_export_edited">đã chỉnh sửa</string>
+    <string name="ig_chat_export_pinned">đã ghim</string>
+    <string name="ig_chat_export_forwarded">đã chuyển tiếp</string>
+    <string name="ig_chat_export_story_reply">Trả lời tin</string>
+    <string name="ig_chat_export_reply_to">tới @%1$s</string>
+    <string name="ig_chat_export_shared_story">Tin được chia sẻ</string>
+    <string name="ig_chat_export_shared_reel">Reel được chia sẻ</string>
+    <string name="ig_chat_export_shared_post">Bài viết được chia sẻ</string>
+    <string name="ig_chat_export_shared_profile">Trang cá nhân được chia sẻ</string>
+    <string name="ig_chat_export_mention_by_you">Bạn đã nhắc đến họ trong tin của bạn</string>
+    <string name="ig_chat_export_mention_of_you">Đã nhắc đến bạn trong tin của họ</string>
+    <string name="ig_chat_export_unsupported">Xuất đoạn chat không hoạt động trên phiên bản Instagram này</string>
+    <string name="ig_bulk_unsend_not_ready">Đoạn chat chưa sẵn sàng, hãy thử lại</string>
+    <plurals name="ig_bulk_unsend_result">
+        <item quantity="other">Đã thu hồi %1$d / %2$d tin nhắn</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="other">Thu hồi %1$d tin nhắn? Không thể hoàn tác.</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="other">Đang thu hồi %1$d/%2$d</item>
+    </plurals>
+    <string name="ig_jump_first_stop_menu">Dừng tải tin nhắn cũ hơn</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="other">Đang tải tin nhắn cũ hơn · đã tải %1$d</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">Đang tải tin nhắn cũ hơn</string>
+    <string name="ig_jump_first_stop">Dừng</string>
+    <string name="ig_jump_first_reached">Đã tới tin nhắn đầu tiên của đoạn chat này</string>
+    <string name="ig_jump_first_stopped_loading">Đã dừng tải tin nhắn cũ hơn</string>
+    <string name="ig_lock_chat">Khóa đoạn chat này</string>
+    <string name="ig_lock_chat_unlock">Mở khóa đoạn chat này</string>
+    <string name="ig_lock_chat_locked">Đã khóa đoạn chat</string>
+    <string name="ig_lock_chat_locked_on">Đã khóa đoạn chat. “Khóa đoạn chat đã chọn” hiện đã bật.</string>
+    <string name="ig_lock_chat_unlocked">Đã mở khóa đoạn chat</string>
+    <string name="ig_lock_selected_menu_desc">Chọn đoạn chat ở đây hoặc bằng “Khóa đoạn chat này” trong menu của đoạn chat</string>
+    <string name="ig_ghost_messages_tab_label">Tin nhắn, chế độ ẩn danh đang bật</string>
+    <string name="ig_toast_ghost_on">Đã bật chế độ ẩn danh: %1$s</string>
+    <string name="ig_toast_ghost_off">Đã tắt chế độ ẩn danh: %1$s</string>
+    <string name="ig_quick_toggle_none_chosen">Chưa chọn gì. Hãy chọn những mục sẽ bật/tắt khi giữ biểu tượng Tin nhắn.</string>
+    <string name="ig_quick_toggle_name_seen">đã xem</string>
+    <string name="ig_quick_toggle_name_typing">đang soạn tin</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">cảnh báo chụp màn hình</string>
+    <string name="ig_quick_toggle_name_view_once">xem 1 lần</string>
+    <string name="ig_quick_toggle_name_stories">tin</string>
+    <string name="ig_quick_toggle_name_live">trực tiếp</string>
+    <string name="ig_quick_toggle_name_disappearing">tin nhắn tự biến mất</string>
+    <string name="ig_quick_toggle_name_permanent_view">xem vĩnh viễn</string>
+    <string name="ig_quick_toggle_name_screenshots">chụp màn hình</string>
+    <string name="ig_read_receipt_list_title">Đoạn chat nhận xác nhận đã đọc</string>
+    <string name="ig_read_receipt_list_add">Thêm đoạn chat</string>
+    <string name="ig_read_receipt_pick_title">Chọn đoạn chat nhận xác nhận đã đọc</string>
+    <string name="ig_read_receipt_list_empty">Chưa có đoạn chat nào nhận xác nhận đã đọc. Hãy thêm ở đây, hoặc mở một đoạn chat và chọn “Gửi xác nhận đã đọc trong đoạn chat này” trong menu của nó.</string>
+    <string name="ig_read_receipt_list_seen_off">“Ẩn Đã xem trong đoạn chat” đang tắt, nên hiện giờ mọi đoạn chat đều nhận xác nhận đã đọc.</string>
+</resources>

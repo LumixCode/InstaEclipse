@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_hex_invalid">Εισαγάγετε 6 ή 8 δεκαεξαδικά ψηφία</string>
+    <string name="theme_custom_reset">Έγινε επαναφορά χρωμάτων</string>
+    <string name="theme_undo">Αναίρεση</string>
+    <string name="theme_preset_selected">Επιλεγμένο</string>
+    <string name="theme_custom_dark_only">Τα προσαρμοσμένα χρώματα είναι για τη σκοτεινή λειτουργία. Βάλτε το τηλέφωνο σε σκοτεινή λειτουργία για επεξεργασία</string>
+    <string name="loc_picker_clear_search">Εκκαθάριση αναζήτησης</string>
+    <string name="dev_config_open_instagram">Ανοίξτε πρώτα το Instagram και δοκιμάστε ξανά</string>
+    <string name="dev_config_export_failed">Αποτυχία εξαγωγής ρυθμίσεων από το Instagram</string>
+    <string name="ie_frame_previous">Προηγούμενο καρέ</string>
+    <string name="ie_frame_next">Επόμενο καρέ</string>
+    <string name="ie_frame_cleanup_pending_open">Ο καθαρισμός προσωρινών αρχείων δεν ολοκληρώθηκε. Ανοίξτε το InstaEclipse για νέα προσπάθεια.</string>
+    <string name="credits_on_github">%1$s στο GitHub</string>
+    <string name="credits_on_telegram">%1$s στο Telegram</string>
+    <string name="credits_on_linkedin">%1$s στο LinkedIn</string>
+    <string name="import_sending">Αποστολή στο Instagram…</string>
+    <string name="import_too_large">Το αρχείο είναι πολύ μεγάλο για εισαγωγή</string>
+    <string name="import_cant_receive">Το Instagram δεν μπορεί να λάβει αυτό το αρχείο</string>
+    <string name="import_no_reply">Το Instagram δεν επιβεβαίωσε. Ανοίξτε το Instagram (επανεκκινήστε το μετά από ενημέρωση του InstaEclipse) και δοκιμάστε ξανά.</string>
+    <string name="loc_picker_spoof_off">Η ψεύτικη τοποθεσία είναι ανενεργή, οπότε το Instagram βλέπει ακόμα την πραγματική σας τοποθεσία.</string>
+    <string name="loc_picker_needs_restart">Χρειάζεται μία επανεκκίνηση του Instagram για χρήση.</string>
+    <string name="loc_picker_turn_on">Ενεργοποίηση</string>
+    <string name="loc_picker_only_save">Μόνο αποθήκευση</string>
+    <string name="loc_saved_spoof_off">Αποθηκεύτηκε. Ενεργοποιήστε την ψεύτικη τοποθεσία για χρήση.</string>
+    <string name="loc_picker_no_connection">Χωρίς σύνδεση</string>
+    <string name="loc_picker_search_unavailable">Η αναζήτηση δεν είναι διαθέσιμη τώρα</string>
+</resources>

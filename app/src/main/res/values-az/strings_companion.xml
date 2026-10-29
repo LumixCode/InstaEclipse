@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_hex_invalid">6 və ya 8 hex rəqəm daxil edin</string>
+    <string name="theme_custom_reset">Xüsusi rənglər sıfırlandı</string>
+    <string name="theme_undo">Geri al</string>
+    <string name="theme_preset_selected">Seçilib</string>
+    <string name="theme_custom_dark_only">Xüsusi rənglər qaranlıq rejim üçündür. Onları dəyişmək üçün telefonu qaranlıq rejimə keçirin</string>
+    <string name="loc_picker_clear_search">Axtarışı təmizlə</string>
+    <string name="dev_config_open_instagram">Əvvəlcə Instagram-ı açın, sonra yenidən cəhd edin</string>
+    <string name="dev_config_export_failed">Instagram konfiqurasiyasını ixrac edə bilmədi</string>
+    <string name="ie_frame_previous">Əvvəlki kadr</string>
+    <string name="ie_frame_next">Növbəti kadr</string>
+    <string name="ie_frame_cleanup_pending_open">Müvəqqəti faylların təmizlənməsi bitməyib. Yenidən təmizləmək üçün InstaEclipse-i açın.</string>
+    <string name="credits_on_github">%1$s GitHub-da</string>
+    <string name="credits_on_telegram">%1$s Telegram-da</string>
+    <string name="credits_on_linkedin">%1$s LinkedIn-də</string>
+    <string name="import_sending">Instagram-a göndərilir…</string>
+    <string name="import_too_large">Bu fayl idxal üçün çox böyükdür</string>
+    <string name="import_cant_receive">Instagram bu faylı qəbul edə bilmir</string>
+    <string name="import_no_reply">Instagram təsdiq etmədi. Instagram-ı açın (InstaEclipse yeniləməsindən sonra onu yenidən başladın), sonra yenidən cəhd edin.</string>
+    <string name="loc_picker_spoof_off">Saxta məkan deaktivdir, ona görə Instagram hələ də real məkanınızı görür.</string>
+    <string name="loc_picker_needs_restart">Bunun üçün Instagram bir dəfə yenidən başlamalıdır.</string>
+    <string name="loc_picker_turn_on">Aktiv et</string>
+    <string name="loc_picker_only_save">Yalnız saxla</string>
+    <string name="loc_saved_spoof_off">Saxlanıldı. İstifadə etmək üçün saxta məkanı aktiv edin.</string>
+    <string name="loc_picker_no_connection">Bağlantı yoxdur</string>
+    <string name="loc_picker_search_unavailable">Axtarış hazırda mövcud deyil</string>
+</resources>

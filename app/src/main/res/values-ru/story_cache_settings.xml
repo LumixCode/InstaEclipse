@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">Кэш просмотренных историй</string>
+    <string name="ig_story_cache_duration">Срок хранения</string>
+    <string name="ig_story_cache_hours">%1$d ч</string>
+    <string name="ig_story_cache_picker_help">Хранить истории от 1 до 720 часов (до 30 дней). Самые старые истории могут удалиться раньше, если кэш достигнет 500 МБ.</string>
+    <string name="ig_story_cache_picker_unit">ч после просмотра</string>
+    <string name="ig_story_cache_invalid">Введите число от 1 до 720.</string>
+    <string name="ig_story_cache_empty_current">Кэшированных историй пока нет. Включите кэширование и посмотрите истории — они сохранятся здесь на выбранный срок.</string>
+</resources>

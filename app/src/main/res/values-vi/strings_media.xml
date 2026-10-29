@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_dl_opened_in_instagram">Đã mở trong Instagram. Hãy lưu mục này từ menu của nó.</string>
+    <string name="ie_companion_unreachable">Ứng dụng InstaEclipse không phản hồi. Hãy mở ứng dụng một lần, rồi thử lại.</string>
+    <string name="ie_companion_timeout">Ứng dụng InstaEclipse phản hồi quá lâu. Hãy thử lại.</string>
+    <string name="ie_companion_busy">Ứng dụng InstaEclipse đang bận. Hãy thử lại sau giây lát.</string>
+    <string name="ie_companion_denied">Ứng dụng InstaEclipse đã từ chối yêu cầu này. Hãy cập nhật cả hai ứng dụng lên cùng phiên bản.</string>
+    <string name="ie_companion_failed">Ứng dụng InstaEclipse không làm được việc này. Hãy thử lại.</string>
+    <string name="ie_companion_invalid">Không thể gửi yêu cầu này tới ứng dụng InstaEclipse.</string>
+    <string name="ie_companion_not_visible">Hãy mở mục này từ màn hình bạn đang xem.</string>
+    <string name="ie_companion_launch_failed">Không mở được ứng dụng InstaEclipse. Hãy thử lại từ màn hình này.</string>
+    <string name="ie_download_saved_quality">Đã lưu: %1$s (%2$s)</string>
+    <string name="ie_download_saved_lower">Đã lưu ở chất lượng thấp hơn: %1$s (%2$s)</string>
+    <string name="ie_download_reason_expired">Liên kết đã hết hạn. Hãy mở lại bài viết và thử lại.</string>
+    <string name="ie_download_reason_offline">Lỗi kết nối. Hãy kiểm tra internet và thử lại.</string>
+    <string name="ie_download_reason_server">Máy chủ Instagram không gửi tệp. Hãy thử lại sau.</string>
+    <string name="ie_download_reason_storage">Điện thoại không đủ dung lượng trống.</string>
+    <string name="ie_download_reason_too_large">Tệp quá lớn để lưu.</string>
+    <string name="ie_download_reason_no_media">Không có gì để tải ở đây.</string>
+    <string name="ie_download_reason_ceiling">Không có bản nào trong giới hạn chất lượng của bạn.</string>
+    <string name="ie_download_reason_unplayable">Tệp không vượt qua bước kiểm tra phát.</string>
+    <string name="ie_download_reason_blocked">Đã chặn: đây không phải tệp phương tiện của Instagram.</string>
+    <string name="ie_download_reason_generic">Đã xảy ra lỗi. Hãy thử lại.</string>
+    <string name="ie_frame_reason_memory">Không đủ bộ nhớ cho khung hình này.</string>
+    <string name="ie_frame_reason_write">Không ghi được PNG. Hãy kiểm tra dung lượng trống.</string>
+    <string name="ie_copy_media_link">Sao chép liên kết tệp</string>
+    <string name="ig_profile_pic_load_failed">Không tải được ảnh này</string>
+    <string name="ie_download_starting">Đang bắt đầu…</string>
+    <string name="ie_download_verifying">Đang kiểm tra tệp…</string>
+    <string name="ie_download_saving">Đang lưu…</string>
+    <string name="ie_download_extracting_audio">Đang tách âm thanh…</string>
+    <string name="ie_download_reason_invalid">Yêu cầu tải xuống này bị hỏng. Hãy thử lại.</string>
+    <plurals name="ie_download_waiting">
+        <item quantity="other">%1$s · %2$d đang chờ</item>
+    </plurals>
+    <plurals name="ie_download_files_saved">
+        <item quantity="other">Đã lưu %1$d tệp</item>
+    </plurals>
+    <plurals name="ie_download_files_failed">
+        <item quantity="other">%1$d tệp lỗi</item>
+    </plurals>
+    <string name="ie_download_saved_and_failed">%1$s, %2$s</string>
+    <string name="ie_export_saving">Đang lưu bản xuất đoạn chat…</string>
+    <string name="ie_export_saving_media">Đang lưu phương tiện %1$d / %2$d</string>
+    <string name="ie_export_failed">Không lưu được bản xuất đoạn chat</string>
+    <string name="ie_download_cover">Lưu ảnh bìa</string>
+    <string name="ig_media_info_type">Loại</string>
+    <string name="ig_media_info_video">Video</string>
+    <string name="ig_media_info_carousel">Băng chuyền</string>
+    <string name="ig_media_info_photo">Ảnh</string>
+    <string name="ig_media_info_slide">%1$s (%2$d/%3$d)</string>
+    <string name="ig_media_info_original">Kích thước gốc</string>
+    <string name="ig_media_info_size_value">%1$d × %2$d</string>
+    <string name="ig_media_info_duration">Thời lượng</string>
+    <string name="ig_media_info_seconds">%1$.1f giây</string>
+    <string name="ig_media_info_codec">Codec</string>
+    <string name="ig_media_info_audio">Âm thanh</string>
+    <string name="ig_media_info_yes">Có</string>
+    <string name="ig_media_info_no">Không</string>
+    <string name="ig_media_info_qualities">Chất lượng</string>
+    <string name="ig_media_info_file_size">Dung lượng tệp</string>
+    <string name="ig_media_info_megabytes">%1$.2f MB</string>
+    <string name="ig_media_info_error">Không đọc được bài viết này</string>
+    <string name="ig_highlight_failed">Không tải được tin nổi bật này. Hãy thử lại.</string>
+    <string name="ig_instant_already_saved">Đã lưu rồi</string>
+    <plurals name="ie_download_batch_done">
+        <item quantity="other">Đã lưu %1$d / %2$d</item>
+    </plurals>
+    <string name="ig_playback_speed_normal">Bình thường</string>
+    <string name="ig_playback_speed_stays">%1$s được giữ cho đến khi bạn chọn Bình thường</string>
+</resources>

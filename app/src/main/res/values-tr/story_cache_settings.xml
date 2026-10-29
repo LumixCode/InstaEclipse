@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">İzlenen hikayeleri sakla</string>
+    <string name="ig_story_cache_duration">Önbellek süresi</string>
+    <string name="ig_story_cache_hours">%1$d sa</string>
+    <string name="ig_story_cache_picker_help">Hikayeleri 1–720 saat (en fazla 30 gün) saklayın. Önbellek 500 MB\'a ulaşırsa en eski hikayeler daha erken silinebilir.</string>
+    <string name="ig_story_cache_picker_unit">saat, izlemeden itibaren</string>
+    <string name="ig_story_cache_invalid">1 ile 720 arasında bir sayı girin.</string>
+    <string name="ig_story_cache_empty_current">Henüz önbellekte hikaye yok. Önbelleğe almayı açın, ardından hikaye izleyin; seçtiğiniz süre boyunca burada saklanırlar.</string>
+</resources>

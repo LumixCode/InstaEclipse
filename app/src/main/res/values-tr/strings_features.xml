@@ -5,4 +5,40 @@
     <string name="feat_search_no_results">Eşleşen özellik yok</string>
     <string name="feat_count_on">%1$d açık</string>
     <string name="feat_count_off">Kapalı</string>
+    <string name="feat_cache_size_limit">Önbellek boyutu sınırı</string>
+    <string name="feat_tab_move_up">Yukarı taşı: %1$s</string>
+    <string name="feat_tab_move_down">Aşağı taşı: %1$s</string>
+    <string name="feat_tab_hidden">%1$s · Gizli</string>
+    <plurals name="feat_restore_confirm">
+        <item quantity="one">Bu yedekten %d ayar geri yüklensin mi? Dosyadaki ayarlar mevcut ayarların yerine geçer; kilitler yalnızca etkinleştirilir.</item>
+        <item quantity="other">Bu yedekten %d ayar geri yüklensin mi? Dosyadaki ayarlar mevcut ayarların yerine geçer; kilitler yalnızca etkinleştirilir.</item>
+    </plurals>
+    <plurals name="feat_restore_skipped">
+        <item quantity="one">%d kayıt atlanır.</item>
+        <item quantity="other">%d kayıt atlanır.</item>
+    </plurals>
+    <string name="feat_restore_needs_passcode">Kilitler için Instagram\'da şifre gerekir.</string>
+    <string name="feat_restore_action">Geri yükle</string>
+    <string name="feat_restore_invalid_file">geçerli bir yedek dosyası değil</string>
+    <string name="feat_backup_unreadable">ayarlar okunamadı</string>
+    <string name="feat_notification_rationale_title">İndirme ilerlemesi gösterilsin mi?</string>
+    <string name="feat_notification_rationale_message">InstaEclipse, indirmelerinizi kaydederken bir bildirim gösterir.</string>
+    <string name="feat_storage_rationale_title">Kaydetme izni verilsin mi?</string>
+    <string name="feat_storage_rationale_message">Bu Android sürümünde InstaEclipse\'in indirmelerinizi kaydetmek için depolama erişimine ihtiyacı var.</string>
+    <string name="feat_permission_not_now">Şimdi değil</string>
+    <string name="feat_use_default_folder">Varsayılan klasörü kullan</string>
+    <string name="feat_download_folder_default">%1$s (varsayılan)</string>
+    <string name="feat_reset_folder_confirm">Varsayılan klasör kullanılsın mı? Yeni indirmeler: %1$s.</string>
+    <string name="feat_search_try_another">Başka bir kelime deneyin</string>
+    <string name="feat_reason_best_only">Yalnızca En iyi kalitede</string>
+    <string name="feat_reason_overridden">“%1$s” açıkken kapalı</string>
+    <string name="feat_requires_lock">Önce bir kilidi etkinleştirin</string>
+    <string name="feat_requires_above">Önce yukarıdaki seçeneklerden birini açın</string>
+    <string name="feat_corner_small">Küçük</string>
+    <string name="feat_corner_medium">Orta</string>
+    <string name="feat_corner_large">Büyük</string>
+    <string name="feat_corner_extra_large">Çok büyük</string>
+    <string name="feat_corner_round">Yuvarlak</string>
+    <string name="feat_lock_needs_passcode">Açık · Instagram\'da şifre gerekiyor</string>
+    <string name="feat_restart_waiting">Instagram\'ın yeniden başlatılması bekleniyor</string>
 </resources>

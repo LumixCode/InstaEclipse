@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_comment_search_maybe_more">%1$d şərh yükləndi · daha çox ola bilər</string>
+    <string name="ig_toast_story_unavailable">Hekayə təfərrüatları mövcud deyil</string>
+    <string name="ig_toast_like_not_sent">Bəyənmə göndərilmədi</string>
+    <string name="ig_toast_user_follows_you">\@%1$s sizi izləyir</string>
+    <string name="ig_toast_user_not_follows_you">\@%1$s sizi izləmir</string>
+    <string name="ig_pa_remove_confirm">\@%1$s izləmə siyahısından silinsin? Onun %2$d saxlanılmış analizi və dəyişiklik tarixçəsi silinəcək. Bunu geri qaytarmaq olmaz.</string>
+    <string name="ig_pa_remove_confirm_action">Sil</string>
+    <string name="ig_pa_save_failed">Bu analiz saxlanıla bilmədi, ona görə növbəti analiz son saxlanılmış analizlə müqayisə ediləcək.</string>
+    <string name="ig_follow_tools">Siyahı alətləri</string>
+    <string name="ig_follow_tools_title">\@%1$s · %2$s: %3$s</string>
+    <string name="ig_follow_load_stop">Dayandır</string>
+    <string name="ig_follow_export_failed">İxrac saxlanıla bilmədi: %1$s</string>
+    <string name="ig_pa_check_mine">İzləyicilərimi yoxla</string>
+    <string name="ig_pa_watch_row_followers">%1$d izləyici · %2$s</string>
+    <string name="ig_pa_watch_full">İzləmə siyahısı doludur: ən köhnə profil silindi</string>
+    <plurals name="ig_list_more">
+        <item quantity="one">+%1$d digər · Dəyişiklik tarixçəsində</item>
+        <item quantity="other">+%1$d digər · Dəyişiklik tarixçəsində</item>
+    </plurals>
+    <string name="ig_comment_search_clear">Axtarışı təmizlə</string>
+    <string name="ig_comment_export_none">Hələ şərh yüklənməyib</string>
+    <string name="ig_comment_export_title">Şərhlər</string>
+    <string name="ig_comment_export_on_post">Paylaşıma şərhlər (@%1$s)</string>
+    <string name="ig_comment_export_banner">Şərh ixracı</string>
+    <string name="ig_comment_export_exported">İxrac edildi: %1$s</string>
+    <string name="ig_comment_export_loaded_only">Yalnız tətbiqdə yüklənmiş şərhlər daxildir</string>
+    <string name="ig_comment_media_gif">GIF</string>
+    <string name="ig_comment_media_image">Şəkil</string>
+    <string name="ig_comment_media_unavailable">%1$s (əlçatmaz)</string>
+    <plurals name="ig_comment_export_comments">
+        <item quantity="one">%1$d şərh</item>
+        <item quantity="other">%1$d şərh</item>
+    </plurals>
+    <plurals name="ig_comment_export_replies">
+        <item quantity="one">%1$d cavab</item>
+        <item quantity="other">%1$d cavab</item>
+    </plurals>
+    <string name="ig_confirm_follow_title_v2">\@%1$s izlənsin?</string>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">Cache ιστοριών που είδατε</string>
+    <string name="ig_story_cache_duration">Διάρκεια cache</string>
+    <string name="ig_story_cache_hours">%1$d ώρ.</string>
+    <string name="ig_story_cache_picker_help">Διατήρηση ιστοριών για 1–720 ώρες (έως 30 ημέρες). Οι παλαιότερες μπορεί να διαγραφούν νωρίτερα αν η cache φτάσει τα 500 MB.</string>
+    <string name="ig_story_cache_picker_unit">ώρες μετά την προβολή</string>
+    <string name="ig_story_cache_invalid">Εισαγάγετε αριθμό από 1 έως 720.</string>
+    <string name="ig_story_cache_empty_current">Δεν υπάρχουν ακόμα ιστορίες στην cache. Ενεργοποιήστε την cache και δείτε μερικές ιστορίες για να μείνουν εδώ όσο διάστημα επιλέξατε.</string>
+</resources>

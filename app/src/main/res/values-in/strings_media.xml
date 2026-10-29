@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_dl_opened_in_instagram">Dibuka di Instagram. Simpan dari menunya.</string>
+    <string name="ie_companion_unreachable">Aplikasi InstaEclipse tidak merespons. Buka sekali, lalu coba lagi.</string>
+    <string name="ie_companion_timeout">Aplikasi InstaEclipse terlalu lama merespons. Coba lagi.</string>
+    <string name="ie_companion_busy">Aplikasi InstaEclipse sedang sibuk. Coba lagi sebentar lagi.</string>
+    <string name="ie_companion_denied">Aplikasi InstaEclipse menolak permintaan ini. Perbarui kedua aplikasi ke versi yang sama.</string>
+    <string name="ie_companion_failed">Aplikasi InstaEclipse tidak dapat melakukan ini. Coba lagi.</string>
+    <string name="ie_companion_invalid">Permintaan ini tidak dapat dikirim ke aplikasi InstaEclipse.</string>
+    <string name="ie_companion_not_visible">Buka ini dari layar yang sedang Anda lihat.</string>
+    <string name="ie_companion_launch_failed">Aplikasi InstaEclipse tidak dapat dibuka. Coba lagi dari layar ini.</string>
+    <string name="ie_download_saved_quality">Disimpan: %1$s (%2$s)</string>
+    <string name="ie_download_saved_lower">Disimpan dalam kualitas lebih rendah: %1$s (%2$s)</string>
+    <string name="ie_download_reason_expired">Tautan kedaluwarsa. Buka postingan lagi lalu coba lagi.</string>
+    <string name="ie_download_reason_offline">Masalah koneksi. Periksa internet Anda lalu coba lagi.</string>
+    <string name="ie_download_reason_server">Server Instagram tidak mengirim file. Coba lagi nanti.</string>
+    <string name="ie_download_reason_storage">Ruang kosong di ponsel ini tidak cukup.</string>
+    <string name="ie_download_reason_too_large">File terlalu besar untuk disimpan.</string>
+    <string name="ie_download_reason_no_media">Tidak ada yang bisa diunduh di sini.</string>
+    <string name="ie_download_reason_ceiling">Tidak ada versi yang sesuai batas kualitas Anda.</string>
+    <string name="ie_download_reason_unplayable">File tidak lolos pemeriksaan pemutaran.</string>
+    <string name="ie_download_reason_blocked">Diblokir: ini bukan file media Instagram.</string>
+    <string name="ie_download_reason_generic">Terjadi kesalahan. Coba lagi.</string>
+    <string name="ie_frame_reason_memory">Memori tidak cukup untuk bingkai ini.</string>
+    <string name="ie_frame_reason_write">PNG tidak dapat ditulis. Periksa ruang kosong Anda.</string>
+    <string name="ie_copy_media_link">Salin tautan media</string>
+    <string name="ig_profile_pic_load_failed">Tidak dapat memuat gambar ini</string>
+    <string name="ie_download_starting">Memulai…</string>
+    <string name="ie_download_verifying">Memeriksa file…</string>
+    <string name="ie_download_saving">Menyimpan…</string>
+    <string name="ie_download_extracting_audio">Mengekstrak audio…</string>
+    <string name="ie_download_reason_invalid">Permintaan unduhan ini rusak. Coba lagi.</string>
+    <plurals name="ie_download_waiting">
+        <item quantity="other">%1$s · %2$d menunggu</item>
+    </plurals>
+    <plurals name="ie_download_files_saved">
+        <item quantity="other">%1$d file disimpan</item>
+    </plurals>
+    <plurals name="ie_download_files_failed">
+        <item quantity="other">%1$d gagal</item>
+    </plurals>
+    <string name="ie_download_saved_and_failed">%1$s, %2$s</string>
+    <string name="ie_export_saving">Menyimpan ekspor obrolan…</string>
+    <string name="ie_export_saving_media">Menyimpan media %1$d dari %2$d</string>
+    <string name="ie_export_failed">Tidak dapat menyimpan ekspor obrolan</string>
+    <string name="ie_download_cover">Simpan gambar sampul</string>
+    <string name="ig_media_info_type">Jenis</string>
+    <string name="ig_media_info_video">Video</string>
+    <string name="ig_media_info_carousel">Carousel</string>
+    <string name="ig_media_info_photo">Foto</string>
+    <string name="ig_media_info_slide">%1$s (%2$d/%3$d)</string>
+    <string name="ig_media_info_original">Ukuran asli</string>
+    <string name="ig_media_info_size_value">%1$d × %2$d</string>
+    <string name="ig_media_info_duration">Durasi</string>
+    <string name="ig_media_info_seconds">%1$.1f dtk</string>
+    <string name="ig_media_info_codec">Codec</string>
+    <string name="ig_media_info_audio">Audio</string>
+    <string name="ig_media_info_yes">Ya</string>
+    <string name="ig_media_info_no">Tidak</string>
+    <string name="ig_media_info_qualities">Kualitas</string>
+    <string name="ig_media_info_file_size">Ukuran file</string>
+    <string name="ig_media_info_megabytes">%1$.2f MB</string>
+    <string name="ig_media_info_error">Tidak dapat membaca postingan ini</string>
+    <string name="ig_highlight_failed">Tidak dapat mengunduh Sorotan ini. Coba lagi.</string>
+    <string name="ig_instant_already_saved">Sudah disimpan</string>
+    <plurals name="ie_download_batch_done">
+        <item quantity="other">%1$d dari %2$d disimpan</item>
+    </plurals>
+    <string name="ig_playback_speed_normal">Normal</string>
+    <string name="ig_playback_speed_stays">%1$s tetap aktif sampai Anda memilih Normal</string>
+</resources>

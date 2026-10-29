@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ig_fancy_font_names">
+        <item>Обычный</item>
+        <item>Жирный</item>
+        <item>Курсив</item>
+        <item>Жирный курсив</item>
+        <item>Жирный без засечек</item>
+        <item>Курсив без засечек</item>
+        <item>Рукописный</item>
+        <item>Фрактура</item>
+        <item>Контурный</item>
+        <item>Моноширинный</item>
+        <item>В кружках</item>
+        <item>Полноширинный</item>
+        <item>Капитель</item>
+        <item>Зачёркнутый</item>
+        <item>Подчёркнутый</item>
+    </string-array>
+</resources>

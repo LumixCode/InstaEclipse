@@ -5,4 +5,44 @@
     <string name="feat_search_no_results">Ничего не найдено</string>
     <string name="feat_count_on">Вкл.: %1$d</string>
     <string name="feat_count_off">Выкл.</string>
+    <string name="feat_cache_size_limit">Лимит размера кэша</string>
+    <string name="feat_tab_move_up">Поднять %1$s</string>
+    <string name="feat_tab_move_down">Опустить %1$s</string>
+    <string name="feat_tab_hidden">%1$s · скрыта</string>
+    <plurals name="feat_restore_confirm">
+        <item quantity="one">Восстановить %d настройку из этой копии? Настройки из файла заменят текущие; блокировки только включаются.</item>
+        <item quantity="few">Восстановить %d настройки из этой копии? Настройки из файла заменят текущие; блокировки только включаются.</item>
+        <item quantity="many">Восстановить %d настроек из этой копии? Настройки из файла заменят текущие; блокировки только включаются.</item>
+        <item quantity="other">Восстановить %d настройки из этой копии? Настройки из файла заменят текущие; блокировки только включаются.</item>
+    </plurals>
+    <plurals name="feat_restore_skipped">
+        <item quantity="one">%d запись пропущена.</item>
+        <item quantity="few">%d записи пропущены.</item>
+        <item quantity="many">%d записей пропущено.</item>
+        <item quantity="other">%d записи пропущено.</item>
+    </plurals>
+    <string name="feat_restore_needs_passcode">Для блокировок нужен код-пароль, заданный в Instagram.</string>
+    <string name="feat_restore_action">Восстановить</string>
+    <string name="feat_restore_invalid_file">это не файл резервной копии</string>
+    <string name="feat_backup_unreadable">не удалось прочитать настройки</string>
+    <string name="feat_notification_rationale_title">Показывать ход скачивания?</string>
+    <string name="feat_notification_rationale_message">InstaEclipse показывает уведомление, пока сохраняет ваши загрузки.</string>
+    <string name="feat_storage_rationale_title">Разрешить сохранять загрузки?</string>
+    <string name="feat_storage_rationale_message">В этой версии Android приложению InstaEclipse нужен доступ к хранилищу для сохранения загрузок.</string>
+    <string name="feat_permission_not_now">Не сейчас</string>
+    <string name="feat_use_default_folder">Папка по умолчанию</string>
+    <string name="feat_download_folder_default">%1$s (по умолчанию)</string>
+    <string name="feat_reset_folder_confirm">Вернуть папку по умолчанию? Новые загрузки пойдут в %1$s.</string>
+    <string name="feat_search_try_another">Попробуйте другое слово</string>
+    <string name="feat_reason_best_only">Только в качестве «Лучшее»</string>
+    <string name="feat_reason_overridden">Выкл., пока включено «%1$s»</string>
+    <string name="feat_requires_lock">Сначала включите блокировку</string>
+    <string name="feat_requires_above">Сначала включите один из параметров выше</string>
+    <string name="feat_corner_small">Маленькие</string>
+    <string name="feat_corner_medium">Средние</string>
+    <string name="feat_corner_large">Большие</string>
+    <string name="feat_corner_extra_large">Очень большие</string>
+    <string name="feat_corner_round">Круглые</string>
+    <string name="feat_lock_needs_passcode">Вкл. · нужен код-пароль в Instagram</string>
+    <string name="feat_restart_waiting">Ожидается перезапуск Instagram</string>
 </resources>

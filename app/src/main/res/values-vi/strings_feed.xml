@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_preset_light">%1$s Sáng</string>
+    <string name="theme_preset_dark">%1$s Tối</string>
+    <string name="ig_reel_block_off_title">Reels đã bị tắt</string>
+    <string name="ig_reel_block_off_detail">Bật lại trong InstaEclipse › %1$s</string>
+    <string name="ig_reel_block_night_title">Reels tạm dừng vào ban đêm</string>
+    <string name="ig_reel_block_night_detail">Mở lại lúc %1$s</string>
+    <string name="ig_reel_block_limit_title">Bạn đã đạt giới hạn reel hôm nay</string>
+    <string name="ig_reel_block_limit_detail">%1$d / %2$d reel · đặt lại lúc nửa đêm</string>
+    <string name="ig_reel_block_go_back">Quay lại</string>
+</resources>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_manual_story_seen_action">Tandai cerita ini sudah dilihat</string>
+    <string name="ig_manual_story_seen_sent">Tanda dilihat dikirim untuk cerita ini</string>
+    <string name="ig_manual_story_seen_unavailable">Tidak dapat mengirim tanda dilihat cerita ini. Mode hantu tetap aktif.</string>
+    <string name="ig_manual_story_seen_unsupported">Tandai sudah dilihat tidak tersedia di build Instagram ini. Mode hantu tetap aktif.</string>
+</resources>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_dl_opened_in_instagram">Ανοίχτηκε στο Instagram. Αποθηκεύστε το από το μενού του.</string>
+    <string name="ie_companion_unreachable">Η εφαρμογή InstaEclipse δεν απάντησε. Ανοίξτε την μία φορά και δοκιμάστε ξανά.</string>
+    <string name="ie_companion_timeout">Η εφαρμογή InstaEclipse άργησε να απαντήσει. Δοκιμάστε ξανά.</string>
+    <string name="ie_companion_busy">Η εφαρμογή InstaEclipse είναι απασχολημένη. Δοκιμάστε ξανά σε λίγο.</string>
+    <string name="ie_companion_denied">Η εφαρμογή InstaEclipse απέρριψε το αίτημα. Ενημερώστε και τις δύο εφαρμογές στην ίδια έκδοση.</string>
+    <string name="ie_companion_failed">Η εφαρμογή InstaEclipse δεν μπόρεσε να το κάνει. Δοκιμάστε ξανά.</string>
+    <string name="ie_companion_invalid">Αυτό το αίτημα δεν μπορεί να σταλεί στην εφαρμογή InstaEclipse.</string>
+    <string name="ie_companion_not_visible">Ανοίξτε το από την οθόνη που βλέπετε.</string>
+    <string name="ie_companion_launch_failed">Η εφαρμογή InstaEclipse δεν άνοιξε. Δοκιμάστε ξανά από αυτή την οθόνη.</string>
+    <string name="ie_download_saved_quality">Αποθηκεύτηκε: %1$s (%2$s)</string>
+    <string name="ie_download_saved_lower">Αποθηκεύτηκε σε χαμηλότερη ποιότητα: %1$s (%2$s)</string>
+    <string name="ie_download_reason_expired">Ο σύνδεσμος έληξε. Ανοίξτε ξανά τη δημοσίευση και δοκιμάστε πάλι.</string>
+    <string name="ie_download_reason_offline">Πρόβλημα σύνδεσης. Ελέγξτε το internet και δοκιμάστε ξανά.</string>
+    <string name="ie_download_reason_server">Ο διακομιστής του Instagram δεν έστειλε το αρχείο. Δοκιμάστε αργότερα.</string>
+    <string name="ie_download_reason_storage">Δεν υπάρχει αρκετός ελεύθερος χώρος στο τηλέφωνο.</string>
+    <string name="ie_download_reason_too_large">Το αρχείο είναι πολύ μεγάλο για αποθήκευση.</string>
+    <string name="ie_download_reason_no_media">Δεν υπάρχει τίποτα για λήψη εδώ.</string>
+    <string name="ie_download_reason_ceiling">Καμία έκδοση δεν ταιριάζει στο όριο ποιότητάς σας.</string>
+    <string name="ie_download_reason_unplayable">Το αρχείο απέτυχε στον έλεγχο αναπαραγωγής.</string>
+    <string name="ie_download_reason_blocked">Αποκλείστηκε: δεν είναι αρχείο πολυμέσων του Instagram.</string>
+    <string name="ie_download_reason_generic">Κάτι πήγε στραβά. Δοκιμάστε ξανά.</string>
+    <string name="ie_frame_reason_memory">Δεν υπάρχει αρκετή μνήμη για αυτό το καρέ.</string>
+    <string name="ie_frame_reason_write">Το PNG δεν γράφτηκε. Ελέγξτε τον ελεύθερο χώρο.</string>
+    <string name="ie_copy_media_link">Αντιγραφή συνδέσμου πολυμέσων</string>
+    <string name="ig_profile_pic_load_failed">Η εικόνα δεν φορτώθηκε</string>
+    <string name="ie_download_starting">Έναρξη…</string>
+    <string name="ie_download_verifying">Έλεγχος αρχείου…</string>
+    <string name="ie_download_saving">Αποθήκευση…</string>
+    <string name="ie_download_extracting_audio">Εξαγωγή ήχου…</string>
+    <string name="ie_download_reason_invalid">Το αίτημα λήψης είναι κατεστραμμένο. Δοκιμάστε ξανά.</string>
+    <plurals name="ie_download_waiting">
+        <item quantity="one">%1$s · %2$d σε αναμονή</item>
+        <item quantity="other">%1$s · %2$d σε αναμονή</item>
+    </plurals>
+    <plurals name="ie_download_files_saved">
+        <item quantity="one">%1$d αρχείο αποθηκεύτηκε</item>
+        <item quantity="other">%1$d αρχεία αποθηκεύτηκαν</item>
+    </plurals>
+    <plurals name="ie_download_files_failed">
+        <item quantity="one">%1$d απέτυχε</item>
+        <item quantity="other">%1$d απέτυχαν</item>
+    </plurals>
+    <string name="ie_download_saved_and_failed">%1$s, %2$s</string>
+    <string name="ie_export_saving">Αποθήκευση εξαγωγής συνομιλίας…</string>
+    <string name="ie_export_saving_media">Αποθήκευση πολυμέσου %1$d από %2$d</string>
+    <string name="ie_export_failed">Η εξαγωγή συνομιλίας δεν αποθηκεύτηκε</string>
+    <string name="ie_download_cover">Αποθήκευση εξωφύλλου</string>
+    <string name="ig_media_info_type">Τύπος</string>
+    <string name="ig_media_info_video">Βίντεο</string>
+    <string name="ig_media_info_carousel">Καρουζέλ</string>
+    <string name="ig_media_info_photo">Φωτογραφία</string>
+    <string name="ig_media_info_slide">%1$s (%2$d/%3$d)</string>
+    <string name="ig_media_info_original">Αρχικό μέγεθος</string>
+    <string name="ig_media_info_size_value">%1$d × %2$d</string>
+    <string name="ig_media_info_duration">Διάρκεια</string>
+    <string name="ig_media_info_seconds">%1$.1f δ</string>
+    <string name="ig_media_info_codec">Codec</string>
+    <string name="ig_media_info_audio">Ήχος</string>
+    <string name="ig_media_info_yes">Ναι</string>
+    <string name="ig_media_info_no">Όχι</string>
+    <string name="ig_media_info_qualities">Ποιότητες</string>
+    <string name="ig_media_info_file_size">Μέγεθος αρχείου</string>
+    <string name="ig_media_info_megabytes">%1$.2f MB</string>
+    <string name="ig_media_info_error">Η δημοσίευση δεν διαβάστηκε</string>
+    <string name="ig_highlight_failed">Η λήψη της επιλεγμένης ιστορίας απέτυχε. Δοκιμάστε ξανά.</string>
+    <string name="ig_instant_already_saved">Ήδη αποθηκευμένο</string>
+    <plurals name="ie_download_batch_done">
+        <item quantity="one">Αποθήκευση: %1$d από %2$d</item>
+        <item quantity="other">Αποθήκευση: %1$d από %2$d</item>
+    </plurals>
+    <string name="ig_playback_speed_normal">Κανονική</string>
+    <string name="ig_playback_speed_stays">Η ταχύτητα %1$s μένει μέχρι να επιλέξετε Κανονική</string>
+</resources>

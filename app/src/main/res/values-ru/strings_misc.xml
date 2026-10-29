@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_comment_search_maybe_more">Загружено комментариев: %1$d · возможно, есть ещё</string>
+    <string name="ig_toast_story_unavailable">Детали истории недоступны</string>
+    <string name="ig_toast_like_not_sent">Лайк не отправлен</string>
+    <string name="ig_toast_user_follows_you">\@%1$s подписан(а) на вас</string>
+    <string name="ig_toast_user_not_follows_you">\@%1$s не подписан(а) на вас</string>
+    <string name="ig_pa_remove_confirm">Убрать @%1$s из списка наблюдения? Сохранённые анализы (%2$d) и история изменений будут удалены. Это нельзя отменить.</string>
+    <string name="ig_pa_remove_confirm_action">Убрать</string>
+    <string name="ig_pa_save_failed">Не удалось сохранить этот анализ, поэтому следующий будет сравниваться с последним сохранённым.</string>
+    <string name="ig_follow_tools">Инструменты списка</string>
+    <string name="ig_follow_tools_title">\@%1$s · %2$s: %3$s</string>
+    <string name="ig_follow_load_stop">Остановить</string>
+    <string name="ig_follow_export_failed">Не удалось сохранить экспорт: %1$s</string>
+    <string name="ig_pa_check_mine">Проверить моих подписчиков</string>
+    <string name="ig_pa_watch_row_followers">Подписчики: %1$d · %2$s</string>
+    <string name="ig_pa_watch_full">Список наблюдения заполнен: самый старый профиль удалён</string>
+    <plurals name="ig_list_more">
+        <item quantity="one">+%1$d · см. «История изменений»</item>
+        <item quantity="few">+%1$d · см. «История изменений»</item>
+        <item quantity="many">+%1$d · см. «История изменений»</item>
+        <item quantity="other">+%1$d · см. «История изменений»</item>
+    </plurals>
+    <string name="ig_comment_search_clear">Очистить поиск</string>
+    <string name="ig_comment_export_none">Комментарии ещё не загружены</string>
+    <string name="ig_comment_export_title">Комментарии</string>
+    <string name="ig_comment_export_on_post">Комментарии к публикации @%1$s</string>
+    <string name="ig_comment_export_banner">Экспорт комментариев</string>
+    <string name="ig_comment_export_exported">Экспорт: %1$s</string>
+    <string name="ig_comment_export_loaded_only">Включены только комментарии, загруженные в приложении</string>
+    <string name="ig_comment_media_gif">GIF</string>
+    <string name="ig_comment_media_image">Изображение</string>
+    <string name="ig_comment_media_unavailable">%1$s (недоступно)</string>
+    <plurals name="ig_comment_export_comments">
+        <item quantity="one">%1$d комментарий</item>
+        <item quantity="few">%1$d комментария</item>
+        <item quantity="many">%1$d комментариев</item>
+        <item quantity="other">%1$d комментария</item>
+    </plurals>
+    <plurals name="ig_comment_export_replies">
+        <item quantity="one">%1$d ответ</item>
+        <item quantity="few">%1$d ответа</item>
+        <item quantity="many">%1$d ответов</item>
+        <item quantity="other">%1$d ответа</item>
+    </plurals>
+    <string name="ig_confirm_follow_title_v2">Подписаться на @%1$s?</string>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_preset_light">%1$s Terang</string>
+    <string name="theme_preset_dark">%1$s Gelap</string>
+    <string name="ig_reel_block_off_title">Reels dinonaktifkan</string>
+    <string name="ig_reel_block_off_detail">Aktifkan lagi di InstaEclipse › %1$s</string>
+    <string name="ig_reel_block_night_title">Reels dijeda untuk malam ini</string>
+    <string name="ig_reel_block_night_detail">Kembali pukul %1$s</string>
+    <string name="ig_reel_block_limit_title">Anda sudah mencapai batas reel hari ini</string>
+    <string name="ig_reel_block_limit_detail">%1$d dari %2$d reel · diatur ulang tengah malam</string>
+    <string name="ig_reel_block_go_back">Kembali</string>
+</resources>

@@ -12,4 +12,16 @@
     <string name="help_lspatch_title">LSPatch (JingMatrix)</string>
     <string name="help_lspatch_sub">Chưa root? Cài bản này</string>
     <string name="help_lspatch_guide">Xem hướng dẫn cài đặt</string>
+    <string name="about_based_on">Dựa trên InstaEclipse của %1$s</string>
+    <string name="update_check_note">Kiểm tra github.com để tìm bản phát hành InstaEclipse mới, tối đa một lần mỗi ngày.</string>
+    <string name="update_whats_new">Có gì mới</string>
+    <string name="update_skip_version">Bỏ qua phiên bản này</string>
+    <string name="links_no_app">Không có ứng dụng để mở liên kết này</string>
+    <string name="help_faq_2"><b>2. Module chưa được bật?</b>\n- Trong LSPatch hoặc Vector, hãy kiểm tra InstaEclipse đã được bật cho Instagram, rồi buộc dừng và mở lại Instagram.</string>
+    <string name="help_faq_4"><b>4. Tùy chọn nhà phát triển gây văng app?</b>\n- Tắt tùy chọn nhà phát triển và dùng Tùy chọn nhà phát triển → Khôi phục cấu hình mặc định.</string>
+    <string name="help_faq_5"><b>5. Tùy chọn nhà phát triển có nhãn hoặc số lạ?</b>\n- Bản Instagram ổn định ẩn tên các tùy chọn. InstaEclipse được thử nghiệm với Instagram %1$s.</string>
+    <string name="help_troubleshooting">Khắc phục sự cố</string>
+    <string name="help_faq_expanded">Đã mở rộng</string>
+    <string name="help_faq_collapsed">Đã thu gọn</string>
+    <string name="help_tested_with">Đã thử nghiệm với Instagram %1$s</string>
 </resources>

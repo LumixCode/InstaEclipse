@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">Unduhan InstaEclipse</string>
     <string name="ie_download_quality">Kualitas unduhan</string>
     <string name="ie_downloader_original">Standar</string>
     <string name="ie_download_best">Terbaik</string>
     <string name="ie_download_ceiling">Terbaik, hingga %1$dp</string>
+    <string name="ie_save_video_frame">Simpan bingkai video</string>
+    <string name="ie_download_video">Unduh video</string>
+    <string name="ie_frame_help">Pilih bingkai dengan penggeser. Hanya PNG resolusi penuh yang disimpan; video sementara dihapus saat Anda menyimpan atau menutup.</string>
+    <string name="ie_frame_preparing">Menyiapkan video kualitas tertinggi…</string>
+    <string name="ie_frame_preparing_progress">Menyiapkan video kualitas tertinggi… %1$d%%</string>
+    <string name="ie_frame_loading">Memuat pratinjau…</string>
+    <string name="ie_frame_preview">Pratinjau bingkai video yang dipilih</string>
+    <string name="ie_frame_position">Posisi bingkai</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · Resolusi penuh</string>
+    <string name="ie_frame_save">Simpan PNG</string>
+    <string name="ie_frame_saving">Menyimpan bingkai resolusi penuh…</string>
+    <string name="ie_frame_saved">PNG disimpan: %1$d × %2$d. Video sementara dihapus.</string>
+    <string name="ie_frame_failed">Tidak dapat menyiapkan atau menyimpan bingkai ini. Tidak diganti dengan versi berkualitas lebih rendah.</string>
+    <string name="ie_frame_reopen">Buka Unduh lagi di Instagram untuk memilih bingkai.</string>
     <string name="ie_download_compatibility">Utamakan video yang bisa diputar di mana saja</string>
-    <string name="ie_download_fallback">Gunakan kualitas lebih rendah jika Terbaik gagal</string>
+    <string name="ie_download_fallback">Pakai kualitas lebih rendah jika Terbaik gagal</string>
+    <string name="ie_download_unavailable">Media yang dipilih tidak dapat diambil untuk versi Instagram ini.</string>
+    <string name="ie_download_retry_lower">Coba kualitas lebih rendah</string>
     <string name="ie_downloader_original_unavailable">Standar tidak bisa menyimpannya. Beralih ke Terbaik untuk mengunduhnya.</string>
     <string name="ie_download_fallback_prompt">Terbaik tidak bisa menyimpannya. Coba kualitas lebih rendah?</string>
+    <string name="ie_download_cancelled">Unduhan dibatalkan</string>
+    <string name="ie_download_select_item">Pilih item carousel</string>
+    <string name="ie_download_item">Item %1$d</string>
 </resources>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_manual_story_seen_action">Hikayeyi görüldü olarak işaretle</string>
+    <string name="ig_manual_story_seen_sent">Bu hikaye için Görüldü bilgisi gönderildi</string>
+    <string name="ig_manual_story_seen_unavailable">Bu hikayenin Görüldü bilgisi gönderilemedi. Hayalet modu hâlâ açık.</string>
+    <string name="ig_manual_story_seen_unsupported">Görüldü olarak işaretleme bu Instagram sürümünde kullanılamıyor. Hayalet modu hâlâ açık.</string>
+</resources>

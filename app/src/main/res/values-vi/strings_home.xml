@@ -4,7 +4,7 @@
     <string name="home_section_quick_actions">Thao tác nhanh</string>
     <string name="home_section_shortcuts">Lối tắt nhanh</string>
     <string name="home_status_not_installed">Chưa cài đặt</string>
-    <string name="home_status_module_active">Module đang hoạt động</string>
+    <string name="home_status_module_active">Module đang chạy</string>
     <string name="home_status_no_version">Hãy cài Instagram để dùng InstaEclipse</string>
     <plurals name="home_features_enabled">
         <item quantity="other">Đã bật %d tính năng</item>
@@ -19,4 +19,25 @@
     <string name="home_shortcuts_hint">Thay đổi được gửi đến Instagram ngay lập tức.</string>
     <string name="home_shortcuts_limit">Bạn có thể ghim tối đa %1$d lối tắt</string>
     <string name="home_shortcuts_locked_extreme">Đã bị khóa bởi Chế độ Nghiêm ngặt</string>
+    <string name="home_instagram_version">Instagram %1$s</string>
+    <string name="home_tested_version">Bản đã thử nghiệm</string>
+    <string name="home_untested_version">Không phải phiên bản đã thử nghiệm (%1$s): một số tính năng có thể không hoạt động</string>
+    <string name="home_status_worked">Đã hoạt động trong Instagram: %1$s</string>
+    <string name="home_status_not_confirmed">Chưa được xác nhận</string>
+    <string name="home_status_open_to_check">Mở Instagram để kiểm tra</string>
+    <string name="home_status_clone">Bản sao · không đồng bộ trực tiếp</string>
+    <string name="home_instagram_app_info">Thông tin ứng dụng Instagram</string>
+    <string name="home_detected_versions">Phiên bản đã phát hiện</string>
+    <string name="home_detected_version_row">%1$s — v%2$s</string>
+    <string name="home_use_this">Dùng bản này</string>
+    <string name="home_variant_official">Chính thức</string>
+    <string name="home_setup_step_1">Vá Instagram bằng LSPatch, hoặc bật InstaEclipse cho Instagram trong Vector.</string>
+    <string name="home_setup_step_2">Buộc dừng và mở lại Instagram.</string>
+    <string name="home_setup_step_3">Trong Instagram, nhấn giữ tab Tìm kiếm ở dưới cùng.</string>
+    <string name="home_setup_open_instagram">Mở Instagram</string>
+    <string name="home_setup_got_it">Đã hiểu</string>
+    <string name="home_restarting">Đang khởi động lại…</string>
+    <string name="home_shortcuts_needs_setting">Hãy bật cài đặt cần thiết trước</string>
+    <string name="home_restart_applies_on_open">Áp dụng khi Instagram mở. Bạn sẽ được nhắc khởi động lại nếu cần.</string>
+    <string name="home_tool_restart_sub">Đóng và mở lại Instagram</string>
 </resources>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_dl_opened_in_instagram">Instagram-da açıldı. Bunu onun menyusundan saxlayın.</string>
+    <string name="ie_companion_unreachable">InstaEclipse tətbiqi cavab vermədi. Onu bir dəfə açın, sonra yenidən cəhd edin.</string>
+    <string name="ie_companion_timeout">InstaEclipse tətbiqi çox gec cavab verdi. Yenidən cəhd edin.</string>
+    <string name="ie_companion_busy">InstaEclipse tətbiqi məşğuldur. Bir azdan yenidən cəhd edin.</string>
+    <string name="ie_companion_denied">InstaEclipse tətbiqi bu sorğunu rədd etdi. Hər iki tətbiqi eyni versiyaya yeniləyin.</string>
+    <string name="ie_companion_failed">InstaEclipse tətbiqi bunu edə bilmədi. Yenidən cəhd edin.</string>
+    <string name="ie_companion_invalid">Bu sorğunu InstaEclipse tətbiqinə göndərmək olmur.</string>
+    <string name="ie_companion_not_visible">Bunu olduğunuz ekrandan açın.</string>
+    <string name="ie_companion_launch_failed">InstaEclipse tətbiqi açılmadı. Bu ekrandan yenidən cəhd edin.</string>
+    <string name="ie_download_saved_quality">Saxlanıldı: %1$s (%2$s)</string>
+    <string name="ie_download_saved_lower">Aşağı keyfiyyətdə saxlanıldı: %1$s (%2$s)</string>
+    <string name="ie_download_reason_expired">Linkin vaxtı bitib. Paylaşımı yenidən açıb təkrar cəhd edin.</string>
+    <string name="ie_download_reason_offline">Bağlantı problemi. İnternetinizi yoxlayıb yenidən cəhd edin.</string>
+    <string name="ie_download_reason_server">Instagram serveri faylı göndərmədi. Sonra yenidən cəhd edin.</string>
+    <string name="ie_download_reason_storage">Bu telefonda kifayət qədər boş yer yoxdur.</string>
+    <string name="ie_download_reason_too_large">Fayl saxlamaq üçün çox böyükdür.</string>
+    <string name="ie_download_reason_no_media">Burada yüklənəcək heç nə yoxdur.</string>
+    <string name="ie_download_reason_ceiling">Keyfiyyət limitinizə uyğun versiya yoxdur.</string>
+    <string name="ie_download_reason_unplayable">Fayl oynatma yoxlamasından keçmədi.</string>
+    <string name="ie_download_reason_blocked">Bloklandı: bu Instagram media faylı deyil.</string>
+    <string name="ie_download_reason_generic">Nəsə alınmadı. Yenidən cəhd edin.</string>
+    <string name="ie_frame_reason_memory">Bu kadr üçün kifayət qədər yaddaş yoxdur.</string>
+    <string name="ie_frame_reason_write">PNG yazıla bilmədi. Boş yeri yoxlayın.</string>
+    <string name="ie_copy_media_link">Media linkini kopyala</string>
+    <string name="ig_profile_pic_load_failed">Bu şəkil yüklənə bilmədi</string>
+    <string name="ie_download_starting">Başlayır…</string>
+    <string name="ie_download_verifying">Fayl yoxlanılır…</string>
+    <string name="ie_download_saving">Saxlanılır…</string>
+    <string name="ie_download_extracting_audio">Səs çıxarılır…</string>
+    <string name="ie_download_reason_invalid">Bu yükləmə sorğusu zədələnib. Yenidən cəhd edin.</string>
+    <plurals name="ie_download_waiting">
+        <item quantity="one">%1$s · %2$d gözləyir</item>
+        <item quantity="other">%1$s · %2$d gözləyir</item>
+    </plurals>
+    <plurals name="ie_download_files_saved">
+        <item quantity="one">%1$d fayl saxlanıldı</item>
+        <item quantity="other">%1$d fayl saxlanıldı</item>
+    </plurals>
+    <plurals name="ie_download_files_failed">
+        <item quantity="one">%1$d alınmadı</item>
+        <item quantity="other">%1$d alınmadı</item>
+    </plurals>
+    <string name="ie_download_saved_and_failed">%1$s, %2$s</string>
+    <string name="ie_export_saving">Söhbət ixracı saxlanılır…</string>
+    <string name="ie_export_saving_media">Media saxlanılır: %1$d / %2$d</string>
+    <string name="ie_export_failed">Söhbət ixracı saxlanıla bilmədi</string>
+    <string name="ie_download_cover">Üz qabığını saxla</string>
+    <string name="ig_media_info_type">Növ</string>
+    <string name="ig_media_info_video">Video</string>
+    <string name="ig_media_info_carousel">Karusel</string>
+    <string name="ig_media_info_photo">Foto</string>
+    <string name="ig_media_info_slide">%1$s (%2$d/%3$d)</string>
+    <string name="ig_media_info_original">Orijinal ölçü</string>
+    <string name="ig_media_info_size_value">%1$d × %2$d</string>
+    <string name="ig_media_info_duration">Müddət</string>
+    <string name="ig_media_info_seconds">%1$.1f san</string>
+    <string name="ig_media_info_codec">Kodek</string>
+    <string name="ig_media_info_audio">Səs</string>
+    <string name="ig_media_info_yes">Bəli</string>
+    <string name="ig_media_info_no">Xeyr</string>
+    <string name="ig_media_info_qualities">Keyfiyyətlər</string>
+    <string name="ig_media_info_file_size">Fayl ölçüsü</string>
+    <string name="ig_media_info_megabytes">%1$.2f MB</string>
+    <string name="ig_media_info_error">Bu paylaşım oxuna bilmədi</string>
+    <string name="ig_highlight_failed">Bu seçilmiş yüklənə bilmədi. Yenidən cəhd edin.</string>
+    <string name="ig_instant_already_saved">Artıq saxlanılıb</string>
+    <plurals name="ie_download_batch_done">
+        <item quantity="one">Saxlanıldı: %1$d / %2$d</item>
+        <item quantity="other">Saxlanıldı: %1$d / %2$d</item>
+    </plurals>
+    <string name="ig_playback_speed_normal">Adi</string>
+    <string name="ig_playback_speed_stays">«Adi» seçənə qədər %1$s aktiv qalır</string>
+</resources>

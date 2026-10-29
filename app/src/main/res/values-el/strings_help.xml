@@ -8,8 +8,20 @@
     <string name="help_version">Έκδοση %1$s</string>
     <string name="help_source_code">Πηγαίος κώδικας στο GitHub</string>
     <string name="help_vector_title">Vector (JingMatrix)</string>
-    <string name="help_vector_sub">Έχεις root; Χρησιμοποίησε αυτή την έκδοση</string>
+    <string name="help_vector_sub">Έχετε root; Πάρτε αυτή την έκδοση</string>
     <string name="help_lspatch_title">LSPatch (JingMatrix)</string>
-    <string name="help_lspatch_sub">Χωρίς root; Εγκατάστησε αυτό</string>
-    <string name="help_lspatch_guide">Δες τον οδηγό εγκατάστασης</string>
+    <string name="help_lspatch_sub">Χωρίς root; Εγκαταστήστε αυτό</string>
+    <string name="help_lspatch_guide">Δείτε τον οδηγό εγκατάστασης</string>
+    <string name="about_based_on">Βασισμένο στο InstaEclipse από %1$s</string>
+    <string name="update_check_note">Ελέγχει το github.com για νέες εκδόσεις του InstaEclipse το πολύ μία φορά την ημέρα.</string>
+    <string name="update_whats_new">Τι νέο υπάρχει</string>
+    <string name="update_skip_version">Παράλειψη έκδοσης</string>
+    <string name="links_no_app">Καμία εφαρμογή για αυτόν τον σύνδεσμο</string>
+    <string name="help_faq_2"><b>2. Το module δεν είναι ενεργό;</b>\n- Στο LSPatch ή στο Vector, ελέγξτε ότι το InstaEclipse είναι ενεργό για το Instagram και μετά κάντε αναγκαστική διακοπή και ανοίξτε ξανά το Instagram.</string>
+    <string name="help_faq_4"><b>4. Το Instagram κλείνει απότομα με τις επιλογές προγραμματιστή;</b>\n- Απενεργοποιήστε τις και χρησιμοποιήστε Επιλογές προγραμματιστή → Επαναφορά προεπιλεγμένων ρυθμίσεων.</string>
+    <string name="help_faq_5"><b>5. Παράξενες ετικέτες ή αριθμοί στις επιλογές προγραμματιστή;</b>\n- Η σταθερή έκδοση του Instagram κρύβει τα ονόματα των επιλογών. Το InstaEclipse έχει δοκιμαστεί με το Instagram %1$s.</string>
+    <string name="help_troubleshooting">Επίλυση προβλημάτων</string>
+    <string name="help_faq_expanded">Ανεπτυγμένο</string>
+    <string name="help_faq_collapsed">Συμπτυγμένο</string>
+    <string name="help_tested_with">Δοκιμασμένο με Instagram %1$s</string>
 </resources>

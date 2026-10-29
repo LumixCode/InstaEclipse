@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ig_fancy_font_names">
+        <item>Normal</item>
+        <item>Tebal</item>
+        <item>Miring</item>
+        <item>Tebal miring</item>
+        <item>Sans tebal</item>
+        <item>Sans miring</item>
+        <item>Skrip</item>
+        <item>Fraktur</item>
+        <item>Garis ganda</item>
+        <item>Monospace</item>
+        <item>Berlingkar</item>
+        <item>Lebar penuh</item>
+        <item>Kapital kecil</item>
+        <item>Coret</item>
+        <item>Garis bawah</item>
+    </string-array>
+</resources>

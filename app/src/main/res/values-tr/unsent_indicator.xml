@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">Geri alındı</string>
+    <string name="ig_unsent_clear_failed">Kaydedilen mesajlar temizlenemedi. Bu sohbeti yeniden açıp tekrar deneyin.</string>
+    <string name="ig_unsent_clear_saved">Kaydedilen geri alınan mesajları temizle</string>
+    <string name="ig_unsent_clear_saved_confirm">Saklanan bu mesajlar çöp kutusundan ve yerel sohbet geçmişinden kaldırılsın mı? Bu işlem geri alınamaz.</string>
+    <string name="ig_unsent_cleared_saved">Kaydedilen geri alınan mesajlar temizlendi</string>
+</resources>

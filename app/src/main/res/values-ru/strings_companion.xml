@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_hex_invalid">Введите 6 или 8 hex-цифр</string>
+    <string name="theme_custom_reset">Свои цвета сброшены</string>
+    <string name="theme_undo">Отменить</string>
+    <string name="theme_preset_selected">Выбрано</string>
+    <string name="theme_custom_dark_only">Свои цвета работают в тёмном режиме. Включите на телефоне тёмный режим, чтобы их изменить</string>
+    <string name="loc_picker_clear_search">Очистить поиск</string>
+    <string name="dev_config_open_instagram">Сначала откройте Instagram, затем повторите</string>
+    <string name="dev_config_export_failed">Instagram не смог экспортировать конфигурацию</string>
+    <string name="ie_frame_previous">Предыдущий кадр</string>
+    <string name="ie_frame_next">Следующий кадр</string>
+    <string name="ie_frame_cleanup_pending_open">Временные файлы удалены не полностью. Откройте InstaEclipse, чтобы повторить очистку.</string>
+    <string name="credits_on_github">%1$s на GitHub</string>
+    <string name="credits_on_telegram">%1$s в Telegram</string>
+    <string name="credits_on_linkedin">%1$s в LinkedIn</string>
+    <string name="import_sending">Отправка в Instagram…</string>
+    <string name="import_too_large">Файл слишком большой для импорта</string>
+    <string name="import_cant_receive">Instagram не может принять этот файл</string>
+    <string name="import_no_reply">Instagram не подтвердил. Откройте Instagram (после обновления InstaEclipse перезапустите его) и попробуйте снова.</string>
+    <string name="loc_picker_spoof_off">Подмена местоположения выключена, поэтому Instagram видит ваше настоящее местоположение.</string>
+    <string name="loc_picker_needs_restart">Для этого нужен один перезапуск Instagram.</string>
+    <string name="loc_picker_turn_on">Включить</string>
+    <string name="loc_picker_only_save">Только сохранить</string>
+    <string name="loc_saved_spoof_off">Сохранено. Включите подмену местоположения, чтобы использовать.</string>
+    <string name="loc_picker_no_connection">Нет подключения</string>
+    <string name="loc_picker_search_unavailable">Поиск сейчас недоступен</string>
+</resources>

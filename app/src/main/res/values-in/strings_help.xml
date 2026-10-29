@@ -12,4 +12,16 @@
     <string name="help_lspatch_title">LSPatch (JingMatrix)</string>
     <string name="help_lspatch_sub">Belum root? Pasang ini</string>
     <string name="help_lspatch_guide">Ikuti panduan pemasangan</string>
+    <string name="about_based_on">Berbasis InstaEclipse oleh %1$s</string>
+    <string name="update_check_note">Memeriksa rilis InstaEclipse baru di github.com paling banyak sekali sehari.</string>
+    <string name="update_whats_new">Yang baru</string>
+    <string name="update_skip_version">Lewati versi ini</string>
+    <string name="links_no_app">Tak ada aplikasi untuk tautan ini</string>
+    <string name="help_faq_2"><b>2. Modul tidak aktif?</b>\n- Di LSPatch atau Vector, pastikan InstaEclipse diaktifkan untuk Instagram, lalu paksa berhenti dan buka ulang Instagram.</string>
+    <string name="help_faq_4"><b>4. Opsi pengembang menyebabkan crash?</b>\n- Nonaktifkan opsi pengembang dan gunakan Opsi pengembang → Pulihkan ke konfigurasi bawaan.</string>
+    <string name="help_faq_5"><b>5. Opsi pengembang menampilkan label atau angka aneh?</b>\n- Instagram versi stabil menyembunyikan nama opsi. InstaEclipse diuji dengan Instagram %1$s.</string>
+    <string name="help_troubleshooting">Pemecahan masalah</string>
+    <string name="help_faq_expanded">Diperluas</string>
+    <string name="help_faq_collapsed">Diciutkan</string>
+    <string name="help_tested_with">Diuji dengan Instagram %1$s</string>
 </resources>

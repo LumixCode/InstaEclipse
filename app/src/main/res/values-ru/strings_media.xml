@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_dl_opened_in_instagram">Открыто в Instagram. Сохраните через его меню.</string>
+    <string name="ie_companion_unreachable">Приложение InstaEclipse не ответило. Откройте его один раз и попробуйте снова.</string>
+    <string name="ie_companion_timeout">Приложение InstaEclipse слишком долго не отвечало. Попробуйте снова.</string>
+    <string name="ie_companion_busy">Приложение InstaEclipse занято. Попробуйте чуть позже.</string>
+    <string name="ie_companion_denied">Приложение InstaEclipse отклонило запрос. Обновите оба приложения до одной версии.</string>
+    <string name="ie_companion_failed">Приложению InstaEclipse не удалось это сделать. Попробуйте снова.</string>
+    <string name="ie_companion_invalid">Этот запрос нельзя отправить в приложение InstaEclipse.</string>
+    <string name="ie_companion_not_visible">Откройте это с текущего экрана.</string>
+    <string name="ie_companion_launch_failed">Не удалось открыть приложение InstaEclipse. Попробуйте снова с этого экрана.</string>
+    <string name="ie_download_saved_quality">Сохранено: %1$s (%2$s)</string>
+    <string name="ie_download_saved_lower">Сохранено в качестве ниже: %1$s (%2$s)</string>
+    <string name="ie_download_reason_expired">Срок ссылки истёк. Откройте публикацию снова и повторите.</string>
+    <string name="ie_download_reason_offline">Проблема с подключением. Проверьте интернет и попробуйте снова.</string>
+    <string name="ie_download_reason_server">Сервер Instagram не отправил файл. Попробуйте позже.</string>
+    <string name="ie_download_reason_storage">На телефоне недостаточно свободного места.</string>
+    <string name="ie_download_reason_too_large">Файл слишком большой для сохранения.</string>
+    <string name="ie_download_reason_no_media">Здесь нечего скачивать.</string>
+    <string name="ie_download_reason_ceiling">Нет версии в пределах вашего лимита качества.</string>
+    <string name="ie_download_reason_unplayable">Файл не прошёл проверку воспроизведения.</string>
+    <string name="ie_download_reason_blocked">Заблокировано: это не медиафайл Instagram.</string>
+    <string name="ie_download_reason_generic">Что-то пошло не так. Попробуйте снова.</string>
+    <string name="ie_frame_reason_memory">Недостаточно памяти для этого кадра.</string>
+    <string name="ie_frame_reason_write">Не удалось записать PNG. Проверьте свободное место.</string>
+    <string name="ie_copy_media_link">Копировать ссылку на медиа</string>
+    <string name="ig_profile_pic_load_failed">Не удалось загрузить это фото</string>
+    <string name="ie_download_starting">Запуск…</string>
+    <string name="ie_download_verifying">Проверка файла…</string>
+    <string name="ie_download_saving">Сохранение…</string>
+    <string name="ie_download_extracting_audio">Извлечение аудио…</string>
+    <string name="ie_download_reason_invalid">Запрос на скачивание повреждён. Попробуйте снова.</string>
+    <plurals name="ie_download_waiting">
+        <item quantity="one">%1$s · в очереди: %2$d</item>
+        <item quantity="few">%1$s · в очереди: %2$d</item>
+        <item quantity="many">%1$s · в очереди: %2$d</item>
+        <item quantity="other">%1$s · в очереди: %2$d</item>
+    </plurals>
+    <plurals name="ie_download_files_saved">
+        <item quantity="one">Сохранён %1$d файл</item>
+        <item quantity="few">Сохранено %1$d файла</item>
+        <item quantity="many">Сохранено %1$d файлов</item>
+        <item quantity="other">Сохранено %1$d файла</item>
+    </plurals>
+    <plurals name="ie_download_files_failed">
+        <item quantity="one">%1$d не сохранён</item>
+        <item quantity="few">%1$d не сохранены</item>
+        <item quantity="many">%1$d не сохранено</item>
+        <item quantity="other">%1$d не сохранено</item>
+    </plurals>
+    <string name="ie_download_saved_and_failed">%1$s, %2$s</string>
+    <string name="ie_export_saving">Сохранение экспорта чата…</string>
+    <string name="ie_export_saving_media">Сохранение медиа %1$d из %2$d</string>
+    <string name="ie_export_failed">Не удалось сохранить экспорт чата</string>
+    <string name="ie_download_cover">Сохранить обложку</string>
+    <string name="ig_media_info_type">Тип</string>
+    <string name="ig_media_info_video">Видео</string>
+    <string name="ig_media_info_carousel">Карусель</string>
+    <string name="ig_media_info_photo">Фото</string>
+    <string name="ig_media_info_slide">%1$s (%2$d/%3$d)</string>
+    <string name="ig_media_info_original">Исходный размер</string>
+    <string name="ig_media_info_size_value">%1$d × %2$d</string>
+    <string name="ig_media_info_duration">Длительность</string>
+    <string name="ig_media_info_seconds">%1$.1f с</string>
+    <string name="ig_media_info_codec">Кодек</string>
+    <string name="ig_media_info_audio">Аудио</string>
+    <string name="ig_media_info_yes">Да</string>
+    <string name="ig_media_info_no">Нет</string>
+    <string name="ig_media_info_qualities">Варианты качества</string>
+    <string name="ig_media_info_file_size">Размер файла</string>
+    <string name="ig_media_info_megabytes">%1$.2f МБ</string>
+    <string name="ig_media_info_error">Не удалось прочитать публикацию</string>
+    <string name="ig_highlight_failed">Не удалось скачать «Актуальное». Попробуйте снова.</string>
+    <string name="ig_instant_already_saved">Уже сохранено</string>
+    <plurals name="ie_download_batch_done">
+        <item quantity="one">Сохранено %1$d из %2$d</item>
+        <item quantity="few">Сохранено %1$d из %2$d</item>
+        <item quantity="many">Сохранено %1$d из %2$d</item>
+        <item quantity="other">Сохранено %1$d из %2$d</item>
+    </plurals>
+    <string name="ig_playback_speed_normal">Обычная</string>
+    <string name="ig_playback_speed_stays">%1$s действует, пока вы не выберете «Обычная»</string>
+</resources>

@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">Λήψεις InstaEclipse</string>
     <string name="ie_download_quality">Ποιότητα λήψης</string>
     <string name="ie_downloader_original">Τυπική</string>
     <string name="ie_download_best">Καλύτερη</string>
     <string name="ie_download_ceiling">Καλύτερη, έως %1$dp</string>
+    <string name="ie_save_video_frame">Αποθήκευση καρέ βίντεο</string>
+    <string name="ie_download_video">Λήψη βίντεο</string>
+    <string name="ie_frame_help">Επιλέξτε καρέ με τον ρυθμιστή. Αποθηκεύεται μόνο το PNG σε πλήρη ανάλυση· το προσωρινό βίντεο διαγράφεται όταν αποθηκεύσετε ή κλείσετε.</string>
+    <string name="ie_frame_preparing">Προετοιμασία βίντεο υψηλότερης ποιότητας…</string>
+    <string name="ie_frame_preparing_progress">Προετοιμασία βίντεο υψηλότερης ποιότητας… %1$d%%</string>
+    <string name="ie_frame_loading">Φόρτωση προεπισκόπησης…</string>
+    <string name="ie_frame_preview">Προεπισκόπηση επιλεγμένου καρέ</string>
+    <string name="ie_frame_position">Θέση καρέ</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · Πλήρης ανάλυση</string>
+    <string name="ie_frame_save">Αποθήκευση PNG</string>
+    <string name="ie_frame_saving">Αποθήκευση καρέ σε πλήρη ανάλυση…</string>
+    <string name="ie_frame_saved">Αποθηκεύτηκε PNG: %1$d × %2$d. Το προσωρινό βίντεο διαγράφηκε.</string>
+    <string name="ie_frame_failed">Το καρέ δεν ετοιμάστηκε ή δεν αποθηκεύτηκε. Δεν χρησιμοποιήθηκε έκδοση χαμηλότερης ποιότητας.</string>
+    <string name="ie_frame_reopen">Ανοίξτε ξανά τη «Λήψη» στο Instagram για να επιλέξετε καρέ.</string>
     <string name="ie_download_compatibility">Προτίμηση βίντεο που παίζουν παντού</string>
     <string name="ie_download_fallback">Χαμηλότερη ποιότητα αν αποτύχει η Καλύτερη</string>
+    <string name="ie_download_unavailable">Τα επιλεγμένα πολυμέσα δεν εντοπίστηκαν σε αυτή την έκδοση του Instagram.</string>
+    <string name="ie_download_retry_lower">Δοκιμή σε χαμηλότερη ποιότητα</string>
     <string name="ie_downloader_original_unavailable">Η Τυπική δεν μπόρεσε να το αποθηκεύσει. Αλλάξτε σε Καλύτερη για λήψη.</string>
     <string name="ie_download_fallback_prompt">Η Καλύτερη δεν μπόρεσε να το αποθηκεύσει. Δοκιμή με χαμηλότερη ποιότητα;</string>
+    <string name="ie_download_cancelled">Η λήψη ακυρώθηκε</string>
+    <string name="ie_download_select_item">Επιλογή στοιχείου καρουζέλ</string>
+    <string name="ie_download_item">Στοιχείο %1$d</string>
 </resources>

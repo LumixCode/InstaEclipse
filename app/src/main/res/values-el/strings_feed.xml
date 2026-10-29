@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_preset_light">%1$s Φωτεινό</string>
+    <string name="theme_preset_dark">%1$s Σκοτεινό</string>
+    <string name="ig_reel_block_off_title">Τα Reels είναι ανενεργά</string>
+    <string name="ig_reel_block_off_detail">Ενεργοποιήστε τα ξανά στο InstaEclipse › %1$s</string>
+    <string name="ig_reel_block_night_title">Τα Reels είναι σε παύση για τη νύχτα</string>
+    <string name="ig_reel_block_night_detail">Ξανά στις %1$s</string>
+    <string name="ig_reel_block_limit_title">Φτάσατε το σημερινό όριο reels</string>
+    <string name="ig_reel_block_limit_detail">%1$d από %2$d reels · μηδενίζεται τα μεσάνυχτα</string>
+    <string name="ig_reel_block_go_back">Επιστροφή</string>
+</resources>

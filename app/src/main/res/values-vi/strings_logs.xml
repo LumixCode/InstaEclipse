@@ -2,7 +2,7 @@
 <resources>
     <!-- Logs tab (0.8) -->
     <string name="logs_filter_all">Tất cả</string>
-    <string name="logs_filter_hooked">Thành công</string>
+    <string name="logs_filter_hooked">Sẵn sàng</string>
     <string name="logs_filter_errors">Lỗi</string>
     <string name="logs_filter_warnings">Cảnh báo</string>
     <string name="logs_technical_details">Chi tiết kỹ thuật</string>
@@ -27,4 +27,22 @@
     <string name="logs_entry_copied">Đã sao chép mục</string>
     <string name="logs_cleared">Đã xóa nhật ký</string>
     <string name="logs_source_companion">[ứng dụng]</string>
+    <string name="logs_latest">Mới nhất</string>
+    <string name="logs_clear_confirm_title">Xóa nhật ký?</string>
+    <string name="logs_clear_confirm_body">Xóa nhật ký đã lưu trên điện thoại này, kể cả nhật ký của Instagram.</string>
+    <string name="logs_share_no_app">Không có ứng dụng nào để chia sẻ</string>
+    <string name="logs_status_unsynced">Nhật ký đã lưu · không thể đồng bộ trực tiếp</string>
+    <string name="logs_copy_entry">Sao chép mục</string>
+    <string name="logs_crash_share">Chia sẻ báo cáo sự cố</string>
+    <string name="logs_crash_delete">Xóa báo cáo sự cố</string>
+    <string name="logs_crash_share_warning">Báo cáo sự cố có thể chứa một phần dữ liệu Instagram đang giữ trong bộ nhớ, như tin nhắn hoặc dữ liệu đăng nhập. Hãy chia sẻ riêng tư, đừng đăng trong issue công khai.</string>
+    <string name="logs_crash_share_summary">Chia sẻ bản tóm tắt</string>
+    <string name="logs_crash_share_full">Chia sẻ báo cáo đầy đủ</string>
+    <string name="logs_crash_share_subject">Báo cáo sự cố InstaEclipse</string>
+    <string name="logs_crash_share_failed">Không tạo được báo cáo sự cố</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="other">Xóa %d báo cáo sự cố?</item>
+    </plurals>
+    <string name="logs_crash_delete_action">Xóa</string>
+    <string name="logs_crash_deleted">Đã xóa báo cáo sự cố</string>
 </resources>

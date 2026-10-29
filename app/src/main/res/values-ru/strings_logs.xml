@@ -22,9 +22,30 @@
     <string name="logs_empty_body">Откройте Instagram один раз с включённым в Vector InstaEclipse, затем вернитесь сюда и нажмите «Обновить». Лог Instagram сохраняется здесь автоматически — даже после закрытия Instagram.</string>
     <string name="logs_empty_filter_title">Нет записей для этого фильтра</string>
     <string name="logs_empty_filter_body">Выберите «Все», чтобы увидеть все записи.</string>
-    <string name="logs_nothing_to_copy">Нет логов для копирования</string>
+    <string name="logs_nothing_to_copy">Копировать нечего</string>
     <string name="logs_copied">Логи скопированы</string>
     <string name="logs_entry_copied">Запись скопирована</string>
     <string name="logs_cleared">Логи очищены</string>
     <string name="logs_source_companion">[приложение]</string>
+    <string name="logs_latest">К последним</string>
+    <string name="logs_clear_confirm_title">Очистить логи?</string>
+    <string name="logs_clear_confirm_body">Удаляет логи, сохранённые на этом телефоне, включая логи Instagram.</string>
+    <string name="logs_share_no_app">Нет приложения для отправки</string>
+    <string name="logs_status_unsynced">Сохранённый лог · синхронизация недоступна</string>
+    <string name="logs_copy_entry">Копировать запись</string>
+    <string name="logs_crash_share">Поделиться отчётом о сбое</string>
+    <string name="logs_crash_delete">Удалить отчёты о сбоях</string>
+    <string name="logs_crash_share_warning">Отчёты о сбоях могут содержать часть данных из памяти Instagram, например сообщения или данные входа. Делитесь ими лично, а не в публичном обсуждении.</string>
+    <string name="logs_crash_share_summary">Поделиться сводкой</string>
+    <string name="logs_crash_share_full">Поделиться полным отчётом</string>
+    <string name="logs_crash_share_subject">Отчёт о сбое InstaEclipse</string>
+    <string name="logs_crash_share_failed">Не удалось создать отчёт о сбое</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="one">Удалить %d отчёт о сбое?</item>
+        <item quantity="few">Удалить %d отчёта о сбоях?</item>
+        <item quantity="many">Удалить %d отчётов о сбоях?</item>
+        <item quantity="other">Удалить %d отчёта о сбоях?</item>
+    </plurals>
+    <string name="logs_crash_delete_action">Удалить</string>
+    <string name="logs_crash_deleted">Отчёты о сбоях удалены</string>
 </resources>

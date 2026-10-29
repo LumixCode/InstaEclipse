@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_comment_search_maybe_more">Φορτώθηκαν %1$d σχόλια · ίσως υπάρχουν κι άλλα</string>
+    <string name="ig_toast_story_unavailable">Δεν υπάρχουν λεπτομέρειες ιστορίας</string>
+    <string name="ig_toast_like_not_sent">Το like δεν στάλθηκε</string>
+    <string name="ig_toast_user_follows_you">\@%1$s σας ακολουθεί</string>
+    <string name="ig_toast_user_not_follows_you">\@%1$s δεν σας ακολουθεί</string>
+    <string name="ig_pa_remove_confirm">Αφαίρεση του @%1$s από τη λίστα παρακολούθησης; Διαγράφονται οι %2$d αποθηκευμένες αναλύσεις του και το χρονολόγιο αλλαγών. Δεν αναιρείται.</string>
+    <string name="ig_pa_remove_confirm_action">Αφαίρεση</string>
+    <string name="ig_pa_save_failed">Η ανάλυση δεν αποθηκεύτηκε, οπότε η επόμενη θα συγκριθεί με την τελευταία αποθηκευμένη.</string>
+    <string name="ig_follow_tools">Εργαλεία λίστας</string>
+    <string name="ig_follow_tools_title">\@%1$s · %2$s: %3$s</string>
+    <string name="ig_follow_load_stop">Διακοπή</string>
+    <string name="ig_follow_export_failed">Η εξαγωγή δεν αποθηκεύτηκε: %1$s</string>
+    <string name="ig_pa_check_mine">Έλεγχος των ακολούθων μου</string>
+    <string name="ig_pa_watch_row_followers">%1$d ακόλουθοι · %2$s</string>
+    <string name="ig_pa_watch_full">Η λίστα παρακολούθησης γέμισε: αφαιρέθηκε το παλαιότερο προφίλ</string>
+    <plurals name="ig_list_more">
+        <item quantity="one">+%1$d ακόμα · βλ. Χρονολόγιο αλλαγών</item>
+        <item quantity="other">+%1$d ακόμα · βλ. Χρονολόγιο αλλαγών</item>
+    </plurals>
+    <string name="ig_comment_search_clear">Εκκαθάριση αναζήτησης</string>
+    <string name="ig_comment_export_none">Δεν φορτώθηκαν ακόμα σχόλια</string>
+    <string name="ig_comment_export_title">Σχόλια</string>
+    <string name="ig_comment_export_on_post">Σχόλια στη δημοσίευση του @%1$s</string>
+    <string name="ig_comment_export_banner">Εξαγωγή σχολίων</string>
+    <string name="ig_comment_export_exported">Εξαγωγή: %1$s</string>
+    <string name="ig_comment_export_loaded_only">Περιλαμβάνονται μόνο τα σχόλια που φορτώθηκαν στην εφαρμογή</string>
+    <string name="ig_comment_media_gif">GIF</string>
+    <string name="ig_comment_media_image">Εικόνα</string>
+    <string name="ig_comment_media_unavailable">%1$s (μη διαθέσιμο)</string>
+    <plurals name="ig_comment_export_comments">
+        <item quantity="one">%1$d σχόλιο</item>
+        <item quantity="other">%1$d σχόλια</item>
+    </plurals>
+    <plurals name="ig_comment_export_replies">
+        <item quantity="one">%1$d απάντηση</item>
+        <item quantity="other">%1$d απαντήσεις</item>
+    </plurals>
+    <string name="ig_confirm_follow_title_v2">Ακολούθηση @%1$s;</string>
+</resources>

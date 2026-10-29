@@ -5,4 +5,40 @@
     <string name="feat_search_no_results">Δεν βρέθηκαν λειτουργίες</string>
     <string name="feat_count_on">%1$d ενεργές</string>
     <string name="feat_count_off">Ανενεργές</string>
+    <string name="feat_cache_size_limit">Όριο μεγέθους cache</string>
+    <string name="feat_tab_move_up">Μετακίνηση πάνω: %1$s</string>
+    <string name="feat_tab_move_down">Μετακίνηση κάτω: %1$s</string>
+    <string name="feat_tab_hidden">%1$s · Κρυφή</string>
+    <plurals name="feat_restore_confirm">
+        <item quantity="one">Επαναφορά %d ρύθμισης από αυτό το αντίγραφο; Οι ρυθμίσεις του αρχείου αντικαθιστούν τις τρέχουσες· τα κλειδώματα μόνο ενεργοποιούνται.</item>
+        <item quantity="other">Επαναφορά %d ρυθμίσεων από αυτό το αντίγραφο; Οι ρυθμίσεις του αρχείου αντικαθιστούν τις τρέχουσες· τα κλειδώματα μόνο ενεργοποιούνται.</item>
+    </plurals>
+    <plurals name="feat_restore_skipped">
+        <item quantity="one">%d εγγραφή παραλείπεται.</item>
+        <item quantity="other">%d εγγραφές παραλείπονται.</item>
+    </plurals>
+    <string name="feat_restore_needs_passcode">Τα κλειδώματα χρειάζονται κωδικό ορισμένο στο Instagram.</string>
+    <string name="feat_restore_action">Επαναφορά</string>
+    <string name="feat_restore_invalid_file">μη έγκυρο αρχείο αντιγράφου</string>
+    <string name="feat_backup_unreadable">δεν ήταν δυνατή η ανάγνωση των ρυθμίσεων</string>
+    <string name="feat_notification_rationale_title">Εμφάνιση προόδου λήψης;</string>
+    <string name="feat_notification_rationale_message">Το InstaEclipse εμφανίζει μια ειδοποίηση όσο αποθηκεύει τις λήψεις σας.</string>
+    <string name="feat_storage_rationale_title">Άδεια για αποθήκευση λήψεων;</string>
+    <string name="feat_storage_rationale_message">Σε αυτή την έκδοση Android το InstaEclipse χρειάζεται πρόσβαση στον αποθηκευτικό χώρο για να αποθηκεύει τις λήψεις σας.</string>
+    <string name="feat_permission_not_now">Όχι τώρα</string>
+    <string name="feat_use_default_folder">Χρήση προεπιλεγμένου φακέλου</string>
+    <string name="feat_download_folder_default">%1$s (προεπιλογή)</string>
+    <string name="feat_reset_folder_confirm">Χρήση του προεπιλεγμένου φακέλου; Οι νέες λήψεις πάνε στο %1$s.</string>
+    <string name="feat_search_try_another">Δοκιμάστε άλλη λέξη</string>
+    <string name="feat_reason_best_only">Μόνο με την ποιότητα Καλύτερη</string>
+    <string name="feat_reason_overridden">Ανενεργό όσο ισχύει το «%1$s»</string>
+    <string name="feat_requires_lock">Ενεργοποιήστε πρώτα κλείδωμα</string>
+    <string name="feat_requires_above">Ενεργοποιήστε πρώτα μια επιλογή παραπάνω</string>
+    <string name="feat_corner_small">Μικρές</string>
+    <string name="feat_corner_medium">Μεσαίες</string>
+    <string name="feat_corner_large">Μεγάλες</string>
+    <string name="feat_corner_extra_large">Πολύ μεγάλες</string>
+    <string name="feat_corner_round">Πλήρεις</string>
+    <string name="feat_lock_needs_passcode">Ενεργό · χρειάζεται κωδικό στο Instagram</string>
+    <string name="feat_restart_waiting">Αναμονή για επανεκκίνηση του Instagram</string>
 </resources>

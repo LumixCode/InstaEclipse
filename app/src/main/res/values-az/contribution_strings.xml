@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">InstaEclipse yükləmələri</string>
     <string name="ie_download_quality">Yükləmə keyfiyyəti</string>
     <string name="ie_downloader_original">Standart</string>
     <string name="ie_download_best">Ən yaxşı</string>
     <string name="ie_download_ceiling">Ən yaxşı, %1$dp-yə qədər</string>
+    <string name="ie_save_video_frame">Video kadrını saxla</string>
+    <string name="ie_download_video">Videonu yüklə</string>
+    <string name="ie_frame_help">Sürüşdürücü ilə kadr seçin. Yalnız tam ölçülü PNG saxlanılır; müvəqqəti video saxlayanda və ya bağlayanda silinir.</string>
+    <string name="ie_frame_preparing">Ən yüksək keyfiyyətli video hazırlanır…</string>
+    <string name="ie_frame_preparing_progress">Ən yüksək keyfiyyətli video hazırlanır… %1$d%%</string>
+    <string name="ie_frame_loading">Önizləmə yüklənir…</string>
+    <string name="ie_frame_preview">Seçilmiş video kadrının önizləməsi</string>
+    <string name="ie_frame_position">Kadrın mövqeyi</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · Tam ölçü</string>
+    <string name="ie_frame_save">PNG saxla</string>
+    <string name="ie_frame_saving">Tam ölçülü kadr saxlanılır…</string>
+    <string name="ie_frame_saved">PNG saxlanıldı: %1$d × %2$d. Müvəqqəti video silindi.</string>
+    <string name="ie_frame_failed">Bu kadr hazırlana və ya saxlanıla bilmədi. Aşağı keyfiyyətli versiya ilə əvəz edilmədi.</string>
+    <string name="ie_frame_reopen">Kadr seçmək üçün Instagram-da «Yüklə» pəncərəsini yenidən açın.</string>
     <string name="ie_download_compatibility">Hər yerdə açılan videolara üstünlük ver</string>
     <string name="ie_download_fallback">Ən yaxşı alınmasa, aşağı keyfiyyət istifadə et</string>
+    <string name="ie_download_unavailable">Seçilmiş media bu Instagram versiyası üçün tapıla bilmədi.</string>
+    <string name="ie_download_retry_lower">Aşağı keyfiyyətlə təkrarla</string>
     <string name="ie_downloader_original_unavailable">Standart bunu saxlaya bilmədi. Yükləmək üçün Ən yaxşı seçiminə keçin.</string>
     <string name="ie_download_fallback_prompt">Ən yaxşı bunu saxlaya bilmədi. Aşağı keyfiyyət sınansın?</string>
+    <string name="ie_download_cancelled">Yükləmə ləğv edildi</string>
+    <string name="ie_download_select_item">Karusel elementini seçin</string>
+    <string name="ie_download_item">Element %1$d</string>
 </resources>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_hex_invalid">6 veya 8 onaltılık basamak girin</string>
+    <string name="theme_custom_reset">Özel renkler sıfırlandı</string>
+    <string name="theme_undo">Geri al</string>
+    <string name="theme_preset_selected">Seçili</string>
+    <string name="theme_custom_dark_only">Özel renkler koyu mod içindir. Düzenlemek için telefonunuzu koyu moda alın</string>
+    <string name="loc_picker_clear_search">Aramayı temizle</string>
+    <string name="dev_config_open_instagram">Önce Instagram\'ı açın, sonra tekrar deneyin</string>
+    <string name="dev_config_export_failed">Instagram yapılandırmasını dışa aktaramadı</string>
+    <string name="ie_frame_previous">Önceki kare</string>
+    <string name="ie_frame_next">Sonraki kare</string>
+    <string name="ie_frame_cleanup_pending_open">Geçici dosyaların temizliği tamamlanmadı. Temizliği yeniden denemek için InstaEclipse\'i açın.</string>
+    <string name="credits_on_github">GitHub\'da %1$s</string>
+    <string name="credits_on_telegram">Telegram\'da %1$s</string>
+    <string name="credits_on_linkedin">LinkedIn\'de %1$s</string>
+    <string name="import_sending">Instagram\'a gönderiliyor…</string>
+    <string name="import_too_large">Bu dosya içe aktarmak için çok büyük</string>
+    <string name="import_cant_receive">Instagram bu dosyayı alamıyor</string>
+    <string name="import_no_reply">Instagram onaylamadı. Instagram\'ı açın (InstaEclipse güncellemesinden sonra yeniden başlatın), sonra tekrar deneyin.</string>
+    <string name="loc_picker_spoof_off">Sahte konum kapalı, bu yüzden Instagram hâlâ gerçek konumunuzu görüyor.</string>
+    <string name="loc_picker_needs_restart">Kullanmak için Instagram bir kez yeniden başlatılmalı.</string>
+    <string name="loc_picker_turn_on">Aç</string>
+    <string name="loc_picker_only_save">Yalnızca kaydet</string>
+    <string name="loc_saved_spoof_off">Kaydedildi. Kullanmak için sahte konumu açın.</string>
+    <string name="loc_picker_no_connection">Bağlantı yok</string>
+    <string name="loc_picker_search_unavailable">Arama şu anda kullanılamıyor</string>
+</resources>

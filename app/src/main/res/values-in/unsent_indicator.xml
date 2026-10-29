@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">Dibatalkan</string>
+    <string name="ig_unsent_clear_failed">Tidak dapat menghapus pesan yang disimpan. Buka ulang obrolan ini lalu coba lagi.</string>
+    <string name="ig_unsent_clear_saved">Hapus pesan dibatalkan yang disimpan</string>
+    <string name="ig_unsent_clear_saved_confirm">Hapus pesan yang disimpan ini dari sampah dan riwayat obrolan lokal? Tindakan ini tidak dapat diurungkan.</string>
+    <string name="ig_unsent_cleared_saved">Pesan dibatalkan yang disimpan dihapus</string>
+</resources>

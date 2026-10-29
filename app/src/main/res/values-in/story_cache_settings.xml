@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">Cache cerita yang dilihat</string>
+    <string name="ig_story_cache_duration">Durasi cache</string>
+    <string name="ig_story_cache_hours">%1$d jam</string>
+    <string name="ig_story_cache_picker_help">Simpan cerita selama 1–720 jam (hingga 30 hari). Cerita terlama bisa dihapus lebih awal jika cache mencapai 500 MB.</string>
+    <string name="ig_story_cache_picker_unit">jam setelah dilihat</string>
+    <string name="ig_story_cache_invalid">Masukkan angka dari 1 sampai 720.</string>
+    <string name="ig_story_cache_empty_current">Belum ada cerita di cache. Aktifkan cache, lalu lihat beberapa cerita agar tersimpan di sini selama durasi pilihan Anda.</string>
+</resources>

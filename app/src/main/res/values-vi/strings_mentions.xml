@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="ig_mention_count">
+        <item quantity="other">%1$d lượt nhắc · chạm để mở, giữ để sao chép</item>
+    </plurals>
+</resources>

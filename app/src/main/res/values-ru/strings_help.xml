@@ -12,4 +12,16 @@
     <string name="help_lspatch_title">LSPatch (JingMatrix)</string>
     <string name="help_lspatch_sub">Нет root? Установите это</string>
     <string name="help_lspatch_guide">Открыть инструкцию по установке</string>
+    <string name="about_based_on">Основано на InstaEclipse от %1$s</string>
+    <string name="update_check_note">Проверяет github.com на новые версии InstaEclipse не чаще раза в день.</string>
+    <string name="update_whats_new">Что нового</string>
+    <string name="update_skip_version">Пропустить версию</string>
+    <string name="links_no_app">Нет приложения, чтобы открыть ссылку</string>
+    <string name="help_faq_2"><b>2. Модуль не включён?</b>\n- В LSPatch или Vector проверьте, что InstaEclipse включён для Instagram, затем принудительно остановите и снова откройте Instagram.</string>
+    <string name="help_faq_4"><b>4. Параметры разработчика вызывают сбои?</b>\n- Отключите параметры разработчика и выберите «Параметры разработчика» → «Вернуть конфигурацию по умолчанию».</string>
+    <string name="help_faq_5"><b>5. В параметрах разработчика странные названия или числа?</b>\n- Стабильная версия Instagram скрывает названия параметров. InstaEclipse протестирован с Instagram %1$s.</string>
+    <string name="help_troubleshooting">Решение проблем</string>
+    <string name="help_faq_expanded">Развёрнуто</string>
+    <string name="help_faq_collapsed">Свёрнуто</string>
+    <string name="help_tested_with">Протестировано с Instagram %1$s</string>
 </resources>

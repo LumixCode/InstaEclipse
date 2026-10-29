@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_toast_restored_some_skipped">Pengaturan dipulihkan, kecuali %1$d yang tidak valid atau dikunci oleh mode ekstrem.</string>
+</resources>

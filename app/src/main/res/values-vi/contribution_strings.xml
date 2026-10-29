@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">Tải xuống InstaEclipse</string>
     <string name="ie_download_quality">Chất lượng tải xuống</string>
     <string name="ie_downloader_original">Tiêu chuẩn</string>
     <string name="ie_download_best">Tốt nhất</string>
     <string name="ie_download_ceiling">Tốt nhất, tối đa %1$dp</string>
+    <string name="ie_save_video_frame">Lưu khung hình video</string>
+    <string name="ie_download_video">Tải video</string>
+    <string name="ie_frame_help">Chọn khung hình bằng thanh trượt. Chỉ ảnh PNG độ phân giải đầy đủ được lưu; video tạm sẽ bị xóa khi bạn lưu hoặc đóng.</string>
+    <string name="ie_frame_preparing">Đang chuẩn bị video chất lượng cao nhất…</string>
+    <string name="ie_frame_preparing_progress">Đang chuẩn bị video chất lượng cao nhất… %1$d%%</string>
+    <string name="ie_frame_loading">Đang tải bản xem trước…</string>
+    <string name="ie_frame_preview">Xem trước khung hình video đã chọn</string>
+    <string name="ie_frame_position">Vị trí khung hình</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · Độ phân giải đầy đủ</string>
+    <string name="ie_frame_save">Lưu PNG</string>
+    <string name="ie_frame_saving">Đang lưu khung hình độ phân giải đầy đủ…</string>
+    <string name="ie_frame_saved">Đã lưu PNG: %1$d × %2$d. Đã xóa video tạm.</string>
+    <string name="ie_frame_failed">Không thể chuẩn bị hoặc lưu khung hình này. Không dùng bản chất lượng thấp hơn để thay thế.</string>
+    <string name="ie_frame_reopen">Mở lại Tải xuống trong Instagram để chọn khung hình.</string>
     <string name="ie_download_compatibility">Ưu tiên video phát được ở mọi nơi</string>
     <string name="ie_download_fallback">Dùng chất lượng thấp hơn nếu Tốt nhất lỗi</string>
+    <string name="ie_download_unavailable">Không xác định được phương tiện đã chọn trên phiên bản Instagram này.</string>
+    <string name="ie_download_retry_lower">Thử chất lượng thấp hơn</string>
     <string name="ie_downloader_original_unavailable">Tiêu chuẩn không lưu được mục này. Chuyển sang Tốt nhất để tải.</string>
     <string name="ie_download_fallback_prompt">Tốt nhất không lưu được. Thử chất lượng thấp hơn?</string>
+    <string name="ie_download_cancelled">Đã hủy tải xuống</string>
+    <string name="ie_download_select_item">Chọn mục trong băng chuyền</string>
+    <string name="ie_download_item">Mục %1$d</string>
 </resources>

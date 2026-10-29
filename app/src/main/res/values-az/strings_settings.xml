@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_toast_restored_some_skipped">Ayarlar bərpa edildi, yanlış olan və ya Ekstremal rejimlə kilidlənmiş %1$d ayar istisna olmaqla.</string>
+</resources>

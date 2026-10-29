@@ -2,7 +2,7 @@
 <resources>
     <!-- Logs tab (0.8) -->
     <string name="logs_filter_all">Semua</string>
-    <string name="logs_filter_hooked">Berhasil</string>
+    <string name="logs_filter_hooked">Siap</string>
     <string name="logs_filter_errors">Kesalahan</string>
     <string name="logs_filter_warnings">Peringatan</string>
     <string name="logs_technical_details">Detail teknis</string>
@@ -27,4 +27,22 @@
     <string name="logs_entry_copied">Entri disalin</string>
     <string name="logs_cleared">Log dibersihkan</string>
     <string name="logs_source_companion">[aplikasi]</string>
+    <string name="logs_latest">Terbaru</string>
+    <string name="logs_clear_confirm_title">Bersihkan log?</string>
+    <string name="logs_clear_confirm_body">Menghapus log yang tersimpan di ponsel ini, termasuk log Instagram.</string>
+    <string name="logs_share_no_app">Tidak ada aplikasi untuk berbagi</string>
+    <string name="logs_status_unsynced">Log tersimpan · sinkron langsung tidak tersedia</string>
+    <string name="logs_copy_entry">Salin entri</string>
+    <string name="logs_crash_share">Bagikan laporan crash</string>
+    <string name="logs_crash_delete">Hapus laporan crash</string>
+    <string name="logs_crash_share_warning">Laporan crash bisa berisi sebagian isi memori Instagram, seperti pesan atau data login. Bagikan secara pribadi, jangan di issue publik.</string>
+    <string name="logs_crash_share_summary">Bagikan ringkasan</string>
+    <string name="logs_crash_share_full">Bagikan laporan lengkap</string>
+    <string name="logs_crash_share_subject">Laporan crash InstaEclipse</string>
+    <string name="logs_crash_share_failed">Tidak dapat membuat laporan crash</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="other">Hapus %d laporan crash?</item>
+    </plurals>
+    <string name="logs_crash_delete_action">Hapus</string>
+    <string name="logs_crash_deleted">Laporan crash dihapus</string>
 </resources>

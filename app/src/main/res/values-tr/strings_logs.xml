@@ -2,7 +2,7 @@
 <resources>
     <!-- Logs tab (0.8) -->
     <string name="logs_filter_all">Tümü</string>
-    <string name="logs_filter_hooked">Başarılı</string>
+    <string name="logs_filter_hooked">Hazır</string>
     <string name="logs_filter_errors">Hatalar</string>
     <string name="logs_filter_warnings">Uyarılar</string>
     <string name="logs_technical_details">Teknik ayrıntılar</string>
@@ -27,4 +27,23 @@
     <string name="logs_entry_copied">Kayıt kopyalandı</string>
     <string name="logs_cleared">Günlükler temizlendi</string>
     <string name="logs_source_companion">[uygulama]</string>
+    <string name="logs_latest">En yeni</string>
+    <string name="logs_clear_confirm_title">Günlükler temizlensin mi?</string>
+    <string name="logs_clear_confirm_body">Bu telefonda kayıtlı günlükleri, Instagram\'ınkiler dahil, siler.</string>
+    <string name="logs_share_no_app">Paylaşmak için uygulama yok</string>
+    <string name="logs_status_unsynced">Kayıtlı günlük · canlı eşitleme kullanılamıyor</string>
+    <string name="logs_copy_entry">Kaydı kopyala</string>
+    <string name="logs_crash_share">Çökme raporunu paylaş</string>
+    <string name="logs_crash_delete">Çökme raporlarını sil</string>
+    <string name="logs_crash_share_warning">Çökme raporları, Instagram\'ın bellekte tuttuğu mesajlar veya giriş bilgileri gibi verilerin parçalarını içerebilir. Bunları herkese açık bir issue\'da değil, özel olarak paylaşın.</string>
+    <string name="logs_crash_share_summary">Özeti paylaş</string>
+    <string name="logs_crash_share_full">Tam raporu paylaş</string>
+    <string name="logs_crash_share_subject">InstaEclipse çökme raporu</string>
+    <string name="logs_crash_share_failed">Çökme raporu oluşturulamadı</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="one">%d çökme raporu silinsin mi?</item>
+        <item quantity="other">%d çökme raporu silinsin mi?</item>
+    </plurals>
+    <string name="logs_crash_delete_action">Sil</string>
+    <string name="logs_crash_deleted">Çökme raporları silindi</string>
 </resources>

@@ -4,4 +4,6 @@
     <string name="ig_toast_link_copied">Tautan disalin</string>
     <string name="ig_toast_links_copied">Semua tautan disalin</string>
     <string name="ig_dialog_misc_story_links">Salin tautan cerita</string>
+    <string name="ig_btn_copy_sticker_link">Salin tautan stiker</string>
+    <string name="ig_sticker_links_title">Tautan stiker</string>
 </resources>

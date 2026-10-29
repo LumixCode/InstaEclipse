@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_manual_story_seen_action">Đánh dấu đã xem tin này</string>
+    <string name="ig_manual_story_seen_sent">Đã gửi trạng thái đã xem cho tin này</string>
+    <string name="ig_manual_story_seen_unavailable">Không gửi được trạng thái đã xem của tin này. Chế độ ẩn danh vẫn bật.</string>
+    <string name="ig_manual_story_seen_unsupported">Không thể đánh dấu đã xem trên bản Instagram này. Chế độ ẩn danh vẫn bật.</string>
+</resources>

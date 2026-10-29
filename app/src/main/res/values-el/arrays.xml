@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ig_fancy_font_names">
+        <item>Κανονική</item>
+        <item>Έντονη</item>
+        <item>Πλάγια</item>
+        <item>Έντονη πλάγια</item>
+        <item>Sans έντονη</item>
+        <item>Sans πλάγια</item>
+        <item>Καλλιγραφική</item>
+        <item>Fraktur</item>
+        <item>Διπλή γραμμή</item>
+        <item>Σταθερού πλάτους</item>
+        <item>Σε κύκλο</item>
+        <item>Πλήρους πλάτους</item>
+        <item>Μικρά κεφαλαία</item>
+        <item>Διακριτή διαγραφή</item>
+        <item>Υπογράμμιση</item>
+    </string-array>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_preset_light">%1$s, светлая</string>
+    <string name="theme_preset_dark">%1$s, тёмная</string>
+    <string name="ig_reel_block_off_title">Reels отключены</string>
+    <string name="ig_reel_block_off_detail">Включите их снова: InstaEclipse › %1$s</string>
+    <string name="ig_reel_block_night_title">Reels приостановлены на ночь</string>
+    <string name="ig_reel_block_night_detail">Вернутся в %1$s</string>
+    <string name="ig_reel_block_limit_title">Достигнут дневной лимит Reels</string>
+    <string name="ig_reel_block_limit_detail">%1$d из %2$d Reels · сброс в полночь</string>
+    <string name="ig_reel_block_go_back">Назад</string>
+</resources>

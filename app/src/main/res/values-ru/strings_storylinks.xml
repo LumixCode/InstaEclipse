@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="ig_story_links_hint">Нажмите, чтобы скопировать · удерживайте, чтобы открыть</string>
+    <string name="ig_story_links_hint">Нажатие — копировать · удержание — открыть</string>
     <string name="ig_toast_link_copied">Ссылка скопирована</string>
     <string name="ig_toast_links_copied">Все ссылки скопированы</string>
-    <string name="ig_dialog_misc_story_links">Копировать ссылки из историй</string>
+    <string name="ig_dialog_misc_story_links">Ссылки из историй</string>
+    <string name="ig_btn_copy_sticker_link">Копировать ссылку стикера</string>
+    <string name="ig_sticker_links_title">Ссылки стикеров</string>
 </resources>

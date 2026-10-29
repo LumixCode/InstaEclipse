@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">Đã thu hồi</string>
+    <string name="ig_unsent_clear_failed">Không xóa được tin nhắn đã lưu. Hãy mở lại đoạn chat này và thử lại.</string>
+    <string name="ig_unsent_clear_saved">Xóa các tin nhắn thu hồi đã lưu</string>
+    <string name="ig_unsent_clear_saved_confirm">Xóa các tin nhắn được giữ này khỏi thùng rác và lịch sử chat trên máy? Không thể hoàn tác.</string>
+    <string name="ig_unsent_cleared_saved">Đã xóa các tin nhắn thu hồi đã lưu</string>
+</resources>

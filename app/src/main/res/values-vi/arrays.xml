@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ig_fancy_font_names">
+        <item>Bình thường</item>
+        <item>Đậm</item>
+        <item>Nghiêng</item>
+        <item>Đậm nghiêng</item>
+        <item>Sans đậm</item>
+        <item>Sans nghiêng</item>
+        <item>Chữ viết tay</item>
+        <item>Fraktur</item>
+        <item>Nét kép</item>
+        <item>Đơn cách</item>
+        <item>Khoanh tròn</item>
+        <item>Toàn độ rộng</item>
+        <item>Chữ hoa nhỏ</item>
+        <item>Gạch ngang</item>
+        <item>Gạch chân</item>
+    </string-array>
+</resources>

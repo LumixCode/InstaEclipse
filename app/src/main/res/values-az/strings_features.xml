@@ -5,4 +5,40 @@
     <string name="feat_search_no_results">Uyğun funksiya tapılmadı</string>
     <string name="feat_count_on">%1$d aktiv</string>
     <string name="feat_count_off">Deaktiv</string>
+    <string name="feat_cache_size_limit">Keş ölçüsü limiti</string>
+    <string name="feat_tab_move_up">Yuxarı köçür: %1$s</string>
+    <string name="feat_tab_move_down">Aşağı köçür: %1$s</string>
+    <string name="feat_tab_hidden">%1$s · Gizli</string>
+    <plurals name="feat_restore_confirm">
+        <item quantity="one">Bu ehtiyat nüsxədən %d ayar bərpa edilsin? Fayldakı ayarlar cari ayarları əvəz edir; kilidlər yalnız aktiv edilir.</item>
+        <item quantity="other">Bu ehtiyat nüsxədən %d ayar bərpa edilsin? Fayldakı ayarlar cari ayarları əvəz edir; kilidlər yalnız aktiv edilir.</item>
+    </plurals>
+    <plurals name="feat_restore_skipped">
+        <item quantity="one">%d qeyd ötürülür.</item>
+        <item quantity="other">%d qeyd ötürülür.</item>
+    </plurals>
+    <string name="feat_restore_needs_passcode">Kilidlər üçün Instagram-da parol təyin edilməlidir.</string>
+    <string name="feat_restore_action">Bərpa et</string>
+    <string name="feat_restore_invalid_file">etibarlı ehtiyat faylı deyil</string>
+    <string name="feat_backup_unreadable">ayarlar oxuna bilmədi</string>
+    <string name="feat_notification_rationale_title">Yükləmənin gedişatı göstərilsin?</string>
+    <string name="feat_notification_rationale_message">InstaEclipse yükləmələrinizi saxlayarkən bildiriş göstərir.</string>
+    <string name="feat_storage_rationale_title">Yükləmələrin saxlanmasına icazə verilsin?</string>
+    <string name="feat_storage_rationale_message">Bu Android versiyasında InstaEclipse yükləmələrinizi saxlamaq üçün yaddaşa giriş tələb edir.</string>
+    <string name="feat_permission_not_now">İndi yox</string>
+    <string name="feat_use_default_folder">Standart qovluğu seç</string>
+    <string name="feat_download_folder_default">%1$s (standart)</string>
+    <string name="feat_reset_folder_confirm">Standart qovluq seçilsin? Yeni yükləmələr bura gedəcək: %1$s.</string>
+    <string name="feat_search_try_another">Başqa söz yoxlayın</string>
+    <string name="feat_reason_best_only">Yalnız Ən yaxşı keyfiyyətlə</string>
+    <string name="feat_reason_overridden">«%1$s» aktiv olduqca deaktivdir</string>
+    <string name="feat_requires_lock">Əvvəlcə bir kilid aktiv edin</string>
+    <string name="feat_requires_above">Əvvəlcə yuxarıda bir seçimi aktiv edin</string>
+    <string name="feat_corner_small">Kiçik</string>
+    <string name="feat_corner_medium">Orta</string>
+    <string name="feat_corner_large">Böyük</string>
+    <string name="feat_corner_extra_large">Çox böyük</string>
+    <string name="feat_corner_round">Dairəvi</string>
+    <string name="feat_lock_needs_passcode">Aktiv · Instagram-da parol lazımdır</string>
+    <string name="feat_restart_waiting">Instagram-ın yenidən başladılması gözlənilir</string>
 </resources>

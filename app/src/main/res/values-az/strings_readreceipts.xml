@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="ig_dialog_ghost_read_receipt_chats">Oxunma bildirişlərini seçilmiş söhbətlərə göndər</string>
+    <string name="ig_dialog_ghost_read_receipt_chats">Seçilən söhbətlərə oxunma bildirişi</string>
     <string name="ig_read_receipt_chat_on">Bu söhbətdə oxunma bildirişi göndər</string>
     <string name="ig_read_receipt_chat_off">Bu söhbətdə oxunma bildirişini dayandır</string>
     <string name="ig_toast_read_receipt_on">Bu söhbət üçün oxunma bildirişi açıldı</string>

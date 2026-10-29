@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">Αναιρέθηκε</string>
+    <string name="ig_unsent_clear_failed">Η εκκαθάριση των αποθηκευμένων μηνυμάτων απέτυχε. Ανοίξτε ξανά τη συνομιλία και δοκιμάστε πάλι.</string>
+    <string name="ig_unsent_clear_saved">Εκκαθάριση αποθηκευμένων αναιρεμένων</string>
+    <string name="ig_unsent_clear_saved_confirm">Αφαίρεση αυτών των κρατημένων μηνυμάτων από τον κάδο και το τοπικό ιστορικό συνομιλίας; Δεν αναιρείται.</string>
+    <string name="ig_unsent_cleared_saved">Διαγράφηκαν τα αποθηκευμένα αναιρεμένα</string>
+</resources>

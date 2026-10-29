@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_feature_unsent_indicator">Geri götürülənləri işarələ</string>
+    <string name="ig_feature_show_unsent_button">Söhbət menyusunda «Geri götürülən mesajlar» göstər</string>
+    <string name="ig_feature_following_follow_status">Sizi qarşılıqlı izləyənləri göstər</string>
+    <string name="ig_feature_manual_story_seen">Hekayələri əllə baxılmış kimi işarələ</string>
+</resources>

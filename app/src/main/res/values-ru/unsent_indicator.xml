@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">Удалено</string>
+    <string name="ig_unsent_clear_failed">Не удалось очистить сохранённые сообщения. Откройте чат снова и повторите попытку.</string>
+    <string name="ig_unsent_clear_saved">Очистить сохранённые удалённые сообщения</string>
+    <string name="ig_unsent_clear_saved_confirm">Удалить эти сохранённые сообщения из корзины и локальной истории чата? Это действие нельзя отменить.</string>
+    <string name="ig_unsent_cleared_saved">Сохранённые удалённые сообщения очищены</string>
+</resources>

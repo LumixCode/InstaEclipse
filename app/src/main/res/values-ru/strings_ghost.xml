@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_unsent_log_set_aside">Не удалось прочитать сохранённый список; он сохранён отдельно.</string>
+    <string name="ig_toast_marked_as_seen">Отмечено прочитанным</string>
+    <string name="ig_toast_channel_marked_as_seen">Канал отмечен прочитанным</string>
+    <string name="ig_chat_export_banner">Экспорт чата</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="one">%1$d сообщение</item>
+        <item quantity="few">%1$d сообщения</item>
+        <item quantity="many">%1$d сообщений</item>
+        <item quantity="other">%1$d сообщения</item>
+    </plurals>
+    <string name="ig_chat_export_edited">изменено</string>
+    <string name="ig_chat_export_pinned">закреплено</string>
+    <string name="ig_chat_export_forwarded">переслано</string>
+    <string name="ig_chat_export_story_reply">Ответ на историю</string>
+    <string name="ig_chat_export_reply_to">для @%1$s</string>
+    <string name="ig_chat_export_shared_story">Пересланная история</string>
+    <string name="ig_chat_export_shared_reel">Пересланное видео Reels</string>
+    <string name="ig_chat_export_shared_post">Пересланная публикация</string>
+    <string name="ig_chat_export_shared_profile">Пересланный профиль</string>
+    <string name="ig_chat_export_mention_by_you">Вы упомянули собеседника в своей истории</string>
+    <string name="ig_chat_export_mention_of_you">Упомянул(а) вас в своей истории</string>
+    <string name="ig_chat_export_unsupported">Экспорт чата не работает в этой версии Instagram</string>
+    <string name="ig_bulk_unsend_not_ready">Чат не готов, попробуйте ещё раз</string>
+    <plurals name="ig_bulk_unsend_result">
+        <item quantity="one">Отменена отправка %1$d из %2$d сообщения</item>
+        <item quantity="few">Отменена отправка %1$d из %2$d сообщений</item>
+        <item quantity="many">Отменена отправка %1$d из %2$d сообщений</item>
+        <item quantity="other">Отменена отправка %1$d из %2$d сообщений</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="one">Отменить отправку %1$d сообщения? Это необратимо.</item>
+        <item quantity="few">Отменить отправку %1$d сообщений? Это необратимо.</item>
+        <item quantity="many">Отменить отправку %1$d сообщений? Это необратимо.</item>
+        <item quantity="other">Отменить отправку %1$d сообщения? Это необратимо.</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="one">Отмена отправки %1$d/%2$d</item>
+        <item quantity="few">Отмена отправки %1$d/%2$d</item>
+        <item quantity="many">Отмена отправки %1$d/%2$d</item>
+        <item quantity="other">Отмена отправки %1$d/%2$d</item>
+    </plurals>
+    <string name="ig_jump_first_stop_menu">Остановить загрузку старых сообщений</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="one">Загрузка старых сообщений · загружено: %1$d</item>
+        <item quantity="few">Загрузка старых сообщений · загружено: %1$d</item>
+        <item quantity="many">Загрузка старых сообщений · загружено: %1$d</item>
+        <item quantity="other">Загрузка старых сообщений · загружено: %1$d</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">Загрузка старых сообщений</string>
+    <string name="ig_jump_first_stop">Остановить</string>
+    <string name="ig_jump_first_reached">Достигнуто первое сообщение этого чата</string>
+    <string name="ig_jump_first_stopped_loading">Загрузка старых сообщений остановлена</string>
+    <string name="ig_lock_chat">Заблокировать чат</string>
+    <string name="ig_lock_chat_unlock">Разблокировать чат</string>
+    <string name="ig_lock_chat_locked">Чат заблокирован</string>
+    <string name="ig_lock_chat_locked_on">Чат заблокирован. Включено «Блокировать выбранные чаты».</string>
+    <string name="ig_lock_chat_unlocked">Чат разблокирован</string>
+    <string name="ig_lock_selected_menu_desc">Выберите чаты здесь или через «Заблокировать чат» в меню чата</string>
+    <string name="ig_ghost_messages_tab_label">Сообщения, режим призрака включён</string>
+    <string name="ig_toast_ghost_on">Режим призрака вкл.: %1$s</string>
+    <string name="ig_toast_ghost_off">Режим призрака выкл.: %1$s</string>
+    <string name="ig_quick_toggle_none_chosen">Пока ничего не выбрано. Выберите, что переключает удержание значка «Сообщения».</string>
+    <string name="ig_quick_toggle_name_seen">прочтение</string>
+    <string name="ig_quick_toggle_name_typing">набор текста</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">уведомления о скриншотах</string>
+    <string name="ig_quick_toggle_name_view_once">одноразовые</string>
+    <string name="ig_quick_toggle_name_stories">истории</string>
+    <string name="ig_quick_toggle_name_live">эфиры</string>
+    <string name="ig_quick_toggle_name_disappearing">исчезающие сообщения</string>
+    <string name="ig_quick_toggle_name_permanent_view">повторный просмотр</string>
+    <string name="ig_quick_toggle_name_screenshots">скриншоты</string>
+    <string name="ig_read_receipt_list_title">Чаты с отметками о прочтении</string>
+    <string name="ig_read_receipt_list_add">Добавить чаты</string>
+    <string name="ig_read_receipt_pick_title">Выберите чаты с отметками о прочтении</string>
+    <string name="ig_read_receipt_list_empty">Пока ни в одном чате нет отметок о прочтении. Добавьте чаты здесь или откройте чат и выберите в его меню «Отправлять отметки о прочтении в этом чате».</string>
+    <string name="ig_read_receipt_list_seen_off">«Скрыть прочтение в чатах» выключено, поэтому сейчас отметки о прочтении получают все чаты.</string>
+</resources>

@@ -5,4 +5,38 @@
     <string name="feat_search_no_results">Tidak ada fitur yang cocok</string>
     <string name="feat_count_on">%1$d aktif</string>
     <string name="feat_count_off">Nonaktif</string>
+    <string name="feat_cache_size_limit">Batas ukuran cache</string>
+    <string name="feat_tab_move_up">Naikkan %1$s</string>
+    <string name="feat_tab_move_down">Turunkan %1$s</string>
+    <string name="feat_tab_hidden">%1$s · Tersembunyi</string>
+    <plurals name="feat_restore_confirm">
+        <item quantity="other">Pulihkan %d pengaturan dari cadangan ini? Pengaturan dalam file menggantikan yang sekarang; kunci hanya bisa diaktifkan.</item>
+    </plurals>
+    <plurals name="feat_restore_skipped">
+        <item quantity="other">%d entri dilewati.</item>
+    </plurals>
+    <string name="feat_restore_needs_passcode">Kunci memerlukan kode sandi yang diatur di Instagram.</string>
+    <string name="feat_restore_action">Pulihkan</string>
+    <string name="feat_restore_invalid_file">bukan file cadangan yang valid</string>
+    <string name="feat_backup_unreadable">pengaturan tidak dapat dibaca</string>
+    <string name="feat_notification_rationale_title">Tampilkan progres unduhan?</string>
+    <string name="feat_notification_rationale_message">InstaEclipse menampilkan notifikasi saat menyimpan unduhan Anda.</string>
+    <string name="feat_storage_rationale_title">Izinkan menyimpan unduhan?</string>
+    <string name="feat_storage_rationale_message">Di versi Android ini, InstaEclipse memerlukan akses penyimpanan untuk menyimpan unduhan Anda.</string>
+    <string name="feat_permission_not_now">Jangan sekarang</string>
+    <string name="feat_use_default_folder">Gunakan folder bawaan</string>
+    <string name="feat_download_folder_default">%1$s (bawaan)</string>
+    <string name="feat_reset_folder_confirm">Gunakan folder bawaan? Unduhan baru masuk ke %1$s.</string>
+    <string name="feat_search_try_another">Coba kata lain</string>
+    <string name="feat_reason_best_only">Hanya dengan kualitas Terbaik</string>
+    <string name="feat_reason_overridden">Nonaktif selama “%1$s” aktif</string>
+    <string name="feat_requires_lock">Aktifkan kunci terlebih dahulu</string>
+    <string name="feat_requires_above">Aktifkan dulu salah satu opsi di atas</string>
+    <string name="feat_corner_small">Kecil</string>
+    <string name="feat_corner_medium">Sedang</string>
+    <string name="feat_corner_large">Besar</string>
+    <string name="feat_corner_extra_large">Ekstra besar</string>
+    <string name="feat_corner_round">Bulat</string>
+    <string name="feat_lock_needs_passcode">Aktif · perlu kode sandi di Instagram</string>
+    <string name="feat_restart_waiting">Menunggu Instagram dimulai ulang</string>
 </resources>

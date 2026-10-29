@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_hex_invalid">Masukkan 6 atau 8 digit hex</string>
+    <string name="theme_custom_reset">Warna kustom diatur ulang</string>
+    <string name="theme_undo">Urungkan</string>
+    <string name="theme_preset_selected">Dipilih</string>
+    <string name="theme_custom_dark_only">Warna kustom untuk mode gelap. Ubah ponsel Anda ke mode gelap untuk mengeditnya</string>
+    <string name="loc_picker_clear_search">Hapus pencarian</string>
+    <string name="dev_config_open_instagram">Buka Instagram dulu, lalu coba lagi</string>
+    <string name="dev_config_export_failed">Instagram tidak dapat mengekspor konfigurasinya</string>
+    <string name="ie_frame_previous">Bingkai sebelumnya</string>
+    <string name="ie_frame_next">Bingkai berikutnya</string>
+    <string name="ie_frame_cleanup_pending_open">Pembersihan file sementara belum selesai. Buka InstaEclipse untuk mencoba lagi.</string>
+    <string name="credits_on_github">%1$s di GitHub</string>
+    <string name="credits_on_telegram">%1$s di Telegram</string>
+    <string name="credits_on_linkedin">%1$s di LinkedIn</string>
+    <string name="import_sending">Mengirim ke Instagram…</string>
+    <string name="import_too_large">File ini terlalu besar untuk diimpor</string>
+    <string name="import_cant_receive">Instagram tidak dapat menerima file ini</string>
+    <string name="import_no_reply">Instagram tidak memberi konfirmasi. Buka Instagram (mulai ulang setelah InstaEclipse diperbarui), lalu coba lagi.</string>
+    <string name="loc_picker_spoof_off">Lokasi palsu nonaktif, jadi Instagram masih melihat lokasi asli Anda.</string>
+    <string name="loc_picker_needs_restart">Instagram perlu dimulai ulang sekali untuk memakainya.</string>
+    <string name="loc_picker_turn_on">Aktifkan</string>
+    <string name="loc_picker_only_save">Simpan saja</string>
+    <string name="loc_saved_spoof_off">Disimpan. Aktifkan lokasi palsu untuk menggunakannya.</string>
+    <string name="loc_picker_no_connection">Tidak ada koneksi</string>
+    <string name="loc_picker_search_unavailable">Pencarian tidak tersedia saat ini</string>
+</resources>

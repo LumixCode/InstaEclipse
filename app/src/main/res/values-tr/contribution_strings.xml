@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">InstaEclipse indirmeleri</string>
     <string name="ie_download_quality">İndirme kalitesi</string>
     <string name="ie_downloader_original">Standart</string>
     <string name="ie_download_best">En iyi</string>
     <string name="ie_download_ceiling">En iyi, %1$dp\'ye kadar</string>
+    <string name="ie_save_video_frame">Video karesini kaydet</string>
+    <string name="ie_download_video">Videoyu indir</string>
+    <string name="ie_frame_help">Kaydırıcıyla bir kare seçin. Yalnızca tam çözünürlüklü PNG kaydedilir; geçici video, kaydettiğinizde veya kapattığınızda silinir.</string>
+    <string name="ie_frame_preparing">En yüksek kaliteli video hazırlanıyor…</string>
+    <string name="ie_frame_preparing_progress">En yüksek kaliteli video hazırlanıyor… %%%1$d</string>
+    <string name="ie_frame_loading">Önizleme yükleniyor…</string>
+    <string name="ie_frame_preview">Seçilen video karesinin önizlemesi</string>
+    <string name="ie_frame_position">Kare konumu</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · Tam çözünürlük</string>
+    <string name="ie_frame_save">PNG kaydet</string>
+    <string name="ie_frame_saving">Tam çözünürlüklü kare kaydediliyor…</string>
+    <string name="ie_frame_saved">PNG kaydedildi: %1$d × %2$d. Geçici video silindi.</string>
+    <string name="ie_frame_failed">Bu kare hazırlanamadı veya kaydedilemedi. Yerine daha düşük kaliteli bir sürüm kullanılmadı.</string>
+    <string name="ie_frame_reopen">Kare seçmek için Instagram\'da İndir menüsünü yeniden açın.</string>
     <string name="ie_download_compatibility">Her yerde oynatılan videoları tercih et</string>
     <string name="ie_download_fallback">En iyi başarısız olursa düşük kaliteyi kullan</string>
+    <string name="ie_download_unavailable">Seçilen medya bu Instagram sürümünde bulunamadı.</string>
+    <string name="ie_download_retry_lower">Düşük kaliteyle tekrar dene</string>
     <string name="ie_downloader_original_unavailable">Standart bunu kaydedemedi. İndirmek için En iyi\'ye geçin.</string>
     <string name="ie_download_fallback_prompt">En iyi bunu kaydedemedi. Daha düşük kalite denensin mi?</string>
+    <string name="ie_download_cancelled">İndirme iptal edildi</string>
+    <string name="ie_download_select_item">Çoklu gönderiden öğe seç</string>
+    <string name="ie_download_item">Öğe %1$d</string>
 </resources>

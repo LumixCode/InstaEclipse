@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_feature_unsent_indicator">Отмечать удалённые сообщения</string>
+    <string name="ig_feature_show_unsent_button">Показывать «Удалённые сообщения» в меню чата</string>
+    <string name="ig_feature_following_follow_status">Показывать взаимные подписки</string>
+    <string name="ig_feature_manual_story_seen">Ручная отметка просмотра историй</string>
+</resources>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="ig_dialog_ghost_read_receipt_chats">Отправлять отметки о прочтении в выбранные чаты</string>
+    <string name="ig_dialog_ghost_read_receipt_chats">Отмечать прочтение в выбранных чатах</string>
     <string name="ig_read_receipt_chat_on">Отправлять отметки о прочтении в этом чате</string>
     <string name="ig_read_receipt_chat_off">Не отправлять отметки о прочтении в этом чате</string>
     <string name="ig_toast_read_receipt_on">Отметки о прочтении включены для этого чата</string>

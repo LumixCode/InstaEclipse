@@ -7,7 +7,7 @@
     <string name="feat_group_media">Phương tiện</string>
     <string name="feat_group_tools">Công cụ</string>
     <string name="theme_section_colors">Màu sắc</string>
-    <string name="theme_section_fonts">Phông chữ &amp; Emoji</string>
+    <string name="theme_section_fonts">Phông chữ &amp; emoji</string>
     <string name="ig_dialog_ghost_chat_export">Nút xuất đoạn chat trong cuộc trò chuyện</string>
     <string name="ig_chat_export">Xuất đoạn chat</string>
     <string name="ig_locked_coll_setting">Khóa bộ sưu tập đã lưu (nút 🔒 trong bộ sưu tập; dùng mã khóa đặt trong Instagram)</string>
@@ -19,7 +19,7 @@
     <string name="ig_locked_coll_unlock">Mở khóa bộ sưu tập này</string>
     <string name="ig_locked_coll_locked">Đã khóa bộ sưu tập: sẽ yêu cầu mã khóa của bạn</string>
     <string name="ig_locked_coll_unlocked">Đã mở khóa bộ sưu tập</string>
-    <string name="ig_saved_on_profile">Nút Đã lưu trên trang cá nhân (khởi động lại Instagram)</string>
+    <string name="ig_saved_on_profile">Nút Đã lưu trên trang cá nhân</string>
     <string name="ig_saved_on_profile_button">Đã lưu</string>
     <string name="ig_nav_tab_order">Thứ tự tab</string>
     <string name="ig_nav_tab_order_hint">Dùng các mũi tên để sắp xếp lại thanh dưới cùng. Tab bị ẩn vẫn giữ vị trí. Có hiệu lực khi bạn quay lại Instagram.</string>
@@ -49,7 +49,7 @@
     <string name="ig_dialog_section_auto_clear_cache">Tự xóa bộ nhớ đệm</string>
     <string name="ig_dialog_misc_remove_meta_ai">Xóa Meta AI</string>
     <string name="ig_dialog_misc_lock_dms">Khóa tin nhắn</string>
-    <string name="ig_dialog_misc_lock_dms_set">Đặt / đổi mã</string>
+    <string name="ig_dialog_misc_lock_dms_set">Đặt hoặc đổi mã khóa</string>
     <string name="ig_dialog_misc_lock_dms_saved">Đã lưu mã</string>
     <string name="ig_dialog_misc_lock_dms_always">Khóa lại mỗi khi rời đi</string>
     <string name="ig_dialog_misc_lock_whole_app">Khóa toàn bộ ứng dụng</string>
@@ -61,7 +61,7 @@
     <string name="ig_download_choice_title">Tải xuống</string>
     <string name="ig_download_choice_audio">Chỉ âm thanh (.m4a)</string>
     <string name="ig_download_choice_copy_image">Sao chép ảnh</string>
-    <string name="ig_dialog_downloader_offer_copy_image">Thêm Sao chép ảnh vào menu bài viết</string>
+    <string name="ig_dialog_downloader_offer_copy_image">Sao chép ảnh</string>
     <string name="ig_toast_copy_image_video">Trang này là video — không có gì để sao chép</string>
     <string name="ig_toast_copying_image">Đang sao chép ảnh…</string>
     <string name="ig_toast_image_copied">Đã sao chép ảnh vào bộ nhớ tạm</string>
@@ -69,7 +69,7 @@
     <string name="ig_toast_audio_saved">Đã lưu âm thanh</string>
     <string name="ig_dialog_misc_hide_chats">Ẩn đoạn chat cụ thể</string>
     <string name="ig_hide_chat_hidden">Đã ẩn đoạn chat — nó sẽ biến mất khỏi hộp thư</string>
-    <string name="ig_hide_chat_unhidden">Đã hiện lại đoạn chat</string>
+    <string name="ig_hide_chat_unhidden">Đã bỏ ẩn đoạn chat</string>
     <string name="ig_hide_chat_no_thread">Không xác định được đoạn chat này</string>
     <string name="ig_story_cache_view">Xem tin đã lưu tạm</string>
     <string name="ig_story_cache_clear">Xóa tin đã lưu tạm</string>
@@ -84,7 +84,7 @@
     <string name="ig_custom_emoji_pick">Chọn phông emoji (.ttf / .otf)</string>
     <string name="ig_dialog_unsent_clear_yes">Xóa</string>
     <string name="ig_dialog_unsent_empty">Chưa ghi lại tin nhắn thu hồi nào</string>
-    <string name="ig_dialog_unsent_unknown_chat">Đoạn chat không xác định</string>
+    <string name="ig_dialog_unsent_unknown_chat">Đoạn chat không rõ</string>
     <string name="ig_dialog_open_links_externally">Mở liên kết bằng trình duyệt ngoài</string>
     <string name="theme_light_mode">Chế độ sáng</string>
     <string name="theme_dark_mode">Chế độ tối</string>
@@ -120,10 +120,10 @@
     <string name="ig_dialog_fancy_bio_font">Phông chữ cách điệu trong tiểu sử</string>
     <string name="ig_fancy_font_button">Phông cách điệu</string>
     <string name="ig_fancy_font_title">Phông chữ tiểu sử</string>
-    <string name="ig_fancy_font_note">Tạo kiểu cho chữ Latinh, chữ Hy Lạp và số mà ai cũng thấy. Gạch ngang và gạch chân dùng được với mọi ngôn ngữ.</string>
+    <string name="ig_fancy_font_note">Chọn một kiểu và những gì bạn gõ tiếp theo sẽ dùng kiểu đó; chữ đã có vẫn giữ nguyên. Chữ Latinh, chữ Hy Lạp và số có mọi kiểu; gạch ngang và gạch chân dùng được với mọi ngôn ngữ.</string>
     <string name="ig_profile_follows_you">Theo dõi bạn</string>
     <string name="ig_profile_not_following_you">Không theo dõi bạn</string>
-    <string name="ig_dialog_downloader_offer_media_info">Thêm Thông tin phương tiện vào menu bài viết</string>
+    <string name="ig_dialog_downloader_offer_media_info">Thông tin phương tiện</string>
     <string name="ig_dialog_downloader_offer_speed">Thêm Tốc độ phát vào menu bài viết</string>
     <string name="ig_dialog_downloader_reel_scrubber">Luôn hiện thanh tua của Reel</string>
     <string name="ig_dialog_reels_hold_left_slow">Giữ bên trái để phát chậm (0,5×)</string>
@@ -133,7 +133,7 @@
     <string name="ig_playback_speed_title">Tốc độ phát</string>
     <string name="ig_playback_speed_next">Đã đặt tốc độ — áp dụng cho video tiếp theo</string>
     <string name="ig_dialog_distraction_hide_notes_tray">Ẩn Ghi chú trong Tin nhắn</string>
-    <string name="ig_hide_dm_suggestions">Ẩn tài khoản được gợi ý trong Tin nhắn</string>
+    <string name="ig_hide_dm_suggestions">Ẩn tài khoản được gợi ý</string>
     <string name="ig_data_backup">Sao lưu dữ liệu (tin nhắn đã xóa, hồ sơ đã phân tích…)</string>
     <string name="ig_data_restore">Khôi phục dữ liệu</string>
     <string name="ig_data_backup_saved">Đã lưu bản sao lưu: %1$s</string>
@@ -150,7 +150,7 @@
     <string name="ig_post_counts_keep">Giữ số thật</string>
     <string name="ig_post_counts_reset">Đặt lại</string>
     <string name="ig_post_counts_saved">Đã lưu số liệu</string>
-    <string name="ig_dl_companion_fallback">Không kết nối được ứng dụng InstaEclipse nên đã lưu vào Download. Để dùng thư mục của bạn, hãy cho phép InstaEclipse tự khởi động / chạy nền.</string>
+    <string name="ig_dl_companion_fallback">Không kết nối được ứng dụng InstaEclipse nên tệp đã được lưu vào Download. Để dùng thư mục của bạn, hãy cho InstaEclipse chạy nền: bỏ khỏi Ứng dụng ngủ (Samsung), bật Tự khởi động (Xiaomi), pin không hạn chế.</string>
     <string name="background_access_title">Cho phép InstaEclipse chạy nền</string>
     <string name="background_access_message">Ứng dụng này lưu tệp tải vào thư mục của bạn khi được Instagram khởi động. Nếu điện thoại cho nó ngủ, tệp sẽ vào Download. Hãy cho phép chạy không hạn chế. Trên Samsung bỏ khỏi Ứng dụng ngủ; trên Xiaomi bật Tự khởi động.</string>
     <string name="background_access_allow">Cho phép</string>
@@ -158,9 +158,9 @@
     <string name="folder_access_lost_title">Chọn lại thư mục tải xuống</string>
     <string name="folder_access_lost_message">InstaEclipse không còn quyền truy cập thư mục tải xuống của bạn (xảy ra sau khi cài lại hoặc xóa dữ liệu), nên tệp tải vào Download. Hãy chọn lại thư mục.</string>
     <string name="folder_access_lost_choose">Chọn thư mục</string>
-    <string name="ig_profile_menu_tools">Menu hồ sơ: sao chép tên, tiểu sử và tải tất cả</string>
+    <string name="ig_profile_menu_tools">Trang cá nhân: giữ tên người dùng hoặc tiểu sử để sao chép, menu ⋮: Tải tất cả</string>
     <string name="ig_profile_spoofer">Giả mạo hồ sơ (chỉ trên điện thoại này)</string>
-    <string name="ig_profile_spoofer_edit">Sửa hồ sơ giả</string>
+    <string name="ig_profile_spoofer_edit">Chỉnh cách hồ sơ hiển thị</string>
     <string name="ig_profile_spoofer_followers">Người theo dõi</string>
     <string name="ig_profile_spoofer_following">Đang theo dõi</string>
     <string name="ig_profile_spoofer_posts">Bài viết</string>
@@ -250,7 +250,7 @@
     <string name="ig_pa_cl_not_recorded">không được ghi lại</string>
     <string name="ig_pa_cl_counts_missing">Số liệu: không được ghi lại</string>
     <string name="ig_pa_cl_no_changes">Không tìm thấy thay đổi.</string>
-    <string name="ig_pa_cl_none_kept">Không có thay đổi nào được lưu cho lần phân tích này.</string>
+    <string name="ig_pa_cl_none_kept">Lần phân tích này không lưu thay đổi nào.</string>
     <string name="ig_pa_cl_partial">Có thể thiếu các thay đổi cũ hơn ở đây: nhật ký chỉ giữ %1$d thay đổi mới nhất.</string>
     <string name="ig_pa_cl_more">Xem thêm</string>
     <string name="ig_pa_cl_last_listed">liệt kê lần cuối %1$s</string>
@@ -298,7 +298,7 @@
     <string name="ig_follow_block_wait">Hãy đợi đến %1$s rồi mới tải lại danh sách.</string>
     <string name="ig_follow_block_anyway">Vẫn tải</string>
     <string name="ig_dialog_misc_like_undo">Thời gian hoàn tác lượt thích (4 giây)</string>
-    <string name="ig_dialog_misc_exact_timestamps">Hiện ngày chính xác thay vì \"2 giờ trước\"</string>
+    <string name="ig_dialog_misc_exact_timestamps">Hiện ngày giờ chính xác</string>
     <string name="ig_timestamp_format">Định dạng ngày</string>
     <string name="ig_timestamp_format_default">Mặc định của thiết bị</string>
     <string name="ig_timestamp_format_custom">Tùy chỉnh…</string>
@@ -306,17 +306,17 @@
     <string name="ig_timestamp_format_invalid">Định dạng không hợp lệ</string>
     <string name="ig_dialog_misc_hide_share_create_group">Ẩn \"Tạo nhóm\" trên bảng chia sẻ</string>
     <string name="ig_comment_gif_downloading">Đang tải phương tiện của bình luận…</string>
-    <string name="ig_dialog_downloader_copy_link">Sao chép liên kết phương tiện</string>
-    <string name="ig_copy_link_copied">Đã sao chép liên kết phương tiện</string>
-    <string name="ig_copy_link_none">Không tìm thấy liên kết phương tiện cho bài viết này</string>
+    <string name="ig_dialog_downloader_copy_link">Sao chép liên kết tệp</string>
+    <string name="ig_copy_link_copied">Đã sao chép liên kết tệp vào bộ nhớ tạm</string>
+    <string name="ig_copy_link_none">Không tìm thấy liên kết tệp của bài viết này</string>
     <string name="ig_copy_link_slide">Trang %1$d / %2$d</string>
-    <string name="ig_copy_link_all">Sao chép tất cả %1$d liên kết</string>
-    <string name="ig_copy_link_copied_all">Đã sao chép %1$d liên kết phương tiện</string>
+    <string name="ig_copy_link_all">Sao chép cả %1$d liên kết</string>
+    <string name="ig_copy_link_copied_all">Đã sao chép %1$d liên kết tệp</string>
     <string name="ig_dialog_misc_save_instants">Lưu Instants (nhấn giữ để lưu)</string>
-    <string name="ig_instant_save_none">Không tìm thấy phương tiện Instant</string>
+    <string name="ig_instant_save_none">Không có phương tiện Instant</string>
     <string name="ig_dialog_misc_upload_instants">Đăng Instant từ thư viện</string>
-    <string name="ig_instant_upload_chip">🖼 Thư viện</string>
-    <string name="ig_instant_upload_chip_ready">✓ Sẵn sàng — chạm nút chụp</string>
+    <string name="ig_instant_upload_chip">Thư viện</string>
+    <string name="ig_instant_upload_chip_ready">Sẵn sàng — chạm nút chụp</string>
     <string name="ig_instant_upload_ready">Đã chọn! Chạm nút chụp để gửi dưới dạng Instant</string>
     <string name="ig_instant_upload_fail">Không thể tải ảnh đó</string>
     <string name="ig_highlight_download_all">Tải toàn bộ tin nổi bật</string>
@@ -340,7 +340,7 @@
     <string name="ig_call_confirm_audio">Bắt đầu cuộc gọi thoại?</string>
     <string name="ig_call_confirm_video">Bắt đầu cuộc gọi video?</string>
     <string name="ig_call_confirm_call">Gọi</string>
-    <string name="ig_confirm_refresh">Hỏi trước khi làm mới bảng tin</string>
-    <string name="ig_confirm_refresh_question">Làm mới bảng tin?</string>
+    <string name="ig_confirm_refresh">Hỏi trước khi làm mới bảng feed</string>
+    <string name="ig_confirm_refresh_question">Làm mới bảng feed?</string>
     <string name="ig_confirm_refresh_action">Làm mới</string>
 </resources>
