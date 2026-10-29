@@ -27,7 +27,7 @@
     <string name="home_instagram_version" tools:ignore="MissingTranslation">Instagram %1$s</string>
     <string name="home_tested_version" tools:ignore="MissingTranslation">Tested version</string>
     <string name="home_untested_version" tools:ignore="MissingTranslation">Not the tested version (%1$s): some features may not work</string>
-    <string name="home_status_worked" tools:ignore="MissingTranslation">Worked in Instagram at %1$s</string>
+    <string name="home_status_worked" tools:ignore="MissingTranslation">Worked in Instagram: %1$s</string>
     <string name="home_status_not_confirmed" tools:ignore="MissingTranslation">Not confirmed yet</string>
     <string name="home_status_open_to_check" tools:ignore="MissingTranslation">Open Instagram to check</string>
     <string name="home_status_clone" tools:ignore="MissingTranslation">Clone · no live sync</string>
