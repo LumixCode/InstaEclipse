@@ -161,10 +161,13 @@ public final class ThemePresets {
 
     public static String getDisplayName(Context context, int id) {
         if (id > VARIANT_OFFSET) {
-            String base = getDisplayName(context, id - VARIANT_OFFSET);
-            return variantLabel(I18n.t(context, isLightPreset(id) ? R.string.theme_preset_light : R.string.theme_preset_dark), base);
+            return variantLabel(I18n.t(context, isLightPreset(id) ? R.string.theme_preset_light : R.string.theme_preset_dark), getBaseName(id));
         }
-        int index = id - 1;
+        return getBaseName(id);
+    }
+
+    public static String getBaseName(int id) {
+        int index = (id > VARIANT_OFFSET ? id - VARIANT_OFFSET : id) - 1;
         if (index >= 0 && index < PRESET_NAMES.length) return PRESET_NAMES[index];
         return PRESET_NAMES.length > 0 ? PRESET_NAMES[0] : "";
     }

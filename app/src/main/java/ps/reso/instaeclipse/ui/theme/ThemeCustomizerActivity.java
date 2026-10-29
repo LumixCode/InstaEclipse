@@ -299,7 +299,7 @@ public class ThemeCustomizerActivity extends AppCompatActivity implements Advanc
         @Override
         public void onBindViewHolder(Holder holder, int position) {
             ThemePreset preset = presets.get(position);
-            holder.name.setText(ThemePresets.getDisplayName(holder.itemView.getContext(), preset.id));
+            holder.name.setText(ThemePresets.getBaseName(preset.id));
             bindPreview(holder.preview, preset.palette.previewColors());
             boolean selected = !customMode && preset.id == selectedPresetId;
             int stroke = selected
