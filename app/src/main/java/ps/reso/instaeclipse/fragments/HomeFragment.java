@@ -3,13 +3,11 @@ package ps.reso.instaeclipse.fragments;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -526,7 +524,6 @@ public class HomeFragment extends Fragment implements TabFragment {
 
     private void pingModule() {
         if (installedPackages == null || installedPackages.isEmpty() || pingReceiverRegistered) return;
-        IntentFilter filter = new IntentFilter("ps.reso.instaeclipse.ACTION_SEND_PREFS");
         try {
             // Same registration as FeaturesFragment: the reply comes from the Instagram process.
             if (pingReply != null) pingReply.cancel();

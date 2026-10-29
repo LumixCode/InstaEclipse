@@ -4,12 +4,10 @@ import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -235,12 +233,6 @@ public class LoggingFragment extends Fragment implements TabFragment {
     @Override
     public void onTabReselected() {
         if (listView != null && adapter.getItemCount() > 0) listView.scrollToPosition(adapter.getItemCount() - 1);
-    }
-
-    @Override
-    public void onStart() {
-        super.onStart();
-
     }
 
     @Override

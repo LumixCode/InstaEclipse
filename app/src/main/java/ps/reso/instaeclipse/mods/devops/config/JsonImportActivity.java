@@ -1,6 +1,5 @@
 package ps.reso.instaeclipse.mods.devops.config;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -12,8 +11,6 @@ import android.os.Looper;
 import android.widget.Toast;
 
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Scanner;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.IpcSecurity;
@@ -119,11 +116,5 @@ public class JsonImportActivity extends Activity {
             main.removeCallbacks(this);
             show(app, result, data, null);
         }
-    }
-
-    @SuppressLint("NewApi")
-    private String readStream(InputStream inputStream) {
-        Scanner scanner = new Scanner(inputStream, StandardCharsets.UTF_8).useDelimiter("\\A");
-        return scanner.hasNext() ? scanner.next() : "";
     }
 }
