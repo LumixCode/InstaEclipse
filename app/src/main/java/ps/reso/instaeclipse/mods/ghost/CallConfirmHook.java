@@ -39,7 +39,7 @@ public final class CallConfirmHook {
         try {
             XposedHelpers.findAndHookMethod(View.class, "performClick", new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (!FeatureFlags.confirmCalls) return;
                     View v = (View) param.thisObject;
                     if (v == passThrough) { passThrough = null; return; }

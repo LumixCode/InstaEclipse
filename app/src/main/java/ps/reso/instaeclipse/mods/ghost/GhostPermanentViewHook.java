@@ -105,7 +105,7 @@ public class GhostPermanentViewHook {
     private static XC_MethodHook buildHook() {
         return new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 if (!FeatureFlags.permanentViewMode) return;
                 Object result = param.getResult();
                 if (result == null) return;

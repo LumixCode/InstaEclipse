@@ -134,7 +134,7 @@ public class ShareSheetCleanupHook {
             XposedHelpers.findAndHookMethod(FRAGMENT, classLoader, "onViewCreated",
                     View.class, Bundle.class, new XC_MethodHook() {
                         @Override
-                        protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                        protected void afterHookedMethod(MethodHookParam param) {
                             if (param.args[0] instanceof View root) watch(root);
                         }
                     });
@@ -146,7 +146,7 @@ public class ShareSheetCleanupHook {
 
         XC_MethodHook inflate = new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 if (!FeatureFlags.hideShareCreateGroup) return;
                 try {
                     if (!(param.args[0] instanceof Integer res) || !(param.getResult() instanceof View result)) return;
@@ -384,7 +384,7 @@ public class ShareSheetCleanupHook {
     private static XC_MethodHook sendModeHook(boolean several) {
         return new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 try {
                     setSeveralChats(param.thisObject, several);
                 } catch (Throwable t) {

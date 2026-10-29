@@ -91,7 +91,7 @@ public class DisableVideoAutoPlayHook {
     private void hookMethod(Method targetMethod) {
         XposedBridge.hookMethod(targetMethod, new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 if (FeatureFlags.disableVideoAutoPlay) param.setResult(true);
             }
         });
@@ -116,7 +116,7 @@ public class DisableVideoAutoPlayHook {
     private void hookPlayOverlayClicks() {
         XC_MethodHook clickHook = new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 if (!FeatureFlags.disableVideoAutoPlay || !(param.thisObject instanceof View)) return;
 
                 View view = (View) param.thisObject;

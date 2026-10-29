@@ -21,7 +21,6 @@ import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -169,7 +168,6 @@ public class StoryLikeUndoHook {
         XposedBridge.hookMethod(like, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
-                JitGuard.tick(param.method);
                 if (param.method.equals(REPLAYING.get())) return;
                 if (!FeatureFlags.likeUndo && pending.isEmpty()) return;
                 String id = idOf(param.args[mediaAt]);
@@ -206,7 +204,6 @@ public class StoryLikeUndoHook {
         XposedBridge.hookMethod(check, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                JitGuard.tick(param.method);
                 if (pending.isEmpty() || param.hasThrowable() || Boolean.TRUE.equals(param.getResult())) return;
                 String id = idOf(mediaIn(param.args[0]));
                 if (id != null && pending.contains(id)) param.setResult(true);
@@ -228,7 +225,6 @@ public class StoryLikeUndoHook {
         XposedBridge.hookMethod(bind, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                JitGuard.tick(param.method);
                 if (pending.isEmpty()) return;
                 try {
                     ImageView heart = (ImageView) view.get(param.thisObject);

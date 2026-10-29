@@ -29,7 +29,6 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -70,7 +69,6 @@ public final class ProfileFollowStatusHook {
                 final int rootArg = viewIndex;
                 XposedBridge.hookMethod(binder, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) {
-                        JitGuard.tick(param.method);
                         View root = (View) param.args[rootArg];
                         if (root == null) return;
                         if (!FeatureFlags.showFollowStatusLabel) {

@@ -26,7 +26,6 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -124,7 +123,7 @@ public class HideHeaderButtonsHook {
             }
             XposedBridge.hookMethod(gate, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (!hideOwnProfileThreads()) return;
                     param.setResult(false);
                     if (!gateLogged && Boolean.TRUE.equals(param.args[1])) {
@@ -175,7 +174,7 @@ public class HideHeaderButtonsHook {
             }
             XposedBridge.hookMethod(bind, new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     if (!hideOwnProfileThreads() || !(param.thisObject instanceof View bar)) return;
                     try {
                         resolveIds(bar);

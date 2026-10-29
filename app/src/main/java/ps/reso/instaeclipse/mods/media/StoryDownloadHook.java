@@ -313,15 +313,15 @@ public class StoryDownloadHook {
             Method[] roles = trayRoles(helper, members.subList(1, members.size()));
             Method addRow = roles[0], legacyItems = roles[1], popupSet = roles[2], rowFactory = roles[3];
             XposedBridge.hookMethod(build, new XC_MethodHook() {
-                @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+                @Override protected void beforeHookedMethod(MethodHookParam p) {
                     if (FeatureFlags.enableStoryDownload) trayHelper.set(p.thisObject);
                 }
-                @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method); trayHelper.remove(); }
+                @Override protected void afterHookedMethod(MethodHookParam p) { trayHelper.remove(); }
             });
             if (addRow != null && legacyItems != null) {
                 final Method add = addRow;
                 XposedBridge.hookMethod(legacyItems, new XC_MethodHook() {
-                    @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+                    @Override protected void beforeHookedMethod(MethodHookParam p) {
                         Object h = trayHelper.get();
                         if (h == null || !trayDialogsDone.add(p.thisObject)) return;
                         try {
@@ -335,7 +335,7 @@ public class StoryDownloadHook {
                 final Method factory = rowFactory;
                 final Class<?> iface = rowFactory.getParameterTypes()[0];
                 XposedBridge.hookMethod(popupSet, new XC_MethodHook() {
-                    @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+                    @Override protected void beforeHookedMethod(MethodHookParam p) {
                         Object h = trayHelper.get();
                         if (h == null || !(p.args[0] instanceof List<?>)) return;
                         try {
@@ -571,7 +571,7 @@ public class StoryDownloadHook {
      */
     private void installStoryCaptureHook(ClassLoader cl) {
         XC_MethodHook capture = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+            @Override protected void afterHookedMethod(MethodHookParam p) {
                 if (!FeatureFlags.cacheStories) return;
                 Object reelItem = null;
                 for (Object a : p.args) {
@@ -669,7 +669,7 @@ public class StoryDownloadHook {
 
     private static XC_MethodHook menuButtonInjector() {
         return new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            @Override protected void afterHookedMethod(MethodHookParam param) {
                 if (!FeatureFlags.enableStoryDownload || param.hasThrowable()) return;
                 Object original = param.getResult();
                 String label = I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_dl_title);

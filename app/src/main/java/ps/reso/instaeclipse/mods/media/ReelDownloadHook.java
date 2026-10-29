@@ -45,7 +45,7 @@ public class ReelDownloadHook {
                 FeatureStatusTracker.setHooked("ReelDownload");
                 XposedBridge.hookMethod(cached, new XC_MethodHook() {
                     @Override
-                    protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    protected void afterHookedMethod(MethodHookParam param) {
                         if (!FeatureFlags.enableReelDownload) return;
                         onOptionsBuilt(param);
                     }
@@ -107,7 +107,7 @@ public class ReelDownloadHook {
 
             XposedBridge.hookMethod(target, new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     if (!FeatureFlags.enableReelDownload) return;
                     onOptionsBuilt(param);
                 }
@@ -172,7 +172,7 @@ public class ReelDownloadHook {
 
             XC_MethodHook hook = new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     boolean wantDl = FeatureFlags.enableReelDownload && download != null;
                     boolean wantCl = FeatureFlags.copyMediaLink && copyLink != null;
                     boolean wantInfo = FeatureFlags.offerMediaInfo && info != null;

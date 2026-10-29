@@ -27,7 +27,6 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -79,12 +78,10 @@ public final class FollowingFollowStatusHook {
 
             XposedBridge.hookMethod(binder, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    JitGuard.tick(param.method);
                     clearLabel(subtitle(texts, param.args[9]));
                 }
 
                 @Override protected void afterHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
                     try {
                         TextView anchor = subtitle(texts, param.args[9]);
                         if (anchor == null || param.hasThrowable() || !FeatureFlags.showFollowingFollowStatus) return;

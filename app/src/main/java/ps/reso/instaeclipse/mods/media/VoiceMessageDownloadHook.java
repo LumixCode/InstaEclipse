@@ -102,7 +102,7 @@ public class VoiceMessageDownloadHook {
     public static void installUserCacheTracker(ClassLoader cl) throws ClassNotFoundException {
         XposedBridge.hookAllConstructors(cl.loadClass(USER_CACHE), new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 userCaches.removeIf(r -> r.get() == null);
                 userCaches.add(new java.lang.ref.WeakReference<>(param.thisObject));
             }
@@ -142,7 +142,7 @@ public class VoiceMessageDownloadHook {
                     if (m.getReturnType() != messageClass || Modifier.isAbstract(m.getModifiers())) continue;
                     XposedBridge.hookMethod(m, new XC_MethodHook() {
                         @Override
-                        protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                        protected void afterHookedMethod(MethodHookParam param) {
                             if (param.getResult() != null) {
                                 MATCH.onLookup(stringArg(param.args, 0), stringArg(param.args, 1),
                                         param.getResult(), System.currentTimeMillis());
@@ -171,7 +171,7 @@ public class VoiceMessageDownloadHook {
                 if (!Modifier.isStatic(m.getModifiers()) || m.getReturnType() != vm) continue;
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    protected void beforeHookedMethod(MethodHookParam param) {
                         clearPending(); // the pending targets belong to the menu being built
                         if ((!downloadEnabled() && !FeatureFlags.translateMessages && !FeatureFlags.bulkUnsend) || ctor == null) return;
                         Object msg = MATCH.pressed(messageIds(param.args), System.currentTimeMillis());
@@ -252,7 +252,7 @@ public class VoiceMessageDownloadHook {
                 Method m = md.getMethodInstance(cl);
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    protected void beforeHookedMethod(MethodHookParam param) {
                         if (FeatureFlags.bulkUnsend && hasAction(param.args, BULK_CARRIER)) {
                             Activity bctx = null;
                             for (Object a : param.args) if (a instanceof Activity act) bctx = act;
@@ -319,7 +319,7 @@ public class VoiceMessageDownloadHook {
                 if (!Modifier.isStatic(m.getModifiers())) continue;
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    protected void beforeHookedMethod(MethodHookParam param) {
                         if (!downloadEnabled() && !FeatureFlags.translateMessages && !FeatureFlags.bulkUnsend) return;
                         Object row = null;
                         for (Object a : param.args) if (data.isInstance(a)) row = a;
@@ -353,7 +353,7 @@ public class VoiceMessageDownloadHook {
                     if (Modifier.isStatic(m.getModifiers()) || Modifier.isAbstract(m.getModifiers())) continue;
                     XposedBridge.hookMethod(m, new XC_MethodHook() {
                         @Override
-                        protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                        protected void beforeHookedMethod(MethodHookParam param) {
                             if (FeatureFlags.bulkUnsend && param.args[0] instanceof Enum<?> be && BULK_CARRIER.equals(be.name())) {
                                 param.setResult(null);
                                 bulkUnsend(null);
@@ -427,7 +427,7 @@ public class VoiceMessageDownloadHook {
                         if (!takesFn) continue;
                         XposedBridge.hookMethod(m, new XC_MethodHook() {
                             @Override
-                            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                            protected void beforeHookedMethod(MethodHookParam param) {
                                 if (!downloadEnabled() && !FeatureFlags.translateMessages && !FeatureFlags.bulkUnsend) return;
                                 if (!composeWrapsRows && hasOurRow(param.args, data)) composeWrapsRows = true;
                                 for (int i = 0; i < param.args.length; i++) {

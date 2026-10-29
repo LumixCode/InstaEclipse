@@ -49,7 +49,7 @@ public final class HighResolutionImageHook {
         }
         XC_MethodHook pick = new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam p) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+            protected void afterHookedMethod(MethodHookParam p) throws Throwable {
                 if (!FeatureFlags.highResolutionImages) return;
                 if (p.hasThrowable() || !(p.args[1] instanceof List)) return;
                 Object picked = p.getResult();

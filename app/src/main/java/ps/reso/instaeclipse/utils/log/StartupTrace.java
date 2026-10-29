@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import ps.reso.instaeclipse.utils.core.DexKitStats;
+import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.core.LegacyPaths;
 import ps.reso.instaeclipse.utils.core.StartupIdle;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -141,7 +142,7 @@ public final class StartupTrace {
         if (install == null || !install.ended()) return;
         List<Span> all = spans();
         String line = summary(warm, processStartNanos(), all, install) + LegacyPaths.summarySuffix();
-        String detail = detail(all, install, DexKitStats.bySegmentAndThread());
+        String detail = detail(all, install, DexKitStats.bySegmentAndThread(), JitGuard.active());
         lastSummary = line;
         lastDetail = detail;
         ModuleLog.line(line);
@@ -176,7 +177,7 @@ public final class StartupTrace {
         return sb.toString();
     }
 
-    static String detail(List<Span> spans, Span install, Map<String, DexKitStats.Totals> bySegment) {
+    static String detail(List<Span> spans, Span install, Map<String, DexKitStats.Totals> bySegment, boolean jitGuardActive) {
         StringBuilder sb = new StringBuilder("(IE|Startup) Steps (name ms hooks hits misses):");
         boolean first = true;
         for (Span s : stepsOf(spans, install)) {
@@ -196,6 +197,7 @@ public final class StartupTrace {
             }
             sb.append('.');
         }
+        sb.append(" JitGuard: ").append(jitGuardActive ? "active" : "inactive").append('.');
         return sb.toString();
     }
 

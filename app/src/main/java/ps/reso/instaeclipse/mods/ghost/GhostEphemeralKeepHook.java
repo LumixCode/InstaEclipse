@@ -32,7 +32,7 @@ public class GhostEphemeralKeepHook {
         // Both return "anything removed"; callers only commit on true, so false = keep all.
         XC_MethodHook keep = new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (FeatureFlags.keepEphemeralMessages) param.setResult(false);
             }
         };
@@ -92,7 +92,7 @@ public class GhostEphemeralKeepHook {
     private void hookServerPing() {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (FeatureFlags.keepEphemeralMessages) GhostViewOnceHook.skipMutation(param, "Ephemeral");
             }
         };

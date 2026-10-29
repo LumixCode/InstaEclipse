@@ -40,7 +40,6 @@ import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -193,7 +192,6 @@ final class LikeHeartTint {
             XposedBridge.hookMethod(Activity.class.getMethod("dispatchTouchEvent", MotionEvent.class), new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
                     if (!(FeatureFlags.likeUndo || FeatureFlags.confirmLikes)
                             || !(param.args[0] instanceof MotionEvent e)) return;
                     int action = e.getActionMasked();
@@ -268,7 +266,6 @@ final class LikeHeartTint {
             XposedBridge.hookMethod(render, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
                     if (FeatureFlags.likeUndo) RENDERING.set(idOf(follow(param.thisObject, path)));
                 }
 
@@ -283,7 +280,6 @@ final class LikeHeartTint {
             XposedBridge.hookMethod(c, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
                     String id = RENDERING.get();
                     if (id != null && param.args[1] instanceof Drawable heart) built(id, heart, redLayer(heart), ANIMATED);
                 }
@@ -294,7 +290,6 @@ final class LikeHeartTint {
             XposedBridge.hookMethod(c, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
                     String id = RENDERING.get();
                     if (id == null || !(param.args[at] instanceof Drawable heart)) return;
                     boolean animatedHeart = filled != null && filled.getDeclaringClass().isInstance(heart);
@@ -307,7 +302,6 @@ final class LikeHeartTint {
             XposedBridge.hookMethod(c, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
                     String id = RENDERING.get();
                     // One drawable for both looks: the view's selected state picks the red.
                     if (id == null) return;
@@ -322,7 +316,6 @@ final class LikeHeartTint {
                 XposedBridge.hookMethod(make, new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {
-                        JitGuard.tick(param.method);
                         String id;
                         synchronized (icons) {
                             id = icons.get(param.thisObject);
@@ -451,7 +444,6 @@ final class LikeHeartTint {
             XposedBridge.hookMethod(row, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
                     if (FeatureFlags.likeUndo) COMPOSING.set(idOf(follow(param.args[at], mediaPath)));
                 }
 
@@ -463,7 +455,6 @@ final class LikeHeartTint {
             XposedBridge.hookMethod(spec, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
                     String id = COMPOSING.get();
                     if (id == null || !filledHeart(param.args)) return;
                     if (seen.getAndIncrement(COMPOSE) == 0) ModuleLog.detail(TAG + "heart drawn compose");

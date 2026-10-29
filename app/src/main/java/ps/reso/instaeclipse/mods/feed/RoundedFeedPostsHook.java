@@ -32,7 +32,7 @@ public final class RoundedFeedPostsHook {
             View.OnLayoutChangeListener onLayout = (v, l, t, r, b, ol, ot, or, ob) -> apply(v);
             XposedBridge.hookMethod(frame.getDeclaredConstructor(Context.class, AttributeSet.class, int.class), new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     if (param.thisObject instanceof View v && v.getClass() == frame) v.addOnLayoutChangeListener(onLayout);
                 }
             });

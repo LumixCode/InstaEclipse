@@ -320,7 +320,7 @@ public class KeepUnsentMessagesHook {
                 if (localRemoval != null && cacheGetter != null && serverQuery != null && lookups.size() == 2) {
                     localRemoval.setAccessible(true);
                     XposedBridge.hookMethod(cacheGetter, new XC_MethodHook() {
-                        @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                        @Override protected void afterHookedMethod(MethodHookParam param) {
                             // Runs on every thread-cache lookup: no reflection while the feature is off.
                             if (!FeatureFlags.keepUnsentMessages || param.hasThrowable()
                                     || Boolean.TRUE.equals(clearingLocally.get())) return;
@@ -331,7 +331,7 @@ public class KeepUnsentMessagesHook {
                     localClearingAvailable = true;
                 }
                 XposedBridge.hookMethod(removal, new XC_MethodHook() {
-                    @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    @Override protected void beforeHookedMethod(MethodHookParam param) {
                         if (Boolean.TRUE.equals(clearingLocally.get())) return;
                         // Bulk unsend removes the user's own selection on purpose: let Instagram
                         // remove it and forget anything kept for it (also while the feature is off,
@@ -849,7 +849,7 @@ public class KeepUnsentMessagesHook {
             // actual message object so we can re-inject it on later passes that no longer carry it.
             @Override
             @SuppressWarnings("unchecked")
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (!FeatureFlags.keepUnsentMessages || !FeatureFlags.keepUnsentInChat || protectedIds.isEmpty()) return;
                 Object[] args = param.args;
                 if (args == null || args.length == 0 || args[0] == null) return;
@@ -875,7 +875,7 @@ public class KeepUnsentMessagesHook {
             // nothing in the chat, so it neither re-injects nor restores.
             @Override
             @SuppressWarnings("unchecked")
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 if (!FeatureFlags.keepUnsentMessages || !FeatureFlags.keepUnsentInChat) return;
                 Object[] args = param.args;
                 if (args == null || args.length < 4 || args[0] == null) return;

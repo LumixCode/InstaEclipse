@@ -38,7 +38,6 @@ import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -137,7 +136,7 @@ public final class StoryMenu {
             resumes = resumesOf(classLoader, d, searched);
             int rows = hookAll(b, new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     try {
                         addRows(param);
                     } catch (Throwable t) {
@@ -147,7 +146,7 @@ public final class StoryMenu {
             });
             int taps = hookAll(d, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     try {
                         onTap(param);
                     } catch (Throwable t) {
@@ -157,7 +156,7 @@ public final class StoryMenu {
             });
             hookAll(dialogs, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     try {
                         wrapDialog(param);
                     } catch (Throwable t) {

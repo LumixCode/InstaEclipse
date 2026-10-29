@@ -24,7 +24,6 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -81,7 +80,6 @@ public final class FollowStatusHook {
             XposedBridge.hookMethod(apply, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
                     if (!wanted()) return;
                     try {
                         onStatusApplied(param.args[0], param.args[1]);
@@ -179,7 +177,6 @@ public final class FollowStatusHook {
         XposedBridge.hookMethod(parseField, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
-                JitGuard.tick(param.method);
                 if (followedBy != null || !wanted()
                         || !FOLLOWED_BY.equals(param.args[2]) || !status.isInstance(param.args[1])) return;
                 List<Field> open = new ArrayList<>();

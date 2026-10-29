@@ -28,7 +28,6 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 import ps.reso.instaeclipse.utils.core.HookFrames;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -111,7 +110,6 @@ public final class ExactTimestampHook {
             private final HookFrames.Slot frames = new HookFrames.Slot();
 
             @Override protected void beforeHookedMethod(MethodHookParam param) {
-                JitGuard.tick(param.method);
                 HookFrames.Frame frame = frames.enter();
                 if (!FeatureFlags.exactTimestamps) return;
                 scope.enter();
@@ -119,7 +117,6 @@ public final class ExactTimestampHook {
             }
 
             @Override protected void afterHookedMethod(MethodHookParam param) {
-                JitGuard.tick(param.method);
                 HookFrames.Frame frame = frames.exit();
                 // Xposed invokes the after hook even when the host binder throws. Do not test
                 // the setting here: it may have changed while a nested bind was in progress.
@@ -161,7 +158,6 @@ public final class ExactTimestampHook {
         for (Method entry : scopes) installScope(entry, dmScope, "ExactTimestampDmScope");
         XposedBridge.hookMethod(formatter, new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam param) {
-                JitGuard.tick(param.method);
                 if (!FeatureFlags.exactTimestamps || !dmScope.active() || param.hasThrowable()
                         || !(param.getResult() instanceof String original) || original.isEmpty()) return;
                 try {
@@ -211,7 +207,6 @@ public final class ExactTimestampHook {
         installScope(methods.get(0), composeStoryScope, "ExactTimestampComposeStoryScope");
         XposedBridge.hookMethod(methods.get(1), new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam param) {
-                JitGuard.tick(param.method);
                 if (FeatureFlags.exactTimestamps && composeStoryScope.active()) {
                     StoryTimestampComposeLayout.wrap(param.args);
                 }
@@ -375,7 +370,6 @@ public final class ExactTimestampHook {
     private void installFormatter(Method method) {
         XposedBridge.hookMethod(method, new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam param) {
-                JitGuard.tick(param.method);
                 if (!FeatureFlags.exactTimestamps || !contentScope.active() || param.hasThrowable()
                         || !(param.getResult() instanceof String original) || original.isEmpty()) return;
                 try {

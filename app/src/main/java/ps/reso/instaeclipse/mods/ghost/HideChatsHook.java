@@ -189,7 +189,7 @@ public class HideChatsHook {
         installHeaderMenu(classLoader);
         installInboxGesture(classLoader);
         int inboxResumes = hookDirectLifecycle(classLoader, "DirectInboxController.onResume", new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            @Override protected void afterHookedMethod(MethodHookParam param) {
                 Activity activity = fragmentActivity(param.thisObject);
                 if (activity != null) foregroundInboxes.put(activity, new WeakReference<>(param.thisObject));
                 watchActivity(activity);
@@ -198,7 +198,7 @@ public class HideChatsHook {
             }
         });
         hookDirectLifecycle(classLoader, "DirectInboxController.onPause", new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            @Override protected void afterHookedMethod(MethodHookParam param) {
                 Activity activity = fragmentActivity(param.thisObject);
                 WeakReference<Object> current = foregroundInboxes.get(activity);
                 if (current != null && current.get() == param.thisObject) foregroundInboxes.remove(activity);
@@ -222,7 +222,7 @@ public class HideChatsHook {
                 Method dispatch = type.getMethod("dispatchTouchEvent", MotionEvent.class);
                 if (!hooked.add(dispatch)) continue;
                 XposedBridge.hookMethod(dispatch, new XC_MethodHook() {
-                    @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    @Override protected void beforeHookedMethod(MethodHookParam param) {
                         if (param.thisObject instanceof Activity activity
                                 && activity.getPackageName().startsWith("com.instagram")
                                 && activeHook != null
@@ -329,7 +329,7 @@ public class HideChatsHook {
 
     private void installInboxFilter(ClassLoader classLoader) {
         XC_MethodHook filter = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            @Override protected void afterHookedMethod(MethodHookParam param) {
                 Object result = param.getResult();
                 if (!(result instanceof List<?> rows) || rows.isEmpty()) return;
 
@@ -387,7 +387,7 @@ public class HideChatsHook {
             NativeInboxPath path = callbacks.size() == 1 ? NativeInboxPath.of(model, callbacks.get(0)) : null;
             if (path == null) throw new IllegalStateException(callbacks.size() + " inbox consumer callback(s)");
             XposedBridge.hookMethod(path.submit, new XC_MethodHook() {
-                @Override protected void beforeHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                @Override protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                     // The lambda class serves every stream variant (on 451 other owners too):
                     // only a List through this generator's own consumer is its inbox row list.
                     Object owner = path.rowGenerator(param.thisObject, param.args[0]);
@@ -440,7 +440,7 @@ public class HideChatsHook {
         }
         int resumes = hookDirectLifecycle(classLoader,
                 "DirectThreadController.onResume", new XC_MethodHook() {
-                    @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    @Override protected void afterHookedMethod(MethodHookParam param) {
                         Object fragment = param.thisObject;
                         Activity activity = fragmentActivity(fragment);
                         String threadId = directThreadId(fragment);
@@ -454,7 +454,7 @@ public class HideChatsHook {
                 });
         int pauses = hookDirectLifecycle(classLoader,
                 "DirectThreadController.onPause", new XC_MethodHook() {
-                    @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    @Override protected void afterHookedMethod(MethodHookParam param) {
                         Object fragment = param.thisObject;
                         Activity activity = fragmentActivity(fragment);
                         if (activity == null) return;

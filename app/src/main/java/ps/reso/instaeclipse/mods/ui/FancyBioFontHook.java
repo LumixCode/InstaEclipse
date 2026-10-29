@@ -41,7 +41,7 @@ public final class FancyBioFontHook {
                     "setupSecondRightAddOnButton", CharSequence.class, boolean.class, "kotlin.jvm.functions.Function0",
                     new XC_MethodHook() {
                         @Override
-                        protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                        protected void afterHookedMethod(MethodHookParam param) {
                             if (!FeatureFlags.fancyBioFont || !(param.thisObject instanceof View field)) return;
                             if (UIHookManager.dialogHost(field.getContext()) instanceof Activity a && ids(a)) wire(a, field);
                         }

@@ -33,7 +33,7 @@ public final class ViewAttachHooks {
 
     private static final XC_MethodHook CALLBACK = new XC_MethodHook() {
         @Override
-        protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+        protected void afterHookedMethod(MethodHookParam param) {
             dispatch((View) param.thisObject);
         }
     };

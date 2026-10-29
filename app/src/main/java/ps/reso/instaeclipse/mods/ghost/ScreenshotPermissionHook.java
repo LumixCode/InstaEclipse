@@ -27,7 +27,7 @@ public class ScreenshotPermissionHook {
             XposedHelpers.findAndHookMethod(Window.class, "setFlags",
                     int.class, int.class, new XC_MethodHook() {
                         @Override
-                        protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                        protected void beforeHookedMethod(MethodHookParam param) {
                             if (!FeatureFlags.allowScreenshots) return;
                             int[] stripped = SecureFlags.strip((int) param.args[0], (int) param.args[1]);
                             param.args[0] = stripped[0];
@@ -39,7 +39,7 @@ public class ScreenshotPermissionHook {
             XposedHelpers.findAndHookMethod(Window.class, "addFlags",
                     int.class, new XC_MethodHook() {
                         @Override
-                        protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                        protected void beforeHookedMethod(MethodHookParam param) {
                             if (!FeatureFlags.allowScreenshots) return;
                             param.args[0] = (int) param.args[0] & ~WindowManager.LayoutParams.FLAG_SECURE;
                         }

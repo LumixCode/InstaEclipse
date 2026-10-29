@@ -69,7 +69,6 @@ public final class PostCountSpoof {
             for (Method m : found) {
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) {
-                        ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                         if (!FeatureFlags.postCountSpoof) return;
                         ensureLoaded();
                         if (STORE.isEmpty()) return;
@@ -90,7 +89,6 @@ public final class PostCountSpoof {
             for (Method m : lookup(cl, key, m -> m.getReturnType() == Boolean.class || m.getReturnType() == boolean.class, false)) {
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) {
-                        ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                         if (!FeatureFlags.postCountSpoof || !Boolean.TRUE.equals(param.getResult())) return;
                         if (countsFor(param.thisObject) != null) param.setResult(Boolean.FALSE);
                     }
@@ -237,7 +235,6 @@ public final class PostCountSpoof {
         try {
             XC_MethodHook rebind = new XC_MethodHook() {
                 @Override protected void afterHookedMethod(MethodHookParam param) {
-                    ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                     if (!FeatureFlags.postCountSpoof || SETTING.get() == Boolean.TRUE) return;
                     ensureLoaded();
                     if (STORE.isEmpty()) return;

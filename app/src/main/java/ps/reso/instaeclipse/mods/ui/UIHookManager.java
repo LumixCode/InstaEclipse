@@ -258,7 +258,7 @@ public class UIHookManager {
         try {
             XposedHelpers.findAndHookMethod(View.class, "performLongClick", new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (sInboxButtonId == 0 && sDirectTabId == 0) return;
                     View view = (View) param.thisObject;
                     int id = view.getId();

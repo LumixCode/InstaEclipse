@@ -53,6 +53,10 @@ public final class JitGuard {
         }
     }
 
+    public static boolean active() {
+        return !broken && !done.isEmpty();
+    }
+
     private static boolean isStub(String name) {
         return name.startsWith("LSPHooker_") || name.startsWith("Vector_");
     }

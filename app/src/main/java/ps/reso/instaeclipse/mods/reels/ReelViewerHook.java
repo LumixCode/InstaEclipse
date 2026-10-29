@@ -34,7 +34,6 @@ import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -83,7 +82,6 @@ public final class ReelViewerHook {
                 if (method.getParameterCount() != 2 || method.getReturnType() != void.class) continue;
                 XposedBridge.hookMethod(method, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
-                        JitGuard.tick(param.method);
                         try {
                             String id = mediaId(param.args[0]);
                             if (id == null) return;
@@ -130,7 +128,6 @@ public final class ReelViewerHook {
                     if (Modifier.isStatic(method.getModifiers()) || method.getReturnType() != void.class) continue;
                     XposedBridge.hookMethod(method, new XC_MethodHook() {
                         @Override protected void beforeHookedMethod(MethodHookParam param) {
-                            JitGuard.tick(param.method);
                             try {
                                 players.add(param.thisObject);
                                 // The outer resume methods resolve the item before calling the
@@ -160,7 +157,6 @@ public final class ReelViewerHook {
                 if (p.length != 2 || p[0] != View.class || p[1] != Bundle.class) continue;
                 XposedBridge.hookMethod(method, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) {
-                        JitGuard.tick(param.method);
                         if (!(param.args[0] instanceof ViewGroup root)) return;
                         registerPager(root);
                         watch(root, param.thisObject);
@@ -204,7 +200,6 @@ public final class ReelViewerHook {
             XposedHelpers.findAndHookMethod(ViewGroup.class, "dispatchTouchEvent", MotionEvent.class,
                     new XC_MethodHook() {
                         @Override protected void beforeHookedMethod(MethodHookParam param) {
-                            JitGuard.tick(param.method);
                             if (idle()) return;
                             if (sessions.isRoot(param.thisObject)) updatePagers();
                             ReelBlockCard card = blockedRoots.get(param.thisObject);
@@ -336,7 +331,6 @@ public final class ReelViewerHook {
                 }
                 XposedBridge.hookMethod(setter, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
-                        JitGuard.tick(param.method);
                         if (idle()) return;
                         ReelPagerGate gate = reelPagers.get(param.thisObject);
                         if (gate == null || gate.isUpdating()) return;
@@ -357,7 +351,6 @@ public final class ReelViewerHook {
             for (Method method : PagerJumpFilter.jumps(pager)) {
                 XposedBridge.hookMethod(method, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
-                        JitGuard.tick(param.method);
                         if (idle()) return;
                         View view = (View) param.thisObject;
                         if (!reelPagers.containsKey(view) || !view.isLaidOut()) return;
@@ -389,7 +382,6 @@ public final class ReelViewerHook {
             }
             XposedBridge.hookMethod(intercept, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
                     if (idle()) return;
                     if (inputLock((View) param.thisObject)) {
                         param.setResult(false);
@@ -489,7 +481,6 @@ public final class ReelViewerHook {
                 if (configIndex < 0 || sourceIndexes.length == 0) continue;
                 XposedBridge.hookMethod(constructor, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) {
-                        JitGuard.tick(param.method);
                         ReelViewerSession session = sessionForConfig(param.args[configIndex]);
                         if (session == null) return;
                         for (int index : sourceIndexes) sessions.bindSource(param.args[index], session);

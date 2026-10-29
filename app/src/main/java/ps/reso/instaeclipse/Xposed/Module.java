@@ -189,12 +189,12 @@ public class Module {
 
             XposedHelpers.findAndHookMethod("android.app.Application", lpparam.classLoader, "attach", Context.class, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     attachBefore(param.thisObject, (Context) param.args[0], lpparam);
                 }
 
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     attachAfter(param.thisObject, (Context) param.args[0], lpparam);
                 }
 

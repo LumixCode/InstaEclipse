@@ -50,7 +50,7 @@ public class InboxDiscoverPeopleHook {
             if (path == null) throw new IllegalStateException("inbox section emitter not found");
             InboxSectionPath sections = path;
             XposedBridge.hookMethod(sections.emit, new XC_MethodHook() {
-                @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                @Override protected void beforeHookedMethod(MethodHookParam param) {
                     if (!FeatureFlags.disableDiscoverPeople && !FeatureFlags.hideDmSuggestions && !FeatureFlags.hideNotesTray) return;
                     try {
                         String type = sections.typeOf(param.args);

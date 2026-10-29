@@ -49,7 +49,7 @@ public class DisableDoubleTapLikeHook {
 
     private static final XC_MethodHook HOOK = new XC_MethodHook() {
         @Override
-        protected void beforeHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
             if (!FeatureFlags.disableDoubleTapLike) return;
             StackTraceElement[] stack = Thread.currentThread().getStackTrace();
             for (StackTraceElement frame : stack) {
@@ -64,7 +64,7 @@ public class DisableDoubleTapLikeHook {
 
     private static final XC_MethodHook REELS_GESTURE_HOOK = new XC_MethodHook() {
         @Override
-        protected void beforeHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
             if (!FeatureFlags.disableDoubleTapLike) return;
             if (!looksLikeClipsDoubleTapGesture(param.thisObject)) return;
             block(param);
@@ -244,7 +244,6 @@ public class DisableDoubleTapLikeHook {
             action.setAccessible(true);
             XC_MethodHook.Unhook setterHook = XposedBridge.hookMethod(setter, new XC_MethodHook() {
                 @Override protected void afterHookedMethod(MethodHookParam param) {
-                    ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                     if (!param.hasThrowable() && param.args.length == 1
                             && action.getDeclaringClass().isInstance(param.args[0])) callbacks.bind(param.args[0]);
                 }
@@ -252,7 +251,6 @@ public class DisableDoubleTapLikeHook {
             try {
                 XposedBridge.hookMethod(action, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
-                        ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                         if (callbacks.shouldBlock(FeatureFlags.disableDoubleTapLike, param.thisObject,
                                 param.args, () -> Thread.currentThread().getStackTrace())) {
                             // The proven void dispatcher discards the result. Other cases of

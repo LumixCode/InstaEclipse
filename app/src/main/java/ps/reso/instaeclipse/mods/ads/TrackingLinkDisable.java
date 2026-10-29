@@ -25,7 +25,7 @@ public class TrackingLinkDisable {
         XposedHelpers.findAndHookMethod(clipboardManagerClass, "setPrimaryClip",
                 Class.forName("android.content.ClipData"), new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    protected void beforeHookedMethod(MethodHookParam param) {
                         if (!active()) return;
                         ClipData clipData = (ClipData) param.args[0];
                         if (clipData == null || clipData.getItemCount() == 0) return;
@@ -40,7 +40,7 @@ public class TrackingLinkDisable {
         // 3. External share sheet -- Intent.putExtra(EXTRA_TEXT, ...) 
         XC_MethodHook putExtraHook = new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (!active()) return;
                 if (!(param.args[0] instanceof String) || param.args[1] == null) return;
                 if (!Intent.EXTRA_TEXT.equals(param.args[0])) return;
@@ -62,7 +62,7 @@ public class TrackingLinkDisable {
         // in IG's process), which fixes both the system "Copy" and every "Share to <app>" target.
         XC_MethodHook chooserHook = new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (!active()) return;
                 if (param.args.length == 0 || !(param.args[0] instanceof Intent target)) return;
                 sanitizeIntentText(target);

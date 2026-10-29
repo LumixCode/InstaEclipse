@@ -95,7 +95,7 @@ public final class StoryTrayHook {
                 final int arg = colorsArg;
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    protected void beforeHookedMethod(MethodHookParam param) {
                         int[] custom = ringColors(FeatureFlags.storyRingColor);
                         if (custom == null || !(param.args[arg] instanceof int[] colors) || colors.length == 0) return;
                         if (isCloseFriends(colors)) return;

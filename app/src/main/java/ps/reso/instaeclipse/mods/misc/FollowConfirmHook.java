@@ -112,7 +112,7 @@ public class FollowConfirmHook {
         }
         XposedBridge.hookMethod(sender, new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (!FeatureFlags.confirmFollows || REPLAYING.get() == Boolean.TRUE || !FollowConfirmPolicy.isFollow(param.args)) return;
                 Activity act = UIHookManager.getCurrentActivity();
                 if (act == null) return;
@@ -175,7 +175,7 @@ public class FollowConfirmHook {
     private static void hookProfileButton() {
         XposedBridge.hookAllMethods(android.view.View.class, "performClick", new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (!FeatureFlags.confirmFollows || replayingClick) return;
                 android.view.View v = (android.view.View) param.thisObject;
                 if (profileButtonId == 0) {
@@ -229,7 +229,7 @@ public class FollowConfirmHook {
                 boolean resumes = resolveCoroutine(p[ci]);
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    protected void beforeHookedMethod(MethodHookParam param) {
                         if (!FeatureFlags.confirmFollows || REPLAYING.get() == Boolean.TRUE || !FollowConfirmPolicy.isFollow(param.args)) return;
                         Activity act = UIHookManager.getCurrentActivity();
                         if (act == null) return;

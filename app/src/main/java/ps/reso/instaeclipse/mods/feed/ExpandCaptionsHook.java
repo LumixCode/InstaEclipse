@@ -47,20 +47,20 @@ public class ExpandCaptionsHook {
         Method builder = pair.get(0), helper = pair.get(1);
         XposedBridge.hookMethod(builder, new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 Integer d = IN_BUILDER.get();
                 IN_BUILDER.set(d == null ? 1 : d + 1);
             }
 
             @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 Integer d = IN_BUILDER.get();
                 if (d == null || d <= 1) IN_BUILDER.remove(); else IN_BUILDER.set(d - 1);
             }
         });
         XposedBridge.hookMethod(helper, new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (!FeatureFlags.expandCaptions || IN_BUILDER.get() == null) return;
                 if (param.args[4] instanceof Integer) param.args[4] = Integer.MAX_VALUE;
             }

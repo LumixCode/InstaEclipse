@@ -63,7 +63,7 @@ public class FeedPhotoZoomHook {
             // at construction time, so the feed-row ancestor check below would always fail.
             XposedBridge.hookMethod(binding.attach, new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     // setOnLongClickListener() has a side effect beyond registering the
                     // callback: it also flips the view's LONG_CLICKABLE flag, which changes
                     // Android's internal tap-vs-long-press disambiguation timing for that

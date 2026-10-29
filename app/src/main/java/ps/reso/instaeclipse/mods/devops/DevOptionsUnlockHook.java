@@ -93,7 +93,7 @@ public class DevOptionsUnlockHook {
             m.setAccessible(true);
             XposedBridge.hookMethod(m, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (FeatureFlags.isDevEnabled) {
                         param.setResult(true);
                     }

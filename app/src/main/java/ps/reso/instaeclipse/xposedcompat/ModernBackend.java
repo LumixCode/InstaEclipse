@@ -8,6 +8,7 @@ import java.lang.reflect.Method;
 import java.util.Map;
 
 import io.github.libxposed.api.XposedInterface;
+import ps.reso.instaeclipse.utils.core.JitGuard;
 
 /**
  * Backend for libxposed API 101/102 (Vector 2.2+). Each legacy-style before/after callback becomes
@@ -44,6 +45,7 @@ public final class ModernBackend implements HookBackend {
     }
 
     private Object intercept(XposedInterface.Chain chain, Member member, XC_MethodHook callback) throws Throwable {
+        JitGuard.tick(member);
         XC_MethodHook.MethodHookParam param = new XC_MethodHook.MethodHookParam();
         param.method = member;
         param.thisObject = chain.getThisObject();

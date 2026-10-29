@@ -34,7 +34,7 @@ public class AdBlocker {
     private void blockAdPods(ClassLoader classLoader) {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 if (FeatureFlags.isAdBlockEnabled) param.setResult(false);
             }
         };

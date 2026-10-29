@@ -18,7 +18,6 @@ import java.util.Set;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.core.PasscodeCheck;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -63,7 +62,7 @@ public class LockedCollectionsHook {
             viewMethod = fragment.getMethod("getView");
             XposedHelpers.findAndHookMethod(fragment, "onResume", new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     if (!FeatureFlags.lockSavedCollections) return;
                     Bundle args = arguments(param.thisObject);
                     String id = args != null ? collectionId(args) : null;

@@ -116,7 +116,7 @@ public final class ReelsAdFilter {
         Predicate<Object> isAd = item -> isAd(item, isAdCheck, type);
         return new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 if (!FeatureFlags.isAdBlockEnabled || !(param.getResult() instanceof List<?> items)) return;
                 List<?> kept = filter(items, isAd);
                 if (kept != items) param.setResult(kept);

@@ -155,12 +155,12 @@ public class EditHistoryHook {
                 // stored.merge(session, incoming, x): the server's copy replaces the stored text.
                 XposedBridge.hookMethod(merge, new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    protected void beforeHookedMethod(MethodHookParam param) {
                         BEFORE.get().push(FeatureFlags.keepEditHistory ? snapshot(param.thisObject) : NONE);
                     }
 
                     @Override
-                    protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    protected void afterHookedMethod(MethodHookParam param) {
                         compare(param.thisObject, BEFORE.get().poll(), param.args[0], "merge");
                     }
                 });
@@ -186,13 +186,13 @@ public class EditHistoryHook {
                 // message.setContent(type, value): the sync engine's in-place edit (no session at hand).
                 XposedBridge.hookMethod(setter, new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    protected void beforeHookedMethod(MethodHookParam param) {
                         BEFORE.get().push(FeatureFlags.keepEditHistory && param.args[1] instanceof String
                                 ? snapshot(param.thisObject) : NONE);
                     }
 
                     @Override
-                    protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    protected void afterHookedMethod(MethodHookParam param) {
                         compare(param.thisObject, BEFORE.get().poll(), null, "in place");
                     }
                 });
@@ -250,7 +250,7 @@ public class EditHistoryHook {
 
         XposedBridge.hookMethod(tap, new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 TAP.remove();
                 // "Hide" (Instagram's own expansion is open) stays Instagram's.
                 if (!FeatureFlags.keepEditHistory || !Boolean.TRUE.equals(param.args[1]) || param.args[0] == null) return;
@@ -259,7 +259,7 @@ public class EditHistoryHook {
             }
 
             @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 Tap t = TAP.get();
                 TAP.remove();
                 if (t != null) show(t);
@@ -268,7 +268,7 @@ public class EditHistoryHook {
 
         XposedBridge.hookMethod(getter, new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 Tap t = TAP.get();
                 if (t == null || t.message != null) return;
                 // Only the tapped message (the toggle reads it right after finding its row).

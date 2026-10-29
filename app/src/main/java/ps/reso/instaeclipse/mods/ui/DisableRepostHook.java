@@ -105,7 +105,7 @@ public class DisableRepostHook {
     private int installActionHandler(ClassLoader classLoader) {
         XC_MethodHook skip = new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (FeatureFlags.disableRepost) {
                     param.setResult(null); // void method → skip original entirely
                     ModuleLog.line("(IE|Repost) Blocked a repost");
@@ -138,7 +138,7 @@ public class DisableRepostHook {
     private int installFeedCommit(ClassLoader classLoader) {
         XC_MethodHook skipPostRepost = new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (FeatureFlags.disableRepost) {
                     param.setResult(null); // void launcher → coroutine never built/launched
                     ModuleLog.line("(IE|Repost) Blocked a repost from the feed");
@@ -202,7 +202,7 @@ public class DisableRepostHook {
         targets.removeIf(m -> !ownRender(m));
         XC_MethodHook drawNothing = new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 if (FeatureFlags.disableRepost && !param.hasThrowable()) param.setResult(null);
             }
         };
@@ -233,7 +233,7 @@ public class DisableRepostHook {
             final Field repostButton = field;
             int total = XposedBridge.hookAllConstructors(field.getDeclaringClass(), new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     if (!FeatureFlags.disableRepost) return;
                     try {
                         repostButton.setBoolean(param.thisObject, false);

@@ -38,7 +38,6 @@ import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.HookFrames;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -179,7 +178,6 @@ public class CaptionCopyHook {
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {
-                        JitGuard.tick(param.method);
                         if (!FeatureFlags.enableCaptionCopy) return;
                         Object out = param.getResult();
                         if (out instanceof android.util.Pair<?, ?> pair) out = pair.first;
@@ -324,7 +322,6 @@ public class CaptionCopyHook {
 
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {
-            JitGuard.tick(param.method);
             HookFrames.Frame frame = frames.enter();
             View view = (View) param.thisObject;
             MotionEvent event = (MotionEvent) param.args[0];
@@ -350,7 +347,6 @@ public class CaptionCopyHook {
 
         @Override
         protected void afterHookedMethod(MethodHookParam param) {
-            JitGuard.tick(param.method);
             HookFrames.Frame frame = frames.exit();
             if (Boolean.TRUE.equals(frame.get(RESTORE_UP))) {
                 ((MotionEvent) param.args[0]).setAction(MotionEvent.ACTION_UP);

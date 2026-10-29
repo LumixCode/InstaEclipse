@@ -49,7 +49,7 @@ public final class BackLeavesHomeHook {
             }
             XposedBridge.hookMethod(back, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (param.thisObject instanceof Activity a && leaveIfHomeFeed(a)) param.setResult(null);
                 }
             });

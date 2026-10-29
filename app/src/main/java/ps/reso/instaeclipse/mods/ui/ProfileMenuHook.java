@@ -76,7 +76,7 @@ public final class ProfileMenuHook {
                 }
             }
             XC_MethodHook onShow = new XC_MethodHook() {
-                @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                @Override protected void afterHookedMethod(MethodHookParam param) {
                     if ((FeatureFlags.profileMenuTools || FeatureFlags.profileAnalyzer) && param.thisObject instanceof PopupWindow pw) inject(pw);
                 }
             };

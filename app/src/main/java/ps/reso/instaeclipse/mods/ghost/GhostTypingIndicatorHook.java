@@ -22,7 +22,7 @@ public class GhostTypingIndicatorHook {
     public void handleTypingBlock() {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (FeatureFlags.isGhostTyping) param.setResult(null);
             }
         };

@@ -119,7 +119,7 @@ public final class ProfileSpoofHook {
                 if (!found.isEmpty()) DexKitCache.saveMethods(cacheKey, found);
             }
             XC_MethodHook hook = new XC_MethodHook() {
-                @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                @Override protected void afterHookedMethod(MethodHookParam param) {
                     if (!FeatureFlags.profileSpoofer) return;
                     Object value = spoofed(which, ((Method) param.method).getReturnType());
                     if (value != null && isSelf(param.thisObject)) param.setResult(value);
@@ -183,7 +183,7 @@ public final class ProfileSpoofHook {
             Method resume = fragment.getDeclaredMethod("performResume");
             Method args = fragment.getMethod("getArguments");
             XposedBridge.hookMethod(resume, new XC_MethodHook() {
-                @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                @Override protected void afterHookedMethod(MethodHookParam param) {
                     try {
                         Object b = args.invoke(param.thisObject);
                         if (!(b instanceof android.os.Bundle bundle) || !(bundle.get(TOKEN) instanceof String t)) return;
@@ -210,7 +210,7 @@ public final class ProfileSpoofHook {
 
     private static void hookHeaderViews() {
         XposedBridge.hookAllMethods(android.widget.TextView.class, "setText", new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            @Override protected void afterHookedMethod(MethodHookParam param) {
                 if (!FeatureFlags.profileSpoofer || SETTING.get() == Boolean.TRUE) return;
                 android.widget.TextView tv = (android.widget.TextView) param.thisObject;
                 int id = tv.getId();
@@ -244,7 +244,7 @@ public final class ProfileSpoofHook {
                 return;
             }
             XposedBridge.hookMethod(writer, new XC_MethodHook() {
-                @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                @Override protected void beforeHookedMethod(MethodHookParam param) {
                     if (!FeatureFlags.profileSpoofer) return;
                     Object[] args = param.args;
                     int[] ids = new int[args.length];
@@ -274,7 +274,7 @@ public final class ProfileSpoofHook {
     /** The real picture arrives asynchronously (and again on every rebind): put ours back. */
     private static void hookAvatarView() {
         XC_MethodHook hook = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            @Override protected void afterHookedMethod(MethodHookParam param) {
                 if (!FeatureFlags.profileSpoofer || SETTING.get() == Boolean.TRUE) return;
                 String value = FeatureFlags.spoofAvatar;
                 if (value == null || value.isEmpty()) return;

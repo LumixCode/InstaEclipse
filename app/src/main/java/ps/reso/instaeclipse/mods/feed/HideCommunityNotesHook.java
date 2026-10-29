@@ -55,7 +55,7 @@ public class HideCommunityNotesHook {
         }
         XC_MethodHook hide = new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (FeatureFlags.hideCommunityNotes) param.setResult(null);
             }
         };

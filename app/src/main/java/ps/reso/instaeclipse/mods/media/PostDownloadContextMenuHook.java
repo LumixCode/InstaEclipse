@@ -271,14 +271,14 @@ public class PostDownloadContextMenuHook {
         XposedBridge.hookMethod(addButtonMethod, new XC_MethodHook() {
 
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (Boolean.TRUE.equals(sAddingDownload.get())) return;
                 PostMenuRowsPolicy.Row row = rowOf(param.args[idxOption]);
                 if (row != null && menu(param.args[idxSelf]).suppressNative(row, enabledRows())) param.setResult(null);
             }
 
             @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 if (Boolean.TRUE.equals(sAddingDownload.get())) return;
                 Set<PostMenuRowsPolicy.Row> wanted = wantedRows();
                 if (wanted.isEmpty()) return;
@@ -401,7 +401,7 @@ public class PostDownloadContextMenuHook {
         resolveReelClickDispatcher(classLoader);
         XC_MethodHook clickHook = new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (!PostMenuRowsPolicy.handlesTaps(enabledRows(), FeatureFlags.enableReelDownload)) return;
                 onOptionClicked(param);
             }
@@ -486,7 +486,7 @@ public class PostDownloadContextMenuHook {
     private static void installAllowlistPatchHook(ClassLoader classLoader) {
         XC_MethodHook allowlistHook = new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 try {
                     Object result = param.getResult();
                     if (!(result instanceof List<?> original)) return;

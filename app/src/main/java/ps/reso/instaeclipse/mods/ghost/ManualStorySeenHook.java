@@ -279,7 +279,7 @@ public final class ManualStorySeenHook {
     private void hookReceiptPipeline() throws Exception {
         resolutionStage = "request path setter hook";
         XposedBridge.hookMethod(pathSetter, new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+            @Override protected void beforeHookedMethod(MethodHookParam p) {
                 Dispatch active = dispatch.get();
                 if (active == null || !(p.args[0] instanceof String path)
                         || !path.startsWith("media/seen/?")) return;
@@ -295,11 +295,11 @@ public final class ManualStorySeenHook {
             XposedBridge.hookMethod(method, new XC_MethodHook() {
                 private final HookFrames.Slot frames = new HookFrames.Slot();
 
-                @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+                @Override protected void beforeHookedMethod(MethodHookParam p) {
                     HookFrames.Frame frame = frames.enter();
                     frame.put("manual_story_previous", tracking.enter(enabled(), () -> mediaId(p.args[index])));
                 }
-                @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+                @Override protected void afterHookedMethod(MethodHookParam p) {
                     tracking.exit(frames.exit().get("manual_story_previous"));
                 }
             });
@@ -309,7 +309,7 @@ public final class ManualStorySeenHook {
         int sessionIndex = staticPopulation ? 1 : 0;
         int reelIndex = staticPopulation ? 3 : 2;
         XposedBridge.hookMethod(populateItem, new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+            @Override protected void beforeHookedMethod(MethodHookParam p) {
                 String id = tracking.current();
                 if (!enabled() || dispatch.get() != null || id == null || p.args[graphIndex] == null
                         || p.args[sessionIndex] == null || !(p.args[reelIndex] instanceof String reelId)) return;

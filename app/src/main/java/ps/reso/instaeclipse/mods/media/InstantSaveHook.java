@@ -72,7 +72,7 @@ public class InstantSaveHook {
             int hooked = 0;
             for (java.lang.reflect.Constructor<?> c : ps.reso.instaeclipse.utils.core.SafeReflect.constructors(lambda)) {
                 XposedBridge.hookMethod(c, new XC_MethodHook() {
-                    @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+                    @Override protected void afterHookedMethod(MethodHookParam p) {
                         try {
                             Object media = findInstantMedia(p.args);
                             if (media != null) currentMedia = media;
@@ -171,7 +171,7 @@ public class InstantSaveHook {
             int hooked = 0;
             for (java.lang.reflect.Constructor<?> c : ps.reso.instaeclipse.utils.core.SafeReflect.constructors(handler)) {
                 XposedBridge.hookMethod(c, new XC_MethodHook() {
-                    @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+                    @Override protected void afterHookedMethod(MethodHookParam p) {
                         try {
                             java.lang.reflect.Field field = longPressField(p, function1);
                             if (field == null) return;

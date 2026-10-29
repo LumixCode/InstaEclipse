@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Set;
 
 import ps.reso.instaeclipse.R;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -109,7 +108,6 @@ public final class ProfileTextCopyHook {
             Class<?> bar = XposedHelpers.findClass(ACTION_BAR, cl);
             XC_MethodHook bind = new XC_MethodHook() {
                 @Override protected void afterHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
                     if (param.thisObject instanceof View v) attachTitle(v);
                 }
             };
@@ -193,7 +191,6 @@ public final class ProfileTextCopyHook {
     private static final XC_MethodHook TOUCH = new XC_MethodHook() {
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {
-            JitGuard.tick(param.method);
             if (!FeatureFlags.profileMenuTools && pressed.get() == null) return;
             View view = (View) param.thisObject;
             MotionEvent event = (MotionEvent) param.args[0];
@@ -221,7 +218,6 @@ public final class ProfileTextCopyHook {
 
         @Override
         protected void afterHookedMethod(MethodHookParam param) {
-            JitGuard.tick(param.method);
             MotionEvent event = (MotionEvent) param.args[0];
             if (event == restoreUp && param.thisObject == restoreView) {
                 restoreUp = null;

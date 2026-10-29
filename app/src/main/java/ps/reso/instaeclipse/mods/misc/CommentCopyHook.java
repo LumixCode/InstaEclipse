@@ -20,7 +20,6 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.media.CommentMediaDownload;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -78,11 +77,9 @@ public class CommentCopyHook {
             Method presenter = menu.get(0);
             XposedBridge.hookMethod(presenter, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
                     menuCall.set(new MenuCall(commentArg(param.args)));
                 }
                 @Override protected void afterHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
                     MenuCall call = menuCall.get();
                     menuCall.remove();
                     if (call != null && call.rowsSeen && !call.rowAdded && FeatureFlags.enableCopyComment
@@ -156,7 +153,6 @@ public class CommentCopyHook {
     private static final XC_MethodHook ADD_ROW_HOOK = new XC_MethodHook() {
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {
-            JitGuard.tick(param.method);
             MenuCall call = menuCall.get();
             if (call == null || call.rowAdded || !FeatureFlags.enableCopyComment) return; // one menu, one row
             if (!(param.args[0] instanceof List<?> rows) || rows.isEmpty()) return;

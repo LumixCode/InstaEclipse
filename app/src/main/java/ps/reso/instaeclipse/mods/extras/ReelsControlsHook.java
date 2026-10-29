@@ -36,7 +36,7 @@ public class ReelsControlsHook {
         if (gate == null) return;
         XposedBridge.hookMethod(gate, new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 if (FeatureFlags.reelsAutoScroll) param.setResult(true);
             }
         });

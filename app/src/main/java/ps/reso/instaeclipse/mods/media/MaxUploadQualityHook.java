@@ -47,7 +47,6 @@ public class MaxUploadQualityHook {
                     XposedBridge.hookMethod(md.getMethodInstance(classLoader), new XC_MethodHook() {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) {
-                            ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
                             if (!FeatureFlags.maxUploadQuality) return;
                             param.setResult(Boolean.TRUE);
                         }

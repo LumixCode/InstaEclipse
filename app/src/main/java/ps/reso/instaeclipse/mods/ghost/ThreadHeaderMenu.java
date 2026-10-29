@@ -23,7 +23,6 @@ import java.util.WeakHashMap;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.R;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
@@ -292,7 +291,6 @@ final class ThreadHeaderMenu {
                 if (hooked.contains(dispatch)) continue;
                 XposedBridge.hookMethod(dispatch, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
-                        JitGuard.tick(param.method);
                         if (!(param.thisObject instanceof Activity a)) return;
                         MotionEvent event = (MotionEvent) param.args[0];
                         // Sees every touch, swallowed below or not; returns at once without a jump.

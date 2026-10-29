@@ -19,7 +19,6 @@ import java.util.WeakHashMap;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 /**
@@ -101,7 +100,6 @@ final class IgThemeColorSourceHooks {
     private static int hookCslResult(Class<?> cls, String name, Object... params) {
         Object[] args = append(params, new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam p) {
-                JitGuard.tick(p.method);
                 if (p.getThrowable() != null || !(p.getResult() instanceof ColorStateList)) return;
                 ColorStateList themed = theme((ColorStateList) p.getResult());
                 if (themed != p.getResult()) p.setResult(themed);
@@ -113,7 +111,6 @@ final class IgThemeColorSourceHooks {
     private static int hookCslArg(Class<?> cls, String name, Object... params) {
         Object[] args = append(params, new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam p) {
-                JitGuard.tick(p.method);
                 if (p.args[0] instanceof ColorStateList) p.args[0] = theme((ColorStateList) p.args[0]);
             }
         });
@@ -122,7 +119,6 @@ final class IgThemeColorSourceHooks {
 
     private static final XC_MethodHook REMAP_FIRST_INT = new XC_MethodHook() {
         @Override protected void beforeHookedMethod(MethodHookParam p) {
-            JitGuard.tick(p.method);
             if (!active() || !(p.args[0] instanceof Integer)) return;
             int c = (Integer) p.args[0];
             int r = IgColorRemapEngine.remap(c);
@@ -149,7 +145,6 @@ final class IgThemeColorSourceHooks {
         try {
             ps.reso.instaeclipse.xposedcompat.XposedBridge.hookAllConstructors(ColorDrawable.class, new XC_MethodHook() {
                 @Override protected void afterHookedMethod(MethodHookParam p) {
-                    JitGuard.tick(p.method);
                     if (p.args.length != 2 || !active()) return;
                     ColorDrawable d = (ColorDrawable) p.thisObject;
                     int c = d.getColor();
@@ -173,31 +168,22 @@ final class IgThemeColorSourceHooks {
     // is recording its drawing (UI thread), leaving ordinary views and the module's own UI alone.
     private static int composeDrawDepth;
     private static final Thread MAIN_THREAD = Looper.getMainLooper().getThread();
-    // Paint.setColor runs on every frame long before the first Compose draw: each member ticks once
-    // up front, so JitGuard marks its stub before the JIT can compile it (Android 13 crash).
-    private static boolean setColorIntTicked, setColorLongTicked;
 
     private static int hookComposeDrawing(ClassLoader cl) {
         try {
             XposedHelpers.findAndHookMethod("androidx.compose.ui.platform.AndroidComposeView", cl,
                     "dispatchDraw", android.graphics.Canvas.class, new XC_MethodHook() {
                         @Override protected void beforeHookedMethod(MethodHookParam p) {
-                            JitGuard.tick(p.method);
                             composeDrawDepth++;
                         }
 
-                        @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+                        @Override protected void afterHookedMethod(MethodHookParam p) {
                             if (composeDrawDepth > 0) composeDrawDepth--;
                         }
                     });
             XposedHelpers.findAndHookMethod(android.graphics.Paint.class, "setColor", int.class, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam p) {
-                    if (!setColorIntTicked) {
-                        setColorIntTicked = true;
-                        JitGuard.tick(p.method);
-                    }
                     if (composeDrawDepth == 0 || Thread.currentThread() != MAIN_THREAD) return;
-                    JitGuard.tick(p.method);
                     if (!active()) return;
                     int c = (Integer) p.args[0];
                     int r = IgColorRemapEngine.remap(c);
@@ -207,12 +193,7 @@ final class IgThemeColorSourceHooks {
             if (Build.VERSION.SDK_INT >= 29) {
                 XposedHelpers.findAndHookMethod(android.graphics.Paint.class, "setColor", long.class, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam p) {
-                        if (!setColorLongTicked) {
-                            setColorLongTicked = true;
-                            JitGuard.tick(p.method);
-                        }
                         if (composeDrawDepth == 0 || Thread.currentThread() != MAIN_THREAD) return;
-                        JitGuard.tick(p.method);
                         long c = (Long) p.args[0];
                         if (!active() || !android.graphics.Color.isSrgb(c)) return;
                         int argb = android.graphics.Color.toArgb(c);
@@ -239,7 +220,6 @@ final class IgThemeColorSourceHooks {
         try {
             XposedHelpers.findAndHookMethod(ColorDrawable.class, "draw", android.graphics.Canvas.class, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam p) {
-                    JitGuard.tick(p.method);
                     if (!active()) return;
                     ColorDrawable d = (ColorDrawable) p.thisObject;
                     int c = d.getColor();

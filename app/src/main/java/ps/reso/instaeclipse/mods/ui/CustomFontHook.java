@@ -116,7 +116,7 @@ public class CustomFontHook {
     private void installTypefaceHooks(boolean setTypeface) {
         IconFontGuard iconFonts = IconFontGuard.resolve(CustomFontHook::fontId);
         XC_MethodHook replace = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+            @Override protected void afterHookedMethod(MethodHookParam p) {
                 if (!(FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled)) return;
                 if (Boolean.TRUE.equals(loading.get())) return; // our own load
                 for (Object a : p.args) {
@@ -146,7 +146,7 @@ public class CustomFontHook {
         // our font on EVERY text view (this build renders icons as vector drawables, not an icon
         // font, so replacing text typefaces app-wide is safe). beforeHook swaps the arg.
         XC_MethodHook setTf1 = new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+            @Override protected void beforeHookedMethod(MethodHookParam p) {
                 if (!(FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled) || Boolean.TRUE.equals(loading.get())) return;
                 if (iconFonts.isIcon(p.args[0])) return;
                 Typeface tf = getActiveTypeface();
@@ -156,7 +156,7 @@ public class CustomFontHook {
             }
         };
         XC_MethodHook setTf2 = new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+            @Override protected void beforeHookedMethod(MethodHookParam p) {
                 if (!(FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled) || Boolean.TRUE.equals(loading.get())) return;
                 if (iconFonts.isIcon(p.args[0])) return;
                 Typeface tf = getActiveTypeface();
@@ -176,7 +176,7 @@ public class CustomFontHook {
                 try {
                     XposedHelpers.findAndHookConstructor(android.graphics.fonts.Font.Builder.class,
                             android.content.res.Resources.class, int.class, new XC_MethodHook() {
-                                @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+                                @Override protected void beforeHookedMethod(MethodHookParam p) {
                                     iconFonts.fontResource((int) p.args[1]);
                                 }
                             });
@@ -190,7 +190,7 @@ public class CustomFontHook {
         // (Typeface.Builder / CustomFallbackBuilder) and the system defaults a null Paint typeface
         // or a "sans-serif" family resolves to.
         XC_MethodHook built = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+            @Override protected void afterHookedMethod(MethodHookParam p) {
                 if (Boolean.TRUE.equals(loading.get()) || iconFonts.keep(p.getResult()) || p.getResult() == null) return;
                 try {
                     Object path = XposedHelpers.getObjectField(p.thisObject, "mPath");
@@ -255,7 +255,7 @@ public class CustomFontHook {
         try {
             XposedHelpers.findAndHookMethod(Activity.class, "onActivityResult",
                     int.class, int.class, Intent.class, new XC_MethodHook() {
-                        @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+                        @Override protected void afterHookedMethod(MethodHookParam p) {
                             try {
                                 int req = (int) p.args[0];
                                 if (req != FONT_PICK_REQUEST && req != EMOJI_PICK_REQUEST) return;
@@ -489,7 +489,7 @@ public class CustomFontHook {
             for (Found md : found) {
                 java.lang.reflect.Method run = md.getMethodInstance(cl);
                 ps.reso.instaeclipse.xposedcompat.XposedBridge.hookMethod(run, new XC_MethodHook() {
-                    @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+                    @Override protected void beforeHookedMethod(MethodHookParam p) {
                         if (!FeatureFlags.customEmojiEnabled) return;
                         try {
                             if (failEmojiLoad(p.thisObject, 0)) {

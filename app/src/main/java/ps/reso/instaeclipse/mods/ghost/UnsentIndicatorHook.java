@@ -72,7 +72,7 @@ final class UnsentIndicatorHook {
                 XposedBridge.hookMethod(bind, new XC_MethodHook() {
                     private final HookFrames.Slot frames = new HookFrames.Slot();
 
-                    @Override protected void beforeHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    @Override protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         if (!UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) return;
                         HookFrames.Frame frame = frames.enter();
                         View view = (View) viewField.get(param.args[0]);
@@ -84,7 +84,7 @@ final class UnsentIndicatorHook {
                         frame.put("ie_unsent_previous_binding", bubbles.beginBind(view));
                     }
 
-                    @Override protected void afterHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    @Override protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         if (!UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) return;
                         HookFrames.Frame frame = frames.exit();
                         try {

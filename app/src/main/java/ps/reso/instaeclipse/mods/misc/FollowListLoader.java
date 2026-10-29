@@ -426,7 +426,6 @@ final class FollowListLoader {
     private static final XC_MethodHook PAGE_HOOK = new XC_MethodHook() {
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {
-            ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
             if (!FeatureFlags.followListExport && !FeatureFlags.profileAnalyzer) return;
             Load l = current;
             try {
@@ -650,7 +649,6 @@ final class FollowListLoader {
     private static final XC_MethodHook BUILDER_HOOK = new XC_MethodHook() {
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {
-            ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
             Load l = current;
             if (l == null) return;
             try {
@@ -726,7 +724,6 @@ final class FollowListLoader {
     private static final XC_MethodHook FAILURE_HOOK = new XC_MethodHook() {
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {
-            ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
             Load l = current;
             if (l == null) return;
             try {

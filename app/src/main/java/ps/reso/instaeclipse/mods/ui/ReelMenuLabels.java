@@ -20,7 +20,6 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
@@ -99,7 +98,6 @@ public final class ReelMenuLabels {
             XposedBridge.hookMethod(resolver, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
-                    JitGuard.tick(param.method);
                     if (EXTRA_REEL_LABELS.isEmpty() || copyLinkOptionForLabels == null) return;
                     for (int i = 0; i < param.args.length; i++) {
                         Object a = param.args[i];
@@ -220,7 +218,6 @@ public final class ReelMenuLabels {
     private static final XC_MethodHook BUILDER_LABEL = new XC_MethodHook() {
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {
-            JitGuard.tick(param.method);
             if (EXTRA_REEL_LABELS.isEmpty()) return;
             try {
                 Object[] args = param.args;

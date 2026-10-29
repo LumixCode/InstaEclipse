@@ -21,7 +21,6 @@ import java.util.List;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -108,7 +107,7 @@ public class SavedOnProfileHook {
             if (navMake != null) { navMake.setAccessible(true); navPush.setAccessible(true); navCommit.setAccessible(true); }
             XposedHelpers.findAndHookMethod(cl.loadClass("androidx.fragment.app.Fragment"), "onResume", new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     if (!FeatureFlags.savedOnProfile || !isProfileFragment(param.thisObject)) return;
                     final Object frag = param.thisObject;
                     View root;

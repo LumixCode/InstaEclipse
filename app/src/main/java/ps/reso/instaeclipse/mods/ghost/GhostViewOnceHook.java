@@ -85,7 +85,7 @@ public class GhostViewOnceHook {
     private static XC_MethodHook buildViewOnceHook() {
         return new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (FeatureFlags.isGhostViewOnce) skipMutation(param, "ViewOnce");
             }
         };

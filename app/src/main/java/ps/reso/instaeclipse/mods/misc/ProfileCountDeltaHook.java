@@ -39,7 +39,6 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -259,7 +258,6 @@ public final class ProfileCountDeltaHook {
 
     private static final XC_MethodHook STEP = new XC_MethodHook() {
         @Override protected void beforeHookedMethod(MethodHookParam param) {
-            JitGuard.tick(param.method);
             String profile = null;
             try {
                 Object holder = param.args[stateArg];
@@ -274,14 +272,12 @@ public final class ProfileCountDeltaHook {
         }
 
         @Override protected void afterHookedMethod(MethodHookParam param) {
-            JitGuard.tick(param.method);
             BINDING.remove();
         }
     };
 
     private static final XC_MethodHook CELL = new XC_MethodHook() {
         @Override protected void afterHookedMethod(MethodHookParam param) {
-            JitGuard.tick(param.method);
             try {
                 TextView value = null;
                 boolean followers = false;

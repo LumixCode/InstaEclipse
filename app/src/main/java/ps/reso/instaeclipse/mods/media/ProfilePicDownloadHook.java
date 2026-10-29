@@ -84,7 +84,7 @@ public class ProfilePicDownloadHook {
         try {
             XposedHelpers.findAndHookMethod(cl.loadClass("androidx.fragment.app.Fragment"), "onResume", new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     if (!FeatureFlags.enableProfileDownload) return;
                     for (Class<?> c = param.thisObject.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
                         if (c.getName().equals(FRAGMENT)) {

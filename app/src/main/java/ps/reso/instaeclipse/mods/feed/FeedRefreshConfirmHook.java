@@ -67,7 +67,7 @@ public final class FeedRefreshConfirmHook {
             final java.lang.reflect.Field listenerField = field;
             XposedBridge.hookMethod(container.getMethod("onNestedScrollAccepted", View.class, View.class, int.class), new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     try {
                         View view = (View) param.thisObject;
                         Object listener = listenerField.get(view);

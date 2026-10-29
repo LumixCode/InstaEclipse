@@ -105,7 +105,7 @@ public class LikeUndoHook {
         final Method sender = target;
         XposedBridge.hookMethod(sender, new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (param.method.equals(REPLAYING.get())) return;
                 if (!(FeatureFlags.likeUndo || FeatureFlags.confirmLikes) && pending.isEmpty()) return;
                 Object media = mediaOf(param.args);
@@ -198,7 +198,7 @@ public class LikeUndoHook {
     private static void hookHeartButtons() {
         XposedBridge.hookAllMethods(View.class, "performClick", new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (!FeatureFlags.confirmLikes || replayingTap) return;
                 View v = (View) param.thisObject;
                 if (heartIds.isEmpty()) {
@@ -247,7 +247,7 @@ public class LikeUndoHook {
             if (!activity || !media) continue;
             XposedBridge.hookMethod(m, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (!FeatureFlags.confirmLikes || param.method.equals(REPLAYING.get())) return;
                     Object media = mediaOf(param.args);
                     if (media == null || HideSuggestedFeedItemsHook.isLiked(media) || confirmedLike(media)) return;

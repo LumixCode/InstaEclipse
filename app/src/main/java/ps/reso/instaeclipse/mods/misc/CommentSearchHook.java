@@ -114,7 +114,7 @@ public class CommentSearchHook {
                 if (!takesVm) continue;
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
-                    protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    protected void afterHookedMethod(MethodHookParam param) {
                         Object state = param.getResult();
                         if ((!FeatureFlags.commentSearch && !FeatureFlags.enableCaptionCopy) || state == null) return;
                         Object sortRow = findSortRow(state);
@@ -174,7 +174,7 @@ public class CommentSearchHook {
                     if (!Modifier.isStatic(m.getModifiers()) || m.getReturnType() != void.class) continue;
                     XposedBridge.hookMethod(m, new XC_MethodHook() {
                         @Override
-                        protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                        protected void afterHookedMethod(MethodHookParam param) {
                             if (FeatureFlags.commentSearch) SortRowOverlay.poke();
                         }
                     });
@@ -201,7 +201,7 @@ public class CommentSearchHook {
                         }
 
                         @Override
-                        protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                        protected void afterHookedMethod(MethodHookParam param) {
                             if (param.thisObject != null) lastFragment = new java.lang.ref.WeakReference<>(param.thisObject);
                             Object frag = param.thisObject;
                             if (FeatureFlags.commentSearch && param.args[0] instanceof View root) root.post(() -> addPill(host(root), frag));

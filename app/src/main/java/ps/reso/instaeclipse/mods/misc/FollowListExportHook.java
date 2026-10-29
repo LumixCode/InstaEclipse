@@ -64,7 +64,7 @@ public class FollowListExportHook {
             fragClass = frag;
             XposedBridge.hookMethod(ovc, new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     if ((!FeatureFlags.followListExport && !FeatureFlags.profileAnalyzer)
                             || !fragClass.isInstance(param.thisObject)) return;
                     if (param.args[0] instanceof View root) {

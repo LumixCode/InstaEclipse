@@ -65,7 +65,7 @@ public class RemoveMetaAIHook {
     public void install(ClassLoader classLoader) {
         XC_MethodHook inflateHook = new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 if (!FeatureFlags.removeMetaAI) return;
                 try {
                     if (!(param.args[0] instanceof Integer)) return;
@@ -136,7 +136,7 @@ public class RemoveMetaAIHook {
     private void installReelContentDeepDive(ClassLoader cl) {
         // Fetcher: skip fetching prompt data so there is nothing to render.
         XC_MethodHook skip = new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+            @Override protected void beforeHookedMethod(MethodHookParam p) {
                 if (FeatureFlags.removeMetaAI) p.setResult(null);
             }
         };
@@ -149,7 +149,7 @@ public class RemoveMetaAIHook {
         // so the row is never appended. Only skip if it's void (a side-effecting row-adder) — never
         // clobber a method that returns a value the caller uses.
         XC_MethodHook skipIfVoid = new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+            @Override protected void beforeHookedMethod(MethodHookParam p) {
                 if (!FeatureFlags.removeMetaAI) return;
                 try {
                     if (((java.lang.reflect.Method) p.method).getReturnType() == void.class) p.setResult(null);
@@ -222,7 +222,7 @@ public class RemoveMetaAIHook {
      */
     private void installReelsCardEligibility(ClassLoader cl) {
         XC_MethodHook skip = new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+            @Override protected void beforeHookedMethod(MethodHookParam p) {
                 if (FeatureFlags.removeMetaAI) p.setResult(null); // void → skip candidate build/inject
             }
         };
@@ -258,7 +258,7 @@ public class RemoveMetaAIHook {
      */
     private void installVideoAttribution(ClassLoader cl) {
         XC_MethodHook blank = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam p) { ps.reso.instaeclipse.utils.core.JitGuard.tick(p.method);
+            @Override protected void afterHookedMethod(MethodHookParam p) {
                 if (!FeatureFlags.removeMetaAI) return;
                 Object r = p.getResult();
                 if (r == null) return;
@@ -287,7 +287,7 @@ public class RemoveMetaAIHook {
 
     private void installReelsOverflowGate(ClassLoader classLoader) {
         XC_MethodHook forceFalse = new XC_MethodHook() {
-            @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            @Override protected void beforeHookedMethod(MethodHookParam param) {
                 if (FeatureFlags.removeMetaAI) param.setResult(false);
             }
         };
@@ -321,7 +321,7 @@ public class RemoveMetaAIHook {
     private void installMenuOptionFilter(ClassLoader cl) {
         final String od = "Lcom/instagram/feed/media/mediaoption/MediaOption$Option;";
         XC_MethodHook filter = new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            @Override protected void afterHookedMethod(MethodHookParam param) {
                 if (!FeatureFlags.removeMetaAI) return;
                 Object r = param.getResult();
                 if (!(r instanceof List)) return;
@@ -376,7 +376,7 @@ public class RemoveMetaAIHook {
             int optionIndex = Arrays.asList(addButton.getParameterTypes()).indexOf(option);
             if (optionIndex < 0) return;
             XposedBridge.hookMethod(addButton, new XC_MethodHook() {
-                @Override protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                @Override protected void beforeHookedMethod(MethodHookParam param) {
                     Object opt = param.args[optionIndex];
                     if (FeatureFlags.removeMetaAI && opt != null && isMetaAiOption(opt.toString())) {
                         param.setResult(null); // void row-adder: the row is never added

@@ -61,7 +61,7 @@ public final class SearchHistoryHook {
             }
             XposedBridge.hookMethod(add, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (FeatureFlags.disableSearchHistory) param.setResult(null);
                 }
             });

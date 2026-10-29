@@ -194,7 +194,7 @@ public class PlaybackSpeedHook {
         try {
             XposedBridge.hookMethod(Activity.class.getDeclaredMethod("dispatchTouchEvent", MotionEvent.class), new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (!FeatureFlags.holdLeftSlowMotion) {
                         if (HOLD.slowActive()) HOLD.up(); // turned off during a hold: end it
                         return;
@@ -208,7 +208,7 @@ public class PlaybackSpeedHook {
             // "2X" token. TextView.setText covers the same hint if it's ever a plain TextView.
             XC_MethodHook hint = new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (!HOLD.slowActive() || !FeatureFlags.holdLeftSlowMotion || param.args.length == 0
                             || !(param.args[0] instanceof CharSequence cs) || cs.length() > 80
                             || param.thisObject instanceof android.widget.EditText) return; // never a typed draft
@@ -268,7 +268,7 @@ public class PlaybackSpeedHook {
             heroSet = set;
             XposedBridge.hookMethod(set, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (param.args[0] != null) HEROES.put(param.args[0], Boolean.TRUE);
                     if (APPLYING.get() == Boolean.TRUE) return;
                     if (param.args[1] instanceof Float f0 && f0 == 2f && FeatureFlags.holdLeftSlowMotion) {
@@ -287,7 +287,7 @@ public class PlaybackSpeedHook {
             });
             XposedBridge.hookMethod(prepare, new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     Object p = param.args[0];
                     if (p == null) return;
                     HEROES.put(p, Boolean.TRUE);
@@ -530,7 +530,7 @@ public class PlaybackSpeedHook {
             for (Method m : cached) { m.setAccessible(true); SETTERS.add(m); }
             XposedBridge.hookMethod(start, new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     lastPlayer = new WeakReference<>(param.thisObject);
                     if (FeatureFlags.offerPlaybackSpeed && SCOPE.applies(PlaybackScope.Surface.FEED, param.thisObject, speed)) {
                         Object p = param.thisObject;
@@ -552,7 +552,7 @@ public class PlaybackSpeedHook {
             if (started != null) {
                 XposedBridge.hookMethod(started, new XC_MethodHook() {
                     @Override
-                    protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                    protected void afterHookedMethod(MethodHookParam param) {
                         lastPlayer = new WeakReference<>(param.thisObject);
                         if (FeatureFlags.offerPlaybackSpeed && SCOPE.applies(PlaybackScope.Surface.FEED, param.thisObject, speed))
                             apply(param.thisObject, speed);
@@ -574,7 +574,7 @@ public class PlaybackSpeedHook {
                     WRAPPERS.add(m);
                     XposedBridge.hookMethod(m, new XC_MethodHook() {
                         @Override
-                        protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                        protected void beforeHookedMethod(MethodHookParam param) {
                             remember(param.thisObject);
                             if (APPLYING.get() == Boolean.TRUE) return;
                             if (param.args[0] instanceof Float f0 && f0 == 2f && FeatureFlags.holdLeftSlowMotion) {
@@ -595,7 +595,7 @@ public class PlaybackSpeedHook {
                     for (java.lang.reflect.Constructor<?> c : ps.reso.instaeclipse.utils.core.SafeReflect.constructors(m.getDeclaringClass())) {
                         XposedBridge.hookMethod(c, new XC_MethodHook() {
                             @Override
-                            protected void afterHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method); remember(param.thisObject); }
+                            protected void afterHookedMethod(MethodHookParam param) { remember(param.thisObject); }
                         });
                     }
                     storyHooks++;
@@ -631,7 +631,7 @@ public class PlaybackSpeedHook {
             }
             XposedBridge.hookMethod(gate, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (FeatureFlags.forceReelScrubber) param.setResult(true);
                 }
             });

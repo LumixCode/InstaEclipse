@@ -12,7 +12,6 @@ import java.util.List;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
@@ -121,12 +120,10 @@ public final class ProfileBioState {
 
     private static final XC_MethodHook HOOK = new XC_MethodHook() {
         @Override protected void beforeHookedMethod(MethodHookParam param) {
-            JitGuard.tick(param.method);
             before(param.args, layout, spoof);
         }
 
         @Override protected void afterHookedMethod(MethodHookParam param) {
-            JitGuard.tick(param.method);
             after(param.args, layout, copy);
         }
     };

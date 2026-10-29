@@ -16,7 +16,6 @@ import java.util.Set;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -48,7 +47,7 @@ public final class BackLeavesHomeDispatcher {
             dispatcherGetter = getter;
             XposedBridge.hookMethod(dispatch, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) { JitGuard.tick(param.method);
+                protected void beforeHookedMethod(MethodHookParam param) {
                     if (!FeatureFlags.backLeavesHome) return;
                     Activity a = UIHookManager.getCurrentActivity();
                     if (a == null || a.isFinishing() || !owns(a, param.thisObject)) return;

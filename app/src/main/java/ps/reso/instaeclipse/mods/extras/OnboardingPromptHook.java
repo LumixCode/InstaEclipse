@@ -22,7 +22,6 @@ import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -92,7 +91,6 @@ public final class OnboardingPromptHook {
     private static final XC_MethodHook SKIP_ONBOARDING = new XC_MethodHook() {
         @Override
         protected void beforeHookedMethod(MethodHookParam p) {
-            JitGuard.tick(p.method);
             if (!FeatureFlags.hideOnboardingPrompts) return;
             String id = OnboardingPromptPolicy.skippedScreen(p.thisObject);
             // args[0] is the Context in every hooked shape, often an Instagram activity: not read.
@@ -174,7 +172,6 @@ public final class OnboardingPromptHook {
                 XposedBridge.hookMethod(method, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
-                        JitGuard.tick(param.method);
                         if (!FeatureFlags.hideOnboardingPrompts) return;
                         try {
                             if (!(param.args[activityIndex] instanceof Activity activity) || hasLocationGrant(activity)) return;
@@ -212,7 +209,6 @@ public final class OnboardingPromptHook {
                     new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) {
-                            JitGuard.tick(param.method);
                             if (!FeatureFlags.hideOnboardingPrompts) return;
                             try {
                                 Activity activity = (Activity) param.thisObject;
@@ -259,7 +255,6 @@ public final class OnboardingPromptHook {
                     new XC_MethodHook() {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) {
-                            JitGuard.tick(param.method);
                             if (Boolean.TRUE.equals(answeringSilently.get())
                                     && OnboardingPromptPolicy.isLocationPermission((String) param.args[0])) {
                                 param.setResult(true);

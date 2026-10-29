@@ -17,7 +17,6 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.share.ShareLinks;
-import ps.reso.instaeclipse.utils.core.JitGuard;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.text.MediaIds;
@@ -46,7 +45,7 @@ public class ShareLinkDownloadHook {
         try {
             XposedBridge.hookAllConstructors(XposedHelpers.findClass("com.instagram.common.session.UserSession", cl), new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) { JitGuard.tick(param.method);
+                protected void afterHookedMethod(MethodHookParam param) {
                     sessions.add(param.thisObject);
                 }
             });
@@ -55,7 +54,7 @@ public class ShareLinkDownloadHook {
         }
         XC_MethodHook onIntent = new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) { JitGuard.tick(param.method);
+            protected void afterHookedMethod(MethodHookParam param) {
                 Activity a = (Activity) param.thisObject;
                 Intent i = param.args.length > 0 && param.args[0] instanceof Intent in ? in : a.getIntent();
                 if (i == null || !i.getBooleanExtra(EXTRA, false)) return;

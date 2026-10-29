@@ -57,7 +57,7 @@ public class SwipeToCameraHook {
         final Method current = clamped;
         XposedHelpers.findAndHookMethod(container, "setInternalPosition", config, new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable { ps.reso.instaeclipse.utils.core.JitGuard.tick(param.method);
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 if (!FeatureFlags.disableSwipeToCamera) return;
                 Object cfg = param.args[0];
                 if (cfg == null || target.getFloat(cfg) >= 0f || !fromSwipe(cfg, strings)) return;
