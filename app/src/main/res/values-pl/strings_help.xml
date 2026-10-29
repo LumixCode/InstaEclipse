@@ -7,8 +7,6 @@
     <string name="help_about">O module</string>
     <string name="help_version">Wersja %1$s</string>
     <string name="help_source_code">Kod źródłowy na GitHubie</string>
-    <string name="help_faq_expand">Rozwiń odpowiedź</string>
-    <string name="help_faq_collapse">Zwiń odpowiedź</string>
     <string name="help_vector_title">Vector (JingMatrix)</string>
     <string name="help_vector_sub">Masz roota? Użyj tej wersji</string>
     <string name="help_lspatch_title">LSPatch (JingMatrix)</string>

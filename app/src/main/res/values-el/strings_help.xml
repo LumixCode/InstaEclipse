@@ -7,8 +7,6 @@
     <string name="help_about">Σχετικά</string>
     <string name="help_version">Έκδοση %1$s</string>
     <string name="help_source_code">Πηγαίος κώδικας στο GitHub</string>
-    <string name="help_faq_expand">Ανάπτυξη απάντησης</string>
-    <string name="help_faq_collapse">Σύμπτυξη απάντησης</string>
     <string name="help_vector_title">Vector (JingMatrix)</string>
     <string name="help_vector_sub">Έχεις root; Χρησιμοποίησε αυτή την έκδοση</string>
     <string name="help_lspatch_title">LSPatch (JingMatrix)</string>

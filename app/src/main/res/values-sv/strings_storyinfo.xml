@@ -20,14 +20,12 @@
     <string name="ig_si_sound_off">utan ljud</string>
     <string name="ig_si_countdown">Nedräkning</string>
     <string name="ig_si_question">Fråga</string>
-    <string name="ig_si_highlights">I höjdpunkter</string>
     <string name="ig_si_mention_request">Begäran om omnämnande</string>
     <string name="ig_si_none">Ingen extra info om den här storyn.</string>
     <string name="ig_si_your_answer">ditt svar</string>
     <string name="ig_si_average">Genomsnitt</string>
     <string name="ig_si_copied">Kopierat</string>
     <string name="ig_dialog_misc_story_info">Storyinfo, quiz- och omröstningssvar</string>
-    <string name="ig_feat_story_info">Storyinfo</string>
     <string name="ig_si_add_yours">Lägg till din</string>
     <string name="ig_si_joined">har deltagit</string>
     <string name="ig_si_paid_partnership">Betalt samarbete med (håll in för att öppna)</string>

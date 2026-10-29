@@ -20,14 +20,12 @@
     <string name="ig_si_sound_off">tanpa suara</string>
     <string name="ig_si_countdown">Hitung mundur</string>
     <string name="ig_si_question">Pertanyaan</string>
-    <string name="ig_si_highlights">Di sorotan</string>
     <string name="ig_si_mention_request">Permintaan sebutan</string>
     <string name="ig_si_none">Tidak ada info tambahan di cerita ini.</string>
     <string name="ig_si_your_answer">jawabanmu</string>
     <string name="ig_si_average">Rata-rata</string>
     <string name="ig_si_copied">Disalin</string>
     <string name="ig_dialog_misc_story_info">Info cerita, jawaban kuis &amp; polling</string>
-    <string name="ig_feat_story_info">Info cerita</string>
     <string name="ig_si_add_yours">Tambahkan milikmu</string>
     <string name="ig_si_joined">bergabung</string>
     <string name="ig_si_paid_partnership">Kemitraan berbayar dengan (tahan untuk membuka)</string>

@@ -5,5 +5,4 @@
     <string name="ig_read_receipt_chat_off">Bu sohbette okundu bilgisini durdur</string>
     <string name="ig_toast_read_receipt_on">Bu sohbet için okundu bilgisi açık</string>
     <string name="ig_toast_read_receipt_off">Bu sohbet için okundu bilgisi kapalı</string>
-    <string name="ig_feat_read_receipt_chats">Sohbete özel okundu bilgisi</string>
 </resources>

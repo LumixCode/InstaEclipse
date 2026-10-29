@@ -3,9 +3,7 @@
     <string name="feat_group_social">Κοινωνικά</string>
     <string name="menu_feed">Ροή</string>
     <string name="menu_navigation">Πλοήγηση</string>
-    <string name="menu_reels_stories">Reels &amp; Ιστορίες</string>
     <string name="menu_messages">Μηνύματα</string>
-    <string name="menu_post_menu">Μενού ανάρτησης &amp; Μεταφορτώσεις</string>
     <string name="menu_likes_comments">Likes &amp; Σχόλια</string>
     <string name="menu_profiles">Προφίλ</string>
     <string name="menu_app">Εφαρμογή &amp; Λογαριασμός</string>
@@ -15,6 +13,5 @@
     <string name="menu_nav_gestures">Χειρονομίες</string>
     <string name="menu_reels">Reels</string>
     <string name="menu_stories">Ιστορίες</string>
-    <string name="nav_tab_order_changed">Η σειρά καρτελών άλλαξε</string>
     <string name="menu_quality">Ποιότητα</string>
 </resources>

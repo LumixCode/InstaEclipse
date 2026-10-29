@@ -20,14 +20,12 @@
     <string name="ig_si_sound_off">без звука</string>
     <string name="ig_si_countdown">Обратный отсчёт</string>
     <string name="ig_si_question">Вопрос</string>
-    <string name="ig_si_highlights">В актуальном</string>
     <string name="ig_si_mention_request">Запрос на упоминание</string>
     <string name="ig_si_none">Дополнительной информации нет.</string>
     <string name="ig_si_your_answer">ваш ответ</string>
     <string name="ig_si_average">Среднее</string>
     <string name="ig_si_copied">Скопировано</string>
     <string name="ig_dialog_misc_story_info">Инфо об историях, ответы викторин и опросов</string>
-    <string name="ig_feat_story_info">Инфо об историях</string>
     <string name="ig_si_add_yours">Добавьте своё</string>
     <string name="ig_si_joined">участвуют</string>
     <string name="ig_si_paid_partnership">Платное партнёрство с (удерживайте, чтобы открыть)</string>

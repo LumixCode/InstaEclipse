@@ -20,14 +20,12 @@
     <string name="ig_si_sound_off">בלי צליל</string>
     <string name="ig_si_countdown">ספירה לאחור</string>
     <string name="ig_si_question">שאלה</string>
-    <string name="ig_si_highlights">בהיילייטס</string>
     <string name="ig_si_mention_request">בקשת תיוג</string>
     <string name="ig_si_none">אין מידע נוסף על הסטורי הזה.</string>
     <string name="ig_si_your_answer">התשובה שלך</string>
     <string name="ig_si_average">ממוצע</string>
     <string name="ig_si_copied">הועתק</string>
     <string name="ig_dialog_misc_story_info">פרטי סטורי, תשובות לחידונים ולסקרים</string>
-    <string name="ig_feat_story_info">פרטי סטורי</string>
     <string name="ig_si_add_yours">הוסיפו משלכם</string>
     <string name="ig_si_joined">הצטרפו</string>
     <string name="ig_si_paid_partnership">שותפות בתשלום עם (לחיצה ארוכה לפתיחה)</string>

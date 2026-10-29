@@ -2,7 +2,6 @@
 <resources>
     <string name="tool_backup_sub">שמירת כל ההגדרות לקובץ</string>
     <string name="tool_restore_sub">טעינת הגדרות מקובץ גיבוי</string>
-    <string name="tool_restart_sub">עצירה ופתיחה מחדש של אינסטגרם</string>
     <string name="tool_about_sub">גרסה, קרדיטים וקישורים</string>
     <string name="about_tagline">אינסטגרם נקי ופרטי יותר</string>
     <string name="about_source">קוד מקור</string>

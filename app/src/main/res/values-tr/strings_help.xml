@@ -7,8 +7,6 @@
     <string name="help_about">Hakkında</string>
     <string name="help_version">Sürüm %1$s</string>
     <string name="help_source_code">GitHub\'da kaynak kod</string>
-    <string name="help_faq_expand">Yanıtı genişlet</string>
-    <string name="help_faq_collapse">Yanıtı daralt</string>
     <string name="help_vector_title">Vector (JingMatrix)</string>
     <string name="help_vector_sub">Root var mı? Bu sürümü kullanın</string>
     <string name="help_lspatch_title">LSPatch (JingMatrix)</string>

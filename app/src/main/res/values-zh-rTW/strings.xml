@@ -5,140 +5,55 @@
     <string name="home">首頁</string>
     <string name="features">功能</string>
     <string name="help">幫助</string>
-    <string name="instagram_version">版本</string>
 
     <!-- home -->
-    <string name="module_disabled">模組未啟用。請啟用它。</string>
-
-    <string name="module_status">模組狀態：</string>
-
-    <string name="module_status_disabled">模組狀態：已禁用</string>
-    <string name="request_enable_module">請在 Xposed 安裝程式中啟用該模組。</string>
-
-    <string name="module_status_enabled_no_root">模組狀態： 已啟用 (無 Root 權限)</string>
-    <string name="request_enable_root">需要 Root 權限才能自動重啟。需要手動重啟。</string>
-
-    <string name="module_status_enabled">模組狀態：已啟用</string>
-    <string name="module_active">模組已啟用並正常工作。</string>
 
     <string name="checking_instagram">正在檢查 Instagram</string>
     <string name="installed_instagram_version">Instagram 已安裝</string>
     <string name="not_installed_instagram">Instagram 未安裝</string>
-    <string name="error_instagram">檢查 Instagram 狀態時發生錯誤</string>
 
     <string name="launch_instagram">開啟 Instagram</string>
     <string name="download_apk">下載 APK</string>
     <string name="how_to_use">如何使用</string>
-    <string name="usage_instructions">長按搜尋圖示</string>
     <string name="contributors">貢獻者</string>
     <string name="special_thanks">特別感謝</string>
 
     <!-- Don't translate! -->
 
     <!-- help -->
-    <string name="help_amp_troubleshooting">幫助和故障排除</string>
-    <string name="find_updates_and_documentation">查詢更新和文件。</string>
     <string name="go_to_github">前往 GitHub</string>
-    <string name="find_support">查詢支援</string>
     <string name="go_to_telegram">前往 Telegram</string>
 
     <!-- Don't translate! -->
-    <string name="github">GitHub</string>
     <string name="telegram">Telegram</string>
 
     <!-- faq -->
     <string name="frequently_asked_questions">常見問題</string>
     <string name="faq_1"><b>1. 使用 Google Play 版本時無法正常執行或崩潰？</b>\n- 請使用 APKMirror 下載的版本。</string>
-    <string name="faq_2"><b>2. 模組未啟用？</b>\n- 在 Vector 中禁用並重新啟用該模組。</string>
     <string name="faq_3"><b>3. 功能無法使用？</b>\n- 強制停止並重新啟動 Instagram。</string>
-    <string name="faq_4"><b>4. 開發者選項導致崩潰？</b>\n- 按照開發者選項指南操作。</string>
-    <string name="faq_5"><b>5. 開發者選項的標籤或數字異常</b>\n- 使用 Beta 或 Alpha 版本，因為穩定版有進行過混淆。</string>
     <string name="faq_6"><b>6. 啟用了無干擾模式，但內容仍然顯示？</b>\n- 強制停止 Instagram 並清除其快取。</string>
-
-    <!-- guide -->
-    <string name="module_not_working_title">模組仍然無法使用？</string>
-
-    <!-- features -->
-    <string name="developer_options">開發者選項</string>
-    <string name="ghost_mode">幽靈模式</string>
-    <string name="distraction_free">無干擾模式</string>
-    <string name="remove_ads">移除廣告</string>
-    <string name="remove_analytics">移除分析</string>
-
-    <string name="enable_disable_all">啟用/禁用所有</string>
 
     <!-- Don't translate! -->
 
     <!-- ghost -->
-    <string name="ghost_mode_options">幽靈模式選項</string>
-    <string name="typing">隱藏輸入狀態</string>
     <string name="story">限時動態</string>
-    <string name="view_once">查看一次</string>
     <string name="live">直播</string>
-    <string name="direct_messages">私人訊息</string>
-    <string name="disable_typing">停用輸入狀態提示</string>
-    <string name="screen_shot">截圖</string>
-
-    <!-- developer_options -->
-    <string name="developer_options_guide">開發者選項指南</string>
-    <string name="dev_options_version_req">僅能在 Beta/Alpha 中啟用！</string>
-    <string name="dev_options_req">請確保您已登入！</string>
-
-    <string name="dev_options_1">1. 開啟 Instagram，並長按主頁按鈕。</string>
-    <string name="dev_options_2">2. 導航至開發者選項 > MetaConfig 設定與覆蓋。</string>
-    <string name="dev_options_3">3. 搜尋「Employee」並啟用以下選項：</string>
-    <string name="dev_options_4">4. 最後，從模組中禁用開發者選項以防止應用崩潰。</string>
-
-    <!-- Don't translate! -->
-
-    <!-- distraction free -->
-    <string name="distraction_free_options">無干擾模式選項</string>
-    <string name="disable_stories">關閉限時動態</string>
-    <string name="disable_feed">關閉動態</string>
-    <string name="disable_reels">關閉連續短片</string>
-    <string name="disable_explore">禁用探索</string>
-    <string name="disable_comments">禁用評論</string>
-
-    <!-- Miscellaneous -->
-    <string name="misc">雜項</string>
-    <string name="miscellaneous_options">雜項選項</string>
-    <string name="story_flipping">禁用限時動態翻頁</string>
-    <string name="video_autoplay">禁用影片自動播放</string>
-    <string name="follower_toast">顯示關注者提示</string>
-    <string name="hooked_methods_toast">顯示已啟用功能提示</string>
-
-    <!-- contributor card -->
-    <string name="contributor_name">Contributor Name</string>
 
     <!-- Dialog strings -->
     <string name="ig_dialog_close">關閉</string>
-    <string name="ig_dialog_enable_disable_all">全部啟用/停用</string>
     <string name="ig_dialog_error">錯誤</string>
     <string name="ig_dialog_ok">確定</string>
     <string name="ig_dialog_yes">是</string>
     <string name="ig_dialog_cancel">取消</string>
     <string name="ig_dialog_menu_dev_options">開發者選項</string>
-    <string name="ig_dialog_menu_ghost_settings">幽靈模式設定</string>
-    <string name="ig_dialog_menu_ad_analytics">廣告/分析封鎖</string>
     <string name="ig_dialog_menu_clean_feed">純淨動態</string>
     <string name="ig_dialog_menu_distraction_free">無干擾 Instagram</string>
-    <string name="ig_dialog_menu_misc">其他功能</string>
     <string name="ig_dialog_menu_downloader">下載器</string>
     <string name="ig_dialog_menu_backup_restore">備份與還原</string>
     <string name="ig_dialog_menu_about">關於</string>
     <string name="ig_dialog_menu_restart">重新啟動應用程式</string>
-    <string name="ig_dialog_section_dev_options">開發者選項</string>
     <string name="ig_dialog_section_ghost_mode">幽靈模式</string>
-    <string name="ig_dialog_section_ad_analytics">廣告/分析封鎖</string>
-    <string name="ig_dialog_section_clean_feed">純淨動態</string>
-    <string name="ig_dialog_section_distraction_free">無干擾 Instagram</string>
-    <string name="ig_dialog_section_misc">其他</string>
-    <string name="ig_dialog_section_downloader">下載器</string>
-    <string name="ig_dialog_section_downloader_settings">下載器設定</string>
-    <string name="ig_dialog_section_backup_restore">備份與還原</string>
     <string name="ig_dialog_section_about">關於</string>
-    <string name="ig_dialog_section_restart">重新啟動應用程式</string>
-    <string name="ig_dialog_section_quick_toggle">自訂快速切換</string>
     <string name="ig_dialog_dev_enable">啟用開發者模式</string>
     <string name="ig_dialog_dev_import">匯入開發者設定</string>
     <string name="ig_dialog_dev_export">匯出開發者設定</string>
@@ -159,11 +74,9 @@
 
     <!-- JsonImportActivity -->
     <string name="json_select_config">選擇 JSON 設定檔</string>
-    <string name="json_target_not_specified">❌ 未指定目標套件。</string>
     <string name="json_sent">✅ 已傳送至 Instagram。</string>
     <string name="json_not_valid">❌ 非有效的 JSON 檔案。</string>
     <string name="json_read_failed">❌ 讀取檔案失敗：%1$s</string>
-    <string name="json_cancelled">已取消或未選擇檔案。</string>
     <string name="ig_dialog_ghost_hide_dm_seen">隱藏私訊已讀</string>
     <string name="ig_dialog_ghost_hide_typing">隱藏輸入狀態</string>
     <string name="ig_dialog_ghost_hide_story_views">隱藏限時動態觀看</string>
@@ -195,10 +108,8 @@
     <string name="ig_dialog_bulk_unsend">批次收回訊息</string>
     <string name="ig_bulk_unsend_row">批次收回</string>
     <string name="ig_bulk_unsend_go">收回</string>
-    <string name="ig_bulk_unsend_done">已收回 %1$d 則訊息</string>
     <string name="ig_bulk_unsend_unavailable">此 Instagram 版本不支援批次收回</string>
     <string name="ig_downloader_folder_hint">請在 InstaEclipse 應用程式中設定資料夾</string>
-    <string name="lock_code_set_in_ig">請在 Instagram 內設定：InstaEclipse 選單 &gt; 鎖定。輕觸以開啟 Instagram。</string>
     <string name="theme_set_light">淺色模式主題</string>
     <string name="theme_set_dark">深色模式主題</string>
     <string name="theme_light_same">與深色模式相同的主題</string>
@@ -211,7 +122,6 @@
     <string name="ig_dialog_distraction_disable_explore">停用探索</string>
     <string name="ig_dialog_distraction_disable_comments">停用留言</string>
     <string name="ig_dialog_distraction_extreme_title">啟用極端模式？</string>
-    <string name="ig_dialog_distraction_extreme_message">啟用後，在重新安裝應用程式前無法停用無干擾模式。繼續？</string>
     <string name="ig_dialog_misc_disable_story_autoswipe">停用限時動態自動滑動</string>
     <string name="ig_dialog_misc_disable_video_autoplay">停用影片自動播放</string>
     <string name="ig_dialog_misc_disable_repost">停用分享</string>
@@ -297,8 +207,6 @@
     <string name="ig_confirm_like_title">對這則貼文按讚？</string>
     <string name="ig_confirm_like_message">你按了讚。要送出嗎？</string>
     <string name="ig_confirm_like_yes">讚</string>
-    <string name="ig_confirm_follow_title">追蹤？</string>
-    <string name="ig_confirm_follow_message">追蹤 @%1$s？</string>
     <string name="ig_confirm_follow_message_any">追蹤這個帳號？</string>
     <string name="ig_confirm_follow_yes">追蹤</string>
     <string name="ig_profile_analyzer">個人檔案分析：追蹤粉絲與追蹤中名單的變化</string>
@@ -386,12 +294,7 @@
 
     <!-- Comment Copy dialog -->
     <string name="ig_comment_copy_title">複製留言</string>
-    <string name="ig_comment_copy_full">複製完整留言</string>
-    <string name="ig_comment_select_part">選取部分複製</string>
-    <string name="ig_comment_select_title">選取後複製</string>
-    <string name="ig_comment_copy_selected">複製選取內容</string>
     <string name="ig_toast_comment_copied">✅ 已複製到剪貼簿！</string>
-    <string name="ig_dialog_downloader_settings">下載器設定</string>
     <string name="ig_dialog_downloader_posts">下載貼文</string>
     <string name="ig_dialog_downloader_stories">下載限時動態</string>
     <string name="ig_dialog_downloader_reels">下載 Reels</string>
@@ -403,36 +306,17 @@
     <string name="ig_dialog_backup_settings">備份設定</string>
     <string name="ig_dialog_restore_settings">還原設定</string>
     <string name="ig_dialog_backup_failed">建立備份失敗：%1$s</string>
-    <string name="ig_dialog_about_github">GitHub</string>
-    <string name="ig_dialog_about_telegram">Telegram</string>
-    <string name="ig_dialog_restart_message">⚠️ 清除應用程式快取並重新啟動？</string>
     <string name="ig_dialog_clear_cache">清除 Hooks 快取</string>
-    <string name="ig_dialog_section_clear_cache">清除 Hooks 快取</string>
-    <string name="ig_dialog_clear_cache_message">⚠️ 這將強制 InstaEclipse 在下次啟動時重新掃描 Instagram。應用程式將重新啟動。</string>
-    <string name="ig_dialog_clear_cache_now">清除快取並重啟</string>
     <string name="ig_dialog_restart_now">立即重新啟動</string>
     <string name="ig_dialog_restart_not_found">找不到要重新啟動的應用程式。</string>
     <string name="ig_dialog_restart_failed">重新啟動失敗：%1$s</string>
 
-    <!-- Toast: Ghost mode -->
-    <string name="ig_toast_ghost_no_options">未選擇任何幽靈模式選項！</string>
-    <string name="ig_toast_ghost_enabled">幽靈模式已啟用</string>
-    <string name="ig_toast_ghost_disabled">幽靈模式已停用</string>
-    <string name="ig_toast_seen_sent">✅ 已讀已傳送</string>
-    <string name="ig_toast_channel_seen_sent">✅ 頻道已讀已傳送</string>
-
-    <!-- Toast: Follower status -->
-    <string name="ig_toast_follows_you">正在追蹤您 ✅</string>
-    <string name="ig_toast_not_follows_you">未追蹤您 ❌</string>
-
     <!-- Toast: App settings -->
-    <string name="ig_toast_settings_applied">設定已套用！</string>
     <string name="ig_toast_restart_manual">請手動關閉 Instagram 以使變更生效。</string>
     <string name="ig_toast_settings_restored">設定已成功還原。</string>
     <string name="ig_toast_restore_failed">還原失敗：%1$s</string>
 
     <!-- Toast: Download folder -->
-    <string name="ig_toast_download_folder_set">下載資料夾：%1$s</string>
     <string name="ig_toast_download_folder_updated">下載資料夾已更新！</string>
     <string name="ig_toast_download_folder_reset">下載資料夾已重設為預設值</string>
 
@@ -440,34 +324,15 @@
     <string name="ig_toast_downloading">下載中…</string>
     <string name="ig_toast_downloading_video">正在下載影片…</string>
     <string name="ig_toast_downloading_photo">正在下載相片…</string>
-    <string name="ig_toast_video_saved">影片已儲存至 InstaEclipse 資料夾</string>
-    <string name="ig_toast_photo_saved">相片已儲存至 InstaEclipse 資料夾</string>
-    <string name="ig_toast_saved">已儲存至 InstaEclipse 資料夾</string>
     <string name="ig_toast_download_failed">下載失敗：%1$s</string>
-    <string name="ig_toast_downloading_reel">正在下載 Reels…</string>
-    <string name="ig_toast_reel_saved">Reels 已儲存至 InstaEclipse 資料夾</string>
-    <string name="ig_toast_reel_failed">Reels 下載失敗：%1$s</string>
-    <string name="ig_toast_reel_url_not_found">找不到 Reels 連結</string>
-    <string name="ig_toast_post_url_not_found">找不到貼文連結</string>
     <string name="ig_toast_no_media_for_post">找不到此貼文的媒體</string>
-    <string name="ig_toast_no_media">找不到媒體</string>
-    <string name="ig_toast_downloading_story_video">正在下載限時動態影片…</string>
-    <string name="ig_toast_downloading_story_photo">正在下載限時動態相片…</string>
-    <string name="ig_toast_story_saved">限時動態已儲存至 InstaEclipse 資料夾</string>
-    <string name="ig_toast_story_url_not_found">找不到限時動態連結</string>
     <string name="ig_toast_downloading_profile_pic">正在下載大頭照…</string>
     <string name="ig_toast_profile_pic_saved">大頭照已儲存！</string>
     <string name="ig_toast_profile_pic_url_not_found">無法取得大頭照連結</string>
     <string name="ig_toast_merging_video_audio">正在合併影片與音訊…</string>
-    <string name="ig_toast_downloading_n_items">正在下載 %1$d 個項目…</string>
     <string name="ig_toast_downloading_all_n_items">正在下載全部 %1$d 個項目…</string>
-    <string name="ig_toast_all_items_saved">全部 %1$d 個項目已儲存至 InstaEclipse 資料夾</string>
-    <string name="ig_toast_items_partial_saved">%2$d 個項目中已儲存 %1$d 個（%3$d 個失敗）</string>
-    <string name="ig_toast_no_reel_url_scroll">找不到 Reels 連結 — 請先滑過 Reels</string>
     <string name="ig_dl_title">下載</string>
     <string name="ig_story_mark_seen">標記為已看</string>
-    <string name="ig_story_marked_seen">已標記為已看</string>
-    <string name="ig_story_mark_seen_none">此限時動態尚無可傳送的內容 — 請先讓它播放</string>
     <string name="ig_dl_carousel_subtitle">輪播 • %1$d 個項目</string>
     <string name="ig_dl_carousel_current">下載目前項目（%1$d / %2$d）</string>
     <string name="ig_dl_carousel_all">下載全部 %1$d 個項目</string>
@@ -476,19 +341,11 @@
     <string name="ig_toast_all_mentions_copied">已複製所有提及</string>
 
     <string name="back">返回</string>
-    <string name="apply_changes">套用變更</string>
 
     <!-- features fragment section headers -->
-    <string name="feat_categories">分類：</string>
-    <string name="feat_tools">工具：</string>
-    <string name="feat_features">功能：</string>
     <string name="feat_config">設定</string>
-    <string name="feat_options">選項：</string>
     <string name="feat_quick_toggle">快速切換</string>
     <string name="feat_danger_zone">危險區域</string>
-    <string name="feat_download_folder">下載資料夾：</string>
-    <string name="feat_downloader_set_folder">設定下載資料夾位置</string>
-    <string name="feat_downloader_selected">已選擇：%1$s</string>
     <string name="feat_downloader_reset_folder">重設下載資料夾</string>
 
     <!-- multiple versions -->
@@ -496,7 +353,6 @@
 
     <!-- Story mentions dialog -->
     <string name="ig_mention_dialog_title">限時動態提及</string>
-    <string name="ig_mention_subtitle">%1$d 個提及 • 點擊複製</string>
     <string name="ig_mention_no_mentions">此限時動態中未發現提及</string>
     <string name="ig_mention_copy_all">全部複製</string>
 
@@ -511,7 +367,6 @@
     <string name="ig_update_message">新版本（%1$s）已發布，是否立即更新？</string>
     <string name="ig_update_button">更新</string>
     <string name="ig_update_later">稍後</string>
-    <string name="ig_update_error_message">檢查更新失敗，請稍後重試。</string>
     <!-- Custom Theme -->
     <string name="ig_dialog_menu_theme">自訂主題</string>
     <string name="theme_title">自訂主題</string>
@@ -522,7 +377,6 @@
     <string name="theme_collapse_section">收合區段</string>
     <string name="theme_expand_section">展開區段</string>
     <string name="theme_reset_custom">重設為預設值</string>
-    <string name="theme_saved">主題已儲存</string>
     <string name="theme_pick_color">選擇顏色</string>
     <string name="theme_apply_color">套用</string>
     <string name="theme_rgba_format">R %1$d  G %2$d  B %3$d  A %4$d</string>
@@ -547,22 +401,8 @@
     <string name="feat_group_privacy">隱私</string>
     <string name="feat_group_media">媒體</string>
     <string name="feat_group_tools">工具</string>
-    <string name="ig_dialog_subtitle">點擊某個區段進行設定</string>
     <string name="ig_dialog_menu_location">位置</string>
-    <string name="ig_dialog_menu_quality">影片畫質</string>
     <string name="logging">日誌</string>
-    <string name="logging_clear">清除</string>
-    <string name="logging_copy">複製</string>
-    <string name="logging_copied">已複製到剪貼簿</string>
-    <string name="logging_companion">InstaEclipse</string>
-    <string name="logging_instagram">Instagram</string>
-    <string name="logging_instagram_timeout">Instagram 未及時回應。僅顯示 InstaEclipse 日誌。</string>
-    <string name="logging_no_target">請先安裝受支援的 Instagram 應用程式。</string>
-    <string name="logging_empty_reply">（緩衝區為空 —— 請在啟用模組的情況下開啟 Instagram）</string>
-    <string name="logging_placeholder">尚未載入日誌。</string>
-    <string name="logging_lines_format">%1$d 行</string>
-    <string name="ig_dialog_section_location">位置</string>
-    <string name="ig_dialog_section_quality">影片畫質</string>
     <string name="ig_dialog_quality_force_reels">強制 Reels 畫質</string>
     <string name="ig_dialog_quality_auto">自動</string>
     <string name="ig_dialog_quality_360">360p</string>
@@ -573,22 +413,14 @@
     <string name="theme_section_fonts">字體和表情符號</string>
     <string name="ig_dialog_quality_max">最高可用</string>
     <string name="ig_dialog_max_upload_quality">一律以最高畫質上傳</string>
-    <string name="ig_feat_max_upload_quality">最高上傳畫質</string>
     <string name="ig_dialog_location_spoof_enable">偽造 GPS 位置</string>
     <string name="ig_dialog_location_pick">在地圖上選擇位置</string>
     <string name="ig_dialog_location_unset">未設定位置</string>
-    <string name="ig_dialog_location_current">目前：%1$.4f, %2$.4f</string>
-    <string name="loc_picker_title">選擇位置</string>
     <string name="loc_picker_search_hint">搜尋城市、地址或地點</string>
     <string name="loc_picker_use">使用此位置</string>
     <string name="loc_picker_search_failed">找不到位置</string>
-    <string name="loc_picker_search_error">搜尋失敗：%1$s</string>
-    <string name="ig_dialog_ghost_keep_unsent">記錄已收回訊息</string>
     <string name="ig_dialog_ghost_jump_first">聊天中的「跳到第一則訊息」按鈕</string>
     <string name="ig_jump_first_message">跳到第一則訊息</string>
-    <string name="ig_jump_first_loading">正在載入較舊的訊息… 再點一下即可停止</string>
-    <string name="ig_jump_first_done">已到達第一則訊息</string>
-    <string name="ig_jump_first_stopped">已停止</string>
     <string name="ig_dialog_ghost_edit_history">保留訊息的編輯紀錄</string>
     <string name="ig_edit_history_title">編輯紀錄</string>
     <string name="ig_edit_history_original">原始</string>
@@ -599,22 +431,14 @@
     <string name="ig_edit_history_missing">有 %1$d 個較早版本未儲存在此手機上。</string>
     <string name="ig_edit_history_none">此手機上未儲存這則訊息的任何較早版本</string>
     <string name="ig_dialog_unsent_title">已收回訊息</string>
-    <string name="ig_dialog_unsent_clear">清除此對話的記錄</string>
     <string name="ig_dialog_unsent_export">匯出為 JSON</string>
     <string name="ig_dialog_unsent_exported">已儲存至 %1$s</string>
     <string name="ig_dialog_auto_clear_cache">快取過大時自動清除</string>
-    <string name="ig_dialog_auto_clear_cache_size">超過時清除：%1$d MB（點擊變更）</string>
     <string name="ig_dialog_section_auto_clear_cache">自動清除快取</string>
-    <string name="ig_dialog_auto_clear_cache_desc">當您離開應用程式時，若 Instagram 的媒體快取超過所選大小，便會將其清除。僅清除快取（Instagram 會重新產生）—— 您的資料、登入資訊和下載內容絕不會受到影響。</string>
     <string name="ig_dialog_misc_remove_meta_ai">移除 Meta AI</string>
     <string name="ig_dialog_misc_lock_dms">鎖定私訊</string>
     <string name="ig_dialog_misc_lock_dms_set">設定 / 變更密碼</string>
-    <string name="ig_dialog_misc_lock_dms_hint">輸入數字密碼</string>
     <string name="ig_dialog_misc_lock_dms_saved">密碼已儲存</string>
-    <string name="ig_dialog_misc_lock_dms_cleared">密碼已清除</string>
-    <string name="ig_dialog_misc_lock_dms_current">輸入目前密碼</string>
-    <string name="ig_dialog_misc_lock_dms_wrong">目前密碼錯誤</string>
-    <string name="ig_dialog_misc_lock_dms_disable">輸入密碼以停用鎖定</string>
     <string name="ig_dialog_misc_lock_dms_always">每次離開時重新鎖定</string>
     <string name="ig_dialog_misc_lock_whole_app">鎖定整個應用程式</string>
     <string name="ig_dialog_misc_lock_section">鎖定</string>
@@ -623,9 +447,7 @@
     <string name="ig_translate_text">翻譯</string>
     <string name="ig_dialog_downloader_offer_audio">為影片提供僅音訊下載</string>
     <string name="ig_download_choice_title">下載</string>
-    <string name="ig_download_choice_video">影片</string>
     <string name="ig_download_choice_audio">僅音訊 (.m4a)</string>
-    <string name="ig_download_choice_save">儲存到裝置</string>
     <string name="ig_download_choice_copy_image">複製圖片</string>
     <string name="ig_dialog_downloader_offer_copy_image">在貼文選單中加入「複製圖片」</string>
     <string name="ig_toast_copy_image_video">此頁是影片 — 沒有可複製的內容</string>
@@ -634,38 +456,23 @@
     <string name="ig_toast_downloading_audio">正在下載音訊…</string>
     <string name="ig_toast_audio_saved">音訊已儲存</string>
     <string name="ig_dialog_misc_hide_chats">隱藏特定對話</string>
-    <string name="ig_hide_chats_manage">管理已隱藏對話</string>
-    <string name="ig_hide_chats_empty">尚無已隱藏對話。開啟一個對話並點擊隱藏眼睛按鈕即可將其隱藏。</string>
-    <string name="ig_hide_chats_unhide">取消隱藏</string>
-    <string name="ig_hide_chats_hint">若要隱藏對話，請開啟它並點擊對話標題列中的隱藏眼睛按鈕。</string>
-    <string name="ig_lock_passcode_hint">請在 Instagram 內設定您的密碼（開啟 InstaEclipse 選單 → 鎖定）。</string>
-    <string name="ig_theme_font_hint">請在 Instagram 內選擇您的字體和表情檔案（InstaEclipse 選單 → 自訂主題）。</string>
     <string name="ig_hide_chat_hidden">對話已隱藏 —— 它將從您的收件匣中消失</string>
     <string name="ig_hide_chat_unhidden">對話已取消隱藏</string>
     <string name="ig_hide_chat_no_thread">無法辨識此對話</string>
-    <string name="ig_story_cache_title">快取限時動態（24 小時）</string>
-    <string name="ig_dialog_misc_cache_stories">快取限時動態 24 小時</string>
     <string name="ig_story_cache_view">查看已快取的限時動態</string>
-    <string name="ig_story_cache_empty">尚無已快取的限時動態。開啟此功能後查看一些限時動態 —— 它們將在此保留 24 小時。</string>
     <string name="ig_story_cache_clear">清除已快取的限時動態</string>
-    <string name="ig_story_cache_count">%1$d 則已快取的限時動態</string>
     <string name="ig_story_cache_saving">正在儲存快取的限時動態…</string>
     <string name="ig_story_cache_saved">已儲存快取的限時動態</string>
     <string name="ig_story_cache_save_fail">無法儲存快取的限時動態</string>
-    <string name="ig_custom_font_title">自訂字體</string>
     <string name="ig_dialog_misc_custom_font">自訂字體</string>
     <string name="ig_custom_font_pick">選擇字體檔案（.ttf / .otf）</string>
-    <string name="ig_custom_emoji_title">自訂表情</string>
     <string name="ig_dialog_misc_custom_emoji">自訂表情</string>
     <string name="ig_custom_emoji_pick">選擇表情字體（.ttf / .otf）</string>
-    <string name="ig_dialog_unsent_clear_confirm">刪除此對話已儲存的收回訊息？此操作無法復原。</string>
     <string name="ig_dialog_unsent_clear_yes">清除</string>
-    <string name="ig_dialog_unsent_cleared">收回訊息記錄已清除</string>
     <string name="ig_dialog_unsent_empty">尚未擷取任何收回訊息</string>
     <string name="ig_dialog_unsent_unknown_chat">未知對話</string>
     <string name="ig_dialog_clean_feed_hide_threads">隱藏 Threads 推薦</string>
     <string name="ig_dialog_clean_feed_hide_liked">隱藏已按讚的貼文</string>
-    <string name="ig_nav_settings_title">導覽設定</string>
     <string name="ig_nav_name_home">首頁</string>
     <string name="ig_nav_name_reels">Reels</string>
     <string name="ig_nav_name_create">建立</string>
@@ -673,46 +480,29 @@
     <string name="ig_nav_name_activity">活動</string>
     <string name="ig_nav_name_profile">個人檔案</string>
     <string name="ig_nav_name_search">搜尋</string>
-    <string name="ig_nav_tabs_title">隱藏導覽分頁</string>
     <string name="ig_nav_tab_home">隱藏首頁分頁</string>
     <string name="ig_nav_tab_reels">隱藏 Reels 分頁</string>
     <string name="ig_nav_tab_create">隱藏建立分頁</string>
     <string name="ig_nav_tab_messages">隱藏訊息分頁</string>
     <string name="ig_nav_tab_activity">隱藏活動分頁</string>
     <string name="ig_nav_tab_profile">隱藏個人檔案分頁</string>
-    <string name="ig_dialog_misc_spoof_last_seen">偽造最後上線時間（凍結）</string>
     <string name="ig_dialog_misc_copy_caption">複製說明文字</string>
     <string name="ig_dialog_misc_photo_zoom">相片縮放（長按）</string>
-    <string name="ig_caption_copy_menu_item">複製說明文字</string>
-    <string name="ig_caption_translate_menu_item">翻譯說明文字</string>
-    <string name="ig_caption_translate_full">完整說明文字</string>
-    <string name="ig_caption_translate_no_hashtags">不含主題標籤</string>
-    <string name="ig_caption_copy_title">複製說明文字</string>
-    <string name="ig_caption_copy_full">複製完整說明文字</string>
-    <string name="ig_caption_copy_none">此貼文沒有說明文字</string>
     <string name="ig_caption_copied">✅ 說明文字已複製到剪貼簿！</string>
     <string name="ig_dialog_downloader_copy_link">複製媒體連結</string>
-    <string name="ig_copy_link_title">複製媒體連結</string>
     <string name="ig_copy_link_copied">媒體連結已複製到剪貼簿</string>
     <string name="ig_copy_link_none">找不到此貼文的媒體連結</string>
     <string name="ig_copy_link_slide">第 %1$d / %2$d 張</string>
     <string name="ig_copy_link_all">複製全部 %1$d 個連結</string>
     <string name="ig_copy_link_copied_all">已複製 %1$d 個媒體連結</string>
-    <string name="ig_instant_save_title">儲存 Instants</string>
     <string name="ig_dialog_misc_save_instants">儲存 Instants（長按儲存）</string>
-    <string name="ig_instant_saving">正在儲存 Instant…</string>
-    <string name="ig_instant_saved">Instant 已儲存</string>
     <string name="ig_instant_save_none">找不到 Instant 媒體</string>
-    <string name="ig_instant_upload_title">從相簿上傳 Instant</string>
     <string name="ig_dialog_misc_upload_instants">從相簿上傳 Instant</string>
     <string name="ig_instant_upload_chip">🖼 相簿</string>
     <string name="ig_instant_upload_chip_ready">✓ 就緒 —— 點擊快門</string>
     <string name="ig_instant_upload_ready">已選擇！點擊快門以將其作為 Instant 傳送</string>
     <string name="ig_instant_upload_fail">無法載入該圖片</string>
-    <string name="ig_story_download_choice_title">下載限時動態</string>
-    <string name="ig_story_download_choice_subtitle">選擇要儲存的格式</string>
     <string name="ig_story_download_photo">下載相片</string>
-    <string name="ig_story_download_video_music">下載含音樂的影片</string>
     <string name="ig_story_cache_clear_confirm">刪除所有已快取的限時動態？此操作無法復原。</string>
     <string name="ig_story_cache_cleared">已清除快取的限時動態</string>
     <string name="ig_dialog_ghost_chat_export">聊天中的「匯出聊天」按鈕</string>
@@ -726,10 +516,8 @@
     <string name="ig_locked_coll_unlock">解鎖此收藏夾</string>
     <string name="ig_locked_coll_locked">收藏夾已鎖定：將會要求輸入密碼</string>
     <string name="ig_locked_coll_unlocked">收藏夾已解鎖</string>
-    <string name="ig_locked_coll_need_passcode">請先設定密碼：在 Instagram 中開啟 InstaEclipse 設定 → 鎖定</string>
     <string name="ig_saved_on_profile">在個人檔案顯示「收藏」按鈕（需重新啟動 Instagram）</string>
     <string name="ig_saved_on_profile_button">收藏</string>
-    <string name="ig_nav_tab_search">搜尋</string>
     <string name="ig_nav_tab_order">標籤順序</string>
     <string name="ig_nav_tab_order_hint">使用箭頭重新排列底部列。隱藏的標籤會保留原位。返回 Instagram 後生效。</string>
     <string name="ig_nav_tab_order_reset">重設</string>
@@ -737,32 +525,20 @@
     <string name="share_dl_no_link">找不到 Instagram 貼文或 Reels 連結</string>
     <string name="share_dl_no_instagram">尚未安裝 Instagram</string>
     <string name="ig_share_dl_loading">InstaEclipse：正在載入要下載的貼文…</string>
-    <string name="ig_share_dl_saving">InstaEclipse：正在儲存 %1$d 個檔案…</string>
     <string name="ig_share_dl_not_found">InstaEclipse：無法載入該貼文</string>
     <string name="ig_thread_menu">InstaEclipse 聊天操作</string>
     <string name="ig_unsent_messages">已收回訊息</string>
-    <string name="ig_hide_chat_toggle">隱藏 / 取消隱藏聊天</string>
     <string name="ig_chat_export_working">正在匯出已載入的訊息…</string>
     <string name="ig_chat_export_done">已將 %1$d 則訊息匯出至 %2$s</string>
     <string name="ig_chat_export_load_all">先載入整個聊天（跳到第一則訊息）</string>
     <string name="ig_chat_export_media">將媒體下載至匯出資料夾</string>
-    <string name="ig_chat_export_media_progress">正在下載媒體 %1$d/%2$d…</string>
     <string name="ig_chat_export_done_media">已將 %1$d 則訊息與 %2$d 個媒體檔案匯出至 %3$s</string>
     <string name="ig_export_media_saved">匯出已儲存 — %1$d 個媒體檔案已存入 %2$s</string>
-    <string name="ig_feat_edit_history">編輯紀錄</string>
-    <string name="ig_feat_lock_collections">鎖定收藏夾</string>
-    <string name="ig_feat_comment_search">留言搜尋</string>
-    <string name="ig_feat_viewer_search">限時動態觀看者</string>
-    <string name="ig_feat_follow_export">追蹤匯出</string>
-    <string name="ig_feat_saved_on_profile">個人檔案上的收藏</string>
-    <string name="ig_feat_hide_notes">隱藏便利貼列</string>
-    <string name="ig_feat_voice_download">語音下載</string>
     <string name="ig_feat_photo_zoom">相片縮放</string>
     <string name="ig_chat_export_none">此聊天尚未載入任何訊息</string>
     <string name="ig_media_info_copy">複製</string>
     <string name="ig_dialog_misc_comment_search">搜尋留言</string>
     <string name="ig_comment_search">搜尋留言</string>
-    <string name="ig_comment_search_hint">在 %1$d 則已載入留言中搜尋</string>
     <string name="ig_comment_search_load_all">全部載入</string>
     <string name="ig_comment_search_stop">停止</string>
     <string name="ig_comment_search_field_hint">依名稱或關鍵字搜尋</string>
@@ -778,16 +554,8 @@
     <string name="ig_comment_export_done">已將 %1$d 則留言匯出至 %2$s</string>
     <string name="ig_dialog_misc_follow_export">將粉絲/追蹤中名單匯出為 CSV</string>
     <string name="ig_feat_followers_history">粉絲紀錄（誰取消了追蹤）</string>
-    <string name="ig_followers_history">粉絲紀錄</string>
     <string name="ig_followers_history_first">已儲存第一份名單：%1$d 位粉絲。稍後再查看，即可知道誰取消追蹤或追蹤了你。</string>
-    <string name="ig_followers_history_changes">自 %1$s 起：%2$d 人取消追蹤，%3$d 位新粉絲</string>
-    <string name="ig_followers_history_summary">%1$d 位粉絲 · 查看於 %2$s</string>
-    <string name="ig_followers_history_empty">目前沒有變化紀錄。</string>
-    <string name="ig_followers_history_unfollowed">取消追蹤了你</string>
-    <string name="ig_followers_history_followed">追蹤了你</string>
-    <string name="ig_followers_history_partial">名單未載入完整，因此未進行比較。請重試。</string>
     <string name="ig_followers_history_note">變化在你查看時才會被發現，因此日期是發現變化的時間。</string>
-    <string name="ig_followers_history_clear">清除紀錄</string>
     <string name="ig_followers_history_wrong_tab">請開啟你自己的「粉絲」分頁進行查看。</string>
     <string name="ig_follow_export">匯出 CSV</string>
     <string name="ig_follow_export_done">已將 %1$d 個帳號匯出至 %2$s</string>
@@ -809,7 +577,6 @@
     <string name="ig_follow_block_wait">請等到 %1$s 再重新載入名單。</string>
     <string name="ig_follow_block_anyway">仍要載入</string>
     <string name="ig_comment_gif_downloading">正在下載留言媒體…</string>
-    <string name="ig_comment_copy_media_link">複製 GIF / 圖片連結</string>
     <string name="ig_highlight_download_all">下載整個精選</string>
     <string name="ig_highlight_loading">正在載入精選…</string>
     <string name="ig_highlight_downloading">正在下載 %1$d 個精選項目…</string>
@@ -817,7 +584,6 @@
     <string name="ig_spoof_device">偽裝裝置（HDR 影片）</string>
     <string name="ig_spoof_device_note">Instagram 會將此手機識別為所選裝置。這會解鎖 HDR 影片以及 Instagram 僅限這些手機的其他功能，並加入對應的開發者選項。重新啟動 Instagram 後生效。Instagram 可能會要求你確認一次帳號。</string>
     <string name="ig_dialog_downloader_stickers">下載私訊中的貼圖和 GIF（長按）</string>
-    <string name="ig_feat_sticker_download">貼圖下載</string>
     <string name="ig_story_tray_size">限時動態列大小</string>
     <string name="ig_story_ring_color">未看限時動態圓環顏色</string>
     <string name="ig_story_ring_default">Instagram 預設</string>

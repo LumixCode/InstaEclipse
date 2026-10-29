@@ -20,14 +20,12 @@
     <string name="ig_si_sound_off">无声音</string>
     <string name="ig_si_countdown">倒计时</string>
     <string name="ig_si_question">问题</string>
-    <string name="ig_si_highlights">在精选快拍中</string>
     <string name="ig_si_mention_request">提及请求</string>
     <string name="ig_si_none">此快拍没有其他信息。</string>
     <string name="ig_si_your_answer">你的答案</string>
     <string name="ig_si_average">平均</string>
     <string name="ig_si_copied">已复制</string>
     <string name="ig_dialog_misc_story_info">快拍信息、测验和投票答案</string>
-    <string name="ig_feat_story_info">快拍信息</string>
     <string name="ig_si_add_yours">添加你的</string>
     <string name="ig_si_joined">人参与</string>
     <string name="ig_si_paid_partnership">付费合作伙伴（长按打开）</string>

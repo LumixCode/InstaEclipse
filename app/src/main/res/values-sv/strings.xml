@@ -6,139 +6,54 @@
     <string name="help">Hjälp</string>
 
     <!-- home -->
-    <string name="instagram_version">Version</string>
-    <string name="module_disabled">Modulen är inaktiverad. Aktivera den i Xposed Installer.</string>
-
-    <string name="module_status">Modulstatus:</string>
-
-    <string name="module_status_disabled">Modulstatus: Inaktiverad</string>
-    <string name="request_enable_module">Aktivera modulen via Xposed Installer.</string>
-
-    <string name="module_status_enabled_no_root">Modulstatus: Aktiverad (Ingen root-åtkomst)</string>
-    <string name="request_enable_root">Root-åtkomst krävs för automatisk omstart. Manuell omstart behövs utan root.</string>
-
-    <string name="module_status_enabled">Modulstatus: Aktiverad</string>
-    <string name="module_active">Modulen är aktiv och fungerar korrekt.</string>
 
     <string name="checking_instagram">Verifierar Instagram...</string>
     <string name="installed_instagram_version">Instagram installerat - Version: </string>
     <string name="not_installed_instagram">Instagram är inte installerat.</string>
-    <string name="error_instagram">Fel vid verifiering av Instagram-status.</string>
     
     <string name="launch_instagram">Starta Instagram</string>
     <string name="download_apk">Ladda ner APK</string>
     <string name="how_to_use">Så använder du den</string>
-    <string name="module_not_working_title">Fungerar modulen fortfarande inte?</string>
 
-    <string name="usage_instructions">Håll in sökikonen</string>
     <string name="contributors">Bidragsgivare</string>
     <string name="special_thanks">Särskilt tack</string>
 
     <!-- Don't translate! -->
 
     <!-- help -->
-    <string name="help_amp_troubleshooting">Hjälp och felsökning</string>
-    <string name="find_updates_and_documentation">Sök efter uppdateringar och dokumentation.</string>
     <string name="go_to_github">Besök GitHub</string>
-    <string name="find_support">Hitta support.</string>
     <string name="go_to_telegram">Besök Telegram</string>
 
     <!-- Don't translate! -->
-    <string name="github">GitHub</string>
     <string name="telegram">Telegram</string>
 
     <!-- faq -->
     <string name="frequently_asked_questions">Vanliga frågor (FAQ)</string>
     <string name="faq_1">1. Fungerar det inte eller kraschar det med Google Play-versionen?\n- Använd APK:er från APKMirror istället.</string>
-    <string name="faq_2">2. Är modulen inte aktiverad?\n- Avaktivera och återaktivera den i Vector.</string>
     <string name="faq_3">3. Fungerar funktionerna inte?\n- Tvinga stopp och starta om Instagram.</string>
-    <string name="faq_4">4. Leder utvecklaralternativ till krascher?\n- Följ guiden för utvecklaralternativ.</string>
-    <string name="faq_5">5. Visas konstiga etiketter eller nummer i utvecklaralternativen?\n- Använd Beta- eller Alpha-versioner; stabila versioner är obfuskerade.</string>
     <string name="faq_6">6. Är störningsfritt läge aktiverat men innehåll visas ändå?\n- Tvinga stopp på Instagram och rensa dess cache.</string>
-
-    <!-- features -->
-    <string name="developer_options">Utvecklaralternativ</string>
-    <string name="ghost_mode">Spökläge</string>
-    <string name="distraction_free">Störningsfritt läge</string>
-    <string name="remove_ads">Ta bort annonser</string>
-    <string name="remove_analytics">Inaktivera analys</string>
-
-    <string name="enable_disable_all">Aktivera/avaktivera allt</string>
 
     <!-- Don't translate! -->
 
     <!-- ghost -->
-    <string name="ghost_mode_options">Inställningar för spökläge</string>
-    <string name="typing">Skrivindikator</string>
     <string name="story">Story</string>
-    <string name="view_once">Visa en gång</string>
     <string name="live">Live</string>
-    <string name="direct_messages">Direktmeddelanden</string>
-    <string name="disable_typing">Inaktivera skrivindikator</string>
-
-    <!-- developer_options -->
-    <string name="screen_shot">Skärmdump</string>
-    <string name="developer_options_guide">Guide för utvecklaralternativ</string>
-    <string name="dev_options_version_req">Använd enbart på Beta/Alpha-versioner!</string>
-    <string name="dev_options_req">Säkerställ att du är inloggad först!</string>
-
-    <string name="dev_options_1">1. Öppna Instagram och håll nere Hem-knappen.</string>
-    <string name="dev_options_2">2. Navigera till Utvecklaralternativ > MetaConfig-inställningar och åsidosättningar.</string>
-    <string name="dev_options_3">3. Sök efter \"Employee\" och aktivera följande alternativ:</string>
-    <string name="dev_options_4">4. Avaktivera sedan utvecklaralternativen i modulen för att förhindra krascher.</string>
-
-    <!-- Don't translate! -->
-
-    <!-- distraction free -->
-    <string name="distraction_free_options">Inställningar för störningsfritt läge</string>
-    <string name="disable_stories">Inaktivera Stories</string>
-    <string name="disable_feed">Inaktivera flödet</string>
-    <string name="disable_reels">Inaktivera Reels</string>
-    <string name="disable_explore">Inaktivera Utforska</string>
-    <string name="disable_comments">Inaktivera kommentarer</string>
-
-    <!-- contributor card -->
-    <string name="hooked_methods_toast">Visa notifikation om aktiverade funktioner</string>
-    <string name="contributor_name">Contributor Name</string>
-
-    <!-- Miscellaneous -->
-    <string name="misc">Övrigt</string>
-    <string name="miscellaneous_options">Övriga alternativ</string>
-    <string name="story_flipping">"Inaktivera bläddring mellan stories  "</string>
-    <string name="video_autoplay">Inaktivera automatisk uppspelning av video</string>
-
-    <!-- Toast -->
-    <string name="follower_toast">Visa följarnotifikation</string>
 
     <!-- Dialog strings -->
     <string name="ig_dialog_close">Stäng</string>
-    <string name="ig_dialog_enable_disable_all">Aktivera/inaktivera alla</string>
     <string name="ig_dialog_error">Fel</string>
     <string name="ig_dialog_ok">OK</string>
     <string name="ig_dialog_yes">Ja</string>
     <string name="ig_dialog_cancel">Avbryt</string>
     <string name="ig_dialog_menu_dev_options">Utvecklaralternativ</string>
-    <string name="ig_dialog_menu_ghost_settings">Spöklägeinställningar</string>
-    <string name="ig_dialog_menu_ad_analytics">Blockera annonser/analys</string>
     <string name="ig_dialog_menu_clean_feed">Rent flöde</string>
     <string name="ig_dialog_menu_distraction_free">Instagram utan distraktioner</string>
-    <string name="ig_dialog_menu_misc">Övriga funktioner</string>
     <string name="ig_dialog_menu_downloader">Nedladdare</string>
     <string name="ig_dialog_menu_backup_restore">Säkerhetskopiering och återställning</string>
     <string name="ig_dialog_menu_about">Om</string>
     <string name="ig_dialog_menu_restart">Starta om appen</string>
-    <string name="ig_dialog_section_dev_options">Utvecklaralternativ</string>
     <string name="ig_dialog_section_ghost_mode">Spökläge</string>
-    <string name="ig_dialog_section_ad_analytics">Blockera annonser/analys</string>
-    <string name="ig_dialog_section_clean_feed">Rent flöde</string>
-    <string name="ig_dialog_section_distraction_free">Instagram utan distraktioner</string>
-    <string name="ig_dialog_section_misc">Övrigt</string>
-    <string name="ig_dialog_section_downloader">Nedladdare</string>
-    <string name="ig_dialog_section_downloader_settings">Nedladdningsinställningar</string>
-    <string name="ig_dialog_section_backup_restore">Säkerhetskopiering och återställning</string>
     <string name="ig_dialog_section_about">Om</string>
-    <string name="ig_dialog_section_restart">Starta om appen</string>
-    <string name="ig_dialog_section_quick_toggle">Anpassa snabbväxling</string>
     <string name="ig_dialog_dev_enable">Aktivera utvecklarläge</string>
     <string name="ig_dialog_dev_import">Importera utvecklarkonfiguration</string>
     <string name="ig_dialog_dev_export">Exportera utvecklarkonfiguration</string>
@@ -159,11 +74,9 @@
 
     <!-- JsonImportActivity -->
     <string name="json_select_config">Välj JSON-konfiguration</string>
-    <string name="json_target_not_specified">❌ Målpaket ej angivet.</string>
     <string name="json_sent">✅ Skickat till Instagram.</string>
     <string name="json_not_valid">❌ Inte en giltig JSON-fil.</string>
     <string name="json_read_failed">❌ Det gick inte att läsa filen: %1$s</string>
-    <string name="json_cancelled">Avbrutet eller ingen fil vald.</string>
     <string name="ig_dialog_ghost_hide_dm_seen">Dölj läst i direktmeddelanden</string>
     <string name="ig_dialog_ghost_hide_typing">Dölj skrivindikator</string>
     <string name="ig_dialog_ghost_hide_story_views">Dölj Story-visningar</string>
@@ -195,10 +108,8 @@
     <string name="ig_dialog_bulk_unsend">Ångra flera meddelanden</string>
     <string name="ig_bulk_unsend_row">Ångra flera</string>
     <string name="ig_bulk_unsend_go">Ångra</string>
-    <string name="ig_bulk_unsend_done">%1$d meddelande(n) ångrade</string>
     <string name="ig_bulk_unsend_unavailable">Ångra flera är inte tillgängligt i den här Instagram-versionen</string>
     <string name="ig_downloader_folder_hint">Välj mappen i InstaEclipse-appen</string>
-    <string name="lock_code_set_in_ig">Ställs in i Instagram: InstaEclipse-menyn &gt; Lås. Tryck för att öppna Instagram.</string>
     <string name="theme_set_light">Teman för ljust läge</string>
     <string name="theme_set_dark">Teman för mörkt läge</string>
     <string name="theme_light_same">Samma tema som i mörkt läge</string>
@@ -211,7 +122,6 @@
     <string name="ig_dialog_distraction_disable_explore">Inaktivera utforska</string>
     <string name="ig_dialog_distraction_disable_comments">Inaktivera kommentarer</string>
     <string name="ig_dialog_distraction_extreme_title">Aktivera extremläge?</string>
-    <string name="ig_dialog_distraction_extreme_message">När det är aktiverat kan du inte inaktivera läget utan distraktioner förrän du installerar om appen. Fortsätt?</string>
     <string name="ig_dialog_misc_disable_story_autoswipe">Inaktivera automatisk Story-bläddring</string>
     <string name="ig_dialog_misc_disable_video_autoplay">Inaktivera automatisk videouppspelning</string>
     <string name="ig_dialog_misc_disable_repost">Inaktivera repost</string>
@@ -297,8 +207,6 @@
     <string name="ig_confirm_like_title">Gilla det här inlägget?</string>
     <string name="ig_confirm_like_message">Du tryckte på gilla. Skicka?</string>
     <string name="ig_confirm_like_yes">Gilla</string>
-    <string name="ig_confirm_follow_title">Följa?</string>
-    <string name="ig_confirm_follow_message">Följa @%1$s?</string>
     <string name="ig_confirm_follow_message_any">Följa det här kontot?</string>
     <string name="ig_confirm_follow_yes">Följ</string>
     <string name="ig_profile_analyzer">Profilanalys: bevaka följare och följer</string>
@@ -386,12 +294,7 @@
 
     <!-- Comment Copy dialog -->
     <string name="ig_comment_copy_title">Kopiera kommentar</string>
-    <string name="ig_comment_copy_full">Kopiera hela kommentaren</string>
-    <string name="ig_comment_select_part">Välj del att kopiera</string>
-    <string name="ig_comment_select_title">Välj för att kopiera</string>
-    <string name="ig_comment_copy_selected">Kopiera markerat</string>
     <string name="ig_toast_comment_copied">✅ Kopierat till urklipp!</string>
-    <string name="ig_dialog_downloader_settings">Nedladdningsinställningar</string>
     <string name="ig_dialog_downloader_posts">Ladda ned inlägg</string>
     <string name="ig_dialog_downloader_stories">Ladda ned Stories</string>
     <string name="ig_dialog_downloader_reels">Ladda ned Reels</string>
@@ -403,36 +306,17 @@
     <string name="ig_dialog_backup_settings">Säkerhetskopiera inställningar</string>
     <string name="ig_dialog_restore_settings">Återställ inställningar</string>
     <string name="ig_dialog_backup_failed">Det gick inte att skapa säkerhetskopia: %1$s</string>
-    <string name="ig_dialog_about_github">GitHub</string>
-    <string name="ig_dialog_about_telegram">Telegram</string>
-    <string name="ig_dialog_restart_message">⚠️ Rensa appcachen och starta om?</string>
     <string name="ig_dialog_clear_cache">Rensa Hooks-cache</string>
-    <string name="ig_dialog_section_clear_cache">Rensa Hooks-cache</string>
-    <string name="ig_dialog_clear_cache_message">⚠️ Detta tvingar InstaEclipse att skanna om Instagram vid nästa start. Appen startas om.</string>
-    <string name="ig_dialog_clear_cache_now">Rensa cache &amp; starta om</string>
     <string name="ig_dialog_restart_now">Starta om nu</string>
     <string name="ig_dialog_restart_not_found">Kunde inte hitta appen för omstart.</string>
     <string name="ig_dialog_restart_failed">Omstart misslyckades: %1$s</string>
 
-    <!-- Toast: Ghost mode -->
-    <string name="ig_toast_ghost_no_options">Inga spöklägealternativ valda!</string>
-    <string name="ig_toast_ghost_enabled">Spökläge aktiverat</string>
-    <string name="ig_toast_ghost_disabled">Spökläge inaktiverat</string>
-    <string name="ig_toast_seen_sent">✅ Läst skickat</string>
-    <string name="ig_toast_channel_seen_sent">✅ Kanal läst skickat</string>
-
-    <!-- Toast: Follower status -->
-    <string name="ig_toast_follows_you">följer dig ✅</string>
-    <string name="ig_toast_not_follows_you">följer dig inte ❌</string>
-
     <!-- Toast: App settings -->
-    <string name="ig_toast_settings_applied">Inställningar tillämpade!</string>
     <string name="ig_toast_restart_manual">Stäng Instagram manuellt för att ändringarna ska träda i kraft.</string>
     <string name="ig_toast_settings_restored">Inställningar återställda.</string>
     <string name="ig_toast_restore_failed">Återställning misslyckades: %1$s</string>
 
     <!-- Toast: Download folder -->
-    <string name="ig_toast_download_folder_set">Nedladdningsmapp: %1$s</string>
     <string name="ig_toast_download_folder_updated">Nedladdningsmapp uppdaterad!</string>
     <string name="ig_toast_download_folder_reset">Nedladdningsmapp återställd till standard</string>
 
@@ -440,34 +324,15 @@
     <string name="ig_toast_downloading">Laddar ned…</string>
     <string name="ig_toast_downloading_video">Laddar ned video…</string>
     <string name="ig_toast_downloading_photo">Laddar ned foto…</string>
-    <string name="ig_toast_video_saved">Video sparad i InstaEclipse-mappen</string>
-    <string name="ig_toast_photo_saved">Foto sparat i InstaEclipse-mappen</string>
-    <string name="ig_toast_saved">Sparat i InstaEclipse-mappen</string>
     <string name="ig_toast_download_failed">Nedladdning misslyckades: %1$s</string>
-    <string name="ig_toast_downloading_reel">Laddar ned reel…</string>
-    <string name="ig_toast_reel_saved">Reel sparad i InstaEclipse-mappen</string>
-    <string name="ig_toast_reel_failed">Reel-nedladdning misslyckades: %1$s</string>
-    <string name="ig_toast_reel_url_not_found">Reel-URL hittades inte</string>
-    <string name="ig_toast_post_url_not_found">Inläggets URL hittades inte</string>
     <string name="ig_toast_no_media_for_post">Inga media hittades för detta inlägg</string>
-    <string name="ig_toast_no_media">Inga media hittades</string>
-    <string name="ig_toast_downloading_story_video">Laddar ned story-video…</string>
-    <string name="ig_toast_downloading_story_photo">Laddar ned story-foto…</string>
-    <string name="ig_toast_story_saved">Story sparad i InstaEclipse-mappen</string>
-    <string name="ig_toast_story_url_not_found">Story-URL hittades inte</string>
     <string name="ig_toast_downloading_profile_pic">Laddar ned profilbild…</string>
     <string name="ig_toast_profile_pic_saved">Profilbild sparad!</string>
     <string name="ig_toast_profile_pic_url_not_found">Kunde inte hämta profilbildens URL</string>
     <string name="ig_toast_merging_video_audio">Sammanfogar video och ljud…</string>
-    <string name="ig_toast_downloading_n_items">Laddar ned %1$d objekt…</string>
     <string name="ig_toast_downloading_all_n_items">Laddar ned alla %1$d objekt…</string>
-    <string name="ig_toast_all_items_saved">Alla %1$d objekt sparade i InstaEclipse-mappen</string>
-    <string name="ig_toast_items_partial_saved">%1$d av %2$d objekt sparade (%3$d misslyckades)</string>
-    <string name="ig_toast_no_reel_url_scroll">Reel-URL hittades inte — scrolla igenom reelen först</string>
     <string name="ig_dl_title">Ladda ned</string>
     <string name="ig_story_mark_seen">Markera som sedd</string>
-    <string name="ig_story_marked_seen">Markerad som sedd</string>
-    <string name="ig_story_mark_seen_none">Inget att skicka för den här storyn än — låt den spelas upp först</string>
     <string name="ig_dl_carousel_subtitle">Karusell • %1$d objekt</string>
     <string name="ig_dl_carousel_current">Ladda ned aktuellt (%1$d av %2$d)</string>
     <string name="ig_dl_carousel_all">Ladda ned alla %1$d objekt</string>
@@ -476,19 +341,11 @@
     <string name="ig_toast_all_mentions_copied">Alla omnämnanden kopierade</string>
 
     <string name="back">Tillbaka</string>
-    <string name="apply_changes">Tillämpa ändringar</string>
 
     <!-- features fragment section headers -->
-    <string name="feat_categories">Kategorier:</string>
-    <string name="feat_tools">Verktyg:</string>
-    <string name="feat_features">Funktioner:</string>
     <string name="feat_config">Konfiguration</string>
-    <string name="feat_options">Alternativ:</string>
     <string name="feat_quick_toggle">Snabbväxling</string>
     <string name="feat_danger_zone">Farlig zon</string>
-    <string name="feat_download_folder">Nedladdningsmapp:</string>
-    <string name="feat_downloader_set_folder">Ange nedladdningsmapp</string>
-    <string name="feat_downloader_selected">Vald: %1$s</string>
     <string name="feat_downloader_reset_folder">Återställ nedladdningsmapp</string>
 
     <!-- multiple versions -->
@@ -496,7 +353,6 @@
 
     <!-- Story mentions dialog -->
     <string name="ig_mention_dialog_title">Story-omnämnanden</string>
-    <string name="ig_mention_subtitle">%1$d omnämnande(n) • tryck för att kopiera</string>
     <string name="ig_mention_no_mentions">Inga omnämnanden hittades i denna story</string>
     <string name="ig_mention_copy_all">Kopiera alla</string>
 
@@ -510,7 +366,6 @@
     <string name="ig_update_message">En ny version (%1$s) är tillgänglig. Vill du uppdatera nu?</string>
     <string name="ig_update_button">Uppdatera</string>
     <string name="ig_update_later">Senare</string>
-    <string name="ig_update_error_message">Det gick inte att söka efter uppdateringar. Försök igen senare.</string>
     <!-- Custom Theme -->
     <string name="ig_dialog_menu_theme">Anpassat Tema</string>
     <string name="theme_title">Anpassat Tema</string>
@@ -521,7 +376,6 @@
     <string name="theme_collapse_section">Fäll ihop sektion</string>
     <string name="theme_expand_section">Expandera sektion</string>
     <string name="theme_reset_custom">Återställ till Standard</string>
-    <string name="theme_saved">Tema sparat</string>
     <string name="theme_pick_color">Välj en färg</string>
     <string name="theme_apply_color">Tillämpa</string>
     <string name="theme_rgba_format">R %1$d  G %2$d  B %3$d  A %4$d</string>
@@ -546,22 +400,8 @@
     <string name="feat_group_privacy">Integritet</string>
     <string name="feat_group_media">Media</string>
     <string name="feat_group_tools">Verktyg</string>
-    <string name="ig_dialog_subtitle">Tryck på en sektion för att konfigurera</string>
     <string name="ig_dialog_menu_location">Plats</string>
-    <string name="ig_dialog_menu_quality">Videokvalitet</string>
     <string name="logging">Loggar</string>
-    <string name="logging_clear">Rensa</string>
-    <string name="logging_copy">Kopiera</string>
-    <string name="logging_copied">Kopierat till urklipp</string>
-    <string name="logging_companion">InstaEclipse</string>
-    <string name="logging_instagram">Instagram</string>
-    <string name="logging_instagram_timeout">Instagram svarade inte i tid. Visar endast InstaEclipse-loggar.</string>
-    <string name="logging_no_target">Installera först en Instagram-app som stöds.</string>
-    <string name="logging_empty_reply">(tom buffert - öppna Instagram med modulen aktiverad)</string>
-    <string name="logging_placeholder">Inga loggar har laddats ännu.</string>
-    <string name="logging_lines_format">%1$d rader</string>
-    <string name="ig_dialog_section_location">Plats</string>
-    <string name="ig_dialog_section_quality">Videokvalitet</string>
     <string name="ig_dialog_quality_force_reels">Tvinga Reels-kvalitet</string>
     <string name="ig_dialog_quality_auto">Auto</string>
     <string name="ig_dialog_quality_360">360p</string>
@@ -572,22 +412,14 @@
     <string name="theme_section_fonts">Teckensnitt &amp; Emoji</string>
     <string name="ig_dialog_quality_max">Högsta Tillgängliga</string>
     <string name="ig_dialog_max_upload_quality">Ladda alltid upp i högsta kvalitet</string>
-    <string name="ig_feat_max_upload_quality">Max uppladdningskvalitet</string>
     <string name="ig_dialog_location_spoof_enable">Förfalska GPS-plats</string>
     <string name="ig_dialog_location_pick">Välj plats på kartan</string>
     <string name="ig_dialog_location_unset">Ingen plats angiven</string>
-    <string name="ig_dialog_location_current">Aktuell: %1$.4f, %2$.4f</string>
-    <string name="loc_picker_title">Välj plats</string>
     <string name="loc_picker_search_hint">Sök stad, adress eller plats</string>
     <string name="loc_picker_use">Använd denna plats</string>
     <string name="loc_picker_search_failed">Platsen hittades inte</string>
-    <string name="loc_picker_search_error">Sökningen misslyckades: %1$s</string>
-    <string name="ig_dialog_ghost_keep_unsent">Logga ångrade meddelanden</string>
     <string name="ig_dialog_ghost_jump_first">Knapp för att hoppa till första meddelandet i chattar</string>
     <string name="ig_jump_first_message">Hoppa till första meddelandet</string>
-    <string name="ig_jump_first_loading">Läser in äldre meddelanden… tryck igen för att stoppa</string>
-    <string name="ig_jump_first_done">Nådde första meddelandet</string>
-    <string name="ig_jump_first_stopped">Stoppad</string>
     <string name="ig_dialog_ghost_edit_history">Behåll redigeringshistorik för meddelanden</string>
     <string name="ig_edit_history_title">Redigeringshistorik</string>
     <string name="ig_edit_history_original">Original</string>
@@ -598,22 +430,14 @@
     <string name="ig_edit_history_missing">%1$d tidigare version(er) sparades inte på den här telefonen.</string>
     <string name="ig_edit_history_none">Ingen tidigare version av det här meddelandet sparades på den här telefonen</string>
     <string name="ig_dialog_unsent_title">Ej skickade meddelanden</string>
-    <string name="ig_dialog_unsent_clear">Rensa loggen för denna chatt</string>
     <string name="ig_dialog_unsent_export">Exportera som JSON</string>
     <string name="ig_dialog_unsent_exported">Sparat till %1$s</string>
     <string name="ig_dialog_auto_clear_cache">Rensa cache automatiskt när den är stor</string>
-    <string name="ig_dialog_auto_clear_cache_size">Rensa över: %1$d MB (tryck för att ändra)</string>
     <string name="ig_dialog_section_auto_clear_cache">Rensa cache automatiskt</string>
-    <string name="ig_dialog_auto_clear_cache_desc">Rensar Instagrams mediacache när du lämnar appen, om den överstiger den valda storleken. Endast cachen rensas (Instagram bygger upp den igen) — dina data, inloggningar och nedladdningar rörs aldrig.</string>
     <string name="ig_dialog_misc_remove_meta_ai">Ta bort Meta AI</string>
     <string name="ig_dialog_misc_lock_dms">Lås direktmeddelanden</string>
     <string name="ig_dialog_misc_lock_dms_set">Ange / ändra kod</string>
-    <string name="ig_dialog_misc_lock_dms_hint">Ange en numerisk kod</string>
     <string name="ig_dialog_misc_lock_dms_saved">Koden sparad</string>
-    <string name="ig_dialog_misc_lock_dms_cleared">Koden rensad</string>
-    <string name="ig_dialog_misc_lock_dms_current">Ange nuvarande kod</string>
-    <string name="ig_dialog_misc_lock_dms_wrong">Fel nuvarande lösenkod</string>
-    <string name="ig_dialog_misc_lock_dms_disable">Ange kod för att inaktivera låset</string>
     <string name="ig_dialog_misc_lock_dms_always">Lås igen varje gång du lämnar</string>
     <string name="ig_dialog_misc_lock_whole_app">Lås hela appen</string>
     <string name="ig_dialog_misc_lock_section">Lås</string>
@@ -622,9 +446,7 @@
     <string name="ig_translate_text">Översätt</string>
     <string name="ig_dialog_downloader_offer_audio">Erbjud nedladdning av endast ljud för videor</string>
     <string name="ig_download_choice_title">Ladda ned</string>
-    <string name="ig_download_choice_video">Video</string>
     <string name="ig_download_choice_audio">Endast ljud (.m4a)</string>
-    <string name="ig_download_choice_save">Spara på enheten</string>
     <string name="ig_download_choice_copy_image">Kopiera bild</string>
     <string name="ig_dialog_downloader_offer_copy_image">Lägg till Kopiera bild i inläggsmenyn</string>
     <string name="ig_toast_copy_image_video">Det här objektet är en video — inget att kopiera</string>
@@ -633,38 +455,23 @@
     <string name="ig_toast_downloading_audio">Laddar ned ljud…</string>
     <string name="ig_toast_audio_saved">Ljudet sparades</string>
     <string name="ig_dialog_misc_hide_chats">Dölj specifika chattar</string>
-    <string name="ig_hide_chats_manage">Hantera dolda chattar</string>
-    <string name="ig_hide_chats_empty">Inga dolda chattar. Öppna en chatt och tryck på knappen med överkryssat öga för att dölja den.</string>
-    <string name="ig_hide_chats_unhide">Visa igen</string>
-    <string name="ig_hide_chats_hint">För att dölja en chatt, öppna den och tryck på knappen med överkryssat öga i chattens rubrik.</string>
-    <string name="ig_lock_passcode_hint">Ange din lösenkod inifrån Instagram (öppna InstaEclipse-menyn → Lås).</string>
-    <string name="ig_theme_font_hint">Välj dina teckensnitts- &amp; emoji-filer inifrån Instagram (InstaEclipse-menyn → Anpassat Tema).</string>
     <string name="ig_hide_chat_hidden">Chatten dold — den försvinner från din inkorg</string>
     <string name="ig_hide_chat_unhidden">Chatten visas igen</string>
     <string name="ig_hide_chat_no_thread">Det gick inte att identifiera denna chatt</string>
-    <string name="ig_story_cache_title">Cacha Stories (24 h)</string>
-    <string name="ig_dialog_misc_cache_stories">Cacha Stories i 24 h</string>
     <string name="ig_story_cache_view">Visa cachade stories</string>
-    <string name="ig_story_cache_empty">Inga cachade stories ännu. Aktivera detta och visa sedan några stories — de sparas här i 24 timmar.</string>
     <string name="ig_story_cache_clear">Rensa cachade stories</string>
-    <string name="ig_story_cache_count">%1$d cachade stories</string>
     <string name="ig_story_cache_saving">Sparar story…</string>
     <string name="ig_story_cache_saved">Story sparad</string>
     <string name="ig_story_cache_save_fail">Det gick inte att spara story</string>
-    <string name="ig_custom_font_title">Anpassat teckensnitt</string>
     <string name="ig_dialog_misc_custom_font">Anpassat teckensnitt</string>
     <string name="ig_custom_font_pick">Välj teckensnittsfil (.ttf / .otf)</string>
-    <string name="ig_custom_emoji_title">Anpassad emoji</string>
     <string name="ig_dialog_misc_custom_emoji">Anpassad emoji</string>
     <string name="ig_custom_emoji_pick">Välj emoji-teckensnitt (.ttf / .otf)</string>
-    <string name="ig_dialog_unsent_clear_confirm">Radera denna chatts sparade ej skickade meddelanden? Detta kan inte ångras.</string>
     <string name="ig_dialog_unsent_clear_yes">Rensa</string>
-    <string name="ig_dialog_unsent_cleared">Loggen för ej skickade rensad</string>
     <string name="ig_dialog_unsent_empty">Inga ej skickade meddelanden har fångats ännu</string>
     <string name="ig_dialog_unsent_unknown_chat">Okänd chatt</string>
     <string name="ig_dialog_clean_feed_hide_threads">Dölj Threads-förslag</string>
     <string name="ig_dialog_clean_feed_hide_liked">Dölj inlägg du redan har gillat</string>
-    <string name="ig_nav_settings_title">Navigeringsinställningar</string>
     <string name="ig_nav_name_home">Hem</string>
     <string name="ig_nav_name_reels">Reels</string>
     <string name="ig_nav_name_create">Skapa</string>
@@ -672,46 +479,29 @@
     <string name="ig_nav_name_activity">Aktivitet</string>
     <string name="ig_nav_name_profile">Profil</string>
     <string name="ig_nav_name_search">Sök</string>
-    <string name="ig_nav_tabs_title">Dölj navigeringsflikar</string>
     <string name="ig_nav_tab_home">Dölj fliken Hem</string>
     <string name="ig_nav_tab_reels">Dölj fliken Reels</string>
     <string name="ig_nav_tab_create">Dölj fliken Skapa</string>
     <string name="ig_nav_tab_messages">Dölj fliken Meddelanden</string>
     <string name="ig_nav_tab_activity">Dölj fliken Aktivitet</string>
     <string name="ig_nav_tab_profile">Dölj fliken Profil</string>
-    <string name="ig_dialog_misc_spoof_last_seen">Förfalska Senast sedd (frys)</string>
     <string name="ig_dialog_misc_copy_caption">Kopiera bildtext</string>
     <string name="ig_dialog_misc_photo_zoom">Fotozoom (långtryck)</string>
-    <string name="ig_caption_copy_menu_item">Kopiera bildtext</string>
-    <string name="ig_caption_translate_menu_item">Översätt bildtext</string>
-    <string name="ig_caption_translate_full">Hela bildtexten</string>
-    <string name="ig_caption_translate_no_hashtags">Utan hashtaggar</string>
-    <string name="ig_caption_copy_title">Kopiera bildtext</string>
-    <string name="ig_caption_copy_full">Kopiera hela bildtexten</string>
-    <string name="ig_caption_copy_none">Ingen bildtext på detta inlägg</string>
     <string name="ig_caption_copied">✅ Bildtext kopierad till urklipp!</string>
     <string name="ig_dialog_downloader_copy_link">Kopiera medialänk</string>
-    <string name="ig_copy_link_title">Kopiera medialänk</string>
     <string name="ig_copy_link_copied">Medialänk kopierad till urklipp</string>
     <string name="ig_copy_link_none">Ingen medialänk hittades för detta inlägg</string>
     <string name="ig_copy_link_slide">Bild %1$d av %2$d</string>
     <string name="ig_copy_link_all">Kopiera alla %1$d länkar</string>
     <string name="ig_copy_link_copied_all">%1$d medialänkar kopierade</string>
-    <string name="ig_instant_save_title">Spara Instants</string>
     <string name="ig_dialog_misc_save_instants">Spara Instants (långtryck för att spara)</string>
-    <string name="ig_instant_saving">Sparar Instant…</string>
-    <string name="ig_instant_saved">Instant sparad</string>
     <string name="ig_instant_save_none">Ingen Instant-media hittades</string>
-    <string name="ig_instant_upload_title">Ladda upp Instant från galleriet</string>
     <string name="ig_dialog_misc_upload_instants">Ladda upp Instant från galleriet</string>
     <string name="ig_instant_upload_chip">🖼 Galleri</string>
     <string name="ig_instant_upload_chip_ready">✓ Klar — tryck på avtryckaren</string>
     <string name="ig_instant_upload_ready">Vald! Tryck på avtryckaren för att skicka den som en Instant</string>
     <string name="ig_instant_upload_fail">Det gick inte att ladda den bilden</string>
-    <string name="ig_story_download_choice_title">Ladda ned story</string>
-    <string name="ig_story_download_choice_subtitle">Välj ett format att spara</string>
     <string name="ig_story_download_photo">Ladda ned foto</string>
-    <string name="ig_story_download_video_music">Ladda ned video med musik</string>
     <string name="ig_story_cache_clear_confirm">Ta bort alla cachade stories? Detta kan inte ångras.</string>
     <string name="ig_story_cache_cleared">Cachade stories borttagna</string>
     <!-- v0.8 UI strings added -->
@@ -726,10 +516,8 @@
     <string name="ig_locked_coll_unlock">Lås upp den här samlingen</string>
     <string name="ig_locked_coll_locked">Samlingen låst: den frågar efter din kod</string>
     <string name="ig_locked_coll_unlocked">Samlingen upplåst</string>
-    <string name="ig_locked_coll_need_passcode">Ange en kod först: InstaEclipse-inställningar i Instagram, Lås</string>
     <string name="ig_saved_on_profile">Sparat-knapp på din profil (starta om Instagram)</string>
     <string name="ig_saved_on_profile_button">Sparat</string>
-    <string name="ig_nav_tab_search">Sök</string>
     <string name="ig_nav_tab_order">Flikordning</string>
     <string name="ig_nav_tab_order_hint">Använd pilarna för att ändra ordningen i nedre fältet. Dolda flikar behåller sin plats. Träder i kraft när du återvänder till Instagram.</string>
     <string name="ig_nav_tab_order_reset">Återställ</string>
@@ -737,32 +525,20 @@
     <string name="share_dl_no_link">Ingen länk till Instagram-inlägg eller reel hittades</string>
     <string name="share_dl_no_instagram">Instagram är inte installerat</string>
     <string name="ig_share_dl_loading">InstaEclipse: laddar inlägget för nedladdning…</string>
-    <string name="ig_share_dl_saving">InstaEclipse: sparar %1$d fil(er)…</string>
     <string name="ig_share_dl_not_found">InstaEclipse: kunde inte ladda inlägget</string>
     <string name="ig_thread_menu">InstaEclipse-chattåtgärder</string>
     <string name="ig_unsent_messages">Ångrade meddelanden</string>
-    <string name="ig_hide_chat_toggle">Dölj / visa chatt</string>
     <string name="ig_chat_export_working">Exporterar laddade meddelanden…</string>
     <string name="ig_chat_export_done">%1$d meddelanden exporterade till %2$s</string>
     <string name="ig_chat_export_load_all">Ladda hela chatten först (hoppar till första meddelandet)</string>
     <string name="ig_chat_export_media">Ladda ned media till exportmappen</string>
-    <string name="ig_chat_export_media_progress">Laddar ned media %1$d/%2$d…</string>
     <string name="ig_chat_export_done_media">%1$d meddelanden och %2$d mediefiler exporterade till %3$s</string>
     <string name="ig_export_media_saved">Export sparad — %1$d mediefil(er) i %2$s</string>
-    <string name="ig_feat_edit_history">Redigeringshistorik</string>
-    <string name="ig_feat_lock_collections">Lås samlingar</string>
-    <string name="ig_feat_comment_search">Kommentarsökning</string>
-    <string name="ig_feat_viewer_search">Story-tittare</string>
-    <string name="ig_feat_follow_export">Exportera följare</string>
-    <string name="ig_feat_saved_on_profile">Sparat på profilen</string>
-    <string name="ig_feat_hide_notes">Dölj anteckningsfältet</string>
-    <string name="ig_feat_voice_download">Nedladdning av röstmeddelanden</string>
     <string name="ig_feat_photo_zoom">Fotozoom</string>
     <string name="ig_chat_export_none">Inga meddelanden har laddats för den här chatten än</string>
     <string name="ig_media_info_copy">Kopiera</string>
     <string name="ig_dialog_misc_comment_search">Sök i kommentarer</string>
     <string name="ig_comment_search">Sök kommentarer</string>
-    <string name="ig_comment_search_hint">Sök bland %1$d laddade kommentarer</string>
     <string name="ig_comment_search_load_all">Ladda alla</string>
     <string name="ig_comment_search_stop">Stoppa</string>
     <string name="ig_comment_search_field_hint">Sök efter namn eller ord</string>
@@ -778,16 +554,8 @@
     <string name="ig_comment_export_done">%1$d kommentarer exporterade till %2$s</string>
     <string name="ig_dialog_misc_follow_export">Exportera följare/följer till CSV</string>
     <string name="ig_feat_followers_history">Följarhistorik (vem som slutade följa)</string>
-    <string name="ig_followers_history">Följarhistorik</string>
     <string name="ig_followers_history_first">Första listan sparad: %1$d följare. Kontrollera igen senare för att se vem som slutade följa eller började följa dig.</string>
-    <string name="ig_followers_history_changes">Sedan %1$s: %2$d slutade, %3$d nya</string>
-    <string name="ig_followers_history_summary">%1$d följare · kontrollerad %2$s</string>
-    <string name="ig_followers_history_empty">Inga ändringar registrerade ännu.</string>
-    <string name="ig_followers_history_unfollowed">Slutade följa dig</string>
-    <string name="ig_followers_history_followed">Började följa dig</string>
-    <string name="ig_followers_history_partial">Listan laddades inte klart, så inget jämfördes. Försök igen.</string>
     <string name="ig_followers_history_note">Ändringar hittas när du kontrollerar, så datumet är när ändringen upptäcktes.</string>
-    <string name="ig_followers_history_clear">Rensa historik</string>
     <string name="ig_followers_history_wrong_tab">Öppna din egen Följare-flik för att kontrollera.</string>
     <string name="ig_follow_export">Exportera CSV</string>
     <string name="ig_follow_export_done">%1$d konton exporterade till %2$s</string>
@@ -810,7 +578,6 @@ Stanna på den här skärmen tills det är klart.</string>
     <string name="ig_follow_block_wait">Vänta till %1$s innan du läser in en lista igen.</string>
     <string name="ig_follow_block_anyway">Ladda ändå</string>
     <string name="ig_comment_gif_downloading">Laddar ned kommentarmedia…</string>
-    <string name="ig_comment_copy_media_link">Kopiera GIF-/bildlänk</string>
     <string name="ig_highlight_download_all">Ladda ned hela höjdpunkten</string>
     <string name="ig_highlight_loading">Laddar höjdpunkt…</string>
     <string name="ig_highlight_downloading">Laddar ned %1$d objekt från höjdpunkten…</string>
@@ -818,7 +585,6 @@ Stanna på den här skärmen tills det är klart.</string>
     <string name="ig_spoof_device">Förfalska enhet (HDR-video)</string>
     <string name="ig_spoof_device_note">Instagram ser den här telefonen som den valda enheten. Det låser upp HDR-video och andra funktioner som Instagram begränsar till de telefonerna, och lägger till motsvarande utvecklaralternativ. Starta om Instagram för att tillämpa. Instagram kan be dig bekräfta ditt konto en gång.</string>
     <string name="ig_dialog_downloader_stickers">Ladda ner klistermärken och GIF:ar i DM (långt tryck)</string>
-    <string name="ig_feat_sticker_download">Nedladdning av klistermärken</string>
     <string name="ig_story_tray_size">Storlek på berättelsefältet</string>
     <string name="ig_story_ring_color">Färg på ringen för osedda berättelser</string>
     <string name="ig_story_ring_default">Instagrams standard</string>

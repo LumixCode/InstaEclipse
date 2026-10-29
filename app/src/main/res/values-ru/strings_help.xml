@@ -7,8 +7,6 @@
     <string name="help_about">О приложении</string>
     <string name="help_version">Версия %1$s</string>
     <string name="help_source_code">Исходный код на GitHub</string>
-    <string name="help_faq_expand">Развернуть ответ</string>
-    <string name="help_faq_collapse">Свернуть ответ</string>
     <string name="help_vector_title">Vector (JingMatrix)</string>
     <string name="help_vector_sub">Есть root? Используйте эту версию</string>
     <string name="help_lspatch_title">LSPatch (JingMatrix)</string>

@@ -3,9 +3,7 @@
     <string name="feat_group_social">Social</string>
     <string name="menu_feed">Feed</string>
     <string name="menu_navigation">Navigation</string>
-    <string name="menu_reels_stories">Reels &amp; Stories</string>
     <string name="menu_messages">Messages</string>
-    <string name="menu_post_menu">Post Menu &amp; Uploads</string>
     <string name="menu_likes_comments">Likes &amp; comments</string>
     <string name="menu_profiles">Profiles</string>
     <string name="menu_app">App &amp; account</string>
@@ -15,6 +13,5 @@
     <string name="menu_nav_gestures">Gestures</string>
     <string name="menu_reels">Reels</string>
     <string name="menu_stories">Stories</string>
-    <string name="nav_tab_order_changed">Tab order changed</string>
     <string name="menu_quality">Quality</string>
 </resources>

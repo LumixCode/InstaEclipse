@@ -20,14 +20,12 @@
     <string name="ig_si_sound_off">bez dźwięku</string>
     <string name="ig_si_countdown">Odliczanie</string>
     <string name="ig_si_question">Pytanie</string>
-    <string name="ig_si_highlights">W wyróżnionych</string>
     <string name="ig_si_mention_request">Prośba o oznaczenie</string>
     <string name="ig_si_none">Brak dodatkowych informacji o tej relacji.</string>
     <string name="ig_si_your_answer">twoja odpowiedź</string>
     <string name="ig_si_average">Średnia</string>
     <string name="ig_si_copied">Skopiowano</string>
     <string name="ig_dialog_misc_story_info">Info o relacjach, odpowiedzi w quizach i ankietach</string>
-    <string name="ig_feat_story_info">Info o relacjach</string>
     <string name="ig_si_add_yours">Dodaj swoje</string>
     <string name="ig_si_joined">dołączyło</string>
     <string name="ig_si_paid_partnership">Płatna współpraca z (przytrzymaj, aby otworzyć)</string>

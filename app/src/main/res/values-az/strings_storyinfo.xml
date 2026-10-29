@@ -20,14 +20,12 @@
     <string name="ig_si_sound_off">səssiz</string>
     <string name="ig_si_countdown">Geri sayım</string>
     <string name="ig_si_question">Sual</string>
-    <string name="ig_si_highlights">Seçilmişlərdə</string>
     <string name="ig_si_mention_request">Qeyd sorğusu</string>
     <string name="ig_si_none">Bu hekayədə əlavə məlumat yoxdur.</string>
     <string name="ig_si_your_answer">sənin cavabın</string>
     <string name="ig_si_average">Orta</string>
     <string name="ig_si_copied">Kopyalandı</string>
     <string name="ig_dialog_misc_story_info">Hekayə məlumatı, test və səsvermə cavabları</string>
-    <string name="ig_feat_story_info">Hekayə məlumatı</string>
     <string name="ig_si_add_yours">Səninkini əlavə et</string>
     <string name="ig_si_joined">qoşulub</string>
     <string name="ig_si_paid_partnership">Ödənişli əməkdaşlıq (açmaq üçün basıb saxla)</string>

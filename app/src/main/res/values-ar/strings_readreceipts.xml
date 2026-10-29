@@ -5,5 +5,4 @@
     <string name="ig_read_receipt_chat_off">إيقاف إشعارات القراءة في هذه المحادثة</string>
     <string name="ig_toast_read_receipt_on">تم تفعيل إشعارات القراءة لهذه المحادثة</string>
     <string name="ig_toast_read_receipt_off">تم إيقاف إشعارات القراءة لهذه المحادثة</string>
-    <string name="ig_feat_read_receipt_chats">إشعارات قراءة لكل محادثة</string>
 </resources>

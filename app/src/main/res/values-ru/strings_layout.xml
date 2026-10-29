@@ -3,9 +3,7 @@
     <string name="feat_group_social">Общение</string>
     <string name="menu_feed">Лента</string>
     <string name="menu_navigation">Навигация</string>
-    <string name="menu_reels_stories">Reels и истории</string>
     <string name="menu_messages">Сообщения</string>
-    <string name="menu_post_menu">Меню публикации и загрузки</string>
     <string name="menu_likes_comments">Лайки и комментарии</string>
     <string name="menu_profiles">Профили</string>
     <string name="menu_app">Приложение и аккаунт</string>
@@ -15,6 +13,5 @@
     <string name="menu_nav_gestures">Жесты</string>
     <string name="menu_reels">Reels</string>
     <string name="menu_stories">Истории</string>
-    <string name="nav_tab_order_changed">Порядок вкладок изменён</string>
     <string name="menu_quality">Качество</string>
 </resources>

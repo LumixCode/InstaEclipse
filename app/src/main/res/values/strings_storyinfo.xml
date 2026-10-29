@@ -20,14 +20,12 @@
     <string name="ig_si_sound_off">no sound</string>
     <string name="ig_si_countdown">Countdown</string>
     <string name="ig_si_question">Question</string>
-    <string name="ig_si_highlights">In highlights</string>
     <string name="ig_si_mention_request">Mention request</string>
     <string name="ig_si_none">No extra info on this story.</string>
     <string name="ig_si_your_answer">your answer</string>
     <string name="ig_si_average">Average</string>
     <string name="ig_si_copied">Copied</string>
     <string name="ig_dialog_misc_story_info">Show story details and answers</string>
-    <string name="ig_feat_story_info">Story info</string>
     <string name="ig_si_add_yours">Add yours</string>
     <string name="ig_si_joined">joined</string>
     <string name="ig_si_paid_partnership">Paid partnership with (hold to open)</string>

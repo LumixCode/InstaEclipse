@@ -2,7 +2,6 @@
 <resources>
     <string name="tool_backup_sub">Simpan semua pengaturan ke file</string>
     <string name="tool_restore_sub">Muat pengaturan dari file cadangan</string>
-    <string name="tool_restart_sub">Hentikan dan buka ulang Instagram</string>
     <string name="tool_about_sub">Versi, kredit, dan tautan</string>
     <string name="about_tagline">Instagram yang lebih bersih dan privat</string>
     <string name="about_source">Kode sumber</string>

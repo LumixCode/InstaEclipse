@@ -2,7 +2,6 @@
 <resources>
     <string name="tool_backup_sub">Save all settings to a file</string>
     <string name="tool_restore_sub">Load settings from a backup file</string>
-    <string name="tool_restart_sub">Force stop and reopen Instagram</string>
     <string name="tool_about_sub">Version, credits and links</string>
     <string name="about_tagline">A cleaner, more private Instagram</string>
     <string name="about_source">Source code</string>

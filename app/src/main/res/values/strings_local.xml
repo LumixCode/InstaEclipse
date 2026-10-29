@@ -4,7 +4,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <!-- Hide specific chats -->
     <string name="ig_hide_chats_show_button">Show “Hide chat” in the chat menu</string>
-    <string name="ig_hide_chats_show_button_requires">Requires Hide chosen chats</string>
     <string name="ig_hide_chats_unknown">Chat</string>
     <string name="ig_hide_chats_select">Choose chats to hide</string>
     <string name="ig_hide_chats_picker_empty">No chats are loaded yet. Open your inbox once, then return here.</string>
@@ -12,7 +11,6 @@
 
     <!-- Chat header menu -->
     <string name="ig_hide_chat_menu_button">Hide the InstaEclipse chat button</string>
-    <string name="ig_hide_chat_menu_button_hint">Triple-tap the empty space between the chat name and the call buttons to open the menu</string>
 
     <!-- Features whose hook is installed only when they are on at Instagram's start -->
     <string name="ig_restart_to_apply_hint">Turning it on takes effect after restarting Instagram</string>
@@ -64,7 +62,6 @@
     <string name="ig_unsent_detail_shared_by">Shared by @%1$s</string>
 
     <!-- Daily reel limit -->
-    <string name="ig_reel_limit_title">Daily reel limit</string>
     <string name="ig_reel_limit_enable">Limit reels per day</string>
     <string name="ig_reel_limit_allow_dm">Allow DM reels</string>
     <string name="ig_reel_limit_warning">Reels left today: %1$d</string>
@@ -76,20 +73,15 @@
     <string name="ig_reel_usage_count">Watched today: %1$d</string>
     <string name="ig_reel_debug_waiting">Watched today: —</string>
     <string name="ig_reel_limit_invalid">Enter a number from 1 to 10000.</string>
-    <string name="ig_reels_blocked">Reels are disabled in Distraction-Free settings.</string>
-    <string name="ig_reel_limit_reached">Daily reel limit reached. Come back tomorrow.</string>
 
     <!-- Nighttime reel block -->
     <string name="ig_night_reels_enable">Block reels at night</string>
     <string name="ig_night_reels_allow_dm">Allow the reel opened from a DM</string>
     <string name="ig_night_reels_start_label">Start time</string>
     <string name="ig_night_reels_end_label">End time</string>
-    <string name="ig_night_reels_start">Starts at %1$s</string>
-    <string name="ig_night_reels_end">Ends at %1$s</string>
     <string name="ig_night_reels_status_active">Blocked now · until %1$s</string>
     <string name="ig_night_reels_status_inactive">Starts at %1$s</string>
     <string name="ig_night_reels_same_time">Start and end times must be different.</string>
-    <string name="ig_night_reels_blocked">Reels are blocked until %1$s.</string>
 
     <!-- Comment long-press menu: save a comment's GIF or photo -->
     <string name="ig_comment_download_gif">Download GIF</string>

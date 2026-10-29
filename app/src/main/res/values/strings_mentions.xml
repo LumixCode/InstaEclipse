@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="ig_mention_hold_hint">Hold a name to open the profile</string>
     <plurals name="ig_mention_count" tools:ignore="MissingTranslation">
         <item quantity="one">%1$d mention · tap to open, hold to copy</item>
         <item quantity="other">%1$d mentions · tap to open, hold to copy</item>

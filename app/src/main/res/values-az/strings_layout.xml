@@ -3,9 +3,7 @@
     <string name="feat_group_social">Sosial</string>
     <string name="menu_feed">Lent</string>
     <string name="menu_navigation">Naviqasiya</string>
-    <string name="menu_reels_stories">Reels və Hekayələr</string>
     <string name="menu_messages">Mesajlar</string>
-    <string name="menu_post_menu">Paylaşım menyusu və yükləmələr</string>
     <string name="menu_likes_comments">Bəyənmələr və Şərhlər</string>
     <string name="menu_profiles">Profillər</string>
     <string name="menu_app">Tətbiq və Hesab</string>
@@ -15,6 +13,5 @@
     <string name="menu_nav_gestures">Jestlər</string>
     <string name="menu_reels">Reels</string>
     <string name="menu_stories">Hekayələr</string>
-    <string name="nav_tab_order_changed">Tab sırası dəyişdirilib</string>
     <string name="menu_quality">Keyfiyyət</string>
 </resources>

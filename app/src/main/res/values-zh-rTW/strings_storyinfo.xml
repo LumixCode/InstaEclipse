@@ -20,14 +20,12 @@
     <string name="ig_si_sound_off">無聲音</string>
     <string name="ig_si_countdown">倒數計時</string>
     <string name="ig_si_question">問題</string>
-    <string name="ig_si_highlights">在精選動態中</string>
     <string name="ig_si_mention_request">提及請求</string>
     <string name="ig_si_none">此限時動態沒有其他資訊。</string>
     <string name="ig_si_your_answer">你的答案</string>
     <string name="ig_si_average">平均</string>
     <string name="ig_si_copied">已複製</string>
     <string name="ig_dialog_misc_story_info">限時動態資訊、測驗和投票答案</string>
-    <string name="ig_feat_story_info">限時動態資訊</string>
     <string name="ig_si_add_yours">加入你的</string>
     <string name="ig_si_joined">人參與</string>
     <string name="ig_si_paid_partnership">付費合作夥伴（長按開啟）</string>

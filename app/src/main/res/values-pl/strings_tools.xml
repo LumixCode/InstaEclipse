@@ -2,7 +2,6 @@
 <resources>
     <string name="tool_backup_sub">Zapisz wszystkie ustawienia do pliku</string>
     <string name="tool_restore_sub">Wczytaj ustawienia z kopii zapasowej</string>
-    <string name="tool_restart_sub">Zatrzymaj i ponownie otwórz Instagrama</string>
     <string name="tool_about_sub">Wersja, podziękowania i linki</string>
     <string name="about_tagline">Czystszy, bardziej prywatny Instagram</string>
     <string name="about_source">Kod źródłowy</string>

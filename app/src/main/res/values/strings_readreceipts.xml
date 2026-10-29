@@ -5,5 +5,4 @@
     <string name="ig_read_receipt_chat_off">Stop read receipts in this chat</string>
     <string name="ig_toast_read_receipt_on">Read receipts on for this chat</string>
     <string name="ig_toast_read_receipt_off">Read receipts off for this chat</string>
-    <string name="ig_feat_read_receipt_chats">Per-chat read receipts</string>
 </resources>

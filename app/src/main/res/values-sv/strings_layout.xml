@@ -3,9 +3,7 @@
     <string name="feat_group_social">Socialt</string>
     <string name="menu_feed">Flöde</string>
     <string name="menu_navigation">Navigering</string>
-    <string name="menu_reels_stories">Reels och berättelser</string>
     <string name="menu_messages">Meddelanden</string>
-    <string name="menu_post_menu">Inläggsmeny och uppladdningar</string>
     <string name="menu_likes_comments">Gillningar och kommentarer</string>
     <string name="menu_profiles">Profiler</string>
     <string name="menu_app">App och konto</string>
@@ -15,6 +13,5 @@
     <string name="menu_nav_gestures">Gester</string>
     <string name="menu_reels">Reels</string>
     <string name="menu_stories">Stories</string>
-    <string name="nav_tab_order_changed">Flikordningen ändrad</string>
     <string name="menu_quality">Kvalitet</string>
 </resources>

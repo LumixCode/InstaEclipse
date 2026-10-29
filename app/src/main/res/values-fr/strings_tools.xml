@@ -2,7 +2,6 @@
 <resources>
     <string name="tool_backup_sub">Enregistrer tous les réglages dans un fichier</string>
     <string name="tool_restore_sub">Charger les réglages depuis une sauvegarde</string>
-    <string name="tool_restart_sub">Forcer l\'arrêt et rouvrir Instagram</string>
     <string name="tool_about_sub">Version, crédits et liens</string>
     <string name="about_tagline">Un Instagram plus épuré et plus privé</string>
     <string name="about_source">Code source</string>

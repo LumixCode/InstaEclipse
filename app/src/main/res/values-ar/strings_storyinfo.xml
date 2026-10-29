@@ -20,14 +20,12 @@
     <string name="ig_si_sound_off">بدون صوت</string>
     <string name="ig_si_countdown">العد التنازلي</string>
     <string name="ig_si_question">السؤال</string>
-    <string name="ig_si_highlights">في القصص المميزة</string>
     <string name="ig_si_mention_request">طلب إشارة</string>
     <string name="ig_si_none">لا توجد معلومات إضافية لهذه القصة.</string>
     <string name="ig_si_your_answer">إجابتك</string>
     <string name="ig_si_average">المتوسط</string>
     <string name="ig_si_copied">تم النسخ</string>
     <string name="ig_dialog_misc_story_info">معلومات القصة وإجابات الاختبارات والتصويت</string>
-    <string name="ig_feat_story_info">معلومات القصة</string>
     <string name="ig_si_add_yours">أضف ما لديك</string>
     <string name="ig_si_joined">شاركوا</string>
     <string name="ig_si_paid_partnership">شراكة مدفوعة مع (اضغط مطولاً للفتح)</string>

@@ -7,139 +7,54 @@
     <string name="help">Помощь</string>
 
     <!-- home -->
-    <string name="instagram_version">Версия</string>
-    <string name="module_disabled">Модуль не включен. Пожалуйста включите его.</string>
-
-    <string name="module_status">Статус модуля:</string>
-
-    <string name="module_status_disabled">Статус модуля: Выключен</string>
-    <string name="request_enable_module">Пожалуйста включите модуль в Xposed Installer.</string>
-
-    <string name="module_status_enabled_no_root">Статус модуля: Включен (Без рут доступа)</string>
-    <string name="request_enable_root">Рут доступ требуется для авто-перезагрузки. Требуется ручная перезагрузка.</string>
-
-    <string name="module_status_enabled">Статус модуля: Включен</string>
-    <string name="module_active">Модуль включен и работает.</string>
 
     <string name="checking_instagram">Проверка Instagram</string>
     <string name="installed_instagram_version">Instagram установлен - Версия: </string>
     <string name="not_installed_instagram">Instagram не установлен.</string>
-    <string name="error_instagram">Ошибка проверки статуса Instagram.</string>
 
     <string name="launch_instagram">Запустить Instagram</string>
     <string name="download_apk">Скачать APK</string>
     <string name="how_to_use">Как использовать</string>
-    <string name="module_not_working_title">Модуль всё ещё не работает?</string>
 
-    <string name="usage_instructions">Удерживайте значок поиска</string>
     <string name="contributors">Участники</string>
     <string name="special_thanks">Большое Cпасибо</string>
 
     <!-- Don't translate! -->
 
     <!-- help -->
-    <string name="help_amp_troubleshooting">Помощь &amp; Поддержка</string>
-    <string name="find_updates_and_documentation">Найти обновления и документацию.</string>
     <string name="go_to_github">Перейти в GitHub</string>
-    <string name="find_support">Найти поддержку.</string>
     <string name="go_to_telegram">Перейти в Telegram</string>
 
     <!-- Don't translate! -->
-    <string name="github">GitHub</string>
     <string name="telegram">Telegram</string>
 
     <!-- faq -->
     <string name="frequently_asked_questions">Часто задаваемые вопросы (FAQ)</string>
     <string name="faq_1">1. Не работает/вылетает с версией из Google Play?\n- Используйте APK файлы с APKMirror</string>
-    <string name="faq_2">2. Модуль не включен?\n- Выключите and сново включите модуль в Vector.</string>
     <string name="faq_3">3. Функции не работают?\n- Остановите и перезапустите Instagram.</string>
-    <string name="faq_4">4. Режим Разработчика вызывает вылеты?\n- Следуйте инструкции для Режима Разработчика.</string>
-    <string name="faq_5">5. Режим Разработчика имеет странные название или цифры?\n- Используйте Alpha и Beta версии, так как обычные версии имеют искажение.</string>
     <string name="faq_6">6. Режим Без Отвлечений включен, но контент все еще присуствует?\n- Остановите Instagram и очистите кэш.</string>
-
-    <!-- features -->
-    <string name="developer_options">Режим Разработчика</string>
-    <string name="ghost_mode">Режим Призрака</string>
-    <string name="distraction_free">Режим Без Отвлечений</string>
-    <string name="remove_ads">Убрать рекламу</string>
-    <string name="remove_analytics">Убрать аналитику</string>
-
-    <string name="enable_disable_all">Включить/Выключить все</string>
 
     <!-- Don't translate! -->
 
     <!-- ghost -->
-    <string name="ghost_mode_options">Настройки Режима Призрака</string>
-    <string name="typing">Печатание</string>
     <string name="story">История</string>
-    <string name="view_once">Просмотреть один раз</string>
     <string name="live">Прямой эфир</string>
-    <string name="direct_messages">Личные сообщения</string>
-    <string name="disable_typing">Не отправлять "печатает"</string>
-
-    <!-- developer_options -->
-    <string name="screen_shot">Скриншот</string>
-    <string name="developer_options_guide">Инструкция для Режима Разработчика</string>
-    <string name="dev_options_version_req">Используйте только с Alpha/Beta версиями!</string>
-    <string name="dev_options_req">Убидитесь, что вы вошли в аккаунт!</string>
-
-    <string name="dev_options_1">1. Откройте Instagram и удерживайте кнопку с Домиком.</string>
-    <string name="dev_options_2">2. Перейдите в Developer Options > MetaConfig Settings &amp; Overrides.</string>
-    <string name="dev_options_3">3. Найдите \'Employee\' и включите следующие опции:</string>
-    <string name="dev_options_4">4. И наконец, выключите Режим Разработчика в модуле, чтобы Instagram не вылетал.</string>
-
-    <!-- Don't translate! -->
-
-    <!-- distraction free -->
-    <string name="distraction_free_options">Настройки Режима Без Отвлечений</string>
-    <string name="disable_stories">Выключить Истории</string>
-    <string name="disable_feed">Выключить Ленту</string>
-    <string name="disable_reels">Выключить Reels</string>
-    <string name="disable_explore">Выключить Explore</string>
-    <string name="disable_comments">Выключить Комментарии</string>
-
-    <!-- Miscellaneous -->
-    <string name="misc">Разное</string>
-    <string name="miscellaneous_options">Дополнительные параметры</string>
-    <string name="story_flipping">Отключить пролистывание историй</string>
-    <string name="video_autoplay">Отключить автоматическое воспроизведение видео</string>
-
-    <!-- contributor card -->
-    <string name="hooked_methods_toast">Активированные функции</string>
-    <string name="contributor_name">Имя участника</string>
-
-    <!-- Toast -->
-    <string name="follower_toast">Статус подписки</string>
 
     <!-- Dialog strings -->
     <string name="ig_dialog_close">Закрыть</string>
-    <string name="ig_dialog_enable_disable_all">Включить/Отключить всё</string>
     <string name="ig_dialog_error">Ошибка</string>
     <string name="ig_dialog_ok">ОК</string>
     <string name="ig_dialog_yes">Да</string>
     <string name="ig_dialog_cancel">Отмена</string>
     <string name="ig_dialog_menu_dev_options">Параметры разработчика</string>
-    <string name="ig_dialog_menu_ghost_settings">Настройки режима призрака</string>
-    <string name="ig_dialog_menu_ad_analytics">Блокировка рекламы/аналитики</string>
     <string name="ig_dialog_menu_clean_feed">Чистая лента</string>
     <string name="ig_dialog_menu_distraction_free">Instagram без отвлечений</string>
-    <string name="ig_dialog_menu_misc">Прочие функции</string>
     <string name="ig_dialog_menu_downloader">Загрузчик</string>
     <string name="ig_dialog_menu_backup_restore">Резервное копирование</string>
     <string name="ig_dialog_menu_about">О приложении</string>
     <string name="ig_dialog_menu_restart">Перезапустить приложение</string>
-    <string name="ig_dialog_section_dev_options">Параметры разработчика</string>
     <string name="ig_dialog_section_ghost_mode">Режим призрака</string>
-    <string name="ig_dialog_section_ad_analytics">Блокировка рекламы/аналитики</string>
-    <string name="ig_dialog_section_clean_feed">Чистая лента</string>
-    <string name="ig_dialog_section_distraction_free">Instagram без отвлечений</string>
-    <string name="ig_dialog_section_misc">Прочее</string>
-    <string name="ig_dialog_section_downloader">Загрузчик</string>
-    <string name="ig_dialog_section_downloader_settings">Настройки загрузчика</string>
-    <string name="ig_dialog_section_backup_restore">Резервное копирование</string>
     <string name="ig_dialog_section_about">О приложении</string>
-    <string name="ig_dialog_section_restart">Перезапустить приложение</string>
-    <string name="ig_dialog_section_quick_toggle">Настроить быстрое переключение</string>
     <string name="ig_dialog_dev_enable">Включить режим разработчика</string>
     <string name="ig_dialog_dev_import">Импорт конфигурации разработчика</string>
     <string name="ig_dialog_dev_export">Экспорт конфигурации разработчика</string>
@@ -160,11 +75,9 @@
 
     <!-- JsonImportActivity -->
     <string name="json_select_config">Выбрать JSON-конфигурацию</string>
-    <string name="json_target_not_specified">❌ Целевой пакет не указан.</string>
     <string name="json_sent">✅ Отправлено в Instagram.</string>
     <string name="json_not_valid">❌ Неверный формат JSON.</string>
     <string name="json_read_failed">❌ Не удалось прочитать файл: %1$s</string>
-    <string name="json_cancelled">Отменено или файл не выбран.</string>
     <string name="ig_dialog_ghost_hide_dm_seen">Скрыть прочтение в личных сообщениях</string>
     <string name="ig_dialog_ghost_hide_typing">Скрыть индикатор набора текста</string>
     <string name="ig_dialog_ghost_hide_story_views">Скрыть просмотры историй</string>
@@ -196,10 +109,8 @@
     <string name="ig_dialog_bulk_unsend">Отмена отправки нескольких сообщений</string>
     <string name="ig_bulk_unsend_row">Отменить несколько</string>
     <string name="ig_bulk_unsend_go">Отменить отправку</string>
-    <string name="ig_bulk_unsend_done">Отменено сообщений: %1$d</string>
     <string name="ig_bulk_unsend_unavailable">Массовая отмена недоступна в этой версии Instagram</string>
     <string name="ig_downloader_folder_hint">Папку можно выбрать в приложении InstaEclipse</string>
-    <string name="lock_code_set_in_ig">Задаётся внутри Instagram: меню InstaEclipse &gt; Блокировка. Нажмите, чтобы открыть Instagram.</string>
     <string name="theme_set_light">Темы для светлого режима</string>
     <string name="theme_set_dark">Темы для тёмного режима</string>
     <string name="theme_light_same">Та же тема, что и в тёмном режиме</string>
@@ -212,7 +123,6 @@
     <string name="ig_dialog_distraction_disable_explore">Отключить поиск</string>
     <string name="ig_dialog_distraction_disable_comments">Отключить комментарии</string>
     <string name="ig_dialog_distraction_extreme_title">Активировать экстремальный режим?</string>
-    <string name="ig_dialog_distraction_extreme_message">После активации вы не сможете отключить режим без отвлечений до переустановки приложения. Продолжить?</string>
     <string name="ig_dialog_misc_disable_story_autoswipe">Отключить автопролистывание историй</string>
     <string name="ig_dialog_misc_disable_video_autoplay">Отключить автовоспроизведение видео</string>
     <string name="ig_dialog_misc_disable_repost">Отключить репост</string>
@@ -298,8 +208,6 @@
     <string name="ig_confirm_like_title">Поставить лайк этой публикации?</string>
     <string name="ig_confirm_like_message">Вы нажали «нравится». Отправить?</string>
     <string name="ig_confirm_like_yes">Нравится</string>
-    <string name="ig_confirm_follow_title">Подписаться?</string>
-    <string name="ig_confirm_follow_message">Подписаться на @%1$s?</string>
     <string name="ig_confirm_follow_message_any">Подписаться на этот аккаунт?</string>
     <string name="ig_confirm_follow_yes">Подписаться</string>
     <string name="ig_profile_analyzer">Анализ профиля: следить за подписчиками и подписками</string>
@@ -387,12 +295,7 @@
 
     <!-- Comment Copy dialog -->
     <string name="ig_comment_copy_title">Копировать комментарий</string>
-    <string name="ig_comment_copy_full">Копировать весь комментарий</string>
-    <string name="ig_comment_select_part">Выбрать часть для копирования</string>
-    <string name="ig_comment_select_title">Выбрать для копирования</string>
-    <string name="ig_comment_copy_selected">Копировать выбранное</string>
     <string name="ig_toast_comment_copied">✅ Скопировано в буфер обмена!</string>
-    <string name="ig_dialog_downloader_settings">Настройки загрузчика</string>
     <string name="ig_dialog_downloader_posts">Загружать публикации</string>
     <string name="ig_dialog_downloader_stories">Загружать истории</string>
     <string name="ig_dialog_downloader_reels">Загружать Reels</string>
@@ -404,36 +307,17 @@
     <string name="ig_dialog_backup_settings">Резервное копирование настроек</string>
     <string name="ig_dialog_restore_settings">Восстановить настройки</string>
     <string name="ig_dialog_backup_failed">Не удалось создать резервную копию: %1$s</string>
-    <string name="ig_dialog_about_github">GitHub</string>
-    <string name="ig_dialog_about_telegram">Telegram</string>
-    <string name="ig_dialog_restart_message">⚠️ Очистить кэш приложения и перезапустить?</string>
     <string name="ig_dialog_clear_cache">Очистить кэш хуков</string>
-    <string name="ig_dialog_section_clear_cache">Очистить кэш хуков</string>
-    <string name="ig_dialog_clear_cache_message">⚠️ InstaEclipse повторно просканирует Instagram при следующем запуске. Приложение перезапустится.</string>
-    <string name="ig_dialog_clear_cache_now">Очистить кэш и перезапустить</string>
     <string name="ig_dialog_restart_now">Перезапустить сейчас</string>
     <string name="ig_dialog_restart_not_found">Не удалось найти приложение для перезапуска.</string>
     <string name="ig_dialog_restart_failed">Перезапуск не удался: %1$s</string>
 
-    <!-- Toast: Ghost mode -->
-    <string name="ig_toast_ghost_no_options">Опции режима призрака не выбраны!</string>
-    <string name="ig_toast_ghost_enabled">Режим призрака включён</string>
-    <string name="ig_toast_ghost_disabled">Режим призрака отключён</string>
-    <string name="ig_toast_seen_sent">✅ Прочтено отправлено</string>
-    <string name="ig_toast_channel_seen_sent">✅ Прочтено в канале отправлено</string>
-
-    <!-- Toast: Follower status -->
-    <string name="ig_toast_follows_you">подписан на вас ✅</string>
-    <string name="ig_toast_not_follows_you">не подписан на вас ❌</string>
-
     <!-- Toast: App settings -->
-    <string name="ig_toast_settings_applied">Настройки применены!</string>
     <string name="ig_toast_restart_manual">Пожалуйста, закройте Instagram вручную для применения изменений.</string>
     <string name="ig_toast_settings_restored">Настройки успешно восстановлены.</string>
     <string name="ig_toast_restore_failed">Ошибка восстановления: %1$s</string>
 
     <!-- Toast: Download folder -->
-    <string name="ig_toast_download_folder_set">Папка загрузок: %1$s</string>
     <string name="ig_toast_download_folder_updated">Папка загрузок обновлена!</string>
     <string name="ig_toast_download_folder_reset">Папка загрузок сброшена до стандартной</string>
 
@@ -441,34 +325,15 @@
     <string name="ig_toast_downloading">Загрузка…</string>
     <string name="ig_toast_downloading_video">Загрузка видео…</string>
     <string name="ig_toast_downloading_photo">Загрузка фото…</string>
-    <string name="ig_toast_video_saved">Видео сохранено в папку InstaEclipse</string>
-    <string name="ig_toast_photo_saved">Фото сохранено в папку InstaEclipse</string>
-    <string name="ig_toast_saved">Сохранено в папку InstaEclipse</string>
     <string name="ig_toast_download_failed">Ошибка загрузки: %1$s</string>
-    <string name="ig_toast_downloading_reel">Загрузка рила…</string>
-    <string name="ig_toast_reel_saved">Рил сохранён в папку InstaEclipse</string>
-    <string name="ig_toast_reel_failed">Ошибка загрузки рила: %1$s</string>
-    <string name="ig_toast_reel_url_not_found">URL рила не найден</string>
-    <string name="ig_toast_post_url_not_found">URL публикации не найден</string>
     <string name="ig_toast_no_media_for_post">Медиафайлы для этой публикации не найдены</string>
-    <string name="ig_toast_no_media">Медиафайлы не найдены</string>
-    <string name="ig_toast_downloading_story_video">Загрузка видео истории…</string>
-    <string name="ig_toast_downloading_story_photo">Загрузка фото истории…</string>
-    <string name="ig_toast_story_saved">История сохранена в папку InstaEclipse</string>
-    <string name="ig_toast_story_url_not_found">URL истории не найден</string>
     <string name="ig_toast_downloading_profile_pic">Загрузка фото профиля…</string>
     <string name="ig_toast_profile_pic_saved">Фото профиля сохранено!</string>
     <string name="ig_toast_profile_pic_url_not_found">Не удалось получить URL фото профиля</string>
     <string name="ig_toast_merging_video_audio">Объединение видео и аудио…</string>
-    <string name="ig_toast_downloading_n_items">Загрузка %1$d элементов…</string>
     <string name="ig_toast_downloading_all_n_items">Загрузка всех %1$d элементов…</string>
-    <string name="ig_toast_all_items_saved">Все %1$d элементов сохранены в папку InstaEclipse</string>
-    <string name="ig_toast_items_partial_saved">%1$d из %2$d элементов сохранено (%3$d не удалось)</string>
-    <string name="ig_toast_no_reel_url_scroll">URL рила не найден — сначала прокрутите рил</string>
     <string name="ig_dl_title">Скачать</string>
     <string name="ig_story_mark_seen">Отметить как просмотренное</string>
-    <string name="ig_story_marked_seen">Отмечено как просмотренное</string>
-    <string name="ig_story_mark_seen_none">Для этой истории пока нечего отправлять — сначала дайте ей проиграться</string>
     <string name="ig_dl_carousel_subtitle">Карусель • %1$d элементов</string>
     <string name="ig_dl_carousel_current">Скачать текущее (%1$d из %2$d)</string>
     <string name="ig_dl_carousel_all">Скачать все %1$d элементов</string>
@@ -477,19 +342,11 @@
     <string name="ig_toast_all_mentions_copied">Все упоминания скопированы</string>
 
     <string name="back">Назад</string>
-    <string name="apply_changes">Применить изменения</string>
 
     <!-- features fragment section headers -->
-    <string name="feat_categories">Категории:</string>
-    <string name="feat_tools">Инструменты:</string>
-    <string name="feat_features">Функции:</string>
     <string name="feat_config">Конфигурация</string>
-    <string name="feat_options">Параметры:</string>
     <string name="feat_quick_toggle">Быстрое переключение</string>
     <string name="feat_danger_zone">Опасная зона</string>
-    <string name="feat_download_folder">Папка загрузки:</string>
-    <string name="feat_downloader_set_folder">Выбрать папку загрузки</string>
-    <string name="feat_downloader_selected">Выбрана: %1$s</string>
     <string name="feat_downloader_reset_folder">Сбросить папку загрузки</string>
 
     <!-- multiple versions -->
@@ -497,7 +354,6 @@
 
     <!-- Story mentions dialog -->
     <string name="ig_mention_dialog_title">Упоминания в истории</string>
-    <string name="ig_mention_subtitle">%1$d упомин. • нажмите для копирования</string>
     <string name="ig_mention_no_mentions">В этой истории не найдено упоминаний</string>
     <string name="ig_mention_copy_all">Копировать все</string>
 
@@ -511,7 +367,6 @@
     <string name="ig_update_message">Доступна новая версия (%1$s). Обновить сейчас?</string>
     <string name="ig_update_button">Обновить</string>
     <string name="ig_update_later">Позже</string>
-    <string name="ig_update_error_message">Не удалось проверить обновления. Повторите попытку позже.</string>
     <!-- Custom Theme -->
     <string name="ig_dialog_menu_theme">Своя Тема</string>
     <string name="theme_title">Своя Тема</string>
@@ -522,7 +377,6 @@
     <string name="theme_collapse_section">Свернуть раздел</string>
     <string name="theme_expand_section">Развернуть раздел</string>
     <string name="theme_reset_custom">Сбросить по Умолчанию</string>
-    <string name="theme_saved">Тема сохранена</string>
     <string name="theme_pick_color">Выберите цвет</string>
     <string name="theme_apply_color">Применить</string>
     <string name="theme_rgba_format">R %1$d  G %2$d  B %3$d  A %4$d</string>
@@ -547,22 +401,8 @@
     <string name="feat_group_privacy">Конфиденциальность</string>
     <string name="feat_group_media">Медиа</string>
     <string name="feat_group_tools">Инструменты</string>
-    <string name="ig_dialog_subtitle">Нажмите на раздел для настройки</string>
     <string name="ig_dialog_menu_location">Местоположение</string>
-    <string name="ig_dialog_menu_quality">Качество видео</string>
     <string name="logging">Логи</string>
-    <string name="logging_clear">Очистить</string>
-    <string name="logging_copy">Копировать</string>
-    <string name="logging_copied">Скопировано в буфер обмена</string>
-    <string name="logging_companion">InstaEclipse</string>
-    <string name="logging_instagram">Instagram</string>
-    <string name="logging_instagram_timeout">Instagram не ответил вовремя. Показаны только логи InstaEclipse.</string>
-    <string name="logging_no_target">Сначала установите поддерживаемое приложение Instagram.</string>
-    <string name="logging_empty_reply">(буфер пуст — откройте Instagram с включённым модулем)</string>
-    <string name="logging_placeholder">Логи ещё не загружены.</string>
-    <string name="logging_lines_format">%1$d строк</string>
-    <string name="ig_dialog_section_location">Местоположение</string>
-    <string name="ig_dialog_section_quality">Качество видео</string>
     <string name="ig_dialog_quality_force_reels">Принудительное качество Reels</string>
     <string name="ig_dialog_quality_auto">Авто</string>
     <string name="ig_dialog_quality_360">360p</string>
@@ -573,22 +413,14 @@
     <string name="theme_section_fonts">Шрифты &amp; Эмодзи</string>
     <string name="ig_dialog_quality_max">Максимально доступное</string>
     <string name="ig_dialog_max_upload_quality">Всегда загружать в наилучшем качестве</string>
-    <string name="ig_feat_max_upload_quality">Макс. качество загрузки</string>
     <string name="ig_dialog_location_spoof_enable">Подменять GPS-местоположение</string>
     <string name="ig_dialog_location_pick">Выбрать место на карте</string>
     <string name="ig_dialog_location_unset">Место не задано</string>
-    <string name="ig_dialog_location_current">Текущее: %1$.4f, %2$.4f</string>
-    <string name="loc_picker_title">Выбор места</string>
     <string name="loc_picker_search_hint">Поиск города, адреса или места</string>
     <string name="loc_picker_use">Использовать это место</string>
     <string name="loc_picker_search_failed">Место не найдено</string>
-    <string name="loc_picker_search_error">Ошибка поиска: %1$s</string>
-    <string name="ig_dialog_ghost_keep_unsent">Записывать отменённые сообщения</string>
     <string name="ig_dialog_ghost_jump_first">Кнопка перехода к первому сообщению в чатах</string>
     <string name="ig_jump_first_message">К первому сообщению</string>
-    <string name="ig_jump_first_loading">Загрузка старых сообщений… нажмите ещё раз, чтобы остановить</string>
-    <string name="ig_jump_first_done">Достигнуто первое сообщение</string>
-    <string name="ig_jump_first_stopped">Остановлено</string>
     <string name="ig_dialog_ghost_edit_history">Сохранять историю правок сообщений</string>
     <string name="ig_edit_history_title">История правок</string>
     <string name="ig_edit_history_original">Оригинал</string>
@@ -599,22 +431,14 @@
     <string name="ig_edit_history_missing">Предыдущих версий не сохранено на этом телефоне: %1$d.</string>
     <string name="ig_edit_history_none">На этом телефоне не сохранено ни одной предыдущей версии этого сообщения</string>
     <string name="ig_dialog_unsent_title">Неотправленные сообщения</string>
-    <string name="ig_dialog_unsent_clear">Очистить журнал этого чата</string>
     <string name="ig_dialog_unsent_export">Экспорт в JSON</string>
     <string name="ig_dialog_unsent_exported">Сохранено в %1$s</string>
     <string name="ig_dialog_auto_clear_cache">Автоочистка кэша при переполнении</string>
-    <string name="ig_dialog_auto_clear_cache_size">Очищать свыше: %1$d MB (нажмите, чтобы изменить)</string>
     <string name="ig_dialog_section_auto_clear_cache">Автоочистка кэша</string>
-    <string name="ig_dialog_auto_clear_cache_desc">Очищает медиакэш Instagram при выходе из приложения, если он превышает выбранный размер. Удаляется только кэш (Instagram создаёт его заново) — ваши данные, входы и загрузки не затрагиваются.</string>
     <string name="ig_dialog_misc_remove_meta_ai">Убрать Meta AI</string>
     <string name="ig_dialog_misc_lock_dms">Блокировать личные сообщения</string>
     <string name="ig_dialog_misc_lock_dms_set">Задать / изменить код</string>
-    <string name="ig_dialog_misc_lock_dms_hint">Введите цифровой код</string>
     <string name="ig_dialog_misc_lock_dms_saved">Код сохранён</string>
-    <string name="ig_dialog_misc_lock_dms_cleared">Код удалён</string>
-    <string name="ig_dialog_misc_lock_dms_current">Введите текущий код</string>
-    <string name="ig_dialog_misc_lock_dms_wrong">Неверный текущий код</string>
-    <string name="ig_dialog_misc_lock_dms_disable">Введите код, чтобы отключить блокировку</string>
     <string name="ig_dialog_misc_lock_dms_always">Блокировать заново при каждом выходе</string>
     <string name="ig_dialog_misc_lock_whole_app">Блокировать всё приложение</string>
     <string name="ig_dialog_misc_lock_section">Блокировка</string>
@@ -623,9 +447,7 @@
     <string name="ig_translate_text">Перевести</string>
     <string name="ig_dialog_downloader_offer_audio">Предлагать загрузку только аудио для видео</string>
     <string name="ig_download_choice_title">Скачать</string>
-    <string name="ig_download_choice_video">Видео</string>
     <string name="ig_download_choice_audio">Только аудио (.m4a)</string>
-    <string name="ig_download_choice_save">Сохранить на устройство</string>
     <string name="ig_download_choice_copy_image">Копировать изображение</string>
     <string name="ig_dialog_downloader_offer_copy_image">Добавить «Копировать изображение» в меню публикации</string>
     <string name="ig_toast_copy_image_video">Этот слайд — видео, копировать нечего</string>
@@ -634,38 +456,23 @@
     <string name="ig_toast_downloading_audio">Загрузка аудио…</string>
     <string name="ig_toast_audio_saved">Аудио сохранено</string>
     <string name="ig_dialog_misc_hide_chats">Скрыть определённые чаты</string>
-    <string name="ig_hide_chats_manage">Управление скрытыми чатами</string>
-    <string name="ig_hide_chats_empty">Скрытых чатов нет. Откройте чат и нажмите значок перечёркнутого глаза, чтобы скрыть его.</string>
-    <string name="ig_hide_chats_unhide">Показать</string>
-    <string name="ig_hide_chats_hint">Чтобы скрыть чат, откройте его и нажмите значок перечёркнутого глаза в заголовке беседы.</string>
-    <string name="ig_lock_passcode_hint">Задайте код-пароль прямо в Instagram (откройте меню InstaEclipse → Блокировка).</string>
-    <string name="ig_theme_font_hint">Выберите файлы шрифта &amp; эмодзи прямо в Instagram (меню InstaEclipse → Своя Тема).</string>
     <string name="ig_hide_chat_hidden">Чат скрыт — он исчезнет из вашего списка</string>
     <string name="ig_hide_chat_unhidden">Чат снова показан</string>
     <string name="ig_hide_chat_no_thread">Не удалось определить этот чат</string>
-    <string name="ig_story_cache_title">Кэшировать истории (24 ч)</string>
-    <string name="ig_dialog_misc_cache_stories">Кэшировать истории на 24 ч</string>
     <string name="ig_story_cache_view">Просмотр кэшированных историй</string>
-    <string name="ig_story_cache_empty">Кэшированных историй пока нет. Включите это, затем просмотрите несколько историй — они будут храниться здесь 24 часа.</string>
     <string name="ig_story_cache_clear">Очистить кэшированные истории</string>
-    <string name="ig_story_cache_count">%1$d кэшированных историй</string>
     <string name="ig_story_cache_saving">Сохранение кэшированной истории…</string>
     <string name="ig_story_cache_saved">Кэшированная история сохранена</string>
     <string name="ig_story_cache_save_fail">Не удалось сохранить кэшированную историю</string>
-    <string name="ig_custom_font_title">Свой шрифт</string>
     <string name="ig_dialog_misc_custom_font">Свой шрифт</string>
     <string name="ig_custom_font_pick">Выбрать файл шрифта (.ttf / .otf)</string>
-    <string name="ig_custom_emoji_title">Свои эмодзи</string>
     <string name="ig_dialog_misc_custom_emoji">Свои эмодзи</string>
     <string name="ig_custom_emoji_pick">Выбрать шрифт эмодзи (.ttf / .otf)</string>
-    <string name="ig_dialog_unsent_clear_confirm">Удалить сохранённые неотправленные сообщения этого чата? Это действие необратимо.</string>
     <string name="ig_dialog_unsent_clear_yes">Очистить</string>
-    <string name="ig_dialog_unsent_cleared">Журнал неотправленных очищен</string>
     <string name="ig_dialog_unsent_empty">Неотправленные сообщения ещё не записаны</string>
     <string name="ig_dialog_unsent_unknown_chat">Неизвестный чат</string>
     <string name="ig_dialog_clean_feed_hide_threads">Скрыть рекомендации Threads</string>
     <string name="ig_dialog_clean_feed_hide_liked">Скрывать публикации, которые вам уже понравились</string>
-    <string name="ig_nav_settings_title">Настройки навигации</string>
     <string name="ig_nav_name_home">Главная</string>
     <string name="ig_nav_name_reels">Reels</string>
     <string name="ig_nav_name_create">Создать</string>
@@ -673,46 +480,29 @@
     <string name="ig_nav_name_activity">Активность</string>
     <string name="ig_nav_name_profile">Профиль</string>
     <string name="ig_nav_name_search">Поиск</string>
-    <string name="ig_nav_tabs_title">Скрыть вкладки навигации</string>
     <string name="ig_nav_tab_home">Скрыть вкладку «Главная»</string>
     <string name="ig_nav_tab_reels">Скрыть вкладку Reels</string>
     <string name="ig_nav_tab_create">Скрыть вкладку «Создать»</string>
     <string name="ig_nav_tab_messages">Скрыть вкладку «Сообщения»</string>
     <string name="ig_nav_tab_activity">Скрыть вкладку «Активность»</string>
     <string name="ig_nav_tab_profile">Скрыть вкладку «Профиль»</string>
-    <string name="ig_dialog_misc_spoof_last_seen">Подменять «был(а) в сети» (заморозить)</string>
     <string name="ig_dialog_misc_copy_caption">Копировать подпись</string>
     <string name="ig_dialog_misc_photo_zoom">Увеличение фото (долгое нажатие)</string>
-    <string name="ig_caption_copy_menu_item">Копировать подпись</string>
-    <string name="ig_caption_translate_menu_item">Перевести подпись</string>
-    <string name="ig_caption_translate_full">Подпись целиком</string>
-    <string name="ig_caption_translate_no_hashtags">Без хештегов</string>
-    <string name="ig_caption_copy_title">Копировать подпись</string>
-    <string name="ig_caption_copy_full">Копировать всю подпись</string>
-    <string name="ig_caption_copy_none">У этого поста нет подписи</string>
     <string name="ig_caption_copied">✅ Подпись скопирована в буфер обмена!</string>
     <string name="ig_dialog_downloader_copy_link">Копировать ссылку на медиа</string>
-    <string name="ig_copy_link_title">Копировать ссылку на медиа</string>
     <string name="ig_copy_link_copied">Ссылка на медиа скопирована в буфер обмена</string>
     <string name="ig_copy_link_none">Ссылка на медиа для этого поста не найдена</string>
     <string name="ig_copy_link_slide">Слайд %1$d из %2$d</string>
     <string name="ig_copy_link_all">Копировать все ссылки (%1$d)</string>
     <string name="ig_copy_link_copied_all">Скопировано ссылок на медиа: %1$d</string>
-    <string name="ig_instant_save_title">Сохранять Instants</string>
     <string name="ig_dialog_misc_save_instants">Сохранять Instants (долгое нажатие для сохранения)</string>
-    <string name="ig_instant_saving">Сохранение Instant…</string>
-    <string name="ig_instant_saved">Instant сохранён</string>
     <string name="ig_instant_save_none">Медиа Instant не найдено</string>
-    <string name="ig_instant_upload_title">Загрузить Instant из галереи</string>
     <string name="ig_dialog_misc_upload_instants">Загрузить Instant из галереи</string>
     <string name="ig_instant_upload_chip">🖼 Галерея</string>
     <string name="ig_instant_upload_chip_ready">✓ Готово — нажмите затвор</string>
     <string name="ig_instant_upload_ready">Выбрано! Нажмите затвор, чтобы отправить как Instant</string>
     <string name="ig_instant_upload_fail">Не удалось загрузить это изображение</string>
-    <string name="ig_story_download_choice_title">Скачать историю</string>
-    <string name="ig_story_download_choice_subtitle">Выберите формат для сохранения</string>
     <string name="ig_story_download_photo">Скачать фото</string>
-    <string name="ig_story_download_video_music">Скачать видео с музыкой</string>
     <string name="ig_story_cache_clear_confirm">Удалить все кэшированные истории? Это действие нельзя отменить.</string>
     <string name="ig_story_cache_cleared">Кэшированные истории удалены</string>
     <string name="ig_dialog_ghost_chat_export">Кнопка экспорта чата в чатах</string>
@@ -726,10 +516,8 @@
     <string name="ig_locked_coll_unlock">Разблокировать эту коллекцию</string>
     <string name="ig_locked_coll_locked">Коллекция заблокирована: она запросит ваш код-пароль</string>
     <string name="ig_locked_coll_unlocked">Коллекция разблокирована</string>
-    <string name="ig_locked_coll_need_passcode">Сначала задайте код-пароль: настройки InstaEclipse в Instagram, Блокировка</string>
     <string name="ig_saved_on_profile">Кнопка «Сохранённое» в вашем профиле (перезапустите Instagram)</string>
     <string name="ig_saved_on_profile_button">Сохранённое</string>
-    <string name="ig_nav_tab_search">Поиск</string>
     <string name="ig_nav_tab_order">Порядок вкладок</string>
     <string name="ig_nav_tab_order_hint">Используйте стрелки, чтобы изменить порядок нижней панели. Скрытые вкладки сохраняют своё место. Изменения вступят в силу после возврата в Instagram.</string>
     <string name="ig_nav_tab_order_reset">Сбросить</string>
@@ -737,32 +525,20 @@
     <string name="share_dl_no_link">Ссылка на публикацию или Reel в Instagram не найдена</string>
     <string name="share_dl_no_instagram">Instagram не установлен</string>
     <string name="ig_share_dl_loading">InstaEclipse: загрузка публикации для скачивания…</string>
-    <string name="ig_share_dl_saving">InstaEclipse: сохранение %1$d файл(ов)…</string>
     <string name="ig_share_dl_not_found">InstaEclipse: не удалось загрузить эту публикацию</string>
     <string name="ig_thread_menu">Действия с чатом InstaEclipse</string>
     <string name="ig_unsent_messages">Неотправленные сообщения</string>
-    <string name="ig_hide_chat_toggle">Скрыть / показать чат</string>
     <string name="ig_chat_export_working">Экспорт загруженных сообщений…</string>
     <string name="ig_chat_export_done">Экспортировано %1$d сообщений в %2$s</string>
     <string name="ig_chat_export_load_all">Сначала загрузите весь чат (переход к первому сообщению)</string>
     <string name="ig_chat_export_media">Скачивать медиа в папку экспорта</string>
-    <string name="ig_chat_export_media_progress">Загрузка медиа %1$d/%2$d…</string>
     <string name="ig_chat_export_done_media">Экспортировано %1$d сообщений и %2$d медиафайлов в %3$s</string>
     <string name="ig_export_media_saved">Экспорт сохранён — %1$d медиафайл(ов) в %2$s</string>
-    <string name="ig_feat_edit_history">История правок</string>
-    <string name="ig_feat_lock_collections">Блокировка коллекций</string>
-    <string name="ig_feat_comment_search">Поиск по комментариям</string>
-    <string name="ig_feat_viewer_search">Зрители истории</string>
-    <string name="ig_feat_follow_export">Экспорт подписок</string>
-    <string name="ig_feat_saved_on_profile">Сохранённое в профиле</string>
-    <string name="ig_feat_hide_notes">Скрыть заметки</string>
-    <string name="ig_feat_voice_download">Скачивание голосовых</string>
     <string name="ig_feat_photo_zoom">Увеличение фото</string>
     <string name="ig_chat_export_none">Для этого чата ещё не загружены сообщения</string>
     <string name="ig_media_info_copy">Копировать</string>
     <string name="ig_dialog_misc_comment_search">Поиск по комментариям</string>
     <string name="ig_comment_search">Поиск по комментариям</string>
-    <string name="ig_comment_search_hint">Поиск по %1$d загруженным комментариям</string>
     <string name="ig_comment_search_load_all">Загрузить все</string>
     <string name="ig_comment_search_stop">Остановить</string>
     <string name="ig_comment_search_field_hint">Поиск по имени или словам</string>
@@ -778,16 +554,8 @@
     <string name="ig_comment_export_done">Экспортировано %1$d комментариев в %2$s</string>
     <string name="ig_dialog_misc_follow_export">Экспорт подписчиков/подписок в CSV</string>
     <string name="ig_feat_followers_history">История подписчиков (кто отписался)</string>
-    <string name="ig_followers_history">История подписчиков</string>
     <string name="ig_followers_history_first">Первый список сохранён: %1$d подписчиков. Проверьте позже, чтобы увидеть, кто отписался или подписался.</string>
-    <string name="ig_followers_history_changes">С %1$s: %2$d отписались, %3$d новых</string>
-    <string name="ig_followers_history_summary">%1$d подписчиков · проверено %2$s</string>
-    <string name="ig_followers_history_empty">Изменений пока нет.</string>
-    <string name="ig_followers_history_unfollowed">Отписался(ась)</string>
-    <string name="ig_followers_history_followed">Подписался(ась)</string>
-    <string name="ig_followers_history_partial">Список загрузился не полностью, поэтому сравнения не было. Попробуйте ещё раз.</string>
     <string name="ig_followers_history_note">Изменения находятся при проверке, поэтому дата — это когда изменение заметили.</string>
-    <string name="ig_followers_history_clear">Очистить историю</string>
     <string name="ig_followers_history_wrong_tab">Откройте свою вкладку «Подписчики», чтобы проверить.</string>
     <string name="ig_follow_export">Экспорт в CSV</string>
     <string name="ig_follow_export_done">Экспортировано %1$d аккаунтов в %2$s</string>
@@ -810,7 +578,6 @@
     <string name="ig_follow_block_wait">Подождите до %1$s, прежде чем снова загружать список.</string>
     <string name="ig_follow_block_anyway">Всё равно загрузить</string>
     <string name="ig_comment_gif_downloading">Загрузка медиа из комментария…</string>
-    <string name="ig_comment_copy_media_link">Копировать ссылку на GIF / изображение</string>
     <string name="ig_highlight_download_all">Скачать всё «Актуальное»</string>
     <string name="ig_highlight_loading">Загрузка «Актуального»…</string>
     <string name="ig_highlight_downloading">Загрузка %1$d элементов «Актуального»…</string>
@@ -818,7 +585,6 @@
     <string name="ig_spoof_device">Подмена устройства (HDR-видео)</string>
     <string name="ig_spoof_device_note">Instagram видит этот телефон как выбранное устройство. Это открывает HDR-видео и другие функции, которые Instagram ограничивает этими телефонами, и добавляет соответствующие параметры разработчика. Перезапустите Instagram, чтобы применить. Instagram может один раз попросить подтвердить аккаунт.</string>
     <string name="ig_dialog_downloader_stickers">Скачивать стикеры и GIF в директе (долгое нажатие)</string>
-    <string name="ig_feat_sticker_download">Загрузка стикеров</string>
     <string name="ig_story_tray_size">Размер ленты историй</string>
     <string name="ig_story_ring_color">Цвет кольца непросмотренных историй</string>
     <string name="ig_story_ring_default">Стандарт Instagram</string>

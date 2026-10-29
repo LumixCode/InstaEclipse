@@ -2,7 +2,6 @@
 <resources>
     <string name="tool_backup_sub">Alle Einstellungen in eine Datei sichern</string>
     <string name="tool_restore_sub">Einstellungen aus einer Sicherung laden</string>
-    <string name="tool_restart_sub">Instagram beenden und neu öffnen</string>
     <string name="tool_about_sub">Version, Credits und Links</string>
     <string name="about_tagline">Ein aufgeräumteres, privateres Instagram</string>
     <string name="about_source">Quellcode</string>

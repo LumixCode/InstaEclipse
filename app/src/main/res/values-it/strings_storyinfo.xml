@@ -20,14 +20,12 @@
     <string name="ig_si_sound_off">senza audio</string>
     <string name="ig_si_countdown">Conto alla rovescia</string>
     <string name="ig_si_question">Domanda</string>
-    <string name="ig_si_highlights">Nei momenti salienti</string>
     <string name="ig_si_mention_request">Richiesta di menzione</string>
     <string name="ig_si_none">Nessuna info aggiuntiva su questa storia.</string>
     <string name="ig_si_your_answer">la tua risposta</string>
     <string name="ig_si_average">Media</string>
     <string name="ig_si_copied">Copiato</string>
     <string name="ig_dialog_misc_story_info">Info storie, risposte a quiz e sondaggi</string>
-    <string name="ig_feat_story_info">Info storie</string>
     <string name="ig_si_add_yours">Aggiungi il tuo</string>
     <string name="ig_si_joined">hanno partecipato</string>
     <string name="ig_si_paid_partnership">Partnership retribuita con (tieni premuto per aprire)</string>

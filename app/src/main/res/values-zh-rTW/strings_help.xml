@@ -7,8 +7,6 @@
     <string name="help_about">關於</string>
     <string name="help_version">版本 %1$s</string>
     <string name="help_source_code">GitHub 上的原始碼</string>
-    <string name="help_faq_expand">展開答案</string>
-    <string name="help_faq_collapse">收合答案</string>
     <string name="help_vector_title">Vector（JingMatrix）</string>
     <string name="help_vector_sub">已 Root？請使用此版本</string>
     <string name="help_lspatch_title">LSPatch（JingMatrix）</string>

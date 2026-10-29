@@ -3,9 +3,7 @@
     <string name="feat_group_social">Sosial</string>
     <string name="menu_feed">Feed</string>
     <string name="menu_navigation">Navigasi</string>
-    <string name="menu_reels_stories">Reels &amp; Cerita</string>
     <string name="menu_messages">Pesan</string>
-    <string name="menu_post_menu">Menu Postingan &amp; Unggahan</string>
     <string name="menu_likes_comments">Suka &amp; Komentar</string>
     <string name="menu_profiles">Profil</string>
     <string name="menu_app">Aplikasi &amp; Akun</string>
@@ -15,6 +13,5 @@
     <string name="menu_nav_gestures">Gestur</string>
     <string name="menu_reels">Reels</string>
     <string name="menu_stories">Cerita</string>
-    <string name="nav_tab_order_changed">Urutan tab diubah</string>
     <string name="menu_quality">Kualitas</string>
 </resources>

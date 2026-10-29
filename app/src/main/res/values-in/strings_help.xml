@@ -7,8 +7,6 @@
     <string name="help_about">Tentang</string>
     <string name="help_version">Versi %1$s</string>
     <string name="help_source_code">Kode sumber di GitHub</string>
-    <string name="help_faq_expand">Tampilkan jawaban</string>
-    <string name="help_faq_collapse">Sembunyikan jawaban</string>
     <string name="help_vector_title">Vector (JingMatrix)</string>
     <string name="help_vector_sub">Sudah root? Pakai versi ini</string>
     <string name="help_lspatch_title">LSPatch (JingMatrix)</string>

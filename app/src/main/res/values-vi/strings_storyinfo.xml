@@ -20,14 +20,12 @@
     <string name="ig_si_sound_off">không có âm thanh</string>
     <string name="ig_si_countdown">Đếm ngược</string>
     <string name="ig_si_question">Câu hỏi</string>
-    <string name="ig_si_highlights">Trong tin nổi bật</string>
     <string name="ig_si_mention_request">Yêu cầu nhắc đến</string>
     <string name="ig_si_none">Không có thêm thông tin cho tin này.</string>
     <string name="ig_si_your_answer">câu trả lời của bạn</string>
     <string name="ig_si_average">Trung bình</string>
     <string name="ig_si_copied">Đã sao chép</string>
     <string name="ig_dialog_misc_story_info">Thông tin tin, đáp án câu đố &amp; bình chọn</string>
-    <string name="ig_feat_story_info">Thông tin tin</string>
     <string name="ig_si_add_yours">Thêm của bạn</string>
     <string name="ig_si_joined">đã tham gia</string>
     <string name="ig_si_paid_partnership">Quan hệ đối tác có trả phí với (giữ để mở)</string>

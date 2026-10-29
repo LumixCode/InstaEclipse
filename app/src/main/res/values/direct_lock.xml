@@ -3,7 +3,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="ig_lock_selected_enable">Lock chosen chats</string>
     <string name="ig_lock_select_chats">Choose chats to lock</string>
-    <string name="ig_lock_selected_companion_hint">Choose conversations inside Instagram → InstaEclipse → Lock → Choose chats to lock. Turn off Lock Messages to keep the inbox unlocked and protect only your chosen chats.</string>
     <string name="ig_lock_relock_hint">Lock Messages stays unlocked while you browse messages and conversations. With Lock again when you leave on, it locks again after you leave Messages. Chosen chats lock again after you leave that conversation.</string>
     <string name="ig_lock_selected_empty">Open your Direct inbox first to load available chats, then return here.</string>
     <string name="ig_lock_change_locks_prompt">Enter passcode to change chat locks</string>
@@ -14,8 +13,6 @@
     <string name="ig_lock_open_chat_prompt">Enter passcode to open this chat</string>
     <string name="ig_lock_unlock">Unlock</string>
     <string name="ig_lock_wrong_passcode">Wrong passcode</string>
-    <string name="ig_lock_biometric_title">Unlock Instagram</string>
-    <string name="ig_lock_biometric_description">Unlock with your fingerprint</string>
     <string name="ig_lock_biometric_use_passcode">Use passcode</string>
     <string name="ig_lock_biometric_confirm">Confirm it\'s you</string>
     <string name="ig_hidden_inbox_show_all">Show all messages</string>
