@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_comment_search_maybe_more">נטענו %1$d תגובות · ייתכן שיש עוד</string>
+    <string name="ig_toast_story_unavailable">פרטי הסטורי לא זמינים</string>
+    <string name="ig_toast_like_not_sent">הלייק לא נשלח</string>
+    <string name="ig_toast_user_follows_you">\@%1$s עוקב/ת אחריך</string>
+    <string name="ig_toast_user_not_follows_you">\@%1$s לא עוקב/ת אחריך</string>
+    <string name="ig_pa_remove_confirm">להסיר את @%1$s מרשימת המעקב? %2$d הניתוחים השמורים והיסטוריית השינויים שלו יימחקו. אי אפשר לבטל את זה.</string>
+    <string name="ig_pa_remove_confirm_action">הסר</string>
+    <string name="ig_pa_save_failed">לא ניתן לשמור את הניתוח הזה, ולכן הניתוח הבא יושווה לניתוח האחרון שנשמר.</string>
+    <string name="ig_follow_tools">כלי רשימה</string>
+    <string name="ig_follow_tools_title">\@%1$s · %2$s: %3$s</string>
+    <string name="ig_follow_load_stop">עצור</string>
+    <string name="ig_follow_export_failed">לא ניתן לשמור את הייצוא: %1$s</string>
+    <string name="ig_pa_check_mine">בדוק את העוקבים שלי</string>
+    <string name="ig_pa_watch_row_followers">%1$d עוקבים · %2$s</string>
+    <string name="ig_pa_watch_full">רשימת המעקב מלאה: הפרופיל הישן ביותר הוסר</string>
+    <plurals name="ig_list_more">
+        <item quantity="one">ועוד %1$d · ראה היסטוריית שינויים</item>
+        <item quantity="two">ועוד %1$d · ראה היסטוריית שינויים</item>
+        <item quantity="other">ועוד %1$d · ראה היסטוריית שינויים</item>
+    </plurals>
+    <string name="ig_comment_search_clear">נקה חיפוש</string>
+    <string name="ig_comment_export_none">עדיין לא נטענו תגובות</string>
+    <string name="ig_comment_export_title">תגובות</string>
+    <string name="ig_comment_export_on_post">תגובות לפוסט של @%1$s</string>
+    <string name="ig_comment_export_banner">ייצוא תגובות</string>
+    <string name="ig_comment_export_exported">יוצא ב-%1$s</string>
+    <string name="ig_comment_export_loaded_only">כלולות רק תגובות שנטענו באפליקציה</string>
+    <string name="ig_comment_media_gif">GIF</string>
+    <string name="ig_comment_media_image">תמונה</string>
+    <string name="ig_comment_media_unavailable">%1$s (לא זמין)</string>
+    <plurals name="ig_comment_export_comments">
+        <item quantity="one">%1$d תגובה</item>
+        <item quantity="two">%1$d תגובות</item>
+        <item quantity="other">%1$d תגובות</item>
+    </plurals>
+    <plurals name="ig_comment_export_replies">
+        <item quantity="one">%1$d תשובה</item>
+        <item quantity="two">%1$d תשובות</item>
+        <item quantity="other">%1$d תשובות</item>
+    </plurals>
+    <string name="ig_confirm_follow_title_v2">לעקוב אחרי @%1$s?</string>
+</resources>

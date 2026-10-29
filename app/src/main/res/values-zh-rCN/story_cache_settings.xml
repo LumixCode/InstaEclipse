@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">缓存看过的快拍</string>
+    <string name="ig_story_cache_duration">缓存时长</string>
+    <string name="ig_story_cache_hours">%1$d 小时</string>
+    <string name="ig_story_cache_picker_help">快拍可保留 1–720 小时（最长 30 天）。缓存达到 500 MB 时，最早的快拍可能会被提前删除。</string>
+    <string name="ig_story_cache_picker_unit">观看后保留的小时数</string>
+    <string name="ig_story_cache_invalid">请输入 1 到 720 之间的数字。</string>
+    <string name="ig_story_cache_empty_current">还没有缓存的快拍。开启缓存后观看一些快拍，它们会在你选择的时长内保留在这里。</string>
+</resources>

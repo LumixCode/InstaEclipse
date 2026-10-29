@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">تخزين القصص التي شاهدتها</string>
+    <string name="ig_story_cache_duration">مدة التخزين</string>
+    <string name="ig_story_cache_hours">%1$d س</string>
+    <string name="ig_story_cache_picker_help">احتفظ بالقصص لمدة 1–720 ساعة (حتى 30 يومًا). قد تُحذف أقدم القصص قبل ذلك إذا بلغ حجم التخزين 500 MB.</string>
+    <string name="ig_story_cache_picker_unit">ساعة بعد المشاهدة</string>
+    <string name="ig_story_cache_invalid">أدخل رقمًا من 1 إلى 720.</string>
+    <string name="ig_story_cache_empty_current">لا توجد قصص مخزّنة بعد. فعّل التخزين، ثم شاهد بعض القصص للاحتفاظ بها هنا للمدة التي اخترتها.</string>
+</resources>

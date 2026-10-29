@@ -12,4 +12,16 @@
     <string name="help_lspatch_title">LSPatch（JingMatrix）</string>
     <string name="help_lspatch_sub">未 Root？请安装此版本</string>
     <string name="help_lspatch_guide">查看安装指南</string>
+    <string name="about_based_on">基于 %1$s 的 InstaEclipse</string>
+    <string name="update_check_note">每天最多检查一次 github.com 上的 InstaEclipse 新版本。</string>
+    <string name="update_whats_new">更新内容</string>
+    <string name="update_skip_version">跳过此版本</string>
+    <string name="links_no_app">没有可打开此链接的应用</string>
+    <string name="help_faq_2"><b>2. 模块未启用？</b>\n- 在 LSPatch 或 Vector 中确认已为 Instagram 启用 InstaEclipse，然后强制停止并重新打开 Instagram。</string>
+    <string name="help_faq_4"><b>4. 开发者选项导致崩溃？</b>\n- 关闭开发者选项，然后使用“开发者选项 → 恢复默认配置”。</string>
+    <string name="help_faq_5"><b>5. 开发者选项显示奇怪的标签或数字？</b>\n- 正式版 Instagram 会隐藏选项名称。InstaEclipse 已在 Instagram %1$s 上测试。</string>
+    <string name="help_troubleshooting">故障排除</string>
+    <string name="help_faq_expanded">已展开</string>
+    <string name="help_faq_collapsed">已收起</string>
+    <string name="help_tested_with">已在 Instagram %1$s 上测试</string>
 </resources>

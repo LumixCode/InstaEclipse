@@ -1,12 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">تنزيلات InstaEclipse</string>
     <string name="ie_downloader_original">قياسي</string>
     <string name="ie_downloader_original_unavailable">تعذّر على القياسي حفظ هذا العنصر. انتقل إلى الأفضل لتنزيله.</string>
 
     <string name="ie_download_quality">جودة التنزيل</string>
     <string name="ie_download_best">الأفضل</string>
     <string name="ie_download_ceiling">الأفضل، حتى %1$dp</string>
+    <string name="ie_save_video_frame">حفظ إطار من الفيديو</string>
+    <string name="ie_download_video">تنزيل الفيديو</string>
+    <string name="ie_frame_help">اختر إطارًا باستخدام شريط التمرير. يُحفظ ملف PNG بالدقة الكاملة فقط؛ ويُحذف الفيديو المؤقت عند الحفظ أو الإغلاق.</string>
+    <string name="ie_frame_preparing">جارٍ تجهيز الفيديو بأعلى جودة…</string>
+    <string name="ie_frame_preparing_progress">جارٍ تجهيز الفيديو بأعلى جودة… %1$d%%</string>
+    <string name="ie_frame_loading">جارٍ تحميل المعاينة…</string>
+    <string name="ie_frame_preview">معاينة إطار الفيديو المحدد</string>
+    <string name="ie_frame_position">موضع الإطار</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · دقة كاملة</string>
+    <string name="ie_frame_save">حفظ PNG</string>
+    <string name="ie_frame_saving">جارٍ حفظ الإطار بالدقة الكاملة…</string>
+    <string name="ie_frame_saved">تم حفظ PNG: %1$d × %2$d. وحُذف الفيديو المؤقت.</string>
+    <string name="ie_frame_failed">تعذّر تجهيز هذا الإطار أو حفظه. لم يُستبدل بنسخة أقل جودة.</string>
+    <string name="ie_frame_reopen">افتح «تنزيل» مجددًا في Instagram لاختيار إطار.</string>
     <string name="ie_download_compatibility">تفضيل مقاطع تعمل على كل الأجهزة</string>
     <string name="ie_download_fallback">استخدام جودة أقل إذا فشل الأفضل</string>
+    <string name="ie_download_unavailable">تعذّر العثور على الوسائط المحددة في إصدار Instagram هذا.</string>
+    <string name="ie_download_retry_lower">إعادة المحاولة بجودة أقل</string>
     <string name="ie_download_fallback_prompt">تعذّر على الأفضل حفظ هذا العنصر. هل تريد تجربة جودة أقل؟</string>
+    <string name="ie_download_cancelled">تم إلغاء التنزيل</string>
+    <string name="ie_download_select_item">اختر عنصرًا من الكاروسيل</string>
+    <string name="ie_download_item">العنصر %1$d</string>
 </resources>

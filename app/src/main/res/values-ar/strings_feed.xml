@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_preset_light">%1$s فاتح</string>
+    <string name="theme_preset_dark">%1$s داكن</string>
+    <string name="ig_reel_block_off_title">الريلز متوقفة</string>
+    <string name="ig_reel_block_off_detail">أعد تفعيلها من InstaEclipse › %1$s</string>
+    <string name="ig_reel_block_night_title">الريلز متوقفة مؤقتًا الليلة</string>
+    <string name="ig_reel_block_night_detail">تعود عند %1$s</string>
+    <string name="ig_reel_block_limit_title">بلغت حد الريلز لهذا اليوم</string>
+    <string name="ig_reel_block_limit_detail">%1$d من %2$d مقطع ريلز · يُعاد التعيين عند منتصف الليل</string>
+    <string name="ig_reel_block_go_back">رجوع</string>
+</resources>

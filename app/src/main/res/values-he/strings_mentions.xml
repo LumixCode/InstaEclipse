@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="ig_mention_count">
+        <item quantity="one">%1$d אזכור · הקש לפתיחה, החזק להעתקה</item>
+        <item quantity="two">%1$d אזכורים · הקש לפתיחה, החזק להעתקה</item>
+        <item quantity="other">%1$d אזכורים · הקש לפתיחה, החזק להעתקה</item>
+    </plurals>
+</resources>

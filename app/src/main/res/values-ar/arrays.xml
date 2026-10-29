@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ig_fancy_font_names">
+        <item>عادي</item>
+        <item>عريض</item>
+        <item>مائل</item>
+        <item>عريض مائل</item>
+        <item>عريض بلا زوائد</item>
+        <item>مائل بلا زوائد</item>
+        <item>خط يدوي</item>
+        <item>فراكتور</item>
+        <item>مزدوج الخطوط</item>
+        <item>أحادي المسافة</item>
+        <item>داخل دوائر</item>
+        <item>كامل العرض</item>
+        <item>أحرف كبيرة صغيرة</item>
+        <item>مشطوب</item>
+        <item>مسطّر</item>
+    </string-array>
+</resources>

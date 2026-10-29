@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_hex_invalid">أدخل 6 أو 8 أرقام سداسية عشرية</string>
+    <string name="theme_custom_reset">أُعيد تعيين الألوان المخصصة</string>
+    <string name="theme_undo">تراجع</string>
+    <string name="theme_preset_selected">محدّد</string>
+    <string name="theme_custom_dark_only">الألوان المخصصة للوضع الداكن. حوّل هاتفك إلى الوضع الداكن لتعديلها</string>
+    <string name="loc_picker_clear_search">مسح البحث</string>
+    <string name="dev_config_open_instagram">افتح Instagram أولًا، ثم حاول مرة أخرى</string>
+    <string name="dev_config_export_failed">تعذّر على Instagram تصدير إعداداته</string>
+    <string name="ie_frame_previous">الإطار السابق</string>
+    <string name="ie_frame_next">الإطار التالي</string>
+    <string name="ie_frame_cleanup_pending_open">لم يكتمل تنظيف الملفات المؤقتة. افتح InstaEclipse لإعادة محاولة التنظيف.</string>
+    <string name="credits_on_github">%1$s على GitHub</string>
+    <string name="credits_on_telegram">%1$s على Telegram</string>
+    <string name="credits_on_linkedin">%1$s على LinkedIn</string>
+    <string name="import_sending">جارٍ الإرسال إلى Instagram…</string>
+    <string name="import_too_large">هذا الملف كبير جدًا ولا يمكن استيراده</string>
+    <string name="import_cant_receive">لا يستطيع Instagram استلام هذا الملف</string>
+    <string name="import_no_reply">لم يؤكد Instagram الاستلام. افتح Instagram (وأعد تشغيله بعد تحديث InstaEclipse)، ثم حاول مرة أخرى.</string>
+    <string name="loc_picker_spoof_off">الموقع المزيف متوقف، لذا لا يزال Instagram يرى موقعك الحقيقي.</string>
+    <string name="loc_picker_needs_restart">يحتاج Instagram إلى إعادة تشغيل مرة واحدة لاستخدامه.</string>
+    <string name="loc_picker_turn_on">تفعيل</string>
+    <string name="loc_picker_only_save">الحفظ فقط</string>
+    <string name="loc_saved_spoof_off">تم الحفظ. فعّل الموقع المزيف لاستخدامه.</string>
+    <string name="loc_picker_no_connection">لا يوجد اتصال</string>
+    <string name="loc_picker_search_unavailable">البحث غير متاح حاليًا</string>
+</resources>

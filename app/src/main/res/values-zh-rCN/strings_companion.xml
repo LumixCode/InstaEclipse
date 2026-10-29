@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_hex_invalid">请输入 6 位或 8 位十六进制数</string>
+    <string name="theme_custom_reset">自定义颜色已重置</string>
+    <string name="theme_undo">撤销</string>
+    <string name="theme_preset_selected">已选择</string>
+    <string name="theme_custom_dark_only">自定义颜色仅用于深色模式。请将手机切换到深色模式后再编辑</string>
+    <string name="loc_picker_clear_search">清除搜索</string>
+    <string name="dev_config_open_instagram">请先打开 Instagram，然后重试</string>
+    <string name="dev_config_export_failed">Instagram 无法导出其配置</string>
+    <string name="ie_frame_previous">上一帧</string>
+    <string name="ie_frame_next">下一帧</string>
+    <string name="ie_frame_cleanup_pending_open">临时文件尚未清理完毕。请打开 InstaEclipse 重试清理。</string>
+    <string name="credits_on_github">GitHub 上的 %1$s</string>
+    <string name="credits_on_telegram">Telegram 上的 %1$s</string>
+    <string name="credits_on_linkedin">LinkedIn 上的 %1$s</string>
+    <string name="import_sending">正在发送到 Instagram…</string>
+    <string name="import_too_large">此文件太大，无法导入</string>
+    <string name="import_cant_receive">Instagram 无法接收此文件</string>
+    <string name="import_no_reply">Instagram 没有确认。请打开 Instagram（InstaEclipse 更新后请重启 Instagram），然后重试。</string>
+    <string name="loc_picker_spoof_off">伪造位置已关闭，因此 Instagram 仍会看到你的真实位置。</string>
+    <string name="loc_picker_needs_restart">Instagram 需要重启一次才能使用它。</string>
+    <string name="loc_picker_turn_on">开启</string>
+    <string name="loc_picker_only_save">仅保存</string>
+    <string name="loc_saved_spoof_off">已保存。开启伪造位置后即可使用。</string>
+    <string name="loc_picker_no_connection">无网络连接</string>
+    <string name="loc_picker_search_unavailable">搜索暂时不可用</string>
+</resources>

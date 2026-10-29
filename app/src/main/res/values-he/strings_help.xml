@@ -8,8 +8,20 @@
     <string name="help_version">גרסה %1$s</string>
     <string name="help_source_code">קוד המקור ב-GitHub</string>
     <string name="help_vector_title">Vector (JingMatrix)</string>
-    <string name="help_vector_sub">יש רוט? השתמשו בגרסה הזו</string>
+    <string name="help_vector_sub">יש לך רוט? השתמש בגרסה הזו</string>
     <string name="help_lspatch_title">LSPatch (JingMatrix)</string>
-    <string name="help_lspatch_sub">אין רוט? התקינו את זה</string>
+    <string name="help_lspatch_sub">אין לך רוט? התקן את זה</string>
     <string name="help_lspatch_guide">למדריך ההתקנה</string>
+    <string name="about_based_on">מבוסס על InstaEclipse מאת %1$s</string>
+    <string name="update_check_note">בודק ב-github.com אם יש גרסאות חדשות של InstaEclipse, לכל היותר פעם ביום.</string>
+    <string name="update_whats_new">מה חדש</string>
+    <string name="update_skip_version">דלג על הגרסה הזו</string>
+    <string name="links_no_app">אין אפליקציה לפתיחת הקישור</string>
+    <string name="help_faq_2"><b>2. המודול לא מופעל?</b>\n- ב-LSPatch או ב-Vector, ודא ש-InstaEclipse מופעל עבור Instagram, ואז עצור בכוח את Instagram ופתח אותו מחדש.</string>
+    <string name="help_faq_4"><b>4. אפשרויות המפתחים גורמות לקריסות?</b>\n- כבה את אפשרויות המפתחים והשתמש ב\"אפשרויות מפתחים ← שחזר להגדרות ברירת המחדל\".</string>
+    <string name="help_faq_5"><b>5. באפשרויות המפתחים מופיעים שמות או מספרים מוזרים?</b>\n- הגרסה היציבה של Instagram מסתירה את שמות האפשרויות. InstaEclipse נבדק עם Instagram %1$s.</string>
+    <string name="help_troubleshooting">פתרון בעיות</string>
+    <string name="help_faq_expanded">מורחב</string>
+    <string name="help_faq_collapsed">מכווץ</string>
+    <string name="help_tested_with">נבדק עם Instagram %1$s</string>
 </resources>

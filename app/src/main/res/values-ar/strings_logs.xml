@@ -2,7 +2,7 @@
 <resources>
     <!-- Logs tab (0.8) -->
     <string name="logs_filter_all">الكل</string>
-    <string name="logs_filter_hooked">ناجحة</string>
+    <string name="logs_filter_hooked">جاهزة</string>
     <string name="logs_filter_errors">أخطاء</string>
     <string name="logs_filter_warnings">تحذيرات</string>
     <string name="logs_technical_details">التفاصيل التقنية</string>
@@ -27,4 +27,27 @@
     <string name="logs_entry_copied">تم نسخ الإدخال</string>
     <string name="logs_cleared">تم مسح السجلات</string>
     <string name="logs_source_companion">[التطبيق]</string>
+    <string name="logs_latest">الأحدث</string>
+    <string name="logs_clear_confirm_title">مسح السجلات؟</string>
+    <string name="logs_clear_confirm_body">يزيل السجلات المحفوظة على هذا الهاتف، بما فيها سجلات Instagram.</string>
+    <string name="logs_share_no_app">لا يوجد تطبيق متاح للمشاركة</string>
+    <string name="logs_status_unsynced">سجل محفوظ · المزامنة المباشرة غير متاحة</string>
+    <string name="logs_copy_entry">نسخ الإدخال</string>
+    <string name="logs_crash_share">مشاركة تقرير العطل</string>
+    <string name="logs_crash_delete">حذف تقارير الأعطال</string>
+    <string name="logs_crash_share_warning">قد تحتوي تقارير الأعطال على أجزاء مما كان في ذاكرة Instagram، مثل الرسائل أو بيانات تسجيل الدخول. شاركها بشكل خاص، لا في بلاغ عام.</string>
+    <string name="logs_crash_share_summary">مشاركة الملخص</string>
+    <string name="logs_crash_share_full">مشاركة التقرير كاملًا</string>
+    <string name="logs_crash_share_subject">تقرير عطل InstaEclipse</string>
+    <string name="logs_crash_share_failed">تعذّر إنشاء تقرير العطل</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="zero">حذف %d تقرير عطل؟</item>
+        <item quantity="one">حذف %d تقرير عطل؟</item>
+        <item quantity="two">حذف %d تقريرَي عطل؟</item>
+        <item quantity="few">حذف %d تقارير أعطال؟</item>
+        <item quantity="many">حذف %d تقرير عطل؟</item>
+        <item quantity="other">حذف %d تقرير عطل؟</item>
+    </plurals>
+    <string name="logs_crash_delete_action">حذف</string>
+    <string name="logs_crash_deleted">تم حذف تقارير الأعطال</string>
 </resources>

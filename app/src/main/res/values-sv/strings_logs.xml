@@ -2,7 +2,7 @@
 <resources>
     <!-- Logs tab (0.8) -->
     <string name="logs_filter_all">Alla</string>
-    <string name="logs_filter_hooked">Lyckade</string>
+    <string name="logs_filter_hooked">Redo</string>
     <string name="logs_filter_errors">Fel</string>
     <string name="logs_filter_warnings">Varningar</string>
     <string name="logs_technical_details">Tekniska detaljer</string>
@@ -27,4 +27,23 @@
     <string name="logs_entry_copied">Post kopierad</string>
     <string name="logs_cleared">Loggar rensade</string>
     <string name="logs_source_companion">[app]</string>
+    <string name="logs_latest">Senaste</string>
+    <string name="logs_clear_confirm_title">Rensa loggar?</string>
+    <string name="logs_clear_confirm_body">Tar bort loggarna som sparats på den här telefonen, även Instagrams.</string>
+    <string name="logs_share_no_app">Ingen app för delning finns</string>
+    <string name="logs_status_unsynced">Sparad logg · direktsynkning inte tillgänglig</string>
+    <string name="logs_copy_entry">Kopiera post</string>
+    <string name="logs_crash_share">Dela kraschrapport</string>
+    <string name="logs_crash_delete">Radera kraschrapporter</string>
+    <string name="logs_crash_share_warning">Kraschrapporter kan innehålla delar av det som Instagram hade i minnet, till exempel meddelanden eller inloggningsuppgifter. Dela dem privat, inte i ett offentligt issue.</string>
+    <string name="logs_crash_share_summary">Dela sammanfattning</string>
+    <string name="logs_crash_share_full">Dela hela rapporten</string>
+    <string name="logs_crash_share_subject">InstaEclipse-kraschrapport</string>
+    <string name="logs_crash_share_failed">Kunde inte skapa kraschrapporten</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="one">Radera %d kraschrapport?</item>
+        <item quantity="other">Radera %d kraschrapporter?</item>
+    </plurals>
+    <string name="logs_crash_delete_action">Radera</string>
+    <string name="logs_crash_deleted">Kraschrapporter raderade</string>
 </resources>

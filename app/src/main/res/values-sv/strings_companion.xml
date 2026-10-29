@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_hex_invalid">Ange 6 eller 8 hexsiffror</string>
+    <string name="theme_custom_reset">Anpassade färger återställda</string>
+    <string name="theme_undo">Ångra</string>
+    <string name="theme_preset_selected">Vald</string>
+    <string name="theme_custom_dark_only">Anpassade färger gäller mörkt läge. Ställ in telefonen på mörkt läge för att redigera dem</string>
+    <string name="loc_picker_clear_search">Rensa sökning</string>
+    <string name="dev_config_open_instagram">Öppna Instagram först och försök sedan igen</string>
+    <string name="dev_config_export_failed">Instagram kunde inte exportera sin konfiguration</string>
+    <string name="ie_frame_previous">Föregående bildruta</string>
+    <string name="ie_frame_next">Nästa bildruta</string>
+    <string name="ie_frame_cleanup_pending_open">Rensningen av tillfälliga filer blev inte klar. Öppna InstaEclipse för att försöka rensa igen.</string>
+    <string name="credits_on_github">%1$s på GitHub</string>
+    <string name="credits_on_telegram">%1$s på Telegram</string>
+    <string name="credits_on_linkedin">%1$s på LinkedIn</string>
+    <string name="import_sending">Skickar till Instagram…</string>
+    <string name="import_too_large">Filen är för stor för att importeras</string>
+    <string name="import_cant_receive">Instagram kan inte ta emot den här filen</string>
+    <string name="import_no_reply">Instagram bekräftade inte. Öppna Instagram (starta om det efter en InstaEclipse-uppdatering) och försök sedan igen.</string>
+    <string name="loc_picker_spoof_off">Den falska platsen är av, så Instagram ser fortfarande din riktiga plats.</string>
+    <string name="loc_picker_needs_restart">Instagram behöver startas om en gång för att använda den.</string>
+    <string name="loc_picker_turn_on">Slå på</string>
+    <string name="loc_picker_only_save">Spara bara</string>
+    <string name="loc_saved_spoof_off">Sparad. Slå på den falska platsen för att använda den.</string>
+    <string name="loc_picker_no_connection">Ingen anslutning</string>
+    <string name="loc_picker_search_unavailable">Sökningen är inte tillgänglig just nu</string>
+</resources>

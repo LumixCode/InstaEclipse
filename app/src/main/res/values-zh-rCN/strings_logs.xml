@@ -2,7 +2,7 @@
 <resources>
     <!-- Logs tab (0.8) -->
     <string name="logs_filter_all">全部</string>
-    <string name="logs_filter_hooked">成功</string>
+    <string name="logs_filter_hooked">就绪</string>
     <string name="logs_filter_errors">错误</string>
     <string name="logs_filter_warnings">警告</string>
     <string name="logs_technical_details">技术细节</string>
@@ -19,7 +19,7 @@
     <string name="logs_status_saved">已保存的日志 · Instagram 未运行</string>
     <string name="logs_status_none">未安装受支持的 Instagram 应用</string>
     <string name="logs_empty_title">暂无日志</string>
-    <string name="logs_empty_body">请在 Vector 中启用 InstaEclipse 后打开一次 Instagram，然后回到这里点击“刷新”。即使 Instagram 已关闭，其日志也会自动保存在这里。</string>
+    <string name="logs_empty_body">请在 Vector 中启用 InstaEclipse 后打开一次 Instagram，然后回到这里点按“刷新”。即使 Instagram 已关闭，其日志也会自动保存在这里。</string>
     <string name="logs_empty_filter_title">没有符合此筛选条件的内容</string>
     <string name="logs_empty_filter_body">切换回“全部”即可查看所有条目。</string>
     <string name="logs_nothing_to_copy">没有可复制的日志</string>
@@ -27,4 +27,22 @@
     <string name="logs_entry_copied">条目已复制</string>
     <string name="logs_cleared">日志已清除</string>
     <string name="logs_source_companion">[应用]</string>
+    <string name="logs_latest">最新</string>
+    <string name="logs_clear_confirm_title">清除日志？</string>
+    <string name="logs_clear_confirm_body">将删除保存在此手机上的日志，包括 Instagram 的日志。</string>
+    <string name="logs_share_no_app">没有可用于分享的应用</string>
+    <string name="logs_status_unsynced">已保存的日志 · 实时同步不可用</string>
+    <string name="logs_copy_entry">复制条目</string>
+    <string name="logs_crash_share">分享崩溃报告</string>
+    <string name="logs_crash_delete">删除崩溃报告</string>
+    <string name="logs_crash_share_warning">崩溃报告可能包含 Instagram 内存中的部分内容，例如消息或登录数据。请私下分享，不要发到公开的 Issue 中。</string>
+    <string name="logs_crash_share_summary">分享摘要</string>
+    <string name="logs_crash_share_full">分享完整报告</string>
+    <string name="logs_crash_share_subject">InstaEclipse 崩溃报告</string>
+    <string name="logs_crash_share_failed">无法创建崩溃报告</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="other">删除 %d 份崩溃报告？</item>
+    </plurals>
+    <string name="logs_crash_delete_action">删除</string>
+    <string name="logs_crash_deleted">崩溃报告已删除</string>
 </resources>

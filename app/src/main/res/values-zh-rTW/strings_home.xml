@@ -19,4 +19,25 @@
     <string name="home_shortcuts_hint">變更會立即同步到 Instagram。</string>
     <string name="home_shortcuts_limit">最多只能釘選 %1$d 個快速開關</string>
     <string name="home_shortcuts_locked_extreme">已被極端模式鎖定</string>
+    <string name="home_instagram_version">Instagram %1$s</string>
+    <string name="home_tested_version">已測試的版本</string>
+    <string name="home_untested_version">不是已測試的版本（%1$s）：部分功能可能無法運作</string>
+    <string name="home_status_worked">於 %1$s 在 Instagram 中正常運作</string>
+    <string name="home_status_not_confirmed">尚未確認</string>
+    <string name="home_status_open_to_check">開啟 Instagram 以確認</string>
+    <string name="home_status_clone">分身 · 無即時同步</string>
+    <string name="home_instagram_app_info">Instagram 應用程式資訊</string>
+    <string name="home_detected_versions">偵測到的版本</string>
+    <string name="home_detected_version_row">%1$s — v%2$s</string>
+    <string name="home_use_this">使用此版本</string>
+    <string name="home_variant_official">官方版</string>
+    <string name="home_setup_step_1">使用 LSPatch 修補 Instagram，或在 Vector 中為它啟用 InstaEclipse。</string>
+    <string name="home_setup_step_2">強制停止並重新開啟 Instagram。</string>
+    <string name="home_setup_step_3">在 Instagram 中，按住底部的「搜尋」分頁。</string>
+    <string name="home_setup_open_instagram">開啟 Instagram</string>
+    <string name="home_setup_got_it">知道了</string>
+    <string name="home_restarting">正在重新啟動…</string>
+    <string name="home_shortcuts_needs_setting">請先開啟它所需的設定</string>
+    <string name="home_restart_applies_on_open">Instagram 開啟時套用。如有需要，會要求重新啟動。</string>
+    <string name="home_tool_restart_sub">關閉並重新開啟 Instagram</string>
 </resources>

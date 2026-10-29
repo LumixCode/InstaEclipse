@@ -21,4 +21,25 @@
     <string name="home_shortcuts_hint">השינויים נשלחים ל-Instagram באופן מיידי.</string>
     <string name="home_shortcuts_limit">ניתן להצמיד עד %1$d קיצורים</string>
     <string name="home_shortcuts_locked_extreme">נעול על ידי המצב הקיצוני</string>
+    <string name="home_instagram_version">Instagram %1$s</string>
+    <string name="home_tested_version">גרסה שנבדקה</string>
+    <string name="home_untested_version">לא הגרסה שנבדקה (%1$s): ייתכן שחלק מהתכונות לא יעבדו</string>
+    <string name="home_status_worked">עבד ב-Instagram ב-%1$s</string>
+    <string name="home_status_not_confirmed">עדיין לא אושר</string>
+    <string name="home_status_open_to_check">פתח את Instagram כדי לבדוק</string>
+    <string name="home_status_clone">שכפול · אין סנכרון חי</string>
+    <string name="home_instagram_app_info">פרטי האפליקציה של Instagram</string>
+    <string name="home_detected_versions">גרסאות שזוהו</string>
+    <string name="home_detected_version_row">%1$s — גרסה %2$s</string>
+    <string name="home_use_this">השתמש בגרסה הזו</string>
+    <string name="home_variant_official">רשמי</string>
+    <string name="home_setup_step_1">בצע Patch ל-Instagram עם LSPatch, או הפעל עבורו את InstaEclipse ב-Vector.</string>
+    <string name="home_setup_step_2">עצור בכוח את Instagram ופתח אותו מחדש.</string>
+    <string name="home_setup_step_3">ב-Instagram, לחץ לחיצה ארוכה על לשונית החיפוש למטה.</string>
+    <string name="home_setup_open_instagram">פתח את Instagram</string>
+    <string name="home_setup_got_it">הבנתי</string>
+    <string name="home_restarting">מפעיל מחדש…</string>
+    <string name="home_shortcuts_needs_setting">הפעל קודם הגדרה שהקיצור צריך</string>
+    <string name="home_restart_applies_on_open">יחול כש-Instagram ייפתח. הוא יבקש הפעלה מחדש אם צריך.</string>
+    <string name="home_tool_restart_sub">סוגר ופותח מחדש את Instagram</string>
 </resources>

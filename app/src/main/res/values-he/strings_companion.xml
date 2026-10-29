@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_hex_invalid">הזן 6 או 8 ספרות הקסדצימליות</string>
+    <string name="theme_custom_reset">הצבעים המותאמים אופסו</string>
+    <string name="theme_undo">בטל</string>
+    <string name="theme_preset_selected">נבחר</string>
+    <string name="theme_custom_dark_only">הצבעים המותאמים מיועדים למצב כהה. העבר את הטלפון למצב כהה כדי לערוך אותם</string>
+    <string name="loc_picker_clear_search">נקה חיפוש</string>
+    <string name="dev_config_open_instagram">פתח קודם את Instagram ונסה שוב</string>
+    <string name="dev_config_export_failed">Instagram לא הצליח לייצא את ההגדרות שלו</string>
+    <string name="ie_frame_previous">הפריים הקודם</string>
+    <string name="ie_frame_next">הפריים הבא</string>
+    <string name="ie_frame_cleanup_pending_open">ניקוי הקבצים הזמניים לא הושלם. פתח את InstaEclipse כדי לנסות לנקות שוב.</string>
+    <string name="credits_on_github">%1$s ב-GitHub</string>
+    <string name="credits_on_telegram">%1$s ב-Telegram</string>
+    <string name="credits_on_linkedin">%1$s ב-LinkedIn</string>
+    <string name="import_sending">שולח ל-Instagram…</string>
+    <string name="import_too_large">הקובץ הזה גדול מדי לייבוא</string>
+    <string name="import_cant_receive">Instagram לא יכול לקבל את הקובץ הזה</string>
+    <string name="import_no_reply">Instagram לא אישר. פתח את Instagram (הפעל אותו מחדש אחרי עדכון של InstaEclipse) ונסה שוב.</string>
+    <string name="loc_picker_spoof_off">המיקום המזויף כבוי, ולכן Instagram עדיין רואה את המיקום האמיתי שלך.</string>
+    <string name="loc_picker_needs_restart">Instagram צריך הפעלה מחדש אחת כדי להשתמש בו.</string>
+    <string name="loc_picker_turn_on">הפעל</string>
+    <string name="loc_picker_only_save">רק שמור</string>
+    <string name="loc_saved_spoof_off">נשמר. הפעל את המיקום המזויף כדי להשתמש בו.</string>
+    <string name="loc_picker_no_connection">אין חיבור</string>
+    <string name="loc_picker_search_unavailable">החיפוש לא זמין כרגע</string>
+</resources>

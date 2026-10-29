@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_toast_restored_some_skipped">设置已恢复，但有 %1$d 项无效或被极端模式锁定。</string>
+</resources>

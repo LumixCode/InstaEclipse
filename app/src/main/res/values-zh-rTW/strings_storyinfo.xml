@@ -25,11 +25,12 @@
     <string name="ig_si_your_answer">你的答案</string>
     <string name="ig_si_average">平均</string>
     <string name="ig_si_copied">已複製</string>
-    <string name="ig_dialog_misc_story_info">限時動態資訊、測驗和投票答案</string>
+    <string name="ig_dialog_misc_story_info">顯示限時動態詳細資訊和答案</string>
     <string name="ig_si_add_yours">加入你的</string>
     <string name="ig_si_joined">人參與</string>
     <string name="ig_si_paid_partnership">付費合作夥伴（長按開啟）</string>
     <string name="ig_si_collaborators">共同創作者（長按開啟）</string>
     <string name="ig_btn_slider_results">滑桿結果</string>
     <string name="ig_si_votes">票</string>
+    <string name="ig_poll_your_vote">你的投票</string>
 </resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">בוטלה</string>
+    <string name="ig_unsent_clear_failed">לא ניתן לנקות את ההודעות השמורות. פתח שוב את הצ\'אט ונסה שוב.</string>
+    <string name="ig_unsent_clear_saved">נקה הודעות שבוטלו שנשמרו</string>
+    <string name="ig_unsent_clear_saved_confirm">להסיר את ההודעות השמורות האלה מהאשפה ומהיסטוריית הצ\'אט המקומית? אי אפשר לבטל את זה.</string>
+    <string name="ig_unsent_cleared_saved">ההודעות שבוטלו שנשמרו נמחקו</string>
+</resources>

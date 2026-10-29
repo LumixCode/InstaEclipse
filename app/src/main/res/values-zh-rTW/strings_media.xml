@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_dl_opened_in_instagram">已在 Instagram 中開啟。請從它的選單儲存。</string>
+    <string name="ie_companion_unreachable">InstaEclipse 應用程式沒有回應。請開啟它一次，然後再試一次。</string>
+    <string name="ie_companion_timeout">InstaEclipse 應用程式回應逾時。請再試一次。</string>
+    <string name="ie_companion_busy">InstaEclipse 應用程式忙碌中。請稍後再試。</string>
+    <string name="ie_companion_denied">InstaEclipse 應用程式拒絕了此要求。請將兩個應用程式更新至相同版本。</string>
+    <string name="ie_companion_failed">InstaEclipse 應用程式無法完成此操作。請再試一次。</string>
+    <string name="ie_companion_invalid">無法將此要求傳送至 InstaEclipse 應用程式。</string>
+    <string name="ie_companion_not_visible">請從你目前所在的畫面開啟。</string>
+    <string name="ie_companion_launch_failed">無法開啟 InstaEclipse 應用程式。請從此畫面再試一次。</string>
+    <string name="ie_download_saved_quality">已儲存：%1$s（%2$s）</string>
+    <string name="ie_download_saved_lower">已以較低畫質儲存：%1$s（%2$s）</string>
+    <string name="ie_download_reason_expired">連結已過期。請重新開啟貼文後再試。</string>
+    <string name="ie_download_reason_offline">連線有問題。請檢查網路連線後再試一次。</string>
+    <string name="ie_download_reason_server">Instagram 伺服器未傳送檔案。請稍後再試。</string>
+    <string name="ie_download_reason_storage">這支手機的可用空間不足。</string>
+    <string name="ie_download_reason_too_large">檔案太大，無法儲存。</string>
+    <string name="ie_download_reason_no_media">這裡沒有可下載的內容。</string>
+    <string name="ie_download_reason_ceiling">沒有符合你畫質上限的版本。</string>
+    <string name="ie_download_reason_unplayable">檔案未通過播放檢查。</string>
+    <string name="ie_download_reason_blocked">已封鎖：這不是 Instagram 媒體檔案。</string>
+    <string name="ie_download_reason_generic">發生錯誤。請再試一次。</string>
+    <string name="ie_frame_reason_memory">記憶體不足，無法處理此畫面。</string>
+    <string name="ie_frame_reason_write">無法寫入 PNG。請檢查可用空間。</string>
+    <string name="ie_copy_media_link">複製媒體連結</string>
+    <string name="ig_profile_pic_load_failed">無法載入這張圖片</string>
+    <string name="ie_download_starting">正在開始…</string>
+    <string name="ie_download_verifying">正在檢查檔案…</string>
+    <string name="ie_download_saving">正在儲存…</string>
+    <string name="ie_download_extracting_audio">正在擷取音訊…</string>
+    <string name="ie_download_reason_invalid">此下載要求已損毀。請再試一次。</string>
+    <plurals name="ie_download_waiting">
+        <item quantity="other">%1$s · %2$d 個等待中</item>
+    </plurals>
+    <plurals name="ie_download_files_saved">
+        <item quantity="other">已儲存 %1$d 個檔案</item>
+    </plurals>
+    <plurals name="ie_download_files_failed">
+        <item quantity="other">%1$d 個失敗</item>
+    </plurals>
+    <string name="ie_download_saved_and_failed">%1$s，%2$s</string>
+    <string name="ie_export_saving">正在儲存聊天匯出…</string>
+    <string name="ie_export_saving_media">正在儲存媒體 %1$d / %2$d</string>
+    <string name="ie_export_failed">無法儲存聊天匯出</string>
+    <string name="ie_download_cover">儲存封面圖片</string>
+    <string name="ig_media_info_type">類型</string>
+    <string name="ig_media_info_video">影片</string>
+    <string name="ig_media_info_carousel">輪播</string>
+    <string name="ig_media_info_photo">相片</string>
+    <string name="ig_media_info_slide">%1$s（%2$d/%3$d）</string>
+    <string name="ig_media_info_original">原始尺寸</string>
+    <string name="ig_media_info_size_value">%1$d × %2$d</string>
+    <string name="ig_media_info_duration">長度</string>
+    <string name="ig_media_info_seconds">%1$.1f 秒</string>
+    <string name="ig_media_info_codec">編碼</string>
+    <string name="ig_media_info_audio">音訊</string>
+    <string name="ig_media_info_yes">是</string>
+    <string name="ig_media_info_no">否</string>
+    <string name="ig_media_info_qualities">畫質</string>
+    <string name="ig_media_info_file_size">檔案大小</string>
+    <string name="ig_media_info_megabytes">%1$.2f MB</string>
+    <string name="ig_media_info_error">無法讀取此貼文</string>
+    <string name="ig_highlight_failed">無法下載此精選。請再試一次。</string>
+    <string name="ig_instant_already_saved">已經儲存過了</string>
+    <plurals name="ie_download_batch_done">
+        <item quantity="other">已儲存 %1$d / %2$d</item>
+    </plurals>
+    <string name="ig_playback_speed_normal">正常</string>
+    <string name="ig_playback_speed_stays">%1$s 會持續套用，直到你選擇「正常」</string>
+</resources>

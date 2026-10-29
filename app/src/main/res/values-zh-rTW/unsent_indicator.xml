@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">已收回</string>
+    <string name="ig_unsent_clear_failed">無法清除已儲存的訊息。請重新開啟此聊天後再試一次。</string>
+    <string name="ig_unsent_clear_saved">清除已儲存的收回訊息</string>
+    <string name="ig_unsent_clear_saved_confirm">要從垃圾桶和本機聊天紀錄中移除這些保留的訊息嗎？此操作無法復原。</string>
+    <string name="ig_unsent_cleared_saved">已清除已儲存的收回訊息</string>
+</resources>

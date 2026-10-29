@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_preset_light">%1$s ljus</string>
+    <string name="theme_preset_dark">%1$s mörk</string>
+    <string name="ig_reel_block_off_title">Reels är avstängda</string>
+    <string name="ig_reel_block_off_detail">Slå på dem igen i InstaEclipse › %1$s</string>
+    <string name="ig_reel_block_night_title">Reels är pausade för natten</string>
+    <string name="ig_reel_block_night_detail">Tillbaka kl. %1$s</string>
+    <string name="ig_reel_block_limit_title">Du har nått dagens reel-gräns</string>
+    <string name="ig_reel_block_limit_detail">%1$d av %2$d reels · nollställs vid midnatt</string>
+    <string name="ig_reel_block_go_back">Gå tillbaka</string>
+</resources>

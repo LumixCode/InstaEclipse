@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_comment_search_maybe_more">تم تحميل %1$d تعليق · قد يكون هناك المزيد</string>
+    <string name="ig_toast_story_unavailable">تفاصيل القصة غير متاحة</string>
+    <string name="ig_toast_like_not_sent">لم يُرسل الإعجاب</string>
+    <string name="ig_toast_user_follows_you">\@%1$s يتابعك</string>
+    <string name="ig_toast_user_not_follows_you">\@%1$s لا يتابعك</string>
+    <string name="ig_pa_remove_confirm">إزالة @%1$s من قائمة المراقبة؟ ستُحذف تحليلاته المحفوظة (%2$d) وتاريخ التغييرات. لا يمكن التراجع عن ذلك.</string>
+    <string name="ig_pa_remove_confirm_action">إزالة</string>
+    <string name="ig_pa_save_failed">تعذّر حفظ هذا التحليل، لذا سيُقارَن التحليل التالي بآخر تحليل محفوظ.</string>
+    <string name="ig_follow_tools">أدوات القائمة</string>
+    <string name="ig_follow_tools_title">\@%1$s · %2$s: %3$s</string>
+    <string name="ig_follow_load_stop">إيقاف</string>
+    <string name="ig_follow_export_failed">تعذّر حفظ التصدير: %1$s</string>
+    <string name="ig_pa_check_mine">فحص متابِعيّ</string>
+    <string name="ig_pa_watch_row_followers">%1$d متابِع · %2$s</string>
+    <string name="ig_pa_watch_full">قائمة المراقبة ممتلئة: أُزيل أقدم ملف شخصي</string>
+    <plurals name="ig_list_more">
+        <item quantity="zero">+%1$d أخرى · راجع «تاريخ التغييرات»</item>
+        <item quantity="one">+%1$d أخرى · راجع «تاريخ التغييرات»</item>
+        <item quantity="two">+%1$d أخرى · راجع «تاريخ التغييرات»</item>
+        <item quantity="few">+%1$d أخرى · راجع «تاريخ التغييرات»</item>
+        <item quantity="many">+%1$d أخرى · راجع «تاريخ التغييرات»</item>
+        <item quantity="other">+%1$d أخرى · راجع «تاريخ التغييرات»</item>
+    </plurals>
+    <string name="ig_comment_search_clear">مسح البحث</string>
+    <string name="ig_comment_export_none">لم تُحمَّل أي تعليقات بعد</string>
+    <string name="ig_comment_export_title">التعليقات</string>
+    <string name="ig_comment_export_on_post">التعليقات على منشور @%1$s</string>
+    <string name="ig_comment_export_banner">تصدير التعليقات</string>
+    <string name="ig_comment_export_exported">تم التصدير %1$s</string>
+    <string name="ig_comment_export_loaded_only">تُضمَّن التعليقات المحمّلة في التطبيق فقط</string>
+    <string name="ig_comment_media_gif">GIF</string>
+    <string name="ig_comment_media_image">صورة</string>
+    <string name="ig_comment_media_unavailable">%1$s (غير متاح)</string>
+    <plurals name="ig_comment_export_comments">
+        <item quantity="zero">%1$d تعليق</item>
+        <item quantity="one">%1$d تعليق</item>
+        <item quantity="two">%1$d تعليقان</item>
+        <item quantity="few">%1$d تعليقات</item>
+        <item quantity="many">%1$d تعليقًا</item>
+        <item quantity="other">%1$d تعليق</item>
+    </plurals>
+    <plurals name="ig_comment_export_replies">
+        <item quantity="zero">%1$d رد</item>
+        <item quantity="one">%1$d رد</item>
+        <item quantity="two">%1$d ردّان</item>
+        <item quantity="few">%1$d ردود</item>
+        <item quantity="many">%1$d ردًّا</item>
+        <item quantity="other">%1$d رد</item>
+    </plurals>
+    <string name="ig_confirm_follow_title_v2">متابعة @%1$s؟</string>
+</resources>

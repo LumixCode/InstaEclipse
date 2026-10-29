@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">快取看過的限時動態</string>
+    <string name="ig_story_cache_duration">快取時間</string>
+    <string name="ig_story_cache_hours">%1$d 小時</string>
+    <string name="ig_story_cache_picker_help">限時動態可保留 1–720 小時（最多 30 天）。快取達到 500 MB 時，最舊的限時動態可能會提早移除。</string>
+    <string name="ig_story_cache_picker_unit">小時（從觀看時起算）</string>
+    <string name="ig_story_cache_invalid">請輸入 1 到 720 之間的數字。</string>
+    <string name="ig_story_cache_empty_current">尚無已快取的限時動態。開啟快取後觀看一些限時動態，它們就會依你選擇的時間保留在這裡。</string>
+</resources>

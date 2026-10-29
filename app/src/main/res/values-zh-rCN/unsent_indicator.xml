@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">已撤回</string>
+    <string name="ig_unsent_clear_failed">无法清除已保存的消息。请重新打开此聊天后重试。</string>
+    <string name="ig_unsent_clear_saved">清除已保存的撤回消息</string>
+    <string name="ig_unsent_clear_saved_confirm">要从回收站和本地聊天记录中移除这些保留的消息吗？此操作无法撤销。</string>
+    <string name="ig_unsent_cleared_saved">已清除保存的撤回消息</string>
+</resources>

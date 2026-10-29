@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_unsent_log_set_aside">تعذّرت قراءة القائمة المحفوظة، فوُضعت جانبًا.</string>
+    <string name="ig_toast_marked_as_seen">تم التحديد كمُشاهَد</string>
+    <string name="ig_toast_channel_marked_as_seen">تم تحديد القناة كمُشاهَدة</string>
+    <string name="ig_chat_export_banner">تصدير المحادثة</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="zero">%1$d رسالة</item>
+        <item quantity="one">%1$d رسالة</item>
+        <item quantity="two">%1$d رسالتان</item>
+        <item quantity="few">%1$d رسائل</item>
+        <item quantity="many">%1$d رسالة</item>
+        <item quantity="other">%1$d رسالة</item>
+    </plurals>
+    <string name="ig_chat_export_edited">تم التعديل</string>
+    <string name="ig_chat_export_pinned">مثبّتة</string>
+    <string name="ig_chat_export_forwarded">تمت إعادة التوجيه</string>
+    <string name="ig_chat_export_story_reply">رد على قصة</string>
+    <string name="ig_chat_export_reply_to">إلى @%1$s</string>
+    <string name="ig_chat_export_shared_story">قصة مُشارَكة</string>
+    <string name="ig_chat_export_shared_reel">مقطع ريلز مُشارَك</string>
+    <string name="ig_chat_export_shared_post">منشور مُشارَك</string>
+    <string name="ig_chat_export_shared_profile">ملف شخصي مُشارَك</string>
+    <string name="ig_chat_export_mention_by_you">أشرت إلى هذا الحساب في قصتك</string>
+    <string name="ig_chat_export_mention_of_you">أشار إليك في قصته</string>
+    <string name="ig_chat_export_unsupported">تصدير المحادثة لا يعمل على إصدار Instagram هذا</string>
+    <string name="ig_bulk_unsend_not_ready">المحادثة غير جاهزة، حاول مرة أخرى</string>
+    <plurals name="ig_bulk_unsend_result">
+        <item quantity="zero">تم إلغاء إرسال %1$d من %2$d رسالة</item>
+        <item quantity="one">تم إلغاء إرسال %1$d من %2$d رسالة</item>
+        <item quantity="two">تم إلغاء إرسال %1$d من %2$d رسالتين</item>
+        <item quantity="few">تم إلغاء إرسال %1$d من %2$d رسائل</item>
+        <item quantity="many">تم إلغاء إرسال %1$d من %2$d رسالة</item>
+        <item quantity="other">تم إلغاء إرسال %1$d من %2$d رسالة</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="zero">إلغاء إرسال %1$d رسالة؟ لا يمكن التراجع عن ذلك.</item>
+        <item quantity="one">إلغاء إرسال %1$d رسالة؟ لا يمكن التراجع عن ذلك.</item>
+        <item quantity="two">إلغاء إرسال %1$d رسالتين؟ لا يمكن التراجع عن ذلك.</item>
+        <item quantity="few">إلغاء إرسال %1$d رسائل؟ لا يمكن التراجع عن ذلك.</item>
+        <item quantity="many">إلغاء إرسال %1$d رسالة؟ لا يمكن التراجع عن ذلك.</item>
+        <item quantity="other">إلغاء إرسال %1$d رسالة؟ لا يمكن التراجع عن ذلك.</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="zero">جارٍ إلغاء الإرسال %1$d/%2$d</item>
+        <item quantity="one">جارٍ إلغاء الإرسال %1$d/%2$d</item>
+        <item quantity="two">جارٍ إلغاء الإرسال %1$d/%2$d</item>
+        <item quantity="few">جارٍ إلغاء الإرسال %1$d/%2$d</item>
+        <item quantity="many">جارٍ إلغاء الإرسال %1$d/%2$d</item>
+        <item quantity="other">جارٍ إلغاء الإرسال %1$d/%2$d</item>
+    </plurals>
+    <string name="ig_jump_first_stop_menu">إيقاف تحميل الرسائل الأقدم</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="zero">جارٍ تحميل الرسائل الأقدم · تم تحميل %1$d</item>
+        <item quantity="one">جارٍ تحميل الرسائل الأقدم · تم تحميل %1$d</item>
+        <item quantity="two">جارٍ تحميل الرسائل الأقدم · تم تحميل %1$d</item>
+        <item quantity="few">جارٍ تحميل الرسائل الأقدم · تم تحميل %1$d</item>
+        <item quantity="many">جارٍ تحميل الرسائل الأقدم · تم تحميل %1$d</item>
+        <item quantity="other">جارٍ تحميل الرسائل الأقدم · تم تحميل %1$d</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">جارٍ تحميل الرسائل الأقدم</string>
+    <string name="ig_jump_first_stop">إيقاف</string>
+    <string name="ig_jump_first_reached">تم الوصول إلى أول رسالة في هذه المحادثة</string>
+    <string name="ig_jump_first_stopped_loading">تم إيقاف تحميل الرسائل الأقدم</string>
+    <string name="ig_lock_chat">قفل هذه المحادثة</string>
+    <string name="ig_lock_chat_unlock">إلغاء قفل هذه المحادثة</string>
+    <string name="ig_lock_chat_locked">تم قفل المحادثة</string>
+    <string name="ig_lock_chat_locked_on">تم قفل المحادثة. «قفل محادثات مختارة» مفعّل الآن.</string>
+    <string name="ig_lock_chat_unlocked">أُلغي قفل المحادثة</string>
+    <string name="ig_lock_selected_menu_desc">اختر المحادثات هنا أو عبر «قفل هذه المحادثة» في قائمة المحادثة</string>
+    <string name="ig_ghost_messages_tab_label">الرسائل، وضع الشبح مفعّل</string>
+    <string name="ig_toast_ghost_on">وضع الشبح مفعّل: %1$s</string>
+    <string name="ig_toast_ghost_off">وضع الشبح متوقف: %1$s</string>
+    <string name="ig_quick_toggle_none_chosen">لم تختر شيئًا بعد. اختر ما يبدّله الضغط المطوّل على أيقونة الرسائل.</string>
+    <string name="ig_quick_toggle_name_seen">المشاهدة</string>
+    <string name="ig_quick_toggle_name_typing">الكتابة</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">تنبيهات لقطات الشاشة</string>
+    <string name="ig_quick_toggle_name_view_once">العرض لمرة واحدة</string>
+    <string name="ig_quick_toggle_name_stories">القصص</string>
+    <string name="ig_quick_toggle_name_live">البث المباشر</string>
+    <string name="ig_quick_toggle_name_disappearing">الرسائل المختفية</string>
+    <string name="ig_quick_toggle_name_permanent_view">العرض الدائم</string>
+    <string name="ig_quick_toggle_name_screenshots">لقطات الشاشة</string>
+    <string name="ig_read_receipt_list_title">المحادثات التي تتلقى إشعارات القراءة</string>
+    <string name="ig_read_receipt_list_add">إضافة محادثات</string>
+    <string name="ig_read_receipt_pick_title">اختر المحادثات التي تتلقى إشعارات القراءة</string>
+    <string name="ig_read_receipt_list_empty">لا توجد محادثات تتلقى إشعارات القراءة بعد. أضف محادثات هنا، أو افتح محادثة واختر «إرسال إشعارات القراءة في هذه المحادثة» من قائمتها.</string>
+    <string name="ig_read_receipt_list_seen_off">«إخفاء المشاهدة في المحادثات» متوقف، لذا تتلقى كل المحادثات إشعارات القراءة حاليًا.</string>
+</resources>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_unsent_log_set_aside">Kunde inte läsa den sparade listan; den lades åt sidan.</string>
+    <string name="ig_toast_marked_as_seen">Markerat som sett</string>
+    <string name="ig_toast_channel_marked_as_seen">Kanalen markerad som sedd</string>
+    <string name="ig_chat_export_banner">Chattexport</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="one">%1$d meddelande</item>
+        <item quantity="other">%1$d meddelanden</item>
+    </plurals>
+    <string name="ig_chat_export_edited">redigerat</string>
+    <string name="ig_chat_export_pinned">fäst</string>
+    <string name="ig_chat_export_forwarded">vidarebefordrat</string>
+    <string name="ig_chat_export_story_reply">Svar på story</string>
+    <string name="ig_chat_export_reply_to">till @%1$s</string>
+    <string name="ig_chat_export_shared_story">Delad story</string>
+    <string name="ig_chat_export_shared_reel">Delad reel</string>
+    <string name="ig_chat_export_shared_post">Delat inlägg</string>
+    <string name="ig_chat_export_shared_profile">Delad profil</string>
+    <string name="ig_chat_export_mention_by_you">Du nämnde dem i din story</string>
+    <string name="ig_chat_export_mention_of_you">Nämnde dig i sin story</string>
+    <string name="ig_chat_export_unsupported">Chattexport fungerar inte i den här Instagram-versionen</string>
+    <string name="ig_bulk_unsend_not_ready">Chatten är inte redo, försök igen</string>
+    <plurals name="ig_bulk_unsend_result">
+        <item quantity="one">Ångrade %1$d av %2$d meddelande</item>
+        <item quantity="other">Ångrade %1$d av %2$d meddelanden</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="one">Ångra %1$d meddelande? Det går inte att göra ogjort.</item>
+        <item quantity="other">Ångra %1$d meddelanden? Det går inte att göra ogjort.</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="one">Ångrar %1$d/%2$d</item>
+        <item quantity="other">Ångrar %1$d/%2$d</item>
+    </plurals>
+    <string name="ig_jump_first_stop_menu">Sluta ladda äldre meddelanden</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="one">Laddar äldre meddelanden · %1$d laddat</item>
+        <item quantity="other">Laddar äldre meddelanden · %1$d laddade</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">Laddar äldre meddelanden</string>
+    <string name="ig_jump_first_stop">Stoppa</string>
+    <string name="ig_jump_first_reached">Nådde det första meddelandet i chatten</string>
+    <string name="ig_jump_first_stopped_loading">Slutade ladda äldre meddelanden</string>
+    <string name="ig_lock_chat">Lås den här chatten</string>
+    <string name="ig_lock_chat_unlock">Lås upp den här chatten</string>
+    <string name="ig_lock_chat_locked">Chatten låst</string>
+    <string name="ig_lock_chat_locked_on">Chatten låst. Lås valda chattar är nu på.</string>
+    <string name="ig_lock_chat_unlocked">Chatten upplåst</string>
+    <string name="ig_lock_selected_menu_desc">Välj chattar här eller med Lås den här chatten i en chatts meny</string>
+    <string name="ig_ghost_messages_tab_label">Meddelanden, spökläge på</string>
+    <string name="ig_toast_ghost_on">Spökläge på: %1$s</string>
+    <string name="ig_toast_ghost_off">Spökläge av: %1$s</string>
+    <string name="ig_quick_toggle_none_chosen">Inget är valt ännu. Välj vad som växlas när du håller in Meddelanden-ikonen.</string>
+    <string name="ig_quick_toggle_name_seen">sett</string>
+    <string name="ig_quick_toggle_name_typing">skrivindikator</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">skärmdumpsaviseringar</string>
+    <string name="ig_quick_toggle_name_view_once">engångsmedia</string>
+    <string name="ig_quick_toggle_name_stories">stories</string>
+    <string name="ig_quick_toggle_name_live">live</string>
+    <string name="ig_quick_toggle_name_disappearing">försvinnande meddelanden</string>
+    <string name="ig_quick_toggle_name_permanent_view">permanent visning</string>
+    <string name="ig_quick_toggle_name_screenshots">skärmdumpar</string>
+    <string name="ig_read_receipt_list_title">Chattar som får läskvitton</string>
+    <string name="ig_read_receipt_list_add">Lägg till chattar</string>
+    <string name="ig_read_receipt_pick_title">Välj chattar som får läskvitton</string>
+    <string name="ig_read_receipt_list_empty">Inga chattar får läskvitton ännu. Lägg till chattar här, eller öppna en chatt och välj Skicka läskvitton i den här chatten i dess meny.</string>
+    <string name="ig_read_receipt_list_seen_off">Dölj Sett i chattar är av, så alla chattar får läskvitton just nu.</string>
+</resources>

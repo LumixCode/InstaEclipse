@@ -2,7 +2,7 @@
 <resources>
     <!-- Logs tab (0.8) -->
     <string name="logs_filter_all">全部</string>
-    <string name="logs_filter_hooked">成功</string>
+    <string name="logs_filter_hooked">就緒</string>
     <string name="logs_filter_errors">錯誤</string>
     <string name="logs_filter_warnings">警告</string>
     <string name="logs_technical_details">技術細節</string>
@@ -27,4 +27,22 @@
     <string name="logs_entry_copied">已複製項目</string>
     <string name="logs_cleared">已清除日誌</string>
     <string name="logs_source_companion">[應用程式]</string>
+    <string name="logs_latest">最新</string>
+    <string name="logs_clear_confirm_title">要清除日誌嗎？</string>
+    <string name="logs_clear_confirm_body">移除這支手機上儲存的日誌，包括 Instagram 的日誌。</string>
+    <string name="logs_share_no_app">沒有可用於分享的應用程式</string>
+    <string name="logs_status_unsynced">已儲存的日誌 · 無法即時同步</string>
+    <string name="logs_copy_entry">複製項目</string>
+    <string name="logs_crash_share">分享崩潰報告</string>
+    <string name="logs_crash_delete">刪除崩潰報告</string>
+    <string name="logs_crash_share_warning">崩潰報告可能包含 Instagram 記憶體中的部分內容，例如訊息或登入資料。請私下分享，不要放在公開的問題回報中。</string>
+    <string name="logs_crash_share_summary">分享摘要</string>
+    <string name="logs_crash_share_full">分享完整報告</string>
+    <string name="logs_crash_share_subject">InstaEclipse 崩潰報告</string>
+    <string name="logs_crash_share_failed">無法建立崩潰報告</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="other">要刪除 %d 份崩潰報告嗎？</item>
+    </plurals>
+    <string name="logs_crash_delete_action">刪除</string>
+    <string name="logs_crash_deleted">已刪除崩潰報告</string>
 </resources>

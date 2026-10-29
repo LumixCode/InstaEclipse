@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">שמור סטוריז שצפית בהם</string>
+    <string name="ig_story_cache_duration">משך השמירה</string>
+    <string name="ig_story_cache_hours">%1$d שע׳</string>
+    <string name="ig_story_cache_picker_help">שמור סטוריז למשך 1–720 שעות (עד 30 יום). הסטוריז הישנים ביותר עשויים להימחק מוקדם יותר אם המטמון מגיע ל-500 MB.</string>
+    <string name="ig_story_cache_picker_unit">שעות אחרי הצפייה</string>
+    <string name="ig_story_cache_invalid">הזן מספר בין 1 ל-720.</string>
+    <string name="ig_story_cache_empty_current">עדיין אין סטוריז שמורים. הפעל את השמירה וצפה בכמה סטוריז כדי שיישמרו כאן למשך הזמן שבחרת.</string>
+</resources>

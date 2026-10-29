@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="ig_mention_count">
+        <item quantity="one">%1$d omnämnande · tryck öppnar, håll in kopierar</item>
+        <item quantity="other">%1$d omnämnanden · tryck öppnar, håll in kopierar</item>
+    </plurals>
+</resources>

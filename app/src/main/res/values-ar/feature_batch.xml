@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_feature_unsent_indicator">تمييز الرسائل الملغاة</string>
+    <string name="ig_feature_show_unsent_button">إظهار «الرسائل الملغاة» في قائمة المحادثة</string>
+    <string name="ig_feature_following_follow_status">إظهار من يتابعك بالمقابل</string>
+    <string name="ig_feature_manual_story_seen">تحديد القصص كمُشاهَدة يدويًا</string>
+</resources>

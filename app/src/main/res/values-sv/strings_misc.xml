@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_comment_search_maybe_more">%1$d kommentarer laddade · det kan finnas fler</string>
+    <string name="ig_toast_story_unavailable">Storydetaljer är inte tillgängliga</string>
+    <string name="ig_toast_like_not_sent">Gillningen skickades inte</string>
+    <string name="ig_toast_user_follows_you">\@%1$s följer dig</string>
+    <string name="ig_toast_user_not_follows_you">\@%1$s följer inte dig</string>
+    <string name="ig_pa_remove_confirm">Ta bort @%1$s från bevakningslistan? Dess %2$d sparade analyser och ändringshistorik raderas. Det går inte att ångra.</string>
+    <string name="ig_pa_remove_confirm_action">Ta bort</string>
+    <string name="ig_pa_save_failed">Den här analysen kunde inte sparas, så nästa jämförs med den senast sparade analysen.</string>
+    <string name="ig_follow_tools">Listverktyg</string>
+    <string name="ig_follow_tools_title">\@%1$s · %2$s: %3$s</string>
+    <string name="ig_follow_load_stop">Stoppa</string>
+    <string name="ig_follow_export_failed">Kunde inte spara exporten: %1$s</string>
+    <string name="ig_pa_check_mine">Kontrollera mina följare</string>
+    <string name="ig_pa_watch_row_followers">%1$d följare · %2$s</string>
+    <string name="ig_pa_watch_full">Bevakningslistan är full: den äldsta profilen togs bort</string>
+    <plurals name="ig_list_more">
+        <item quantity="one">+%1$d till · se Ändringshistorik</item>
+        <item quantity="other">+%1$d till · se Ändringshistorik</item>
+    </plurals>
+    <string name="ig_comment_search_clear">Rensa sökning</string>
+    <string name="ig_comment_export_none">Inga kommentarer har laddats ännu</string>
+    <string name="ig_comment_export_title">Kommentarer</string>
+    <string name="ig_comment_export_on_post">Kommentarer på inlägget från @%1$s</string>
+    <string name="ig_comment_export_banner">Kommentarsexport</string>
+    <string name="ig_comment_export_exported">Exporterad %1$s</string>
+    <string name="ig_comment_export_loaded_only">Bara kommentarer som laddats i appen ingår</string>
+    <string name="ig_comment_media_gif">GIF</string>
+    <string name="ig_comment_media_image">Bild</string>
+    <string name="ig_comment_media_unavailable">%1$s (inte tillgänglig)</string>
+    <plurals name="ig_comment_export_comments">
+        <item quantity="one">%1$d kommentar</item>
+        <item quantity="other">%1$d kommentarer</item>
+    </plurals>
+    <plurals name="ig_comment_export_replies">
+        <item quantity="one">%1$d svar</item>
+        <item quantity="other">%1$d svar</item>
+    </plurals>
+    <string name="ig_confirm_follow_title_v2">Följa @%1$s?</string>
+</resources>

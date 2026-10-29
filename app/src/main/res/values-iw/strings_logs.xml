@@ -27,4 +27,24 @@
     <string name="logs_entry_copied">הרשומה הועתקה</string>
     <string name="logs_cleared">היומנים נוקו</string>
     <string name="logs_source_companion">[אפליקציה]</string>
+    <string name="logs_latest">האחרונות</string>
+    <string name="logs_clear_confirm_title">לנקות את היומנים?</string>
+    <string name="logs_clear_confirm_body">מוחק את היומנים השמורים בטלפון הזה, כולל של Instagram.</string>
+    <string name="logs_share_no_app">אין אפליקציה זמינה לשיתוף</string>
+    <string name="logs_status_unsynced">יומן שמור · סנכרון חי לא זמין</string>
+    <string name="logs_copy_entry">העתק רשומה</string>
+    <string name="logs_crash_share">שתף דוח קריסה</string>
+    <string name="logs_crash_delete">מחק דוחות קריסה</string>
+    <string name="logs_crash_share_warning">דוחות קריסה עלולים לכלול חלקים ממה ש-Instagram החזיק בזיכרון, כמו הודעות או פרטי התחברות. שתף אותם באופן פרטי, לא ב-issue ציבורי.</string>
+    <string name="logs_crash_share_summary">שתף סיכום</string>
+    <string name="logs_crash_share_full">שתף דוח מלא</string>
+    <string name="logs_crash_share_subject">דוח קריסה של InstaEclipse</string>
+    <string name="logs_crash_share_failed">לא ניתן ליצור את דוח הקריסה</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="one">למחוק %d דוח קריסה?</item>
+        <item quantity="two">למחוק %d דוחות קריסה?</item>
+        <item quantity="other">למחוק %d דוחות קריסה?</item>
+    </plurals>
+    <string name="logs_crash_delete_action">מחק</string>
+    <string name="logs_crash_deleted">דוחות הקריסה נמחקו</string>
 </resources>

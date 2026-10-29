@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_manual_story_seen_action">将此快拍标记为已看</string>
+    <string name="ig_manual_story_seen_sent">已为此快拍发送已看回执</string>
+    <string name="ig_manual_story_seen_unavailable">无法发送此快拍的已看回执。幽灵模式仍然开启。</string>
+    <string name="ig_manual_story_seen_unsupported">此 Instagram 版本无法使用“将此快拍标记为已看”。幽灵模式仍然开启。</string>
+</resources>

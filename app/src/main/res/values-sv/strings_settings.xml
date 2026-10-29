@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_toast_restored_some_skipped">Inställningarna återställdes, utom %1$d som var ogiltiga eller låsta av Extremläge.</string>
+</resources>

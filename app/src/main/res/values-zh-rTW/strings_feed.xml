@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_preset_light">%1$s 淺色</string>
+    <string name="theme_preset_dark">%1$s 深色</string>
+    <string name="ig_reel_block_off_title">Reels 已停用</string>
+    <string name="ig_reel_block_off_detail">可在 InstaEclipse › %1$s 中重新開啟</string>
+    <string name="ig_reel_block_night_title">Reels 夜間暫停中</string>
+    <string name="ig_reel_block_night_detail">%1$s 恢復</string>
+    <string name="ig_reel_block_limit_title">你已達到今天的 Reels 上限</string>
+    <string name="ig_reel_block_limit_detail">已看 %1$d / %2$d 部 Reels · 午夜重設</string>
+    <string name="ig_reel_block_go_back">返回</string>
+</resources>

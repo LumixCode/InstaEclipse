@@ -5,4 +5,40 @@
     <string name="feat_search_no_results">Inga matchande funktioner</string>
     <string name="feat_count_on">%1$d på</string>
     <string name="feat_count_off">Av</string>
+    <string name="feat_cache_size_limit">Gräns för cachestorlek</string>
+    <string name="feat_tab_move_up">Flytta upp %1$s</string>
+    <string name="feat_tab_move_down">Flytta ned %1$s</string>
+    <string name="feat_tab_hidden">%1$s · Dold</string>
+    <plurals name="feat_restore_confirm">
+        <item quantity="one">Återställa %d inställning från den här säkerhetskopian? Inställningarna i filen ersätter de nuvarande; lås slås bara på.</item>
+        <item quantity="other">Återställa %d inställningar från den här säkerhetskopian? Inställningarna i filen ersätter de nuvarande; lås slås bara på.</item>
+    </plurals>
+    <plurals name="feat_restore_skipped">
+        <item quantity="one">%d post hoppas över.</item>
+        <item quantity="other">%d poster hoppas över.</item>
+    </plurals>
+    <string name="feat_restore_needs_passcode">Lås kräver en kod som anges i Instagram.</string>
+    <string name="feat_restore_action">Återställ</string>
+    <string name="feat_restore_invalid_file">inte en giltig säkerhetskopia</string>
+    <string name="feat_backup_unreadable">inställningarna kunde inte läsas</string>
+    <string name="feat_notification_rationale_title">Visa nedladdningsförlopp?</string>
+    <string name="feat_notification_rationale_message">InstaEclipse visar en avisering medan dina nedladdningar sparas.</string>
+    <string name="feat_storage_rationale_title">Tillåta att nedladdningar sparas?</string>
+    <string name="feat_storage_rationale_message">I den här Android-versionen behöver InstaEclipse lagringsåtkomst för att spara dina nedladdningar.</string>
+    <string name="feat_permission_not_now">Inte nu</string>
+    <string name="feat_use_default_folder">Använd standardmappen</string>
+    <string name="feat_download_folder_default">%1$s (standard)</string>
+    <string name="feat_reset_folder_confirm">Använda standardmappen? Nya nedladdningar hamnar i %1$s.</string>
+    <string name="feat_search_try_another">Prova ett annat ord</string>
+    <string name="feat_reason_best_only">Bara med kvaliteten Bästa</string>
+    <string name="feat_reason_overridden">Av medan ”%1$s” är på</string>
+    <string name="feat_requires_lock">Slå på ett lås först</string>
+    <string name="feat_requires_above">Slå på ett alternativ ovan först</string>
+    <string name="feat_corner_small">Liten</string>
+    <string name="feat_corner_medium">Medel</string>
+    <string name="feat_corner_large">Stor</string>
+    <string name="feat_corner_extra_large">Extra stor</string>
+    <string name="feat_corner_round">Rund</string>
+    <string name="feat_lock_needs_passcode">På · behöver en kod i Instagram</string>
+    <string name="feat_restart_waiting">Väntar på omstart av Instagram</string>
 </resources>

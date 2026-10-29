@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="ig_mention_count">
+        <item quantity="zero">%1$d إشارة · اضغط للفتح، واضغط مطولًا للنسخ</item>
+        <item quantity="one">%1$d إشارة · اضغط للفتح، واضغط مطولًا للنسخ</item>
+        <item quantity="two">%1$d إشارتان · اضغط للفتح، واضغط مطولًا للنسخ</item>
+        <item quantity="few">%1$d إشارات · اضغط للفتح، واضغط مطولًا للنسخ</item>
+        <item quantity="many">%1$d إشارة · اضغط للفتح، واضغط مطولًا للنسخ</item>
+        <item quantity="other">%1$d إشارة · اضغط للفتح، واضغط مطولًا للنسخ</item>
+    </plurals>
+</resources>

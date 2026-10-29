@@ -4,4 +4,6 @@
     <string name="ig_toast_link_copied">Länk kopierad</string>
     <string name="ig_toast_links_copied">Alla länkar kopierade</string>
     <string name="ig_dialog_misc_story_links">Kopiera länkar i stories</string>
+    <string name="ig_btn_copy_sticker_link">Kopiera klistermärkeslänk</string>
+    <string name="ig_sticker_links_title">Klistermärkeslänkar</string>
 </resources>

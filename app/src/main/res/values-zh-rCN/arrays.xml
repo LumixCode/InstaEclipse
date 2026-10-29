@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ig_fancy_font_names">
+        <item>常规</item>
+        <item>粗体</item>
+        <item>斜体</item>
+        <item>粗斜体</item>
+        <item>无衬线粗体</item>
+        <item>无衬线斜体</item>
+        <item>手写体</item>
+        <item>哥特体</item>
+        <item>双线体</item>
+        <item>等宽</item>
+        <item>圆圈</item>
+        <item>全角</item>
+        <item>小型大写</item>
+        <item>删除线</item>
+        <item>下划线</item>
+    </string-array>
+</resources>

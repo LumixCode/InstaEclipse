@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">InstaEclipse-nedladdningar</string>
     <string name="ie_download_quality">Nedladdningskvalitet</string>
     <string name="ie_downloader_original">Standard</string>
     <string name="ie_download_best">Bästa</string>
     <string name="ie_download_ceiling">Bästa, upp till %1$dp</string>
+    <string name="ie_save_video_frame">Spara bildruta</string>
+    <string name="ie_download_video">Ladda ned video</string>
+    <string name="ie_frame_help">Välj en bildruta med reglaget. Bara PNG-filen i full upplösning sparas; den tillfälliga videon tas bort när du sparar eller stänger.</string>
+    <string name="ie_frame_preparing">Förbereder video i högsta kvalitet…</string>
+    <string name="ie_frame_preparing_progress">Förbereder video i högsta kvalitet… %1$d%%</string>
+    <string name="ie_frame_loading">Laddar förhandsvisning…</string>
+    <string name="ie_frame_preview">Förhandsvisning av vald bildruta</string>
+    <string name="ie_frame_position">Bildrutans position</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · Full upplösning</string>
+    <string name="ie_frame_save">Spara PNG</string>
+    <string name="ie_frame_saving">Sparar bildruta i full upplösning…</string>
+    <string name="ie_frame_saved">PNG sparad: %1$d × %2$d. Den tillfälliga videon togs bort.</string>
+    <string name="ie_frame_failed">Kunde inte förbereda eller spara bildrutan. Ingen version i lägre kvalitet användes i stället.</string>
+    <string name="ie_frame_reopen">Öppna Ladda ned igen i Instagram för att välja en bildruta.</string>
     <string name="ie_download_compatibility">Föredra videor som spelas överallt</string>
     <string name="ie_download_fallback">Använd lägre kvalitet om Bästa misslyckas</string>
-    <string name="ie_downloader_original_unavailable">Standard kunde inte spara den. Byt till Bästa för att ladda ner den.</string>
+    <string name="ie_download_unavailable">Det valda mediet kunde inte hämtas i den här Instagram-versionen.</string>
+    <string name="ie_download_retry_lower">Försök med lägre kvalitet</string>
+    <string name="ie_downloader_original_unavailable">Standard kunde inte spara den. Byt till Bästa för att ladda ned den.</string>
     <string name="ie_download_fallback_prompt">Bästa kunde inte spara den. Försöka med lägre kvalitet?</string>
+    <string name="ie_download_cancelled">Nedladdningen avbröts</string>
+    <string name="ie_download_select_item">Välj objekt i karusellen</string>
+    <string name="ie_download_item">Objekt %1$d</string>
 </resources>

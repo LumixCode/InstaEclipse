@@ -4,4 +4,6 @@
     <string name="ig_toast_link_copied">链接已复制</string>
     <string name="ig_toast_links_copied">已复制所有链接</string>
     <string name="ig_dialog_misc_story_links">复制快拍链接</string>
+    <string name="ig_btn_copy_sticker_link">复制贴纸链接</string>
+    <string name="ig_sticker_links_title">贴纸链接</string>
 </resources>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_comment_search_maybe_more">已載入 %1$d 則留言 · 可能還有更多</string>
+    <string name="ig_toast_story_unavailable">無法取得限時動態詳細資訊</string>
+    <string name="ig_toast_like_not_sent">未送出讚</string>
+    <string name="ig_toast_user_follows_you">\@%1$s 追蹤你</string>
+    <string name="ig_toast_user_not_follows_you">\@%1$s 沒有追蹤你</string>
+    <string name="ig_pa_remove_confirm">要將 @%1$s 從觀察清單中移除嗎？其 %2$d 份已儲存的分析和變更歷史都會刪除。此操作無法復原。</string>
+    <string name="ig_pa_remove_confirm_action">移除</string>
+    <string name="ig_pa_save_failed">無法儲存此次分析，因此下次分析會與上次儲存的分析比較。</string>
+    <string name="ig_follow_tools">名單工具</string>
+    <string name="ig_follow_tools_title">\@%1$s · %2$s：%3$s</string>
+    <string name="ig_follow_load_stop">停止</string>
+    <string name="ig_follow_export_failed">無法儲存匯出檔案：%1$s</string>
+    <string name="ig_pa_check_mine">檢查我的粉絲</string>
+    <string name="ig_pa_watch_row_followers">%1$d 位粉絲 · %2$s</string>
+    <string name="ig_pa_watch_full">觀察清單已滿：已移除最舊的個人檔案</string>
+    <plurals name="ig_list_more">
+        <item quantity="other">還有 %1$d 個 · 請見「變更歷史」</item>
+    </plurals>
+    <string name="ig_comment_search_clear">清除搜尋</string>
+    <string name="ig_comment_export_none">尚未載入任何留言</string>
+    <string name="ig_comment_export_title">留言</string>
+    <string name="ig_comment_export_on_post">@%1$s 貼文的留言</string>
+    <string name="ig_comment_export_banner">留言匯出</string>
+    <string name="ig_comment_export_exported">匯出時間：%1$s</string>
+    <string name="ig_comment_export_loaded_only">僅包含已在應用程式中載入的留言</string>
+    <string name="ig_comment_media_gif">GIF</string>
+    <string name="ig_comment_media_image">圖片</string>
+    <string name="ig_comment_media_unavailable">%1$s（無法取得）</string>
+    <plurals name="ig_comment_export_comments">
+        <item quantity="other">%1$d 則留言</item>
+    </plurals>
+    <plurals name="ig_comment_export_replies">
+        <item quantity="other">%1$d 則回覆</item>
+    </plurals>
+    <string name="ig_confirm_follow_title_v2">要追蹤 @%1$s 嗎？</string>
+</resources>

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_voice_download_unavailable">無法取得音訊。請先播放此訊息，然後再試一次。</string>
+</resources>

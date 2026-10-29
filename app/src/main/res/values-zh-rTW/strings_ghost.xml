@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_unsent_log_set_aside">無法讀取已儲存的清單，已先將它移到一旁。</string>
+    <string name="ig_toast_marked_as_seen">已標記為已讀</string>
+    <string name="ig_toast_channel_marked_as_seen">頻道已標記為已讀</string>
+    <string name="ig_chat_export_banner">聊天匯出</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="other">%1$d 則訊息</item>
+    </plurals>
+    <string name="ig_chat_export_edited">已編輯</string>
+    <string name="ig_chat_export_pinned">已釘選</string>
+    <string name="ig_chat_export_forwarded">已轉寄</string>
+    <string name="ig_chat_export_story_reply">限時動態回覆</string>
+    <string name="ig_chat_export_reply_to">給 @%1$s</string>
+    <string name="ig_chat_export_shared_story">分享的限時動態</string>
+    <string name="ig_chat_export_shared_reel">分享的 Reels</string>
+    <string name="ig_chat_export_shared_post">分享的貼文</string>
+    <string name="ig_chat_export_shared_profile">分享的個人檔案</string>
+    <string name="ig_chat_export_mention_by_you">你在限時動態中提及了對方</string>
+    <string name="ig_chat_export_mention_of_you">在限時動態中提及了你</string>
+    <string name="ig_chat_export_unsupported">此 Instagram 版本無法使用聊天匯出</string>
+    <string name="ig_bulk_unsend_not_ready">聊天尚未就緒，請再試一次</string>
+    <plurals name="ig_bulk_unsend_result">
+        <item quantity="other">已收回 %1$d / %2$d 則訊息</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="other">要收回 %1$d 則訊息嗎？此操作無法復原。</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="other">正在收回 %1$d/%2$d</item>
+    </plurals>
+    <string name="ig_jump_first_stop_menu">停止載入較早的訊息</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="other">正在載入較早的訊息 · 已載入 %1$d 則</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">正在載入較早的訊息</string>
+    <string name="ig_jump_first_stop">停止</string>
+    <string name="ig_jump_first_reached">已到達此聊天的第一則訊息</string>
+    <string name="ig_jump_first_stopped_loading">已停止載入較早的訊息</string>
+    <string name="ig_lock_chat">鎖定此聊天</string>
+    <string name="ig_lock_chat_unlock">解鎖此聊天</string>
+    <string name="ig_lock_chat_locked">聊天已鎖定</string>
+    <string name="ig_lock_chat_locked_on">聊天已鎖定。「鎖定所選聊天」現已開啟。</string>
+    <string name="ig_lock_chat_unlocked">聊天已解鎖</string>
+    <string name="ig_lock_selected_menu_desc">在這裡選擇聊天，或在聊天選單中使用「鎖定此聊天」</string>
+    <string name="ig_ghost_messages_tab_label">訊息，幽靈模式已開啟</string>
+    <string name="ig_toast_ghost_on">幽靈模式已開啟：%1$s</string>
+    <string name="ig_toast_ghost_off">幽靈模式已關閉：%1$s</string>
+    <string name="ig_quick_toggle_none_chosen">尚未選擇任何項目。請選擇按住「訊息」圖示時要切換的項目。</string>
+    <string name="ig_quick_toggle_name_seen">已讀</string>
+    <string name="ig_quick_toggle_name_typing">輸入狀態</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">截圖通知</string>
+    <string name="ig_quick_toggle_name_view_once">限看一次</string>
+    <string name="ig_quick_toggle_name_stories">限時動態</string>
+    <string name="ig_quick_toggle_name_live">直播</string>
+    <string name="ig_quick_toggle_name_disappearing">消失訊息</string>
+    <string name="ig_quick_toggle_name_permanent_view">永久觀看</string>
+    <string name="ig_quick_toggle_name_screenshots">截圖</string>
+    <string name="ig_read_receipt_list_title">會收到已讀回條的聊天</string>
+    <string name="ig_read_receipt_list_add">新增聊天</string>
+    <string name="ig_read_receipt_pick_title">選擇會收到已讀回條的聊天</string>
+    <string name="ig_read_receipt_list_empty">目前沒有聊天會收到已讀回條。請在這裡新增聊天，或開啟聊天並從選單中選擇「在此聊天中傳送已讀回條」。</string>
+    <string name="ig_read_receipt_list_seen_off">「隱藏私訊已讀」已關閉，因此目前所有聊天都會收到已讀回條。</string>
+</resources>

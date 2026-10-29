@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">Cacha sedda stories</string>
+    <string name="ig_story_cache_duration">Cachetid</string>
+    <string name="ig_story_cache_hours">%1$d tim</string>
+    <string name="ig_story_cache_picker_help">Behåll stories i 1–720 timmar (upp till 30 dagar). De äldsta kan tas bort tidigare om cachen når 500 MB.</string>
+    <string name="ig_story_cache_picker_unit">timmar efter visning</string>
+    <string name="ig_story_cache_invalid">Ange ett tal från 1 till 720.</string>
+    <string name="ig_story_cache_empty_current">Inga cachade stories ännu. Slå på cachning och titta på några stories, så sparas de här så länge du har valt.</string>
+</resources>

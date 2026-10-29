@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_dl_opened_in_instagram">Öppnat i Instagram. Spara det från dess meny.</string>
+    <string name="ie_companion_unreachable">InstaEclipse-appen svarade inte. Öppna den en gång och försök sedan igen.</string>
+    <string name="ie_companion_timeout">InstaEclipse-appen tog för lång tid att svara. Försök igen.</string>
+    <string name="ie_companion_busy">InstaEclipse-appen är upptagen. Försök igen om en stund.</string>
+    <string name="ie_companion_denied">InstaEclipse-appen nekade begäran. Uppdatera båda apparna till samma version.</string>
+    <string name="ie_companion_failed">InstaEclipse-appen kunde inte göra detta. Försök igen.</string>
+    <string name="ie_companion_invalid">Den här begäran kan inte skickas till InstaEclipse-appen.</string>
+    <string name="ie_companion_not_visible">Öppna det här från skärmen du är på.</string>
+    <string name="ie_companion_launch_failed">InstaEclipse-appen kunde inte öppnas. Försök igen från den här skärmen.</string>
+    <string name="ie_download_saved_quality">Sparad: %1$s (%2$s)</string>
+    <string name="ie_download_saved_lower">Sparad i lägre kvalitet: %1$s (%2$s)</string>
+    <string name="ie_download_reason_expired">Länken har gått ut. Öppna inlägget igen och försök på nytt.</string>
+    <string name="ie_download_reason_offline">Anslutningsproblem. Kontrollera internet och försök igen.</string>
+    <string name="ie_download_reason_server">Instagrams server skickade inte filen. Försök igen senare.</string>
+    <string name="ie_download_reason_storage">För lite ledigt utrymme på telefonen.</string>
+    <string name="ie_download_reason_too_large">Filen är för stor för att sparas.</string>
+    <string name="ie_download_reason_no_media">Det finns inget att ladda ned här.</string>
+    <string name="ie_download_reason_ceiling">Ingen version ryms inom din kvalitetsgräns.</string>
+    <string name="ie_download_reason_unplayable">Filen klarade inte uppspelningskontrollen.</string>
+    <string name="ie_download_reason_blocked">Blockerad: det här är inte en mediefil från Instagram.</string>
+    <string name="ie_download_reason_generic">Något gick fel. Försök igen.</string>
+    <string name="ie_frame_reason_memory">För lite minne för den här bildrutan.</string>
+    <string name="ie_frame_reason_write">PNG-filen kunde inte skrivas. Kontrollera ledigt utrymme.</string>
+    <string name="ie_copy_media_link">Kopiera medialänk</string>
+    <string name="ig_profile_pic_load_failed">Kunde inte ladda bilden</string>
+    <string name="ie_download_starting">Startar…</string>
+    <string name="ie_download_verifying">Kontrollerar filen…</string>
+    <string name="ie_download_saving">Sparar…</string>
+    <string name="ie_download_extracting_audio">Extraherar ljud…</string>
+    <string name="ie_download_reason_invalid">Nedladdningsbegäran är skadad. Försök igen.</string>
+    <plurals name="ie_download_waiting">
+        <item quantity="one">%1$s · %2$d väntar</item>
+        <item quantity="other">%1$s · %2$d väntar</item>
+    </plurals>
+    <plurals name="ie_download_files_saved">
+        <item quantity="one">%1$d fil sparad</item>
+        <item quantity="other">%1$d filer sparade</item>
+    </plurals>
+    <plurals name="ie_download_files_failed">
+        <item quantity="one">%1$d misslyckades</item>
+        <item quantity="other">%1$d misslyckades</item>
+    </plurals>
+    <string name="ie_download_saved_and_failed">%1$s, %2$s</string>
+    <string name="ie_export_saving">Sparar chattexport…</string>
+    <string name="ie_export_saving_media">Sparar media %1$d av %2$d</string>
+    <string name="ie_export_failed">Kunde inte spara chattexporten</string>
+    <string name="ie_download_cover">Spara omslagsbild</string>
+    <string name="ig_media_info_type">Typ</string>
+    <string name="ig_media_info_video">Video</string>
+    <string name="ig_media_info_carousel">Karusell</string>
+    <string name="ig_media_info_photo">Foto</string>
+    <string name="ig_media_info_slide">%1$s (%2$d/%3$d)</string>
+    <string name="ig_media_info_original">Originalstorlek</string>
+    <string name="ig_media_info_size_value">%1$d × %2$d</string>
+    <string name="ig_media_info_duration">Längd</string>
+    <string name="ig_media_info_seconds">%1$.1f s</string>
+    <string name="ig_media_info_codec">Codec</string>
+    <string name="ig_media_info_audio">Ljud</string>
+    <string name="ig_media_info_yes">Ja</string>
+    <string name="ig_media_info_no">Nej</string>
+    <string name="ig_media_info_qualities">Kvaliteter</string>
+    <string name="ig_media_info_file_size">Filstorlek</string>
+    <string name="ig_media_info_megabytes">%1$.2f MB</string>
+    <string name="ig_media_info_error">Kunde inte läsa inlägget</string>
+    <string name="ig_highlight_failed">Kunde inte ladda ned höjdpunkten. Försök igen.</string>
+    <string name="ig_instant_already_saved">Redan sparad</string>
+    <plurals name="ie_download_batch_done">
+        <item quantity="one">Sparade %1$d av %2$d</item>
+        <item quantity="other">Sparade %1$d av %2$d</item>
+    </plurals>
+    <string name="ig_playback_speed_normal">Normal</string>
+    <string name="ig_playback_speed_stays">%1$s gäller tills du väljer Normal</string>
+</resources>

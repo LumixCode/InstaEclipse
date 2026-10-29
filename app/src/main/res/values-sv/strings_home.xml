@@ -3,7 +3,7 @@
     <!-- Home dashboard (HomeFragment) -->
     <string name="home_section_quick_actions">Snabbåtgärder</string>
     <string name="home_section_shortcuts">Snabbgenvägar</string>
-    <string name="home_status_not_installed">Inte installerad</string>
+    <string name="home_status_not_installed">Inte installerat</string>
     <string name="home_status_module_active">Modulen är aktiv</string>
     <string name="home_status_no_version">Installera Instagram för att använda InstaEclipse</string>
     <plurals name="home_features_enabled">
@@ -20,4 +20,25 @@
     <string name="home_shortcuts_hint">Ändringar skickas direkt till Instagram.</string>
     <string name="home_shortcuts_limit">Du kan fästa upp till %1$d genvägar</string>
     <string name="home_shortcuts_locked_extreme">Låst av Extremläge</string>
+    <string name="home_instagram_version">Instagram %1$s</string>
+    <string name="home_tested_version">Testad version</string>
+    <string name="home_untested_version">Inte den testade versionen (%1$s): vissa funktioner kanske inte fungerar</string>
+    <string name="home_status_worked">Fungerade i Instagram: %1$s</string>
+    <string name="home_status_not_confirmed">Inte bekräftat ännu</string>
+    <string name="home_status_open_to_check">Öppna Instagram för kontroll</string>
+    <string name="home_status_clone">Klon · ingen direktsynkning</string>
+    <string name="home_instagram_app_info">Appinfo för Instagram</string>
+    <string name="home_detected_versions">Hittade versioner</string>
+    <string name="home_detected_version_row">%1$s — v%2$s</string>
+    <string name="home_use_this">Använd den här</string>
+    <string name="home_variant_official">Officiell</string>
+    <string name="home_setup_step_1">Patcha Instagram med LSPatch, eller aktivera InstaEclipse för det i Vector.</string>
+    <string name="home_setup_step_2">Tvångsstoppa Instagram och öppna det igen.</string>
+    <string name="home_setup_step_3">Håll in fliken Sök längst ned i Instagram.</string>
+    <string name="home_setup_open_instagram">Öppna Instagram</string>
+    <string name="home_setup_got_it">Uppfattat</string>
+    <string name="home_restarting">Startar om…</string>
+    <string name="home_shortcuts_needs_setting">Slå först på en inställning som den behöver</string>
+    <string name="home_restart_applies_on_open">Tillämpas när Instagram öppnas. Du får frågan om omstart om det behövs.</string>
+    <string name="home_tool_restart_sub">Stänger och öppnar Instagram igen</string>
 </resources>

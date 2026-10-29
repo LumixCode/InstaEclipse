@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">ملغاة</string>
+    <string name="ig_unsent_clear_failed">تعذّر مسح الرسائل المحفوظة. يرجى إعادة فتح هذه المحادثة والمحاولة مرة أخرى.</string>
+    <string name="ig_unsent_clear_saved">مسح الرسائل الملغاة المحفوظة</string>
+    <string name="ig_unsent_clear_saved_confirm">إزالة هذه الرسائل المحتفَظ بها من سلة المحذوفات وسجل المحادثة المحلي؟ لا يمكن التراجع عن ذلك.</string>
+    <string name="ig_unsent_cleared_saved">تم مسح الرسائل الملغاة المحفوظة</string>
+</resources>

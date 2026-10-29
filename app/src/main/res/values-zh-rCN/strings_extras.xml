@@ -4,12 +4,12 @@
     <string name="ig_dialog_extras_no_swipe_camera">禁用滑动进入相机</string>
     <string name="ig_dialog_extras_reels_auto_scroll">Reels 自动滚动选项</string>
     <string name="ig_dialog_extras_reels_lock_scroll">锁定 Reels 滑动</string>
-    <string name="ig_dialog_extras_unlimited_accounts">无限账户</string>
+    <string name="ig_dialog_extras_unlimited_accounts">允许超过 5 个账号</string>
     <string name="ig_dialog_extras_airplane_mode">飞行模式（显示离线）</string>
     <string name="ig_dialog_extras_high_res_images">加载最高分辨率的图片</string>
     <string name="ig_dialog_extras_hide_onboarding">隐藏通讯录和位置引导提示</string>
     <string name="ig_dialog_extras_fix_notifications">修复 Android 12+ 上的旧版通知注册</string>
-    <string name="ig_dialog_extras_hide_stories_tray">仅隐藏快拍栏</string>
+    <string name="ig_dialog_extras_hide_stories_tray">隐藏快拍栏</string>
     <string name="ig_dialog_extras_share_domain">自定义分享域名</string>
     <string name="ig_dialog_extras_share_domain_off">关闭</string>
     <string name="ig_dialog_extras_share_domain_hint">替换你复制或分享的链接中的 instagram.com。留空即可关闭。</string>

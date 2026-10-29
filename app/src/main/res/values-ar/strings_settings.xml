@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_toast_restored_some_skipped">تمت استعادة الإعدادات، باستثناء %1$d غير صالحة أو مقفلة بالوضع المتطرف.</string>
+</resources>

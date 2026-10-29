@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_toast_restored_some_skipped">設定已還原，但有 %1$d 項無效或被極端模式鎖定，因此未還原。</string>
+</resources>

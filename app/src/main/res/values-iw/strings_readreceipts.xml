@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="ig_dialog_ghost_read_receipt_chats">שליחת אישורי קריאה לצ\'אטים מסוימים</string>
+    <string name="ig_dialog_ghost_read_receipt_chats">שלח אישורי קריאה בצ\'אטים נבחרים</string>
     <string name="ig_read_receipt_chat_on">שליחת אישורי קריאה בצ\'אט הזה</string>
     <string name="ig_read_receipt_chat_off">הפסקת אישורי קריאה בצ\'אט הזה</string>
     <string name="ig_toast_read_receipt_on">אישורי קריאה הופעלו לצ\'אט הזה</string>

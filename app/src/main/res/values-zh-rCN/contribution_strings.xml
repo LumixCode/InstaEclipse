@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">InstaEclipse 下载</string>
     <string name="ie_download_quality">下载画质</string>
     <string name="ie_downloader_original">标准</string>
     <string name="ie_download_best">最佳</string>
     <string name="ie_download_ceiling">最佳，最高 %1$dp</string>
+    <string name="ie_save_video_frame">保存视频帧</string>
+    <string name="ie_download_video">下载视频</string>
+    <string name="ie_frame_help">用滑块选择一帧。只会保存全分辨率 PNG；保存或关闭时会删除临时视频。</string>
+    <string name="ie_frame_preparing">正在准备最高画质视频…</string>
+    <string name="ie_frame_preparing_progress">正在准备最高画质视频… %1$d%%</string>
+    <string name="ie_frame_loading">正在加载预览…</string>
+    <string name="ie_frame_preview">所选视频帧预览</string>
+    <string name="ie_frame_position">帧位置</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · 全分辨率</string>
+    <string name="ie_frame_save">保存 PNG</string>
+    <string name="ie_frame_saving">正在保存全分辨率帧…</string>
+    <string name="ie_frame_saved">已保存 PNG：%1$d × %2$d。临时视频已删除。</string>
+    <string name="ie_frame_failed">无法准备或保存此帧。不会改用较低画质的版本。</string>
+    <string name="ie_frame_reopen">请在 Instagram 中再次打开“下载”来选择帧。</string>
     <string name="ie_download_compatibility">优先选择到处都能播放的视频</string>
     <string name="ie_download_fallback">最佳失败时使用较低画质</string>
+    <string name="ie_download_unavailable">无法在此 Instagram 版本中解析所选媒体。</string>
+    <string name="ie_download_retry_lower">以较低画质重试</string>
     <string name="ie_downloader_original_unavailable">标准无法保存此项。切换到最佳即可下载。</string>
     <string name="ie_download_fallback_prompt">最佳无法保存此项。改用较低画质？</string>
+    <string name="ie_download_cancelled">下载已取消</string>
+    <string name="ie_download_select_item">选择轮播中的项目</string>
+    <string name="ie_download_item">第 %1$d 项</string>
 </resources>

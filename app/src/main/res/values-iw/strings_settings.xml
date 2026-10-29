@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_toast_restored_some_skipped">ההגדרות שוחזרו, חוץ מ-%1$d שלא היו תקינות או שננעלו על ידי המצב הקיצוני.</string>
+</resources>

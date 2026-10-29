@@ -4,4 +4,6 @@
     <string name="ig_toast_link_copied">הקישור הועתק</string>
     <string name="ig_toast_links_copied">כל הקישורים הועתקו</string>
     <string name="ig_dialog_misc_story_links">העתקת קישורי סטורי</string>
+    <string name="ig_btn_copy_sticker_link">העתק קישור מדבקה</string>
+    <string name="ig_sticker_links_title">קישורי מדבקות</string>
 </resources>

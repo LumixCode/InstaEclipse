@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_dl_opened_in_instagram">נפתח ב-Instagram. שמור אותו מהתפריט שלו.</string>
+    <string name="ie_companion_unreachable">אפליקציית InstaEclipse לא ענתה. פתח אותה פעם אחת ונסה שוב.</string>
+    <string name="ie_companion_timeout">אפליקציית InstaEclipse לא ענתה בזמן. נסה שוב.</string>
+    <string name="ie_companion_busy">אפליקציית InstaEclipse עסוקה. נסה שוב בעוד רגע.</string>
+    <string name="ie_companion_denied">אפליקציית InstaEclipse דחתה את הבקשה. עדכן את שתי האפליקציות לאותה גרסה.</string>
+    <string name="ie_companion_failed">אפליקציית InstaEclipse לא הצליחה לבצע את זה. נסה שוב.</string>
+    <string name="ie_companion_invalid">אי אפשר לשלוח את הבקשה הזו לאפליקציית InstaEclipse.</string>
+    <string name="ie_companion_not_visible">פתח את זה מהמסך שבו אתה נמצא.</string>
+    <string name="ie_companion_launch_failed">לא ניתן לפתוח את אפליקציית InstaEclipse. נסה שוב מהמסך הזה.</string>
+    <string name="ie_download_saved_quality">נשמר: %1$s (%2$s)</string>
+    <string name="ie_download_saved_lower">נשמר באיכות נמוכה יותר: %1$s (%2$s)</string>
+    <string name="ie_download_reason_expired">תוקף הקישור פג. פתח את הפוסט שוב ונסה שוב.</string>
+    <string name="ie_download_reason_offline">בעיית חיבור. בדוק את החיבור לאינטרנט ונסה שוב.</string>
+    <string name="ie_download_reason_server">השרת של Instagram לא שלח את הקובץ. נסה שוב מאוחר יותר.</string>
+    <string name="ie_download_reason_storage">אין מספיק מקום פנוי בטלפון הזה.</string>
+    <string name="ie_download_reason_too_large">הקובץ גדול מדי לשמירה.</string>
+    <string name="ie_download_reason_no_media">אין כאן מה להוריד.</string>
+    <string name="ie_download_reason_ceiling">אין גרסה שמתאימה למגבלת האיכות שלך.</string>
+    <string name="ie_download_reason_unplayable">הקובץ לא עבר את בדיקת הניגון.</string>
+    <string name="ie_download_reason_blocked">נחסם: זה לא קובץ מדיה של Instagram.</string>
+    <string name="ie_download_reason_generic">משהו השתבש. נסה שוב.</string>
+    <string name="ie_frame_reason_memory">אין מספיק זיכרון לפריים הזה.</string>
+    <string name="ie_frame_reason_write">לא ניתן לכתוב את קובץ ה-PNG. בדוק את המקום הפנוי.</string>
+    <string name="ie_copy_media_link">העתק קישור מדיה</string>
+    <string name="ig_profile_pic_load_failed">לא ניתן לטעון את התמונה הזו</string>
+    <string name="ie_download_starting">מתחיל…</string>
+    <string name="ie_download_verifying">בודק את הקובץ…</string>
+    <string name="ie_download_saving">שומר…</string>
+    <string name="ie_download_extracting_audio">מחלץ שמע…</string>
+    <string name="ie_download_reason_invalid">בקשת ההורדה הזו פגומה. נסה שוב.</string>
+    <plurals name="ie_download_waiting">
+        <item quantity="one">%1$s · %2$d ממתין</item>
+        <item quantity="two">%1$s · %2$d ממתינים</item>
+        <item quantity="other">%1$s · %2$d ממתינים</item>
+    </plurals>
+    <plurals name="ie_download_files_saved">
+        <item quantity="one">%1$d קובץ נשמר</item>
+        <item quantity="two">%1$d קבצים נשמרו</item>
+        <item quantity="other">%1$d קבצים נשמרו</item>
+    </plurals>
+    <plurals name="ie_download_files_failed">
+        <item quantity="one">%1$d נכשל</item>
+        <item quantity="two">%1$d נכשלו</item>
+        <item quantity="other">%1$d נכשלו</item>
+    </plurals>
+    <string name="ie_download_saved_and_failed">%1$s, %2$s</string>
+    <string name="ie_export_saving">שומר את ייצוא הצ\'אט…</string>
+    <string name="ie_export_saving_media">שומר מדיה %1$d מתוך %2$d</string>
+    <string name="ie_export_failed">לא ניתן לשמור את ייצוא הצ\'אט</string>
+    <string name="ie_download_cover">שמור תמונת שער</string>
+    <string name="ig_media_info_type">סוג</string>
+    <string name="ig_media_info_video">סרטון</string>
+    <string name="ig_media_info_carousel">קרוסלה</string>
+    <string name="ig_media_info_photo">תמונה</string>
+    <string name="ig_media_info_slide">%1$s (%2$d/%3$d)</string>
+    <string name="ig_media_info_original">גודל מקורי</string>
+    <string name="ig_media_info_size_value">%1$d × %2$d</string>
+    <string name="ig_media_info_duration">משך</string>
+    <string name="ig_media_info_seconds">%1$.1f שנ׳</string>
+    <string name="ig_media_info_codec">קודק</string>
+    <string name="ig_media_info_audio">שמע</string>
+    <string name="ig_media_info_yes">כן</string>
+    <string name="ig_media_info_no">לא</string>
+    <string name="ig_media_info_qualities">איכויות</string>
+    <string name="ig_media_info_file_size">גודל קובץ</string>
+    <string name="ig_media_info_megabytes">%1$.2f MB</string>
+    <string name="ig_media_info_error">לא ניתן לקרוא את הפוסט הזה</string>
+    <string name="ig_highlight_failed">לא ניתן להוריד את ההיילייט הזה. נסה שוב.</string>
+    <string name="ig_instant_already_saved">כבר נשמר</string>
+    <plurals name="ie_download_batch_done">
+        <item quantity="one">נשמר %1$d מתוך %2$d</item>
+        <item quantity="two">נשמרו %1$d מתוך %2$d</item>
+        <item quantity="other">נשמרו %1$d מתוך %2$d</item>
+    </plurals>
+    <string name="ig_playback_speed_normal">רגילה</string>
+    <string name="ig_playback_speed_stays">המהירות %1$s נשארת פעילה עד שתבחר \"רגילה\"</string>
+</resources>

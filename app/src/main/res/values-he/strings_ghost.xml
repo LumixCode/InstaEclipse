@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_unsent_log_set_aside">לא ניתן לקרוא את הרשימה השמורה; היא הועברה הצידה.</string>
+    <string name="ig_toast_marked_as_seen">סומן כנצפה</string>
+    <string name="ig_toast_channel_marked_as_seen">הערוץ סומן כנצפה</string>
+    <string name="ig_chat_export_banner">ייצוא צ\'אט</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="one">%1$d הודעה</item>
+        <item quantity="two">%1$d הודעות</item>
+        <item quantity="other">%1$d הודעות</item>
+    </plurals>
+    <string name="ig_chat_export_edited">נערכה</string>
+    <string name="ig_chat_export_pinned">הוצמדה</string>
+    <string name="ig_chat_export_forwarded">הועברה</string>
+    <string name="ig_chat_export_story_reply">תגובה לסטורי</string>
+    <string name="ig_chat_export_reply_to">אל @%1$s</string>
+    <string name="ig_chat_export_shared_story">סטורי ששותף</string>
+    <string name="ig_chat_export_shared_reel">סרטון Reels ששותף</string>
+    <string name="ig_chat_export_shared_post">פוסט ששותף</string>
+    <string name="ig_chat_export_shared_profile">פרופיל ששותף</string>
+    <string name="ig_chat_export_mention_by_you">הזכרת אותו/ה בסטורי שלך</string>
+    <string name="ig_chat_export_mention_of_you">הזכיר/ה אותך בסטורי</string>
+    <string name="ig_chat_export_unsupported">ייצוא צ\'אט לא עובד בגרסה הזו של Instagram</string>
+    <string name="ig_bulk_unsend_not_ready">הצ\'אט עדיין לא מוכן, נסה שוב</string>
+    <plurals name="ig_bulk_unsend_result">
+        <item quantity="one">בוטלה השליחה של %1$d מתוך %2$d הודעה</item>
+        <item quantity="two">בוטלה השליחה של %1$d מתוך %2$d הודעות</item>
+        <item quantity="other">בוטלה השליחה של %1$d מתוך %2$d הודעות</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="one">לבטל את השליחה של %1$d הודעה? אי אפשר לשחזר אותה.</item>
+        <item quantity="two">לבטל את השליחה של %1$d הודעות? אי אפשר לשחזר אותן.</item>
+        <item quantity="other">לבטל את השליחה של %1$d הודעות? אי אפשר לשחזר אותן.</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="one">מבטל שליחה %1$d/%2$d</item>
+        <item quantity="two">מבטל שליחה %1$d/%2$d</item>
+        <item quantity="other">מבטל שליחה %1$d/%2$d</item>
+    </plurals>
+    <string name="ig_jump_first_stop_menu">הפסק לטעון הודעות ישנות יותר</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="one">טוען הודעות ישנות יותר · %1$d נטענה</item>
+        <item quantity="two">טוען הודעות ישנות יותר · %1$d נטענו</item>
+        <item quantity="other">טוען הודעות ישנות יותר · %1$d נטענו</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">טוען הודעות ישנות יותר</string>
+    <string name="ig_jump_first_stop">עצור</string>
+    <string name="ig_jump_first_reached">הגעת להודעה הראשונה בצ\'אט הזה</string>
+    <string name="ig_jump_first_stopped_loading">הטעינה של הודעות ישנות יותר נעצרה</string>
+    <string name="ig_lock_chat">נעל את הצ\'אט הזה</string>
+    <string name="ig_lock_chat_unlock">בטל את נעילת הצ\'אט הזה</string>
+    <string name="ig_lock_chat_locked">הצ\'אט ננעל</string>
+    <string name="ig_lock_chat_locked_on">הצ\'אט ננעל. \"נעל צ\'אטים נבחרים\" מופעל עכשיו.</string>
+    <string name="ig_lock_chat_unlocked">נעילת הצ\'אט בוטלה</string>
+    <string name="ig_lock_selected_menu_desc">בחר צ\'אטים כאן או עם \"נעל את הצ\'אט הזה\" בתפריט של צ\'אט</string>
+    <string name="ig_ghost_messages_tab_label">הודעות, מצב רפאים מופעל</string>
+    <string name="ig_toast_ghost_on">מצב רפאים מופעל: %1$s</string>
+    <string name="ig_toast_ghost_off">מצב רפאים כבוי: %1$s</string>
+    <string name="ig_quick_toggle_none_chosen">עדיין לא נבחר כלום. בחר מה לחיצה ארוכה על סמל ההודעות תפעיל ותכבה.</string>
+    <string name="ig_quick_toggle_name_seen">אישורי קריאה</string>
+    <string name="ig_quick_toggle_name_typing">הקלדה</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">התראות צילום מסך</string>
+    <string name="ig_quick_toggle_name_view_once">צפייה חד-פעמית</string>
+    <string name="ig_quick_toggle_name_stories">סטוריז</string>
+    <string name="ig_quick_toggle_name_live">שידור חי</string>
+    <string name="ig_quick_toggle_name_disappearing">הודעות נעלמות</string>
+    <string name="ig_quick_toggle_name_permanent_view">צפייה קבועה</string>
+    <string name="ig_quick_toggle_name_screenshots">צילומי מסך</string>
+    <string name="ig_read_receipt_list_title">צ\'אטים שמקבלים אישורי קריאה</string>
+    <string name="ig_read_receipt_list_add">הוסף צ\'אטים</string>
+    <string name="ig_read_receipt_pick_title">בחר צ\'אטים שיקבלו אישורי קריאה</string>
+    <string name="ig_read_receipt_list_empty">עדיין אין צ\'אטים שמקבלים אישורי קריאה. הוסף צ\'אטים כאן, או פתח צ\'אט ובחר \"שליחת אישורי קריאה בצ\'אט הזה\" מהתפריט שלו.</string>
+    <string name="ig_read_receipt_list_seen_off">\"הסתר אישורי קריאה בצ\'אטים\" כבוי, ולכן כרגע כל הצ\'אטים מקבלים אישורי קריאה.</string>
+</resources>

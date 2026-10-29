@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">Ångrat</string>
+    <string name="ig_unsent_clear_failed">Kunde inte rensa sparade meddelanden. Öppna chatten igen och försök på nytt.</string>
+    <string name="ig_unsent_clear_saved">Rensa sparade ångrade meddelanden</string>
+    <string name="ig_unsent_clear_saved_confirm">Ta bort de här sparade meddelandena från papperskorgen och den lokala chatthistoriken? Detta kan inte ångras.</string>
+    <string name="ig_unsent_cleared_saved">Sparade ångrade meddelanden rensade</string>
+</resources>

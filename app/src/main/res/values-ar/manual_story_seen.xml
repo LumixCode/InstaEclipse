@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_manual_story_seen_action">تحديد القصة كمُشاهَدة</string>
+    <string name="ig_manual_story_seen_sent">أُرسل إشعار المشاهدة لهذه القصة</string>
+    <string name="ig_manual_story_seen_unavailable">تعذّر إرسال إشعار المشاهدة لهذه القصة. لا يزال وضع الشبح مفعّلًا.</string>
+    <string name="ig_manual_story_seen_unsupported">«تحديد القصة كمُشاهَدة» غير متاح في إصدار Instagram هذا. لا يزال وضع الشبح مفعّلًا.</string>
+</resources>

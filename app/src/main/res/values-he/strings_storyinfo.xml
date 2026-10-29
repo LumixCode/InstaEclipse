@@ -25,11 +25,12 @@
     <string name="ig_si_your_answer">התשובה שלך</string>
     <string name="ig_si_average">ממוצע</string>
     <string name="ig_si_copied">הועתק</string>
-    <string name="ig_dialog_misc_story_info">פרטי סטורי, תשובות לחידונים ולסקרים</string>
+    <string name="ig_dialog_misc_story_info">הצג פרטי סטורי ותשובות</string>
     <string name="ig_si_add_yours">הוסיפו משלכם</string>
     <string name="ig_si_joined">הצטרפו</string>
     <string name="ig_si_paid_partnership">שותפות בתשלום עם (לחיצה ארוכה לפתיחה)</string>
     <string name="ig_si_collaborators">משתף פעולה (לחיצה ארוכה לפתיחה)</string>
     <string name="ig_btn_slider_results">תוצאות המחוון</string>
     <string name="ig_si_votes">הצבעות</string>
+    <string name="ig_poll_your_vote">ההצבעה שלך</string>
 </resources>

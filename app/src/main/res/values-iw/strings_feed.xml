@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_preset_light">%1$s בהיר</string>
+    <string name="theme_preset_dark">%1$s כהה</string>
+    <string name="ig_reel_block_off_title">Reels מושבתים</string>
+    <string name="ig_reel_block_off_detail">הפעל אותם שוב ב-InstaEclipse › %1$s</string>
+    <string name="ig_reel_block_night_title">Reels מושהים ללילה</string>
+    <string name="ig_reel_block_night_detail">יחזרו ב-%1$s</string>
+    <string name="ig_reel_block_limit_title">הגעת למגבלת ה-Reels של היום</string>
+    <string name="ig_reel_block_limit_detail">%1$d מתוך %2$d סרטוני Reels · מתאפס בחצות</string>
+    <string name="ig_reel_block_go_back">חזור</string>
+</resources>

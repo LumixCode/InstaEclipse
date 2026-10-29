@@ -12,4 +12,16 @@
     <string name="help_lspatch_title">LSPatch (JingMatrix)</string>
     <string name="help_lspatch_sub">جهازك غير مروّت؟ ثبّت هذا</string>
     <string name="help_lspatch_guide">اتبع دليل الإعداد</string>
+    <string name="about_based_on">مبني على InstaEclipse من %1$s</string>
+    <string name="update_check_note">يتحقق من github.com بحثًا عن إصدارات InstaEclipse الجديدة مرة واحدة يوميًا كحد أقصى.</string>
+    <string name="update_whats_new">ما الجديد</string>
+    <string name="update_skip_version">تخطي هذا الإصدار</string>
+    <string name="links_no_app">لا يوجد تطبيق يمكنه فتح هذا الرابط</string>
+    <string name="help_faq_2"><b>2. الوحدة غير مفعّلة؟</b>\n- في LSPatch أو Vector، تأكد من تفعيل InstaEclipse لـ Instagram، ثم افرض إيقاف Instagram وافتحه من جديد.</string>
+    <string name="help_faq_4"><b>4. خيارات المطور تسبب أعطالًا؟</b>\n- أوقف خيارات المطور واستخدم خيارات المطور ← استعادة الإعدادات الافتراضية.</string>
+    <string name="help_faq_5"><b>5. تظهر في خيارات المطور تسميات أو أرقام غريبة؟</b>\n- يخفي إصدار Instagram المستقر أسماء الخيارات. يُختبر InstaEclipse مع Instagram %1$s.</string>
+    <string name="help_troubleshooting">حل المشكلات</string>
+    <string name="help_faq_expanded">موسّع</string>
+    <string name="help_faq_collapsed">مطوي</string>
+    <string name="help_tested_with">تم اختباره مع Instagram %1$s</string>
 </resources>

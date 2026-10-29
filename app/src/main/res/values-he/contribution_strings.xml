@@ -1,12 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">הורדות InstaEclipse</string>
     <string name="ie_downloader_original">רגיל</string>
-    <string name="ie_downloader_original_unavailable">רגיל לא הצליח לשמור את זה. עבור להטובה ביותר כדי להוריד.</string>
+    <string name="ie_downloader_original_unavailable">\"רגיל\" לא הצליח לשמור את זה. עבור ל\"הטובה ביותר\" כדי להוריד.</string>
 
     <string name="ie_download_quality">איכות הורדה</string>
     <string name="ie_download_best">הטובה ביותר</string>
     <string name="ie_download_ceiling">הטובה ביותר, עד %1$dp</string>
+    <string name="ie_save_video_frame">שמור פריים מהסרטון</string>
+    <string name="ie_download_video">הורד סרטון</string>
+    <string name="ie_frame_help">בחר פריים בעזרת המחוון. רק קובץ ה-PNG ברזולוציה מלאה נשמר; הסרטון הזמני נמחק כשאתה שומר או סוגר.</string>
+    <string name="ie_frame_preparing">מכין סרטון באיכות הגבוהה ביותר…</string>
+    <string name="ie_frame_preparing_progress">מכין סרטון באיכות הגבוהה ביותר… %1$d%%</string>
+    <string name="ie_frame_loading">טוען תצוגה מקדימה…</string>
+    <string name="ie_frame_preview">תצוגה מקדימה של הפריים שנבחר</string>
+    <string name="ie_frame_position">מיקום הפריים</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · רזולוציה מלאה</string>
+    <string name="ie_frame_save">שמור PNG</string>
+    <string name="ie_frame_saving">שומר פריים ברזולוציה מלאה…</string>
+    <string name="ie_frame_saved">קובץ PNG נשמר: %1$d × %2$d. הסרטון הזמני נמחק.</string>
+    <string name="ie_frame_failed">לא ניתן להכין או לשמור את הפריים הזה. לא נשמרה במקומו גרסה באיכות נמוכה יותר.</string>
+    <string name="ie_frame_reopen">פתח שוב את \"הורד\" ב-Instagram כדי לבחור פריים.</string>
     <string name="ie_download_compatibility">העדף סרטונים שמתנגנים בכל מקום</string>
     <string name="ie_download_fallback">השתמש באיכות נמוכה יותר אם הטובה ביותר נכשלת</string>
+    <string name="ie_download_unavailable">לא ניתן לאתר את המדיה שנבחרה בגרסה הזו של Instagram.</string>
+    <string name="ie_download_retry_lower">נסה שוב באיכות נמוכה יותר</string>
     <string name="ie_download_fallback_prompt">הטובה ביותר לא הצליחה לשמור את זה. לנסות איכות נמוכה יותר?</string>
+    <string name="ie_download_cancelled">ההורדה בוטלה</string>
+    <string name="ie_download_select_item">בחר פריט מהקרוסלה</string>
+    <string name="ie_download_item">פריט %1$d</string>
 </resources>
