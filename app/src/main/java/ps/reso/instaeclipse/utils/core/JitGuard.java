@@ -1,5 +1,7 @@
 package ps.reso.instaeclipse.utils.core;
 
+import android.os.Build;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -12,6 +14,7 @@ public final class JitGuard {
     private static final int K_ACC_COMPILE_DONT_BOTHER = 0x02000000;
     private static final int ACCESS_FLAGS_OFFSET = 4;
 
+    private static boolean needed = Build.VERSION.SDK_INT == Build.VERSION_CODES.TIRAMISU;
     private static int calls;
     private static boolean broken;
     private static final Set<Class<?>> done = Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));
@@ -23,7 +26,7 @@ public final class JitGuard {
     private static volatile IdentityHashMap<Object, Boolean> seen = new IdentityHashMap<>();
 
     public static void tick(Object member) {
-        if (broken) return;
+        if (!needed || broken) return;
         boolean first = member != null && !seen.containsKey(member);
         if (!first && ((++calls) & 0x3F) != 0) return;
         if (first) {
@@ -43,11 +46,16 @@ public final class JitGuard {
     }
 
     public static boolean active() {
-        return !broken && !done.isEmpty();
+        return needed && !broken && !done.isEmpty();
     }
 
-    private static boolean isStub(String name) {
-        return name.startsWith("LSPHooker_") || name.startsWith("Vector_");
+    public static String state() {
+        if (!needed) return "off (Android 13 only)";
+        return active() ? "active" : "inactive";
+    }
+
+    static boolean isStub(String name) {
+        return name.startsWith("LSPHooker_") || name.startsWith("Vector_") || name.startsWith("LSPatch_");
     }
 
     private static void scan() throws Throwable {
