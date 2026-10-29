@@ -2,7 +2,7 @@
 <resources>
     <!-- Logs tab (0.8) -->
     <string name="logs_filter_all">Tous</string>
-    <string name="logs_filter_hooked">Réussis</string>
+    <string name="logs_filter_hooked">Prêts</string>
     <string name="logs_filter_errors">Erreurs</string>
     <string name="logs_filter_warnings">Avertissements</string>
     <string name="logs_technical_details">Détails techniques</string>
@@ -15,7 +15,7 @@
     <string name="logs_share_subject">Journaux InstaEclipse</string>
     <string name="logs_loading">Chargement des journaux…</string>
     <string name="logs_count_format">%1$d sur %2$d entrées</string>
-    <string name="logs_status_live">Instagram en cours d\'exécution · en direct</string>
+    <string name="logs_status_live">Instagram ouvert · en direct</string>
     <string name="logs_status_saved">Journal enregistré · Instagram n\'est pas lancé</string>
     <string name="logs_status_none">Aucune application Instagram compatible installée</string>
     <string name="logs_empty_title">Aucun journal pour l\'instant</string>
@@ -27,4 +27,24 @@
     <string name="logs_entry_copied">Entrée copiée</string>
     <string name="logs_cleared">Journaux effacés</string>
     <string name="logs_source_companion">[app]</string>
+    <string name="logs_latest">Plus récents</string>
+    <string name="logs_clear_confirm_title">Effacer les journaux ?</string>
+    <string name="logs_clear_confirm_body">Supprime les journaux enregistrés sur ce téléphone, y compris ceux d\'Instagram.</string>
+    <string name="logs_share_no_app">Aucune app disponible pour partager</string>
+    <string name="logs_status_unsynced">Journal enregistré · pas de synchro</string>
+    <string name="logs_copy_entry">Copier l\'entrée</string>
+    <string name="logs_crash_share">Partager le plantage</string>
+    <string name="logs_crash_delete">Supprimer les plantages</string>
+    <string name="logs_crash_share_warning">Les rapports de plantage peuvent contenir une partie de ce qu\'Instagram avait en mémoire, comme des messages ou des identifiants. Partagez-les en privé, pas dans un ticket public.</string>
+    <string name="logs_crash_share_summary">Partager le résumé</string>
+    <string name="logs_crash_share_full">Partager tout le rapport</string>
+    <string name="logs_crash_share_subject">Rapport de plantage InstaEclipse</string>
+    <string name="logs_crash_share_failed">Impossible de créer le rapport de plantage</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="one">Supprimer %d rapport de plantage ?</item>
+        <item quantity="many">Supprimer %d rapports de plantage ?</item>
+        <item quantity="other">Supprimer %d rapports de plantage ?</item>
+    </plurals>
+    <string name="logs_crash_delete_action">Supprimer</string>
+    <string name="logs_crash_deleted">Rapports de plantage supprimés</string>
 </resources>

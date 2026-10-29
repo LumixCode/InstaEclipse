@@ -5,4 +5,44 @@
     <string name="feat_search_no_results">Brak pasujących funkcji</string>
     <string name="feat_count_on">%1$d wł.</string>
     <string name="feat_count_off">Wył.</string>
+    <string name="feat_cache_size_limit">Limit rozmiaru cache</string>
+    <string name="feat_tab_move_up">Przesuń %1$s w górę</string>
+    <string name="feat_tab_move_down">Przesuń %1$s w dół</string>
+    <string name="feat_tab_hidden">%1$s · Ukryta</string>
+    <plurals name="feat_restore_confirm">
+        <item quantity="one">Przywrócić %d ustawienie z tej kopii? Ustawienia z pliku zastąpią obecne; blokady są tylko włączane.</item>
+        <item quantity="few">Przywrócić %d ustawienia z tej kopii? Ustawienia z pliku zastąpią obecne; blokady są tylko włączane.</item>
+        <item quantity="many">Przywrócić %d ustawień z tej kopii? Ustawienia z pliku zastąpią obecne; blokady są tylko włączane.</item>
+        <item quantity="other">Przywrócić %d ustawień z tej kopii? Ustawienia z pliku zastąpią obecne; blokady są tylko włączane.</item>
+    </plurals>
+    <plurals name="feat_restore_skipped">
+        <item quantity="one">Pominięte wpisy: %d.</item>
+        <item quantity="few">Pominięte wpisy: %d.</item>
+        <item quantity="many">Pominięte wpisy: %d.</item>
+        <item quantity="other">Pominięte wpisy: %d.</item>
+    </plurals>
+    <string name="feat_restore_needs_passcode">Blokady wymagają kodu ustawionego w Instagramie.</string>
+    <string name="feat_restore_action">Przywróć</string>
+    <string name="feat_restore_invalid_file">nieprawidłowy plik kopii zapasowej</string>
+    <string name="feat_backup_unreadable">nie udało się odczytać ustawień</string>
+    <string name="feat_notification_rationale_title">Pokazywać postęp pobierania?</string>
+    <string name="feat_notification_rationale_message">InstaEclipse pokazuje powiadomienie podczas zapisywania pobranych plików.</string>
+    <string name="feat_storage_rationale_title">Zezwolić na zapis pobrań?</string>
+    <string name="feat_storage_rationale_message">W tej wersji Androida InstaEclipse potrzebuje dostępu do pamięci, aby zapisywać pobrane pliki.</string>
+    <string name="feat_permission_not_now">Nie teraz</string>
+    <string name="feat_use_default_folder">Użyj domyślnego folderu</string>
+    <string name="feat_download_folder_default">%1$s (domyślny)</string>
+    <string name="feat_reset_folder_confirm">Użyć domyślnego folderu? Nowe pobrane pliki trafią do %1$s.</string>
+    <string name="feat_search_try_another">Spróbuj innego słowa</string>
+    <string name="feat_reason_best_only">Tylko z jakością Najlepsza</string>
+    <string name="feat_reason_overridden">Wył. przy włączonym „%1$s”</string>
+    <string name="feat_requires_lock">Najpierw włącz blokadę</string>
+    <string name="feat_requires_above">Najpierw włącz jedną z opcji powyżej</string>
+    <string name="feat_corner_small">Małe</string>
+    <string name="feat_corner_medium">Średnie</string>
+    <string name="feat_corner_large">Duże</string>
+    <string name="feat_corner_extra_large">Bardzo duże</string>
+    <string name="feat_corner_round">Okrągłe</string>
+    <string name="feat_lock_needs_passcode">Wł. · wymaga kodu w Instagramie</string>
+    <string name="feat_restart_waiting">Czeka na restart Instagrama</string>
 </resources>

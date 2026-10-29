@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_toast_restored_some_skipped">Paramètres restaurés, sauf %1$d non valides ou verrouillés par le mode extrême.</string>
+</resources>

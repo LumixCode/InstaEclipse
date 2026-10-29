@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">Apagada</string>
+    <string name="ig_unsent_clear_failed">Não foi possível limpar as mensagens salvas. Abra esta conversa de novo e tente outra vez.</string>
+    <string name="ig_unsent_clear_saved">Limpar mensagens apagadas salvas</string>
+    <string name="ig_unsent_clear_saved_confirm">Remover estas mensagens mantidas da lixeira e do histórico local da conversa? Isso não pode ser desfeito.</string>
+    <string name="ig_unsent_cleared_saved">Mensagens apagadas salvas foram limpas</string>
+</resources>

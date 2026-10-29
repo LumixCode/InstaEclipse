@@ -21,4 +21,25 @@
     <string name="home_shortcuts_hint">Les modifications sont envoyées instantanément à Instagram.</string>
     <string name="home_shortcuts_limit">Vous pouvez épingler jusqu\'à %1$d raccourcis</string>
     <string name="home_shortcuts_locked_extreme">Verrouillé par le Mode Extrême</string>
+    <string name="home_instagram_version">Instagram %1$s</string>
+    <string name="home_tested_version">Version testée</string>
+    <string name="home_untested_version">Pas la version testée (%1$s) : certaines fonctionnalités peuvent ne pas marcher</string>
+    <string name="home_status_worked">A fonctionné dans Instagram (%1$s)</string>
+    <string name="home_status_not_confirmed">Pas encore confirmé</string>
+    <string name="home_status_open_to_check">Ouvrez Instagram pour vérifier</string>
+    <string name="home_status_clone">Clone · sans synchro</string>
+    <string name="home_instagram_app_info">Infos de l\'app Instagram</string>
+    <string name="home_detected_versions">Versions détectées</string>
+    <string name="home_detected_version_row">%1$s — v%2$s</string>
+    <string name="home_use_this">Utiliser</string>
+    <string name="home_variant_official">Officielle</string>
+    <string name="home_setup_step_1">Patchez Instagram avec LSPatch, ou activez InstaEclipse pour Instagram dans Vector.</string>
+    <string name="home_setup_step_2">Forcez l\'arrêt d\'Instagram et rouvrez-le.</string>
+    <string name="home_setup_step_3">Dans Instagram, maintenez l\'onglet Recherche en bas de l\'écran.</string>
+    <string name="home_setup_open_instagram">Ouvrir Instagram</string>
+    <string name="home_setup_got_it">J\'ai compris</string>
+    <string name="home_restarting">Redémarrage…</string>
+    <string name="home_shortcuts_needs_setting">Activez d\'abord le paramètre requis</string>
+    <string name="home_restart_applies_on_open">S\'applique à l\'ouverture d\'Instagram. Un redémarrage sera demandé si nécessaire.</string>
+    <string name="home_tool_restart_sub">Ferme et rouvre Instagram</string>
 </resources>

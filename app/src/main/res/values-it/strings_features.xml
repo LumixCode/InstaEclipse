@@ -5,4 +5,42 @@
     <string name="feat_search_no_results">Nessuna funzionalità trovata</string>
     <string name="feat_count_on">%1$d attive</string>
     <string name="feat_count_off">Disattivate</string>
+    <string name="feat_cache_size_limit">Limite dimensione cache</string>
+    <string name="feat_tab_move_up">Sposta su: %1$s</string>
+    <string name="feat_tab_move_down">Sposta giù: %1$s</string>
+    <string name="feat_tab_hidden">%1$s · Nascosta</string>
+    <plurals name="feat_restore_confirm">
+        <item quantity="one">Ripristinare %d impostazione da questo backup? Le impostazioni nel file sostituiscono quelle attuali; i blocchi vengono solo attivati.</item>
+        <item quantity="many">Ripristinare %d impostazioni da questo backup? Le impostazioni nel file sostituiscono quelle attuali; i blocchi vengono solo attivati.</item>
+        <item quantity="other">Ripristinare %d impostazioni da questo backup? Le impostazioni nel file sostituiscono quelle attuali; i blocchi vengono solo attivati.</item>
+    </plurals>
+    <plurals name="feat_restore_skipped">
+        <item quantity="one">%d voce viene saltata.</item>
+        <item quantity="many">%d voci vengono saltate.</item>
+        <item quantity="other">%d voci vengono saltate.</item>
+    </plurals>
+    <string name="feat_restore_needs_passcode">I blocchi richiedono un codice impostato in Instagram.</string>
+    <string name="feat_restore_action">Ripristina</string>
+    <string name="feat_restore_invalid_file">non è un file di backup valido</string>
+    <string name="feat_backup_unreadable">impossibile leggere le impostazioni</string>
+    <string name="feat_notification_rationale_title">Mostrare i progressi dei download?</string>
+    <string name="feat_notification_rationale_message">InstaEclipse mostra una notifica mentre salva i tuoi download.</string>
+    <string name="feat_storage_rationale_title">Consentire di salvare i download?</string>
+    <string name="feat_storage_rationale_message">Su questa versione di Android InstaEclipse ha bisogno dell\'accesso alla memoria per salvare i tuoi download.</string>
+    <string name="feat_permission_not_now">Non ora</string>
+    <string name="feat_use_default_folder">Usa la cartella predefinita</string>
+    <string name="feat_download_folder_default">%1$s (predefinita)</string>
+    <string name="feat_reset_folder_confirm">Usare la cartella predefinita? I nuovi download andranno in %1$s.</string>
+    <string name="feat_search_try_another">Prova un\'altra parola</string>
+    <string name="feat_reason_best_only">Solo con la qualità Migliore</string>
+    <string name="feat_reason_overridden">Disattivato se «%1$s» è attivo</string>
+    <string name="feat_requires_lock">Attiva prima un blocco</string>
+    <string name="feat_requires_above">Attiva prima un\'opzione qui sopra</string>
+    <string name="feat_corner_small">Piccolo</string>
+    <string name="feat_corner_medium">Medio</string>
+    <string name="feat_corner_large">Grande</string>
+    <string name="feat_corner_extra_large">Molto grande</string>
+    <string name="feat_corner_round">Rotondo</string>
+    <string name="feat_lock_needs_passcode">Attivo · serve un codice in Instagram</string>
+    <string name="feat_restart_waiting">In attesa del riavvio di Instagram</string>
 </resources>

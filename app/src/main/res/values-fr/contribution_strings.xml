@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">Téléchargements InstaEclipse</string>
     <string name="ie_download_quality">Qualité de téléchargement</string>
     <string name="ie_downloader_original">Standard</string>
     <string name="ie_download_best">Meilleure</string>
     <string name="ie_download_ceiling">Meilleure, jusqu\'à %1$dp</string>
+    <string name="ie_save_video_frame">Enregistrer une image</string>
+    <string name="ie_download_video">Télécharger la vidéo</string>
+    <string name="ie_frame_help">Choisissez une image avec le curseur. Seul le PNG en pleine résolution est enregistré ; la vidéo temporaire est supprimée quand vous enregistrez ou fermez.</string>
+    <string name="ie_frame_preparing">Préparation de la vidéo en qualité maximale…</string>
+    <string name="ie_frame_preparing_progress">Préparation de la vidéo en qualité maximale… %1$d %%</string>
+    <string name="ie_frame_loading">Chargement de l\'aperçu…</string>
+    <string name="ie_frame_preview">Aperçu de l\'image choisie</string>
+    <string name="ie_frame_position">Position de l\'image</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · Pleine résolution</string>
+    <string name="ie_frame_save">Enregistrer le PNG</string>
+    <string name="ie_frame_saving">Enregistrement en pleine résolution…</string>
+    <string name="ie_frame_saved">PNG enregistré : %1$d × %2$d. Vidéo temporaire supprimée.</string>
+    <string name="ie_frame_failed">Impossible de préparer ou d\'enregistrer cette image. Aucune version de moindre qualité n\'a été utilisée à la place.</string>
+    <string name="ie_frame_reopen">Rouvrez « Télécharger » dans Instagram pour choisir une image.</string>
     <string name="ie_download_compatibility">Préférer les vidéos lisibles partout</string>
     <string name="ie_download_fallback">Qualité inférieure si Meilleure échoue</string>
+    <string name="ie_download_unavailable">Impossible de récupérer le média choisi sur cette version d\'Instagram.</string>
+    <string name="ie_download_retry_lower">Réessayer en qualité inférieure</string>
     <string name="ie_downloader_original_unavailable">Standard n\'a pas pu l\'enregistrer. Passez à Meilleure pour le télécharger.</string>
     <string name="ie_download_fallback_prompt">Meilleure n\'a pas pu l\'enregistrer. Essayer une qualité inférieure ?</string>
+    <string name="ie_download_cancelled">Téléchargement annulé</string>
+    <string name="ie_download_select_item">Choisir un élément</string>
+    <string name="ie_download_item">Élément %1$d</string>
 </resources>

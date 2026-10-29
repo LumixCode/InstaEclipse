@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ig_fancy_font_names">
+        <item>Normal</item>
+        <item>Negrita</item>
+        <item>Cursiva</item>
+        <item>Negrita cursiva</item>
+        <item>Sans negrita</item>
+        <item>Sans cursiva</item>
+        <item>Caligráfica</item>
+        <item>Gótica</item>
+        <item>Doble trazo</item>
+        <item>Monoespaciada</item>
+        <item>En círculo</item>
+        <item>Ancho completo</item>
+        <item>Versalitas</item>
+        <item>Tachado</item>
+        <item>Subrayado</item>
+    </string-array>
+</resources>

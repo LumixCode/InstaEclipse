@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">Downloads do InstaEclipse</string>
     <string name="ie_download_quality">Qualidade do download</string>
     <string name="ie_downloader_original">Padrão</string>
     <string name="ie_download_best">Melhor</string>
     <string name="ie_download_ceiling">Melhor, até %1$dp</string>
+    <string name="ie_save_video_frame">Salvar quadro do vídeo</string>
+    <string name="ie_download_video">Baixar vídeo</string>
+    <string name="ie_frame_help">Escolha um quadro com o controle deslizante. Só o PNG em resolução total é salvo; o vídeo temporário é removido quando você salva ou fecha.</string>
+    <string name="ie_frame_preparing">Preparando o vídeo na melhor qualidade…</string>
+    <string name="ie_frame_preparing_progress">Preparando o vídeo na melhor qualidade… %1$d%%</string>
+    <string name="ie_frame_loading">Carregando prévia…</string>
+    <string name="ie_frame_preview">Prévia do quadro escolhido</string>
+    <string name="ie_frame_position">Posição do quadro</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · Resolução total</string>
+    <string name="ie_frame_save">Salvar PNG</string>
+    <string name="ie_frame_saving">Salvando o quadro em resolução total…</string>
+    <string name="ie_frame_saved">PNG salvo: %1$d × %2$d. Vídeo temporário removido.</string>
+    <string name="ie_frame_failed">Não foi possível preparar ou salvar este quadro. Nenhuma versão de qualidade menor foi usada no lugar.</string>
+    <string name="ie_frame_reopen">Abra “Baixar” de novo no Instagram para escolher um quadro.</string>
     <string name="ie_download_compatibility">Preferir vídeos que tocam em qualquer lugar</string>
     <string name="ie_download_fallback">Usar qualidade menor se Melhor falhar</string>
+    <string name="ie_download_unavailable">Não foi possível obter a mídia escolhida nesta versão do Instagram.</string>
+    <string name="ie_download_retry_lower">Tentar qualidade menor</string>
     <string name="ie_downloader_original_unavailable">Padrão não conseguiu salvar. Mude para Melhor para baixar.</string>
     <string name="ie_download_fallback_prompt">Melhor não conseguiu salvar. Tentar uma qualidade menor?</string>
+    <string name="ie_download_cancelled">Download cancelado</string>
+    <string name="ie_download_select_item">Escolher item do carrossel</string>
+    <string name="ie_download_item">Item %1$d</string>
 </resources>

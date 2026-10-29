@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">Guardar historias vistas</string>
+    <string name="ig_story_cache_duration">Duración de la caché</string>
+    <string name="ig_story_cache_hours">%1$d h</string>
+    <string name="ig_story_cache_picker_help">Conserva las historias de 1 a 720 horas (hasta 30 días). Las más antiguas pueden borrarse antes si la caché llega a 500 MB.</string>
+    <string name="ig_story_cache_picker_unit">horas después de verlas</string>
+    <string name="ig_story_cache_invalid">Introduce un número del 1 al 720.</string>
+    <string name="ig_story_cache_empty_current">Aún no hay historias en caché. Activa la caché y mira algunas historias para conservarlas aquí durante el tiempo elegido.</string>
+</resources>

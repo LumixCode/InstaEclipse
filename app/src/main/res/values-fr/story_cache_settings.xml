@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">Conserver les stories vues</string>
+    <string name="ig_story_cache_duration">Durée de conservation</string>
+    <string name="ig_story_cache_hours">%1$d h</string>
+    <string name="ig_story_cache_picker_help">Conserver les stories de 1 à 720 heures (30 jours max). Les plus anciennes peuvent être supprimées plus tôt si le cache atteint 500 Mo.</string>
+    <string name="ig_story_cache_picker_unit">heures après visionnage</string>
+    <string name="ig_story_cache_invalid">Saisissez un nombre de 1 à 720.</string>
+    <string name="ig_story_cache_empty_current">Aucune story en cache pour l\'instant. Activez la mise en cache, puis regardez des stories pour les garder ici pendant la durée choisie.</string>
+</resources>

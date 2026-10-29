@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_feature_unsent_indicator">Marquer les messages annulés</string>
+    <string name="ig_feature_show_unsent_button">Afficher « Messages annulés » dans le menu de discussion</string>
+    <string name="ig_feature_following_follow_status">Voir qui vous suit en retour</string>
+    <string name="ig_feature_manual_story_seen">Marquer les stories vues à la main</string>
+</resources>

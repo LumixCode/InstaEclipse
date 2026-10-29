@@ -19,7 +19,7 @@
     <string name="logs_status_saved">Zapisany log · Instagram nie działa</string>
     <string name="logs_status_none">Brak zainstalowanej obsługiwanej aplikacji Instagram</string>
     <string name="logs_empty_title">Brak logów</string>
-    <string name="logs_empty_body">Otwórz raz Instagrama z włączonym InstaEclipse w Vector, a potem wróć tutaj i stuknij Odśwież. Log Instagrama zapisuje się tu automatycznie, nawet po zamknięciu aplikacji.</string>
+    <string name="logs_empty_body">Otwórz raz Instagram z włączonym InstaEclipse w Vector, a potem wróć tutaj i dotknij Odśwież. Log Instagrama zapisuje się tu automatycznie, nawet po zamknięciu aplikacji.</string>
     <string name="logs_empty_filter_title">Nic nie pasuje do tego filtra</string>
     <string name="logs_empty_filter_body">Wróć do widoku Wszystkie, aby zobaczyć wszystkie wpisy.</string>
     <string name="logs_nothing_to_copy">Brak logów do skopiowania</string>
@@ -27,4 +27,25 @@
     <string name="logs_entry_copied">Skopiowano wpis</string>
     <string name="logs_cleared">Wyczyszczono logi</string>
     <string name="logs_source_companion">[aplikacja]</string>
+    <string name="logs_latest">Najnowsze</string>
+    <string name="logs_clear_confirm_title">Wyczyścić logi?</string>
+    <string name="logs_clear_confirm_body">Usuwa logi zapisane na tym telefonie, także logi Instagrama.</string>
+    <string name="logs_share_no_app">Brak aplikacji do udostępniania</string>
+    <string name="logs_status_unsynced">Zapisany log · synchronizacja na żywo niedostępna</string>
+    <string name="logs_copy_entry">Kopiuj wpis</string>
+    <string name="logs_crash_share">Udostępnij raport o awarii</string>
+    <string name="logs_crash_delete">Usuń raporty o awariach</string>
+    <string name="logs_crash_share_warning">Raporty o awariach mogą zawierać fragmenty tego, co Instagram miał w pamięci, np. wiadomości lub dane logowania. Udostępniaj je prywatnie, nie w publicznym zgłoszeniu.</string>
+    <string name="logs_crash_share_summary">Udostępnij podsumowanie</string>
+    <string name="logs_crash_share_full">Udostępnij pełny raport</string>
+    <string name="logs_crash_share_subject">Raport o awarii InstaEclipse</string>
+    <string name="logs_crash_share_failed">Nie udało się utworzyć raportu o awarii</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="one">Usunąć %d raport o awarii?</item>
+        <item quantity="few">Usunąć %d raporty o awariach?</item>
+        <item quantity="many">Usunąć %d raportów o awariach?</item>
+        <item quantity="other">Usunąć %d raportów o awariach?</item>
+    </plurals>
+    <string name="logs_crash_delete_action">Usuń</string>
+    <string name="logs_crash_deleted">Usunięto raporty o awariach</string>
 </resources>

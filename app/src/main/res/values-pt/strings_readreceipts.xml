@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="ig_dialog_ghost_read_receipt_chats">Enviar confirmações de leitura para conversas específicas</string>
+    <string name="ig_dialog_ghost_read_receipt_chats">Enviar Visto em certas conversas</string>
     <string name="ig_read_receipt_chat_on">Enviar confirmações de leitura nesta conversa</string>
     <string name="ig_read_receipt_chat_off">Parar confirmações de leitura nesta conversa</string>
-    <string name="ig_toast_read_receipt_on">Confirmações de leitura ativadas para esta conversa</string>
-    <string name="ig_toast_read_receipt_off">Confirmações de leitura desativadas para esta conversa</string>
+    <string name="ig_toast_read_receipt_on">Com confirmação de leitura nesta conversa</string>
+    <string name="ig_toast_read_receipt_off">Sem confirmação de leitura nesta conversa</string>
 </resources>

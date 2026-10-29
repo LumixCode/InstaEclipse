@@ -1,13 +1,14 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- app wide -->
     <string name="app_name">InstaEclipse</string>
-    <string name="home">Menu</string>
+    <string name="module_description">Améliorez votre expérience Instagram</string>
+    <string name="home">Accueil</string>
     <string name="features">Fonctionnalités</string>
     <string name="help">Aide</string>
 
     <!-- home -->
     <string name="back">Retour</string>
-    <string name="multiple_versions_detected">⚠️ Plusieurs versions détectées</string>
+    <string name="multiple_versions_detected">Plusieurs versions détectées</string>
     <string name="checking_instagram">Vérification d\'Instagram</string>
     <string name="installed_instagram_version">Instagram est installé</string>
     <string name="not_installed_instagram">Instagram n\'est pas installé</string>
@@ -21,7 +22,7 @@
     <string name="instagram_logo" translatable="false">Instagram Logo</string>
 
     <!-- help -->
-    <string name="go_to_github">Allez sur le GitHub</string>
+    <string name="go_to_github">Aller sur GitHub</string>
     <string name="go_to_telegram">Aller sur Telegram</string>
 
     <!-- Don't translate! -->
@@ -29,15 +30,15 @@
 
     <!-- faq -->
     <string name="frequently_asked_questions">FAQ</string>
-    <string name="faq_1"><![CDATA[<b>1. Ne fonctionne pas/plante lors de l&#39;utilisation de la version Google Play ?</b><br/>- Utilisez les APKs de APKMirror]]></string>
-    <string name="faq_3"><![CDATA[<b>3. Les fonctionnalités ne fonctionnent pas ?</b><br/>- Forcez l&#39;arrêt et redémarrez Instagram.]]></string>
-    <string name="faq_6"><![CDATA[<b>6. Le mode Sans Distraction est activé mais le contenu apparaît toujours ?</b><br/>- Forcez l&#39;arrêt d&#39;Instagram et videz son cache.]]></string>
+    <string name="faq_1"><b>1. Ne fonctionne pas ou plante avec la version Google Play ?</b>\n- Utilisez les APK d\'APKMirror</string>
+    <string name="faq_3"><b>3. Les fonctionnalités ne fonctionnent pas ?</b>\n- Forcez l\'arrêt et redémarrez Instagram.</string>
+    <string name="faq_6"><b>6. Le mode Sans Distractions est activé mais le contenu apparaît toujours ?</b>\n- Forcez l\'arrêt d\'Instagram et videz son cache.</string>
 
     <!-- features fragment section headers -->
     <string name="feat_config">Configuration</string>
     <string name="feat_quick_toggle">Bascule rapide</string>
     <string name="feat_danger_zone">Zone de danger</string>
-    <string name="feat_downloader_reset_folder">Réinitialiser le dossier de téléchargement</string>
+    <string name="feat_downloader_reset_folder">Revenir au dossier par défaut</string>
 
     <!-- ghost -->
     <string name="story">Story</string>
@@ -56,27 +57,27 @@
     <string name="ig_dialog_cancel">Annuler</string>
 
     <!-- Main menu items -->
-    <string name="ig_dialog_menu_dev_options">Options Développeurs</string>
+    <string name="ig_dialog_menu_dev_options">Options développeur</string>
     <string name="ig_dialog_menu_clean_feed">Fil propre</string>
     <string name="ig_dialog_menu_distraction_free">Instagram Sans Distractions</string>
-    <string name="ig_dialog_menu_downloader">Téléchargeur</string>
-    <string name="ig_dialog_menu_backup_restore">Sauvegarde &amp; Restauration</string>
+    <string name="ig_dialog_menu_downloader">Téléchargements</string>
+    <string name="ig_dialog_menu_backup_restore">Sauvegarde et restauration</string>
     <string name="ig_dialog_menu_about">À propos</string>
-    <string name="ig_dialog_menu_restart">Redémarrer l\'app</string>
+    <string name="ig_dialog_menu_restart">Redémarrer Instagram</string>
 
     <!-- Section titles -->
-    <string name="ig_dialog_section_ghost_mode">Mode Fantôme</string>
+    <string name="ig_dialog_section_ghost_mode">Mode fantôme</string>
     <string name="ig_dialog_section_about">À propos</string>
 
     <!-- Developer options -->
-    <string name="ig_dialog_dev_enable">Activer le Mode Développeur</string>
-    <string name="ig_dialog_dev_import">Importer Config Dev</string>
-    <string name="ig_dialog_dev_export">Exporter Config Dev</string>
+    <string name="ig_dialog_dev_enable">Options développeur d\'Instagram</string>
+    <string name="ig_dialog_dev_import">Importer la config dev</string>
+    <string name="ig_dialog_dev_export">Exporter la config dev</string>
     <string name="ig_dialog_dev_restore_default_config">Restaurer la configuration par défaut</string>
     <string name="ig_dialog_dev_restore_default_config_confirm">Cela écrasera la configuration développeur actuelle avec celle par défaut incluse. Continuer ?</string>
     <string name="ig_toast_default_config_restored">✅ Configuration par défaut restaurée.</string>
     <string name="ig_dialog_dev_remove_build_expired">Supprimer le Popup Build Expiré</string>
-    <string name="ig_dialog_unable_open_ui">Impossible d\'ouvrir l\'interface InstaEclipse.</string>
+    <string name="ig_dialog_unable_open_ui">Impossible d\'ouvrir le menu InstaEclipse.</string>
     <string name="ig_dialog_instagram_not_ready">Instagram n\'est pas ouvert ou prêt.</string>
     <string name="ig_dialog_mc_overrides_not_found">mc_overrides.json introuvable.</string>
     <string name="ig_dialog_failed_read_config">Échec de lecture de la config : %1$s</string>
@@ -88,21 +89,21 @@
     <string name="ig_toast_config_import_failed">❌ Échec d\'importation de config.</string>
 
     <!-- JsonImportActivity -->
-    <string name="json_select_config">Sélectionner un fichier JSON</string>
+    <string name="json_select_config">Choisir la config JSON</string>
     <string name="json_sent">✅ Envoyé à Instagram.</string>
     <string name="json_not_valid">❌ Fichier JSON invalide.</string>
     <string name="json_read_failed">❌ Échec de lecture du fichier : %1$s</string>
 
     <!-- Ghost Mode options -->
-    <string name="ig_dialog_ghost_hide_dm_seen">Masquer Lu DM</string>
-    <string name="ig_dialog_ghost_hide_typing">Masquer Indicateur de frappe</string>
-    <string name="ig_dialog_ghost_hide_story_views">Masquer Vues des Stories</string>
-    <string name="ig_dialog_ghost_hide_live_presence">Masquer Présence en Live</string>
+    <string name="ig_dialog_ghost_hide_dm_seen">Masquer le « Vu » des DM</string>
+    <string name="ig_dialog_ghost_hide_typing">Masquer l\'indicateur de frappe</string>
+    <string name="ig_dialog_ghost_hide_story_views">Voir les stories anonymement</string>
+    <string name="ig_dialog_ghost_hide_live_presence">Regarder les lives anonymement</string>
     <string name="ig_dialog_ghost_allow_screenshots_dms">Autoriser captures d\'écran en DM</string>
-    <string name="ig_dialog_ghost_bypass_screenshot">Contourner Détection de capture d\'écran</string>
-    <string name="ig_dialog_ghost_hide_view_once">Masquer Ouverture Vue Unique</string>
-    <string name="ig_dialog_ghost_permanent_view_once">Médias Vue Unique permanents (Instable)</string>
-    <string name="ig_dialog_ghost_keep_disappearing">Conserver Messages éphémères</string>
+    <string name="ig_dialog_ghost_bypass_screenshot">Ne pas signaler les captures d\'écran</string>
+    <string name="ig_dialog_ghost_hide_view_once">Ouvrir les vues uniques en secret</string>
+    <string name="ig_dialog_ghost_permanent_view_once">Débloquer vue unique/deux fois</string>
+    <string name="ig_dialog_ghost_keep_disappearing">Conserver les messages éphémères</string>
     <string name="ig_dialog_customize_quick_toggle">Personnaliser Bascule Rapide</string>
 
     <!-- Quick Toggle options -->
@@ -113,24 +114,24 @@
     <string name="ig_dialog_quick_hide_story_seen">Inclure Masquer Vues des Stories</string>
     <string name="ig_dialog_quick_hide_live_seen">Inclure Masquer Présence en Live</string>
     <string name="ig_dialog_quick_keep_ephemeral">Inclure Conserver Messages éphémères</string>
-    <string name="ig_dialog_quick_permanent_view">Inclure Médias Vue Unique permanents (Instable)</string>
+    <string name="ig_dialog_quick_permanent_view">Inclure Débloquer vue unique/deux fois</string>
     <string name="ig_dialog_quick_allow_screenshots">Inclure Autoriser captures d\'écran en DM</string>
 
     <!-- Ad / Analytics options -->
     <string name="ig_dialog_ad_block_ads">Bloquer les pubs</string>
     <string name="ig_dialog_ad_block_analytics">Bloquer les analytics</string>
-    <string name="ig_dialog_clean_feed_hide_suggested">Masquer les suggestions dans le fil</string>
-    <string name="ig_dialog_ad_disable_tracking">Désactiver liens de suivi</string>
-    <string name="ig_dialog_open_links_externally">Ouvrir les liens dans un navigateur externe</string>
+    <string name="ig_dialog_clean_feed_hide_suggested">Masquer les suggestions du fil</string>
+    <string name="ig_dialog_ad_disable_tracking">Retirer le suivi des liens</string>
+    <string name="ig_dialog_open_links_externally">Ouvrir les liens dans votre navigateur</string>
     <string name="theme_light_mode">Mode clair</string>
     <string name="theme_dark_mode">Mode sombre</string>
     <string name="ig_dialog_translate_messages">Bouton Traduire dans les discussions</string>
     <string name="ig_chat_translate_row">Traduire avec une app</string>
-    <string name="ig_dialog_bulk_unsend">Annuler l\'envoi de plusieurs messages</string>
+    <string name="ig_dialog_bulk_unsend">Annuler l\'envoi en masse</string>
     <string name="ig_bulk_unsend_row">Annuler plusieurs</string>
     <string name="ig_bulk_unsend_go">Annuler l\'envoi</string>
     <string name="ig_bulk_unsend_unavailable">L\'annulation groupée n\'est pas disponible sur cette version d\'Instagram</string>
-    <string name="ig_downloader_folder_hint">Choisissez le dossier depuis l\'application InstaEclipse</string>
+    <string name="ig_downloader_folder_hint">Choisissez le dossier depuis l\'app InstaEclipse</string>
     <string name="theme_set_light">Thèmes du mode clair</string>
     <string name="theme_set_dark">Thèmes du mode sombre</string>
     <string name="theme_light_same">Même thème qu\'en mode sombre</string>
@@ -138,40 +139,40 @@
 
     <!-- Distraction-Free options -->
     <string name="ig_dialog_distraction_extreme_mode">Mode Extrême (Irréversible jusqu\'à réinstallation)</string>
-    <string name="ig_dialog_distraction_disable_stories">Désactiver les Stories</string>
-    <string name="ig_dialog_distraction_disable_feed">Désactiver le fil d\'actualité</string>
+    <string name="ig_dialog_distraction_disable_stories">Désactiver les stories</string>
+    <string name="ig_dialog_distraction_disable_feed">Désactiver le fil</string>
     <string name="ig_dialog_distraction_disable_reels">Désactiver les Reels</string>
     <string name="ig_dialog_distraction_disable_reels_except_dm">Désactiver les Reels sauf en DM</string>
     <string name="ig_dialog_distraction_disable_explore">Désactiver Explorer</string>
-    <string name="ig_dialog_distraction_disable_comments">Désactiver les Commentaires</string>
-    <string name="ig_dialog_distraction_extreme_title">Activer le Mode Extrême ?</string>
+    <string name="ig_dialog_distraction_disable_comments">Désactiver les commentaires</string>
+    <string name="ig_dialog_distraction_extreme_title">Activer le mode extrême ?</string>
 
     <!-- Miscellaneous options -->
-    <string name="ig_dialog_misc_disable_story_autoswipe">Désactiver défilement auto des Stories</string>
-    <string name="ig_dialog_misc_disable_video_autoplay">Désactiver lecture auto des vidéos</string>
-    <string name="ig_dialog_misc_disable_repost">Désactiver Repartage</string>
+    <string name="ig_dialog_misc_disable_story_autoswipe">Ne pas enchaîner les stories</string>
+    <string name="ig_dialog_misc_disable_video_autoplay">Pas de lecture auto des vidéos</string>
+    <string name="ig_dialog_misc_disable_repost">Masquer le bouton Republier</string>
     <string name="ig_dialog_clean_feed_expand_captions">Toujours afficher les légendes complètes (redémarrer IG)</string>
-    <string name="ig_dialog_clean_feed_hide_plus">Masquer les promotions Instagram Plus</string>
+    <string name="ig_dialog_clean_feed_hide_plus">Masquer les offres Instagram Plus</string>
     <string name="ig_dialog_clean_feed_hide_community_notes">Masquer les notes de la communauté</string>
     <string name="ig_dialog_misc_profile_follows_label">Afficher « Vous suit » sur les profils</string>
     <string name="ig_dialog_fancy_bio_font">Polices fantaisie dans la bio</string>
     <string name="ig_fancy_font_button">Police fantaisie</string>
     <string name="ig_fancy_font_title">Police de la bio</string>
-    <string name="ig_fancy_font_note">Stylise les lettres latines et grecques et les chiffres, visibles par tous. Le barré et le souligné fonctionnent dans toutes les langues.</string>
+    <string name="ig_fancy_font_note">Choisissez un style : ce que vous tapez ensuite l\'utilise, le texte déjà saisi ne change pas. Les lettres latines et grecques et les chiffres ont tous les styles ; le barré et le souligné fonctionnent dans toutes les langues.</string>
     <string name="ig_profile_follows_you">Vous suit</string>
     <string name="ig_profile_not_following_you">Ne vous suit pas</string>
-    <string name="ig_dialog_downloader_offer_media_info">Ajouter Infos du média au menu de la publication</string>
+    <string name="ig_dialog_downloader_offer_media_info">Voir les infos média</string>
     <string name="ig_dialog_downloader_offer_speed">Ajouter Vitesse de lecture au menu de la publication</string>
-    <string name="ig_dialog_downloader_reel_scrubber">Toujours afficher la barre de progression des Reels</string>
+    <string name="ig_dialog_downloader_reel_scrubber">Barre de lecture toujours visible</string>
     <string name="ig_dialog_reels_hold_left_slow">Maintenir le côté gauche pour le ralenti (0,5×)</string>
     <string name="ig_media_info_title">Infos du média</string>
     <string name="ig_playback_speed_title">Vitesse de lecture</string>
     <string name="ig_playback_speed_next">Vitesse définie — s\'applique à la prochaine vidéo lancée</string>
-    <string name="ig_dialog_distraction_hide_notes_tray">Masquer les notes dans les messages</string>
-    <string name="ig_hide_dm_suggestions">Masquer les comptes suggérés dans Messages</string>
+    <string name="ig_dialog_distraction_hide_notes_tray">Masquer les notes</string>
+    <string name="ig_hide_dm_suggestions">Masquer les comptes suggérés</string>
     <string name="ig_data_backup">Sauvegarder les données (messages supprimés, profils analysés…)</string>
     <string name="ig_data_restore">Restaurer les données</string>
-    <string name="ig_data_backup_saved">Sauvegarde enregistrée : %1$s</string>
+    <string name="ig_data_backup_saved">Sauvegardé : %1$s</string>
     <string name="ig_data_backup_failed">Échec de la sauvegarde</string>
     <string name="ig_data_restore_done">%1$d fichiers restaurés. Redémarrage d’Instagram…</string>
     <string name="ig_data_restore_failed">Impossible de restaurer cette sauvegarde</string>
@@ -185,7 +186,7 @@
     <string name="ig_post_counts_keep">Garder le vrai</string>
     <string name="ig_post_counts_reset">Réinitialiser</string>
     <string name="ig_post_counts_saved">Chiffres enregistrés</string>
-    <string name="ig_dl_companion_fallback">Impossible de joindre l’app InstaEclipse : enregistré dans Download. Pour utiliser votre dossier, autorisez InstaEclipse à démarrer automatiquement / en arrière-plan.</string>
+    <string name="ig_dl_companion_fallback">Impossible de joindre l\'app InstaEclipse : fichier enregistré dans Download. Pour utiliser votre dossier, laissez InstaEclipse tourner en arrière-plan : hors des applications en veille (Samsung), démarrage automatique activé (Xiaomi), batterie sans restriction.</string>
     <string name="background_access_title">Laisser InstaEclipse fonctionner en arrière-plan</string>
     <string name="background_access_message">Les téléchargements vers votre dossier sont enregistrés par cette app, lancée depuis Instagram. Si le téléphone la met en veille, ils vont dans Download. Autorisez-la sans restriction. Sur Samsung, retirez-la des applis en veille ; sur Xiaomi, activez le démarrage automatique.</string>
     <string name="background_access_allow">Autoriser</string>
@@ -195,13 +196,13 @@
     <string name="folder_access_lost_choose">Choisir le dossier</string>
     <string name="ig_profile_menu_tools">Profil : maintenez le nom ou la bio pour copier, menu ⋮ : tout télécharger</string>
     <string name="ig_profile_spoofer">Faux profil (sur ce téléphone uniquement)</string>
-    <string name="ig_profile_spoofer_edit">Modifier le faux profil</string>
+    <string name="ig_profile_spoofer_edit">Modifier l\'apparence du profil</string>
     <string name="ig_profile_spoofer_followers">Abonnés</string>
     <string name="ig_profile_spoofer_following">Abonnements</string>
     <string name="ig_profile_spoofer_posts">Publications</string>
     <string name="ig_profile_spoofer_verified">Afficher le badge vérifié</string>
-    <string name="ig_profile_spoofer_editor_title">Modifie l\'apparence de ton profil pour toi</string>
-    <string name="ig_profile_spoofer_note">Toi seul le vois, sur ce téléphone, sur ton propre profil. Rien n\'est envoyé à Instagram. Laisse un champ vide pour garder la vraie valeur.</string>
+    <string name="ig_profile_spoofer_editor_title">Modifier l\'apparence de votre profil pour vous</string>
+    <string name="ig_profile_spoofer_note">Vous seul le voyez, sur ce téléphone, sur votre propre profil. Rien n\'est envoyé à Instagram. Laissez un champ vide pour garder la vraie valeur.</string>
     <string name="ig_profile_spoofer_section_identity">Identité</string>
     <string name="ig_profile_spoofer_section_stats">Statistiques</string>
     <string name="ig_profile_spoofer_section_badge">Badge</string>
@@ -217,7 +218,7 @@
     <string name="ig_profile_spoofer_photo_saved">Photo de profil définie</string>
     <string name="ig_profile_spoofer_reset_all">Tout réinitialiser</string>
     <string name="ig_profile_spoofer_save">Enregistrer</string>
-    <string name="ig_profile_download_all">Télécharger toutes les publications</string>
+    <string name="ig_profile_download_all">Tout télécharger</string>
     <string name="ig_profile_dl_collecting">Collecte des publications… %1$d trouvées</string>
     <string name="ig_profile_dl_found">%1$d publications trouvées. Tout télécharger ?</string>
     <string name="ig_profile_dl_started">Téléchargement de %1$d publications…</string>
@@ -270,7 +271,7 @@
     <string name="ig_pa_sec_not_listed">Abonnés de @%1$s non listés dans cette analyse, non confirmés (%2$d)</string>
     <string name="ig_pa_sec_b_not_listed">Abonnements de @%1$s non listés dans cette analyse, non confirmés (%2$d)</string>
     <string name="ig_pa_analysis_of">Analyse · %1$s</string>
-    <string name="ig_pa_remove">Retirer de la liste de surveillance</string>
+    <string name="ig_pa_remove">Retirer de la surveillance</string>
     <string name="ig_pa_removed">@%1$s retiré de la liste de surveillance</string>
     <string name="ig_pa_open_profile">Ouvrir le profil</string>
     <string name="ig_pa_never">Pas encore analysé</string>
@@ -291,7 +292,7 @@
     <string name="ig_pa_cl_none_kept">Aucun changement enregistré pour cette analyse.</string>
     <string name="ig_pa_cl_partial">Des changements plus anciens peuvent manquer ici : le journal garde les %1$d plus récents.</string>
     <string name="ig_pa_cl_more">Afficher plus</string>
-    <string name="ig_pa_cl_last_listed">listé pour la dernière fois le %1$s</string>
+    <string name="ig_pa_cl_last_listed">listé jusqu\'au %1$s</string>
     <string name="ig_pa_cl_unreliable_action">Marquer ces changements comme peu fiables (garder les listes)</string>
     <string name="ig_pa_cl_unreliable_confirm">Retirer de l\'historique les %1$d changements trouvés par cette analyse ? Les listes enregistrées restent telles quelles. Action irréversible.</string>
     <string name="ig_pa_cl_unreliable_remove">Retirer les changements</string>
@@ -300,40 +301,40 @@
     <string name="ig_back_leaves_home">Retour sur l\'accueil quitte Instagram</string>
     <string name="ig_dialog_downloader_voice">Télécharger les messages vocaux (appui long)</string>
     <string name="ig_dialog_downloader_dm_media">Télécharger photos et vidéos des messages (appui long)</string>
-    <string name="ig_dialog_misc_viewer_search">Rechercher parmi les spectateurs de votre story</string>
+    <string name="ig_dialog_misc_viewer_search">Rechercher les spectateurs de story</string>
     <string name="ig_viewer_search_hint">Rechercher des spectateurs</string>
     <string name="ig_dialog_misc_like_undo">Délai d\'annulation des J\'aime (4 s)</string>
-    <string name="ig_dialog_misc_exact_timestamps">Afficher les dates exactes au lieu de « il y a 2 h »</string>
+    <string name="ig_dialog_misc_exact_timestamps">Afficher la date et l\'heure exactes</string>
     <string name="ig_timestamp_format">Format de date</string>
-    <string name="ig_timestamp_format_default">Par défaut de l\'appareil</string>
+    <string name="ig_timestamp_format_default">Format de l\'appareil</string>
     <string name="ig_timestamp_format_custom">Personnalisé…</string>
     <string name="ig_timestamp_format_custom_hint">Lettres : yyyy année · MM mois · MMM nom du mois · dd jour · EEE jour de la semaine · HH heure (24 h) · h heure (12 h) · mm minutes · ss secondes · a AM/PM. Mettez tout autre texte entre \'apostrophes\'.</string>
     <string name="ig_timestamp_format_invalid">Format non valide</string>
-    <string name="ig_dialog_misc_hide_share_create_group">Masquer « Créer un groupe » dans le menu de partage</string>
-    <string name="ig_dialog_misc_show_feature_toasts">Afficher Notifications des fonctions</string>
-    <string name="ig_dialog_misc_show_follower_toast">Afficher Notification d\'abonné</string>
-    <string name="ig_dialog_misc_view_story_mentions">Voir Mentions de Story</string>
-    <string name="ig_dialog_misc_disable_discover_people">Désactiver Suggestions de personnes</string>
-    <string name="ig_dialog_misc_copy_comment">Copier Commentaire</string>
-    <string name="ig_dialog_misc_disable_double_tap_like">Désactiver le double tap pour liker</string>
+    <string name="ig_dialog_misc_hide_share_create_group">Masquer « Créer un groupe » lors du partage</string>
+    <string name="ig_dialog_misc_show_feature_toasts">Notifications des fonctions</string>
+    <string name="ig_dialog_misc_show_follower_toast">Afficher le statut d\'abonnement</string>
+    <string name="ig_dialog_misc_view_story_mentions">Voir les mentions de story</string>
+    <string name="ig_dialog_misc_disable_discover_people">Masquer les suggestions de profils</string>
+    <string name="ig_dialog_misc_copy_comment">Copier les commentaires</string>
+    <string name="ig_dialog_misc_disable_double_tap_like">Ne pas aimer au double appui</string>
 
     <!-- Comment Copy dialog -->
-    <string name="ig_comment_copy_title">Copier Commentaire</string>
+    <string name="ig_comment_copy_title">Copier le commentaire</string>
     <string name="ig_toast_comment_copied">✅ Copié dans le presse-papiers !</string>
 
     <!-- Downloader options -->
-    <string name="ig_dialog_downloader_posts">Télécharger les Publications</string>
-    <string name="ig_dialog_downloader_stories">Télécharger les Stories</string>
+    <string name="ig_dialog_downloader_posts">Télécharger les publications</string>
+    <string name="ig_dialog_downloader_stories">Télécharger les stories</string>
     <string name="ig_dialog_downloader_reels">Télécharger les Reels</string>
-    <string name="ig_dialog_downloader_profiles">Télécharger les Photos de Profil</string>
+    <string name="ig_dialog_downloader_profiles">Télécharger les photos de profil</string>
     <string name="ig_dialog_downloader_folder">Dossier de téléchargement</string>
-    <string name="ig_dialog_downloader_username_subfolder">Sauvegarder dans Sous-dossier utilisateur</string>
-    <string name="ig_dialog_downloader_add_timestamp">Ajouter Horodatage au Nom de fichier</string>
-    <string name="ig_dialog_downloader_cannot_open_picker">Impossible d\'ouvrir le sélecteur de dossier ici</string>
+    <string name="ig_dialog_downloader_username_subfolder">Enregistrer dans un dossier par compte</string>
+    <string name="ig_dialog_downloader_add_timestamp">Date et heure dans les noms de fichiers</string>
+    <string name="ig_dialog_downloader_cannot_open_picker">Sélecteur de dossier indisponible ici</string>
 
     <!-- Backup &amp; Restore -->
-    <string name="ig_dialog_backup_settings">Sauvegarder les Paramètres</string>
-    <string name="ig_dialog_restore_settings">Restaurer les Paramètres</string>
+    <string name="ig_dialog_backup_settings">Sauvegarder les paramètres</string>
+    <string name="ig_dialog_restore_settings">Restaurer les paramètres</string>
     <string name="ig_dialog_backup_failed">Échec de création de sauvegarde : %1$s</string>
 
     <!-- About -->
@@ -341,8 +342,8 @@
 
     <!-- Restart -->
     <string name="ig_dialog_clear_cache">Vider le Cache des Hooks</string>
-    <string name="ig_dialog_restart_now">Redémarrer Maintenant</string>
-    <string name="ig_dialog_restart_not_found">Impossible de trouver l\'app pour redémarrer.</string>
+    <string name="ig_dialog_restart_now">Redémarrer maintenant</string>
+    <string name="ig_dialog_restart_not_found">Impossible de trouver l\'app à redémarrer.</string>
     <string name="ig_dialog_restart_failed">Échec du redémarrage : %1$s</string>
 
     <!-- Toast: App settings -->
@@ -351,8 +352,8 @@
     <string name="ig_toast_restore_failed">Échec de restauration : %1$s</string>
 
     <!-- Toast: Download folder -->
-    <string name="ig_toast_download_folder_updated">Dossier de téléchargement mis à jour !</string>
-    <string name="ig_toast_download_folder_reset">Dossier de téléchargement réinitialisé par défaut</string>
+    <string name="ig_toast_download_folder_updated">Dossier de téléchargement modifié !</string>
+    <string name="ig_toast_download_folder_reset">Dossier par défaut rétabli</string>
 
     <!-- Toast: Downloader feedback -->
     <string name="ig_toast_downloading">Téléchargement…</string>
@@ -362,9 +363,9 @@
     <string name="ig_toast_no_media_for_post">Aucun média trouvé pour cette publication</string>
     <string name="ig_toast_downloading_profile_pic">Téléchargement de la photo de profil…</string>
     <string name="ig_toast_profile_pic_saved">Photo de profil sauvegardée !</string>
-    <string name="ig_toast_profile_pic_url_not_found">Impossible d\'obtenir l\'URL de la photo de profil</string>
+    <string name="ig_toast_profile_pic_url_not_found">URL de la photo de profil introuvable</string>
     <string name="ig_toast_merging_video_audio">Fusion vidéo + audio…</string>
-    <string name="ig_toast_downloading_all_n_items">Téléchargement de tous les %1$d éléments…</string>
+    <string name="ig_toast_downloading_all_n_items">Téléchargement des %1$d éléments…</string>
 
     <!-- Downloader carousel UI -->
     <string name="ig_dl_title">Télécharger</string>
@@ -374,17 +375,17 @@
     <string name="ig_dl_carousel_all">Télécharger tous les %1$d éléments</string>
 
     <!-- Story mentions -->
-    <string name="ig_btn_view_mentions">Voir les Mentions</string>
+    <string name="ig_btn_view_mentions">Voir les mentions</string>
     <string name="ig_toast_mention_copied">@%1$s copié</string>
     <string name="ig_toast_all_mentions_copied">Toutes les mentions copiées</string>
 
     <!-- Story mentions dialog -->
-    <string name="ig_mention_dialog_title">Mentions de Story</string>
+    <string name="ig_mention_dialog_title">Mentions de la story</string>
     <string name="ig_mention_no_mentions">Aucune mention trouvée dans cette story</string>
     <string name="ig_mention_copy_all">Tout copier</string>
 
     <!-- Toast: Downloader (service) -->
-    <string name="ig_toast_no_download_folder">Aucun dossier de téléchargement défini</string>
+    <string name="ig_toast_no_download_folder">Aucun dossier de téléchargement</string>
     <string name="ig_toast_file_saved">Enregistré : %1$s</string>
     <string name="ig_toast_features_loaded">InstaEclipse chargé 🎯</string>
 
@@ -395,10 +396,10 @@
     <string name="ig_update_button">Mettre à jour</string>
     <string name="ig_update_later">Plus tard</string>
     <!-- Custom Theme -->
-    <string name="ig_dialog_menu_theme">Thème Personnalisé</string>
-    <string name="theme_title">Thème Personnalisé</string>
-    <string name="theme_enable">Activer le Thème Personnalisé</string>
-    <string name="theme_customize">Personnaliser le Thème…</string>
+    <string name="ig_dialog_menu_theme">Thème personnalisé</string>
+    <string name="theme_title">Thème personnalisé</string>
+    <string name="theme_enable">Utiliser un thème personnalisé</string>
+    <string name="theme_customize">Personnaliser le thème…</string>
     <string name="theme_section_presets">Préréglages</string>
     <string name="theme_section_custom">Couleurs Personnalisées</string>
     <string name="theme_collapse_section">Réduire la section</string>
@@ -432,75 +433,75 @@
     <string name="feat_group_tools">Outils</string>
     <string name="ig_dialog_menu_location">Localisation</string>
     <string name="logging">Journaux</string>
-    <string name="ig_dialog_quality_force_reels">Forcer la qualité des Reels</string>
+    <string name="ig_dialog_quality_force_reels">Qualité de lecture des reels</string>
     <string name="ig_dialog_quality_auto">Auto</string>
     <string name="ig_dialog_quality_360">360p</string>
     <string name="ig_dialog_quality_480">480p</string>
     <string name="ig_dialog_quality_720">720p</string>
     <string name="ig_dialog_quality_1080">1080p</string>
     <string name="theme_section_colors">Couleurs</string>
-    <string name="theme_section_fonts">Polices &amp; Emoji</string>
+    <string name="theme_section_fonts">Polices et emoji</string>
     <string name="ig_dialog_quality_max">Qualité maximale</string>
     <string name="ig_dialog_max_upload_quality">Toujours envoyer en qualité maximale</string>
-    <string name="ig_dialog_location_spoof_enable">Simuler la position GPS</string>
+    <string name="ig_dialog_location_spoof_enable">Utiliser une fausse position</string>
     <string name="ig_dialog_location_pick">Choisir un lieu sur la carte</string>
-    <string name="ig_dialog_location_unset">Aucune position définie</string>
+    <string name="ig_dialog_location_unset">Position non définie</string>
     <string name="loc_picker_search_hint">Rechercher une ville, une adresse ou un lieu</string>
     <string name="loc_picker_use">Utiliser ce lieu</string>
     <string name="loc_picker_search_failed">Lieu introuvable</string>
-    <string name="ig_dialog_ghost_jump_first">Bouton « Aller au premier message » dans les conversations</string>
+    <string name="ig_dialog_ghost_jump_first">Bouton « Aller au premier message » des discussions</string>
     <string name="ig_jump_first_message">Aller au premier message</string>
-    <string name="ig_dialog_ghost_edit_history">Conserver l\'historique des modifications des messages</string>
+    <string name="ig_dialog_ghost_edit_history">Conserver les versions avant modification</string>
     <string name="ig_edit_history_title">Historique des modifications</string>
-    <string name="ig_edit_history_original">Original</string>
+    <string name="ig_edit_history_original">Version d\'origine</string>
     <string name="ig_edit_history_earlier">Version précédente</string>
-    <string name="ig_edit_history_current">Actuel</string>
+    <string name="ig_edit_history_current">Version actuelle</string>
     <string name="ig_edit_history_time_unknown">heure inconnue</string>
     <string name="ig_edit_history_noticed">remarqué %1$s</string>
     <string name="ig_edit_history_missing">%1$d version(s) précédente(s) n\'ont pas été enregistrée(s) sur ce téléphone.</string>
     <string name="ig_edit_history_none">Aucune version précédente de ce message n\'a été enregistrée sur ce téléphone</string>
-    <string name="ig_dialog_unsent_title">Messages non envoyés</string>
+    <string name="ig_dialog_unsent_title">Messages annulés</string>
     <string name="ig_dialog_unsent_export">Exporter en JSON</string>
     <string name="ig_dialog_unsent_exported">Enregistré dans %1$s</string>
-    <string name="ig_dialog_auto_clear_cache">Vider le cache automatiquement s\'il est volumineux</string>
-    <string name="ig_dialog_section_auto_clear_cache">Vidage automatique du cache</string>
+    <string name="ig_dialog_auto_clear_cache">Vider le cache s\'il devient trop gros</string>
+    <string name="ig_dialog_section_auto_clear_cache">Vidage auto du cache</string>
     <string name="ig_dialog_misc_remove_meta_ai">Supprimer Meta AI</string>
     <string name="ig_dialog_misc_lock_dms">Verrouiller les DM</string>
     <string name="ig_dialog_misc_lock_dms_set">Définir / modifier le code</string>
     <string name="ig_dialog_misc_lock_dms_saved">Code enregistré</string>
-    <string name="ig_dialog_misc_lock_dms_always">Reverrouiller à chaque fois que vous quittez</string>
-    <string name="ig_dialog_misc_lock_whole_app">Verrouiller toute l\'application</string>
+    <string name="ig_dialog_misc_lock_dms_always">Reverrouiller en quittant</string>
+    <string name="ig_dialog_misc_lock_whole_app">Verrouiller Instagram</string>
     <string name="ig_dialog_misc_lock_section">Verrou</string>
-    <string name="ig_dialog_misc_lock_fingerprint">Utiliser l\'empreinte digitale pour déverrouiller</string>
-    <string name="ig_hide_chats_title">Masquer des conversations</string>
+    <string name="ig_dialog_misc_lock_fingerprint">Déverrouiller par empreinte</string>
+    <string name="ig_hide_chats_title">Masquer des discussions</string>
     <string name="ig_translate_text">Traduire</string>
-    <string name="ig_dialog_downloader_offer_audio">Proposer le téléchargement audio seul pour les vidéos</string>
+    <string name="ig_dialog_downloader_offer_audio">Proposer le téléchargement audio seul</string>
     <string name="ig_download_choice_title">Télécharger</string>
     <string name="ig_download_choice_audio">Audio seul (.m4a)</string>
     <string name="ig_download_choice_copy_image">Copier l\'image</string>
-    <string name="ig_dialog_downloader_offer_copy_image">Ajouter Copier l\'image au menu de la publication</string>
+    <string name="ig_dialog_downloader_offer_copy_image">Copier l\'image</string>
     <string name="ig_toast_copy_image_video">Cette diapositive est une vidéo — rien à copier</string>
     <string name="ig_toast_copying_image">Copie de l\'image…</string>
     <string name="ig_toast_image_copied">Image copiée dans le presse-papiers</string>
     <string name="ig_toast_downloading_audio">Téléchargement de l\'audio…</string>
     <string name="ig_toast_audio_saved">Audio enregistré</string>
-    <string name="ig_dialog_misc_hide_chats">Masquer des conversations</string>
-    <string name="ig_hide_chat_hidden">Conversation masquée — elle disparaîtra de votre boîte de réception</string>
-    <string name="ig_hide_chat_unhidden">Conversation affichée</string>
-    <string name="ig_hide_chat_no_thread">Impossible d\'identifier cette conversation</string>
-    <string name="ig_story_cache_view">Voir les Stories en cache</string>
-    <string name="ig_story_cache_clear">Vider les Stories en cache</string>
-    <string name="ig_story_cache_saving">Enregistrement de la Story en cache…</string>
+    <string name="ig_dialog_misc_hide_chats">Masquer des discussions</string>
+    <string name="ig_hide_chat_hidden">Discussion masquée — elle disparaîtra de votre boîte de réception</string>
+    <string name="ig_hide_chat_unhidden">Discussion affichée</string>
+    <string name="ig_hide_chat_no_thread">Impossible d\'identifier cette discussion</string>
+    <string name="ig_story_cache_view">Voir les stories en cache</string>
+    <string name="ig_story_cache_clear">Vider les stories en cache</string>
+    <string name="ig_story_cache_saving">Enregistrement de la story…</string>
     <string name="ig_story_cache_saved">Story en cache enregistrée</string>
-    <string name="ig_story_cache_save_fail">Impossible d\'enregistrer la Story en cache</string>
+    <string name="ig_story_cache_save_fail">Impossible d\'enregistrer la story</string>
     <string name="ig_dialog_misc_custom_font">Police personnalisée</string>
     <string name="ig_custom_font_pick">Choisir un fichier de police (.ttf / .otf)</string>
     <string name="ig_dialog_misc_custom_emoji">Emoji personnalisés</string>
     <string name="ig_custom_emoji_pick">Choisir une police emoji (.ttf / .otf)</string>
     <string name="ig_dialog_unsent_clear_yes">Effacer</string>
-    <string name="ig_dialog_unsent_empty">Aucun message non envoyé capturé pour l\'instant</string>
-    <string name="ig_dialog_unsent_unknown_chat">Conversation inconnue</string>
-    <string name="ig_dialog_clean_feed_hide_threads">Masquer les suggestions Threads</string>
+    <string name="ig_dialog_unsent_empty">Aucun message annulé pour l\'instant</string>
+    <string name="ig_dialog_unsent_unknown_chat">Discussion inconnue</string>
+    <string name="ig_dialog_clean_feed_hide_threads">Masquer Threads dans le fil</string>
     <string name="ig_dialog_clean_feed_hide_liked">Masquer les publications déjà aimées</string>
     <string name="ig_nav_name_home">Accueil</string>
     <string name="ig_nav_name_reels">Reels</string>
@@ -515,7 +516,7 @@
     <string name="ig_nav_tab_messages">Masquer l\'onglet Messages</string>
     <string name="ig_nav_tab_activity">Masquer l\'onglet Activité</string>
     <string name="ig_nav_tab_profile">Masquer l\'onglet Profil</string>
-    <string name="ig_dialog_misc_copy_caption">Copier la légende</string>
+    <string name="ig_dialog_misc_copy_caption">Copier les légendes</string>
     <string name="ig_dialog_misc_photo_zoom">Zoom photo (appui long)</string>
     <string name="ig_caption_copied">✅ Légende copiée dans le presse-papiers !</string>
     <string name="ig_dialog_downloader_copy_link">Copier le lien du média</string>
@@ -524,19 +525,19 @@
     <string name="ig_copy_link_slide">Diapositive %1$d sur %2$d</string>
     <string name="ig_copy_link_all">Copier les %1$d liens</string>
     <string name="ig_copy_link_copied_all">%1$d liens de médias copiés</string>
-    <string name="ig_dialog_misc_save_instants">Enregistrer les Instants (appui long pour enregistrer)</string>
+    <string name="ig_dialog_misc_save_instants">Enregistrer les Instants (appui long)</string>
     <string name="ig_instant_save_none">Aucun média Instant trouvé</string>
-    <string name="ig_dialog_misc_upload_instants">Envoyer un Instant depuis la galerie</string>
-    <string name="ig_instant_upload_chip">🖼 Galerie</string>
-    <string name="ig_instant_upload_chip_ready">✓ Prêt — touchez le déclencheur</string>
+    <string name="ig_dialog_misc_upload_instants">Envoyer des Instants depuis votre galerie</string>
+    <string name="ig_instant_upload_chip">Galerie</string>
+    <string name="ig_instant_upload_chip_ready">Prêt, touchez le déclencheur</string>
     <string name="ig_instant_upload_ready">Sélectionné ! Touchez le déclencheur pour l\'envoyer en Instant</string>
     <string name="ig_instant_upload_fail">Impossible de charger cette image</string>
     <string name="ig_story_download_photo">Télécharger la photo</string>
     <string name="ig_story_cache_clear_confirm">Supprimer toutes les stories en cache ? Cette action est irréversible.</string>
     <string name="ig_story_cache_cleared">Stories en cache supprimées</string>
     <!-- v0.8 UI strings added -->
-    <string name="ig_dialog_ghost_chat_export">Bouton « Exporter » dans les conversations</string>
-    <string name="ig_chat_export">Exporter la conversation</string>
+    <string name="ig_dialog_ghost_chat_export">Bouton « Exporter » des discussions</string>
+    <string name="ig_chat_export">Exporter la discussion</string>
     <string name="ig_locked_coll_setting">Collections enregistrées verrouillables (bouton 🔒 dans une collection ; utilise le code défini dans Instagram)</string>
     <string name="ig_locked_coll_setting_short">Collections enregistrées verrouillables (🔒 dans une collection)</string>
     <string name="ig_locked_coll_title">Collection verrouillée</string>
@@ -546,7 +547,7 @@
     <string name="ig_locked_coll_unlock">Déverrouiller cette collection</string>
     <string name="ig_locked_coll_locked">Collection verrouillée : elle demandera votre code</string>
     <string name="ig_locked_coll_unlocked">Collection déverrouillée</string>
-    <string name="ig_saved_on_profile">Bouton Enregistré sur votre profil (redémarrez Instagram)</string>
+    <string name="ig_saved_on_profile">Bouton Enregistré sur votre profil</string>
     <string name="ig_saved_on_profile_button">Enregistré</string>
     <string name="ig_nav_tab_order">Ordre des onglets</string>
     <string name="ig_nav_tab_order_hint">Utilisez les flèches pour réorganiser la barre du bas. Les onglets masqués gardent leur place. Effectif à votre retour sur Instagram.</string>
@@ -556,18 +557,18 @@
     <string name="share_dl_no_instagram">Instagram n\'est pas installé</string>
     <string name="ig_share_dl_loading">InstaEclipse : chargement de la publication à télécharger…</string>
     <string name="ig_share_dl_not_found">InstaEclipse : impossible de charger cette publication</string>
-    <string name="ig_thread_menu">Actions de conversation InstaEclipse</string>
+    <string name="ig_thread_menu">Actions de discussion InstaEclipse</string>
     <string name="ig_unsent_messages">Messages annulés</string>
     <string name="ig_chat_export_working">Export des messages chargés…</string>
     <string name="ig_chat_export_done">%1$d messages exportés vers %2$s</string>
-    <string name="ig_chat_export_load_all">Chargez d\'abord toute la conversation (va au premier message)</string>
+    <string name="ig_chat_export_load_all">Charger d\'abord toute la discussion (va au premier message)</string>
     <string name="ig_chat_export_media">Télécharger les médias dans le dossier d\'export</string>
     <string name="ig_chat_export_done_media">%1$d messages et %2$d fichiers média exportés vers %3$s</string>
     <string name="ig_export_media_saved">Export enregistré — %1$d fichier(s) média dans %2$s</string>
     <string name="ig_feat_photo_zoom">Zoom photo</string>
-    <string name="ig_chat_export_none">Aucun message chargé pour cette conversation</string>
+    <string name="ig_chat_export_none">Aucun message encore chargé pour cette discussion</string>
     <string name="ig_media_info_copy">Copier</string>
-    <string name="ig_dialog_misc_comment_search">Rechercher dans les commentaires</string>
+    <string name="ig_dialog_misc_comment_search">Rechercher des commentaires</string>
     <string name="ig_comment_search">Rechercher des commentaires</string>
     <string name="ig_comment_search_load_all">Tout charger</string>
     <string name="ig_comment_search_stop">Arrêter</string>
@@ -580,7 +581,7 @@
     <string name="ig_comment_search_hide_replies">Masquer les réponses</string>
     <string name="ig_comment_export">Exporter</string>
     <string name="ig_comment_export_working">Export des commentaires chargés…</string>
-    <string name="ig_comment_export_post_media">Enregistrer aussi les photos/vidéos de la publication</string>
+    <string name="ig_comment_export_post_media">Enregistrer aussi les médias de la publication</string>
     <string name="ig_comment_export_done">%1$d commentaires exportés vers %2$s</string>
     <string name="ig_dialog_misc_follow_export">Exporter abonnés/abonnements en CSV</string>
     <string name="ig_feat_followers_history">Historique des abonnés (qui s\'est désabonné)</string>
@@ -589,10 +590,9 @@
     <string name="ig_followers_history_wrong_tab">Ouvrez votre propre onglet Abonnés pour vérifier.</string>
     <string name="ig_follow_export">Exporter en CSV</string>
     <string name="ig_follow_export_done">%1$d comptes exportés vers %2$s</string>
-    <string name="ig_follow_export_none">Aucun compte chargé pour le moment</string>
-    <string name="ig_follow_export_loading">Chargement des comptes… %1$d jusqu\'ici.
-Restez sur cet écran jusqu\'à la fin.</string>
-    <string name="ig_follow_export_stop">Arrêter &amp; enregistrer</string>
+    <string name="ig_follow_export_none">Aucun compte encore chargé</string>
+    <string name="ig_follow_export_loading">Chargement des comptes… %1$d jusqu\'ici.\nRestez sur cet écran jusqu\'à la fin.</string>
+    <string name="ig_follow_export_stop">Arrêter et enregistrer</string>
     <string name="ig_follow_export_loading_of">Chargement des comptes… %1$d sur %2$d.\nRestez sur cet écran jusqu\'à la fin.</string>
     <string name="ig_follow_export_retry">Instagram n\'a pas envoyé la page suivante. Nouvel essai dans %1$d s…</string>
     <string name="ig_follow_export_pass">Passage supplémentaire %1$d sur %2$d maximum (%3$s) : %4$d nouveaux comptes pour l\'instant.</string>
@@ -607,10 +607,10 @@ Restez sur cet écran jusqu\'à la fin.</string>
     <string name="ig_follow_block_stopped">Le chargement s\'est arrêté et rien n\'a été enregistré.</string>
     <string name="ig_follow_block_wait">Attendez jusqu\'à %1$s avant de recharger une liste.</string>
     <string name="ig_follow_block_anyway">Charger quand même</string>
-    <string name="ig_comment_gif_downloading">Téléchargement des médias du commentaire…</string>
+    <string name="ig_comment_gif_downloading">Téléchargement du média du commentaire…</string>
     <string name="ig_highlight_download_all">Télécharger toute la story à la une</string>
     <string name="ig_highlight_loading">Chargement de la story à la une…</string>
-    <string name="ig_highlight_downloading">Téléchargement de %1$d éléments de la story à la une…</string>
+    <string name="ig_highlight_downloading">Téléchargement de %1$d éléments à la une…</string>
     <string name="ig_highlight_done">Story à la une enregistrée : %1$d éléments sur %2$d</string>
     <string name="ig_spoof_device">Simuler l\'appareil (vidéo HDR)</string>
     <string name="ig_spoof_device_note">Instagram voit ce téléphone comme l\'appareil choisi. Cela débloque la vidéo HDR et d\'autres fonctions qu\'Instagram réserve à ces téléphones, et ajoute les options développeur correspondantes. Redémarrez Instagram pour appliquer. Instagram peut vous demander une fois de confirmer votre compte.</string>
@@ -627,7 +627,7 @@ Restez sur cet écran jusqu\'à la fin.</string>
     <string name="ig_call_confirm_audio">Démarrer un appel audio ?</string>
     <string name="ig_call_confirm_video">Démarrer un appel vidéo ?</string>
     <string name="ig_call_confirm_call">Appeler</string>
-    <string name="ig_confirm_refresh">Demander avant d\'actualiser le fil</string>
+    <string name="ig_confirm_refresh">Demander avant d\'actualiser</string>
     <string name="ig_confirm_refresh_question">Actualiser le fil ?</string>
     <string name="ig_confirm_refresh_action">Actualiser</string>
 </resources>

@@ -4,4 +4,6 @@
     <string name="ig_toast_link_copied">Link kopiert</string>
     <string name="ig_toast_links_copied">Alle Links kopiert</string>
     <string name="ig_dialog_misc_story_links">Story-Links kopieren</string>
+    <string name="ig_btn_copy_sticker_link">Sticker-Link kopieren</string>
+    <string name="ig_sticker_links_title">Sticker-Links</string>
 </resources>

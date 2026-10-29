@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_hex_invalid">Saisissez 6 ou 8 chiffres hexa</string>
+    <string name="theme_custom_reset">Couleurs réinitialisées</string>
+    <string name="theme_undo">Annuler</string>
+    <string name="theme_preset_selected">Sélectionné</string>
+    <string name="theme_custom_dark_only">Les couleurs personnalisées s\'appliquent au mode sombre. Passez votre téléphone en mode sombre pour les modifier</string>
+    <string name="loc_picker_clear_search">Effacer la recherche</string>
+    <string name="dev_config_open_instagram">Ouvrez d\'abord Instagram, puis réessayez</string>
+    <string name="dev_config_export_failed">Instagram n\'a pas pu exporter sa config</string>
+    <string name="ie_frame_previous">Image précédente</string>
+    <string name="ie_frame_next">Image suivante</string>
+    <string name="ie_frame_cleanup_pending_open">Le nettoyage des fichiers temporaires est incomplet. Ouvrez InstaEclipse pour le relancer.</string>
+    <string name="credits_on_github">%1$s sur GitHub</string>
+    <string name="credits_on_telegram">%1$s sur Telegram</string>
+    <string name="credits_on_linkedin">%1$s sur LinkedIn</string>
+    <string name="import_sending">Envoi à Instagram…</string>
+    <string name="import_too_large">Ce fichier est trop volumineux pour être importé</string>
+    <string name="import_cant_receive">Instagram ne peut pas recevoir ce fichier</string>
+    <string name="import_no_reply">Instagram n\'a pas confirmé. Ouvrez Instagram (redémarrez-le après une mise à jour d\'InstaEclipse), puis réessayez.</string>
+    <string name="loc_picker_spoof_off">La fausse position est désactivée : Instagram voit toujours votre vraie position.</string>
+    <string name="loc_picker_needs_restart">Instagram doit redémarrer une fois pour l\'utiliser.</string>
+    <string name="loc_picker_turn_on">Activer</string>
+    <string name="loc_picker_only_save">Enregistrer seulement</string>
+    <string name="loc_saved_spoof_off">Enregistré. Activez la fausse position pour l\'utiliser.</string>
+    <string name="loc_picker_no_connection">Pas de connexion</string>
+    <string name="loc_picker_search_unavailable">La recherche est indisponible pour le moment</string>
+</resources>

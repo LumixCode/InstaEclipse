@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_toast_restored_some_skipped">Einstellungen wiederhergestellt, außer %1$d, die ungültig oder durch den Extremmodus gesperrt waren.</string>
+</resources>

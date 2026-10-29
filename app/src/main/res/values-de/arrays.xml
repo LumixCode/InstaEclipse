@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ig_fancy_font_names">
+        <item>Normal</item>
+        <item>Fett</item>
+        <item>Kursiv</item>
+        <item>Fett kursiv</item>
+        <item>Serifenlos fett</item>
+        <item>Serifenlos kursiv</item>
+        <item>Schreibschrift</item>
+        <item>Fraktur</item>
+        <item>Doppelstrich</item>
+        <item>Festbreite</item>
+        <item>Eingekreist</item>
+        <item>Vollbreite</item>
+        <item>Kapitälchen</item>
+        <item>Durchgestrichen</item>
+        <item>Unterstrichen</item>
+    </string-array>
+</resources>

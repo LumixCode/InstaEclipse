@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">Annulé</string>
+    <string name="ig_unsent_clear_failed">Impossible d\'effacer les messages enregistrés. Rouvrez cette discussion et réessayez.</string>
+    <string name="ig_unsent_clear_saved">Effacer les messages annulés enregistrés</string>
+    <string name="ig_unsent_clear_saved_confirm">Retirer ces messages conservés de la corbeille et de l\'historique local de la discussion ? Action irréversible.</string>
+    <string name="ig_unsent_cleared_saved">Messages annulés enregistrés effacés</string>
+</resources>

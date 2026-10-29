@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">Zachowuj obejrzane relacje</string>
+    <string name="ig_story_cache_duration">Czas przechowywania</string>
+    <string name="ig_story_cache_hours">%1$d godz.</string>
+    <string name="ig_story_cache_picker_help">Przechowuj relacje przez 1–720 godzin (do 30 dni). Najstarsze relacje mogą zostać usunięte wcześniej, gdy pamięć relacji osiągnie 500 MB.</string>
+    <string name="ig_story_cache_picker_unit">godz. po obejrzeniu</string>
+    <string name="ig_story_cache_invalid">Wpisz liczbę od 1 do 720.</string>
+    <string name="ig_story_cache_empty_current">Brak zachowanych relacji. Włącz zachowywanie i obejrzyj kilka relacji, aby były tu dostępne przez wybrany czas.</string>
+</resources>

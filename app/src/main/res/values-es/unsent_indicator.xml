@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">Anulado</string>
+    <string name="ig_unsent_clear_failed">No se pudieron borrar los mensajes guardados. Vuelve a abrir este chat e inténtalo de nuevo.</string>
+    <string name="ig_unsent_clear_saved">Borrar mensajes anulados guardados</string>
+    <string name="ig_unsent_clear_saved_confirm">¿Quitar estos mensajes conservados de la papelera y del historial local del chat? No se puede deshacer.</string>
+    <string name="ig_unsent_cleared_saved">Mensajes anulados guardados borrados</string>
+</resources>

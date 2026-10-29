@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_unsent_log_set_aside">Nie udało się odczytać zapisanej listy; odłożono ją osobno.</string>
+    <string name="ig_toast_marked_as_seen">Oznaczono jako wyświetlone</string>
+    <string name="ig_toast_channel_marked_as_seen">Kanał oznaczono jako wyświetlony</string>
+    <string name="ig_chat_export_banner">Eksport czatu</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="one">%1$d wiadomość</item>
+        <item quantity="few">%1$d wiadomości</item>
+        <item quantity="many">%1$d wiadomości</item>
+        <item quantity="other">%1$d wiadomości</item>
+    </plurals>
+    <string name="ig_chat_export_edited">edytowano</string>
+    <string name="ig_chat_export_pinned">przypięto</string>
+    <string name="ig_chat_export_forwarded">przekazano dalej</string>
+    <string name="ig_chat_export_story_reply">Odpowiedź na relację</string>
+    <string name="ig_chat_export_reply_to">do @%1$s</string>
+    <string name="ig_chat_export_shared_story">Udostępniona relacja</string>
+    <string name="ig_chat_export_shared_reel">Udostępniona rolka</string>
+    <string name="ig_chat_export_shared_post">Udostępniony post</string>
+    <string name="ig_chat_export_shared_profile">Udostępniony profil</string>
+    <string name="ig_chat_export_mention_by_you">Wspomniano o tej osobie w Twojej relacji</string>
+    <string name="ig_chat_export_mention_of_you">Wspomniano o Tobie w relacji tej osoby</string>
+    <string name="ig_chat_export_unsupported">Eksport czatu nie działa w tej wersji Instagrama</string>
+    <string name="ig_bulk_unsend_not_ready">Czat niegotowy, spróbuj ponownie</string>
+    <plurals name="ig_bulk_unsend_result">
+        <item quantity="one">Cofnięto wysłanie %1$d z %2$d wiadomości</item>
+        <item quantity="few">Cofnięto wysłanie %1$d z %2$d wiadomości</item>
+        <item quantity="many">Cofnięto wysłanie %1$d z %2$d wiadomości</item>
+        <item quantity="other">Cofnięto wysłanie %1$d z %2$d wiadomości</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="one">Cofnąć wysłanie %1$d wiadomości? Tego nie da się odwrócić.</item>
+        <item quantity="few">Cofnąć wysłanie %1$d wiadomości? Tego nie da się odwrócić.</item>
+        <item quantity="many">Cofnąć wysłanie %1$d wiadomości? Tego nie da się odwrócić.</item>
+        <item quantity="other">Cofnąć wysłanie %1$d wiadomości? Tego nie da się odwrócić.</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="one">Cofanie wysłania %1$d/%2$d</item>
+        <item quantity="few">Cofanie wysłania %1$d/%2$d</item>
+        <item quantity="many">Cofanie wysłania %1$d/%2$d</item>
+        <item quantity="other">Cofanie wysłania %1$d/%2$d</item>
+    </plurals>
+    <string name="ig_jump_first_stop_menu">Przestań wczytywać starsze wiadomości</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="one">Wczytywanie starszych wiadomości · wczytano %1$d</item>
+        <item quantity="few">Wczytywanie starszych wiadomości · wczytano %1$d</item>
+        <item quantity="many">Wczytywanie starszych wiadomości · wczytano %1$d</item>
+        <item quantity="other">Wczytywanie starszych wiadomości · wczytano %1$d</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">Wczytywanie starszych wiadomości</string>
+    <string name="ig_jump_first_stop">Zatrzymaj</string>
+    <string name="ig_jump_first_reached">To pierwsza wiadomość w tym czacie</string>
+    <string name="ig_jump_first_stopped_loading">Zatrzymano wczytywanie starszych wiadomości</string>
+    <string name="ig_lock_chat">Zablokuj ten czat</string>
+    <string name="ig_lock_chat_unlock">Odblokuj ten czat</string>
+    <string name="ig_lock_chat_locked">Czat zablokowany</string>
+    <string name="ig_lock_chat_locked_on">Czat zablokowany. Włączono „Blokuj wybrane czaty”.</string>
+    <string name="ig_lock_chat_unlocked">Czat odblokowany</string>
+    <string name="ig_lock_selected_menu_desc">Wybierz czaty tutaj lub opcją „Zablokuj ten czat” w menu czatu</string>
+    <string name="ig_ghost_messages_tab_label">Wiadomości, tryb ducha włączony</string>
+    <string name="ig_toast_ghost_on">Tryb ducha włączony: %1$s</string>
+    <string name="ig_toast_ghost_off">Tryb ducha wyłączony: %1$s</string>
+    <string name="ig_quick_toggle_none_chosen">Nic nie wybrano. Wybierz, co przełącza przytrzymanie ikony Wiadomości.</string>
+    <string name="ig_quick_toggle_name_seen">odczyt</string>
+    <string name="ig_quick_toggle_name_typing">pisanie</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">alerty o zrzutach</string>
+    <string name="ig_quick_toggle_name_view_once">jednorazowe</string>
+    <string name="ig_quick_toggle_name_stories">relacje</string>
+    <string name="ig_quick_toggle_name_live">live</string>
+    <string name="ig_quick_toggle_name_disappearing">znikające wiadomości</string>
+    <string name="ig_quick_toggle_name_permanent_view">trwały podgląd</string>
+    <string name="ig_quick_toggle_name_screenshots">zrzuty ekranu</string>
+    <string name="ig_read_receipt_list_title">Czaty z potwierdzeniami odczytu</string>
+    <string name="ig_read_receipt_list_add">Dodaj czaty</string>
+    <string name="ig_read_receipt_pick_title">Wybierz czaty z potwierdzeniami odczytu</string>
+    <string name="ig_read_receipt_list_empty">Żaden czat nie dostaje jeszcze potwierdzeń odczytu. Dodaj czaty tutaj albo otwórz czat i wybierz w jego menu „Wysyłaj potwierdzenia odczytu w tym czacie”.</string>
+    <string name="ig_read_receipt_list_seen_off">Opcja „Ukryj status przeczytania” jest wyłączona, więc teraz każdy czat dostaje potwierdzenia odczytu.</string>
+</resources>

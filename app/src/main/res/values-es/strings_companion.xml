@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_hex_invalid">Introduce 6 u 8 dígitos hexadecimales</string>
+    <string name="theme_custom_reset">Colores restablecidos</string>
+    <string name="theme_undo">Deshacer</string>
+    <string name="theme_preset_selected">Seleccionado</string>
+    <string name="theme_custom_dark_only">Los colores personalizados son para el modo oscuro. Pon el teléfono en modo oscuro para editarlos</string>
+    <string name="loc_picker_clear_search">Borrar búsqueda</string>
+    <string name="dev_config_open_instagram">Abre primero Instagram y vuelve a intentarlo</string>
+    <string name="dev_config_export_failed">Instagram no pudo exportar su configuración</string>
+    <string name="ie_frame_previous">Fotograma anterior</string>
+    <string name="ie_frame_next">Fotograma siguiente</string>
+    <string name="ie_frame_cleanup_pending_open">La limpieza de archivos temporales no terminó. Abre InstaEclipse para reintentarla.</string>
+    <string name="credits_on_github">%1$s en GitHub</string>
+    <string name="credits_on_telegram">%1$s en Telegram</string>
+    <string name="credits_on_linkedin">%1$s en LinkedIn</string>
+    <string name="import_sending">Enviando a Instagram…</string>
+    <string name="import_too_large">Este archivo es demasiado grande para importarlo</string>
+    <string name="import_cant_receive">Instagram no puede recibir este archivo</string>
+    <string name="import_no_reply">Instagram no lo confirmó. Abre Instagram (reinícialo tras actualizar InstaEclipse) y vuelve a intentarlo.</string>
+    <string name="loc_picker_spoof_off">La ubicación falsa está desactivada, así que Instagram sigue viendo tu ubicación real.</string>
+    <string name="loc_picker_needs_restart">Instagram necesita reiniciarse una vez para usarla.</string>
+    <string name="loc_picker_turn_on">Activar</string>
+    <string name="loc_picker_only_save">Solo guardar</string>
+    <string name="loc_saved_spoof_off">Guardada. Activa la ubicación falsa para usarla.</string>
+    <string name="loc_picker_no_connection">Sin conexión</string>
+    <string name="loc_picker_search_unavailable">La búsqueda no está disponible ahora</string>
+</resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="ig_mention_count">
+        <item quantity="one">%1$d wzmianka · dotknij: otwórz, przytrzymaj: kopiuj</item>
+        <item quantity="few">%1$d wzmianki · dotknij: otwórz, przytrzymaj: kopiuj</item>
+        <item quantity="many">%1$d wzmianek · dotknij: otwórz, przytrzymaj: kopiuj</item>
+        <item quantity="other">%1$d wzmianek · dotknij: otwórz, przytrzymaj: kopiuj</item>
+    </plurals>
+</resources>

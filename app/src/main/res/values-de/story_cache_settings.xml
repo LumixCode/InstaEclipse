@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">Gesehene Storys behalten</string>
+    <string name="ig_story_cache_duration">Speicherdauer</string>
+    <string name="ig_story_cache_hours">%1$d Std.</string>
+    <string name="ig_story_cache_picker_help">Storys 1–720 Stunden behalten (bis zu 30 Tage). Erreicht der Cache 500 MB, werden die ältesten Storys eventuell früher entfernt.</string>
+    <string name="ig_story_cache_picker_unit">Stunden nach dem Ansehen</string>
+    <string name="ig_story_cache_invalid">Gib eine Zahl von 1 bis 720 ein.</string>
+    <string name="ig_story_cache_empty_current">Noch keine Storys im Cache. Schalte „Gesehene Storys behalten“ ein und sieh dir Storys an; sie bleiben dann für die gewählte Dauer hier.</string>
+</resources>

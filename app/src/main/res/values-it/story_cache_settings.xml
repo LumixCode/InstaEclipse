@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_story_cache_enable">Memorizza le storie viste</string>
+    <string name="ig_story_cache_duration">Durata della cache</string>
+    <string name="ig_story_cache_hours">%1$d h</string>
+    <string name="ig_story_cache_picker_help">Conserva le storie per 1–720 ore (fino a 30 giorni). Le storie più vecchie possono essere rimosse prima se la cache raggiunge 500 MB.</string>
+    <string name="ig_story_cache_picker_unit">ore dalla visione</string>
+    <string name="ig_story_cache_invalid">Inserisci un numero da 1 a 720.</string>
+    <string name="ig_story_cache_empty_current">Ancora nessuna storia memorizzata. Attiva la memorizzazione, poi guarda qualche storia per conservarla qui per la durata scelta.</string>
+</resources>

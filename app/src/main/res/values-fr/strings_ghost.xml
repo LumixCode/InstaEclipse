@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_unsent_log_set_aside">Impossible de lire la liste enregistrée ; elle a été mise de côté.</string>
+    <string name="ig_toast_marked_as_seen">Marqué comme vu</string>
+    <string name="ig_toast_channel_marked_as_seen">Canal marqué comme vu</string>
+    <string name="ig_chat_export_banner">Export de discussion</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="one">%1$d message</item>
+        <item quantity="many">%1$d messages</item>
+        <item quantity="other">%1$d messages</item>
+    </plurals>
+    <string name="ig_chat_export_edited">modifié</string>
+    <string name="ig_chat_export_pinned">épinglé</string>
+    <string name="ig_chat_export_forwarded">transféré</string>
+    <string name="ig_chat_export_story_reply">Réponse à une story</string>
+    <string name="ig_chat_export_reply_to">à @%1$s</string>
+    <string name="ig_chat_export_shared_story">Story partagée</string>
+    <string name="ig_chat_export_shared_reel">Reel partagé</string>
+    <string name="ig_chat_export_shared_post">Publication partagée</string>
+    <string name="ig_chat_export_shared_profile">Profil partagé</string>
+    <string name="ig_chat_export_mention_by_you">Vous l\'avez mentionné dans votre story</string>
+    <string name="ig_chat_export_mention_of_you">Vous a mentionné dans sa story</string>
+    <string name="ig_chat_export_unsupported">L\'export de discussion ne fonctionne pas sur cette version d\'Instagram</string>
+    <string name="ig_bulk_unsend_not_ready">Discussion pas prête, réessayez</string>
+    <plurals name="ig_bulk_unsend_result">
+        <item quantity="one">Envoi annulé : %1$d sur %2$d message</item>
+        <item quantity="many">Envoi annulé : %1$d sur %2$d messages</item>
+        <item quantity="other">Envoi annulé : %1$d sur %2$d messages</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="one">Annuler l\'envoi de %1$d message ? Action irréversible.</item>
+        <item quantity="many">Annuler l\'envoi de %1$d messages ? Action irréversible.</item>
+        <item quantity="other">Annuler l\'envoi de %1$d messages ? Action irréversible.</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="one">Annulation %1$d/%2$d</item>
+        <item quantity="many">Annulation %1$d/%2$d</item>
+        <item quantity="other">Annulation %1$d/%2$d</item>
+    </plurals>
+    <string name="ig_jump_first_stop_menu">Arrêter de charger les anciens messages</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="one">Chargement des anciens messages · %1$d chargé</item>
+        <item quantity="many">Chargement des anciens messages · %1$d chargés</item>
+        <item quantity="other">Chargement des anciens messages · %1$d chargés</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">Chargement des anciens messages</string>
+    <string name="ig_jump_first_stop">Arrêter</string>
+    <string name="ig_jump_first_reached">Premier message de la discussion atteint</string>
+    <string name="ig_jump_first_stopped_loading">Chargement des anciens messages arrêté</string>
+    <string name="ig_lock_chat">Verrouiller cette discussion</string>
+    <string name="ig_lock_chat_unlock">Déverrouiller cette discussion</string>
+    <string name="ig_lock_chat_locked">Discussion verrouillée</string>
+    <string name="ig_lock_chat_locked_on">Discussion verrouillée, « Verrouiller des discussions » activé</string>
+    <string name="ig_lock_chat_unlocked">Discussion déverrouillée</string>
+    <string name="ig_lock_selected_menu_desc">Choisissez ici ou via « Verrouiller cette discussion » dans son menu</string>
+    <string name="ig_ghost_messages_tab_label">Messages, mode fantôme activé</string>
+    <string name="ig_toast_ghost_on">Mode fantôme activé : %1$s</string>
+    <string name="ig_toast_ghost_off">Mode fantôme désactivé : %1$s</string>
+    <string name="ig_quick_toggle_none_chosen">Rien n\'est encore choisi. Choisissez ce que bascule un appui long sur l\'icône Messages.</string>
+    <string name="ig_quick_toggle_name_seen">vu</string>
+    <string name="ig_quick_toggle_name_typing">frappe</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">alertes de capture</string>
+    <string name="ig_quick_toggle_name_view_once">vue unique</string>
+    <string name="ig_quick_toggle_name_stories">stories</string>
+    <string name="ig_quick_toggle_name_live">live</string>
+    <string name="ig_quick_toggle_name_disappearing">messages éphémères</string>
+    <string name="ig_quick_toggle_name_permanent_view">vue permanente</string>
+    <string name="ig_quick_toggle_name_screenshots">captures d\'écran</string>
+    <string name="ig_read_receipt_list_title">Discussions avec accusés de lecture</string>
+    <string name="ig_read_receipt_list_add">Ajouter des discussions</string>
+    <string name="ig_read_receipt_pick_title">Choisir les discussions avec accusés de lecture</string>
+    <string name="ig_read_receipt_list_empty">Aucune discussion ne reçoit encore d\'accusés de lecture. Ajoutez-en ici, ou ouvrez une discussion et choisissez « Envoyer les accusés de lecture ici » dans son menu.</string>
+    <string name="ig_read_receipt_list_seen_off">« Masquer le “Vu” des DM » est désactivé : toutes les discussions reçoivent donc les accusés de lecture.</string>
+</resources>

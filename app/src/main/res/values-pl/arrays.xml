@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ig_fancy_font_names">
+        <item>Zwykła</item>
+        <item>Pogrubiona</item>
+        <item>Kursywa</item>
+        <item>Pogrubiona kursywa</item>
+        <item>Bezszeryfowa pogrubiona</item>
+        <item>Bezszeryfowa kursywa</item>
+        <item>Odręczna</item>
+        <item>Fraktura</item>
+        <item>Podwójna kreska</item>
+        <item>Stała szerokość</item>
+        <item>W kółkach</item>
+        <item>Pełna szerokość</item>
+        <item>Kapitaliki</item>
+        <item>Przekreślenie</item>
+        <item>Podkreślenie</item>
+    </string-array>
+</resources>

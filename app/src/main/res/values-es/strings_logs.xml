@@ -2,7 +2,7 @@
 <resources>
     <!-- Logs tab (0.8) -->
     <string name="logs_filter_all">Todos</string>
-    <string name="logs_filter_hooked">Correctos</string>
+    <string name="logs_filter_hooked">Listos</string>
     <string name="logs_filter_errors">Errores</string>
     <string name="logs_filter_warnings">Avisos</string>
     <string name="logs_technical_details">Detalles técnicos</string>
@@ -16,15 +16,35 @@
     <string name="logs_loading">Cargando registros…</string>
     <string name="logs_count_format">%1$d de %2$d entradas</string>
     <string name="logs_status_live">Instagram en ejecución · en vivo</string>
-    <string name="logs_status_saved">Registro guardado · Instagram no está en ejecución</string>
+    <string name="logs_status_saved">Registro guardado · Instagram cerrado</string>
     <string name="logs_status_none">No hay ninguna app de Instagram compatible instalada</string>
     <string name="logs_empty_title">Aún no hay registros</string>
     <string name="logs_empty_body">Abre Instagram una vez con InstaEclipse activado en Vector, luego vuelve aquí y toca Actualizar. El registro de Instagram se guarda aquí automáticamente, incluso después de cerrar Instagram.</string>
     <string name="logs_empty_filter_title">Nada coincide con este filtro</string>
     <string name="logs_empty_filter_body">Vuelve a Todos para ver todas las entradas.</string>
-    <string name="logs_nothing_to_copy">No hay registros para copiar</string>
+    <string name="logs_nothing_to_copy">Nada que copiar</string>
     <string name="logs_copied">Registros copiados</string>
     <string name="logs_entry_copied">Entrada copiada</string>
     <string name="logs_cleared">Registros borrados</string>
     <string name="logs_source_companion">[app]</string>
+    <string name="logs_latest">Más recientes</string>
+    <string name="logs_clear_confirm_title">¿Borrar los registros?</string>
+    <string name="logs_clear_confirm_body">Borra los registros guardados en este teléfono, incluidos los de Instagram.</string>
+    <string name="logs_share_no_app">No hay ninguna app para compartir</string>
+    <string name="logs_status_unsynced">Registro guardado · sin sincronización en directo</string>
+    <string name="logs_copy_entry">Copiar entrada</string>
+    <string name="logs_crash_share">Compartir informe de fallo</string>
+    <string name="logs_crash_delete">Eliminar informes de fallos</string>
+    <string name="logs_crash_share_warning">Los informes de fallos pueden contener partes de lo que Instagram tenía en memoria, como mensajes o datos de inicio de sesión. Compártelos en privado, no en un issue público.</string>
+    <string name="logs_crash_share_summary">Compartir resumen</string>
+    <string name="logs_crash_share_full">Compartir informe completo</string>
+    <string name="logs_crash_share_subject">Informe de fallo de InstaEclipse</string>
+    <string name="logs_crash_share_failed">No se pudo crear el informe de fallo</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="one">¿Eliminar %d informe de fallo?</item>
+        <item quantity="many">¿Eliminar %d informes de fallos?</item>
+        <item quantity="other">¿Eliminar %d informes de fallos?</item>
+    </plurals>
+    <string name="logs_crash_delete_action">Eliminar</string>
+    <string name="logs_crash_deleted">Informes de fallos eliminados</string>
 </resources>

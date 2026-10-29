@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_comment_search_maybe_more">%1$d commentaires chargés · il peut y en avoir d\'autres</string>
+    <string name="ig_toast_story_unavailable">Détails de la story indisponibles</string>
+    <string name="ig_toast_like_not_sent">J\'aime non envoyé</string>
+    <string name="ig_toast_user_follows_you">\@%1$s vous suit</string>
+    <string name="ig_toast_user_not_follows_you">\@%1$s ne vous suit pas</string>
+    <string name="ig_pa_remove_confirm">Retirer @%1$s de la liste de surveillance ? Ses %2$d analyses enregistrées et son historique seront supprimés. Action irréversible.</string>
+    <string name="ig_pa_remove_confirm_action">Retirer</string>
+    <string name="ig_pa_save_failed">Cette analyse n\'a pas pu être enregistrée : la prochaine sera comparée à la dernière analyse enregistrée.</string>
+    <string name="ig_follow_tools">Outils de liste</string>
+    <string name="ig_follow_tools_title">\@%1$s · %2$s : %3$s</string>
+    <string name="ig_follow_load_stop">Arrêter</string>
+    <string name="ig_follow_export_failed">Impossible d\'enregistrer l\'export : %1$s</string>
+    <string name="ig_pa_check_mine">Vérifier mes abonnés</string>
+    <string name="ig_pa_watch_row_followers">%1$d abonnés · %2$s</string>
+    <string name="ig_pa_watch_full">Liste de surveillance pleine : le plus ancien profil a été retiré</string>
+    <plurals name="ig_list_more">
+        <item quantity="one">+%1$d autre · voir l\'historique</item>
+        <item quantity="many">+%1$d autres · voir l\'historique</item>
+        <item quantity="other">+%1$d autres · voir l\'historique</item>
+    </plurals>
+    <string name="ig_comment_search_clear">Effacer la recherche</string>
+    <string name="ig_comment_export_none">Aucun commentaire encore chargé</string>
+    <string name="ig_comment_export_title">Commentaires</string>
+    <string name="ig_comment_export_on_post">Commentaires de la publication de @%1$s</string>
+    <string name="ig_comment_export_banner">Export des commentaires</string>
+    <string name="ig_comment_export_exported">Exporté le %1$s</string>
+    <string name="ig_comment_export_loaded_only">Seuls les commentaires chargés dans l\'app sont inclus</string>
+    <string name="ig_comment_media_gif">GIF</string>
+    <string name="ig_comment_media_image">Image</string>
+    <string name="ig_comment_media_unavailable">%1$s (indisponible)</string>
+    <plurals name="ig_comment_export_comments">
+        <item quantity="one">%1$d commentaire</item>
+        <item quantity="many">%1$d commentaires</item>
+        <item quantity="other">%1$d commentaires</item>
+    </plurals>
+    <plurals name="ig_comment_export_replies">
+        <item quantity="one">%1$d réponse</item>
+        <item quantity="many">%1$d réponses</item>
+        <item quantity="other">%1$d réponses</item>
+    </plurals>
+    <string name="ig_confirm_follow_title_v2">Suivre @%1$s ?</string>
+</resources>

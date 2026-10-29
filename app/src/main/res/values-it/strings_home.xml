@@ -20,5 +20,26 @@
     <string name="home_shortcuts_empty">Nessuna scorciatoia fissata. Tocca la matita per fissare fino a 8 opzioni che usi di più.</string>
     <string name="home_shortcuts_hint">Le modifiche vengono inviate subito a Instagram.</string>
     <string name="home_shortcuts_limit">Puoi fissare fino a %1$d scorciatoie</string>
-    <string name="home_shortcuts_locked_extreme">Bloccato dalla Modalità Estrema</string>
+    <string name="home_shortcuts_locked_extreme">Bloccato dalla modalità estrema</string>
+    <string name="home_instagram_version">Instagram %1$s</string>
+    <string name="home_tested_version">Versione testata</string>
+    <string name="home_untested_version">Non è la versione testata (%1$s): alcune funzionalità potrebbero non funzionare</string>
+    <string name="home_status_worked">Ha funzionato in Instagram: %1$s</string>
+    <string name="home_status_not_confirmed">Non ancora confermato</string>
+    <string name="home_status_open_to_check">Apri Instagram per verificare</string>
+    <string name="home_status_clone">Clone · non sincronizzato</string>
+    <string name="home_instagram_app_info">Info app Instagram</string>
+    <string name="home_detected_versions">Versioni rilevate</string>
+    <string name="home_detected_version_row">%1$s — v%2$s</string>
+    <string name="home_use_this">Usa questa</string>
+    <string name="home_variant_official">Ufficiale</string>
+    <string name="home_setup_step_1">Applica la patch a Instagram con LSPatch, oppure attiva InstaEclipse per Instagram in Vector.</string>
+    <string name="home_setup_step_2">Forza l\'arresto e riapri Instagram.</string>
+    <string name="home_setup_step_3">In Instagram, tieni premuta la scheda Cerca in basso.</string>
+    <string name="home_setup_open_instagram">Apri Instagram</string>
+    <string name="home_setup_got_it">Ho capito</string>
+    <string name="home_restarting">Riavvio…</string>
+    <string name="home_shortcuts_needs_setting">Attiva prima un\'impostazione necessaria</string>
+    <string name="home_restart_applies_on_open">Si applica all\'apertura di Instagram. Se serve, chiede di riavviare.</string>
+    <string name="home_tool_restart_sub">Chiude e riapre Instagram</string>
 </resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">Zurückgezogen</string>
+    <string name="ig_unsent_clear_failed">Löschen gespeicherter Nachrichten fehlgeschlagen. Öffne den Chat erneut und versuche es noch mal.</string>
+    <string name="ig_unsent_clear_saved">Zurückgezogene Nachrichten löschen</string>
+    <string name="ig_unsent_clear_saved_confirm">Diese behaltenen Nachrichten aus dem Papierkorb und dem lokalen Chatverlauf entfernen? Das lässt sich nicht rückgängig machen.</string>
+    <string name="ig_unsent_cleared_saved">Zurückgezogene Nachrichten gelöscht</string>
+</resources>

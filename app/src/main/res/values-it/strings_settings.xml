@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_toast_restored_some_skipped">Impostazioni ripristinate, tranne %1$d non valide o bloccate dalla modalità estrema.</string>
+</resources>

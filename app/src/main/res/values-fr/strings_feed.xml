@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_preset_light">%1$s clair</string>
+    <string name="theme_preset_dark">%1$s sombre</string>
+    <string name="ig_reel_block_off_title">Les reels sont désactivés</string>
+    <string name="ig_reel_block_off_detail">Réactivez-les dans InstaEclipse › %1$s</string>
+    <string name="ig_reel_block_night_title">Les reels sont en pause pour la nuit</string>
+    <string name="ig_reel_block_night_detail">Retour à %1$s</string>
+    <string name="ig_reel_block_limit_title">Vous avez atteint la limite de reels du jour</string>
+    <string name="ig_reel_block_limit_detail">%1$d reels sur %2$d · remise à zéro à minuit</string>
+    <string name="ig_reel_block_go_back">Retour</string>
+</resources>

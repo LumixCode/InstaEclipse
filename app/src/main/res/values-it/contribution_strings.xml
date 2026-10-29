@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">Download di InstaEclipse</string>
     <string name="ie_download_quality">Qualità download</string>
     <string name="ie_downloader_original">Standard</string>
     <string name="ie_download_best">Migliore</string>
     <string name="ie_download_ceiling">Migliore, fino a %1$dp</string>
+    <string name="ie_save_video_frame">Salva fotogramma video</string>
+    <string name="ie_download_video">Scarica video</string>
+    <string name="ie_frame_help">Scegli un fotogramma con il cursore. Viene salvato solo il PNG a piena risoluzione; il video temporaneo viene rimosso quando salvi o chiudi.</string>
+    <string name="ie_frame_preparing">Preparazione del video alla massima qualità…</string>
+    <string name="ie_frame_preparing_progress">Preparazione del video alla massima qualità… %1$d%%</string>
+    <string name="ie_frame_loading">Caricamento anteprima…</string>
+    <string name="ie_frame_preview">Anteprima del fotogramma selezionato</string>
+    <string name="ie_frame_position">Posizione fotogramma</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · Piena risoluzione</string>
+    <string name="ie_frame_save">Salva PNG</string>
+    <string name="ie_frame_saving">Salvataggio fotogramma a piena risoluzione…</string>
+    <string name="ie_frame_saved">PNG salvato: %1$d × %2$d. Video temporaneo rimosso.</string>
+    <string name="ie_frame_failed">Impossibile preparare o salvare questo fotogramma. Non è stata usata al suo posto una versione di qualità inferiore.</string>
+    <string name="ie_frame_reopen">Apri di nuovo Download in Instagram per scegliere un fotogramma.</string>
     <string name="ie_download_compatibility">Preferisci video riproducibili ovunque</string>
     <string name="ie_download_fallback">Usa qualità inferiore se Migliore non riesce</string>
+    <string name="ie_download_unavailable">Impossibile trovare il media selezionato per questa versione di Instagram.</string>
+    <string name="ie_download_retry_lower">Riprova in qualità inferiore</string>
     <string name="ie_downloader_original_unavailable">Standard non è riuscito a salvarlo. Passa a Migliore per scaricarlo.</string>
     <string name="ie_download_fallback_prompt">Migliore non è riuscito a salvarlo. Provare una qualità inferiore?</string>
+    <string name="ie_download_cancelled">Download annullato</string>
+    <string name="ie_download_select_item">Scegli elemento del carosello</string>
+    <string name="ie_download_item">Elemento %1$d</string>
 </resources>

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_dl_opened_in_instagram">Otwarto w Instagramie. Zapisz to z jego menu.</string>
+    <string name="ie_companion_unreachable">Aplikacja InstaEclipse nie odpowiedziała. Otwórz ją raz i spróbuj ponownie.</string>
+    <string name="ie_companion_timeout">Aplikacja InstaEclipse odpowiadała zbyt długo. Spróbuj ponownie.</string>
+    <string name="ie_companion_busy">Aplikacja InstaEclipse jest zajęta. Spróbuj za chwilę.</string>
+    <string name="ie_companion_denied">Aplikacja InstaEclipse odrzuciła to żądanie. Zaktualizuj obie aplikacje do tej samej wersji.</string>
+    <string name="ie_companion_failed">Aplikacja InstaEclipse nie mogła tego zrobić. Spróbuj ponownie.</string>
+    <string name="ie_companion_invalid">Tego żądania nie można wysłać do aplikacji InstaEclipse.</string>
+    <string name="ie_companion_not_visible">Otwórz to z ekranu, na którym jesteś.</string>
+    <string name="ie_companion_launch_failed">Nie udało się otworzyć aplikacji InstaEclipse. Spróbuj ponownie z tego ekranu.</string>
+    <string name="ie_download_saved_quality">Zapisano: %1$s (%2$s)</string>
+    <string name="ie_download_saved_lower">Zapisano w niższej jakości: %1$s (%2$s)</string>
+    <string name="ie_download_reason_expired">Link wygasł. Otwórz post ponownie i spróbuj jeszcze raz.</string>
+    <string name="ie_download_reason_offline">Problem z połączeniem. Sprawdź internet i spróbuj ponownie.</string>
+    <string name="ie_download_reason_server">Serwer Instagrama nie wysłał pliku. Spróbuj później.</string>
+    <string name="ie_download_reason_storage">Za mało wolnego miejsca na tym telefonie.</string>
+    <string name="ie_download_reason_too_large">Plik jest za duży, aby go zapisać.</string>
+    <string name="ie_download_reason_no_media">Nie ma tu nic do pobrania.</string>
+    <string name="ie_download_reason_ceiling">Żadna wersja nie mieści się w Twoim limicie jakości.</string>
+    <string name="ie_download_reason_unplayable">Plik nie przeszedł testu odtwarzania.</string>
+    <string name="ie_download_reason_blocked">Zablokowano: to nie jest plik multimedialny Instagrama.</string>
+    <string name="ie_download_reason_generic">Coś poszło nie tak. Spróbuj ponownie.</string>
+    <string name="ie_frame_reason_memory">Za mało pamięci na tę klatkę.</string>
+    <string name="ie_frame_reason_write">Nie udało się zapisać PNG. Sprawdź wolne miejsce.</string>
+    <string name="ie_copy_media_link">Kopiuj link do pliku</string>
+    <string name="ig_profile_pic_load_failed">Nie udało się wczytać tego zdjęcia</string>
+    <string name="ie_download_starting">Rozpoczynanie…</string>
+    <string name="ie_download_verifying">Sprawdzanie pliku…</string>
+    <string name="ie_download_saving">Zapisywanie…</string>
+    <string name="ie_download_extracting_audio">Wyodrębnianie dźwięku…</string>
+    <string name="ie_download_reason_invalid">To żądanie pobrania jest uszkodzone. Spróbuj ponownie.</string>
+    <plurals name="ie_download_waiting">
+        <item quantity="one">%1$s · w kolejce: %2$d</item>
+        <item quantity="few">%1$s · w kolejce: %2$d</item>
+        <item quantity="many">%1$s · w kolejce: %2$d</item>
+        <item quantity="other">%1$s · w kolejce: %2$d</item>
+    </plurals>
+    <plurals name="ie_download_files_saved">
+        <item quantity="one">Zapisano %1$d plik</item>
+        <item quantity="few">Zapisano %1$d pliki</item>
+        <item quantity="many">Zapisano %1$d plików</item>
+        <item quantity="other">Zapisano %1$d plików</item>
+    </plurals>
+    <plurals name="ie_download_files_failed">
+        <item quantity="one">%1$d nieudany</item>
+        <item quantity="few">%1$d nieudane</item>
+        <item quantity="many">%1$d nieudanych</item>
+        <item quantity="other">%1$d nieudanych</item>
+    </plurals>
+    <string name="ie_download_saved_and_failed">%1$s, %2$s</string>
+    <string name="ie_export_saving">Zapisywanie eksportu czatu…</string>
+    <string name="ie_export_saving_media">Zapisywanie multimediów %1$d z %2$d</string>
+    <string name="ie_export_failed">Nie udało się zapisać eksportu czatu</string>
+    <string name="ie_download_cover">Zapisz okładkę</string>
+    <string name="ig_media_info_type">Typ</string>
+    <string name="ig_media_info_video">Film</string>
+    <string name="ig_media_info_carousel">Karuzela</string>
+    <string name="ig_media_info_photo">Zdjęcie</string>
+    <string name="ig_media_info_slide">%1$s (%2$d/%3$d)</string>
+    <string name="ig_media_info_original">Oryginalny rozmiar</string>
+    <string name="ig_media_info_size_value">%1$d × %2$d</string>
+    <string name="ig_media_info_duration">Czas trwania</string>
+    <string name="ig_media_info_seconds">%1$.1f s</string>
+    <string name="ig_media_info_codec">Kodek</string>
+    <string name="ig_media_info_audio">Dźwięk</string>
+    <string name="ig_media_info_yes">Tak</string>
+    <string name="ig_media_info_no">Nie</string>
+    <string name="ig_media_info_qualities">Jakości</string>
+    <string name="ig_media_info_file_size">Rozmiar pliku</string>
+    <string name="ig_media_info_megabytes">%1$.2f MB</string>
+    <string name="ig_media_info_error">Nie udało się odczytać tego posta</string>
+    <string name="ig_highlight_failed">Nie udało się pobrać wyróżnionego. Spróbuj ponownie.</string>
+    <string name="ig_instant_already_saved">Już zapisano</string>
+    <plurals name="ie_download_batch_done">
+        <item quantity="one">Zapisano %1$d z %2$d</item>
+        <item quantity="few">Zapisano %1$d z %2$d</item>
+        <item quantity="many">Zapisano %1$d z %2$d</item>
+        <item quantity="other">Zapisano %1$d z %2$d</item>
+    </plurals>
+    <string name="ig_playback_speed_normal">Normalna</string>
+    <string name="ig_playback_speed_stays">%1$s działa, dopóki nie wybierzesz „Normalna”</string>
+</resources>

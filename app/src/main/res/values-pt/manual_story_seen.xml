@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_manual_story_seen_action">Marcar este story como visto</string>
+    <string name="ig_manual_story_seen_sent">Visualização enviada para este story</string>
+    <string name="ig_manual_story_seen_unavailable">Não foi possível enviar a visualização deste story. O modo fantasma continua ativado.</string>
+    <string name="ig_manual_story_seen_unsupported">“Marcar como visto” não está disponível nesta versão do Instagram. O modo fantasma continua ativado.</string>
+</resources>

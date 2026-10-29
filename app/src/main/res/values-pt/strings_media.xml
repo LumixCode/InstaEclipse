@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_dl_opened_in_instagram">Aberto no Instagram. Salve pelo menu dele.</string>
+    <string name="ie_companion_unreachable">O app InstaEclipse não respondeu. Abra-o uma vez e tente de novo.</string>
+    <string name="ie_companion_timeout">O app InstaEclipse demorou demais para responder. Tente de novo.</string>
+    <string name="ie_companion_busy">O app InstaEclipse está ocupado. Tente de novo daqui a pouco.</string>
+    <string name="ie_companion_denied">O app InstaEclipse recusou este pedido. Atualize os dois apps para a mesma versão.</string>
+    <string name="ie_companion_failed">O app InstaEclipse não conseguiu fazer isso. Tente de novo.</string>
+    <string name="ie_companion_invalid">Este pedido não pode ser enviado ao app InstaEclipse.</string>
+    <string name="ie_companion_not_visible">Abra isto pela tela em que você está.</string>
+    <string name="ie_companion_launch_failed">O app InstaEclipse não abriu. Tente de novo nesta tela.</string>
+    <string name="ie_download_saved_quality">Salvo: %1$s (%2$s)</string>
+    <string name="ie_download_saved_lower">Salvo em qualidade menor: %1$s (%2$s)</string>
+    <string name="ie_download_reason_expired">O link expirou. Abra a publicação de novo e tente outra vez.</string>
+    <string name="ie_download_reason_offline">Problema de conexão. Verifique sua internet e tente de novo.</string>
+    <string name="ie_download_reason_server">O servidor do Instagram não enviou o arquivo. Tente mais tarde.</string>
+    <string name="ie_download_reason_storage">Não há espaço livre suficiente neste telefone.</string>
+    <string name="ie_download_reason_too_large">O arquivo é grande demais para salvar.</string>
+    <string name="ie_download_reason_no_media">Não há nada para baixar aqui.</string>
+    <string name="ie_download_reason_ceiling">Nenhuma versão cabe no seu limite de qualidade.</string>
+    <string name="ie_download_reason_unplayable">O arquivo não passou na verificação de reprodução.</string>
+    <string name="ie_download_reason_blocked">Bloqueado: este não é um arquivo de mídia do Instagram.</string>
+    <string name="ie_download_reason_generic">Algo deu errado. Tente de novo.</string>
+    <string name="ie_frame_reason_memory">Memória insuficiente para este quadro.</string>
+    <string name="ie_frame_reason_write">Não foi possível gravar o PNG. Verifique o espaço livre.</string>
+    <string name="ie_copy_media_link">Copiar link da mídia</string>
+    <string name="ig_profile_pic_load_failed">Não foi possível carregar esta foto</string>
+    <string name="ie_download_starting">Iniciando…</string>
+    <string name="ie_download_verifying">Verificando o arquivo…</string>
+    <string name="ie_download_saving">Salvando…</string>
+    <string name="ie_download_extracting_audio">Extraindo o áudio…</string>
+    <string name="ie_download_reason_invalid">Este pedido de download está corrompido. Tente de novo.</string>
+    <plurals name="ie_download_waiting">
+        <item quantity="one">%1$s · %2$d aguardando</item>
+        <item quantity="many">%1$s · %2$d aguardando</item>
+        <item quantity="other">%1$s · %2$d aguardando</item>
+    </plurals>
+    <plurals name="ie_download_files_saved">
+        <item quantity="one">%1$d arquivo salvo</item>
+        <item quantity="many">%1$d arquivos salvos</item>
+        <item quantity="other">%1$d arquivos salvos</item>
+    </plurals>
+    <plurals name="ie_download_files_failed">
+        <item quantity="one">%1$d falhou</item>
+        <item quantity="many">%1$d falharam</item>
+        <item quantity="other">%1$d falharam</item>
+    </plurals>
+    <string name="ie_download_saved_and_failed">%1$s, %2$s</string>
+    <string name="ie_export_saving">Salvando a exportação…</string>
+    <string name="ie_export_saving_media">Salvando mídia %1$d de %2$d</string>
+    <string name="ie_export_failed">Falha ao salvar a exportação</string>
+    <string name="ie_download_cover">Salvar imagem da capa</string>
+    <string name="ig_media_info_type">Tipo</string>
+    <string name="ig_media_info_video">Vídeo</string>
+    <string name="ig_media_info_carousel">Carrossel</string>
+    <string name="ig_media_info_photo">Foto</string>
+    <string name="ig_media_info_slide">%1$s (%2$d/%3$d)</string>
+    <string name="ig_media_info_original">Tamanho original</string>
+    <string name="ig_media_info_size_value">%1$d × %2$d</string>
+    <string name="ig_media_info_duration">Duração</string>
+    <string name="ig_media_info_seconds">%1$.1f s</string>
+    <string name="ig_media_info_codec">Codec</string>
+    <string name="ig_media_info_audio">Áudio</string>
+    <string name="ig_media_info_yes">Sim</string>
+    <string name="ig_media_info_no">Não</string>
+    <string name="ig_media_info_qualities">Qualidades</string>
+    <string name="ig_media_info_file_size">Tamanho do arquivo</string>
+    <string name="ig_media_info_megabytes">%1$.2f MB</string>
+    <string name="ig_media_info_error">Não foi possível ler esta publicação</string>
+    <string name="ig_highlight_failed">Não foi possível baixar este destaque. Tente de novo.</string>
+    <string name="ig_instant_already_saved">Já salvo</string>
+    <plurals name="ie_download_batch_done">
+        <item quantity="one">%1$d de %2$d salvo</item>
+        <item quantity="many">%1$d de %2$d salvos</item>
+        <item quantity="other">%1$d de %2$d salvos</item>
+    </plurals>
+    <string name="ig_playback_speed_normal">Normal</string>
+    <string name="ig_playback_speed_stays">%1$s fica ativo até você escolher Normal</string>
+</resources>

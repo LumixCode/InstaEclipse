@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_hex_invalid">Wpisz 6 lub 8 cyfr szesnastkowych</string>
+    <string name="theme_custom_reset">Zresetowano własne kolory</string>
+    <string name="theme_undo">Cofnij</string>
+    <string name="theme_preset_selected">Wybrany</string>
+    <string name="theme_custom_dark_only">Własne kolory są dla trybu ciemnego. Przełącz telefon na tryb ciemny, aby je edytować</string>
+    <string name="loc_picker_clear_search">Wyczyść wyszukiwanie</string>
+    <string name="dev_config_open_instagram">Najpierw otwórz Instagram, a potem spróbuj ponownie</string>
+    <string name="dev_config_export_failed">Instagram nie mógł wyeksportować konfiguracji</string>
+    <string name="ie_frame_previous">Poprzednia klatka</string>
+    <string name="ie_frame_next">Następna klatka</string>
+    <string name="ie_frame_cleanup_pending_open">Nie dokończono usuwania plików tymczasowych. Otwórz InstaEclipse, aby spróbować ponownie.</string>
+    <string name="credits_on_github">%1$s na GitHubie</string>
+    <string name="credits_on_telegram">%1$s na Telegramie</string>
+    <string name="credits_on_linkedin">%1$s na LinkedInie</string>
+    <string name="import_sending">Wysyłanie do Instagrama…</string>
+    <string name="import_too_large">Ten plik jest za duży do zaimportowania</string>
+    <string name="import_cant_receive">Instagram nie może odebrać tego pliku</string>
+    <string name="import_no_reply">Instagram nie potwierdził. Otwórz Instagram (po aktualizacji InstaEclipse zrestartuj go) i spróbuj ponownie.</string>
+    <string name="loc_picker_spoof_off">Fałszywa lokalizacja jest wyłączona, więc Instagram nadal widzi Twoją prawdziwą lokalizację.</string>
+    <string name="loc_picker_needs_restart">Instagram potrzebuje jednego restartu, aby jej użyć.</string>
+    <string name="loc_picker_turn_on">Włącz</string>
+    <string name="loc_picker_only_save">Tylko zapisz</string>
+    <string name="loc_saved_spoof_off">Zapisano. Włącz fałszywą lokalizację, aby jej użyć.</string>
+    <string name="loc_picker_no_connection">Brak połączenia</string>
+    <string name="loc_picker_search_unavailable">Wyszukiwanie jest teraz niedostępne</string>
+</resources>

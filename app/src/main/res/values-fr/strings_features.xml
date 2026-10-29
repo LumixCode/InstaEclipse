@@ -2,7 +2,45 @@
 <resources>
     <!-- Features tab: search + per-category counts -->
     <string name="feat_search_hint">Rechercher des fonctionnalités</string>
-    <string name="feat_search_no_results">Aucune fonctionnalité correspondante</string>
+    <string name="feat_search_no_results">Aucun résultat</string>
     <string name="feat_count_on">%1$d activées</string>
     <string name="feat_count_off">Désactivées</string>
+    <string name="feat_cache_size_limit">Taille maximale du cache</string>
+    <string name="feat_tab_move_up">Monter %1$s</string>
+    <string name="feat_tab_move_down">Descendre %1$s</string>
+    <string name="feat_tab_hidden">%1$s · Masqué</string>
+    <plurals name="feat_restore_confirm">
+        <item quantity="one">Restaurer %d paramètre de cette sauvegarde ? Les paramètres du fichier remplacent les actuels ; les verrous ne peuvent qu\'être activés.</item>
+        <item quantity="many">Restaurer %d paramètres de cette sauvegarde ? Les paramètres du fichier remplacent les actuels ; les verrous ne peuvent qu\'être activés.</item>
+        <item quantity="other">Restaurer %d paramètres de cette sauvegarde ? Les paramètres du fichier remplacent les actuels ; les verrous ne peuvent qu\'être activés.</item>
+    </plurals>
+    <plurals name="feat_restore_skipped">
+        <item quantity="one">%d entrée est ignorée.</item>
+        <item quantity="many">%d entrées sont ignorées.</item>
+        <item quantity="other">%d entrées sont ignorées.</item>
+    </plurals>
+    <string name="feat_restore_needs_passcode">Les verrous nécessitent un code défini dans Instagram.</string>
+    <string name="feat_restore_action">Restaurer</string>
+    <string name="feat_restore_invalid_file">fichier de sauvegarde non valide</string>
+    <string name="feat_backup_unreadable">impossible de lire les paramètres</string>
+    <string name="feat_notification_rationale_title">Suivre les téléchargements ?</string>
+    <string name="feat_notification_rationale_message">InstaEclipse affiche une notification pendant l\'enregistrement de vos téléchargements.</string>
+    <string name="feat_storage_rationale_title">Autoriser les téléchargements ?</string>
+    <string name="feat_storage_rationale_message">Sur cette version d\'Android, InstaEclipse a besoin d\'accéder au stockage pour enregistrer vos téléchargements.</string>
+    <string name="feat_permission_not_now">Plus tard</string>
+    <string name="feat_use_default_folder">Dossier par défaut</string>
+    <string name="feat_download_folder_default">%1$s (par défaut)</string>
+    <string name="feat_reset_folder_confirm">Revenir au dossier par défaut ? Les nouveaux fichiers iront dans %1$s.</string>
+    <string name="feat_search_try_another">Essayez un autre mot</string>
+    <string name="feat_reason_best_only">Uniquement en qualité Meilleure</string>
+    <string name="feat_reason_overridden">Inactif si « %1$s » est activé</string>
+    <string name="feat_requires_lock">Activez d\'abord un verrou</string>
+    <string name="feat_requires_above">Activez d\'abord une option ci-dessus</string>
+    <string name="feat_corner_small">Petit</string>
+    <string name="feat_corner_medium">Moyen</string>
+    <string name="feat_corner_large">Grand</string>
+    <string name="feat_corner_extra_large">Très grand</string>
+    <string name="feat_corner_round">Rond</string>
+    <string name="feat_lock_needs_passcode">Activé · code requis dans Instagram</string>
+    <string name="feat_restart_waiting">En attente d\'un redémarrage d\'Instagram</string>
 </resources>

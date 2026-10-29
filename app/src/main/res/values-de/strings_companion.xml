@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_hex_invalid">Gib 6 oder 8 Hex-Ziffern ein</string>
+    <string name="theme_custom_reset">Eigene Farben zurückgesetzt</string>
+    <string name="theme_undo">Rückgängig</string>
+    <string name="theme_preset_selected">Ausgewählt</string>
+    <string name="theme_custom_dark_only">Eigene Farben gelten für den dunklen Modus. Stelle dein Handy auf den dunklen Modus, um sie zu bearbeiten</string>
+    <string name="loc_picker_clear_search">Suche löschen</string>
+    <string name="dev_config_open_instagram">Öffne zuerst Instagram und versuche es dann erneut</string>
+    <string name="dev_config_export_failed">Instagram konnte seine Konfiguration nicht exportieren</string>
+    <string name="ie_frame_previous">Vorheriges Bild</string>
+    <string name="ie_frame_next">Nächstes Bild</string>
+    <string name="ie_frame_cleanup_pending_open">Temporäre Dateien wurden nicht ganz entfernt. Öffne InstaEclipse, um es erneut zu versuchen.</string>
+    <string name="credits_on_github">%1$s auf GitHub</string>
+    <string name="credits_on_telegram">%1$s auf Telegram</string>
+    <string name="credits_on_linkedin">%1$s auf LinkedIn</string>
+    <string name="import_sending">Wird an Instagram gesendet…</string>
+    <string name="import_too_large">Diese Datei ist zu groß für den Import</string>
+    <string name="import_cant_receive">Instagram kann diese Datei nicht empfangen</string>
+    <string name="import_no_reply">Instagram hat nicht bestätigt. Öffne Instagram (nach einem InstaEclipse-Update neu starten) und versuche es dann erneut.</string>
+    <string name="loc_picker_spoof_off">„Standort vortäuschen“ ist aus, daher sieht Instagram weiter deinen echten Standort.</string>
+    <string name="loc_picker_needs_restart">Instagram muss dafür einmal neu starten.</string>
+    <string name="loc_picker_turn_on">Einschalten</string>
+    <string name="loc_picker_only_save">Nur speichern</string>
+    <string name="loc_saved_spoof_off">Gespeichert. Zum Nutzen „Standort vortäuschen“ einschalten.</string>
+    <string name="loc_picker_no_connection">Keine Verbindung</string>
+    <string name="loc_picker_search_unavailable">Die Suche ist gerade nicht verfügbar</string>
+</resources>

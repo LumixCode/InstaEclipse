@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">Descargas de InstaEclipse</string>
     <string name="ie_download_quality">Calidad de descarga</string>
     <string name="ie_downloader_original">Estándar</string>
     <string name="ie_download_best">Máxima</string>
     <string name="ie_download_ceiling">Máxima, hasta %1$dp</string>
+    <string name="ie_save_video_frame">Guardar fotograma</string>
+    <string name="ie_download_video">Descargar vídeo</string>
+    <string name="ie_frame_help">Elige un fotograma con el control deslizante. Solo se guarda el PNG a resolución completa; el vídeo temporal se borra al guardar o cerrar.</string>
+    <string name="ie_frame_preparing">Preparando el vídeo en máxima calidad…</string>
+    <string name="ie_frame_preparing_progress">Preparando el vídeo en máxima calidad… %1$d%%</string>
+    <string name="ie_frame_loading">Cargando vista previa…</string>
+    <string name="ie_frame_preview">Vista previa del fotograma elegido</string>
+    <string name="ie_frame_position">Posición del fotograma</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · Resolución completa</string>
+    <string name="ie_frame_save">Guardar PNG</string>
+    <string name="ie_frame_saving">Guardando fotograma a resolución completa…</string>
+    <string name="ie_frame_saved">PNG guardado: %1$d × %2$d. Vídeo temporal borrado.</string>
+    <string name="ie_frame_failed">No se pudo preparar ni guardar este fotograma. No se usó ninguna versión de menor calidad en su lugar.</string>
+    <string name="ie_frame_reopen">Vuelve a abrir Descargar en Instagram para elegir un fotograma.</string>
     <string name="ie_download_compatibility">Preferir vídeos que se reproduzcan en todas partes</string>
     <string name="ie_download_fallback">Usar menor calidad si Máxima falla</string>
+    <string name="ie_download_unavailable">No se pudo obtener el contenido elegido en esta versión de Instagram.</string>
+    <string name="ie_download_retry_lower">Reintentar con menor calidad</string>
     <string name="ie_downloader_original_unavailable">Estándar no pudo guardarlo. Cambia a Máxima para descargarlo.</string>
     <string name="ie_download_fallback_prompt">Máxima no pudo guardarlo. ¿Probar con menor calidad?</string>
+    <string name="ie_download_cancelled">Descarga cancelada</string>
+    <string name="ie_download_select_item">Elegir elemento del carrusel</string>
+    <string name="ie_download_item">Elemento %1$d</string>
 </resources>

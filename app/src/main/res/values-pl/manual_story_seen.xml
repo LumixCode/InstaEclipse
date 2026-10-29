@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_manual_story_seen_action">Oznacz relację jako wyświetloną</string>
+    <string name="ig_manual_story_seen_sent">Wysłano wyświetlenie tej relacji</string>
+    <string name="ig_manual_story_seen_unavailable">Nie udało się wysłać wyświetlenia tej relacji. Tryb ducha jest nadal włączony.</string>
+    <string name="ig_manual_story_seen_unsupported">Oznaczanie jako wyświetlone jest niedostępne w tej wersji Instagrama. Tryb ducha jest nadal włączony.</string>
+</resources>

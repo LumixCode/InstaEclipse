@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="ig_story_links_hint">Dotknij, aby skopiować · przytrzymaj, aby otworzyć</string>
+    <string name="ig_story_links_hint">Dotknij: kopiuj · przytrzymaj: otwórz</string>
     <string name="ig_toast_link_copied">Link skopiowany</string>
-    <string name="ig_toast_links_copied">Skopiowano wszystkie linki</string>
+    <string name="ig_toast_links_copied">Skopiowano linki</string>
     <string name="ig_dialog_misc_story_links">Kopiuj linki z relacji</string>
+    <string name="ig_btn_copy_sticker_link">Kopiuj link naklejki</string>
+    <string name="ig_sticker_links_title">Linki naklejek</string>
 </resources>

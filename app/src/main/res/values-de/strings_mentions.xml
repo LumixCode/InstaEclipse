@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="ig_mention_count">
+        <item quantity="one">%1$d Erwähnung · antippen zum Öffnen, halten zum Kopieren</item>
+        <item quantity="other">%1$d Erwähnungen · antippen zum Öffnen, halten zum Kopieren</item>
+    </plurals>
+</resources>

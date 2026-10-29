@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">Pobieranie InstaEclipse</string>
     <string name="ie_download_quality">Jakość pobierania</string>
     <string name="ie_downloader_original">Standardowa</string>
     <string name="ie_download_best">Najlepsza</string>
     <string name="ie_download_ceiling">Najlepsza, do %1$dp</string>
+    <string name="ie_save_video_frame">Zapisz klatkę filmu</string>
+    <string name="ie_download_video">Pobierz film</string>
+    <string name="ie_frame_help">Wybierz klatkę suwakiem. Zapisywany jest tylko PNG w pełnej rozdzielczości; tymczasowy film zostaje usunięty po zapisaniu lub zamknięciu.</string>
+    <string name="ie_frame_preparing">Przygotowywanie filmu w najwyższej jakości…</string>
+    <string name="ie_frame_preparing_progress">Przygotowywanie filmu w najwyższej jakości… %1$d%%</string>
+    <string name="ie_frame_loading">Wczytywanie podglądu…</string>
+    <string name="ie_frame_preview">Podgląd wybranej klatki filmu</string>
+    <string name="ie_frame_position">Pozycja klatki</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · Pełna rozdzielczość</string>
+    <string name="ie_frame_save">Zapisz PNG</string>
+    <string name="ie_frame_saving">Zapisywanie klatki w pełnej rozdzielczości…</string>
+    <string name="ie_frame_saved">Zapisano PNG: %1$d × %2$d. Usunięto tymczasowy film.</string>
+    <string name="ie_frame_failed">Nie udało się przygotować ani zapisać tej klatki. Nie zastąpiono jej wersją niższej jakości.</string>
+    <string name="ie_frame_reopen">Otwórz ponownie „Pobierz” w Instagramie, aby wybrać klatkę.</string>
     <string name="ie_download_compatibility">Preferuj filmy działające wszędzie</string>
     <string name="ie_download_fallback">Użyj niższej jakości, gdy Najlepsza zawiedzie</string>
+    <string name="ie_download_unavailable">Nie udało się znaleźć wybranych multimediów w tej wersji Instagrama.</string>
+    <string name="ie_download_retry_lower">Spróbuj niższej jakości</string>
     <string name="ie_downloader_original_unavailable">Standardowa nie mogła tego zapisać. Przełącz na Najlepszą, aby pobrać.</string>
     <string name="ie_download_fallback_prompt">Najlepsza nie mogła tego zapisać. Spróbować niższej jakości?</string>
+    <string name="ie_download_cancelled">Anulowano pobieranie</string>
+    <string name="ie_download_select_item">Wybierz element karuzeli</string>
+    <string name="ie_download_item">Element %1$d</string>
 </resources>

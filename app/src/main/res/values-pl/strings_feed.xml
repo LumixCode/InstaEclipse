@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="theme_preset_light">%1$s jasny</string>
+    <string name="theme_preset_dark">%1$s ciemny</string>
+    <string name="ig_reel_block_off_title">Rolki są wyłączone</string>
+    <string name="ig_reel_block_off_detail">Włączysz je ponownie w InstaEclipse › %1$s</string>
+    <string name="ig_reel_block_night_title">Rolki są wstrzymane na noc</string>
+    <string name="ig_reel_block_night_detail">Wrócą o %1$s</string>
+    <string name="ig_reel_block_limit_title">Osiągnięto dzisiejszy limit rolek</string>
+    <string name="ig_reel_block_limit_detail">%1$d z %2$d rolek · reset o północy</string>
+    <string name="ig_reel_block_go_back">Wróć</string>
+</resources>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ig_fancy_font_names">
+        <item>Normale</item>
+        <item>Grassetto</item>
+        <item>Corsivo</item>
+        <item>Grassetto corsivo</item>
+        <item>Sans grassetto</item>
+        <item>Sans corsivo</item>
+        <item>Calligrafico</item>
+        <item>Gotico</item>
+        <item>Doppio tratto</item>
+        <item>Monospaziato</item>
+        <item>Cerchiato</item>
+        <item>Larghezza piena</item>
+        <item>Maiuscoletto</item>
+        <item>Barrato</item>
+        <item>Sottolineato</item>
+    </string-array>
+</resources>

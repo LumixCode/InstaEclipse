@@ -25,11 +25,12 @@
     <string name="ig_si_your_answer">tu respuesta</string>
     <string name="ig_si_average">Media</string>
     <string name="ig_si_copied">Copiado</string>
-    <string name="ig_dialog_misc_story_info">Info de historias, respuestas de quiz y encuestas</string>
+    <string name="ig_dialog_misc_story_info">Mostrar detalles y respuestas de historias</string>
     <string name="ig_si_add_yours">Añade el tuyo</string>
     <string name="ig_si_joined">participaron</string>
     <string name="ig_si_paid_partnership">Colaboración pagada con (mantén pulsado para abrir)</string>
     <string name="ig_si_collaborators">Colaborador (mantén pulsado para abrir)</string>
     <string name="ig_btn_slider_results">Resultados del deslizador</string>
     <string name="ig_si_votes">votos</string>
+    <string name="ig_poll_your_vote">tu voto</string>
 </resources>

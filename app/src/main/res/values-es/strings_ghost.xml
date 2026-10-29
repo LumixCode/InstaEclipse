@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_unsent_log_set_aside">No se pudo leer la lista guardada; se ha apartado.</string>
+    <string name="ig_toast_marked_as_seen">Marcado como visto</string>
+    <string name="ig_toast_channel_marked_as_seen">Canal marcado como visto</string>
+    <string name="ig_chat_export_banner">Exportación del chat</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="one">%1$d mensaje</item>
+        <item quantity="many">%1$d mensajes</item>
+        <item quantity="other">%1$d mensajes</item>
+    </plurals>
+    <string name="ig_chat_export_edited">editado</string>
+    <string name="ig_chat_export_pinned">fijado</string>
+    <string name="ig_chat_export_forwarded">reenviado</string>
+    <string name="ig_chat_export_story_reply">Respuesta a historia</string>
+    <string name="ig_chat_export_reply_to">a @%1$s</string>
+    <string name="ig_chat_export_shared_story">Historia compartida</string>
+    <string name="ig_chat_export_shared_reel">Reel compartido</string>
+    <string name="ig_chat_export_shared_post">Publicación compartida</string>
+    <string name="ig_chat_export_shared_profile">Perfil compartido</string>
+    <string name="ig_chat_export_mention_by_you">Le mencionaste en tu historia</string>
+    <string name="ig_chat_export_mention_of_you">Te mencionó en su historia</string>
+    <string name="ig_chat_export_unsupported">Exportar chat no funciona en esta versión de Instagram</string>
+    <string name="ig_bulk_unsend_not_ready">Chat no listo, inténtalo de nuevo</string>
+    <plurals name="ig_bulk_unsend_result">
+        <item quantity="one">Envío anulado: %1$d de %2$d mensaje</item>
+        <item quantity="many">Envío anulado: %1$d de %2$d mensajes</item>
+        <item quantity="other">Envío anulado: %1$d de %2$d mensajes</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="one">¿Anular el envío de %1$d mensaje? No se puede deshacer.</item>
+        <item quantity="many">¿Anular el envío de %1$d mensajes? No se puede deshacer.</item>
+        <item quantity="other">¿Anular el envío de %1$d mensajes? No se puede deshacer.</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="one">Anulando envío %1$d/%2$d</item>
+        <item quantity="many">Anulando envío %1$d/%2$d</item>
+        <item quantity="other">Anulando envío %1$d/%2$d</item>
+    </plurals>
+    <string name="ig_jump_first_stop_menu">Dejar de cargar mensajes anteriores</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="one">Cargando mensajes anteriores · %1$d cargado</item>
+        <item quantity="many">Cargando mensajes anteriores · %1$d cargados</item>
+        <item quantity="other">Cargando mensajes anteriores · %1$d cargados</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">Cargando mensajes anteriores</string>
+    <string name="ig_jump_first_stop">Detener</string>
+    <string name="ig_jump_first_reached">Has llegado al primer mensaje de este chat</string>
+    <string name="ig_jump_first_stopped_loading">Carga de mensajes anteriores detenida</string>
+    <string name="ig_lock_chat">Bloquear este chat</string>
+    <string name="ig_lock_chat_unlock">Desbloquear este chat</string>
+    <string name="ig_lock_chat_locked">Chat bloqueado</string>
+    <string name="ig_lock_chat_locked_on">Chat bloqueado. «Bloquear chats elegidos» está activado.</string>
+    <string name="ig_lock_chat_unlocked">Chat desbloqueado</string>
+    <string name="ig_lock_selected_menu_desc">Elige chats aquí o con «Bloquear este chat» en el menú de un chat</string>
+    <string name="ig_ghost_messages_tab_label">Mensajes, modo fantasma activado</string>
+    <string name="ig_toast_ghost_on">Modo fantasma activado: %1$s</string>
+    <string name="ig_toast_ghost_off">Modo fantasma desactivado: %1$s</string>
+    <string name="ig_quick_toggle_none_chosen">Aún no has elegido nada. Elige qué se activa o desactiva al mantener pulsado el icono de Mensajes.</string>
+    <string name="ig_quick_toggle_name_seen">visto</string>
+    <string name="ig_quick_toggle_name_typing">escribiendo</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">avisos de captura</string>
+    <string name="ig_quick_toggle_name_view_once">ver una vez</string>
+    <string name="ig_quick_toggle_name_stories">historias</string>
+    <string name="ig_quick_toggle_name_live">directos</string>
+    <string name="ig_quick_toggle_name_disappearing">mensajes que desaparecen</string>
+    <string name="ig_quick_toggle_name_permanent_view">vista permanente</string>
+    <string name="ig_quick_toggle_name_screenshots">capturas</string>
+    <string name="ig_read_receipt_list_title">Chats con confirmaciones de lectura</string>
+    <string name="ig_read_receipt_list_add">Añadir chats</string>
+    <string name="ig_read_receipt_pick_title">Elige chats con confirmaciones de lectura</string>
+    <string name="ig_read_receipt_list_empty">Aún ningún chat recibe confirmaciones de lectura. Añade chats aquí, o abre un chat y elige «Enviar confirmaciones de lectura en este chat» en su menú.</string>
+    <string name="ig_read_receipt_list_seen_off">«Ocultar “Visto” en chats» está desactivado, así que ahora todos los chats reciben el «Visto».</string>
+</resources>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ie_unsent_log_set_aside">Die gespeicherte Liste war nicht lesbar und wurde beiseitegelegt.</string>
+    <string name="ig_toast_marked_as_seen">Als gesehen markiert</string>
+    <string name="ig_toast_channel_marked_as_seen">Kanal als gesehen markiert</string>
+    <string name="ig_chat_export_banner">Chat-Export</string>
+    <plurals name="ig_chat_export_messages">
+        <item quantity="one">%1$d Nachricht</item>
+        <item quantity="other">%1$d Nachrichten</item>
+    </plurals>
+    <string name="ig_chat_export_edited">bearbeitet</string>
+    <string name="ig_chat_export_pinned">angeheftet</string>
+    <string name="ig_chat_export_forwarded">weitergeleitet</string>
+    <string name="ig_chat_export_story_reply">Story-Antwort</string>
+    <string name="ig_chat_export_reply_to">an @%1$s</string>
+    <string name="ig_chat_export_shared_story">Geteilte Story</string>
+    <string name="ig_chat_export_shared_reel">Geteiltes Reel</string>
+    <string name="ig_chat_export_shared_post">Geteilter Beitrag</string>
+    <string name="ig_chat_export_shared_profile">Geteiltes Profil</string>
+    <string name="ig_chat_export_mention_by_you">Du hast die Person in deiner Story erwähnt</string>
+    <string name="ig_chat_export_mention_of_you">Hat dich in der eigenen Story erwähnt</string>
+    <string name="ig_chat_export_unsupported">Chat-Export funktioniert in dieser Instagram-Version nicht</string>
+    <string name="ig_bulk_unsend_not_ready">Chat nicht bereit, versuche es erneut</string>
+    <plurals name="ig_bulk_unsend_result">
+        <item quantity="one">%1$d von %2$d Nachricht zurückgezogen</item>
+        <item quantity="other">%1$d von %2$d Nachrichten zurückgezogen</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_confirm">
+        <item quantity="one">%1$d Nachricht zurückziehen? Das ist endgültig.</item>
+        <item quantity="other">%1$d Nachrichten zurückziehen? Das ist endgültig.</item>
+    </plurals>
+    <plurals name="ig_bulk_unsend_progress">
+        <item quantity="one">Zurückziehen: %1$d/%2$d</item>
+        <item quantity="other">Zurückziehen: %1$d/%2$d</item>
+    </plurals>
+    <string name="ig_jump_first_stop_menu">Laden älterer Nachrichten stoppen</string>
+    <plurals name="ig_jump_first_progress">
+        <item quantity="one">Ältere Nachrichten werden geladen · %1$d geladen</item>
+        <item quantity="other">Ältere Nachrichten werden geladen · %1$d geladen</item>
+    </plurals>
+    <string name="ig_jump_first_progress_counting">Ältere Nachrichten werden geladen</string>
+    <string name="ig_jump_first_stop">Stopp</string>
+    <string name="ig_jump_first_reached">Erste Nachricht dieses Chats erreicht</string>
+    <string name="ig_jump_first_stopped_loading">Laden älterer Nachrichten gestoppt</string>
+    <string name="ig_lock_chat">Diesen Chat sperren</string>
+    <string name="ig_lock_chat_unlock">Diesen Chat entsperren</string>
+    <string name="ig_lock_chat_locked">Chat gesperrt</string>
+    <string name="ig_lock_chat_locked_on">Chat gesperrt. „Gewählte Chats sperren“ ist jetzt an.</string>
+    <string name="ig_lock_chat_unlocked">Chat entsperrt</string>
+    <string name="ig_lock_selected_menu_desc">Wähle Chats hier oder über „Diesen Chat sperren“ im Menü eines Chats</string>
+    <string name="ig_ghost_messages_tab_label">Nachrichten, Geistermodus an</string>
+    <string name="ig_toast_ghost_on">Geistermodus an: %1$s</string>
+    <string name="ig_toast_ghost_off">Geistermodus aus: %1$s</string>
+    <string name="ig_quick_toggle_none_chosen">Noch nichts ausgewählt. Wähle, was das Gedrückthalten des Nachrichten-Symbols umschaltet.</string>
+    <string name="ig_quick_toggle_name_seen">Gesehen</string>
+    <string name="ig_quick_toggle_name_typing">Tippen</string>
+    <string name="ig_quick_toggle_name_screenshot_alerts">Screenshot-Hinweise</string>
+    <string name="ig_quick_toggle_name_view_once">Einmal ansehen</string>
+    <string name="ig_quick_toggle_name_stories">Storys</string>
+    <string name="ig_quick_toggle_name_live">Live</string>
+    <string name="ig_quick_toggle_name_disappearing">verschwindende Nachrichten</string>
+    <string name="ig_quick_toggle_name_permanent_view">dauerhaftes Ansehen</string>
+    <string name="ig_quick_toggle_name_screenshots">Screenshots</string>
+    <string name="ig_read_receipt_list_title">Chats mit Lesebestätigung</string>
+    <string name="ig_read_receipt_list_add">Chats hinzufügen</string>
+    <string name="ig_read_receipt_pick_title">Chats mit Lesebestätigung wählen</string>
+    <string name="ig_read_receipt_list_empty">Noch keine Chats mit Lesebestätigung. Füge hier Chats hinzu oder öffne einen Chat und wähle in seinem Menü „Lesebestätigungen in diesem Chat senden“.</string>
+    <string name="ig_read_receipt_list_seen_off">„‚Gesehen‘ in Chats verbergen“ ist aus, daher bekommt gerade jeder Chat Lesebestätigungen.</string>
+</resources>

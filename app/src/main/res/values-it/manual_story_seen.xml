@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_manual_story_seen_action">Segna questa storia come vista</string>
+    <string name="ig_manual_story_seen_sent">Visualizzazione della storia inviata</string>
+    <string name="ig_manual_story_seen_unavailable">Impossibile inviare la visualizzazione di questa storia. La modalità fantasma resta attiva.</string>
+    <string name="ig_manual_story_seen_unsupported">«Segna questa storia come vista» non funziona in questa versione di Instagram. La modalità fantasma resta attiva.</string>
+</resources>

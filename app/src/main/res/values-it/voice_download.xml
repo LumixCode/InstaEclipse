@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_voice_download_unavailable">Audio non disponibile. Riproduci il messaggio, poi riprova.</string>
+</resources>

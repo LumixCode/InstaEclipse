@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="module_download_channel_name">InstaEclipse-Downloads</string>
     <string name="ie_download_quality">Download-Qualität</string>
     <string name="ie_downloader_original">Standard</string>
     <string name="ie_download_best">Beste</string>
     <string name="ie_download_ceiling">Beste, bis %1$dp</string>
+    <string name="ie_save_video_frame">Einzelbild speichern</string>
+    <string name="ie_download_video">Video herunterladen</string>
+    <string name="ie_frame_help">Wähle mit dem Schieberegler ein Einzelbild. Gespeichert wird nur das PNG in voller Auflösung; das temporäre Video wird beim Speichern oder Schließen entfernt.</string>
+    <string name="ie_frame_preparing">Video in höchster Qualität wird vorbereitet…</string>
+    <string name="ie_frame_preparing_progress">Video in höchster Qualität wird vorbereitet… %1$d%%</string>
+    <string name="ie_frame_loading">Vorschau wird geladen…</string>
+    <string name="ie_frame_preview">Vorschau des gewählten Einzelbilds</string>
+    <string name="ie_frame_position">Bildposition</string>
+    <string name="ie_frame_time">%1$s / %2$s</string>
+    <string name="ie_frame_ready">PNG · %1$d × %2$d · Volle Auflösung</string>
+    <string name="ie_frame_save">PNG speichern</string>
+    <string name="ie_frame_saving">Bild in voller Auflösung wird gespeichert…</string>
+    <string name="ie_frame_saved">PNG gespeichert: %1$d × %2$d. Temporäres Video entfernt.</string>
+    <string name="ie_frame_failed">Einzelbild konnte nicht vorbereitet oder gespeichert werden. Keine niedrigere Qualität als Ersatz verwendet.</string>
+    <string name="ie_frame_reopen">Öffne in Instagram erneut „Herunterladen“, um ein Einzelbild zu wählen.</string>
     <string name="ie_download_compatibility">Videos bevorzugen, die überall abspielbar sind</string>
-    <string name="ie_download_fallback">Niedrigere Qualität nutzen, wenn Beste fehlschlägt</string>
+    <string name="ie_download_fallback">Niedrigere Qualität, wenn „Beste“ scheitert</string>
+    <string name="ie_download_unavailable">Die gewählten Medien konnten in dieser Instagram-Version nicht gefunden werden.</string>
+    <string name="ie_download_retry_lower">Geringere Qualität versuchen</string>
     <string name="ie_downloader_original_unavailable">Standard konnte das nicht speichern. Wechsle zu Beste, um es zu laden.</string>
     <string name="ie_download_fallback_prompt">Beste konnte das nicht speichern. Stattdessen eine niedrigere Qualität versuchen?</string>
+    <string name="ie_download_cancelled">Download abgebrochen</string>
+    <string name="ie_download_select_item">Karussell-Element wählen</string>
+    <string name="ie_download_item">Element %1$d</string>
 </resources>

@@ -12,4 +12,16 @@
     <string name="help_lspatch_title">LSPatch (JingMatrix)</string>
     <string name="help_lspatch_sub">Kein Root? Installiere das</string>
     <string name="help_lspatch_guide">Zur Einrichtungsanleitung</string>
+    <string name="about_based_on">Basiert auf InstaEclipse von %1$s</string>
+    <string name="update_check_note">Sucht höchstens einmal am Tag auf github.com nach neuen InstaEclipse-Versionen.</string>
+    <string name="update_whats_new">Neuerungen</string>
+    <string name="update_skip_version">Version überspringen</string>
+    <string name="links_no_app">Keine App kann diesen Link öffnen</string>
+    <string name="help_faq_2"><b>2. Modul nicht aktiviert?</b>\n- Prüfe in LSPatch oder Vector, ob InstaEclipse für Instagram aktiviert ist, erzwinge dann das Beenden von Instagram und öffne es neu.</string>
+    <string name="help_faq_4"><b>4. Abstürze durch Entwickleroptionen?</b>\n- Schalte die Entwickleroptionen aus und nutze Entwickleroptionen → Standardkonfiguration wiederherstellen.</string>
+    <string name="help_faq_5"><b>5. Entwickleroptionen mit seltsamen Namen oder Zahlen?</b>\n- Die stabile Instagram-Version verbirgt die Optionsnamen. InstaEclipse ist mit Instagram %1$s getestet.</string>
+    <string name="help_troubleshooting">Fehlerbehebung</string>
+    <string name="help_faq_expanded">Ausgeklappt</string>
+    <string name="help_faq_collapsed">Eingeklappt</string>
+    <string name="help_tested_with">Getestet mit Instagram %1$s</string>
 </resources>

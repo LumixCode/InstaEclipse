@@ -27,4 +27,24 @@
     <string name="logs_entry_copied">Voce copiata</string>
     <string name="logs_cleared">Log cancellati</string>
     <string name="logs_source_companion">[app]</string>
+    <string name="logs_latest">Più recenti</string>
+    <string name="logs_clear_confirm_title">Cancellare i log?</string>
+    <string name="logs_clear_confirm_body">Rimuove i log salvati su questo telefono, compresi quelli di Instagram.</string>
+    <string name="logs_share_no_app">Nessuna app per condividere</string>
+    <string name="logs_status_unsynced">Log salvato · niente sincronizzazione live</string>
+    <string name="logs_copy_entry">Copia voce</string>
+    <string name="logs_crash_share">Condividi report di crash</string>
+    <string name="logs_crash_delete">Elimina i report di crash</string>
+    <string name="logs_crash_share_warning">I report di crash possono contenere parti di ciò che Instagram aveva in memoria, come messaggi o dati di accesso. Condividili in privato, non in una segnalazione pubblica.</string>
+    <string name="logs_crash_share_summary">Condividi riepilogo</string>
+    <string name="logs_crash_share_full">Condividi report completo</string>
+    <string name="logs_crash_share_subject">Report di crash di InstaEclipse</string>
+    <string name="logs_crash_share_failed">Impossibile creare il report di crash</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="one">Eliminare %d report di crash?</item>
+        <item quantity="many">Eliminare %d report di crash?</item>
+        <item quantity="other">Eliminare %d report di crash?</item>
+    </plurals>
+    <string name="logs_crash_delete_action">Elimina</string>
+    <string name="logs_crash_deleted">Report di crash eliminati</string>
 </resources>

@@ -5,4 +5,42 @@
     <string name="feat_search_no_results">Nenhum recurso encontrado</string>
     <string name="feat_count_on">%1$d ativos</string>
     <string name="feat_count_off">Desativados</string>
+    <string name="feat_cache_size_limit">Limite do cache</string>
+    <string name="feat_tab_move_up">Mover %1$s para cima</string>
+    <string name="feat_tab_move_down">Mover %1$s para baixo</string>
+    <string name="feat_tab_hidden">%1$s · Oculta</string>
+    <plurals name="feat_restore_confirm">
+        <item quantity="one">Restaurar %d configuração deste backup? As configurações do arquivo substituem as atuais; os bloqueios só são ativados.</item>
+        <item quantity="many">Restaurar %d configurações deste backup? As configurações do arquivo substituem as atuais; os bloqueios só são ativados.</item>
+        <item quantity="other">Restaurar %d configurações deste backup? As configurações do arquivo substituem as atuais; os bloqueios só são ativados.</item>
+    </plurals>
+    <plurals name="feat_restore_skipped">
+        <item quantity="one">%d item é ignorado.</item>
+        <item quantity="many">%d itens são ignorados.</item>
+        <item quantity="other">%d itens são ignorados.</item>
+    </plurals>
+    <string name="feat_restore_needs_passcode">Os bloqueios precisam de um código definido no Instagram.</string>
+    <string name="feat_restore_action">Restaurar</string>
+    <string name="feat_restore_invalid_file">não é um arquivo de backup válido</string>
+    <string name="feat_backup_unreadable">não foi possível ler as configurações</string>
+    <string name="feat_notification_rationale_title">Mostrar o progresso dos downloads?</string>
+    <string name="feat_notification_rationale_message">O InstaEclipse mostra uma notificação enquanto salva seus downloads.</string>
+    <string name="feat_storage_rationale_title">Permitir salvar downloads?</string>
+    <string name="feat_storage_rationale_message">Nesta versão do Android, o InstaEclipse precisa de acesso ao armazenamento para salvar seus downloads.</string>
+    <string name="feat_permission_not_now">Agora não</string>
+    <string name="feat_use_default_folder">Usar a pasta padrão</string>
+    <string name="feat_download_folder_default">%1$s (padrão)</string>
+    <string name="feat_reset_folder_confirm">Usar a pasta padrão? Os novos downloads vão para %1$s.</string>
+    <string name="feat_search_try_another">Tente outra palavra</string>
+    <string name="feat_reason_best_only">Só com a qualidade Melhor</string>
+    <string name="feat_reason_overridden">Desativado: “%1$s” está ativado</string>
+    <string name="feat_requires_lock">Ative um bloqueio primeiro</string>
+    <string name="feat_requires_above">Ative antes uma opção acima</string>
+    <string name="feat_corner_small">Pequeno</string>
+    <string name="feat_corner_medium">Médio</string>
+    <string name="feat_corner_large">Grande</string>
+    <string name="feat_corner_extra_large">Extragrande</string>
+    <string name="feat_corner_round">Redondo</string>
+    <string name="feat_lock_needs_passcode">Ativado · precisa de código no Instagram</string>
+    <string name="feat_restart_waiting">Aguardando o Instagram reiniciar</string>
 </resources>

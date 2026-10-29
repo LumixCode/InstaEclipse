@@ -2,7 +2,7 @@
 <resources>
     <!-- Logs tab (0.8) -->
     <string name="logs_filter_all">Alle</string>
-    <string name="logs_filter_hooked">Erfolgreich</string>
+    <string name="logs_filter_hooked">Bereit</string>
     <string name="logs_filter_errors">Fehler</string>
     <string name="logs_filter_warnings">Warnungen</string>
     <string name="logs_technical_details">Technische Details</string>
@@ -13,7 +13,7 @@
     <string name="logs_clear">Leeren</string>
     <string name="logs_share_title">InstaEclipse-Protokolle teilen</string>
     <string name="logs_share_subject">InstaEclipse-Protokolle</string>
-    <string name="logs_loading">Protokolle werden geladen…</string>
+    <string name="logs_loading">Lade Protokolle…</string>
     <string name="logs_count_format">%1$d von %2$d Einträgen</string>
     <string name="logs_status_live">Instagram läuft · live</string>
     <string name="logs_status_saved">Gespeichertes Protokoll · Instagram läuft nicht</string>
@@ -22,9 +22,28 @@
     <string name="logs_empty_body">Öffne Instagram einmal mit in Vector aktiviertem InstaEclipse, komm dann hierher zurück und tippe auf Aktualisieren. Das Instagram-Protokoll wird hier automatisch gespeichert – auch nachdem Instagram geschlossen wurde.</string>
     <string name="logs_empty_filter_title">Nichts passt zu diesem Filter</string>
     <string name="logs_empty_filter_body">Wechsle zurück zu „Alle“, um alle Einträge zu sehen.</string>
-    <string name="logs_nothing_to_copy">Keine Protokolle zum Kopieren</string>
+    <string name="logs_nothing_to_copy">Nichts zu kopieren</string>
     <string name="logs_copied">Protokolle kopiert</string>
     <string name="logs_entry_copied">Eintrag kopiert</string>
     <string name="logs_cleared">Protokolle geleert</string>
     <string name="logs_source_companion">[App]</string>
+    <string name="logs_latest">Neueste</string>
+    <string name="logs_clear_confirm_title">Protokolle leeren?</string>
+    <string name="logs_clear_confirm_body">Entfernt die auf diesem Handy gespeicherten Protokolle, auch die von Instagram.</string>
+    <string name="logs_share_no_app">Keine App zum Teilen verfügbar</string>
+    <string name="logs_status_unsynced">Gespeichertes Protokoll · kein Live-Sync</string>
+    <string name="logs_copy_entry">Eintrag kopieren</string>
+    <string name="logs_crash_share">Absturzbericht teilen</string>
+    <string name="logs_crash_delete">Absturzberichte löschen</string>
+    <string name="logs_crash_share_warning">Absturzberichte können Teile dessen enthalten, was Instagram im Speicher hatte, etwa Nachrichten oder Anmeldedaten. Teile sie privat, nicht in einem öffentlichen Issue.</string>
+    <string name="logs_crash_share_summary">Kurzfassung teilen</string>
+    <string name="logs_crash_share_full">Ganzen Bericht teilen</string>
+    <string name="logs_crash_share_subject">InstaEclipse-Absturzbericht</string>
+    <string name="logs_crash_share_failed">Absturzbericht konnte nicht erstellt werden</string>
+    <plurals name="logs_crash_delete_confirm">
+        <item quantity="one">%d Absturzbericht löschen?</item>
+        <item quantity="other">%d Absturzberichte löschen?</item>
+    </plurals>
+    <string name="logs_crash_delete_action">Löschen</string>
+    <string name="logs_crash_deleted">Absturzberichte gelöscht</string>
 </resources>

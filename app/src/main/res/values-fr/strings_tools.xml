@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="tool_backup_sub">Enregistrer tous les réglages dans un fichier</string>
+    <string name="tool_backup_sub">Tous les réglages dans un fichier</string>
     <string name="tool_restore_sub">Charger les réglages depuis une sauvegarde</string>
     <string name="tool_about_sub">Version, crédits et liens</string>
     <string name="about_tagline">Un Instagram plus épuré et plus privé</string>

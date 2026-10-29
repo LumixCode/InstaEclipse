@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_unsent_indicator_label">Cofnięta</string>
+    <string name="ig_unsent_clear_failed">Nie udało się wyczyścić zapisanych wiadomości. Otwórz ponownie ten czat i spróbuj jeszcze raz.</string>
+    <string name="ig_unsent_clear_saved">Wyczyść zapisane cofnięte wiadomości</string>
+    <string name="ig_unsent_clear_saved_confirm">Usunąć te zachowane wiadomości z kosza i lokalnej historii czatu? Tego nie można cofnąć.</string>
+    <string name="ig_unsent_cleared_saved">Wyczyszczono zapisane cofnięte wiadomości</string>
+</resources>

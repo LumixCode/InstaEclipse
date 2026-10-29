@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_feature_unsent_indicator">Oznaczaj cofnięte wiadomości</string>
+    <string name="ig_feature_show_unsent_button">Pokazuj „Cofnięte wiadomości” w menu czatu</string>
+    <string name="ig_feature_following_follow_status">Pokazuj, kto Cię obserwuje</string>
+    <string name="ig_feature_manual_story_seen">Ręczne oznaczanie wyświetleń</string>
+</resources>

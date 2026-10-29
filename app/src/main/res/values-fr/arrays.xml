@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ig_fancy_font_names">
+        <item>Normal</item>
+        <item>Gras</item>
+        <item>Italique</item>
+        <item>Gras italique</item>
+        <item>Sans serif gras</item>
+        <item>Sans serif italique</item>
+        <item>Cursive</item>
+        <item>Gothique</item>
+        <item>Ajouré</item>
+        <item>Chasse fixe</item>
+        <item>Cerclé</item>
+        <item>Pleine chasse</item>
+        <item>Petites capitales</item>
+        <item>Barré</item>
+        <item>Souligné</item>
+    </string-array>
+</resources>

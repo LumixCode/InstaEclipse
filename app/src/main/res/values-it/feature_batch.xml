@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ig_feature_unsent_indicator">Segna i messaggi annullati</string>
+    <string name="ig_feature_show_unsent_button">Mostra «Messaggi annullati» nel menu della chat</string>
+    <string name="ig_feature_following_follow_status">Mostra chi ti segue a sua volta</string>
+    <string name="ig_feature_manual_story_seen">Segna a mano le storie come viste</string>
+</resources>

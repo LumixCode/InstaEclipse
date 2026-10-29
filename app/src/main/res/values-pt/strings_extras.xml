@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="ig_dialog_clean_feed_following_only">Feed só de quem você segue</string>
+    <string name="ig_dialog_clean_feed_following_only">Mostrar só contas que você segue</string>
     <string name="ig_dialog_extras_no_swipe_camera">Desativar deslizar para a câmera</string>
-    <string name="ig_dialog_extras_reels_auto_scroll">Opção de rolagem automática dos Reels</string>
-    <string name="ig_dialog_extras_reels_lock_scroll">Bloquear rolagem dos Reels</string>
-    <string name="ig_dialog_extras_unlimited_accounts">Contas ilimitadas</string>
+    <string name="ig_dialog_extras_reels_auto_scroll">Liberar rolagem automática nos Reels</string>
+    <string name="ig_dialog_extras_reels_lock_scroll">Travar a rolagem entre reels</string>
+    <string name="ig_dialog_extras_unlimited_accounts">Permitir mais de 5 contas</string>
     <string name="ig_dialog_extras_airplane_mode">Modo avião (aparecer offline)</string>
-    <string name="ig_dialog_extras_high_res_images">Carregar imagens na resolução máxima</string>
-    <string name="ig_dialog_extras_hide_onboarding">Ocultar pedidos de contactos e localização</string>
-    <string name="ig_dialog_extras_fix_notifications">Corrigir o registo antigo de notificações no Android 12+</string>
-    <string name="ig_dialog_extras_hide_stories_tray">Ocultar apenas a barra de stories</string>
-    <string name="ig_dialog_extras_share_domain">Domínio de compartilhamento</string>
+    <string name="ig_dialog_extras_high_res_images">Carregar as fotos mais nítidas</string>
+    <string name="ig_dialog_extras_hide_onboarding">Pular pedidos de contatos e localização</string>
+    <string name="ig_dialog_extras_fix_notifications">Corrigir o registro antigo de notificações no Android 12+</string>
+    <string name="ig_dialog_extras_hide_stories_tray">Ocultar a barra de stories</string>
+    <string name="ig_dialog_extras_share_domain">Domínio dos links</string>
     <string name="ig_dialog_extras_share_domain_off">Desativado</string>
     <string name="ig_dialog_extras_share_domain_hint">Substitui instagram.com nos links copiados ou compartilhados, ex.: para prévias. Deixe vazio para desativar.</string>
     <string name="ig_dialog_extras_share_domain_invalid">Domínio inválido</string>
     <string name="ig_dialog_extras_startup_tab">Aba inicial</string>
     <string name="ig_media_open_with">Abrir com…</string>
-    <string name="ig_lock_try_again_in">Demasiadas tentativas. Tente novamente em %1$d s</string>
+    <string name="ig_lock_try_again_in">Muitas tentativas. Tente de novo em %1$d s</string>
     <string name="loc_picker_locating">Procurando local…</string>
     <string name="loc_picker_unnamed">Local sem nome</string>
     <string name="ig_dialog_location_current_title">Local atual</string>
