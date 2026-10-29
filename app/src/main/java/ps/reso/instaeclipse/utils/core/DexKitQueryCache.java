@@ -256,6 +256,24 @@ public final class DexKitQueryCache {
         return wrap(result);
     }
 
+    public static List<Found> invokesCached(Found method) {
+        String key = "q_iv_" + method.getDescriptor();
+        String cached = load(key);
+        if (cached != null) {
+            List<Found> hit = foundMethods(cached);
+            if (hit != null) {
+                DexKitStats.hit();
+                return hit;
+            }
+        }
+        MethodData data = method.data();
+        long start = System.nanoTime();
+        MethodDataList result = data.getInvokes();
+        searched(key, start);
+        DexKitCache.saveString(key, joinMethods(result));
+        return wrap(result);
+    }
+
     public static MethodDataList callersUncached(Found method) {
         return callersUncached(method.data());
     }

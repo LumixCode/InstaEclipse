@@ -10,7 +10,6 @@ import android.widget.LinearLayout;
 
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
-import org.luckypray.dexkit.result.MethodData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -48,7 +47,7 @@ public class SavedOnProfileHook {
             List<Method> invoked = new ArrayList<>();
             for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass(HANDLER).paramCount(3)))) {
-                for (MethodData inv : md.data().getInvokes()) {
+                for (Found inv : DexKitQueryCache.invokesCached(md)) {
                     if (!inv.isMethod()) continue;
                     Method m;
                     try { m = inv.getMethodInstance(cl); } catch (Throwable t) { continue; }
@@ -66,7 +65,7 @@ public class SavedOnProfileHook {
                     else if (p.length == 3 && p[0] == fragment && Activity.class.isAssignableFrom(p[1])
                             && m.getReturnType() == void.class) {
                         navigator = m;
-                        for (MethodData n : inv.getInvokes()) {
+                        for (Found n : DexKitQueryCache.invokesCached(inv)) {
                             try {
                                 if (n.isConstructor()) navCtor = n.getConstructorInstance(cl);
                                 else if (n.isMethod()) {
