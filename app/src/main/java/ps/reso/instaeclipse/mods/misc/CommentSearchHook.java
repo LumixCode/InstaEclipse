@@ -1381,6 +1381,9 @@ public class CommentSearchHook {
         if (v instanceof android.widget.ImageView iv) {
             iv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
             iv.setPadding(pad, pad, pad, pad);
+        } else if (v instanceof TextView tv) {
+            tv.setMaxLines(1);
+            tv.setAutoSizeTextTypeUniformWithConfiguration(6, Math.max(7, Math.round(sp)), 1, android.util.TypedValue.COMPLEX_UNIT_SP);
         }
         v.setLayoutParams(new LinearLayout.LayoutParams(box, box));
         return v;
