@@ -8,6 +8,7 @@ import android.text.InputFilter;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -276,9 +277,11 @@ public final class ProfileSpoofEditor {
         TextView l = text(13, p.text, false);
         l.setText(I18n.t(ctx, label));
         l.setGravity(Gravity.CENTER);
-        l.setSingleLine(true);
+        l.setMaxLines(1);
         l.setEllipsize(TextUtils.TruncateAt.END);
-        col.addView(l, wrap());
+        l.setPadding(dp(3), 0, dp(3), 0);
+        l.setAutoSizeTextTypeUniformWithConfiguration(9, 13, 1, TypedValue.COMPLEX_UNIT_SP);
+        col.addView(l, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         row.addView(col, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         return number;
     }
