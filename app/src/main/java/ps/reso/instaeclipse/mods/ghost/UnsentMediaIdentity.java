@@ -7,7 +7,6 @@ import java.util.List;
 
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 
-/** Only a render model's own ID, or its single direct message model, can identify the preview. */
 final class UnsentMediaIdentity {
     private UnsentMediaIdentity() {}
 
@@ -26,7 +25,6 @@ final class UnsentMediaIdentity {
         return matches.size() == 1 ? accessible(matches.get(0)) : null;
     }
 
-    /** The one parameter that carries a message identity, or -1 when none or several do. */
     static int argument(Class<?>[] types, Class<?> identifier) {
         int match = -1;
         for (int i = 0; i < types.length; i++) {
@@ -51,7 +49,6 @@ final class UnsentMediaIdentity {
         return false;
     }
 
-    /** Returns one matching active row; duplicate aliases fail closed instead of styling another message. */
     static int uniqueMatch(List<? extends List<String>> candidates, List<String> rendered) {
         int match = -1;
         for (int i = 0; i < candidates.size(); i++) {

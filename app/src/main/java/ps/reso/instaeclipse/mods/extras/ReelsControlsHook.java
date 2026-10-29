@@ -9,13 +9,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Reels auto-scroll, keyed on IG's own "android_purge_…" marker: IG's opt-in auto-scroll gate
- * {@code ClipsViewerExperimentUtil.isOptInAutoscrollEnabled} is forced true, which unlocks IG's
- * native "Auto scroll" option in the Reels ⋯ menu.
- * "Lock Reels scrolling" lives in {@link ps.reso.instaeclipse.mods.reels.ReelViewerHook}, which
- * owns the Reels pager input together with the reel limits, so the two never fight over it.
- */
 public class ReelsControlsHook {
 
     private static final String TAG = "(InstaEclipse | Reels): ";

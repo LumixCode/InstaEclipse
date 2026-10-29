@@ -4,12 +4,6 @@ import java.lang.reflect.Field;
 
 import ps.reso.instaeclipse.R;
 
-/**
- * The "Extras" section: on/off features listed in one place so both settings UIs, settings
- * save/load, backup and the feature status tracker pick them up without per-feature wiring.
- * Each entry's flag is a {@code boolean} field of {@link FeatureFlags} with the same name, which
- * is also its pref key, backup key and {@link FeatureStatusTracker} key.
- */
 public final class ExtrasFeatures {
 
     public static final class Entry {
@@ -42,7 +36,6 @@ public final class ExtrasFeatures {
         return out;
     }
 
-    /** The entry for {@code flag}, or null if it isn't an Extras feature. */
     public static Entry entry(String flag) {
         for (Entry e : ALL) if (e.flag.equals(flag)) return e;
         return null;

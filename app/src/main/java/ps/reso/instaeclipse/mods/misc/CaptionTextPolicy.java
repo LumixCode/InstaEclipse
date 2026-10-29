@@ -8,10 +8,6 @@ final class CaptionTextPolicy {
 
     private CaptionTextPolicy() {}
 
-    /**
-     * True when the on-screen text displays this caption, collapsed or expanded. Comments also
-     * link to their post, so a comment only matches if it repeats the caption's opening words.
-     */
     static boolean shows(String visible, String caption) {
         return shows(visible, caption, null);
     }
@@ -25,7 +21,6 @@ final class CaptionTextPolicy {
         } else if (shown.equals(full) || afterAuthor(shown, full, authors)) {
             return true;
         }
-        // Collapsed after a short first line: the caption's start sits right before the ellipsis.
         int cut = shown.indexOf('…');
         if (cut < 0) return false;
         String before = shown.substring(0, cut).trim();
@@ -36,7 +31,6 @@ final class CaptionTextPolicy {
         return false;
     }
 
-    /** True when the on-screen text holds the whole caption, as an expanded caption does. */
     static boolean showsWhole(String visible, String caption) {
         if (visible == null || caption == null) return false;
         String full = squash(caption);
@@ -57,10 +51,7 @@ final class CaptionTextPolicy {
         return authors == null || authors.isEmpty() || authors.contains(token);
     }
 
-    /** Text without invisible format marks (bidi isolates, zero-width joiners) and with every run
-     *  of whitespace, no-break spaces included, as one space: what is shown, not how it's encoded. */
     private static String squash(String text) {
-        // No regex: Android's engine rejects flags like (?U) that the JVM accepts.
         StringBuilder out = new StringBuilder(text.length());
         boolean space = false;
         for (int i = 0; i < text.length(); ) {

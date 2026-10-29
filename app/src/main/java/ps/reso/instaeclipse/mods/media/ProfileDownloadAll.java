@@ -22,13 +22,6 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.text.MediaIds;
 
-/**
- * Download a profile's posts, all of them or the newest N (profile ⋮ menu). The profile page is
- * scrolled with a finger drag, so Instagram fetches each page of the grid itself; the posts' Media
- * models are read from the grid adapter (android:id/list) as they arrive. Then each post goes
- * through the normal downloader (carousels as all their slides), one at a time so the download
- * queue is never flooded.
- */
 public final class ProfileDownloadAll {
 
     private static final String TAG = "(IE|ProfileDL) ";
@@ -40,10 +33,8 @@ public final class ProfileDownloadAll {
     private ProfileDownloadAll() {}
 
     private static final int[] LATEST = {12, 30, 50, 100};
-    /** Pinned posts sit first in the grid but may be old, so a few extra are read before sorting. */
     private static final int PINNED_SLACK = 3;
 
-    /** Asks how many posts first: the latest N, all of them, or a number typed in. */
     public static void start(Activity a, String username) {
         if (a == null || busy) return;
         if (findGrid(a.getWindow().getDecorView()) == null) {
@@ -80,7 +71,6 @@ public final class ProfileDownloadAll {
         }, 150);
     }
 
-    /** {@code limit}: how many of the newest posts, 0 for all. */
     private static void collect(Activity a, String username, int limit) {
         if (busy) return;
         View grid = findGrid(a.getWindow().getDecorView());
@@ -103,7 +93,6 @@ public final class ProfileDownloadAll {
                 if (a.isFinishing() || a.isDestroyed() || !grid.isAttachedToWindow()) { busy = false; dlg.dismiss(); return; }
                 List<Object> fresh = new ArrayList<>();
                 gather(adapterOf(grid), known, fresh);
-                // The adapter can also reach media from elsewhere in the app; keep this profile's own.
                 int before = found.size();
                 for (Object media : fresh) {
                     try {
@@ -144,7 +133,6 @@ public final class ProfileDownloadAll {
         return user != null && SelectedMediaAdapter.value(user, "username") instanceof String name ? name : null;
     }
 
-    /** Media ids grow with time ("<id>_<owner>"), so sorting by id puts the newest first. */
     private static void newestFirst(List<Post> posts) {
         posts.sort((x, y) -> Long.compare(y.id, x.id));
     }
@@ -161,7 +149,6 @@ public final class ProfileDownloadAll {
         View go = dlg.primary(I18n.t(a, R.string.ig_dl_title), () -> download(a, posts));
         dlg.onDismiss(() -> { if (!downloading) busy = false; });
         dlg.show();
-        // This dialog opens where the Stop button was: a late tap on Stop must not start downloads.
         go.setEnabled(false);
         go.setAlpha(0.4f);
         MAIN.postDelayed(() -> { go.setEnabled(true); go.setAlpha(1f); }, 800);
@@ -169,7 +156,6 @@ public final class ProfileDownloadAll {
 
     private static boolean downloading;
 
-    /** One post every SPACING_MS, so the download queue is never flooded. */
     private static void download(Activity a, List<Post> posts) {
         downloading = true;
         toast(a, I18n.t(a, R.string.ig_profile_dl_started, posts.size()));
@@ -198,16 +184,10 @@ public final class ProfileDownloadAll {
         SelectedMediaDownloads.start(a, c, c.batchKind() == DownloadChoices.Choice.VIDEO, batch);
     }
 
-    /**
-     * The grid doesn't scroll on its own: it is laid out at full height inside the profile page,
-     * which scrolls (header first, then the grid). So a finger drag over the grid is played into the
-     * activity's window, one move per frame like a real finger, and Instagram pages in more posts as
-     * it would for the user. Our dialog is a separate window and isn't touched.
-     */
     private static void swipeUp(Activity a, View grid) {
         View root = a.getWindow().getDecorView();
         android.graphics.Rect shown = new android.graphics.Rect();
-        if (!grid.getGlobalVisibleRect(shown)) return; // the part of the grid on screen, above the nav bar
+        if (!grid.getGlobalVisibleRect(shown)) return;
         float x = shown.centerX();
         float y0 = shown.bottom - 60, y1 = Math.max(shown.top + 60, y0 - root.getHeight() * 0.45f);
         if (y0 - y1 < 200) y1 = Math.max(60, y0 - root.getHeight() * 0.45f);
@@ -231,7 +211,6 @@ public final class ProfileDownloadAll {
         try { root.dispatchTouchEvent(e); } finally { e.recycle(); }
     }
 
-    /** The profile's post grid: the tallest shown RecyclerView with id android:id/list. */
     private static View findGrid(View v) {
         View best = null;
         java.util.ArrayDeque<View> st = new java.util.ArrayDeque<>();
@@ -255,7 +234,6 @@ public final class ProfileDownloadAll {
         try { return rv.getClass().getMethod("getAdapter").invoke(rv); } catch (Throwable t) { return null; }
     }
 
-    /** Media models reachable from the grid adapter (its item lists), nearest first, each once. */
     private static void gather(Object root, Set<Object> known, List<Object> out) {
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         java.util.ArrayDeque<Object[]> queue = new java.util.ArrayDeque<>();

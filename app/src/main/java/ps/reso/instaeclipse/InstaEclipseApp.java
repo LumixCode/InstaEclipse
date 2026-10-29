@@ -17,7 +17,6 @@ import ps.reso.instaeclipse.utils.core.SettingsSchema;
 import ps.reso.instaeclipse.utils.log.Logging;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/** Companion app process start: keeps the settings Instagram reads on a cold start in sync. */
 public class InstaEclipseApp extends Application {
 
     @Override
@@ -25,12 +24,8 @@ public class InstaEclipseApp extends Application {
         super.onCreate();
         CompanionUiPrefs.migrate(this);
         migrateSettings();
-        // before the mirror copies the cache: the old lock hash/salt/locked list must never reach
-        // the remote preferences Instagram reads
         CommonUtils.dropStaleCacheKeys(this);
         clearLostFolder();
-        // modern flavor: mirrors "instaeclipse_cache" into Vector's remote preferences (libxposed
-        // API 102, read by the hooked app); legacy flavor: no-op (Instagram uses XSharedPreferences)
         RemotePrefsMirror.start(this);
         new Thread(() -> {
             Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);

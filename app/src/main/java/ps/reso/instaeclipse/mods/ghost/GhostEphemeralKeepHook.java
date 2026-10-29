@@ -24,12 +24,6 @@ public class GhostEphemeralKeepHook {
     }
 
     private void hookVanishLocalDelete(ClassLoader classLoader) {
-        // IG 447+ (verified 447/451/452): the removal itself lives in two methods of the thread
-        // model (X.01eV on 452, X.04r2 on 451, X.01gH on 447), called on chat exit, by the
-        // per-thread expiry timer and when a thread is loaded from disk:
-        //   (Z)Z  remove expired disappearing messages — unique string below
-        //   ()Z   remove vanish-mode ("is_shh_mode") messages — the class's only ()boolean
-        // Both return "anything removed"; callers only commit on true, so false = keep all.
         XC_MethodHook keep = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
@@ -84,11 +78,6 @@ public class GhostEphemeralKeepHook {
         }
     }
 
-    /**
-     * Blocks any void method that dispatches mark_ephemeral_item_ranges_viewed. On 451 that is a
-     * DM mutation processor (X.05uj.Gx1) on the chat's "thread-<id>" queue, which text sends share,
-     * so the skip also completes the mutation (see GhostViewOnceHook.skipMutation).
-     */
     private void hookServerPing() {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override

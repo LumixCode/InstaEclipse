@@ -13,8 +13,6 @@ final class VoiceMessageMenuPolicy {
         for (T action : original) if (!isPrimarySave.test(action)) actions.add(action);
         int position = 0;
         while (position < actions.size() && isHeader.test(actions.get(position))) position++;
-        // Instagram moves everything after the first 3 or 7 actions into More.
-        // Put the explicit download entry before that split, retaining status headers.
         actions.add(position, download);
         return actions;
     }

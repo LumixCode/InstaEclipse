@@ -43,12 +43,10 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.toast.IeToast;
 
-/** Native single-story receipts; never sends or flushes Instagram's accumulated ghost-view queue. */
 public final class ManualStorySeenHook {
     private static final String SESSION = "com.instagram.common.session.UserSession";
     private static final String REEL_ITEM = "com.instagram.model.reels.ReelItem";
     private static final int MENU_ORDER = 3;
-    // populate, send, store getter, path setter (in that order) / per-story trackers
     private static final String CACHE_PIPELINE = "ManualStorySeen_pipeline_v1";
     private static final String CACHE_TRACKERS = "ManualStorySeen_trackers_v1";
     private static final ManualStorySeenPolicy approvals = new ManualStorySeenPolicy();
@@ -111,7 +109,6 @@ public final class ManualStorySeenHook {
         }
     }
 
-    /** Used only by the ghost store's immediate sender; batch inserts remain blocked. */
     static boolean isExplicitItem(Object item) {
         Dispatch active = dispatch.get();
         return active != null && active.item == item;
@@ -121,7 +118,6 @@ public final class ManualStorySeenHook {
         return ManualStorySeenPolicy.hasMarker(uri);
     }
 
-    /** The network fallback must call this for seen requests, even if ghost mode was just disabled. */
     public static boolean allowManualRequest(Object request, URI uri, Object tigonService) {
         String token = ManualStorySeenPolicy.token(uri);
         try {
@@ -153,8 +149,6 @@ public final class ManualStorySeenHook {
     }
 
     private void resolveReceiptPipeline(ClassLoader loader) throws Exception {
-        // The call-graph queries below are costly and every warm launch installs inline, so a
-        // previous scan of this Instagram build is reused whenever all of its members still load.
         if (!loadCachedPipeline(loader)) {
             discoverReceiptPipeline(loader);
             DexKitCache.saveMethods(CACHE_PIPELINE, List.of(populateItem, sendItem, getStore, pathSetter));
@@ -170,7 +164,6 @@ public final class ManualStorySeenHook {
         if (pipeline == null || pipeline.size() != 4 || cachedTrackers == null || cachedTrackers.isEmpty()) return false;
         resolutionStage = "cached pipeline";
         try {
-            // Both verified population shapes are declared on the pending item class itself.
             itemConstructor = pipeline.get(0).getDeclaringClass().getDeclaredConstructor();
             itemConstructor.setAccessible(true);
         } catch (Throwable t) {
@@ -203,8 +196,6 @@ public final class ManualStorySeenHook {
         itemConstructor = itemClass.getDeclaredConstructor();
         itemConstructor.setAccessible(true);
 
-        // 439 passes the pending item into a static helper; 446 uses the fresh item as receiver.
-        // Both verified shapes populate exactly one story using the original account and reel ID.
         resolutionStage = "single-story population";
         for (Method method : itemClass.getDeclaredMethods()) {
             Class<?>[] types = method.getParameterTypes();
@@ -249,8 +240,6 @@ public final class ManualStorySeenHook {
 
         resolutionStage = "request path setter";
         for (MethodData data : builderData.data().getInvokes()) {
-            // Inspect metadata before resolving reflection. Constructors and unrelated request
-            // helpers are not methods we intend to hook and can change independently of this API.
             if (!data.getReturnTypeName().equals("void")
                     || !data.getParamTypeNames().equals(List.of("java.lang.String", "java.lang.Object[]"))) continue;
             Method method = data.getMethodInstance(loader);
@@ -327,7 +316,6 @@ public final class ManualStorySeenHook {
         ModuleLog.detail("(IE|ManualStorySeen) installed " + trackers.size() + " per-story tracker(s)");
     }
 
-    /** Index of the method's only ReelItem parameter, or -1 when it has none. */
     private static int reelItemIndex(Method method) {
         int index = -1;
         Class<?>[] types = method.getParameterTypes();

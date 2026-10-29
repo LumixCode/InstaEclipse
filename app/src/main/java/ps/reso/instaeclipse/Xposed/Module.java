@@ -40,26 +40,12 @@ import ps.reso.instaeclipse.utils.log.StartupTrace;
 import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 
 
-/**
- * The module's bootstrap, shared by both entry points: {@code LegacyEntry} (assets/xposed_init,
- * legacy frameworks) and {@code ModernEntry} (META-INF/xposed/java_init.list, libxposed 102).
- * It references no framework API itself, so it loads on either. See docs/xposed-api-102.
- */
 public class Module {
-    // List of supported Instagram package names (maintained in CommonUtils)
     private static final List<String> SUPPORTED_PACKAGES = CommonUtils.SUPPORTED_PACKAGES;
     public static ClassLoader hostClassLoader;
     public static String moduleSourceDir;
     private static String moduleLibDir;
 
-    // for dev usage
-    /*
-    public static void showToast(final String text) {
-        new Handler(Looper.getMainLooper()).post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(AndroidAppHelper.currentApplication().getApplicationContext(), text, Toast.LENGTH_LONG).show());
-    }
-    */
-
-    /** The module APK, and its native library folder when the framework knows it (else derived). */
     public static void setModulePaths(String apkPath, String nativeLibDir) {
         moduleSourceDir = apkPath;
         ps.reso.instaeclipse.xposedcompat.ModuleResources.setApkPath(apkPath);
@@ -73,19 +59,13 @@ public class Module {
     }
 
     public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) {
-        // Ensure preferences are loaded
 
 
-        // Hook into Instagram and its clones
-        // Debug kill switch: `adb shell setprop debug.instaeclipse.off 1` loads the module but
-        // installs no hooks (isolates crashes to the framework vs. this module).
         if (SUPPORTED_PACKAGES.contains(lpparam.packageName) && "1".equals(debugProp("debug.instaeclipse.off"))) {
             android.util.Log.i("InstaEclipse", "debug.instaeclipse.off=1 -> no hooks installed");
             return;
         }
         if (SUPPORTED_PACKAGES.contains(lpparam.packageName)) {
-            // Only the main app process: Instagram's helper processes (":fbns" push, browser,
-            // video …) never show our features, so hooking them only costs startup time and memory.
             if (lpparam.processName != null && !lpparam.processName.equals(lpparam.packageName)) {
                 return;
             }
@@ -97,10 +77,7 @@ public class Module {
         }
     }
 
-    /** DexKitCache key set once every feature hook has been installed for this IG version. */
     private static final String CACHE_COMPLETE_KEY = "InstallComplete";
-    /** ...by this module build: a new build can bring new lookups, so its first launch is a cold
-     *  one too (the old "1" marker predates DexKitQueryCache, whose entries that launch fills). */
     private static final String CACHE_COMPLETE_VALUE = String.valueOf(ps.reso.instaeclipse.BuildConfig.VERSION_CODE);
 
     private static final String INIT_THREAD = "InstaEclipse-Init";
@@ -161,18 +138,16 @@ public class Module {
         backgroundStarter = starter == null ? Module::startInitThread : starter;
     }
 
-    /** Debug bisect switch: `setprop debug.instaeclipse.skip A,B` skips those hook installs. */
     static java.util.Set<String> skipSet() {
         if (skipped == null) {
             skipped = new java.util.HashSet<>();
-            for (String prop : new String[]{"skip", "skip2", "skip3", "skip4", "skip5", "skip6"}) // props max 91 chars each
+            for (String prop : new String[]{"skip", "skip2", "skip3", "skip4", "skip5", "skip6"})
                 for (String k : debugProp("debug.instaeclipse." + prop).split(",")) if (!k.trim().isEmpty()) skipped.add(k.trim());
             if (!skipped.isEmpty()) ModuleLog.line("(InstaEclipse) debug skip: " + skipped);
         }
         return skipped;
     }
 
-    /** Reads a system property (debug switches); empty string when unavailable. */
     static String debugProp(String key) {
         try {
             Object v = Class.forName("android.os.SystemProperties").getMethod("get", String.class).invoke(null, key);
@@ -208,19 +183,14 @@ public class Module {
     public static void attachBefore(Object application, Context context, XC_LoadPackage.LoadPackageParam lpparam) {
         DexKitCache.preload(context);
         StartupTrace.Span span = StartupTrace.begin(StartupTrace.ATTACH_BEFORE);
-        // Install CommentCopyButtonHook BEFORE Instagram's Application.attach() runs
-        // so we catch any ViewBinding pre-inflation that happens during attach()
         if (application instanceof android.app.Application app)
             ps.reso.instaeclipse.xposedcompat.AndroidAppHelper.setCurrentApplication(app);
         SettingsManager.init(context);
         if (!CompanionSync.pull(context)) SettingsManager.loadAllFlags(context);
 
-        // Before Instagram reads anything about the device; a change applies on the next start.
         ps.reso.instaeclipse.mods.misc.DeviceSpoofHook.apply(lpparam.classLoader);
         ps.reso.instaeclipse.mods.misc.DeviceSpoofHook.syncOverrides(context);
 
-        // Init DexKit cache — checks IG version to decide if saved descriptors are valid.
-        // Must run before any hook that calls DexKitCache.isCacheValid().
         try {
             android.content.pm.PackageInfo pi =
                     context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
@@ -268,21 +238,16 @@ public class Module {
     public static void attachAfter(Object application, Context context, XC_LoadPackage.LoadPackageParam lpparam) {
         StartupTrace.Span span = StartupTrace.begin(StartupTrace.ATTACH_AFTER);
         ps.reso.instaeclipse.utils.core.StartupIdle.armFallback();
-        // Setup context, preferences
         SettingsManager.init(context);
-        // Settings changed in the companion while Instagram wasn't running.
         if (CompanionSync.pull(context)) {
             keptPlan = null;
             keptSplit = null;
         }
-        // ...and the other way: bring the companion's copy up to date with changes
-        // made in this menu (newer side wins per key, see PrefsMerge).
         if (LegacyPaths.has(LegacyPaths.IDLE) || !CompanionSync.remotePrefsAvailable()) {
             CompanionSync.pushAsync(context);
         } else {
             StartupIdle.afterFirstFrame(() -> CompanionSync.pushAsync(context), IDLE_DELAY_MS);
         }
-        // ...and while it sat frozen in the background: check again on every resume.
         if (application instanceof android.app.Application) {
             ((android.app.Application) application).registerActivityLifecycleCallbacks(
                     new android.app.Application.ActivityLifecycleCallbacks() {
@@ -299,28 +264,19 @@ public class Module {
             ps.reso.instaeclipse.utils.core.CacheAutoClear.register((android.app.Application) application);
         }
 
-        // In-app log viewer: every ModuleLog.line(...) call across the hook codebase
-        // appends to this buffer, which the companion app can read via IPC.
         Logging.init(context, "instaeclipse_module.log");
-        // Mirror the buffer into a file owned by the companion app (LogMirrorProvider)
-        // so its Logs tab works even when Instagram is backgrounded or killed.
         if (LegacyPaths.has(LegacyPaths.IDLE) || StartupIdle.previousStartEndedEarly(context)) {
             Logging.enableMirror(context);
         } else {
             StartupIdle.afterFirstFrame(() -> Logging.enableMirror(context), IDLE_DELAY_MS);
         }
-        // Logs the previous exits and saves the last crash's tombstone and Breakpad
-        // minidumps to the companion, before Instagram uploads and deletes them.
         ps.reso.instaeclipse.utils.log.CrashForensics.collectAsync(context);
 
-        // Process-wide stores, before any hook or I18n.t: module strings and icons come
-        // from the loaded APK (LSPatch-safe), and the unsent/reel stores load once here.
         ps.reso.instaeclipse.utils.core.ModuleResources.init(context, moduleSourceDir);
         ps.reso.instaeclipse.utils.ghost.UnsentLog.init(context);
         ps.reso.instaeclipse.utils.ghost.UnsentMessageStore.init(context);
         ps.reso.instaeclipse.mods.reels.DailyReelLimit.init(context);
 
-        // Activate the sync bridge to listen to FeaturesFragment updates
         registerSyncReceiver(context);
 
         try {
@@ -442,10 +398,6 @@ public class Module {
         thread.start();
     }
 
-    /**
-     * Injects a dynamic receiver into Instagram to listen for settings changes
-     * sent from the InstaEclipse companion app (FeaturesFragment staging system).
-     */
     private static void registerSyncReceiver(Context context) {
         BroadcastReceiver receiver = new BroadcastReceiver() {
             @Override
@@ -454,14 +406,10 @@ public class Module {
                 String action = intent.getAction();
                 if (applySettingsIntent(ctx, intent)) return;
                 if (CommonUtils.ACTION_REQUEST_LOGS.equals(action)) {
-                    // Re-attach/rewrite the companion-side mirror file first (covers the companion
-                    // having cleared its data), then reply; the companion re-reads the file on
-                    // reply and only uses the inline text as a fallback.
                     Logging.refreshMirror(ctx, () -> {
                         try {
                             Intent reply = new Intent(CommonUtils.ACTION_LOGS_REPLY);
                             reply.setPackage(CommonUtils.MY_PACKAGE_NAME);
-                            // Mirror active -> companion reads the file; skip the big (binder-limited) extra.
                             reply.putExtra(CommonUtils.EXTRA_LOG_TEXT, Logging.isMirrorActive() ? "" : Logging.getSnapshotForIpc());
                             reply.putExtra(CommonUtils.EXTRA_LOG_SOURCE, ctx.getPackageName());
                             ps.reso.instaeclipse.utils.core.IpcSecurity.echoNonce(intent, reply);
@@ -503,7 +451,6 @@ public class Module {
                             bundle.putInt(entry.getKey(), (Integer) entry.getValue());
                         }
                     }
-                    // Today's reel count for the companion's Distraction-Free page (not a setting).
                     if (ps.reso.instaeclipse.mods.reels.DailyReelLimit.isInitialized()) {
                         bundle.putInt("dailyReelsWatchedToday", ps.reso.instaeclipse.mods.reels.DailyReelLimit.watchedToday());
                         bundle.putString("dailyReelUsageDate", java.time.LocalDate.now().toString());
@@ -557,7 +504,6 @@ public class Module {
         filter.addAction("ps.reso.instaeclipse.ACTION_REQUEST_PREFS");
         filter.addAction("ps.reso.instaeclipse.ACTION_EXPORT_CONFIG");
 
-        // Only the companion (holding the signature permission) can reach this receiver.
         ps.reso.instaeclipse.utils.core.IpcSecurity.registerCompanionOnlyReceiver(context, receiver, filter);
     }
 

@@ -14,16 +14,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
-/**
- * Back leaves Home (#272): on the home feed, scrolled down, Back leaves Instagram instead of
- * scrolling the feed to the top.
- *
- * <p>The main activity's onBackPressed is hooked by name (an Android method, so no lookup). Back is
- * taken over only when the home feed (MainFeedRecyclerView, a named class) is what is in front:
- * the view under the middle of the screen belongs to it and no bottom sheet (comments, menus) is
- * open. A profile, a story or a sheet opened from the feed covers it, so Back keeps going to
- * Instagram there. At the top of the feed Instagram already leaves, so that is left alone too.
- */
 public final class BackLeavesHomeHook {
 
     private static final String TAG = "(IE|BackLeavesHome) ";
@@ -85,7 +75,6 @@ public final class BackLeavesHomeHook {
         return false;
     }
 
-    /** The front-most shown view under (x, y): later children draw on top. */
     private static View topViewAt(ViewGroup group, int x, int y) {
         Rect r = new Rect();
         for (int i = group.getChildCount() - 1; i >= 0; i--) {
@@ -94,8 +83,6 @@ public final class BackLeavesHomeHook {
             if (child instanceof ViewGroup g) {
                 View inner = topViewAt(g, x, y);
                 if (inner != null) return inner;
-                // An empty, see-through container (Instagram keeps a few stacked over the screen)
-                // covers nothing: look at what is under it.
                 if (g.getBackground() == null && !g.isClickable()) continue;
                 return child;
             }

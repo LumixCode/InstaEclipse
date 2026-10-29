@@ -1,6 +1,5 @@
 package ps.reso.instaeclipse.mods.reels;
 
-/** Daily viewing state shared by every reel surface, independent of Android and network prefetch. */
 final class DailyReelUsage {
     static final int DEFAULT_LIMIT = 100;
     static final int MAX_LIMIT = 10_000;
@@ -49,7 +48,6 @@ final class DailyReelUsage {
     boolean blocksPlayback(String mediaId, int limit) {
         int allowance = validLimit(limit);
         if (count < allowance) return false;
-        // Let the final counted reel finish and loop; selecting another reel closes the viewer.
         return count > allowance || mediaId == null || mediaId.isEmpty() || !mediaId.equals(lastMediaId);
     }
 }

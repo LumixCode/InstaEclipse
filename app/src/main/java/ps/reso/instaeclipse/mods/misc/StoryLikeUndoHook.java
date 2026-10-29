@@ -26,49 +26,20 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
-/**
- * Undo window for story likes, like {@link LikeUndoHook}'s for posts (same setting, same wait): a
- * story like is held for {@link LikeUndoHook#DELAY_MS} with its heart blue, then sent through
- * Instagram's own path and the heart is Instagram's red. Tapping the heart again in that time takes
- * it back: neither the like nor the unlike is sent. A like still held when the story moves on or
- * the viewer closes is sent when its wait ends.
- *
- * <p>Stories like through their own pipeline on 451 (the MVVM story viewer). The footer's heart
- * (StoryLikeButtonViewComponent, X.02E2: an ImageView, id toolbar_like_button) asks its view model
- * (X.01IO) to toggle; the view model asks the pending-story-likes store (X.00lL,
- * "pending_story_likes") whether the story is liked and calls StoryLikeRepository's like
- * (X.01I8.A0O: source, Media, LIKED or NOT_LIKED, superlike count). That call flips the story's
- * local like state and launches performStoryLike, which files the like in the store and sends it
- * (send_story_like). The whole call is held, so nothing of the like exists while it waits: no
- * request, and no record a store flush or a restart could send. Meanwhile the store's check answers
- * "liked" for it, so the heart shows liked and a second tap is an unlike, which takes it back.
- * Superlikes (a count of hearts) are not held.
- *
- * <p>Anchors: the performStoryLike coroutine's "on_story_like_success" + "transient_retry_queued"
- * (the repository call is what builds it), the store's one boolean method using "send_story_like",
- * and the button's "StoryLikeButtonViewComponent" name (its bind is its one (Object)V method; the
- * state it binds carries the story's media id). Sponsored stories still like through the old
- * viewer's path (X.046n, SponsoredStoriesLikeButtonBinder) and are not held.
- */
 public class StoryLikeUndoHook {
 
     private static final String TAG = "(InstaEclipse | LikeUndo): ";
     private static final String CACHE_KEY = "StoryLikeUndo_v1";
     private static final String MEDIA = "com.instagram.feed.media.Media";
-    /** The hooked method being called through on purpose, which its own hook lets pass. */
     private static final ThreadLocal<Member> REPLAYING = new ThreadLocal<>();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
-    /** Held story likes by media id: the store's check is given other objects for the same story. */
     private static final PendingLikes<HeldLike> pending = PendingLikes.byId();
 
     private static Class<?> mediaClass;
     private static Method mediaId;
-    /** Per class, the field holding the Media of a liked-check argument (empty: none). */
     private static final Map<Class<?>, Field[]> treeMedia = new ConcurrentHashMap<>();
-    /** The bound state's media id field, for its class. */
     private static volatile Field stateId;
 
-    /** A like waiting out its grace period, and its blue heart (main thread). */
     private static final class HeldLike {
         final Member method;
         final Object self;
@@ -115,9 +86,7 @@ public class StoryLikeUndoHook {
         ModuleLog.detail(TAG + "story likes hooked: " + name(like) + ", liked check " + name(check) + ", button " + name(bind));
     }
 
-    /** The repository's like call, the store's liked check and the like button's bind, in that order. */
     private static List<Method> find(ClassLoader loader) throws Throwable {
-        // StoryLikeRepository.performStoryLike: the repository's like call is what builds it.
         Found perform = only(DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .name("invokeSuspend").usingStrings("on_story_like_success", "transient_retry_queued"))), "story like coroutine");
         Method like = null;
@@ -132,10 +101,8 @@ public class StoryLikeUndoHook {
             }
         }
         if (like == null) throw new IllegalStateException("story like call not found");
-        // The pending-story-likes store's "is this story liked" check.
         Found check = only(DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("send_story_like").returnType("boolean").paramCount(1))), "story liked check");
-        // The like button: its name, and its bind (its one (Object)V method).
         Found named = only(DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("StoryLikeButtonViewComponent").returnType("java.lang.String").paramCount(0))), "story like button");
         Method bind = null;
@@ -160,7 +127,6 @@ public class StoryLikeUndoHook {
         return methods.get(0);
     }
 
-    /** Holds likes, takes them back on an unlike while they wait. */
     private static void hookLike(Method like) {
         final int mediaAt = paramAt(like, mediaClass), stateAt = stateAt(like),
                 countAt = paramAt(like, Integer.class), sourceAt = enumAt(like, "SUPERLIKE");
@@ -196,10 +162,6 @@ public class StoryLikeUndoHook {
         });
     }
 
-    /**
-     * The store's check answers "liked" for a held like: the heart shows it liked, and the button's
-     * next tap is an unlike (which takes it back).
-     */
     private static void hookCheck(Method check) {
         XposedBridge.hookMethod(check, new XC_MethodHook() {
             @Override
@@ -211,7 +173,6 @@ public class StoryLikeUndoHook {
         });
     }
 
-    /** Each bind of the like button: its heart is blue while its story's like is held. */
     private static void hookButton(Method bind) throws NoSuchFieldException {
         Field button = null;
         for (Field f : bind.getDeclaringClass().getDeclaredFields()) {
@@ -239,16 +200,13 @@ public class StoryLikeUndoHook {
         });
     }
 
-    /** Holds the like for DELAY_MS with its heart blue, then sends it; the heart turns red. */
     private static void hold(Member method, Object self, Object[] args, String id) {
         ModuleLog.detail(TAG + "story like held for " + LikeUndoHook.DELAY_MS + " ms");
         HeldLike like = new HeldLike(method, self, args);
         like.fire = () -> {
             like.clearTint();
-            if (pending.release(id, like)) send(like); // else taken back or replaced
+            if (pending.release(id, like)) send(like);
         };
-        // Held at once, on the hook's thread: Instagram's next liked check (a redraw of the heart,
-        // or the next tap) must already find it.
         pending.hold(id, like);
         like.tint = LikeHeartTint.showById(id);
         Runnable start = () -> {
@@ -256,7 +214,6 @@ public class StoryLikeUndoHook {
         };
         if (Looper.myLooper() == Looper.getMainLooper()) start.run();
         else MAIN.post(start);
-        // Safety net, as for post likes: a story like still held after its window goes out now.
         MAIN.postDelayed(() -> {
             if (!pending.isHeld(id, like)) return;
             ModuleLog.warn(TAG + "A held story like was still waiting after " + LikeUndoHook.DELAY_MS + " ms, so it was sent now");
@@ -264,7 +221,6 @@ public class StoryLikeUndoHook {
         }, LikeUndoHook.DELAY_MS + LikeHeartTint.EXPIRE_GRACE_MS);
     }
 
-    /** Ends the wait of the like held for {@code id} without sending it; false when none is held. */
     private static boolean drop(String id) {
         HeldLike held = pending.cancel(id);
         if (held == null) return false;
@@ -277,7 +233,6 @@ public class StoryLikeUndoHook {
 
     private static void send(HeldLike like) {
         try {
-            // Called through the hook (which lets it pass while replaying), as LikeUndoHook does.
             REPLAYING.set(like.method);
             Method m = (Method) like.method;
             m.setAccessible(true);
@@ -298,7 +253,6 @@ public class StoryLikeUndoHook {
         }
     }
 
-    /** The Media a liked-check argument wraps (the story viewer hands it the story's Media). */
     private static Object mediaIn(Object tree) {
         if (tree == null) return null;
         if (mediaClass.isInstance(tree)) return tree;
@@ -311,13 +265,12 @@ public class StoryLikeUndoHook {
         if (f.length == 0) return null;
         try {
             Object media = f[0].get(tree);
-            return mediaClass.isInstance(media) ? media : null; // the sponsored viewer passes another tree
+            return mediaClass.isInstance(media) ? media : null;
         } catch (Throwable t) {
             return null;
         }
     }
 
-    /** The field of {@code type} (or its superclasses) typed as something a Media is (its data tree); null if none. */
     private static Field mediaField(Class<?> type) {
         for (Class<?> c = type; c != null && c != Object.class; c = c.getSuperclass()) {
             for (Field field : c.getDeclaredFields()) {
@@ -330,7 +283,6 @@ public class StoryLikeUndoHook {
         return null;
     }
 
-    /** The story a like button state is for: its one String field, the media id. */
     private static String idOfState(Object state) {
         if (state == null) return null;
         Field f = stateId;
@@ -338,7 +290,7 @@ public class StoryLikeUndoHook {
             f = null;
             for (Field field : state.getClass().getDeclaredFields()) {
                 if (Modifier.isStatic(field.getModifiers()) || field.getType() != String.class) continue;
-                if (f != null) return null; // two strings: which is the story can't be told
+                if (f != null) return null;
                 f = field;
             }
             if (f == null) return null;
@@ -358,12 +310,10 @@ public class StoryLikeUndoHook {
         return -1;
     }
 
-    /** The LIKED / NOT_LIKED argument. */
     private static int stateAt(Method m) {
         return enumAt(m, "NOT_LIKED");
     }
 
-    /** The enum argument that has a constant named {@code constant}; -1 if none. */
     private static int enumAt(Method m, String constant) {
         Class<?>[] p = m.getParameterTypes();
         for (int i = 0; i < p.length; i++) {

@@ -16,42 +16,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
-/**
- * Profile spoofer: your own follower / following / post counts and a verified badge, on this
- * phone only. Nothing is sent to Instagram.
- *
- * <p>Instagram's User model reads each field by the hash of its JSON name (452: A6P() Integer
- * follower_count, A6Q() Integer following_count, A6W() Integer media_count, A61() Boolean
- * is_verified), so the getters are found by {@code fieldName.hashCode()} like the module's other
- * User getters. Their results are replaced only for the logged-in account's own User: its id
- * (the User's one final String field) is compared with the account of the screen in front, the
- * part after ':' of a resumed fragment's IgSessionManager.SESSION_TOKEN_KEY argument.
- *
- * <p>The profile header's follower / following numbers come from a separate header model, so they
- * are also set on the views themselves (profile_header_familiar_*_value) while your own profile is
- * shown (the account switcher's chevron, action_bar_title_chevron, is only there), and the badge
- * is drawn after your username in the action bar.
- *
- * <p>Name, username, bio and picture are changed only on your own profile screen, and only in
- * what is drawn, never in the User model, so DMs, comments, Edit profile and anything sent to
- * Instagram keep the real values:
- * <ul>
- *   <li>username: the action bar title next to the chevron (action_bar_title);</li>
- *   <li>name: profile_header_full_name_above_vanity / profile_header_full_name (TextViews);</li>
- *   <li>picture: row_profile_header_imageview (a CircularImageView). Instagram loads the real
- *       picture asynchronously, so ImageView.setImageDrawable/setImageBitmap on that view put the
- *       spoofed one back right away;</li>
- *   <li>bio: drawn by Compose (profile_user_info_compose_view, ProfileBioComponent), so there is
- *       no TextView. Its text comes from the header's bio UI state, a small immutable class
- *       (452: X.01N1) built by the header binder from the profile's GraphQL model; it is the type
- *       of a ProfileBioComponent composable parameter. Its constructor gets (…, id, username,
- *       bio, …, mention/hashtag entities, …): when the id is your own account, the bio argument
- *       is replaced and the entities (offsets into the real bio) are dropped. That object only
- *       feeds the profile header's bio composable; Edit profile reads its own model, so saving
- *       it never sends the fake bio. A legacy bio TextView (profile_header_bio_text) is handled
- *       like the name.</li>
- * </ul>
- */
 public final class ProfileSpoofHook {
 
     private static final String TAG = "(IE|ProfileSpoof) ";
@@ -60,7 +24,6 @@ public final class ProfileSpoofHook {
 
     private static volatile String selfId;
 
-    /** The logged-in account's user id (null until a screen of it has resumed). */
     public static String selfId() { return selfId; }
     private static volatile Field idField;
     private static volatile boolean idFieldSearched;
@@ -103,7 +66,6 @@ public final class ProfileSpoofHook {
         return own ? bio : null;
     }
 
-    /** Finds User's zero-arg getter for {@code field} and hooks it; returns how many were hooked. */
     private static int hook(ClassLoader cl, String field, String cacheKey,
                             StringBuilder log, java.util.List<Class<?>> types, int which) {
         try {
@@ -138,7 +100,6 @@ public final class ProfileSpoofHook {
         }
     }
 
-    /** The value to show for getter {@code which}, boxed to {@code type}; null = leave it alone. */
     private static Object spoofed(int which, Class<?> type) {
         if (which == 3) return FeatureFlags.spoofVerified ? Boolean.TRUE : null;
         int v = which == 0 ? FeatureFlags.spoofFollowers : which == 1 ? FeatureFlags.spoofFollowing : FeatureFlags.spoofPosts;
@@ -152,7 +113,6 @@ public final class ProfileSpoofHook {
         return self.equals(userId(user));
     }
 
-    /** The User's id: its final String field holding digits (A06 on 452). */
     private static String userId(Object user) {
         Field f = idField;
         if (f == null) {
@@ -166,7 +126,6 @@ public final class ProfileSpoofHook {
                             if (c.get(user) instanceof String s && s.matches("\\d+")) { idField = c; break; }
                         } catch (Throwable ignored) {}
                     }
-                    // A User without an id yet can't tell us; look again on the next one.
                     if (idField != null) ModuleLog.detail(TAG + "user id field=" + idField.getName());
                 }
                 f = idField;
@@ -176,7 +135,6 @@ public final class ProfileSpoofHook {
         try { return (String) f.get(user); } catch (Throwable t) { return null; }
     }
 
-    /** Keeps {@link #selfId} on the account of the screen in front (account switches included). */
     private static boolean trackAccount(ClassLoader cl) {
         try {
             Class<?> fragment = Class.forName("androidx.fragment.app.Fragment", false, cl);
@@ -200,8 +158,6 @@ public final class ProfileSpoofHook {
             return false;
         }
     }
-
-    // ---- View level: counts, username, name, bio TextView, picture ------------------------
 
     private static int followersId, followingId, titleId, chevronId, nameId, nameAltId, bioTextId, avatarId, tabAvatarId;
     private static final ThreadLocal<Boolean> SETTING = new ThreadLocal<>();
@@ -271,7 +227,6 @@ public final class ProfileSpoofHook {
         }
     }
 
-    /** The real picture arrives asynchronously (and again on every rebind): put ours back. */
     private static void hookAvatarView() {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam param) {
@@ -284,7 +239,6 @@ public final class ProfileSpoofHook {
                 if (followersId == 0) resolveIds(iv);
                 if (id == tabAvatarId && tabAvatarId != 0) { watchTabAvatar(iv); return; }
                 if (id != avatarId) return;
-                // Not on screen yet during the first bind: try again once it is laid out.
                 if (!applyAvatar(iv)) iv.post(() -> applyAvatar(iv));
             }
         };
@@ -303,13 +257,11 @@ public final class ProfileSpoofHook {
         nameAltId = r.getIdentifier("profile_header_full_name", "id", pkg);
         bioTextId = r.getIdentifier("profile_header_bio_text", "id", pkg);
         avatarId = r.getIdentifier("row_profile_header_imageview", "id", pkg);
-        tabAvatarId = r.getIdentifier("tab_avatar", "id", pkg); // the bottom bar's profile tab picture
-        // 0 never matches a real id; followersId last, it marks the lookup as done.
+        tabAvatarId = r.getIdentifier("tab_avatar", "id", pkg);
         int f = r.getIdentifier("profile_header_familiar_followers_value", "id", pkg);
         followersId = f != 0 ? f : -1;
     }
 
-    /** Your own profile is on screen: the account switcher chevron is shown. */
     private static boolean ownProfileShown(android.view.View v) {
         return shownChevron(v) != null;
     }
@@ -332,7 +284,6 @@ public final class ProfileSpoofHook {
         return x.isShown() && x.getGlobalVisibleRect(r) && r.width() > 0 && r.height() > 0;
     }
 
-    /** The title is the one next to the shown chevron (not another screen's action bar title). */
     private static boolean besideChevron(android.view.View title) {
         android.view.ViewParent p = title.getParent();
         for (int i = 0; i < 5 && p instanceof android.view.ViewGroup g; i++, p = g.getParent()) {
@@ -342,10 +293,8 @@ public final class ProfileSpoofHook {
         return false;
     }
 
-    /** Your username as Instagram shows it (the action bar title before we change it). */
     private static volatile String realUsername, appliedUsername;
 
-    /** Your real username once your profile has been shown (for the editor's preview), or null. */
     public static String knownUsername() { return realUsername; }
 
     private static void apply(android.widget.TextView tv) {
@@ -353,9 +302,6 @@ public final class ProfileSpoofHook {
             if (!tv.isAttachedToWindow() || !tv.isShown() || !ownProfileShown(tv)) return;
             int id = tv.getId();
             if (id == titleId) {
-                // The username only in the title next to the chevron (other screens' action bars
-                // reuse this id); the badge as before.
-                // Other screens' action bars reuse this id: only the title beside the chevron.
                 if (!besideChevron(tv)) { badge(tv, false); return; }
                 {
                     String user = FeatureFlags.spoofUsername;
@@ -368,13 +314,11 @@ public final class ProfileSpoofHook {
                     }
                 }
                 badge(tv, FeatureFlags.spoofVerified);
-                // The header may have bound before your profile was on screen: catch up.
                 applyHeader(tv.getRootView());
                 return;
             }
             if (id == nameId || id == nameAltId) {
                 String name = FeatureFlags.spoofName;
-                // An empty name view is hidden by Instagram when you have no name; only fill a shown one.
                 if (name != null && !name.isEmpty()) setText(tv, name);
                 return;
             }
@@ -395,7 +339,6 @@ public final class ProfileSpoofHook {
         try { tv.setText(text); } finally { SETTING.remove(); }
     }
 
-    /** Name, legacy bio and picture views already bound in the header. */
     private static void applyHeader(android.view.View root) {
         for (int id : new int[]{nameId, nameAltId, bioTextId}) {
             if (id == 0) continue;
@@ -407,18 +350,13 @@ public final class ProfileSpoofHook {
                 && root.findViewById(avatarId) instanceof android.widget.ImageView iv) applyAvatar(iv);
     }
 
-    /**
-     * The profile tab's avatar (bottom right) shows the spoofed picture while your profile is on
-     * screen, and Instagram's own picture again on other screens. Checked on each layout of the
-     * window (switching screens lays it out), not every frame.
-     */
     private static final java.util.WeakHashMap<android.widget.ImageView, android.graphics.drawable.Drawable> TAB_REAL = new java.util.WeakHashMap<>();
     private static final java.util.Set<android.widget.ImageView> TAB_WATCHED =
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
     private static void watchTabAvatar(android.widget.ImageView iv) {
         if (!(iv.getDrawable() instanceof ps.reso.instaeclipse.utils.profile.SpoofAvatar.CircleDrawable))
-            TAB_REAL.put(iv, iv.getDrawable()); // Instagram set its own picture: remember it
+            TAB_REAL.put(iv, iv.getDrawable());
         if (TAB_WATCHED.add(iv))
             iv.getViewTreeObserver().addOnGlobalLayoutListener(() -> syncTabAvatar(iv));
         iv.post(() -> syncTabAvatar(iv));
@@ -474,7 +412,6 @@ public final class ProfileSpoofHook {
         } catch (Throwable ignored) { }
     }
 
-    /** Shows the spoofed picture on the header avatar; false when your profile isn't on screen. */
     private static boolean applyAvatar(android.widget.ImageView iv) {
         try {
             if (!iv.isAttachedToWindow() || !iv.isShown() || !ownProfileShown(iv)) return false;
@@ -491,7 +428,6 @@ public final class ProfileSpoofHook {
         }
     }
 
-    /** After a change in the editor: apply it to your profile if it is on screen now. */
     public static void refreshNow() {
         try {
             android.app.Activity a = UIHookManager.getCurrentActivity();
@@ -510,7 +446,6 @@ public final class ProfileSpoofHook {
         } catch (Throwable ignored) {}
     }
 
-    /** For the bio state hook: your own profile is in front (current activity's window). */
     private static boolean ownProfileInFront() {
         try {
             android.app.Activity a = UIHookManager.getCurrentActivity();
@@ -523,7 +458,6 @@ public final class ProfileSpoofHook {
         }
     }
 
-    /** Instagram's style: 1,234 · 12.3K · 1.2M. */
     public static String shortCount(int n) {
         if (n < 10_000) return java.text.NumberFormat.getIntegerInstance().format(n);
         if (n < 1_000_000) return trim(n / 1000.0) + "K";
@@ -552,8 +486,6 @@ public final class ProfileSpoofHook {
         }
     }
 
-    /** Instagram's verified seal: a blue scalloped circle with a white check, painted directly so
-     *  the theme engine (which recolors shape drawables) leaves it blue. */
     public static final class VerifiedBadge extends android.graphics.drawable.Drawable {
         private final android.graphics.Paint fill = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         private final android.graphics.Paint check = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);

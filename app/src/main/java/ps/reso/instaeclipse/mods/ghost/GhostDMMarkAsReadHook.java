@@ -21,7 +21,6 @@ public class GhostDMMarkAsReadHook {
 
     static final String GHOST_BTN_TAG = "ie_ghost_seen_btn";
 
-    // Cached once on first use — resource IDs are constant for a given app install.
     private static volatile int sCachedContainerId = 0;
 
     public void install(ClassLoader classLoader) {
@@ -57,10 +56,8 @@ public class GhostDMMarkAsReadHook {
 
         int size = dp(ctx, 35);
 
-        // We use FrameLayout params because most Instagram composer parents are FrameLayouts
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(size, size);
 
-        // POSITION: Left side, slightly elevated so it doesn't block the text input or mic
         lp.gravity = Gravity.CENTER_VERTICAL | Gravity.START;
         lp.setMargins(dp(ctx, 5), dp(ctx, 8), 0, 0);
 

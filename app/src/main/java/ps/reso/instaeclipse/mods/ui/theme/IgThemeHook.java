@@ -23,31 +23,20 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Custom Theme: hooks the standard Android resource/color-resolution APIs (Resources.Theme,
- * Resources, Context, TypedArray) plus Activity/PhoneWindow lifecycle, so a custom palette is
- * substituted everywhere Instagram resolves a themed color. Deliberately limited to stable
- * Android SDK surfaces — Instagram's own Compose/React-Native rendering paths need separate,
- * per-version reverse-engineered hooks and are not covered here.
- */
 public class IgThemeHook {
 
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
-    private static Runnable pendingRecreate;   // main thread only
-    private static boolean themeShown;         // main thread only: was the current screen themed?
-    private static boolean lazyTried;          // main thread only: one live install attempt at most
-    private static volatile ClassLoader hostLoader; // lets a live "theme on" install the skipped hooks
+    private static Runnable pendingRecreate;
+    private static boolean themeShown;
+    private static boolean lazyTried;
+    private static volatile ClassLoader hostLoader;
     private static volatile boolean installed;
     private static volatile Field typedArrayResourcesField;
 
     public void install(ClassLoader classLoader) {
         if (installed) return;
         hostLoader = classLoader;
-        // First: hooks installed before a later one throws still theme the screen.
         themeShown = FeatureFlags.customThemeEnabled;
-        // These hooks sit on very hot framework methods (getColor, resolveAttribute); on some
-        // devices (Android 13 / SM-G780G) that makes ART's JIT crash IG, so they are only installed
-        // when the custom theme is on (turning it on later installs them in refreshCurrentActivity).
         if (!FeatureFlags.customThemeEnabled) {
             ModuleLog.detail("(InstaEclipse | Theme): off -> hooks not installed");
             return;
@@ -136,8 +125,6 @@ public class IgThemeHook {
                         Resources res = typedArrayResources(ta);
                         IgThemeEngine.ensureInitialized(res);
                     }
-                    // A TypedArray keeps no attribute ids, only the color resource each value came
-                    // from: theme by that resource's name as Resources.getColor does, else by value.
                     Integer override = IgThemeEngine.colorForResource(ta.getResourceId(index, 0));
                     if (override != null) {
                         param.setResult(override);
@@ -171,9 +158,6 @@ public class IgThemeHook {
         XposedHelpers.findAndHookMethod(Activity.class, "onCreate", Bundle.class, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
-                // Build the remap table before the activity inflates its layout (setContentView runs
-                // inside onCreate); otherwise the first header/feed backgrounds are created unthemed
-                // and then reused from Android's drawable cache.
                 Activity activity = (Activity) param.thisObject;
                 IgThemeEngine.refreshNight(activity);
                 if (!IgThemeEngine.isActive()) return;
@@ -219,16 +203,9 @@ public class IgThemeHook {
         }
     }
 
-    /**
-     * Called after a theme setting changes so it is visible immediately, rather than
-     * waiting for the user to navigate away and back (which is the only other time the
-     * Activity onResume/onCreate hooks would naturally re-run). Main thread only.
-     */
     public static boolean refreshCurrentActivity() {
         boolean wasShown = themeShown;
         themeShown = FeatureFlags.customThemeEnabled;
-        // Theme was off at startup, so install() skipped the hooks: add them now. Only once, since
-        // a partly failed install() would otherwise stack duplicate hooks on every retry.
         if (themeShown && !installed && !lazyTried && hostLoader != null) {
             lazyTried = true;
             new IgThemeHook().install(hostLoader);
@@ -236,18 +213,15 @@ public class IgThemeHook {
         Activity activity = UIHookManager.getCurrentActivity();
         if (activity == null || activity.isFinishing() || activity.isDestroyed()) return false;
         IgThemeEngine.refreshNight(activity);
-        // Off before and after (a restore or reset re-sending the keys): nothing on screen changes.
         if (!wasShown && !themeShown) return false;
         IgThemeEngine.ensureInitialized(activity);
         if (themeShown) {
             IgColorRemapEngine.ensureBuilt(activity);
             applyWindowColors(activity);
         }
-        // Recreate after disabling too: the bar and decor colors applied above outlive the switch.
-        // One theme save arrives as up to three broadcasts, so coalesce them into a single recreate.
         if (pendingRecreate != null) MAIN.removeCallbacks(pendingRecreate);
         pendingRecreate = () -> {
-            pendingRecreate = null;   // must not keep the old Activity alive after it is rebuilt
+            pendingRecreate = null;
             if (!activity.isFinishing() && !activity.isDestroyed()) activity.recreate();
         };
         MAIN.postDelayed(pendingRecreate, 300);

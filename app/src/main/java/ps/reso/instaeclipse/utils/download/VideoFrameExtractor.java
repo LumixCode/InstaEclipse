@@ -11,11 +11,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
 
-/**
- * Worker-only frame decoding from an already verified local video. No network or publication.
- * PNG preserves the decoded ARGB_8888 frame, not the video's original encoded samples. Platform
- * decoding may tone-map HDR or reduce higher bit depth; original HDR/color fidelity is not promised.
- */
 public final class VideoFrameExtractor implements AutoCloseable {
     private static final int PREVIEW_EDGE = 960;
     private static final long MAX_EXPORT_PIXELS = 64L * 1024 * 1024;
@@ -48,7 +43,6 @@ public final class VideoFrameExtractor implements AutoCloseable {
         this.displayHeight = rotation == 90 || rotation == 270 ? metadata.width : metadata.height;
     }
 
-    /** The caller must serialize operations on its worker and close the helper there. */
     public static VideoFrameExtractor open(File verifiedVideo, DownloadEngine.Metadata metadata,
             DownloadEngine.Cancellation cancel) throws FrameFailure {
         worker(); checkCancelled(cancel);
@@ -74,7 +68,6 @@ public final class VideoFrameExtractor implements AutoCloseable {
         }
     }
 
-    /** Returns a display-oriented preview at most 960 pixels on either edge; caller recycles it. */
     public synchronized Bitmap preview(long timeUs, DownloadEngine.Cancellation cancel) throws FrameFailure {
         worker(); ensureOpen(); checkCancelled(cancel);
         long timestamp = timestamp(timeUs);
@@ -100,7 +93,6 @@ public final class VideoFrameExtractor implements AutoCloseable {
         }
     }
 
-    /** Writes a full display-resolution PNG to an absent or empty file; deletes partial output. */
     public synchronized SavedFrame savePng(long timeUs, File destination, DownloadEngine.Cancellation cancel)
             throws FrameFailure {
         worker(); ensureOpen();
@@ -116,7 +108,6 @@ public final class VideoFrameExtractor implements AutoCloseable {
             checkCancelled(cancel);
             if (bitmap == null) throw fail("DECODE", "The full-resolution frame could not be decoded");
             requireArgb8888(bitmap);
-            // The retriever applies the video's display rotation. Never upscale a decoder result.
             if (bitmap.getWidth() != displayWidth || bitmap.getHeight() != displayHeight)
                 throw fail("DIMENSIONS", "The decoder did not return the video's full display resolution");
             try (FileOutputStream output = new FileOutputStream(destination)) {
@@ -148,8 +139,6 @@ public final class VideoFrameExtractor implements AutoCloseable {
                     ? retriever.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST, width, height, params)
                     : retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST, params);
         }
-        // API28/29 lack the time-based BitmapParams overload. Verify the actual returned config;
-        // converting RGB_565 afterward would not restore the lost color precision.
         return width > 0
                 ? retriever.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST, width, height)
                 : retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST);

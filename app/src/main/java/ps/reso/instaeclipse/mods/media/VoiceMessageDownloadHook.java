@@ -36,24 +36,6 @@ import ps.reso.instaeclipse.utils.toast.IeToast;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * Download voice messages from the DM long-press menu (#223).
- *
- * - The menu is built by the static factory of the named class MessageActionsViewModel; its
- *   main action list is a List<LongPressActionData> argument. We add a row built like IG's own
- *   helper (new LongPressActionData(null, style, action, null, null, icon, null, label, ...)),
- *   carried by the action enum value named COPY_TEXT (never offered on voice messages). The row
- *   goes right after the status header: IG moves every row past its 3/7-row cutoff under "More".
- * - The clip is read only from the selected message's own voice payload (the class parsed with
- *   "waveform_data"), never from a quoted/replied-to message. Without that anchor the graph walk
- *   below is the fallback.
- * - Taps of every DM menu renderer end in the dispatcher using
- *   "DirectReportDailyPromptInteractor.reportDailyPrompt" (X.0RAg.A06), which receives the
- *   action and the message; SAVE_MEDIA on a voice message is consumed and downloaded.
- * - Audio URL: the message's AudioInfoIntf (found through its fields / Media) mapped by IG's
- *   serializer (static AudioInfoIntf -> Map using "audio_src_expiration_timestamp_us" +
- *   "waveform_sampling_frequency_hz") → "audio_src".
- */
 public class VoiceMessageDownloadHook {
 
     private static final String TAG = "(IE|VoiceDL) ";
@@ -67,13 +49,8 @@ public class VoiceMessageDownloadHook {
     private static final String TYPED_IMAGE_URL = "com.instagram.model.direct.stickerstore.TypedImageUrl";
     private static final String IMAGE_URL = "com.instagram.common.typedurl.ImageUrl";
     private static final String USER_CACHE = "com.instagram.user.model.UserCache";
-    // Row carrier: an action IG fully wires (click → dispatch) but never offers on voice messages.
     private static final String CARRIER = "COPY_TEXT";
-    // Translate row carrier: a staff-only action every menu renderer dispatches but that never
-    // appears for normal users, so the action alone identifies our tap (COPY_TEXT would be
-    // indistinguishable from IG's own Copy row on text messages).
     private static final String TRANSLATE_CARRIER = "DEBUG";
-    // Bulk unsend row carrier: another staff-only action (never shown to normal users).
     private static final String BULK_CARRIER = "REPORT_BUG_FOR_VISUAL_MEDIA";
 
     private static final String MESSAGE_ID = "com.instagram.model.direct.messageid.MessageIdentifier";
@@ -84,18 +61,13 @@ public class VoiceMessageDownloadHook {
     private static Method audioMapper;
     private static Object saveMediaAction;
     private static final String VOICE_CACHE = "VoiceDL_VoiceMedia";
-    private static volatile Class<?> voiceType;      // the voice payload (X.03jC on 446)
-    private static volatile Field voiceMediaField;   // its Media field (X.03jC.A02 on 446)
-    // The message our Download row was added for in the menu being shown; reset on every menu
-    // build, so IG's own Copy on a later text message is never taken for a voice download.
+    private static volatile Class<?> voiceType;
+    private static volatile Field voiceMediaField;
     private static volatile Object pendingVoice;
-    private static volatile Field primaryActionField; // LongPressActionData's own action (ctor param 3)
+    private static volatile Field primaryActionField;
     private static final Set<String> diagnostics = Collections.synchronizedSet(new HashSet<>());
     private static Class<?> animatedMediaClass, gifUrlClass, storeStickerClass, typedImageUrlClass, imageUrlClass;
-    /** Instagram's user caches (one per signed-in account), kept from their constructor. */
     private static final List<java.lang.ref.WeakReference<Object>> userCaches = new java.util.concurrent.CopyOnWriteArrayList<>();
-    // The sticker / GIF our Download row was added for, and its message; reset with pendingVoice on
-    // every menu build, so a later tap never re-walks recentMessage() (it can be a text reply).
     private static volatile String pendingSticker;
     private static volatile Object pendingStickerMessage;
 
@@ -131,14 +103,12 @@ public class VoiceMessageDownloadHook {
             }
             resolveVoiceModel(cl);
 
-            // message lookup → remember the long-pressed message
             int lookups = 0;
             for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings(": null_direct_message")))) {
                 Class<?> owner = md.getMethodInstance(cl).getDeclaringClass();
                 messageClass = md.getMethodInstance(cl).getReturnType();
                 for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(owner)) {
-                    // static on some builds, instance methods on others (X.0Awd on 452.0.0.33)
                     if (m.getReturnType() != messageClass || Modifier.isAbstract(m.getModifiers())) continue;
                     XposedBridge.hookMethod(m, new XC_MethodHook() {
                         @Override
@@ -156,7 +126,6 @@ public class VoiceMessageDownloadHook {
                 break;
             }
 
-            // menu factory → add our row for voice messages
             Class<?> vm = cl.loadClass(VIEW_MODEL);
             Class<?> data = cl.loadClass(ACTION_DATA);
             Constructor<?> dataCtor = null;
@@ -172,29 +141,23 @@ public class VoiceMessageDownloadHook {
                 XposedBridge.hookMethod(m, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
-                        clearPending(); // the pending targets belong to the menu being built
+                        clearPending();
                         if ((!downloadEnabled() && !FeatureFlags.translateMessages && !FeatureFlags.bulkUnsend) || ctor == null) return;
                         Object msg = MATCH.pressed(messageIds(param.args), System.currentTimeMillis());
-                        // The factory gets the message's content type (VOICE_MEDIA / TEXT / LINK);
-                        // unlike a field scan it can't mistake a text reply to a voice note for voice.
                         String type = contentType(param.args);
                         boolean voice = FeatureFlags.enableVoiceDownload && msg != null
                                 && (type == null || "VOICE_MEDIA".equals(type)) && hasOwnVoice(msg);
                         String sticker = FeatureFlags.enableStickerDownload && !voice && msg != null
                                 && DmMessageMatch.stickerType(type) ? stickerUrl(msg) : null;
-                        // Translate (like comments): hand a text message to the user's translator app.
                         String text = FeatureFlags.translateMessages && !voice && sticker == null && msg != null
                                 && (type == null || "TEXT".equals(type) || "LINK".equals(type)) ? messageText(msg) : null;
                         diagnose("menu-" + (voice ? "voice" : sticker != null ? "sticker" : text != null ? "text" : "none"),
                                 "message=" + (msg != null) + " type=" + type);
                         for (int i = 0; i < param.args.length; i++) {
                             if (!(param.args[i] instanceof List<?> list) || list.isEmpty() || !data.isInstance(list.get(0))) continue;
-                            // Bulk unsend: only on messages IG itself lets you unsend (your own).
                             boolean bulk = FeatureFlags.bulkUnsend && ps.reso.instaeclipse.mods.ghost.BulkUnsend.ready()
                                     && hasRow(list, "UNSEND");
                             if (!voice && sticker == null && text == null && !bulk) return;
-                            // style template: a regular action row (the first item is the
-                            // non-clickable timestamp header)
                             Object template = list.get(0);
                             for (Object r : list) {
                                 String an = actionName(r);
@@ -227,7 +190,6 @@ public class VoiceMessageDownloadHook {
                                 }
                             }
                             if (bulk) {
-                                // styled from IG's own Unsend row, so it keeps the same icon
                                 Object unsendRow = template;
                                 for (Object r : list) if ("UNSEND".equals(actionName(r))) unsendRow = r;
                                 Object row = buildRow(ctor, unsendRow, c, bulkLabel(), "", BULK_CARRIER);
@@ -237,7 +199,7 @@ public class VoiceMessageDownloadHook {
                                     wireRowWhenShown(bulkLabel(), act -> bulkUnsend(act));
                                 }
                             }
-                            if (!copy.equals(list)) param.args[i] = copy; // rows added, or ours moved up
+                            if (!copy.equals(list)) param.args[i] = copy;
                             return;
                         }
                     }
@@ -245,7 +207,6 @@ public class VoiceMessageDownloadHook {
                 factories++;
             }
 
-            // tap dispatcher
             int dispatchers = 0, saveDispatchers = 0;
             for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("DirectReportDailyPromptInteractor.reportDailyPrompt")))) {
@@ -268,8 +229,6 @@ public class VoiceMessageDownloadHook {
                             translate(tctx);
                             return;
                         }
-                        // DM photos/videos: IG's own "Save" goes through our downloader instead (its
-                        // save lands in Pictures/Instagram as IMG_<date>, no username or folder).
                         if (FeatureFlags.enableDmMediaDownload && hasAction(param.args, "SAVE_MEDIA")) {
                             Object media = null, message = null;
                             Context sctx = null;
@@ -294,7 +253,6 @@ public class VoiceMessageDownloadHook {
                             else if (a instanceof Activity act) ctx = act;
                         }
                         if (action == null) return;
-                        // Only a tap on our row in this menu; IG's own Copy keeps working.
                         if (isPendingSticker(msg)) {
                             param.setResult(null);
                             downloadPending(ctx);
@@ -311,8 +269,6 @@ public class VoiceMessageDownloadHook {
                 dispatchers++;
                 saveDispatchers++;
             }
-            // Row taps of the long-press menu go through the static method of the menu controller
-            // that takes a LongPressActionData (MessageActionsController.A02 on 452).
             for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .paramTypes(ACTION_DATA, null, "java.lang.String")))) {
                 Method m = md.getMethodInstance(cl);
@@ -337,13 +293,11 @@ public class VoiceMessageDownloadHook {
                         }
                         if (!downloadEnabled() || !isOurRow(row, downloadLabel(), CARRIER)) return;
                         ModuleLog.probe(TAG + "row tap: " + (pendingSticker != null ? "sticker" : "voice"));
-                        // Not consumed: the action-selected listener that runs next consumes it.
                         downloadPending(null);
                     }
                 });
                 dispatchers++;
             }
-            // "Action selected" listeners: (ActionEnum, String) -> void, e.g. X.0lMj.E5t on 452.
             if (ctor != null) {
                 String actionEnum = ctor.getParameterTypes()[2].getName();
                 for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
@@ -367,8 +321,6 @@ public class VoiceMessageDownloadHook {
                             }
                             if (!downloadEnabled()) return;
                             if (!(param.args[0] instanceof Enum<?> e) || !CARRIER.equals(e.name())) return;
-                            // The listener holds the selected message itself (X.0OJy.A0h on 446); this
-                            // runs before the dispatcher for every DM action, IG's own Copy included.
                             Object msg = messageClass != null
                                     ? VoiceMessageTargetResolver.readTypedField(param.thisObject, messageClass) : null;
                             if (isPendingSticker(msg)) {
@@ -390,15 +342,11 @@ public class VoiceMessageDownloadHook {
                     dispatchers++;
                 }
             }
-            // Compose menu rows: every method that reads the row label field and takes a Kotlin
-            // Function1 click callback (X.0Ssj.A00 on 452). Wrap the callback so a tap on our row
-            // downloads; other rows are passed through untouched.
             int composeRows = 0;
             try {
                 java.lang.reflect.Field labelField = null;
                 for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(data)) {
                     if (f.getType() == String.class && !Modifier.isStatic(f.getModifiers())) {
-                        // label = constructor param 8 (index 7); pick the field set from it
                         Class<?>[] cp = ctor.getParameterTypes();
                         Object style = cp[1].isEnum() ? cp[1].getEnumConstants()[0] : null;
                         Object act = cp[2].getEnumConstants()[0];
@@ -497,10 +445,6 @@ public class VoiceMessageDownloadHook {
         }
     }
 
-    /**
-     * The voice payload class and its Media field, from the payload's JSON parser. Optional: when
-     * it can't be resolved uniquely, audioUrl() falls back to the graph walk.
-     */
     private static void resolveVoiceModel(ClassLoader cl) {
         try {
             String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(VOICE_CACHE) : null;
@@ -534,7 +478,6 @@ public class VoiceMessageDownloadHook {
         }
     }
 
-    /** The field of LongPressActionData set from its own action (ctor param 3), not a secondary one. */
     private static Field findPrimaryActionField(Class<?> data, Class<?> actionType, Object probe, Object action) {
         Field primary = null;
         for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(data)) {
@@ -545,13 +488,12 @@ public class VoiceMessageDownloadHook {
             } catch (Throwable t) {
                 continue;
             }
-            if (primary != null) return null; // ambiguous: keep the any-field fallback
+            if (primary != null) return null;
             primary = f;
         }
         return primary;
     }
 
-    /** Name of the factory's message content-type argument (X.00xJ on 446), or null if absent. */
     private static String contentType(Object[] args) {
         for (Object a : args) {
             if (!(a instanceof Enum<?> e)) continue;
@@ -562,7 +504,6 @@ public class VoiceMessageDownloadHook {
         return null;
     }
 
-    /** The selected message's own voice Media (never a quoted message's), or null. */
     static Object ownVoiceMedia(Object msg) {
         Field media = voiceMediaField;
         Class<?> type = voiceType, message = messageClass;
@@ -576,7 +517,6 @@ public class VoiceMessageDownloadHook {
         }
     }
 
-    /** Whether the message is itself a voice message (its URL is resolved only at tap time). */
     private static boolean hasOwnVoice(Object msg) {
         if (msg == null) return false;
         return voiceType != null ? ownVoiceMedia(msg) != null : audioUrl(msg) != null;
@@ -586,10 +526,6 @@ public class VoiceMessageDownloadHook {
         if (diagnostics.add(reason)) ModuleLog.detail(TAG + reason + ": " + detail);
     }
 
-    /**
-     * The menu renders our row but routes unknown actions to a dismiss-only branch, so attach our
-     * own click handler to the row once it is on screen (found by its label), then close the menu.
-     */
     private static void wireRowWhenShown(String label, java.util.function.Consumer<Activity> onTap) {
         if (composeWrapsRows) return;
         android.app.Activity act = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
@@ -617,7 +553,6 @@ public class VoiceMessageDownloadHook {
         });
     }
 
-    /** The clickable row containing a TextView whose text is exactly {@code label}. */
     private static android.view.View findRow(android.view.View root, String label, int skipId) {
         java.util.ArrayDeque<android.view.View> st = new java.util.ArrayDeque<>();
         st.push(root);
@@ -639,7 +574,6 @@ public class VoiceMessageDownloadHook {
 
     private static volatile String voiceMediaId;
 
-    /** Sender of the voice clip (its Media's owner, like post downloads), else the chat name. */
     private static String voiceUsername(Object message, boolean walk) {
         try {
             if (walk && message != null) {
@@ -680,11 +614,6 @@ public class VoiceMessageDownloadHook {
         return DmMessageMatch.owner(null, null);
     }
 
-    /**
-     * The username of a message's sender, for messages without a Media (stickers, GIFs): the
-     * sender's id, a number or numeric string field of the message, is looked up in Instagram's
-     * user caches (id -> User).
-     */
     private static String senderUsername(Object message) {
         if (message == null || userCaches.isEmpty()) return null;
         try {
@@ -723,11 +652,6 @@ public class VoiceMessageDownloadHook {
         return null;
     }
 
-    /**
-     * The username of the open one-to-one chat, for messages without a Media (stickers, GIFs):
-     * the thread header's subtitle (header_subtitle) names it. Group chats show a member count
-     * there instead, which isn't a username, so they fall back to the chat's title.
-     */
     private static String chatUsername() {
         try {
             Activity a = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
@@ -745,8 +669,6 @@ public class VoiceMessageDownloadHook {
         }
     }
 
-    /** Our injected row with this label (carried by the CARRIER action, so IG's own rows with the
-     *  same text, e.g. its native "Translate", never match). */
     private static boolean isOurRow(Object row, String label, String carrier) {
         try {
             Field lf = labelFieldRef;
@@ -793,27 +715,23 @@ public class VoiceMessageDownloadHook {
         return c != null ? I18n.t(c, R.string.ig_bulk_unsend_row) : "Unsend multiple";
     }
 
-    /** Opens the bulk-unsend picker for the long-pressed message (several tap paths fire). */
     private static void bulkUnsend(Activity act) {
         if (System.currentTimeMillis() - lastBulkAt < 1500) return;
         lastBulkAt = System.currentTimeMillis();
         Object msg = pendingBulk != null ? pendingBulk : recentMessage();
         Activity a = act != null ? act : ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
         if (a == null) return;
-        // after the menu has closed
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
                 () -> ps.reso.instaeclipse.mods.ghost.BulkUnsend.show(a, msg), 250);
     }
 
-    /** True when the menu list has a row carrying IG's {@code action}. */
     private static boolean hasRow(List<?> list, String action) {
         for (Object r : list) if (action.equals(actionName(r))) return true;
         return false;
     }
 
-    /** Hands the long-pressed message's text to the user's translator app (same as comments). */
     private static void translate(Context ctx) {
-        if (System.currentTimeMillis() - lastTranslateAt < 1500) return; // several tap paths fire
+        if (System.currentTimeMillis() - lastTranslateAt < 1500) return;
         lastTranslateAt = System.currentTimeMillis();
         String text = pendingText;
         if (text == null) {
@@ -829,17 +747,11 @@ public class VoiceMessageDownloadHook {
                 () -> ps.reso.instaeclipse.utils.core.TextTranslator.translate(host, t));
     }
 
-    /**
-     * The message's own text, found by shape rather than by (obfuscated) name: a String field
-     * declared on the message object whose value is repeated inside its inner message model
-     * (wrapper + model both carry the text). Ids ("mid.…", digits) are skipped. Falls back to the
-     * single non-id String field when nothing repeats.
-     */
     public static String messageText(Object msg) {
         try {
             List<String> own = new ArrayList<>();
             List<Object> children = new ArrayList<>();
-            boolean textType = false; // the message type enum (TEXT on 451); skips media/stickers
+            boolean textType = false;
             for (Class<?> k = msg.getClass(); k != null && k != Object.class; k = k.getSuperclass()) {
                 for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(k)) {
                     if (Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive()) continue;
@@ -858,8 +770,6 @@ public class VoiceMessageDownloadHook {
                         if (Modifier.isStatic(f.getModifiers()) || f.getType() != String.class) continue;
                         try { f.setAccessible(true); Object v = f.get(c); if (v instanceof String s) nested.add(s); } catch (Throwable ignored) {}
                     }
-            // The text is stored twice on 451 (a field of the message class and one of its base
-            // class); count both that and copies in a nested model.
             java.util.Map<String, Integer> seenCount = new java.util.HashMap<>();
             for (String s : own) seenCount.merge(s, 1, Integer::sum);
             String best = null;
@@ -892,9 +802,8 @@ public class VoiceMessageDownloadHook {
 
     private static volatile long lastDownloadAt;
 
-    /** Downloads the voice clip of {@code msg} (fallback: the message our row was added for). */
     private static void downloadVoice(Context ctx, Object msg) {
-        if (System.currentTimeMillis() - lastDownloadAt < 1500) return; // several tap paths fire
+        if (System.currentTimeMillis() - lastDownloadAt < 1500) return;
         lastDownloadAt = System.currentTimeMillis();
         if (ctx == null) ctx = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
         if (ctx == null) return;
@@ -906,7 +815,6 @@ public class VoiceMessageDownloadHook {
                     I18n.t(c, R.string.ig_voice_download_unavailable), Toast.LENGTH_SHORT).show());
             return;
         }
-        // Name the file after the clip's own Media (sender + media id), not a graph walk.
         Object media = ownVoiceMedia(msg);
         String user = media != null ? FeedVideoDownloadHook.extractUsernameFromMediaObject(media) : null;
         String id = null;
@@ -925,7 +833,6 @@ public class VoiceMessageDownloadHook {
         FeedVideoDownloadHook.downloadAudio(ctx, url, name, user);
     }
 
-    /** Downloads the sticker / GIF {@code url} of {@code message} (several tap paths fire). */
     private static void downloadStickerOnce(Context ctx, String url, Object message) {
         if (url == null || System.currentTimeMillis() - lastDownloadAt < 1500) return;
         lastDownloadAt = System.currentTimeMillis();
@@ -934,17 +841,12 @@ public class VoiceMessageDownloadHook {
         downloadSticker(ctx, url, message);
     }
 
-    /** A tap on our Download row: the sticker / GIF or the voice clip the row was added for. */
     private static void downloadPending(Context ctx) {
         String sticker = pendingSticker;
         if (sticker != null) downloadStickerOnce(ctx, sticker, pendingStickerMessage);
         else if (FeatureFlags.enableVoiceDownload) downloadVoice(ctx, pendingVoice);
     }
 
-    /**
-     * Whether a tap is for the sticker / GIF our row was added for: the tap's own message (null on
-     * paths that carry none) must be that message, or hold that same sticker.
-     */
     private static boolean isPendingSticker(Object msg) {
         String url = pendingSticker;
         return url != null && (msg == null || msg == pendingStickerMessage || url.equals(stickerUrl(msg)));
@@ -958,7 +860,6 @@ public class VoiceMessageDownloadHook {
 
     private static final java.util.regex.Pattern URL_SIZE = java.util.regex.Pattern.compile("[-.]w(\\d{2,5})h(\\d{2,5})");
 
-    /** Pixel area named in a CDN URL's cache key ("...-w1080h1920..."), or 0 when it has none. */
     private static long urlArea(String url) {
         java.util.regex.Matcher m = URL_SIZE.matcher(url);
         long best = 0;
@@ -966,7 +867,6 @@ public class VoiceMessageDownloadHook {
         return best;
     }
 
-    /** The message's Media (its photo or video), found by its stable class name. */
     private static Object mediaOf(Object message) {
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         ArrayDeque<Object[]> q = new ArrayDeque<>();
@@ -989,8 +889,6 @@ public class VoiceMessageDownloadHook {
         return null;
     }
 
-    /** Saves a DM photo/video (every item of a carousel) like posts: username in the name and
-     *  the username subfolder, at the best quality the downloader finds. */
     private static void downloadDmMedia(Context ctx, Object media, Object message) {
         String user = FeedVideoDownloadHook.extractUsernameFromMediaObject(media);
         if (user == null || user.isEmpty()) user = voiceUsername(message, false);
@@ -1004,7 +902,6 @@ public class VoiceMessageDownloadHook {
         FeedVideoDownloadHook.executor.submit(() -> {
             try {
                 List<String> urls = FeedVideoDownloadHook.extractAllUrlsFromMedia(ctx, media);
-                // a single photo: IG's own URL is sized for the screen; take the largest version
                 if (urls.size() == 1 && !FeedVideoDownloadHook.isVideoUrl(urls.get(0))) {
                     Object[] big = StoryDownloadHook.largestImage(media);
                     long igArea = urlArea(urls.get(0));
@@ -1049,7 +946,6 @@ public class VoiceMessageDownloadHook {
                 if (Modifier.isStatic(g.getModifiers()) || !g.getType().isEnum()) continue;
                 g.setAccessible(true);
                 Object v = g.get(row);
-                // the action enum is the constructor's 3rd param type; its values have names like REPLY
                 if (v instanceof Enum<?> e && e.getDeclaringClass() == (saveMediaAction != null ? saveMediaAction.getClass() : e.getDeclaringClass())) {
                     String n = e.name();
                     if (n.equals(n.toUpperCase()) && n.length() > 2) return n;
@@ -1090,7 +986,6 @@ public class VoiceMessageDownloadHook {
         return ids;
     }
 
-    /** Our injected row ("Download" / "Translate with app"), styled like an existing row. */
     private static Object buildRow(Constructor<?> ctor, Object template, Context ctx, String label, String iconName, String carrier) {
         try {
             Class<?>[] p = ctor.getParameterTypes();
@@ -1126,13 +1021,6 @@ public class VoiceMessageDownloadHook {
         return FeatureFlags.enableVoiceDownload || FeatureFlags.enableStickerDownload;
     }
 
-    /**
-     * The image of a sticker or GIF message, found by named classes:
-     * - Giphy stickers and GIFs: DirectAnimatedMedia holds a GifUrlImpl with the "url" (GIF),
-     *   "webp" and "mp4" versions. The GIF keeps the sticker's transparency and plays everywhere.
-     * - Sticker-pack stickers: DirectStoreSticker holds TypedImageUrls, each an ImageUrl with
-     *   getUrl / getWidth / getHeight; the largest is taken.
-     */
     static String stickerUrl(Object message) {
         if (animatedMediaClass == null || gifUrlClass == null) return null;
         try {
@@ -1192,7 +1080,6 @@ public class VoiceMessageDownloadHook {
         return best;
     }
 
-    /** The largest image of a sticker-pack sticker. */
     private static String storeStickerUrl(Object sticker) throws ReflectiveOperationException {
         if (typedImageUrlClass == null || imageUrlClass == null) return null;
         String best = null;
@@ -1220,11 +1107,9 @@ public class VoiceMessageDownloadHook {
         return best;
     }
 
-    /** Saves a sticker / GIF like DM media: username in the name and the username subfolder. */
     private static void downloadSticker(Context ctx, String url, Object message) {
         String user = voiceUsername(message, false);
         String id = String.valueOf(System.currentTimeMillis());
-        // a .jpg name for a GIF is corrected to .gif once the file's signature is read
         String name = FeedVideoDownloadHook.buildFilename(user, "sticker", id, false);
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_downloading), android.widget.Toast.LENGTH_SHORT).show();
         FeedVideoDownloadHook.executor.submit(() -> {
@@ -1240,11 +1125,9 @@ public class VoiceMessageDownloadHook {
         });
     }
 
-    /** audio_src of the message's voice clip, or null when it isn't a voice message. */
     static String audioUrl(Object message) {
         if (audioMapper == null || audioInfoClass == null) return null;
         if (voiceType != null) return audioUrlOfMedia(ownVoiceMedia(message));
-        // Fallback (voice payload anchor missing): this walk can also reach a quoted message.
         try {
             Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
             ArrayDeque<Object[]> q = new ArrayDeque<>();
@@ -1284,7 +1167,6 @@ public class VoiceMessageDownloadHook {
         return null;
     }
 
-    /** audio_src through the Media's AudioInfoIntf getter (Media.A0b on 446). */
     private static String audioUrlOfMedia(Object media) {
         if (media == null) return null;
         try {

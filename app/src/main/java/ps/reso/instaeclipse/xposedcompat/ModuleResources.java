@@ -6,7 +6,6 @@ public final class ModuleResources {
 
     private ModuleResources() {}
 
-    /** The module APK path, set by the entry the framework loaded. */
     public static void setApkPath(String path) {
         apkPath = path;
     }

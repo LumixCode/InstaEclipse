@@ -11,17 +11,10 @@ import java.util.function.Consumer;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.toast.IeToast;
 
-/**
- * What a hold-to-copy gesture does once it fires (captions, a profile's username and bio): the
- * text goes on the clipboard, and Android 12 and older get a toast. Android 13+ confirms every
- * copy itself, so a second toast would just repeat it. The hold's haptic tick is the caller's: a
- * View's own long click already plays it.
- */
 public final class CopyFeedback {
 
     private CopyFeedback() {}
 
-    /** Puts {@code text} on the clipboard; {@code toastRes} is the confirmation shown before Android 13. */
     public static void copy(Context ctx, String label, String text, int toastRes) {
         ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm == null) return;

@@ -16,13 +16,6 @@ import io.github.libxposed.service.XposedService;
 import io.github.libxposed.service.XposedServiceHelper;
 import ps.reso.instaeclipse.utils.ipc.FrameworkServiceProvider;
 
-/**
- * Modern flavor (libxposed API 102): mirrors the companion's "instaeclipse_cache" prefs into the
- * framework's remote preferences group of the same name, which the hooked app reads through
- * {@code getRemotePreferences} ({@code ModernBackend#companionPrefs}) on a cold start. A full copy
- * when the framework service connects, then every change as it happens. The existing settings
- * code keeps writing the local prefs as before.
- */
 public final class RemotePrefsMirror {
 
     private static final String TAG = "IE|RemotePrefs";
@@ -30,16 +23,14 @@ public final class RemotePrefsMirror {
 
     private static SharedPreferences local;
     private static volatile SharedPreferences remote;
-    // the service the mirror writes to; guarded by RemotePrefsMirror.class
     private static XposedService bound;
     private static int boundUid = FrameworkServiceProvider.UNKNOWN_UID;
 
-    // held strongly: SharedPreferences keeps its listeners weakly
     private static final SharedPreferences.OnSharedPreferenceChangeListener ON_CHANGE = (prefs, key) -> {
         SharedPreferences r = remote;
         if (r == null) return;
         try {
-            if (key == null) copyAll(prefs, r); // the local file was cleared
+            if (key == null) copyAll(prefs, r);
             else copyKey(prefs, r, key);
         } catch (Throwable t) {
             Log.w(TAG, "mirror " + key + ": " + t);

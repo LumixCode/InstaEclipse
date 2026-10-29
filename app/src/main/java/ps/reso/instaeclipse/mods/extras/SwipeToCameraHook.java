@@ -11,12 +11,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Stops a sideways swipe on the home feed from opening the camera. {@code SwipeNavigationContainer}
- * settles every swipe through {@code setInternalPosition(PositionConfig)}; a swipe-sourced config
- * ("swipe") with a negative target position means "go to the camera panel". Its target is reset
- * to 0 so the container springs back to the feed. The camera button still works.
- */
 public class SwipeToCameraHook {
 
     private static final String TAG = "(InstaEclipse | SwipeCamera): ";
@@ -61,7 +55,6 @@ public class SwipeToCameraHook {
                 if (!FeatureFlags.disableSwipeToCamera) return;
                 Object cfg = param.args[0];
                 if (cfg == null || target.getFloat(cfg) >= 0f || !fromSwipe(cfg, strings)) return;
-                // Only a swipe that starts on the feed; leaving an already-open camera still works.
                 if (current != null && (float) current.invoke(param.thisObject) < 0f) return;
                 target.setFloat(cfg, 0f);
             }

@@ -18,22 +18,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * Extends "Disable double-tap to like" ({@link DisableDoubleTapLikeHook}: feed and reels) to
- * comments and DMs.
- * <ul>
- *   <li>Comments: the comment rows' {@code onDoubleTap} listeners log "fb_comment_double_tap";
- *   they are made to consume the gesture without liking.</li>
- *   <li>DMs: every path that sends the double-tap reaction reads the configured double-tap emoji
- *   through one {@code String (UserSession, int)} getter (it falls back to "❤"). Its void callers
- *   are skipped when they run under an {@code onDoubleTap} frame, so reactions picked from the
- *   long-press menu still go through.</li>
- *   <li>DMs drawn with Compose (IG 452) take double-taps through Compose's tap detector, so no
- *   {@code onDoubleTap} frame exists. There the double-tap like has its own static dispatcher
- *   (X.0B4l.A00 on 452: sends the reaction with source "double_tap" and bumps
- *   "should_show_like_direct_message_count"), which is skipped outright.</li>
- * </ul>
- */
 public class DoubleTapExtrasHook {
 
     private static final String TAG = "(InstaEclipse | DoubleTapLike): ";

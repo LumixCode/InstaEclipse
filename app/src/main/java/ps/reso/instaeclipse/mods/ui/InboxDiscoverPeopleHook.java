@@ -14,24 +14,10 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Disable Discover People in Messages: the Direct inbox, the hidden chats inbox included, never
- * builds its "find friends" section (FIND_PEOPLE: the header row "find_people_header_row" and the
- * contacts / search activation cards, 451 X.07LL with X.07LK) or its suggested accounts
- * (RECOMMENDED_USER_SUGGESTIONS, 451 X.07Jo, filled from dynamic_onboarding/get_direct_empty_state/).
- *
- * Neither comes from the thread rows. Instagram adds FIND_PEOPLE while the inbox shows fewer than
- * five threads (the X.07LL branch of 451 X.07Lo.A04) and the suggested accounts below a server
- * threshold, so the hidden chats inbox, which submits only the hidden threads, always got them.
- * Skipping those sections in Instagram's section emitter ({@link InboxSectionPath}, anchored on
- * the section lookup's "No section generator found for section type " string) means their rows
- * are never built; every other section is untouched. Applies on the inbox's next update.
- */
 public class InboxDiscoverPeopleHook {
 
     private static final String TAG = "(IE|InboxDiscover) ";
     private static final String LOOKUP_ANCHOR = "No section generator found for section type";
-    /** Section types already reported as dropped: one log line each per process. */
     private static final Set<String> dropped = ConcurrentHashMap.newKeySet();
 
     public void install(ClassLoader loader) {
@@ -56,7 +42,7 @@ public class InboxDiscoverPeopleHook {
                         String type = sections.typeOf(param.args);
                         if (!InboxSectionPath.drops(type, FeatureFlags.hideDmSuggestions, FeatureFlags.disableDiscoverPeople,
                                 FeatureFlags.hideNotesTray)) return;
-                        param.setResult(false); // what the emitter returns for a section without rows
+                        param.setResult(false);
                         if (dropped.add(type)) ModuleLog.detail(TAG + "dropped inbox section " + type);
                     } catch (Throwable t) {
                         if (dropped.add("error")) ModuleLog.warn(TAG + "Could not check an inbox section; people suggestions or Notes may still show: "

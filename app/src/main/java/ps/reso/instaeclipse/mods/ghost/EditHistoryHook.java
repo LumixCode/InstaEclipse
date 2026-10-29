@@ -26,52 +26,20 @@ import ps.reso.instaeclipse.utils.ghost.EditHistoryStore;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Message edit history (#243): tapping "Edited" on an edited DM opens its earlier versions.
- *
- * - The DM message class is the return type of the lookup using ": null_direct_message" (X.00E9 on
- *   451). Its body is the one String field of that class read by the method using
- *   "DirectMessage.updateIsMessageEmoji" (X.03Ej.A1D).
- * - Tap: both "Edited" renderers (the Compose HeaderText annotations "edit_history_show/hide" and
- *   the legacy ClickableSpan) call the thread's (MessageIdentifier, boolean) listener that logs
- *   "show_edit_history" / "hide_edit_history" (X.08Rt.FPT). It runs the thread's toggle, the
- *   (String, boolean) method that reads DirectMessageEditHistory's body (X.02Zy.A0L): it finds the
- *   row by id and expands the old versions inline, but only when the server sent a history list
- *   (without one the tap does nothing), and it loops over the message's edit count rather than
- *   the list.
- * - During a "show" tap the toggle's ()List call on the message (the history getter, X.00E9.A12)
- *   gives us the message and the server's list, and returns an empty list so the toggle stops
- *   before its inline expansion. After the tap EditHistoryDialog lists the versions; with none
- *   saved, a toast says so. "Hide" taps and every other read of the getter are left alone.
- * - Recording: the body is compared around the server-update merge (the synchronized
- *   (UserSession, message, x) method, X.00E9.A19) and around the content setter (the synchronized
- *   (type, Object) method using "unsupported message type: ", X.00E9.A1L), which Instagram's sync
- *   engine uses to apply an edit in place. Only the body counts, so id or status changes are never
- *   taken for edits. The toggle's int field read on the message (the edit count, X.03Ej.A01) says
- *   whether the replaced text was the original, its ()long call (X.00E9.A0K) when it was sent.
- * Versions persist in EditHistoryStore (Instagram's filesDir), so they survive restarts. Earlier
- * builds fed recorded versions back through the getter instead; that let the toggle index past
- * them (edit count above the list size) and made the sync engine append new server history to the
- * returned copy instead of the message.
- */
 public class EditHistoryHook {
 
     private static final String TAG = "(IE|EditHistory) ";
     private static final String HISTORY = "com.instagram.direct.model.json.DirectMessageEditHistory";
     private static final String IDENTIFIER = "com.instagram.model.direct.messageid.MessageIdentifier";
     private static final String SESSION = "com.instagram.common.session.UserSession";
-    /** DexKitCache keys; bump when the lookups change. */
     private static final String CACHE = "EditHistory_v2_";
 
     private static Field body, editCount, historyBody, historyTime;
     private static Method sentTime;
-    /** {body, edit count} before each running merge / content set on this thread, innermost first;
-     *  every before pushes (NONE when not tracked) and every after pops, so nested calls pair up. */
     private static final ThreadLocal<ArrayDeque<Object[]>> BEFORE = ThreadLocal.withInitial(ArrayDeque::new);
     private static final Object[] NONE = new Object[0];
     private static final ThreadLocal<Tap> TAP = new ThreadLocal<>();
 
-    /** One "show" tap on "Edited", filled in while Instagram's toggle runs. */
     private static final class Tap {
         final List<String> ids;
         final String account;
@@ -106,13 +74,12 @@ public class EditHistoryHook {
             if (body == null) { ModuleLog.error(TAG + "Could not turn on edit history: not supported by this Instagram version (message text not found)"); return; }
             body.setAccessible(true);
 
-            // The toggle is only read for the members it uses on the message; it is not hooked.
             String bodyDesc = "L" + HISTORY.replace('.', '/') + ";->" + historyBody.getName() + ":Ljava/lang/String;";
             CachedLookup.Search<Found> toggle = () -> {
                 Found found = null;
                 for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .addUsingField(bodyDesc).paramTypes("java.lang.String", "boolean").returnType("void")))) {
-                    if (found != null) return null; // ambiguous
+                    if (found != null) return null;
                     found = md;
                 }
                 return found;
@@ -138,8 +105,6 @@ public class EditHistoryHook {
         }
     }
 
-    // ── Recording ────────────────────────────────────────────────────────────
-
     private static String hookRecording(ClassLoader cl, Class<?> message) {
         List<String> hooked = new ArrayList<>();
         try {
@@ -152,7 +117,6 @@ public class EditHistoryHook {
                 return null;
             });
             if (merge != null) {
-                // stored.merge(session, incoming, x): the server's copy replaces the stored text.
                 XposedBridge.hookMethod(merge, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
@@ -183,7 +147,6 @@ public class EditHistoryHook {
                 return found;
             });
             if (setter != null) {
-                // message.setContent(type, value): the sync engine's in-place edit (no session at hand).
                 XposedBridge.hookMethod(setter, new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
@@ -207,14 +170,13 @@ public class EditHistoryHook {
     private static Object[] snapshot(Object msg) {
         try {
             String text = (String) body.get(msg);
-            if (text == null || text.isEmpty()) return NONE; // a new message being filled in
+            if (text == null || text.isEmpty()) return NONE;
             return new Object[]{text, count(msg)};
         } catch (Throwable t) {
             return NONE;
         }
     }
 
-    /** Records the replaced text when the body changed; {@code session} is the merge's UserSession (null in place). */
     private static void compare(Object msg, Object[] before, Object session, String how) {
         if (before == null || before == NONE) return;
         try {
@@ -235,8 +197,6 @@ public class EditHistoryHook {
         }
     }
 
-    // ── Tap on "Edited" ──────────────────────────────────────────────────────
-
     private static boolean hookTap(ClassLoader cl, Method getter) throws Throwable {
         Method tap = null;
         for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
@@ -252,7 +212,6 @@ public class EditHistoryHook {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
                 TAP.remove();
-                // "Hide" (Instagram's own expansion is open) stays Instagram's.
                 if (!FeatureFlags.keepEditHistory || !Boolean.TRUE.equals(param.args[1]) || param.args[0] == null) return;
                 List<String> ids = UnsentIdentity.strings(param.args[0]);
                 if (!ids.isEmpty()) TAP.set(new Tap(ids, UnsentIdentity.account(param.thisObject)));
@@ -271,11 +230,10 @@ public class EditHistoryHook {
             protected void afterHookedMethod(MethodHookParam param) {
                 Tap t = TAP.get();
                 if (t == null || t.message != null) return;
-                // Only the tapped message (the toggle reads it right after finding its row).
                 if (Collections.disjoint(UnsentIdentity.messageIds(param.thisObject), t.ids)) return;
                 t.message = param.thisObject;
                 t.server = param.getResult() instanceof List<?> l ? new ArrayList<>(l) : null;
-                param.setResult(new ArrayList<>()); // the toggle returns before its inline expansion
+                param.setResult(new ArrayList<>());
             }
         });
         return true;
@@ -313,7 +271,6 @@ public class EditHistoryHook {
         return message != null ? UnsentIdentity.thread(message) : null;
     }
 
-    /** Instagram's DirectMessageEditHistory list as versions (body, timestamp), oldest first. */
     private static List<EditHistoryStore.Version> serverVersions(List<?> list) {
         List<EditHistoryStore.Version> out = new ArrayList<>();
         if (list == null) return out;
@@ -336,9 +293,6 @@ public class EditHistoryHook {
         try { return sentTime == null ? 0 : EditHistoryTimeline.toMillis((long) sentTime.invoke(msg)); } catch (Throwable t) { return 0; }
     }
 
-    // ── Lookups ──────────────────────────────────────────────────────────────
-
-    /** The message's own String field read by its "is emoji" check: the text. */
     private static Field bodyField(ClassLoader cl, Class<?> message) throws Throwable {
         Field found = null;
         for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
@@ -346,16 +300,14 @@ public class EditHistoryHook {
             for (var use : md.data().getUsingFields()) {
                 if (!use.getField().getTypeName().equals("java.lang.String")) continue;
                 Field f = use.getField().getFieldInstance(cl);
-                // The same method also reads avatar text; only the message's own field is its body.
                 if (!f.getDeclaringClass().isAssignableFrom(message) || Modifier.isStatic(f.getModifiers())) continue;
-                if (found != null && !found.equals(f)) return null; // ambiguous
+                if (found != null && !found.equals(f)) return null;
                 found = f;
             }
         }
         return found;
     }
 
-    /** The one no-arg method returning {@code type} that {@code caller} invokes on the message. */
     private static Method invoked(Found caller, ClassLoader cl, Class<?> message, Class<?> type) throws Throwable {
         if (caller == null) return null;
         Method found = null;
@@ -364,13 +316,12 @@ public class EditHistoryHook {
             Method m = inv.getMethodInstance(cl);
             if (m.getReturnType() != type || Modifier.isStatic(m.getModifiers())
                     || !m.getDeclaringClass().isAssignableFrom(message)) continue;
-            if (found != null && !found.equals(m)) return null; // ambiguous
+            if (found != null && !found.equals(m)) return null;
             found = m;
         }
         return found;
     }
 
-    /** The one int field of the message that {@code caller} reads. */
     private static Field intRead(Found caller, ClassLoader cl, Class<?> message) throws Throwable {
         if (caller == null) return null;
         Field found = null;
@@ -378,7 +329,7 @@ public class EditHistoryHook {
             if (!use.getUsingType().isRead() || !use.getField().getTypeName().equals("int")) continue;
             Field f = use.getField().getFieldInstance(cl);
             if (Modifier.isStatic(f.getModifiers()) || !f.getDeclaringClass().isAssignableFrom(message)) continue;
-            if (found != null && !found.equals(f)) return null; // ambiguous
+            if (found != null && !found.equals(f)) return null;
             found = f;
         }
         return found;

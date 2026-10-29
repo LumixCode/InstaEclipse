@@ -11,11 +11,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Instagram's legacy push registration builds a broadcast PendingIntent for
- * "com.google.example.invalidpackage" without FLAG_IMMUTABLE/FLAG_MUTABLE, which Android 12+
- * rejects with an exception. The missing flag is added to that one intent only.
- */
 public final class NotificationRegistrationHook {
 
     public void install() {

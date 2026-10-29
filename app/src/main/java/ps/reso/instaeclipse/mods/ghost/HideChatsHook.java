@@ -59,28 +59,15 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.toast.IeToast;
 import ps.reso.instaeclipse.utils.ui.IgTint;
 
-/**
- * Hides explicitly selected Direct threads from Instagram's inbox. An open chat offers
- * "Hide chat" / "Unhide chat" in the module's thread header menu; a triple tap on the inbox
- * header (after the passcode) shows only the hidden chats.
- */
 public class HideChatsHook {
 
     private static final String INBOX_CONTROL_TAG = "ie_hidden_chats_inbox_control";
     private static final String INBOX_ANCHOR = "DirectThreadStoreImpl.getSortedCopyOfThreadSummaries";
     private static final String GENERATOR_ANCHOR = "InboxViewModelGenerator.calculateAndApplyDiffUpdate";
-    /** The corner runs from the window's left edge (the old 8 dp inset only dropped taps). */
     private static final int INBOX_GESTURE_WIDTH_DP = 108;
-    /**
-     * The hidden inbox's back arrow in that corner: 24 dp but never more than the corner's height
-     * less 28 dp, plus BACK_ARROW_GROW_DP, centred BACK_ARROW_CENTER_X_DP from the left edge and
-     * level with the account name (the corner's middle when the name isn't found). The whole
-     * corner stays its touch target.
-     */
     private static final int BACK_ARROW_DP = 24;
     private static final int BACK_ARROW_GROW_DP = 2;
     private static final int BACK_ARROW_CENTER_X_DP = 34;
-    /** The account name in the inbox header, the text first. */
     private static final String[] ACCOUNT_NAME_IDS = {"action_bar_title_textview", "action_bar_title"};
 
     private static final Map<View, WeakReference<Activity>> watchedRoots = new WeakHashMap<>();
@@ -96,8 +83,6 @@ public class HideChatsHook {
     private static final Map<Class<?>, List<Field>> threadKeyFields = new java.util.concurrent.ConcurrentHashMap<>();
     private static final Set<Class<?>> chatScreens = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private static volatile Method titleFormatter;
-    /** invokeNoArg's lookups by class and name, misses included: the Lock gate resolves the open
-     *  screen through them several times a second, and every miss threw NoSuchMethodException. */
     private static final Map<Class<?>, Map<String, java.util.Optional<Method>>> noArgMethods =
             new java.util.concurrent.ConcurrentHashMap<>();
     private static volatile NativeInboxPath inboxPath;
@@ -113,7 +98,6 @@ public class HideChatsHook {
             Collections.newSetFromMap(new WeakHashMap<>());
     private static int inboxActionBarId;
 
-    /** The chat a header menu's Hide/Unhide entry was added for, and which of the two it offers. */
     private static final class MenuBinding {
         final WeakReference<View> header;
         final String threadId;
@@ -227,7 +211,7 @@ public class HideChatsHook {
                                 && activity.getPackageName().startsWith("com.instagram")
                                 && activeHook != null
                                 && activeHook.onInboxTouch(activity, (MotionEvent) param.args[0])) {
-                            param.setResult(true); // a stray tap after the triple tap: Instagram never sees it
+                            param.setResult(true);
                         }
                     }
                 });
@@ -238,10 +222,6 @@ public class HideChatsHook {
         }
     }
 
-    /**
-     * Feeds one Instagram touch event to this activity's {@link InboxTapGesture}; true when the
-     * event must not reach Instagram (a touch in the corner just after the triple tap).
-     */
     private boolean onInboxTouch(Activity activity, MotionEvent event) {
         boolean counting = FeatureFlags.hideSpecificChats && !hiddenOnlyMode;
         InboxTapGesture gesture = tapGestures.get(activity);
@@ -253,9 +233,6 @@ public class HideChatsHook {
         InboxTapGesture.Verdict verdict;
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN -> {
-                // Every touch in Instagram lands here: skip the fragment walk unless the inbox is up
-                // and the touch can count, or be swallowed after a triple tap. The hidden inbox
-                // counts no taps; its back control in the corner is only guarded.
                 boolean active = counting || gesture.guarding(event.getEventTime());
                 Rect area = active && inboxMaybeShown(activity) ? inboxGestureBounds(activity) : null;
                 verdict = gesture.down(event.getRawX(), event.getRawY(), event.getEventTime(),
@@ -295,9 +272,8 @@ public class HideChatsHook {
         });
     }
 
-    /** False only when the inbox lifecycle is tracked and no inbox is in front in this activity. */
     private static boolean inboxMaybeShown(Activity activity) {
-        if (!inboxesTracked) return true; // no lifecycle signal on this build: the view check decides
+        if (!inboxesTracked) return true;
         WeakReference<Object> inbox = foregroundInboxes.get(activity);
         return inbox != null && inbox.get() != null;
     }
@@ -312,7 +288,6 @@ public class HideChatsHook {
         View bar = ThreadHeaderMenu.findShown(decor, inboxActionBarId);
         Rect bounds = new Rect();
         if (bar == null || !bar.getGlobalVisibleRect(bounds)) {
-            // Compose inboxes can omit the old action-bar view. Anchor below the status inset.
             View content = activity.findViewById(android.R.id.content);
             if (content == null || !content.getGlobalVisibleRect(bounds)) return null;
             android.view.WindowInsets insets = decor.getRootWindowInsets();
@@ -333,12 +308,7 @@ public class HideChatsHook {
                 Object result = param.getResult();
                 if (!(result instanceof List<?> rows) || rows.isEmpty()) return;
 
-                // Capture before filtering. Hidden or blocked accounts remain selectable because
-                // every label and ID comes from Instagram's local thread summary.
                 rememberRows(rows, param.thisObject);
-                // Builds without the native row consumer keep normal hiding as a fallback. Where it
-                // exists, filter only the final inbox submission so native caches and pagination
-                // retain every thread.
                 if (inboxPath == null && FeatureFlags.hideSpecificChats) {
                     param.setResult(HiddenInboxRows.select(rows, HiddenThreads.ids(),
                             false, HideChatsHook::threadIdOfRow));
@@ -364,11 +334,6 @@ public class HideChatsHook {
         }
     }
 
-    /**
-     * The inbox generator's row consumer receives the complete row List, then publishes the native
-     * inbox diff (446 X.0AJc as X.05Ho.A0J, 451 X.09TE as X.07Ln.A0L). Resolved from the
-     * generator's trace string and class shapes only; see {@link NativeInboxPath}.
-     */
     private static void installInboxPresentation(ClassLoader loader) {
         try {
             Class<?> generator = null;
@@ -388,8 +353,6 @@ public class HideChatsHook {
             if (path == null) throw new IllegalStateException(callbacks.size() + " inbox consumer callback(s)");
             XposedBridge.hookMethod(path.submit, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    // The lambda class serves every stream variant (on 451 other owners too):
-                    // only a List through this generator's own consumer is its inbox row list.
                     Object owner = path.rowGenerator(param.thisObject, param.args[0]);
                     if (owner == null) return;
                     NativeInbox state;
@@ -411,7 +374,6 @@ public class HideChatsHook {
         }
     }
 
-    /** Classes the constructors of {@code type} instantiate, read from its bytecode by DexKit. */
     private static List<Class<?>> constructedBy(ClassLoader loader, Class<?> type) {
         List<Class<?>> types = new ArrayList<>();
         for (Constructor<?> init : type.getDeclaredConstructors()) {
@@ -529,7 +491,6 @@ public class HideChatsHook {
         return knownThreads.title(id);
     }
 
-    /** Finds the DirectThreadKey on an inbox row and returns its canonical native thread ID. */
     static String threadIdOfRow(Object row) {
         if (row == null) return null;
         try {
@@ -594,8 +555,6 @@ public class HideChatsHook {
     }
 
     private void installHeaderMenu(ClassLoader classLoader) {
-        // InstagramMainActivity declares no onResume on 446 (IgFragmentActivity does), so a plain
-        // findAndHookMethod throws there; LifecycleHookUtil hooks the declaring class instead.
         for (String activity : new String[]{"com.instagram.modal.ModalActivity",
                 "com.instagram.mainactivity.InstagramMainActivity"}) {
             try {
@@ -605,8 +564,6 @@ public class HideChatsHook {
                 ModuleLog.detail("(IE|HideChats) hook " + activity + " failed (chat tracker still used): " + t.getMessage());
             }
         }
-        // A chat opened inside the main activity is a fragment transaction (no activity onResume);
-        // also the fallback signal when the DirectThreadController anchor is gone.
         CurrentThreadTracker.install(classLoader);
         ThreadHeaderInjector.install(classLoader);
         ThreadHeaderInjector.register("hide", true, (a, threadId) -> {
@@ -721,7 +678,6 @@ public class HideChatsHook {
         lifecycleRegistered = true;
     }
 
-    /** Runs on every layout of a watched window, so it returns at once outside an open chat. */
     private boolean tryInject(Activity activity) {
         try {
             View decor = activity.getWindow().getDecorView();
@@ -737,7 +693,6 @@ public class HideChatsHook {
                 return true;
             }
             ForegroundThread foreground = currentForegroundThread(activity);
-            // Without the 446 lifecycle signal, the shared tracker says whether any chat is open.
             if (foreground == null && (threadsTracked || CurrentThreadTracker.currentThreadId() == null)) return false;
             View header = ThreadHeaderMenu.shownHeader(activity);
             if (header == null) return false;
@@ -752,8 +707,6 @@ public class HideChatsHook {
                 return true;
             }
 
-            // The entry is bound to this chat and to the action its label shows; a click after
-            // the screen moved to another chat is rejected instead of hiding or unhiding that one.
             final String boundId = threadId;
             final View boundHeader = header;
             if (!ThreadHeaderMenu.add(activity, "hide",
@@ -785,7 +738,6 @@ public class HideChatsHook {
         if (liveTitle.isEmpty()) liveTitle = threadTitle(boundHeader);
         HiddenThreads.setHidden(liveId, liveTitle, hide);
         rememberThread(activity, liveId, liveTitle);
-        // Refreshes the inbox and re-adds this entry with the opposite label.
         refreshVisibleButtons();
         IeToast.makeText(activity, text(activity, hide ? R.string.ig_hide_chat_hidden : R.string.ig_hide_chat_unhidden),
                 Toast.LENGTH_SHORT).show();
@@ -850,7 +802,7 @@ public class HideChatsHook {
         ModuleLog.line("(IE|HideChats) Chat unlocked (thread " + id + ")");
     }
 
-    @SuppressLint("RtlHardcoded") // The requested gesture is on the physical left in every locale.
+    @SuppressLint("RtlHardcoded")
     private void updateInboxControl(Activity activity, View decor) {
         if (!FeatureFlags.hideSpecificChats && hiddenOnlyMode) {
             setHiddenOnlyMode(activity, false);
@@ -901,10 +853,6 @@ public class HideChatsHook {
         control.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
     }
 
-    /**
-     * Pads the corner control so that its fitted arrow gets the size and spot described above;
-     * {@code middle} is the account name's middle from the corner's top, or -1.
-     */
     private static void placeBackArrow(Activity activity, ImageView control, int width, int height, int middle) {
         int size = Math.max(dp(activity, 16), Math.min(dp(activity, BACK_ARROW_DP), height - dp(activity, 28))
                 + dp(activity, BACK_ARROW_GROW_DP));
@@ -938,7 +886,6 @@ public class HideChatsHook {
             NativeInbox state;
             synchronized (nativeInboxes) { state = nativeInboxes.get(consumer); }
             if (state == null || state.account == null) {
-                // Reached only without the native row path, or before this inbox delivered rows.
                 ModuleLog.warn("(IE|HideChats) Could not open hidden chats: " + (inboxPath == null
                         ? "not available on this Instagram version" : "the chat list has not loaded yet, try again"));
                 ModuleLog.detail("(IE|HideChats) hidden inbox unavailable: path=" + (inboxPath != null)
@@ -972,7 +919,6 @@ public class HideChatsHook {
         }
     }
 
-    /** The foreground inbox's row consumer once it has delivered rows; null otherwise. */
     private static Object findInboxConsumer(Activity activity) {
         NativeInboxPath path = inboxPath;
         if (activity == null || activity.isDestroyed() || path == null) return null;
@@ -994,7 +940,6 @@ public class HideChatsHook {
             Object generator = inboxGetter == null ? null : inboxGetter.generatorOf(fragment);
             if (generator == null) return null;
             synchronized (nativeInboxes) {
-                // Of the generator's stream consumers, only the row consumer captured a list.
                 for (Object consumer : path.consumersOf(generator)) {
                     if (nativeInboxes.containsKey(consumer)) return consumer;
                 }
@@ -1022,7 +967,7 @@ public class HideChatsHook {
         try {
             NativeInbox state;
             synchronized (nativeInboxes) { state = nativeInboxes.get(consumer); }
-            if (state == null) return; // The first native submission will apply the current mode.
+            if (state == null) return;
             if (hiddenOnlyMode && !java.util.Objects.equals(hiddenAccount, state.account)) {
                 hiddenOnlyMode = false;
                 hiddenAccount = null;
@@ -1031,7 +976,6 @@ public class HideChatsHook {
             long revision = state.revision();
             if (!state.gate.stale(revision)) return;
             List<Object> visible = state.visible();
-            // Bypass our capture hook: a filtered replay must never replace the complete source.
             XposedBridge.invokeOriginalMethod(inboxPath.submit, consumer, new Object[]{visible});
             state.gate.applied(revision);
             ModuleLog.probe("(IE|HideChats) local inbox submitted rows=" + visible.size()
@@ -1053,7 +997,6 @@ public class HideChatsHook {
         }
     }
 
-    /** Returns a binding only while its original Direct Fragment is still resumed in this Activity. */
     private static ForegroundThread currentForegroundThread(Activity activity) {
         if (!LegacyPaths.has(LegacyPaths.HEADER)) {
             Object fragment = CurrentThreadTracker.fragment(activity, HideChatsHook::chatScreen);
@@ -1120,7 +1063,6 @@ public class HideChatsHook {
         }
     }
 
-    /** Resolves only from the visible Fragment whose root owns this exact header. */
     private static String resolveVisibleThreadId(Activity activity, View header) {
         try {
             Object fragmentManager = invokeNoArg(activity, "getSupportFragmentManager");
@@ -1128,8 +1070,6 @@ public class HideChatsHook {
             Object key = findDirectThreadKey(fragment, 0,
                     Collections.newSetFromMap(new IdentityHashMap<>()));
             if (key == null) {
-                // The header can be owned by a nested UI Fragment while its parent direct_thread
-                // Fragment owns the controller and key.
                 fragment = findVisibleDirectFragment(fragmentManager);
                 key = findDirectThreadKey(fragment, 0,
                         Collections.newSetFromMap(new IdentityHashMap<>()));
@@ -1154,12 +1094,10 @@ public class HideChatsHook {
         return null;
     }
 
-    /** Safe fallback for action bars attached outside the Direct Fragment's own root. */
     private static Object findVisibleDirectFragment(Object manager) {
         return findVisibleModuleFragment(manager, "direct_thread");
     }
 
-    /** Shared by the gate and gesture; invisible cached fragments must not identify a screen. */
     public static String visibleModule(Activity activity) {
         if (currentForegroundThread(activity) != null) return "direct_thread";
         WeakReference<Object> inbox = foregroundInboxes.get(activity);
@@ -1178,9 +1116,6 @@ public class HideChatsHook {
         return LegacyPaths.has(LegacyPaths.HEADER) ? directThreadId(fragment) : CurrentThreadTracker.threadIdOf(fragment);
     }
 
-    /** The open chat's id for {@code activity} (shared with ReadReceiptChatHook), or null: this
-     *  activity's resumed chat fragment, else the shared fragment tracker. Never a scan of the
-     *  whole activity, which in the main activity can return another chat's key. */
     public static String resolveThreadId(Activity activity) {
         String id = activity == null ? null : currentThreadId(activity);
         return id != null ? id : CurrentThreadTracker.currentThreadId();
@@ -1236,7 +1171,6 @@ public class HideChatsHook {
         return false;
     }
 
-    /** Searches the owning Instagram fragment/controller only; framework/global state is pruned. */
     private static Object findDirectThreadKey(Object object, int depth, Set<Object> seen) {
         if (object == null || depth > 2 || !seen.add(object)) return null;
         String className = object.getClass().getName();
@@ -1290,7 +1224,6 @@ public class HideChatsHook {
         }
     }
 
-    /** The class's public no-arg method of that name, made accessible, or null; looked up once. */
     static Method noArgMethod(Class<?> type, String name) {
         return noArgMethods.computeIfAbsent(type, ignored -> new java.util.concurrent.ConcurrentHashMap<>())
                 .computeIfAbsent(name, ignored -> {

@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
-/** Owns an unfiltered inbox submission; display changes never overwrite the native source. */
 public final class HiddenInboxRows<T> {
     private List<T> source = new ArrayList<>();
 

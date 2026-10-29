@@ -22,11 +22,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Opens links externally at IG's in-app-browser launcher. On IG 446 it can host the browser as a
- * fragment (sheet, overlay, side panel, back stack) that never starts an activity, so
- * ExternalBrowserHook alone would miss those links.
- */
 public final class OpenLinksExternallyHook {
     private static final String CACHE_KEY = "OpenLinks_launcher_v1";
 
@@ -55,7 +50,6 @@ public final class OpenLinksExternallyHook {
                             Context ctx = (Context) context.get(launcher);
                             if (target == null || ctx == null) return;
                             ctx.startActivity(browserIntent(ctx, target));
-                            // Suppress the in-app browser only after Android accepted the launch.
                             param.setResult(true);
                         } catch (Throwable t) {
                             ModuleLog.warn("(IE|ExternalLinks) Could not open the link in your browser, so it opens in Instagram: "
@@ -69,8 +63,6 @@ public final class OpenLinksExternallyHook {
         } catch (Throwable t) {
             ModuleLog.warn("(IE|ExternalLinks) Some links may still open inside Instagram; links that open a new screen still go to your browser", t);
         }
-        // ExternalBrowserHook shares this status key and still covers activity launches, so a
-        // miss here must not mark the feature broken over its working hook.
         if (installed > 0) FeatureStatusTracker.setHooked("OpenLinksExternally");
         else if (FeatureFlags.openLinksExternally) {
             ModuleLog.warn("(IE|ExternalLinks) Some links may still open inside Instagram; links that open a new screen still go to your browser");
@@ -82,8 +74,6 @@ public final class OpenLinksExternallyHook {
         List<Method> cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(CACHE_KEY, loader) : null;
         if (cached != null) return cached;
         List<Method> methods = new ArrayList<>();
-        // IG 451 moved "TrackingInfo.ARG_MODULE_NAME" into a shared string-pool class; the launcher
-        // (446 X.0Pi6.A0G, 451 X.0kfN.A0G) still uses both of these itself.
         for (var data : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("Tracking.ARG_CLICK_SOURCE", "in_app_browser_v2")
                 .returnType("boolean")))) {
@@ -96,9 +86,6 @@ public final class OpenLinksExternallyHook {
     static Intent browserIntent(Context context, String url) {
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         intent.addCategory(Intent.CATEGORY_BROWSABLE);
-        // Resolve a generic web URL to a browser, while delivering the actual URL as intent data.
-        // This selector is never loaded; it avoids routing a verified app link back into Instagram
-        // and works without changing Instagram's package-visibility manifest.
         Intent selector = new Intent(Intent.ACTION_VIEW, Uri.parse("https://instaeclipse.invalid/"));
         selector.addCategory(Intent.CATEGORY_BROWSABLE);
         intent.setSelector(selector);

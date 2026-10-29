@@ -22,7 +22,6 @@ import java.io.OutputStream;
 import ps.reso.instaeclipse.utils.download.DownloadEngine;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 
-/** Publishes only engine-verified files. Failed/cancelled copies remove their own partial output. */
 final class DownloadPublisher {
     static final class Saved {
         final String displayPath;
@@ -40,7 +39,6 @@ final class DownloadPublisher {
                 FeatureFlags.downloaderUsernameFolder, cancellation);
     }
 
-    /** Companion settings come from its cache; loading a host hook class is never required. */
     static void saveFrame(Context ctx, File source, String filename, String owner,
             DownloadEngine.Cancellation cancellation) throws Exception {
         SharedPreferences settings = ps.reso.instaeclipse.utils.core.CommonUtils.companionCache(ctx);
@@ -177,7 +175,6 @@ final class DownloadPublisher {
                 out.getFD().sync();
             }
             DownloadFiles.check(cancellation);
-            // Reserve a new destination so a failed save never overwrites an existing download.
             File target = new File(dir, filename);
             int suffix = 0;
             while (!target.createNewFile()) {

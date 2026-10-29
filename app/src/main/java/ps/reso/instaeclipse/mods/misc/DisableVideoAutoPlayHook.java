@@ -44,7 +44,6 @@ public class DisableVideoAutoPlayHook {
 
     private void findAndHookDynamicMethod() {
         try {
-            // Step 1: Find methods referencing "ig_disable_video_autoplay"
             List<Found> methods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .usingStrings("ig_disable_video_autoplay")
@@ -56,7 +55,6 @@ public class DisableVideoAutoPlayHook {
                 return;
             }
 
-            // Step 2: Find the correct method: boolean return type, 1 parameter
             for (Found method : methods) {
                 boolean returnTypeMatch = method.getReturnTypeName().contains("boolean");
                 boolean paramTypesMatch = method.getParamCount() == 1;
@@ -271,7 +269,6 @@ public class DisableVideoAutoPlayHook {
     }
 
     private static String resourceEntryName(View view) {
-        // Generated ids (package byte 0) are no resources: skip the lookup and Android's log line.
         if (view == null || view.getId() == View.NO_ID || (view.getId() >>> 24) == 0) return null;
         try {
             return view.getResources().getResourceEntryName(view.getId());

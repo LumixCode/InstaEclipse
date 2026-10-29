@@ -12,7 +12,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
-/** Snapshot of one selected item. Contains no Instagram model or live account/view references. */
 public final class DownloadRequest {
     public static final int MAX_MANIFEST_CHARS = 128 * 1024;
     public static final int MAX_JSON_CHARS = 256 * 1024;
@@ -78,7 +77,6 @@ public final class DownloadRequest {
                 throw new IllegalArgumentException("Invalid resolution ceiling");
             if (skip < 0 || skip > MAX_SKIP) throw new IllegalArgumentException("Invalid fallback skip");
             this.originalSelection = originalSelection;
-            // Original copies the caller's selected direct file; Custom controls cannot alter it.
             this.maxShortSide = originalSelection ? 0 : maxShortSide;
             this.compatibility = !originalSelection && compatibility;
             this.allowFallback = !originalSelection && allowFallback;
@@ -86,7 +84,6 @@ public final class DownloadRequest {
         }
     }
 
-    /** Private explicit-component service transport, never a log string or persistent queue. */
     public String toJson() {
         String json;
         try {

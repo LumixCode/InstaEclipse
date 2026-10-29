@@ -66,8 +66,6 @@ final class MediaModelResolver {
             cls = cls.getSuperclass();
         }
 
-        // Some Pando models expose their backing node only through a no-arg getter.
-        // Probe model-returning getters after the field walk, with the same depth limit.
         if (depth > 0 && isInstagramModelClass(obj.getClass().getName())) {
             cls = obj.getClass();
             while (cls != null && cls != Object.class) {

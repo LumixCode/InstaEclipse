@@ -1,13 +1,11 @@
 package ps.reso.instaeclipse.utils.version;
 
-/** Compares dotted version names such as "0.7.0", "0.7.1-hotfix" or "v1.2". */
 public final class VersionComparator {
 
     private static final String FORK = "-lumix.";
 
     private VersionComparator() {}
 
-    /** Negative if {@code a < b}, zero if equal, positive if {@code a > b}. */
     public static int compare(String a, String b) {
         int[] x = parse(a);
         int[] y = parse(b);

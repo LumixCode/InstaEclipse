@@ -34,12 +34,6 @@ import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
-/**
- * Edit a post's likes / comments / reposts / shares, on this phone only (post ⋮ menu → "Edit
- * counts"). Nothing is sent to Instagram: the counts are kept per post id in
- * ie_post_counts.json (part of the data backup) and returned by the Media model's count getters,
- * which are found by their JSON field names' hash like the module's other model getters.
- */
 public final class PostCountSpoof {
 
     private static final String TAG = "(IE|PostCounts) ";
@@ -220,12 +214,6 @@ public final class PostCountSpoof {
         }
     }
 
-    // ----- the counts row under a post -----
-    //
-    // The row's numbers come from a view state that doesn't always re-read the model (a post you
-    // liked, a count Instagram hides at 0). So when a post with edited counts is bound, the row's
-    // count labels (the label right after the heart / comment / repost / send button) are set too.
-
     private static final String[] BUTTONS = {"row_feed_button_like", "row_feed_button_comment",
             "row_feed_button_repost", "row_feed_button_share"};
     private static volatile int[] buttonIds;
@@ -323,17 +311,13 @@ public final class PostCountSpoof {
         }
     }
 
-    /**
-     * The row is laid out by Litho for the real numbers, so a longer number would be cut: widen
-     * the label to fit and move the buttons after it along.
-     */
     private static void fitWidth(android.view.ViewGroup row, android.widget.TextView label, String text) {
         int need = (int) Math.ceil(label.getPaint().measureText(text)) + label.getPaddingLeft() + label.getPaddingRight();
         int have = label.getRight() - label.getLeft();
         if (need == have) return;
         int idx = row.indexOfChild(label);
         int left = label.getLeft(), top = label.getTop(), bottom = label.getBottom();
-        if (have <= 0 && idx > 0) { // a count Instagram hid (0): place it after its button
+        if (have <= 0 && idx > 0) {
             android.view.View button = row.getChildAt(idx - 1);
             left = button.getRight();
             top = button.getTop();
@@ -345,7 +329,7 @@ public final class PostCountSpoof {
         int saveId = ResIds.id(row.getContext(), "row_feed_button_save");
         for (int i = idx + 1; i < row.getChildCount(); i++) {
             android.view.View v = row.getChildAt(i);
-            if (v.getId() == saveId && saveId != 0) continue; // the save button stays on the right
+            if (v.getId() == saveId && saveId != 0) continue;
             v.offsetLeftAndRight(delta);
         }
     }
@@ -401,7 +385,6 @@ public final class PostCountSpoof {
         return new PostCountStore.Row(shownIn(row), author);
     }
 
-    /** The post a feed row shows: a Media held by the row's views (their tags or fields). */
     private static Object mediaForView(android.view.View v) {
         Class<?> mc = mediaClass();
         if (mc == null) return null;
@@ -412,7 +395,6 @@ public final class PostCountSpoof {
                 m = mediaInObject(x, mc, 2);
                 if (m != null) return m;
             }
-            // The list item: its ViewHolder holds the bound post.
             if (x.getParent() instanceof android.view.ViewGroup list && isRecyclerView(list.getClass())) {
                 try {
                     Object holder = list.getClass().getMethod("getChildViewHolder", android.view.View.class).invoke(list, x);
@@ -446,8 +428,6 @@ public final class PostCountSpoof {
         return null;
     }
 
-    // ----- storage -----
-
     private static File file() {
         Context c = ps.reso.instaeclipse.xposedcompat.AndroidAppHelper.currentApplication();
         return c == null ? null : new File(c.getFilesDir(), FILE);
@@ -455,7 +435,6 @@ public final class PostCountSpoof {
 
     private static volatile long checkedAt, fileTime = -1;
 
-    /** Reads the saved counts, again whenever the file changed (a restore, another process). */
     private static void ensureLoaded() {
         long now = System.currentTimeMillis();
         if (loaded && now - checkedAt < 1000) return;
@@ -493,8 +472,6 @@ public final class PostCountSpoof {
             ModuleLog.error(TAG + "Could not save the edited post counts: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
-
-    // ----- editor (post ⋮ menu) -----
 
     public static void edit(Context ctx, Object media) {
         String id;

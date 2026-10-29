@@ -23,11 +23,6 @@ import ps.reso.instaeclipse.utils.core.ModuleResources;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.IePalette;
 
-/**
- * The module's toast: a rounded card in the IeDialog palette (dark / light) with the InstaEclipse
- * mark on the left, faded and slid up as it appears. Drop-in for Toast.makeText(…).show(), safe
- * to call from any thread and from both Instagram's process and the companion app.
- */
 public final class IeToast {
 
     static final int BADGE_DP = 28;
@@ -49,7 +44,6 @@ public final class IeToast {
 
     public static IeToast makeText(Context ctx, int resId, int duration) {
         CharSequence t;
-        // Inside Instagram ctx.getText would read Instagram's table, where our ids mean nothing.
         try { t = ModuleResources.get(ctx).getText(resId); } catch (Throwable e) { t = ""; }
         return new IeToast(ctx, t, duration);
     }
@@ -99,7 +93,6 @@ public final class IeToast {
         tv.setMaxWidth((int) (app.getResources().getDisplayMetrics().widthPixels * 0.78f));
         card.addView(tv);
 
-        // A little room so the elevation shadow isn't clipped by the toast window.
         LinearLayout root = new LinearLayout(app);
         int m = (int) (8 * d);
         root.setPadding(m, m, m, m);
@@ -136,11 +129,6 @@ public final class IeToast {
         return mark;
     }
 
-    /**
-     * Android 11+ silently drops custom-view toasts from a process that isn't in the foreground
-     * (e.g. the companion app's DownloadSaveService while Instagram is on screen), so those get a
-     * plain text toast instead.
-     */
     private static boolean inForeground(Context c) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return true;
         try {

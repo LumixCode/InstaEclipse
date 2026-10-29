@@ -11,11 +11,6 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * The legacy XposedHelpers calls InstaEclipse uses, done with plain reflection (libxposed doesn't
- * ship helpers). Lookups follow the legacy rules: exact parameter types for hooks, fields and
- * methods searched up the class hierarchy, arguments matched by assignability for calls.
- */
 public final class XposedHelpers {
 
     private static final Object MISSING = new Object();
@@ -28,8 +23,6 @@ public final class XposedHelpers {
     public static final class ClassNotFoundError extends Error {
         public ClassNotFoundError(String message, Throwable cause) { super(message, cause); }
     }
-
-    // ---- classes ----
 
     public static Class<?> findClass(String className, ClassLoader classLoader) {
         try {
@@ -47,9 +40,6 @@ public final class XposedHelpers {
         }
     }
 
-    // ---- hooks ----
-
-    /** {@code parameterTypesAndCallback}: the parameter types (Class or class name), then the callback. */
     public static XC_MethodHook.Unhook findAndHookMethod(Class<?> clazz, String methodName, Object... parameterTypesAndCallback) {
         XC_MethodHook callback = callbackOf(parameterTypesAndCallback);
         Class<?>[] types = parameterTypes(clazz.getClassLoader(), parameterTypesAndCallback);
@@ -109,9 +99,6 @@ public final class XposedHelpers {
         }
     }
 
-    // ---- methods ----
-
-    /** The method declared on {@code clazz} or a superclass with exactly these parameter types. */
     public static Method findMethodExact(Class<?> clazz, String methodName, Class<?>... parameterTypes) {
         for (Class<?> c = clazz; c != null; c = c.getSuperclass()) {
             try {
@@ -229,8 +216,6 @@ public final class XposedHelpers {
         return Void.class;
     }
 
-    // ---- fields ----
-
     public static Field findField(Class<?> clazz, String fieldName) {
         Key key = new Key(clazz, fieldName, false, null);
         Object cached = FIELDS.get(key);
@@ -286,8 +271,6 @@ public final class XposedHelpers {
             throw new IllegalAccessError(e.getMessage());
         }
     }
-
-    // ---- extra per-object values ----
 
     public static Object setAdditionalInstanceField(Object obj, String key, Object value) {
         synchronized (EXTRA) {

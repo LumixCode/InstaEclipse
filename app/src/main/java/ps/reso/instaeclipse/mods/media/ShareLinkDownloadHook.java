@@ -21,27 +21,16 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.text.MediaIds;
 
-/**
- * Download a post/reel from a link shared to InstaEclipse in another app (#236).
- *
- * The companion app's share target ({@code ShareDownloadActivity}) opens the link in Instagram
- * with {@link #EXTRA}. Here, once Instagram has loaded that post into its session MediaCache, its
- * media is saved with the module's downloader and Instagram is sent to the background, so the
- * user lands back in the app they shared from. (A silent fetch without the UI would need the
- * module to make authenticated API calls of its own.)
- */
 public class ShareLinkDownloadHook {
     public static final String EXTRA = "ps.reso.instaeclipse.SHARE_DOWNLOAD";
     private static final String TAG = "(IE|ShareDL) ";
     private static final long TIMEOUT_MS = 25_000, STEP_MS = 500;
 
-    /** every UserSession built in this process (several with multiple accounts) */
     private static final java.util.Set<Object> sessions =
             java.util.Collections.synchronizedSet(java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>()));
     private static String pendingPk;
 
     public void install(ClassLoader cl) {
-        // The session: UserSession is built once per login/restore (cold, unlike MediaCache lookups).
         try {
             XposedBridge.hookAllConstructors(XposedHelpers.findClass("com.instagram.common.session.UserSession", cl), new XC_MethodHook() {
                 @Override
@@ -58,7 +47,7 @@ public class ShareLinkDownloadHook {
                 Activity a = (Activity) param.thisObject;
                 Intent i = param.args.length > 0 && param.args[0] instanceof Intent in ? in : a.getIntent();
                 if (i == null || !i.getBooleanExtra(EXTRA, false)) return;
-                i.removeExtra(EXTRA); // once (not again on recreation)
+                i.removeExtra(EXTRA);
                 start(a, i.getData());
             }
         };
@@ -85,7 +74,7 @@ public class ShareLinkDownloadHook {
         final Application application = a.getApplication();
         Runnable poll = new Runnable() {
             @Override public void run() {
-                if (!pk.equals(pendingPk)) return; // a newer link took over
+                if (!pk.equals(pendingPk)) return;
                 Object media = findMedia(pk);
                 if (media != null) {
                     pendingPk = null;
@@ -140,8 +129,6 @@ public class ShareLinkDownloadHook {
         }
     }
 
-    /** This process's resumed activity, from ActivityThread's records (the link handler hands off
-     *  to viewer activities the module doesn't otherwise track). */
     private static Activity resumedActivity() {
         try {
             Object at = XposedHelpers.callStaticMethod(Class.forName("android.app.ActivityThread"), "currentActivityThread");
@@ -157,13 +144,11 @@ public class ShareLinkDownloadHook {
         return null;
     }
 
-    /** Media pk from a post/reel link: the shortcode is the pk in base64url (first 11 chars). */
     static String pkFromLink(String link) {
         String shortcode = ShareLinks.shortcode(link);
         return shortcode == null ? null : MediaIds.pkFromShortcode(shortcode);
     }
 
-    /** The post's Media from a session's MediaCache (its map, so the key format doesn't matter). */
     private static Object findMedia(String pk) {
         Object[] all;
         synchronized (sessions) { all = sessions.toArray(); }
@@ -176,7 +161,7 @@ public class ShareLinkDownloadHook {
                     f.setAccessible(true);
                     Map<?, ?> map = (Map<?, ?>) f.get(mc);
                     if (map == null) continue;
-                    for (Map.Entry<?, ?> e : map.entrySet()) { // keys are "<pk>_<owner id>"
+                    for (Map.Entry<?, ?> e : map.entrySet()) {
                         String k = String.valueOf(e.getKey());
                         if (k.equals(pk) || k.startsWith(pk + "_")) return e.getValue();
                     }

@@ -10,12 +10,6 @@ import java.util.Map;
 import io.github.libxposed.api.XposedInterface;
 import ps.reso.instaeclipse.utils.core.JitGuard;
 
-/**
- * Backend for libxposed API 101/102 (Vector 2.2+). Each legacy-style before/after callback becomes
- * one interceptor on the chain, keeping the legacy rules: a result or throwable set in "before"
- * skips the original (and lower hooks) but "after" still runs; an exception thrown by a callback
- * is logged and ignored, never passed to the app. Only loaded by the API 102 entry.
- */
 public final class ModernBackend implements HookBackend {
 
     private static final String TAG = "InstaEclipse";
@@ -30,13 +24,8 @@ public final class ModernBackend implements HookBackend {
         Executable target = (Executable) member;
         XposedInterface.HookBuilder builder = xposed.hook(target).setPriority(callback.priority);
         try {
-            // module.prop's default (PROTECTIVE) would log a throwable set on purpose and run the
-            // original anyway. intercept() already catches callback crashes, so only that throwable
-            // or the original's own exception reaches the framework.
             builder = builder.setExceptionMode(XposedInterface.ExceptionMode.PASSTHROUGH);
-        } catch (LinkageError noExceptionModes) {
-            // framework API without exception modes: keep its default
-        }
+        } catch (LinkageError noExceptionModes) {}
         XposedInterface.HookHandle handle = builder.intercept(chain -> intercept(chain, member, callback));
         return new XC_MethodHook.Unhook() {
             @Override public Member getHookedMethod() { return member; }
@@ -76,7 +65,7 @@ public final class ModernBackend implements HookBackend {
             callback.callAfter(param);
         } catch (Throwable t) {
             logError("after-callback of " + member + " threw", t);
-            param.setOutcome(lastResult, lastThrowable); // keep the outcome from before the crash
+            param.setOutcome(lastResult, lastThrowable);
         }
 
         if (param.getThrowable() != null) throw param.getThrowable();
@@ -96,7 +85,6 @@ public final class ModernBackend implements HookBackend {
             }
             XposedInterface.CtorInvoker<?> invoker = xposed.getInvoker((Constructor<?>) member);
             invoker.setType(XposedInterface.Invoker.Type.ORIGIN);
-            // calling an original constructor on an existing object = invokeSpecial
             return thisObject != null ? invoker.invokeSpecial(thisObject, safeArgs) : invoker.newInstance(safeArgs);
         } catch (InvocationTargetException e) {
             throw e.getCause() != null ? e.getCause() : e;
@@ -120,7 +108,6 @@ public final class ModernBackend implements HookBackend {
     @Override
     public Map<String, ?> companionPrefs() {
         try {
-            // written by the companion app through the libxposed service (remote preferences)
             return xposed.getRemotePreferences("instaeclipse_cache").getAll();
         } catch (Throwable t) {
             return null;

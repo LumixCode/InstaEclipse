@@ -19,7 +19,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 public class ConfigManager {
 
-    /** Always restores the bundled default config. */
     public static void restoreDefaultConfig(Context context, String moduleApkPath) {
         new Thread(() -> {
             try {
@@ -60,7 +59,6 @@ public class ConfigManager {
         }).start();
     }
 
-    /** Reads an asset entry from the module APK (accessed as a zip). */
     private static String readAssetFromApk(String apkPath, String assetEntry) throws Exception {
         try (ZipFile zip = new ZipFile(apkPath)) {
             ZipEntry entry = zip.getEntry(assetEntry);
@@ -72,17 +70,14 @@ public class ConfigManager {
         }
     }
 
-    /** Validates and writes JSON to Instagram's mc_overrides.json file. */
     private static void writeConfigJson(Context context, String json) throws Exception {
         if (json == null || json.isEmpty()) throw new IllegalArgumentException("Empty JSON");
-        // Parse for real: a truncated/garbled file must never replace Instagram's overrides.
         new org.json.JSONObject(json);
 
         File dest = new File(context.getFilesDir(), "mobileconfig/mc_overrides.json");
         File parent = dest.getParentFile();
         if (parent != null && !parent.exists()) parent.mkdirs();
 
-        // Temp file + rename, so a crash mid-write can't leave a half file behind.
         ps.reso.instaeclipse.utils.core.AtomicFiles.write(dest, json);
     }
 }

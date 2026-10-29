@@ -13,7 +13,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 
-/** One dispatch for one explicitly constructed receipt, bound to the originating login session. */
 final class ManualStorySeenPolicy {
     static final String PARAMETER = "instaeclipse_manual_seen";
     static final Set<String> HOSTS = Set.of("i.instagram.com", "b.i.instagram.com",

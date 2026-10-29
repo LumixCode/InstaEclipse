@@ -14,7 +14,6 @@ import ps.reso.instaeclipse.BuildConfig;
 import ps.reso.instaeclipse.utils.download.DownloadEngine;
 import ps.reso.instaeclipse.utils.download.DownloadRequest;
 
-/** Pure bounded validation shared by the broker and its client; never logs payloads. */
 public final class BrokerPayload {
     public static final String HOST = "com.instagram.android";
     public static final String IMPORT = "ps.reso.instaeclipse.mods.devops.config.JsonImportActivity";
@@ -33,7 +32,6 @@ public final class BrokerPayload {
         public TooLarge(String message) { super(message); }
     }
 
-    /** Same UTF-16 character limit on disk imports and exports; strict UTF-8, bounded reads. */
     public static String readConfig(java.io.InputStream input) throws java.io.IOException {
         if (input == null) throw new java.io.IOException("No configuration stream");
         java.io.Reader reader = new java.io.InputStreamReader(input,
@@ -140,7 +138,6 @@ public final class BrokerPayload {
     private static Set<String> set(String... values) { return new HashSet<>(Arrays.asList(values)); }
     private static void jsonObject(String value, int maximum) {
         bounded(value, maximum, true);
-        // Streaming depth/token bounds before Gson materializes download arrays. No DASH parsing.
         try (JsonReader reader = new JsonReader(new StringReader(value))) {
             reader.setLenient(false);
             if (reader.peek() != JsonToken.BEGIN_OBJECT) invalid();

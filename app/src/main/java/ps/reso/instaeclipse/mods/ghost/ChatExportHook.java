@@ -62,16 +62,6 @@ import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * Export a DM chat to an HTML file (#225): header button in the open chat.
- *
- * - Each message is serialized with IG's own JSON serializer (static void (generator, message)
- *   method using "timestamp_in_micro" + "client_context") into a StringWriter-backed generator
- *   from the factory's (Writer) -> generator method, then read as JSON: text, user_id, timestamp,
- *   item_type. No obfuscated field names.
- * - Sender names: Users reachable from the store (participants) by id → username.
- * Only messages already loaded are exported — use Jump to first message first for a full chat.
- */
 public class ChatExportHook {
 
     private static final String TAG = "(IE|ChatExport) ";
@@ -129,7 +119,6 @@ public class ChatExportHook {
         }
     }
 
-    /** Adds "Export chat" to the module's thread header menu. */
     static void inject(Activity a) {
         if (!FeatureFlags.chatExport || !ready() || ThreadHeaderMenu.has(a, "export")) return;
         ThreadHeaderMenu.add(a, "export", I18n.t(a, R.string.ig_chat_export), () -> ask(a));
@@ -143,8 +132,6 @@ public class ChatExportHook {
         return c.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    /** Export dialog: optionally scroll to the first message first so the whole chat is loaded, and
-     *  optionally download photos/videos/voice/GIFs/shared previews into the export's own folder. */
     private static void ask(Activity a) {
         String threadId = openThread(a);
         Object session = threadId != null ? openChatSession(a) : null;
@@ -197,7 +184,6 @@ public class ChatExportHook {
                 }
                 List<?> msgs = (List<?>) messagesMethod.invoke(entry, true);
                 Object factory = factoryConstructor.newInstance();
-                // first pass: JSON per message + item id -> message (for reply quotes)
                 List<Object[]> rows = new ArrayList<>();
                 Map<String, JSONObject> byId = new HashMap<>();
                 Set<String> senderIds = new HashSet<>();
@@ -218,12 +204,9 @@ public class ChatExportHook {
 
                 String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
                 String safe = DownloadFiles.safeSegment(user != null ? user : title, threadId);
-                String folder = "chat_" + safe + "_" + stamp;   // the export's own folder
+                String folder = "chat_" + safe + "_" + stamp;
                 String file = folder + ".html";
 
-                // media manifest (no in-process download — Instagram's process can't write to the
-                // user's SAF folder, so the companion service fetches + saves these): row index ->
-                // {name, kind}, plus parallel url/name/mime lists handed to the service.
                 Map<Integer, String[]> media = new HashMap<>();
                 List<String> mUrls = new ArrayList<>(), mNames = new ArrayList<>(), mMimes = new ArrayList<>();
                 if (withMedia) {
@@ -231,7 +214,6 @@ public class ChatExportHook {
                         JSONObject j = (JSONObject) rows.get(i)[1];
                         String[] mm = mediaForMessage(j, j.optString("item_type", ""));
                         if (mm == null || !mm[0].startsWith("https://")) continue;
-                        // Extension from the final mime so the saved name matches the HTML link.
                         String mime = mimeFor(mm[1], mm[2]);
                         String name = String.format(Locale.US, "%04d_%s%s", i + 1, mm[1], extForMime(mime));
                         media.put(i, new String[]{name, mm[1]});
@@ -277,10 +259,6 @@ public class ChatExportHook {
 
                 final int count = n;
                 final String page = html.toString();
-                // Preferred path: hand the HTML + media list to the companion app's DownloadSaveService,
-                // which owns the user's SAF folder (Instagram's own process can't write there, so a
-                // local write would land in Download/ and be hidden from file managers). The service
-                // writes everything into <SAF folder>/chats/<folder>/ and shows its own notification.
                 String saf = FeatureFlags.downloaderCustomUri;
                 boolean delegated = false;
                 if (saf != null && !saf.isEmpty()) {
@@ -299,7 +277,6 @@ public class ChatExportHook {
                             it.putExtra("mediaNames", mNames.toArray(new String[0]));
                             it.putExtra("mediaMimes", mMimes.toArray(new String[0]));
                         }
-                        // Long chats the broker would refuse stay in-process (see ExportDelegate).
                         delegated = ps.reso.instaeclipse.utils.ipc.ExportDelegate.delegate(a, it, TAG, () -> {
                             try { writeLocally(a, folder, file, page, count, mUrls, mNames, mMimes); }
                             catch (Throwable t) { exportFailed(a, t); }
@@ -323,9 +300,6 @@ public class ChatExportHook {
         }).start();
     }
 
-    /** Writes the export in-process via MediaStore: with no SAF folder set, or when the companion
-     *  can't take it. It lands in Download/… and is only reachable via the gallery or a PC, but at
-     *  least the data is saved. Downloads the media, so never on the main thread. */
     private static void writeLocally(Activity a, String folder, String file, String page, int count,
                                      List<String> mUrls, List<String> mNames, List<String> mMimes) throws Exception {
         int saved = 0;
@@ -371,7 +345,6 @@ public class ChatExportHook {
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, R.string.ig_unsent_export_failed, reason), Toast.LENGTH_SHORT).show());
     }
 
-    /** Downloads a URL straight into {@code out}. Returns false (leaving {@code out} to the caller) on any error. */
     private static boolean httpGet(String url, OutputStream out) {
         HttpURLConnection conn = null;
         try {
@@ -394,8 +367,6 @@ public class ChatExportHook {
         }
     }
 
-    /** {url, kind, ext} of the best downloadable media in a message, or null. kind ∈
-     *  photo / video / voice / gif / preview (shared-content thumbnail). */
     static String[] mediaForMessage(JSONObject j, String type) {
         Object payload = j.opt(type);
         if (!(payload instanceof JSONObject) && !"text".equals(type)) {
@@ -444,7 +415,6 @@ public class ChatExportHook {
         }
     }
 
-    /** First https URL in a JSON subtree (url / uri / audio_src etc. preferred). */
     private static String deepUrl(Object o, int d) {
         if (o == null || d > 6) return "";
         if (o instanceof JSONObject jo) {
@@ -465,7 +435,6 @@ public class ChatExportHook {
         return "";
     }
 
-    /** First object/array stored under {@code key} anywhere in a JSON subtree. */
     private static Object nodeFor(Object o, String key, int d) {
         if (o == null || d > 6) return null;
         if (o instanceof JSONObject jo) {
@@ -484,7 +453,6 @@ public class ChatExportHook {
         return null;
     }
 
-    /** File extension from a URL's path (".jpg"), or {@code fallback}. */
     private static String extFromUrl(String url, String fallback) {
         try {
             String p = url.split("\\?")[0];
@@ -503,7 +471,6 @@ public class ChatExportHook {
         }
     }
 
-    /** The canonical extension for a mime, so the saved file name matches what MediaStore expects. */
     private static String extForMime(String mime) {
         switch (mime) {
             case "video/mp4":  return ".mp4";
@@ -516,13 +483,11 @@ public class ChatExportHook {
         }
     }
 
-    /** Inline element referencing a media file by name (the companion service rewrites the src to a
-     *  base64 data URI so the page is self-contained; onerror hides any media that failed to save). */
     private static String mediaHtml(String rel, String kind) {
         switch (kind) {
             case "video": return "<video class=media controls preload=none src=\"" + rel + "\" onerror=\"this.remove()\"></video>";
             case "voice": return "<audio class=media controls preload=none src=\"" + rel + "\" onerror=\"this.remove()\"></audio>";
-            default:      return "<img class=media loading=lazy src=\"" + rel + "\" onerror=\"this.remove()\">"; // photo, gif, preview
+            default:      return "<img class=media loading=lazy src=\"" + rel + "\" onerror=\"this.remove()\">";
         }
     }
 
@@ -538,7 +503,6 @@ public class ChatExportHook {
         return s;
     }
 
-    /** One message as a chat row (bubble), or a centered system line for action/call logs. */
     private static String messageHtml(JSONObject j, boolean self, String who, long ts,
                                       JSONObject replied, Map<String, String> names, String[] mrel, SimpleDateFormat fmt,
                                       ChatExportLabels labels) {
@@ -575,7 +539,6 @@ public class ChatExportHook {
         return b.append("</div></div>").toString();
     }
 
-    /** The message body HTML, styled per item type (media, shared card, story reply, like, text). */
     private static String contentHtml(JSONObject j, String type, String[] mrel, boolean self, ChatExportLabels labels) {
         String text = j.optString("text", "");
         switch (type) {
@@ -615,7 +578,6 @@ public class ChatExportHook {
         }
     }
 
-    /** A card for a shared post/reel/story, or a story-reply card (preview + label + @user + caption). */
     private static String sharedCard(JSONObject j, String type, String[] mrel, String text, boolean storyReply,
                                      ChatExportLabels labels) {
         Object payload = payloadOf(j, type);
@@ -633,7 +595,6 @@ public class ChatExportHook {
         if (!user.isEmpty()) s.append("<div class=cu>").append(HtmlExport.esc(labels.sharedBy(user, storyReply))).append("</div>");
         if (!caption.isEmpty()) s.append("<div class=cc>").append(HtmlExport.esc(clip(caption, 220))).append("</div>");
         s.append("</div>").append(link.isEmpty() ? "</div>" : "</a>");
-        // the reply text / any accompanying caption text sits under the card
         if (!text.isEmpty()) s.append("<div class=txt>").append(HtmlExport.esc(text)).append("</div>");
         return s.toString();
     }
@@ -682,12 +643,10 @@ public class ChatExportHook {
         return s.length() > max ? s.substring(0, max) + "…" : s;
     }
 
-    /** Readable text for a message: its text, or a description of what it holds (no media files). */
     static String describe(JSONObject j) {
         String text = j.optString("text", "");
         String type = j.optString("item_type", "");
         Object payload = j.opt(type);
-        // shared posts/clips (xma_*) keep the shared media under "media"
         if (!(payload instanceof JSONObject) && !type.equals("text")) payload = j.opt("media");
         String extra = switch (type) {
             case "text" -> "";
@@ -728,7 +687,6 @@ public class ChatExportHook {
         return "[" + (once ? "disappearing " : "") + kind + "]";
     }
 
-    /** "[disappearing photo · opened]" (RAVEN_OPENED / REPLAYED / DELIVERED ...). */
     private static String disappearing(Object visual) {
         String s = mediaKind(visual, true);
         String state = visual instanceof JSONObject v && v.optJSONObject("expiring_media_action_summary") != null
@@ -744,7 +702,6 @@ public class ChatExportHook {
         } catch (Throwable t) { return ""; }
     }
 
-    /** Earlier versions of an edited message, oldest first. */
     private static String editHistory(JSONObject j, SimpleDateFormat fmt) {
         JSONArray h = j.optJSONArray("edit_history");
         if (h == null || h.length() == 0) return "";
@@ -760,7 +717,6 @@ public class ChatExportHook {
         return b.toString();
     }
 
-    /** "[shared post by @user] link + caption" for shared posts/reels/stories. */
     private static String shared(Object payload, String what) {
         String user = first(payload, "username");
         String caption = first(findObj(payload, "caption", 0), "text");
@@ -774,7 +730,6 @@ public class ChatExportHook {
         return b.toString();
     }
 
-    /** First non-empty scalar for any of the keys, searched depth-first in a JSON tree. */
     private static String first(Object o, String... keys) {
         for (String k : keys) { String v = find(o, k, 0); if (v != null && !v.isEmpty()) return v; }
         return "";
@@ -808,7 +763,6 @@ public class ChatExportHook {
         return null;
     }
 
-    /** "😂 name, ❤️ name" from the message's reactions (emoji reactions, else legacy likes). */
     private static String reactions(JSONObject j, Map<String, String> names) {
         JSONObject r = j.optJSONObject("reactions");
         if (r == null) return "";
@@ -829,7 +783,6 @@ public class ChatExportHook {
         return String.join(", ", out);
     }
 
-    /** The message this one replies to: the model holds the replied message (or its item id). */
     private static JSONObject repliedTo(Object message, String ownId, Map<String, JSONObject> byId, Object factory) {
         Class<?> msgClass = serializer.getParameterTypes()[1];
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -1117,7 +1070,6 @@ public class ChatExportHook {
         }
     }
 
-    /** The User's id: its only non-static final String field (A06 on 452). */
     private static String userId(Object user) {
         for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(user.getClass())) {
             if (f.getType() != String.class || Modifier.isStatic(f.getModifiers()) || !Modifier.isFinal(f.getModifiers())) continue;

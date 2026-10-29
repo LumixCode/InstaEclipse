@@ -19,17 +19,6 @@ import java.util.List;
 
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Remembers DexKit query results for the running Instagram version (#285).
- *
- * A {@code findMethod}/{@code findClass} scan walks the whole APK (~90 ms each on a mid-range
- * phone), and the hooks run about a hundred of them while Instagram's main thread waits in
- * {@code Application.attach}. The same query on the same APK always returns the same members, so
- * the descriptors found on the first launch are stored in {@link DexKitCache} under a hash of the
- * query's serialized form, and later launches rebuild the result with
- * {@link DexKitBridge#getMethodData(String)} / {@link DexKitBridge#getClassData(String)}, which are
- * direct lookups. The result is real DexKit data, so callers keep using it as before.
- */
 public final class DexKitQueryCache {
 
     static final int QUERY_SCHEMA = 1;
@@ -356,7 +345,6 @@ public final class DexKitQueryCache {
         }
     }
 
-    /** Hash of the query as DexKit serializes it; null when it cannot be built. */
     static String key(String kind, BaseFinder query) {
         try {
             return "q_" + kind + "_" + query.hashKey();

@@ -7,15 +7,12 @@ import java.util.List;
 import java.util.Locale;
 
 final class ExternalLinkPolicy {
-    // Meta's own pages stay in Instagram's in-app browser, which keeps Meta sign-in and app links.
     private static final String[] INTERNAL_HOSTS = {
             "instagram.com", "instagr.am", "ig.me", "facebook.com", "fb.com", "threads.net", "threads.com"};
-    // Ad and tracking links carry these unescaped; java.net.URI would reject the whole link.
     private static final String UNESCAPED = " \"<>^`{|}";
 
     private ExternalLinkPolicy() {}
 
-    /** Only unwrap Instagram's and Facebook's link shims, never an unrelated site's query parameter named u. */
     static String browserUrl(String value) {
         if (value == null) return null;
         try {

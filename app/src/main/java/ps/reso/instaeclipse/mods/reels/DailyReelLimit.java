@@ -15,7 +15,6 @@ public final class DailyReelLimit {
 
     public static synchronized void init(Context context) {
         if (prefs != null) return;
-        // Usage is separate from exportable settings so restoring settings cannot reset the day.
         prefs = context.getSharedPreferences("instaeclipse_reel_usage", Context.MODE_PRIVATE);
         usage = new DailyReelUsage(prefs.getLong("day", today()), prefs.getInt("count", 0),
                 prefs.getString("lastMediaId", null));
@@ -27,7 +26,6 @@ public final class DailyReelLimit {
         refreshDay();
         if (isActive() && usage.blocksPlayback(mediaId, FeatureFlags.dailyReelLimit)) return -1;
         if (!usage.record(mediaId, today())) return -1;
-        // Impression deduplication prevents loop spam without suppressing a later allowance's warnings.
         int warning = isActive() ? usage.warningRemaining(FeatureFlags.dailyReelLimit) : -1;
         save();
         return warning;

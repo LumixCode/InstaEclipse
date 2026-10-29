@@ -13,12 +13,6 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.ModuleBridge;
 
-/**
- * ViewPager2's user-input ("swipe enabled") flag, resolved without hardcoded obfuscated names.
- * IG's R8 build keeps the androidx.viewpager2.widget.ViewPager2 class name, but some builds drop
- * setUserInputEnabled() and the backing {@code mUserInputEnabled} field is renamed (A09 on 452).
- * Shared by DistractionFreeUIHook (main tab pager) and ReelViewerHook (Reels pager).
- */
 public final class ViewPager2Input {
 
     private ViewPager2Input() {}
@@ -30,11 +24,6 @@ public final class ViewPager2Input {
     private static Field userInputField;
     private static boolean userInputFieldTried;
 
-    /**
-     * ViewPager2's {@code mUserInputEnabled}. Its inner RecyclerView reads it in
-     * onInterceptTouchEvent, so DexKit gives the exact boolean field that method reads.
-     * Needs a live pager (the inner RecyclerView class is taken from its children).
-     */
     public static synchronized Field field(View pager) {
         if (userInputFieldTried) return userInputField;
         userInputFieldTried = true;
@@ -42,7 +31,7 @@ public final class ViewPager2Input {
             Class<?> vp = viewPager2Class(pager);
             if (vp == null) return null;
             try {
-                Field f = vp.getDeclaredField("mUserInputEnabled"); // unminified builds
+                Field f = vp.getDeclaredField("mUserInputEnabled");
                 f.setAccessible(true);
                 return userInputField = f;
             } catch (NoSuchFieldException ignored) {}
@@ -52,7 +41,7 @@ public final class ViewPager2Input {
                     Field f = vp.getDeclaredField(cached);
                     f.setAccessible(true);
                     return userInputField = f;
-                } catch (NoSuchFieldException ignored) {} // stale cache: rediscover below
+                } catch (NoSuchFieldException ignored) {}
             }
             Class<?> inner = null;
             if (pager instanceof ViewGroup g) {

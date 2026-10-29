@@ -8,19 +8,11 @@ import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 
-// Strips Instagram tracking params (igshid/igsh/utm_*) from links the user copies or shares —
-// only the tracking keys; other params such as img_index are kept (#252, TrackingParamStripper).
-// Covers three framework paths (all obfuscation-proof, no IG class names):
-//   1. android.content.ClipboardManager.setPrimaryClip - modern clipboard copies.
-//   3. android.content.Intent.putExtra(EXTRA_TEXT) - the external "Share to app" sheet, which
-//      never touches the clipboard.
-// Gated on FeatureFlags.disableTrackingLinks; also swaps the host for FeatureFlags.customShareDomain.
 public class TrackingLinkDisable {
 
     public void disableTrackingLinks(ClassLoader classLoader) throws Throwable {
         FeatureStatusTracker.setHooked("DisableTrackingLinks");
 
-        // 1. Modern clipboard (ClipData) 
         Class<?> clipboardManagerClass = XposedHelpers.findClass("android.content.ClipboardManager", classLoader);
         XposedHelpers.findAndHookMethod(clipboardManagerClass, "setPrimaryClip",
                 Class.forName("android.content.ClipData"), new XC_MethodHook() {
@@ -37,7 +29,6 @@ public class TrackingLinkDisable {
                     }
                 });
 
-        // 3. External share sheet -- Intent.putExtra(EXTRA_TEXT, ...) 
         XC_MethodHook putExtraHook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
@@ -56,10 +47,6 @@ public class TrackingLinkDisable {
             XposedHelpers.findAndHookMethod(Intent.class, "putExtra", String.class, CharSequence.class, putExtraHook);
         } catch (Throwable ignored) {}
 
-        // 4. System share sheet (android ChooserActivity) -- its built-in "Copy" button copies the
-        // target Intent's EXTRA_TEXT in the SYSTEM process, so our in-app clipboard hooks never see
-        // it. Sanitize the target Intent here, at the choke point where IG builds the chooser (runs
-        // in IG's process), which fixes both the system "Copy" and every "Share to <app>" target.
         XC_MethodHook chooserHook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
@@ -78,8 +65,6 @@ public class TrackingLinkDisable {
         } catch (Throwable ignored) {}
     }
 
-    /** Strips tracking params from a share Intent's text (EXTRA_TEXT) and any ClipData it carries,
-     *  so the system chooser's "Copy" and every "Share to app" target get the clean link. */
     private static void sanitizeIntentText(Intent target) {
         try {
             CharSequence text = target.getCharSequenceExtra(Intent.EXTRA_TEXT);
@@ -96,13 +81,11 @@ public class TrackingLinkDisable {
         } catch (Throwable ignored) {}
     }
 
-    /** Tracking-param stripping and/or the custom share domain are on. */
     static boolean active() {
         String domain = FeatureFlags.customShareDomain;
         return FeatureFlags.disableTrackingLinks || (domain != null && !domain.isEmpty());
     }
 
-    /** Applies both link rewrites; null when nothing changed. */
     static String rewrite(String text) {
         if (text == null) return null;
         String out = text;

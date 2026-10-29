@@ -3,11 +3,6 @@ package ps.reso.instaeclipse.mods.media;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Pulls the audio track URL out of a video's DASH manifest (Media "video_dash_manifest", #234).
- * Instagram serves reels/videos as separate audio + video DASH streams; the audio AdaptationSet's
- * BaseURL is a plain CDN URL to an AAC-in-MP4 (.m4a) file. Framework-free so it is unit-tested.
- */
 public final class DashAudio {
 
     private static final Pattern ADAPTATION = Pattern.compile(
@@ -22,7 +17,6 @@ public final class DashAudio {
 
     private DashAudio() {}
 
-    /** Highest-bandwidth audio BaseURL in the manifest, or null when there is no audio track. */
     public static String audioUrl(String manifest) {
         if (manifest == null || manifest.isEmpty()) return null;
         Matcher sets = ADAPTATION.matcher(manifest);
@@ -50,10 +44,6 @@ public final class DashAudio {
     private static final Pattern HEIGHT = Pattern.compile("\\bheight\\s*=\\s*\"(\\d+)\"");
     private static final Pattern CODECS = Pattern.compile("\\bcodecs\\s*=\\s*\"([^\"]+)\"");
 
-    /**
-     * The tallest video Representation as {BaseURL, height}, or null. Ties go to the higher bitrate;
-     * {@code skipAv1} leaves AV1 streams out (MediaMuxer can not write AV1 before Android 14).
-     */
     public static String[] bestVideo(String manifest, boolean skipAv1) {
         if (manifest == null || manifest.isEmpty()) return null;
         String best = null;

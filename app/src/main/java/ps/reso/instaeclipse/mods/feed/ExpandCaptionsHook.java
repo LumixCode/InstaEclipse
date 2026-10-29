@@ -19,18 +19,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * Auto-expand feed captions (#246): no "… more" truncation.
- *
- * The feed caption is built by one static builder (X.00bW.A03 on 452, X.00jG.A03 on 451: the
- * 7-arg static non-void method using " [...]"), which calls the shared line-truncation helper
- * (X.04oF.A00(cfg, prefix, body, suffix, int maxLines, boolean) → CharSequence). The helper
- * returns the body untouched when it fits in maxLines, and the builder only appends the "more"
- * span when the text got shorter. While the builder runs (ThreadLocal), raise maxLines to
- * Integer.MAX_VALUE. The helper's other ~15 callers are left alone.
- *
- * IG caches built caption layouts, so toggling takes effect after an Instagram restart.
- */
 public class ExpandCaptionsHook {
 
     private static final String TAG = "(InstaEclipse | ExpandCaptions): ";

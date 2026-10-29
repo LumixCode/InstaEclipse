@@ -33,55 +33,34 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 
-/**
- * Injects a "Download" entry into the feed-post three-dots (⋮) menu.
- *
- * Hook A — static add-button method on MediaOptionsOverflowMenuCreator
- *   Found via DexKit: findClass("MediaOptionsOverflowMenuCreator") → findMethod(declaredClass, void).
- *   Hooks every addButton call; injects our Download entry once per menu popup.
- *
- * Hook B — options click handler
- *   Found via DexKit: void method with sole param MediaOption$Option (stable, unobfuscated type).
- *   Fires on every option tap; we handle DOWNLOAD and trigger the download.
- */
 public class PostDownloadContextMenuHook {
 
 
 
-    // ── Resolved at install time ──────────────────────────────────────────────
-
-    // com.instagram.feed.media.mediaoption.MediaOption$Option — stable public enum
     private static Class<?> mediaOptionEnumClass;
-    private static Object   downloadOptionValue;     // MediaOption$Option.DOWNLOAD
+    private static Object   downloadOptionValue;
     private static Object   copyLinkOptionValue;
     private static Object   copyImageOptionValue;
     private static Object   mediaInfoOptionValue;
     private static Object   speedOptionValue;
     private static Object   countsOptionValue;
 
-    // Obfuscated creator class found via "MediaOptionsOverflowMenuCreator" string
     private static Class<?> menuCreatorClass;
 
-    // Static "add one button to list" method on menuCreatorClass — no hardcoded name
     private static Method   addButtonMethod;
     private static Object   enumNormalValue;
 
-    // Param indices — resolved once when addButtonMethod is found
     private static int idxEnum   = 0;
     private static int idxOption = 1;
     private static int idxSelf   = 2;
     private static int idxText   = 3;
     private static int idxList   = 4;
 
-    // ── Guards ────────────────────────────────────────────────────────────────
-
     private static final ThreadLocal<Boolean> sAddingDownload =
             ThreadLocal.withInitial(() -> Boolean.FALSE);
 
     private static final Map<Object, PostMenuRowsPolicy> menus =
             Collections.synchronizedMap(new WeakHashMap<>());
-
-    // ── Entry point ──────────────────────────────────────────────────────────
 
     public void install(ClassLoader classLoader) {
         loadMediaOptionEnum(classLoader);
@@ -90,8 +69,6 @@ public class PostDownloadContextMenuHook {
         installClickHandlerHook(classLoader);
         installAllowlistPatchHook(classLoader);
     }
-
-    // ── Step 1: MediaOption$Option.DOWNLOAD ──────────────────────────────────
 
     private static void loadMediaOptionEnum(ClassLoader cl) {
         try {
@@ -126,15 +103,7 @@ public class PostDownloadContextMenuHook {
         }
     }
 
-    // ── Step 2: find MediaOptionsOverflowMenuCreator + its add-button method ─
-    //
-    // Pass 1: findClass by string "MediaOptionsOverflowMenuCreator" (avoids <clinit> crash
-    //         that occurs when calling getMethodInstance() on a <clinit> MethodData).
-    // Pass 2: findMethod(declaredClass, returnType=void) → filter for the static method
-    //         that takes MediaOption$Option + ArrayList as params.
-
     private static void findCreatorClassAndAddButtonMethod(ClassLoader classLoader) {
-        // Cache hit: restore addButtonMethod and parameter indices without DexKit
         if (DexKitCache.isCacheValid()) {
             Method cached = DexKitCache.loadMethod("PostDownload_addButton", classLoader);
             if (cached != null) {
@@ -154,7 +123,6 @@ public class PostDownloadContextMenuHook {
                         } catch (NumberFormatException ignored) {}
                     }
                 }
-                // Resolve enumNormalValue from the button-type enum parameter
                 if (idxEnum >= 0) {
                     try {
                         Class<?> btnTypeEnum = cached.getParameterTypes()[idxEnum];
@@ -237,7 +205,6 @@ public class PostDownloadContextMenuHook {
             DexKitCache.saveString("PostDownload_addButtonIdx",
                     idxEnum + "," + idxOption + "," + idxSelf + "," + idxText + "," + idxList);
 
-            // Resolve the "normal" button-type enum value
             Class<?> btnTypeEnumClass = addButtonMethod.getParameterTypes()[idxEnum];
             Object[] btnVals = (Object[]) btnTypeEnumClass.getMethod("values").invoke(null);
             Object firstVal = null;
@@ -258,8 +225,6 @@ public class PostDownloadContextMenuHook {
             ModuleLog.detail("(IE|Post) findCreatorClassAndAddButtonMethod: " + t);
         }
     }
-
-    // ── Hook A: intercept every addButton call, inject Download once per menu ─
 
     private static void installAddButtonHook() {
         if (addButtonMethod == null || enumNormalValue == null
@@ -372,11 +337,6 @@ public class PostDownloadContextMenuHook {
         }
     }
 
-    // ── Hook B: click handler ─────────────────────────────────────────────────
-    //
-    // DexKit finds void methods with sole param MediaOption$Option — a stable unobfuscated type.
-    // No string constants used, so obfuscation of surrounding code doesn't matter.
-
     private static Method reelClickDispatcher;
 
     private static void resolveReelClickDispatcher(ClassLoader loader) {
@@ -407,9 +367,6 @@ public class PostDownloadContextMenuHook {
             }
         };
 
-        // Cache hit: restore all previously-found click handler methods
-        // (cache key bumped to _v2 — the old key could hold private analytics-only
-        // lookalikes hooked before the public-only filter below was added)
         if (DexKitCache.isCacheValid()) {
             List<Method> cached = DexKitCache.loadMethods("PostDownload_click_v3", classLoader);
             if (cached != null && !cached.isEmpty()) {
@@ -426,8 +383,6 @@ public class PostDownloadContextMenuHook {
                             .returnType("void")
                             .paramTypes(optionClassName)));
 
-            // Resolve all non-static candidates first so we can decide the private-exclusion
-            // policy from the whole set, rather than filtering as we go.
             List<Method> candidates = new ArrayList<>();
             for (Found md : results) {
                 try {
@@ -437,15 +392,6 @@ public class PostDownloadContextMenuHook {
                 } catch (Throwable ignored) {}
             }
 
-            // Exclude private methods — these are consistently internal analytics/logging
-            // helpers that also receive the tapped option for telemetry (e.g. 5RY.A08 on
-            // the reel menu), not the real click dispatcher (public in every case seen so
-            // far: RAu.A08 for posts, 5RY.A0O for reels). Hooking the private lookalikes
-            // caused duplicate/spurious download triggers. Only apply the exclusion when a
-            // public candidate also exists — on a build where the real dispatcher itself
-            // turns out to be private with no public sibling, skipping it entirely would
-            // just break the feature outright, which is worse than the duplicate-trigger
-            // risk this filter guards against.
             boolean hasPublicCandidate = candidates.stream().anyMatch(m -> Modifier.isPublic(m.getModifiers()));
 
             List<Method> hooked = new ArrayList<>();
@@ -472,16 +418,6 @@ public class PostDownloadContextMenuHook {
             ModuleLog.error("(IE|Post) Taps on the added menu rows will not work", t);
         }
     }
-
-    // ── Hook C: allowlist patch ─────────────────────────────────────────────────
-    //
-    // IG's newer "SimplifiedMediaOverflowBottomSheet" menu filters the button list
-    // down to a hardcoded allowlist of MediaOption$Option values before rendering
-    // (DOWNLOAD isn't one of them), silently dropping our injected entry even though
-    // Hook A added it successfully. Found via DexKit field-usage matching — the
-    // allowlist-builder method is the unique static (boolean)->List method that
-    // references these three particular MediaOption$Option constants together.
-    // We patch its return value to also include DOWNLOAD so our entry survives.
 
     private static void installAllowlistPatchHook(ClassLoader classLoader) {
         XC_MethodHook allowlistHook = new XC_MethodHook() {
@@ -555,13 +491,10 @@ public class PostDownloadContextMenuHook {
         }
     }
 
-    // ── Click dispatch ────────────────────────────────────────────────────────
-
     private static void onOptionClicked(XC_MethodHook.MethodHookParam param) {
         try {
             if (Boolean.TRUE.equals(sAddingDownload.get())) return;
 
-            // Find MediaOption$Option argument
             Object clicked = null;
             for (Object a : param.args) {
                 if (a != null && mediaOptionEnumClass != null && mediaOptionEnumClass.isInstance(a)) {
@@ -580,10 +513,6 @@ public class PostDownloadContextMenuHook {
 
             String option = clicked.toString();
             PlaybackSpeedHook.instagramRowTapped(option);
-            // ReelDownloadHook adds DOWNLOAD to the reel menu (and unlocks IG's native row) when
-            // REEL download is on. If we only consumed the tap for POST download, a reel tap with
-            // only Reel download enabled fell through to Instagram's own save flow, which burns in
-            // a watermark (#256). Route it to the module's clean downloader for either toggle.
             boolean reelMenu = reelClickDispatcher != null && param.method.equals(reelClickDispatcher);
             PostMenuRowsPolicy.Row row = PostMenuRowsPolicy.row(option);
             boolean isDownload = row == PostMenuRowsPolicy.Row.DOWNLOAD
@@ -595,7 +524,7 @@ public class PostDownloadContextMenuHook {
             boolean isCounts = row == PostMenuRowsPolicy.Row.COUNTS && FeatureFlags.postCountSpoof;
             if (!isDownload && !isCopyLink && !isCopyImage && !isInfo && !isSpeed && !isCounts) return;
 
-            param.setResult(null); // consume the event
+            param.setResult(null);
 
             Object thisObj = param.thisObject;
 
@@ -638,19 +567,12 @@ public class PostDownloadContextMenuHook {
         return owner == null || self.equals(owner);
     }
 
-    // ── Download dispatch ─────────────────────────────────────────────────────
-
     private static void triggerDownload(Context ctx, Object media, Object clickHandler, String type) {
         SelectedMediaDownloads.captureAndShowPost(ctx, media, type, n -> {
             int viewIdx = ReelDownloadHook.findCarouselIndexFromView(ctx, n);
             return viewIdx >= 0 ? viewIdx : findCarouselIndex(clickHandler, n);
         });
     }
-
-    // ── Copy image (#228) ─────────────────────────────────────────────────────
-    //
-    // Copies the photo being viewed (carousel: the visible slide, resolved the same way as
-    // Download) straight to the clipboard. Video slides have no still image to copy.
 
     private static void triggerCopyImage(Context ctx, Object media, Object clickHandler) {
         List<String> urls = FeedVideoDownloadHook.extractAllUrlsFromMedia(ctx, media);
@@ -678,20 +600,12 @@ public class PostDownloadContextMenuHook {
         ImageClipboard.copy(ctx, url);
     }
 
-    // ── Copy Media Link (#117) ────────────────────────────────────────────────
-    //
-    // Copies the direct CDN url of the currently-visible slide to the clipboard.
-    // Reuses the same URL extraction + carousel-index resolution as the downloader
-    // so the copied link always matches the slide the user is looking at.
-
     private static void triggerCopyLink(Context ctx, Object media, Object clickHandler) {
         List<String> urls = FeedVideoDownloadHook.extractAllUrlsFromMedia(ctx, media);
         if (urls == null || urls.isEmpty()) {
             ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_copy_link_none), Toast.LENGTH_SHORT).show();
             return;
         }
-        // Single URL copies straight to clipboard; a carousel shows a per-slide chooser
-        // (see showCopyLinkSheet — the visible slide can't be resolved reliably in the feed).
         FeedVideoDownloadHook.mainHandler.post(() -> FeedVideoDownloadHook.showCopyLinkSheet(ctx, urls));
     }
 
@@ -710,8 +624,6 @@ public class PostDownloadContextMenuHook {
         return fitting == 1 ? index : -1;
     }
 
-    // ── Reflection helpers ────────────────────────────────────────────────────
-
     private static Context findContext(Object obj) {
         if (obj == null) return null;
         Class<?> cls = obj.getClass();
@@ -729,15 +641,6 @@ public class PostDownloadContextMenuHook {
         return null;
     }
 
-    /**
-     * Preferred media lookup: reads the click handler's own reference to the menu-creator
-     * (QpF-equivalent) instance and pulls its Media field directly, instead of the generic
-     * BFS in {@link #findMedia}. The generic scan can land on an unrelated Media-typed field
-     * elsewhere in the object graph first (e.g. a hosting Fragment's own "created with" post
-     * reference, which doesn't update as the user navigates between posts within that
-     * Fragment) — the menu-creator's own Media field is always the one that was current
-     * when THIS specific menu was built, so it can't go stale that way.
-     */
     private static Object findMediaViaMenuCreator(Object clickHandler) {
         if (clickHandler == null || menuCreatorClass == null) return null;
         try {

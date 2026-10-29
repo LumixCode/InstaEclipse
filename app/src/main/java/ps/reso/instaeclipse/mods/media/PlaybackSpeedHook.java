@@ -37,24 +37,6 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 
-/**
- * Playback speed for feed videos and a forced reel seek bar (#247).
- *
- * Feed: IG's feed player (class using "IgFeedVideoPlayer: Persistent Visible Cover Image",
- * X.05fU on 452) starts a video via its (Media, …)boolean method; we keep the last instance.
- * The underlying Groot player's speed setter is the (float) caller of the method that uses
- * "setPlaybackSpeed" (X.01Nh.A0L → X.01Om.A0R on 452) — the same path IG's own hold-for-2x uses.
- * The chosen speed is re-applied to every video that starts afterwards (1x = off).
- *
- * Reels: IG's own attached scrubber is gated by ClipsExperimentUtil.shouldShowAttachedScrubber
- * ((UserSession, long, boolean, boolean)boolean using its purge-flag string); forced true.
- *
- * Hold for slow motion: IG's hold-for-2x fires on both halves of a reel. With
- * FeatureFlags.holdLeftSlowMotion on, a 2x request while a touch that went down on the left half
- * of a reel is still held becomes 0.5x (touch from Activity.dispatchTouchEvent; the rewrite happens
- * in the same Hero / player setters as the chosen speed, see {@link HoldGate}), and IG's "2X" hint
- * reads "½X" meanwhile.
- */
 public class PlaybackSpeedHook {
 
     private static final String TAG = "(InstaEclipse | PlaybackSpeed): ";
@@ -69,51 +51,34 @@ public class PlaybackSpeedHook {
     private static volatile WeakReference<Activity> touchActivity;
     private static final PlaybackScope SCOPE = new PlaybackScope();
 
-    /**
-     * Hold-for-2x from the left half becomes slow motion; IG's 1x reset or the finger lifting
-     * ends it.
-     * @param hero the Hero setter, which the module's own speed changes reach after a Handler hop
-     */
     private static float holdSpeed(float f, boolean hero) {
         if (!FeatureFlags.holdLeftSlowMotion) return f;
         boolean was = HOLD.slowActive();
         float out = HOLD.speedFor(f, hero, android.os.SystemClock.uptimeMillis());
         if (out != f && !was) {
             ModuleLog.probe(TAG + "hold on the left: " + SLOW + "x");
-            // IG shows its "2X" hint before it sets the speed: fix the one already on screen
             FeedVideoDownloadHook.mainHandler.post(PlaybackSpeedHook::relabel);
             FeedVideoDownloadHook.mainHandler.postDelayed(PlaybackSpeedHook::relabel, 200);
         }
         return out;
     }
 
-    /**
-     * Hold-left slow motion state. A 2x request becomes {@code SLOW} only while a touch that went
-     * down on the left half of a reel is still down (IG's hold-for-2x), so taps on 2x controls
-     * (voice messages, IG's speed sheet, our chooser) keep 2x. The module's own speed changes
-     * reach the Hero setter later, on a Handler message outside {@code APPLYING}, so a Hero 2x
-     * matching the module's own request of the last {@code OWN_MS} is left alone too. Slow
-     * motion (and the "½X" hint) ends with the gesture, with IG's 1x, or at the next touch-down.
-     */
     static final class HoldGate {
         static final long OWN_MS = 1000;
         private volatile boolean leftHeld, slow;
         private float ownSpeed = Float.NaN;
         private long ownUntil;
 
-        /** A gesture starts: a hold on the left half of a reel, or not. */
         synchronized void down(boolean leftOnReel) {
             leftHeld = leftOnReel;
             slow = false;
         }
 
-        /** The gesture ended (ACTION_UP / ACTION_CANCEL). */
         synchronized void up() {
             leftHeld = false;
             slow = false;
         }
 
-        /** The module sets speed {@code s} itself; its Hero call may arrive a little later. */
         synchronized void own(float s, long now) {
             ownSpeed = s;
             ownUntil = now + OWN_MS;
@@ -123,7 +88,6 @@ public class PlaybackSpeedHook {
             return !slow && !(s == ownSpeed && now <= ownUntil);
         }
 
-        /** The speed a player gets for a request of {@code f}; {@code hero} = at the Hero setter. */
         synchronized float speedFor(float f, boolean hero, long now) {
             if (f == 2f && leftHeld && !(hero && f == ownSpeed && now <= ownUntil)) {
                 slow = true;
@@ -144,10 +108,9 @@ public class PlaybackSpeedHook {
         if (o != null) PLAYERS.put(o, Boolean.TRUE);
     }
 
-    /** Applies the speed to every live story/reel player; true if any accepted it. */
     private static boolean applyToPlayers(float s) {
         boolean ok = false;
-        HOLD.own(s, android.os.SystemClock.uptimeMillis()); // reaches the Hero setter after a hop
+        HOLD.own(s, android.os.SystemClock.uptimeMillis());
         Object[] live;
         synchronized (PLAYERS) { live = PLAYERS.keySet().toArray(); }
         for (Object p : live) {
@@ -183,10 +146,6 @@ public class PlaybackSpeedHook {
             speedHooks = true;
         }
         if (FeatureFlags.forceReelScrubber) installReelScrubber(cl);
-        // The hold-side hooks sit on very hot framework methods (Activity.dispatchTouchEvent,
-        // TextView.setText, StaticLayout/BoringLayout); hooking those app-wide triggers ART's JIT
-        // SIGSEGV on IG 451+ / Android 13, so they are only installed when the feature is on
-        // (turning it on later applies after an Instagram restart).
         if (FeatureFlags.holdLeftSlowMotion) installHoldSide();
     }
 
@@ -196,25 +155,21 @@ public class PlaybackSpeedHook {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
                     if (!FeatureFlags.holdLeftSlowMotion) {
-                        if (HOLD.slowActive()) HOLD.up(); // turned off during a hold: end it
+                        if (HOLD.slowActive()) HOLD.up();
                         return;
                     }
                     if (INJECTING || !(param.args[0] instanceof MotionEvent ev)) return;
                     if (onTouch((Activity) param.thisObject, ev)) param.setResult(true);
                 }
             });
-            // IG's hint under the finger ("Slide down to lock 2X speed") is Litho text, laid out with
-            // StaticLayout/BoringLayout: only touched while a slow hold is active, and only the
-            // "2X" token. TextView.setText covers the same hint if it's ever a plain TextView.
             XC_MethodHook hint = new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
                     if (!HOLD.slowActive() || !FeatureFlags.holdLeftSlowMotion || param.args.length == 0
                             || !(param.args[0] instanceof CharSequence cs) || cs.length() > 80
-                            || param.thisObject instanceof android.widget.EditText) return; // never a typed draft
+                            || param.thisObject instanceof android.widget.EditText) return;
                     if (!ReelTouchTarget.TWO_X.matcher(cs).find()) return;
                     CharSequence out = ReelTouchTarget.halfX(cs);
-                    // StaticLayout.Builder.obtain(source, start, end, …): keep a whole-text range whole
                     if (param.args.length > 2 && param.args[1] instanceof Integer st && param.args[2] instanceof Integer en) {
                         if (st != 0 || en != cs.length()) return;
                         param.args[2] = out.length();
@@ -233,10 +188,6 @@ public class PlaybackSpeedHook {
         }
     }
 
-    // Hero layer: every IG video (feed, reels, stories, highlights) plays through the Hero player
-    // client (X.09cA on 451). Story viewers never go through the feed/clips wrappers above, so the
-    // speed is set here: (player, speed, pitch) static setter "HeroManager.setPlaybackSpeed",
-    // re-applied each time a player prepares ("HeroManager.prepareAndMayPlay").
     private static Method heroSet;
     private static final java.util.Map<Object, Boolean> HEROES =
             java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
@@ -279,7 +230,6 @@ public class PlaybackSpeedHook {
                         holdSpeed(f1, true);
                         if (HOLD.fromInstagram(f1, android.os.SystemClock.uptimeMillis())) SCOPE.instagramSet(param.args[0], f1);
                     }
-                    // IG resets to 1x on its own (e.g. after hold-for-2x); keep the chosen speed.
                     if (FeatureFlags.offerPlaybackSpeed && param.args[1] instanceof Float f && f == 1f
                             && SCOPE.applies(PlaybackScope.Surface.SHARED_PLAYER, param.args[0], speed))
                         param.args[1] = speed;
@@ -302,10 +252,6 @@ public class PlaybackSpeedHook {
         }
     }
 
-    // IG 452 only speeds up a hold on the left edge of a reel; a hold elsewhere pauses it. The
-    // right-half hold (left of the like/comment/share column) is ours: just before IG's long press
-    // fires, IG gets an ACTION_CANCEL (so it never pauses) and the rest of the gesture is ours,
-    // 2x until the finger lifts.
     private static volatile boolean rightActive;
     private static boolean rightPending;
     private static boolean INJECTING;
@@ -329,7 +275,6 @@ public class PlaybackSpeedHook {
         ok |= applyToHeroes(2f);
         ModuleLog.probe(TAG + "hold on the right: 2x, applied=" + ok);
     };
-    /** @return true to swallow the event (the rest of a right-side hold). */
     private static boolean onTouch(Activity a, MotionEvent ev) {
         switch (ev.getActionMasked()) {
             case MotionEvent.ACTION_DOWN -> {
@@ -342,7 +287,6 @@ public class PlaybackSpeedHook {
                 if (!left && downX < dm.widthPixels * 0.82f && downY > dm.heightPixels * 0.15f
                         && downY < dm.heightPixels * 0.85f && ReelTouchTarget.onReel(a, downX, downY)) {
                     rightPending = true;
-                    // a bit before IG's own long press (getLongPressTimeout) so IG never pauses
                     FeedVideoDownloadHook.mainHandler.postDelayed(RIGHT_HOLD,
                             android.view.ViewConfiguration.getLongPressTimeout() * 3L / 4);
                 }
@@ -387,7 +331,7 @@ public class PlaybackSpeedHook {
 
     private static void relabel(android.view.View v, int depth) {
         if (depth > 40 || v.getVisibility() != android.view.View.VISIBLE) return;
-        if (v instanceof android.widget.EditText) return; // a typed draft: never rewritten
+        if (v instanceof android.widget.EditText) return;
         if (v instanceof TextView tv) {
             CharSequence cs = tv.getText();
             if (cs != null && cs.length() <= 80 && ReelTouchTarget.TWO_X.matcher(cs).find()) tv.setText(ReelTouchTarget.halfX(cs));
@@ -460,7 +404,6 @@ public class PlaybackSpeedHook {
         return found;
     }
 
-    /** Applies the speed to every live Hero player; true if any accepted it. */
     private static boolean applyToHeroes(float s) {
         Object[] live;
         synchronized (HEROES) { live = HEROES.keySet().toArray(); }
@@ -538,8 +481,6 @@ public class PlaybackSpeedHook {
                     }
                 }
             });
-            // Autoplaying feed videos don't always pass through the start method above; the player
-            // impl's "Playback started " callback fires for whichever video actually starts.
             Method started = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("PlaybackSpeed_started", cl) : null;
             if (started == null) {
                 for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
@@ -559,9 +500,6 @@ public class PlaybackSpeedHook {
                     }
                 });
             }
-            // Story / reel players set speed through their own (float) method that calls the Groot
-            // setter (X.0S4W / X.0Cfw .HFy on 452). Remember their instances and, when a custom
-            // speed is chosen, apply it there too (and override IG's own 1x calls).
             int storyHooks = 0;
             for (Method setter : SETTERS) {
                 for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
@@ -643,12 +581,10 @@ public class PlaybackSpeedHook {
         }
     }
 
-    /** Speed chooser from the post ⋯ menu; applies to the playing feed video and the next ones. */
     static void showChooser(Context ctx) {
         showChooser(ctx, null);
     }
 
-    /** @param onClosed run when the chooser closes (stories use it to resume the paused viewer). */
     static void showChooser(Context ctx, Runnable onClosed) {
         String[] labels = new String[SPEEDS.length];
         int checked = 1;
@@ -680,14 +616,13 @@ public class PlaybackSpeedHook {
                 .show();
     }
 
-    /** Finds the Groot player reachable from the feed player and sets its speed. */
     private static boolean apply(Object feedPlayer, float s) {
         Object target = find(feedPlayer, 0, Collections.newSetFromMap(new IdentityHashMap<>()));
         if (target == null) {
             ModuleLog.probe(TAG + "no player object for speed");
             return false;
         }
-        HOLD.own(s, android.os.SystemClock.uptimeMillis()); // reaches the Hero setter after a hop
+        HOLD.own(s, android.os.SystemClock.uptimeMillis());
         for (Method m : SETTERS) {
             if (!m.getDeclaringClass().isInstance(target)) continue;
             try {

@@ -71,7 +71,6 @@ public class HelpFragment extends Fragment implements TabFragment {
 
         buildFaq(view.findViewById(R.id.faq_container));
 
-        // Troubleshooting: JingMatrix's Vector (rooted) / LSPatch (not rooted) + the LSPatch guide.
         view.findViewById(R.id.vector_row).setOnClickListener(v -> openUrl(VECTOR_URL));
         view.findViewById(R.id.lspatch_row).setOnClickListener(v -> openUrl(LSPATCH_URL));
         view.findViewById(R.id.lspatch_guide_button).setOnClickListener(v -> openUrl(LSPATCH_GUIDE_URL));
@@ -236,8 +235,6 @@ public class HelpFragment extends Fragment implements TabFragment {
         OneShotPreDrawListener.add(scroll, () -> scroll.smoothScrollTo(0, about.getTop()));
     }
 
-    // ---- FAQ ------------------------------------------------------------------------------
-
     private void buildFaq(LinearLayout container) {
         Context ctx = container.getContext();
         for (int i = 0; i < FAQ_STRINGS.length; i++) {
@@ -312,7 +309,6 @@ public class HelpFragment extends Fragment implements TabFragment {
 
         Runnable toggle = () -> {
             boolean expand = a.getVisibility() != View.VISIBLE;
-            // Animate the whole card so rows below slide smoothly.
             ViewGroup root = (ViewGroup) parentCard.getParent().getParent();
             TransitionManager.beginDelayedTransition(root != null ? root : parentCard,
                     new AutoTransition().setDuration(220));
@@ -344,11 +340,6 @@ public class HelpFragment extends Fragment implements TabFragment {
                 });
     }
 
-    /**
-     * FAQ strings bundle question + answer ("<b>1. Q?</b>\n- A"). Locales vary: some use
-     * &lt;br/&gt; in CDATA, some have no separator at all. Split robustly; fall back to the
-     * whole text as the question.
-     */
     static CharSequence[] splitFaq(CharSequence raw) {
         String text = raw.toString();
         if (text.contains("<")) {
@@ -395,8 +386,6 @@ public class HelpFragment extends Fragment implements TabFragment {
         v.setLayoutParams(lp);
         return v;
     }
-
-    // ---- helpers --------------------------------------------------------------------------
 
     private void openUrl(String url) {
         Links.open(requireContext(), url);

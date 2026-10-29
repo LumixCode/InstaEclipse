@@ -13,7 +13,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-/** Owns only immediate files in dedicated frame sessions; never traverses links or subdirectories. */
 public final class FrameSessionCache {
     private static final String DIRECTORY = "ie_frames";
     private static final String MARKER = ".ie_frame_session";
@@ -39,7 +38,6 @@ public final class FrameSessionCache {
         return new Session(root, directory);
     }
 
-    /** Best-effort startup cleanup. False means some entries were unsafe, over-limit or undeletable. */
     public static synchronized boolean cleanupOrphans(File cacheRoot) {
         try {
             Path root = ownedRoot(cacheRoot, false);
@@ -80,7 +78,6 @@ public final class FrameSessionCache {
     }
 
     private static boolean deleteSession(Path root, Path directory) throws IOException {
-        // Recheck the complete boundary even for Session.close(): the directory may have changed.
         if (!directory.getParent().equals(root) || !SESSION.matcher(directory.getFileName().toString()).matches()
                 || !safeDirectory(root)) return false;
         if (!Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) return true;
@@ -95,7 +92,6 @@ public final class FrameSessionCache {
                 files.add(entry);
             }
         }
-        // Keep the marker until other files are gone so failed deletion can be retried next startup.
         for (Path file : files) if (!file.equals(marker)) Files.deleteIfExists(file);
         Files.delete(marker);
         Files.delete(directory);

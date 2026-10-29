@@ -16,15 +16,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * Don't save searches (#280): profiles, tags and places you open from Search stay out of Recent.
- *
- * <p>Instagram keeps Recent in two places. On the server, a tap on a result is registered with
- * fbsearch/register_recent_search_click/, which IGNetworkInterceptor drops. On the phone,
- * RecentSearchCache (found by its "Error saving recent searches" log) adds the entry to the top of
- * its list and saves it; that add is skipped here. Searches saved before stay until cleared in
- * Instagram.
- */
 public final class SearchHistoryHook {
 
     private static final String TAG = "(IE|SearchHistory) ";
@@ -42,7 +33,6 @@ public final class SearchHistoryHook {
                     ModuleLog.error(TAG + "Could not stop Instagram from saving searches: not supported by this Instagram version (recent search cache not found)");
                     return;
                 }
-                // The add: (Object) -> void that puts the new entry at the top (List.add(0, entry)).
                 for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .declaredClass(owners.get(0).getClassName())
                         .paramCount(1).returnType("void")

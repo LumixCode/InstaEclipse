@@ -3,7 +3,6 @@ package ps.reso.instaeclipse.mods.misc;
 import java.util.List;
 import java.util.Locale;
 
-/** A formatter is shared with inbox rows, so only explicit content binds may replace its result. */
 final class ExactTimestampScope {
     private final ThreadLocal<Integer> depth = ThreadLocal.withInitial(() -> 0);
 

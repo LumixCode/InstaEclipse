@@ -50,134 +50,6 @@ import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
-/**
- * Loads a followers / following list to the end through Instagram's own pager and reads every
- * account Instagram returned (Export CSV, Followers history, Profile analyzer).
- *
- * <p>IG 451 (FollowListFragment X.0D96): the fragment's pager (field X.0D96.A0O, class X.0E2b:
- * declares isLoading() and keeps the next max_id in its one String field) has two no-arg void
- * methods. "Load more if idle" (AV7) checks the lifecycle, then skips while the last page failed
- * or is in flight; "fetch the next page" (Ei0) hands the request straight to the fragment's query
- * manager, which drops it when that page is already queued or in flight, waits 200 ms, then sends
- * it with the last max_id (building it clears the failed flag). A page's response sets the pager's
- * next max_id, appends the page's Users to the adapter's account list (X.0D9E.A11) and rebuilds
- * the adapter, which ends in notifyDataSetChanged. A failed page shows Instagram's error toast and
- * sets the failed flag, so "load more" stops asking.
- *
- * <p>Driving: a DataSetObserver on the list's adapter runs a step as soon as a page is applied,
- * and the step asks for the next page right away: no scrolling and no fixed waits between pages
- * (the old driver polled every 500 ms and needed two empty polls to end). A 400 ms tick backs the
- * observer up. A failed page (the pager's isLoading() false while a next max_id is set, i.e. its
- * failed flag; or no page for STALL_MS) is asked for again through "fetch the next page" after
- * growing waits (FollowListPolicy.retryDelayMs), and the list only counts as unfinished when the
- * last retry failed too; the old driver kept polling a failed list until Stop was tapped. The
- * end: the next max_id is null after a page.
- *
- * <p>Accounts: read from the adapter's own account list (its List field holding Users: the one
- * that grows as pages come in, else the largest), not from the ListView's rows, which also hold
- * section headers, the loading row and suggestions, and not from a walk over everything the
- * adapter reaches (that walk also found suggested accounts and stopped after 20,000 objects).
- * Accounts are keyed by id (the User's final numeric String field), so a row Instagram repeats on
- * a later page counts once; the progress shows that same count, which is what the result holds.
- * Instagram's own count for the list (follower_count / following_count of the profile's User,
- * found by their field-name hashes) is passed along so a shorter list can be reported honestly.
- *
- * <p>Pages (diagnostics): every page Instagram applies to the list goes through one handler, the
- * Function0 that uses "fetch_suggested_users_optimized" (451: X.0key.invoke; it holds the list's
- * response handler X.0YMs, whose Fragment field is the list fragment, the page X.0lfb and the
- * order key the page was asked with). Both of Instagram's page paths end there: the GraphQL one
- * (xdt_api__v1__friendships__followers / __following, X.0WVi → X.0YMs.A00 → X.0dqV & co., used for
- * Followers / Following tabs) and the REST one (friendships/…, X.0WVN → X.0drJ, other lists). It is
- * hooked at startup and, only while a load runs, logs one line per page:
- * <ul>
- * <li>should_limit_list_of_followers (the page getter Instagram itself reads to switch the list to
- * its limited mode, X.0lfb.DRy); on Following lists also should_limit_list_of_followings (X.0lfb.DRz)
- * and hidden_following_account_count (X.0lfb.CN8, the accounts its "And N others" footer counts;
- * the Followers pages return false / 0 for both). Each page getter is found by its key's hash.</li>
- * <li>the page's account count (X.0lfb.CqI);</li>
- * </ul>
- * Every getter call is guarded: a field the query didn't fetch shows as "?". A list with either
- * should_limit flag on any page is reported as limited (Result.limited), also when only a page
- * before the load carried it (the hook remembers that per list fragment outside loads; the first
- * page usually comes before). When the flag for this list can't be read at all, a list that ends
- * after 2 pages with at most 60 accounts while Instagram counts 4 times as many counts as limited
- * (FollowListPolicy.limitedByShape). A limited list gets no extra passes.
- *
- * The same line counts the page's accounts that are new in this pass and those an earlier page of
- * the pass already sent (FollowListPolicy.PassTally), with how many pages back the last page that
- * sent each repeat was (1, 2, 3..5, more); each pass ends with its totals (received, distinct,
- * repeated).
- *
- * <p>Extra passes: Instagram's server pages someone else's Followers by position through a ranking
- * made for the viewer that shifts between requests, so a pass repeats some accounts (each repeat
- * takes the place of one it skips: a pass can receive as many rows as the list has, with about a
- * fifth of them repeats) and lists a random ~80% of the list, in any order; its server ignores the sort
- * order on lists that aren't yours (instagrapi #2857). So when the first pass is complete, the list isn't limited, and it repeated
- * accounts or listed clearly fewer than the target (FollowListPolicy.startExtraPasses; target:
- * Instagram's count, or the rows a pass received when more), the same list is listed again and
- * the accounts are merged by id, until the target is reached, a pass adds no account, MAX_PASSES
- * in all, or ROW_BUDGET rows (FollowListPolicy.anotherPass). Each pass after the first logs how
- * many new accounts it added; at the end, how many accounts 1, 2, … passes listed (f1..fk) and
- * Chao1's estimate of those still missing (logged, not a stop rule).
- *
- * On someone else's list each extra pass lists the first pass's own order again (always the
- * default one there: Instagram's UI offers sorting only on your own lists, the sort header row
- * needs the list's owner to be you, and the default order sends no "order" at all). Your own lists
- * keep cycling the other orders, which Instagram honours there: date followed latest, earliest,
- * default (X.0NIL: DEFAULT "", DATE_FOLLOWED_LATEST, DATE_FOLLOWED_EARLIEST; constant names kept),
- * and so do the fallbacks (FollowListPolicy.relistPasses): no page caches, no request hook with a
- * refresh flag for this list type, a page request of a pass sent without the refresh flag (the
- * same order would come from Instagram's 1-day response cache), or a pass in the same order that
- * added less than half the accounts predicted for it (FollowListPolicy.relistFellShort).
- *
- * An order is set through Instagram's own sort handler on the fragment (the void method taking
- * that enum, X.0D96.GEP, which its "Sort by" sheet calls: it returns at once for the order already
- * set, else it sets the order and fills the list in it, X.0D96.A05 "fill_data"). Filling looks the
- * order up in the query manager's page cache first (X.0D96.A0H, X.0YGI: two X.0CMQ, one per mode,
- * default / sorted, each a Map of key → X.0D98 {status, accounts so far, next max_id}; the key is
- * the order string, or the search text in the default order): a cached order shows its cached
- * accounts and goes on from its cached max_id, and the query manager's own first-page request
- * (X.0IgS.A04) skips a cached key too. So before a pass the caches are emptied with their own
- * clear(), which is what Instagram's pull-to-refresh does for the default order (X.0gbN.G2U:
- * X.0YGI.A02.clear(), then the one-shot refresh flag X.0WVi.A00, then the first page); then the
- * list is cleared and the first page fetched from the server, also for the order already set (a
- * different constant is written to the order field first, so GEP doesn't return). Without the
- * caches, no order is listed twice (MAX_PASSES_WITHOUT_REPEATS). Every pass in one order sends the
- * same order key, so a page only counts toward a pass once that pass's first page request was
- * built (a late page of the previous pass would match its key too). When a pass ran in another
- * order, the first pass's order is set back the same way at the end.
- *
- * <p>Response cache (only for the list a load runs on): Instagram's GraphQL builders for these
- * lists (X.0a23.A00 "xdt_api__v1__friendships__followers", .A01 "…__following"; both put
- * search_surface "follow_list_page" into the request_data input) keep pages in a 1-day response
- * cache. A before-hook on the builders (hooked at startup) sets their last argument, the refresh
- * flag pull-to-refresh sets (A00 p9 / A01 p10 = X.0WVi.A00 via X.0fdp.B4y), for requests whose
- * arguments hold the owner's id and whose list type is the load's, so every page of a pass comes
- * from the server. An after-hook logs what the built request (com.facebook.pando.PandoGraphQLRequest)
- * says about the cache: getFreshCacheAgeMs, getMaxToleratedCacheAgeMs, getAdditionalCacheKeyValue
- * and the refresh flag, for the load's requests once per pass and whenever they change, outside
- * loads (any follow list request) only with the module's verbose logging on. The first pass is
- * started over from its first page (caches emptied, order set again), as the pages on screen may
- * be cached ones. The builders always send an empty rank_token (they blank the list's own,
- * FollowListData.A03, while their cache age is above 0); a stable token per pass was tried
- * and Instagram repeated as many accounts per pass, so it isn't sent. The
- * builders' two Integer arguments are no page size: they are the owner's follower_count
- * (following_count on A01) and 03w1's following_count, read by their key hashes and used only as
- * the response cache's extra key ("<a>-<b>", setAdditionalCacheKeyValue).
- *
- * <p>Failed pages: Instagram's failure callback for the list (the method using "UserList
- * onRequestFail" and "fetch_request_fail", 451: X.0fdp.G4U(X.06As result, String key), which sets
- * the pager's failed flag and toasts the error) is hooked at startup and, for the running load's
- * fragment only, sorts the failure (FollowListPolicy.classify): no server answer (X.05tG, an
- * exception) is NETWORK; a server answer (X.05Zw, Instagram's error model X.0CdQ: message,
- * error_type, checkpoint_url, challenge, feedback_message, checkpoint_required, login_required,
- * getStatusCode) is RATE_LIMIT (429, rate_limit_error, "wait a few minutes"), CHALLENGE (checkpoint,
- * challenge, login required), ACTION_BLOCK (feedback_required) or else SERVER. The three blocks end
- * the load at once with Result.blocked, not complete even during an extra pass, and pause loading
- * lists for that account (about 15 min, 24 h, until a list loads fine again; prefs, warned about
- * by FollowListToolsIcon, never retried by itself). NETWORK and SERVER failures go through the
- * retry waits, a SERVER one SERVER_RETRIES times at most.
- */
 final class FollowListLoader {
 
     private static final String TAG = "(IE|FollowExport) ";
@@ -185,7 +57,6 @@ final class FollowListLoader {
     private static final Handler H = new Handler(Looper.getMainLooper());
     private static final long TICK_MS = 400;
 
-    // resolved once at install (FollowListExportHook.install → resolve)
     private static Field pagerField, nextMaxIdField;
     private static Method pagerIsLoading, pagerLoadMore, pagerFetch;
     private static Method usernameGetter, fullNameGetter, followerCountGetter, followingCountGetter;
@@ -195,60 +66,36 @@ final class FollowListLoader {
     private static Field pageField, pageKeyField, pageOwnerField;
     private static Method pageLimited, pageUsers, pageLimitedFollowing, pageHiddenFollowing;
     private static volatile Field ownerFragField;
-    // the list's failure callback: its fragment field, and the result's server answer / exception getters
     private static Field failureFragField;
     private static Method failurePayload, failureError;
-    /** Instagram's error model getters (X.0CdQ) by the key they read → method name */
     private static final Map<String, String> errorGetters = new HashMap<>();
     private static Class<?> listFragClass;
-    /** List fragments Instagram flagged as limited on a page applied outside a load (a list's first
-     *  page usually arrives before the load starts). */
     private static final Map<Object, Boolean> limitedLists = Collections.synchronizedMap(new java.util.WeakHashMap<>());
     private static final String LIMIT_KEY = "should_limit_list_of_followers";
     private static final List<Object[]> responseTypes = new ArrayList<>();
-    // the fragment's sort order field (X.0NIL enum) and Instagram's sort handler taking it
     private static Field orderField, orderValueField;
     private static Method sortMethod;
-    // the fragment's query manager (X.0YGI), its two per-order page caches (X.0CMQ) and their clear()
     private static Field queryManagerField;
     private static Field[] pageCacheFields;
     private static Method pageCacheClear;
-    // Instagram's list request builders → {list type, index of the refresh flag argument or -1}
     static final String PANDO_REQUEST = "com.facebook.pando.PandoGraphQLRequest";
     private static final String SURFACE = "follow_list_page";
     private static final Map<Method, Object[]> listBuilders = new HashMap<>();
 
     private FollowListLoader() {}
 
-    /** What loading a list found: every account by id → {username, full name}, in Instagram's order
-     *  (the first pass's, then each extra pass's new ones). */
     static final class Result {
         final Map<String, String[]> users;
-        /** The first pass ran out of pages on its own (not stopped, not left, no failed page) and
-         *  Instagram didn't block the load (an extra pass ending early keeps it: see interrupted) */
         final boolean complete;
-        /** Instagram refused the load (rate limit, challenge, action block) with what it said; null
-         *  when it didn't. complete is false then, also during an extra pass. */
         final FollowListPolicy.Block blocked;
-        /** an extra pass ended early (stopped, left the list, a failed page): users are the passes so far */
         final boolean interrupted;
-        /** Instagram's count for this list (the number on its tab), -1 when unknown */
         final int expected;
-        /** Instagram flagged the list as limited (should_limit_list_of_followers / _followings on one
-         *  of its pages; or, when that flag can't be read, the list looks capped) */
         final boolean limited;
-        /** hidden_following_account_count: the largest on any page (Following lists; 0 otherwise or unknown) */
         final int hiddenFollowing;
-        /** accounts Instagram sent in the first pass, repeats included, and how many of them an earlier
-         *  page of that pass had already sent (page hook; -1 when no page of the pass was counted) */
         final int received, repeated;
-        /** passes run, the first one included */
         final int passes;
-        /** accounts the last extra pass added; -1 when no extra pass ran */
         final int lastPassAdded;
-        /** accounts listed by exactly one / exactly two of the passes */
         final int f1, f2;
-        /** Chao1's estimate of accounts no pass listed (FollowListPolicy.missingEstimate); -1 with one pass */
         final double estMissing;
 
         Result(Map<String, String[]> users, boolean complete, FollowListPolicy.Block blocked, boolean interrupted,
@@ -271,9 +118,6 @@ final class FollowListLoader {
         }
     }
 
-    // ---- install-time resolution ----
-
-    /** Finds the pager members on the FollowListFragment class and the User getters. */
     static boolean resolve(ClassLoader cl, Class<?> fragClass) {
         try {
             for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
@@ -346,10 +190,6 @@ final class FollowListLoader {
         return pagerField != null && pagerLoadMore != null && pages && builders;
     }
 
-    // ---- page diagnostics (install-time) ----
-
-    /** Hooks Instagram's page handler: the no-arg method using "fetch_suggested_users_optimized" and
-     *  "ui_render_start" (451: X.0key.invoke), then finds the page's getters (see the class comment). */
     private static void hookPages(ClassLoader cl) throws Throwable {
         List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingEqStrings(List.of("fetch_suggested_users_optimized", "ui_render_start")).paramCount(0)));
@@ -358,16 +198,14 @@ final class FollowListLoader {
         for (Field f : SafeReflect.fields(handler.getDeclaringClass())) {
             if (Modifier.isStatic(f.getModifiers()) || f.getType().isPrimitive()) continue;
             f.setAccessible(true);
-            if (f.getType().isInterface()) pageField = f;                // the page (X.0lfb)
-            else if (f.getType() == String.class) pageKeyField = f;      // its order key
-            else pageOwnerField = f;                                     // the list's response handler
+            if (f.getType().isInterface()) pageField = f;
+            else if (f.getType() == String.class) pageKeyField = f;
+            else pageOwnerField = f;
         }
         if (pageField == null || pageOwnerField == null) throw new IllegalStateException("page handler fields");
         ClassMatcher page = ClassMatcher.create().addInterface(pageField.getType().getName(), StringMatchType.Equals, false);
-        // should_limit_list_of_followers: the page implementations' boolean getter loading its hash
         pageLimited = pageGetter(MethodMatcher.create().declaredClass(page).paramCount(0).returnType("boolean")
                 .usingNumbers(LIMIT_KEY.hashCode()));
-        // the page's accounts: the List getter whose REST implementation returns the response's getItems()
         pageUsers = pageGetter(MethodMatcher.create().declaredClass(page).paramCount(0).returnType("java.util.List")
                 .addInvoke(MethodMatcher.create().name("getItems")));
         pageLimitedFollowing = pageGetter(MethodMatcher.create().declaredClass(page).paramCount(0).returnType("boolean")
@@ -378,7 +216,6 @@ final class FollowListLoader {
         XposedBridge.hookMethod(handler, PAGE_HOOK);
     }
 
-    /** The page interface's method that {@code m} finds in its implementations (one name), or null. */
     private static Method pageGetter(MethodMatcher m) {
         try {
             String name = null;
@@ -421,8 +258,6 @@ final class FollowListLoader {
         }
     }
 
-    /** Before Instagram applies a page: one log line for the load in progress; outside a load only
-     *  whether Instagram flagged the list as limited is remembered. */
     private static final XC_MethodHook PAGE_HOOK = new XC_MethodHook() {
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {
@@ -437,8 +272,6 @@ final class FollowListLoader {
         }
     };
 
-    /** A page outside a load that Instagram flagged as limited (either should_limit flag): remembers
-     *  its list fragment (the list's response handler's field holding a FollowListFragment). */
     private static void rememberLimited(Object step) throws Exception {
         if (listFragClass == null) return;
         Object page = pageField.get(step);
@@ -456,8 +289,6 @@ final class FollowListLoader {
         }
     }
 
-    /** The page's response model and its getters: the page itself or an object it holds (two
-     *  levels at most) of one of the response types; null when there is none. */
     private static Object[] responseOf(Object page) {
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         ArrayDeque<Object[]> q = new ArrayDeque<>();
@@ -487,8 +318,6 @@ final class FollowListLoader {
         return r != null ? call((Method) r[1], r[0]) : NOT_READ;
     }
 
-    /** {@code getter} on {@code o}; NOT_READ when there is no getter or it threw (a field the
-     *  query didn't fetch, on Pando). */
     private static Object call(Method getter, Object o) {
         if (getter == null || o == null) return NOT_READ;
         try {
@@ -502,7 +331,6 @@ final class FollowListLoader {
         @Override public String toString() { return "?"; }
     };
 
-    /** {@code c}'s own and inherited instance fields. */
     private static List<Field> instanceFields(Class<?> c) {
         List<Field> out = new ArrayList<>();
         for (Class<?> k = c; k != null && k != Object.class; k = k.getSuperclass())
@@ -510,11 +338,6 @@ final class FollowListLoader {
         return out;
     }
 
-    // ---- sort order (install-time) ----
-
-    /** The fragment's sort order field (an enum with DATE_FOLLOWED_LATEST and DATE_FOLLOWED_EARLIEST;
-     *  451: X.0D96.A0L, X.0NIL) and Instagram's sort handler: the fragment's only void method taking
-     *  that enum (X.0D96.GEP). The enum's String field is what Instagram sends as "order". */
     private static void findSort(Class<?> fragClass) {
         for (Class<?> c = fragClass; c != null && orderField == null; c = c.getSuperclass())
             for (Field f : SafeReflect.fields(c)) {
@@ -536,21 +359,19 @@ final class FollowListLoader {
             for (Method m : SafeReflect.methods(c)) {
                 if (Modifier.isStatic(m.getModifiers()) || m.getReturnType() != void.class || m.getParameterCount() != 1
                         || m.getParameterTypes()[0] != orderField.getType()) continue;
-                if (found != null) return; // ambiguous: no extra passes
+                if (found != null) return;
                 found = m;
             }
         if (found != null) found.setAccessible(true);
         sortMethod = found;
     }
 
-    /** The order enum's constant named {@code name}, or null. */
     private static Object order(Class<?> type, String name) {
         Object[] all = type.getEnumConstants();
         if (all != null) for (Object o : all) if (((Enum<?>) o).name().equals(name)) return o;
         return null;
     }
 
-    /** What Instagram sends as "order" for {@code order} (its String field), or its name. */
     private static String orderValue(Object order) {
         try {
             if (orderValueField != null && orderValueField.get(order) instanceof String s) return s;
@@ -558,11 +379,6 @@ final class FollowListLoader {
         return order != null ? ((Enum<?>) order).name() : null;
     }
 
-    // ---- per-order page caches (install-time) ----
-
-    /** The fragment's query manager (451: X.0D96.A0H, X.0YGI): its only field whose class holds a
-     *  boolean (the mode) and exactly two fields of one class with clear() and a Map (the page
-     *  caches, X.0CMQ: a synchronized Map of key → page state). Ambiguous: none. */
     private static void findPageCaches(Class<?> fragClass) throws Throwable {
         Field found = null;
         List<Field> caches = null;
@@ -604,9 +420,6 @@ final class FollowListLoader {
         return false;
     }
 
-    /** Empties the list's page caches with their own clear() (what Instagram's pull-to-refresh does
-     *  for the default order), so the next order set is listed from the server. False when they
-     *  aren't known or clearing failed. */
     private static boolean clearPageCaches(Object frag) {
         if (queryManagerField == null || pageCacheFields == null) return false;
         try {
@@ -623,10 +436,6 @@ final class FollowListLoader {
         }
     }
 
-    // ---- list requests (install-time) ----
-
-    /** Hooks Instagram's GraphQL follow list request builders (see the class comment) by their root
-     *  field, "follow_list_page" and "rank_token" (451: X.0a23.A00 / A01). */
     private static void hookListBuilders(ClassLoader cl) throws Throwable {
         for (String[] k : new String[][]{{FollowListExportHook.FOLLOWERS, "xdt_api__v1__friendships__followers"},
                 {FollowListExportHook.FOLLOWING, "xdt_api__v1__friendships__following"}}) {
@@ -640,7 +449,6 @@ final class FollowListLoader {
             }
             Method m = found.get(0).getMethodInstance(cl);
             Class<?>[] p = m.getParameterTypes();
-            // the last argument is the refresh flag (A00 p9, A01 p10): true skips the response cache
             listBuilders.put(m, new Object[]{k[0], p.length > 0 && p[p.length - 1] == boolean.class ? p.length - 1 : -1});
         }
         for (Method m : listBuilders.keySet()) XposedBridge.hookMethod(m, BUILDER_HOOK);
@@ -663,13 +471,6 @@ final class FollowListLoader {
         }
     };
 
-    // ---- failed pages (install-time) ----
-
-    /** Hooks the list's failure callback (see the class comment): the 2-argument method using
-     *  "UserList onRequestFail" and "fetch_request_fail" (451: X.0fdp.G4U), its field holding the
-     *  list fragment (X.0fdp.A00), the result's no-arg getters for the server's answer (Object, X.06As.A01)
-     *  and the exception (Throwable, .A02), and the error model's getters by the keys they read
-     *  (in the classes whose String getter reads checkpoint_url: X.088M Pando, X.088e REST). */
     private static void hookFailures(ClassLoader cl, Class<?> fragClass) throws Throwable {
         List<Found> found = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingEqStrings(List.of("UserList onRequestFail", "fetch_request_fail")).paramCount(2)));
@@ -720,7 +521,6 @@ final class FollowListLoader {
         XposedBridge.hookMethod(cb, FAILURE_HOOK);
     }
 
-    /** Before Instagram handles a failed page: sorted and handed to the load when it's the load's list. */
     private static final XC_MethodHook FAILURE_HOOK = new XC_MethodHook() {
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {
@@ -737,8 +537,6 @@ final class FollowListLoader {
         }
     };
 
-    /** What a failed page's result says: the exception, or the server's answer read through the
-     *  error model's getters (each guarded: a field the response didn't carry reads as missing). */
     private static FollowListPolicy.Failed failureOf(Object result) {
         FollowListPolicy.Failed f = new FollowListPolicy.Failed();
         Object answer = result != null ? call(failurePayload, result) : null;
@@ -764,7 +562,6 @@ final class FollowListLoader {
         return f;
     }
 
-    /** The error model's value for {@code key}, or null (no getter, it threw, or nothing there). */
     private static Object errorValue(Object answer, String key) {
         String name = errorGetters.get(key);
         if (name == null) return null;
@@ -781,10 +578,8 @@ final class FollowListLoader {
 
     private static String name(Method m) { return m != null ? m.getName() : null; }
 
-    /** An order key as logged: "default" for the default order's "", "?" when unknown. */
     private static String keyName(String key) { return key == null ? "?" : key.isEmpty() ? "default" : key; }
 
-    /** User's Integer getter for {@code field} (451: A6M follower_count, A6N following_count). */
     private static Method countGetter(ClassLoader cl, String field) throws Throwable {
         for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .declaredClass(USER).paramCount(0).returnType("java.lang.Integer").usingNumbers(field.hashCode())))) {
@@ -794,12 +589,6 @@ final class FollowListLoader {
         return null;
     }
 
-    /** IG's list pager: the fragment field whose class has isLoading() and one String field (the next
-     *  max_id); its "load more if idle" method is the no-arg void one that checks the lifecycle, and
-     *  "fetch the next page" is its only other no-arg void method. On 451 isLoading() is
-     *  "in flight, or more pages and not failed" (X.0E2b: A02 || (A00 != null && !A01)), and the
-     *  follow list never sets the in-flight flag, so isLoading() false while a next max_id is set
-     *  means the last page failed. */
     private static void findPager(ClassLoader cl, Class<?> fragClass) throws Throwable {
         for (Class<?> c = fragClass; c != null && pagerField == null; c = c.getSuperclass())
             for (Field f : SafeReflect.fields(c)) {
@@ -842,11 +631,8 @@ final class FollowListLoader {
         }
     }
 
-    // ---- loading ----
-
     static boolean isLoading() { return current != null; }
 
-    /** Stops the load in progress; its result is what was loaded so far (not complete). */
     static void stop() {
         Load l = current;
         if (l != null) {
@@ -855,12 +641,6 @@ final class FollowListLoader {
         }
     }
 
-    /**
-     * Asks IG's pager for page after page until there is no next max_id, then runs {@code done} on
-     * the main thread. The pager only works while the list screen is resumed, so a non-cancelable
-     * progress dialog keeps the user here; its Stop button ends early. False when a load is
-     * already running.
-     */
     static boolean loadAll(View root, Object frag, CharSequence title, CharSequence stopLabel, Consumer<Result> done) {
         if (current != null) return false;
         Object pager = null;
@@ -880,7 +660,6 @@ final class FollowListLoader {
         return true;
     }
 
-    /** Accounts in the list's account list right now (0 while its first page is still loading). */
     static int accountsShown(View root) {
         try {
             AbsListView lv = FollowListExportHook.findList(root);
@@ -897,25 +676,20 @@ final class FollowListLoader {
         }
     }
 
-    // ---- pause after a block (per account, in Instagram's private prefs) ----
-
     private static final String PAUSE_PREFS = "instaeclipse_follow_pause";
 
     private static SharedPreferences pausePrefs(Context ctx) {
         return ctx.getApplicationContext().getSharedPreferences(PAUSE_PREFS, Context.MODE_PRIVATE);
     }
 
-    /** The prefs key prefix for account {@code self} ("_" when it isn't known). */
     private static String pauseKey(String self) {
         return (self != null ? self : "_") + ".";
     }
 
-    /** Opens the pause prefs so a later read doesn't wait for the file (the follow list screen calls it). */
     static void warmPause(Context ctx) {
         try { pausePrefs(ctx); } catch (Throwable ignored) {}
     }
 
-    /** The block whose pause still runs for account {@code self} (null: not known), or null. */
     static FollowListPolicy.Block pause(Context ctx, String self) {
         try {
             SharedPreferences p = pausePrefs(ctx);
@@ -924,7 +698,7 @@ final class FollowListLoader {
                     p.getString(k + "message", null), p.getLong(k + "at", 0), p.getLong(k + "until", 0));
             return b.pausing(System.currentTimeMillis()) ? b : null;
         } catch (Throwable t) {
-            return null; // no pause saved (valueOf("") throws)
+            return null;
         }
     }
 
@@ -952,8 +726,6 @@ final class FollowListLoader {
         }
     }
 
-    /** What a block means: what Instagram did, its own words, and until when loading lists pauses.
-     *  {@code stopped}: a load just stopped on it (nothing was saved). */
     static String blockText(Context ctx, FollowListPolicy.Block b, boolean stopped) {
         StringBuilder sb = new StringBuilder(I18n.t(ctx, switch (b.kind) {
             case RATE_LIMIT -> R.string.ig_follow_block_rate;
@@ -968,7 +740,6 @@ final class FollowListLoader {
         return sb.toString();
     }
 
-    /** Shows a block a load just stopped on. */
     static void showBlocked(Context ctx, FollowListPolicy.Block b) {
         try {
             new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_follow_block_title)).message(blockText(ctx, b, true)).show();
@@ -977,8 +748,6 @@ final class FollowListLoader {
         }
     }
 
-    /** Warns that loading lists pauses after a block; {@code run} runs only when the user picks
-     *  "Load anyway" (never by itself). */
     static void warnPaused(Context ctx, FollowListPolicy.Block b, Runnable run) {
         try {
             IeDialog d = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_follow_block_title)).message(blockText(ctx, b, false));
@@ -1001,11 +770,10 @@ final class FollowListLoader {
         AbsListView list;
         Object adapter;
         DataSetObserver observer;
-        // the adapter's List fields, their sizes at the last step and how often each grew
         Field[] lists;
         int[] sizes, growth;
-        boolean walked;               // the adapter had no account list: fallback walk
-        boolean walkCut;              // ... and the walk stopped at its object cap
+        boolean walked;
+        boolean walkCut;
         final Map<String, String[]> names = new HashMap<>();
         final FollowListPolicy.IncrementalIds listed = new FollowListPolicy.IncrementalIds();
         final Set<String> cursors = new HashSet<>();
@@ -1016,41 +784,34 @@ final class FollowListLoader {
         boolean finished;
         int pagesSeen, pagesLimited, usersSeen, hiddenFollowing;
         boolean limited;
-        // passes: 0 is the first pass, then extra passes 1.., each in the first pass's order again
-        // (relist) or in FollowListPolicy.passOrder's orders
         int pass, passPages;
         int maxPasses = FollowListPolicy.MAX_PASSES;
-        final boolean own;              // the list is the viewer's own
-        boolean relist;                 // extra passes list the first pass's order again
-        boolean passRelist;             // ... this one does
-        int cycled;                     // extra passes in another order so far
-        boolean orderChanged;           // a pass ran in another order: the first one is set back at the end
-        volatile boolean noRefresh;     // a page request of this load went out without the refresh flag
-        Object firstOrder;              // the first pass's order, set back afterwards
-        String firstOrderName;          // ... its constant name (FollowListPolicy order names)
-        String passOrderName;           // this pass's order (constant name)
-        String passKey;                 // what Instagram sends as "order" in this pass
+        final boolean own;
+        boolean relist;
+        boolean passRelist;
+        int cycled;
+        boolean orderChanged;
+        volatile boolean noRefresh;
+        Object firstOrder;
+        String firstOrderName;
+        String passOrderName;
+        String passKey;
         long passStarted;
         boolean passPageSeen, passMerged;
-        boolean fromStart;              // this pass lists the list from its first page (not the first pass going on)
-        FollowListPolicy.PassTally tally = new FollowListPolicy.PassTally(); // this pass's pages as Instagram sent them
-        FollowListPolicy.Counts firstCounts; // the first pass's rows: the result's rows / repeats / without id
-        int firstReceived = -1, firstRepeated = -1; // the first pass's tally (page hook)
-        int maxReceived;                // most accounts Instagram sent in one pass (page hook)
+        boolean fromStart;
+        FollowListPolicy.PassTally tally = new FollowListPolicy.PassTally();
+        FollowListPolicy.Counts firstCounts;
+        int firstReceived = -1, firstRepeated = -1;
+        int maxReceived;
         int passesDone, lastAdded = -1;
-        boolean interrupted;            // an extra pass ended early
-        final Map<String, String[]> merged = new LinkedHashMap<>(); // accounts of the passes so far, in order
-        final Map<String, Integer> hits = new HashMap<>(); // account → passes that listed it
+        boolean interrupted;
+        final Map<String, String[]> merged = new LinkedHashMap<>();
+        final Map<String, Integer> hits = new HashMap<>();
         final StringBuilder passLog = new StringBuilder();
         volatile int requestLogged = -1;
-        // page requests the builder hooks saw for this list in this pass; a first-pass page that came
-        // before any (asked for before the first pass started over: Instagram's query manager drops a
-        // first-page request while that order's page is in flight) lists the first pass again, once.
-        // In a pass from the first page, only pages after its first request count toward it.
         volatile int passRequests;
         volatile boolean stalePage;
         boolean staleRetried;
-        // the last failed page's kind (failure callback), until a page comes; a block ends the load
         FollowListPolicy.Failure lastFailure;
         FollowListPolicy.Block blocked;
 
@@ -1062,7 +823,7 @@ final class FollowListLoader {
             this.expected = expected;
             this.done = done;
             lastProgressAt = started;
-            limited = limitedLists.containsKey(frag); // flagged on a page before this load
+            limited = limitedLists.containsKey(frag);
             own = info != null && info.owner != null && info.owner.equals(info.self);
         }
 
@@ -1073,7 +834,6 @@ final class FollowListLoader {
                 lists = listFields(adapter.getClass()).toArray(new Field[0]);
                 sizes = new int[lists.length];
                 growth = new int[lists.length];
-                // pages already on screen don't count as growth: only pages loaded from here on do
                 for (int i = 0; i < lists.length; i++) sizes[i] = sizeOf(lists[i], adapter);
             }
             try {
@@ -1099,13 +859,6 @@ final class FollowListLoader {
             if (!startOver()) poke();
         }
 
-        /**
-         * Starts the first pass over from its first page, so all its pages come from the server (the
-         * pages on screen may be from Instagram's 1-day response cache): the page caches are emptied
-         * and the order on screen is set again through Instagram's sort handler. Only when the
-         * requests can skip that cache (GraphQL builders hooked) and the order can be set; false: the
-         * first pass goes on from the pages on screen.
-         */
         private boolean startOver() {
             Object order = currentOrder();
             String why = info == null || info.type == null ? "not a followers / following list"
@@ -1129,15 +882,12 @@ final class FollowListLoader {
             return false;
         }
 
-        /** Lists {@code order} from its first page: empties the page caches, then sets the order
-         *  through Instagram's sort handler (for the order already set, after writing another
-         *  constant to the order field: the handler returns at once for the order it has). */
         private boolean listFromStart(Object order) {
             boolean cleared = clearPageCaches(frag);
             Object before = currentOrder();
             try {
                 if (order == before) {
-                    if (!cleared) return false; // it would only show its cached pages again
+                    if (!cleared) return false;
                     Object other = null;
                     for (Object o : orderField.getType().getEnumConstants()) if (o != order) { other = o; break; }
                     if (other == null) return false;
@@ -1152,8 +902,6 @@ final class FollowListLoader {
             }
         }
 
-        /** A request builder built a page request for this list in this pass ({@code refresh}: with
-         *  the response cache skipped); logged once per pass. */
         void requestBuilt(boolean refresh) {
             passRequests++;
             if (!refresh) noRefresh = true;
@@ -1164,18 +912,11 @@ final class FollowListLoader {
                     + label() + " (pass " + (p + 1) + ")");
         }
 
-        /** This list type's page requests go through a hooked builder that can set the refresh flag. */
         private boolean refreshHooked() {
             for (Object[] b : listBuilders.values()) if (info != null && b[0].equals(info.type) && (int) b[1] >= 0) return true;
             return false;
         }
 
-        /**
-         * Instagram's failure callback for one of this list's pages ({@code key}: the order key or
-         * search text it was asked with). A block (rate limit, challenge, action block) ends the load
-         * at once: nothing is retried, the result isn't complete, and loading lists pauses for this
-         * account (FollowListPolicy.pauseUntil). Other failures go through the retry waits.
-         */
         void requestFailed(FollowListPolicy.Failed f, String key) {
             if (finished) return;
             FollowListPolicy.Failure kind = FollowListPolicy.classify(f);
@@ -1198,21 +939,17 @@ final class FollowListLoader {
             finish(false, "blocked by Instagram (" + kind + ")");
         }
 
-        /** A list request builder's call is for this load's list: the builder's list type is this
-         *  list's and one of its arguments is the owner's id (user_id). */
         boolean ownsRequest(String type, Object[] args) {
             if (finished || info == null || info.owner == null || !type.equals(info.type)) return false;
             for (Object a : args) if (info.owner.equals(a)) return true;
             return false;
         }
 
-        /** This list's page requests go through a hooked builder (its type's GraphQL one). */
         private boolean hooked() {
             for (Object[] b : listBuilders.values()) if (info != null && b[0].equals(info.type)) return true;
             return false;
         }
 
-        /** Runs a step now (Instagram applied a page, or Stop was tapped). */
         void poke() {
             H.removeCallbacks(this);
             H.post(this);
@@ -1249,7 +986,6 @@ final class FollowListLoader {
             if (newPage || listed.unique() != lastUnique) {
                 if (newPage && lastUnique >= 0) { pages++; passPages++; }
                 if (newPage && next != null && !cursors.add(next)) {
-                    // Instagram sent a page it had already sent: it would go round forever
                     endPass(false, "Instagram repeated a page");
                     return;
                 }
@@ -1262,8 +998,6 @@ final class FollowListLoader {
             }
             boolean failed = next != null && failed();
             if (next == null) {
-                // a pass from the first page: an empty first page (Instagram's count 0, or a page
-                // seen) ends it, else it waits PASS_FIRST_PAGE_MS for that page
                 FollowListPolicy.End end = !fromStart ? FollowListPolicy.atEnd(listed.unique(), expected, now - started)
                         : FollowListPolicy.passAtEnd(listed.unique(), passPageSeen || expected == 0, now - passStarted);
                 if (end == FollowListPolicy.End.COMPLETE) { endPass(true, "end"); return; }
@@ -1271,13 +1005,9 @@ final class FollowListLoader {
             } else if (retryAt == 0 && !failed && (newPage || now - lastAskAt >= FollowListPolicy.REASK_MS)) {
                 ask(pagerLoadMore, now);
             }
-            // a failed page: Instagram's failed flag (still set a moment after our last retry: that
-            // retry failed too), or no page for STALL_MS. Not the first page of a pass from the first
-            // page: nothing can ask for it again (passAtEnd gives it PASS_FIRST_PAGE_MS instead).
             boolean failedAgain = failed && now - lastFetchAt >= FollowListPolicy.REASK_MS + 500;
             boolean passFirstPage = fromStart && next == null;
             if (retryAt == 0 && !passFirstPage && (failedAgain || now - lastProgressAt >= FollowListPolicy.STALL_MS)) {
-                // a server error gets fewer retries (FollowListPolicy.SERVER_RETRIES)
                 FollowListPolicy.Failure cause = lastFailure;
                 long wait = FollowListPolicy.retryDelayMs(retries + 1, cause);
                 if (wait < 0) {
@@ -1292,7 +1022,7 @@ final class FollowListLoader {
             }
             if (retryAt != 0 && now >= retryAt) {
                 retryAt = 0;
-                lastProgressAt = now; // a fresh STALL_MS window for this attempt
+                lastProgressAt = now;
                 lastFetchAt = now;
                 ask(pagerFetch != null ? pagerFetch : pagerLoadMore, now);
             }
@@ -1300,18 +1030,6 @@ final class FollowListLoader {
             H.postDelayed(this, TICK_MS);
         }
 
-        // ---- passes ----
-
-        /**
-         * The pass in progress ended ({@code ok}: Instagram's pager ran out of pages). The first pass
-         * finishes the load, or, complete, not limited, and with repeats or clearly short of the
-         * target, starts the extra passes (FollowListPolicy.startExtraPasses), in the first pass's
-         * order again or in the other orders (FollowListPolicy.relistPasses); an extra pass adds its
-         * new accounts and starts the next one while the accounts are still short of the target and
-         * it added some (at most maxPasses in all, within ROW_BUDGET). A pass in the same order that
-         * fell short of its prediction makes the next ones switch order. A failed extra pass ends the
-         * passes (its retries already waited for Instagram).
-         */
         private void endPass(boolean ok, String why) {
             if (pass == 0) {
                 if (!ok || walkCut) { finish(false, why); return; }
@@ -1328,7 +1046,6 @@ final class FollowListLoader {
                 }
                 ModuleLog.detail(TAG + label() + ": pass 1 (order " + keyName(passKey) + "): " + tallyText()
                         + "; " + firstCounts.unique + " listed, " + passRequests + " requests");
-                // the pass's pages: those the page hook counted toward it, else the pager's
                 int passPagesSeen = pageField != null ? t.pages : pages + 1;
                 if (!limited && limitFlagMissing() && FollowListPolicy.limitedByShape(true, passPagesSeen, firstCounts.unique, expected)) {
                     limited = true;
@@ -1379,31 +1096,23 @@ final class FollowListLoader {
             finish(true, why);
         }
 
-        /** The count the passes aim for: Instagram's, or the most rows a pass received when more. */
         private int target() {
             return FollowListPolicy.target(expected, maxReceived);
         }
 
-        /** The rows Instagram sends for this list in one pass, for FollowListPolicy.ROW_BUDGET. */
         private int budgetRows() {
             return Math.max(Math.max(maxReceived, expected), firstCounts != null ? firstCounts.rows : listed.rows());
         }
 
-        /** One more pass listed these accounts (FollowListPolicy.passHits). */
         private void countHits(List<String> ids) {
             for (String id : ids) hits.merge(id, 1, Integer::sum);
         }
 
-        /** Instagram's limit flag for this list can't be read: no page getter for it (and, on
-         *  Followers lists, no response model getter either). */
         private boolean limitFlagMissing() {
             if (info != null && FollowListExportHook.FOLLOWING.equals(info.type)) return pageLimitedFollowing == null;
             return pageLimited == null && responseTypes.isEmpty();
         }
 
-        /** Lists the list again from its first page for extra pass {@code n}, in the first pass's
-         *  order (relist) or the cycle's next one (listFromStart: Instagram's sort handler clears the
-         *  list and fetches that order's first page, from the server as the page caches were emptied). */
         private void startPass(int n) {
             pass = n;
             passPages = 0;
@@ -1427,7 +1136,7 @@ final class FollowListLoader {
             ModuleLog.detail(TAG + label() + ": extra pass " + n + " of up to " + (maxPasses - 1) + ", order " + keyName(passKey)
                     + (relist ? " again" : "") + " (listed " + merged.size() + " of " + target() + ")");
             if (order == null || !listFromStart(order)) {
-                passMerged = true; // nothing listed in this order
+                passMerged = true;
                 passLog.append(passLog.length() > 0 ? ", " : "").append(keyName(passKey)).append(" not set");
                 finish(true, "sort failed");
                 return;
@@ -1435,8 +1144,6 @@ final class FollowListLoader {
             poke();
         }
 
-        /** Adds the accounts this extra pass listed that no pass listed before, logs how many and the
-         *  pass's totals; returns how many it added. */
         private int mergePass(String how) {
             if (passMerged) return 0;
             passMerged = true;
@@ -1455,15 +1162,12 @@ final class FollowListLoader {
             return fresh.size();
         }
 
-        /** This pass's pages as Instagram sent them (page hook). */
         private String tallyText() {
             FollowListPolicy.PassTally t = tally;
             return "received " + t.received + ", distinct " + t.distinct() + ", repeated " + t.repeated + " in " + t.pages
                     + " pages" + (t.withoutId > 0 ? ", " + t.withoutId + " without id" : "");
         }
 
-        /** Sets the first pass's order back through Instagram's sort handler, which shows that
-         *  order's pages again from its cache (or fetches them, when a later pass emptied it). */
         private void restoreOrder() {
             if (firstOrder == null || sortMethod == null) return;
             try {
@@ -1487,11 +1191,8 @@ final class FollowListLoader {
             return n != null ? n : new String[2];
         }
 
-        // ---- page diagnostics ----
-
-        /** A page Instagram is about to apply (page hook): logged when it is this list's. */
         void page(Object step) throws Exception {
-            if (finished || !ownsList(pageOwnerField.get(step))) { // another list's page (a neighbouring tab)
+            if (finished || !ownsList(pageOwnerField.get(step))) {
                 rememberLimited(step);
                 return;
             }
@@ -1500,7 +1201,6 @@ final class FollowListLoader {
             Object limit = call(pageLimited, page);
             Object users = call(pageUsers, page);
             if (limit == NOT_READ) limit = responseLimit(page);
-            // Following pages only: the Followers ones return false / 0
             boolean following = info != null && FollowListExportHook.FOLLOWING.equals(info.type);
             Object limitFollowing = following ? call(pageLimitedFollowing, page) : null;
             Object hidden = following ? call(pageHiddenFollowing, page) : null;
@@ -1512,9 +1212,6 @@ final class FollowListLoader {
                 limited = true;
             }
             if (hidden instanceof Integer h && h > hiddenFollowing) hiddenFollowing = h;
-            // a page of this pass: of its order, and in a pass from the first page only once that pass
-            // asked for a page (every pass in one order sends the same key, so a late page of the
-            // previous pass would match it too; a first-pass page before that is a stale one)
             boolean keyed = key == null || passKey == null || passKey.equals(key);
             boolean ofPass = keyed && (!fromStart || passRequests > 0 || !hooked());
             if (fromStart && keyed && pass == 0 && !staleRetried && passRequests == 0 && hooked()) stalePage = true;
@@ -1541,14 +1238,12 @@ final class FollowListLoader {
                     + tallied);
         }
 
-        /** A page's repeats by how many pages back the last page that sent them was. */
         private String repeatsBack(int[] c) {
             return "1 back " + c[FollowListPolicy.P_BACK1] + ", 2 back " + c[FollowListPolicy.P_BACK2] + ", 3-5 back "
                     + c[FollowListPolicy.P_BACK3_5] + ", older " + c[FollowListPolicy.P_OLDER]
                     + (c[FollowListPolicy.P_SAME] > 0 ? ", same page " + c[FollowListPolicy.P_SAME] : "");
         }
 
-        /** The page handler's owner (the list's response handler) belongs to this list's fragment. */
         private boolean ownsList(Object owner) {
             if (owner == null) return false;
             if (owner == frag) return true;
@@ -1567,7 +1262,6 @@ final class FollowListLoader {
             return false;
         }
 
-        /** Instagram's failed flag: its pager says "not loading" although a next page exists. */
         private boolean failed() {
             try {
                 return pagerIsLoading != null && !(boolean) pagerIsLoading.invoke(pager);
@@ -1585,9 +1279,6 @@ final class FollowListLoader {
             }
         }
 
-        /** Reads the adapter's account list. Only an adapter without any List field (not 451's) is
-         *  walked instead, at most every 2 s: a walk also finds suggested accounts, so it must never
-         *  stand in for an account list that is merely still empty. */
         private void read(long now, boolean last) {
             if (lists != null && lists.length > 0) {
                 listed.read(mainList(), this::rowId);
@@ -1610,8 +1301,6 @@ final class FollowListLoader {
             return id;
         }
 
-        /** The adapter's account list: its List field holding Users that grew while pages came in,
-         *  else the largest (FollowListPolicy.mainList); empty while no list holds a User yet. */
         private List<?> mainList() {
             List<List<?>> users = new ArrayList<>();
             List<Integer> idx = new ArrayList<>();
@@ -1639,7 +1328,6 @@ final class FollowListLoader {
             if (shown == null) return;
             try {
                 Context c = shown.dlg.ctx;
-                // in an extra pass: the accounts of the passes so far plus this pass's new ones
                 int fresh = pass > 0 ? listed.fresh(merged.keySet()) : 0;
                 int n = pass > 0 ? merged.size() + fresh : listed.unique();
                 String msg = expected > 0 ? I18n.t(c, R.string.ig_follow_export_loading_of, n, expected)
@@ -1654,13 +1342,6 @@ final class FollowListLoader {
             } catch (Throwable ignored) {}
         }
 
-        /**
-         * Ends the load and hands over its result. During an extra pass (stopped, left, failed or
-         * done) the result is every pass's accounts, complete as the first pass was unless Instagram
-         * blocked the load (an extra pass that ended early marks it interrupted), and the first
-         * pass's order is set back when a pass ran in another one. A complete, unblocked load ends a
-         * pause after an earlier block for this account.
-         */
         void finish(boolean ok, String why) {
             if (finished) return;
             finished = true;
@@ -1737,15 +1418,12 @@ final class FollowListLoader {
         }
     }
 
-    // ---- reading Users ----
-
     private static Object adapterOf(AbsListView lv) {
         Adapter ad = lv != null ? lv.getAdapter() : null;
         if (ad instanceof HeaderViewListAdapter h) ad = h.getWrappedAdapter();
         return ad;
     }
 
-    /** The adapter class's own List fields (not its Instagram base adapter's row bookkeeping). */
     private static List<Field> listFields(Class<?> adapterClass) {
         List<Field> out = new ArrayList<>();
         for (Field f : SafeReflect.fields(adapterClass)) {
@@ -1771,7 +1449,6 @@ final class FollowListLoader {
         return false;
     }
 
-    /** The User's id: its final numeric String field (451: A09, the pk). */
     static String idOf(Object user) {
         Field f = userIdField;
         try {
@@ -1789,7 +1466,6 @@ final class FollowListLoader {
         }
     }
 
-    /** The username, from the getter reading "username" only (UserUtils' fallback guesses getters). */
     static String username(Object user) {
         Method m = usernameGetter != null ? usernameGetter : UserUtils.userUsernameGetter;
         if (m == null) return null;
@@ -1808,11 +1484,6 @@ final class FollowListLoader {
         }
     }
 
-    /**
-     * Instagram's count for the list on screen: follower_count / following_count of the profile's
-     * User (the fragment's User field holding the list owner), -1 when unknown. Not on your own
-     * lists while the profile spoofer shows other counts.
-     */
     static int expectedCount(Object frag, FollowListExportHook.ListInfo info) {
         if (info == null || info.type == null) return -1;
         Method getter = FollowListExportHook.FOLLOWERS.equals(info.type) ? followerCountGetter : followingCountGetter;
@@ -1834,13 +1505,11 @@ final class FollowListLoader {
         return -1;
     }
 
-    /** Fallback when the adapter has no account list: id → {username, full name} for every User
-     *  reachable from the adapter through Lists / Maps; {@code cut[0]} when it stopped at its cap. */
     private static Map<String, String[]> walk(Object adapter, boolean[] cut) {
         Map<String, String[]> out = new LinkedHashMap<>();
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         ArrayDeque<Object[]> q = new ArrayDeque<>();
-        q.add(new Object[]{adapter, 0, false}); // {object, depth, reached through a List/Map (= a row)}
+        q.add(new Object[]{adapter, 0, false});
         while (!q.isEmpty()) {
             if (seen.size() >= 20000) { cut[0] = true; break; }
             Object[] e = q.poll();
@@ -1851,7 +1520,7 @@ final class FollowListLoader {
             if (o instanceof List<?> l) { for (Object it : l) q.add(new Object[]{it, d + 1, true}); continue; }
             if (o instanceof Map<?, ?> m) { for (Object it : m.values()) q.add(new Object[]{it, d + 1, true}); continue; }
             if (o.getClass().getName().equals(USER)) {
-                if (!row) continue; // the profile owner / logged-in user held in plain fields, not a list row
+                if (!row) continue;
                 String id = idOf(o);
                 if (id != null) out.putIfAbsent(id, new String[]{username(o), fullName(o)});
                 continue;
@@ -1889,7 +1558,6 @@ final class FollowListLoader {
 
     static Progress progressDialog(Context c, CharSequence title, CharSequence stopLabel) {
         try {
-            // the Activity that hosts the list (UIHookManager's current one can be a different, hidden one)
             Context ctx = c;
             while (!(ctx instanceof Activity) && ctx instanceof android.content.ContextWrapper w && w.getBaseContext() != null) ctx = w.getBaseContext();
             if (!(ctx instanceof Activity)) {
@@ -1899,7 +1567,7 @@ final class FollowListLoader {
             IeDialog d = new IeDialog(ctx)
                     .title(title)
                     .message(I18n.t(ctx, R.string.ig_follow_export_loading, 0))
-                    .cancelable(false); // leaving the list would stop IG's pager
+                    .cancelable(false);
             ProgressBar bar = new ProgressBar(d.ctx, null, android.R.attr.progressBarStyleHorizontal);
             bar.setIndeterminate(true);
             ColorStateList accent = ColorStateList.valueOf(d.accent);

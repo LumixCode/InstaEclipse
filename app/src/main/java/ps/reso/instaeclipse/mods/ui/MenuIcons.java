@@ -22,26 +22,17 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 
-/**
- * Proper icons for the rows we add to Instagram's post / reel "..." menus. Those rows ride on
- * internal debug options, which Instagram draws with the Meta logo. Once the sheet is on screen
- * we find our rows by their label (control_option_text) and set a fitting Instagram icon on the
- * row's control_option_icon; a pre-draw listener re-applies it when the list re-binds or scrolls.
- */
 public final class MenuIcons {
 
     private MenuIcons() {}
 
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
-    // Weak maps rather than view tags: our R.id values could collide with Instagram's tag keys.
     private static final Map<View, Boolean> WATCHED = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
     private static final Map<ImageView, Applied> APPLIED = java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
     private static volatile long lastStart;
-    // apply() results: no menu rows in the window / menu rows but none of ours / ours found.
     private static final int NO_MENU = 0, MENU = 1, OURS = 2;
     private static Map<String, String> iconsByLabel;
 
-    /** Label -> Instagram drawable name, in the current language. */
     private static Map<String, String> icons() {
         Map<String, String> m = iconsByLabel;
         if (m != null) return m;
@@ -57,7 +48,6 @@ public final class MenuIcons {
         return m;
     }
 
-    /** Call when our rows were just added to a menu; fixes their icons once the sheet shows. */
     public static void fixSoon() {
         try {
             start();
@@ -70,7 +60,7 @@ public final class MenuIcons {
         long now = SystemClock.uptimeMillis();
         if (now - lastStart < 300) return;
         lastStart = now;
-        iconsByLabel = null; // pick up a language change
+        iconsByLabel = null;
         final int[] tries = {0};
         MAIN.postDelayed(new Runnable() {
             @Override
@@ -86,7 +76,6 @@ public final class MenuIcons {
         }, 60);
     }
 
-    /** Applies once and keeps re-applying while this window is showing. */
     private static boolean watch(View root) {
         if (apply(root) != OURS) return false;
         try {
@@ -99,18 +88,14 @@ public final class MenuIcons {
 
     private static void listen(View root) {
         if (WATCHED.put(root, Boolean.TRUE) != null) return;
-        // Pre-draw (throttled), not global layout: rows scrolled into view are bound without a
-        // layout pass on the window, so a layout listener misses them.
         final long[] last = {0};
-        final Runnable catchUp = () -> apply(root); // the frame skipped by the throttle
+        final Runnable catchUp = () -> apply(root);
         final View.OnAttachStateChangeListener[] detach = new View.OnAttachStateChangeListener[1];
         ViewTreeObserver.OnPreDrawListener l = new ViewTreeObserver.OnPreDrawListener() {
             @Override public boolean onPreDraw() {
                 long t = SystemClock.uptimeMillis();
                 if (t - last[0] > 80) {
                     last[0] = t;
-                    // On IG 446 sheets live in the activity window, so "removed on detach" would
-                    // keep walking the main tree every frame; stop once the menu has closed.
                     if (apply(root) == NO_MENU) stop(root, this, detach[0], catchUp);
                 } else { root.removeCallbacks(catchUp); root.postDelayed(catchUp, 100); }
                 return true;
@@ -132,9 +117,6 @@ public final class MenuIcons {
         WATCHED.remove(root);
     }
 
-    /** OURS if at least one of our rows is in this window, MENU if only Instagram's menu rows are.
-     *  Never throws: this also runs from a pre-draw listener on Instagram's UI thread, where an
-     *  exception would crash the app; on any failure the row simply keeps Instagram's own icon. */
     private static int apply(View root) {
         try {
             return applyUnsafe(root);
@@ -196,7 +178,6 @@ public final class MenuIcons {
         }
     }
 
-    /** Every window's root view (activity, dialogs, bottom sheets). */
     @SuppressWarnings("unchecked")
     private static List<View> rootViews() {
         if (Windows.VIEWS != null) {

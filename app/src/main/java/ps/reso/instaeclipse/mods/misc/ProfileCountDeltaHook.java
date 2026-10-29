@@ -50,35 +50,6 @@ import ps.reso.instaeclipse.utils.users.WatchlistStore;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
-/**
- * Profile analyzer: how an analyzed profile's follower and following counts changed since its last
- * analysis, drawn right after each count in its profile header: "+5" in green, "-30" in red.
- * Unchanged counts, and profiles whose last analysis has no counts, show nothing.
- *
- * <p>Instagram binds the header's counts in one step of the profile header binder: the static
- * method with the "bindUserMetrics" trace (X.09ZU.A07 on IG 451). Its header state holds the
- * metrics (X.0Aoq: the profile id and the exact posts, followers and following Integers, built from
- * the profile's "follower_count" / "following_count" fields). Each count cell then goes through one
- * helper, the static method with the "UserMetricsBinderHelper.shrinkVanityMetrics" trace
- * (X.0AeX.A00), which gets the cell, its label and value TextViews, the session and the exact
- * Integer it writes, abbreviated, into the value TextView. So:
- * <ul>
- *   <li>before the metrics step, the profile id is read from its metrics: the one class whose three
- *       Integer fields the step reads, whose only String field is the id;</li>
- *   <li>after each cell, its exact count is kept; the cell is the followers or the following one by
- *       its value TextView's id (profile_header_familiar_followers_value / _following_value). The
- *       counts are also remembered per profile for WatchlistStore, so the next analysis of that
- *       profile that completes keeps them as its baseline.</li>
- * </ul>
- *
- * <p>The change is drawn in the overlay of the row holding the cells, at the number's baseline,
- * not appended to the number: Instagram auto-sizes the value text to its cell (8 to 16 sp), so a
- * longer text would shrink the number, and the cells stay untouched (tapping a count opens the
- * follow list, which the analyzer itself relies on). The header is reused across profiles: every
- * bind replaces a cell's profile and count, and an attach-scoped pre-draw sync (it returns true)
- * places the change and hides it once the value text is no longer the one its count was bound
- * with (another profile's header, or a count changed outside a bind).
- */
 public final class ProfileCountDeltaHook {
     private static final String TAG = "(IE|CountDelta) ";
     private static final String KEY = "ProfileCountDelta";
@@ -92,27 +63,20 @@ public final class ProfileCountDeltaHook {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final Set<String> diagnostics = Collections.synchronizedSet(new HashSet<>());
 
-    /** Counts headers showed, per profile id: the baseline source of WatchlistStore.apply. */
     static final ProfileCountDelta.Seen SEEN = new ProfileCountDelta.Seen();
-    /** The profile whose counts the metrics step is binding right now (it runs every cell's helper). */
     private static final ThreadLocal<String> BINDING = new ThreadLocal<>();
 
-    // Metrics step: argument holding the header state, its metrics field (null: the argument is
-    // the metrics), and the metrics' profile id.
     private static int stateArg = -1;
     private static Field metricsField, profileIdField;
-    // Cell helper: argument positions.
     private static int cellArg = -1, countArg = -1, sessionArg = -1;
     private static final List<Integer> textArgs = new ArrayList<>();
-    private static Method userId; // UserSession.getUserId()
+    private static Method userId;
 
-    // Baselines of the index last loaded (profile id → {followers, following}). Read on the main
-    // thread; a loader thread builds a new map and the main thread swaps it in.
     private static volatile Map<String, int[]> baselines = Collections.emptyMap();
     private static volatile String baselinesSelf;
     private static volatile long baselinesVersion = -1;
-    private static boolean loading; // main thread
-    private static final Set<View> hosts = Collections.newSetFromMap(new WeakHashMap<>()); // main thread
+    private static boolean loading;
+    private static final Set<View> hosts = Collections.newSetFromMap(new WeakHashMap<>());
 
     public void install(ClassLoader loader) {
         try {
@@ -187,8 +151,6 @@ public final class ProfileCountDeltaHook {
         return found.get(0);
     }
 
-    /** The metrics: the one class with three Integer fields the step reads (posts, followers,
-     *  following); its only String field is the profile id. Then the step argument holding it. */
     private static void resolveMetrics(Found step, Method stepMethod, ClassLoader loader) throws Exception {
         if (!Modifier.isStatic(stepMethod.getModifiers())) throw new IllegalStateException("metrics step is not static");
         Map<Class<?>, Set<Field>> integers = new LinkedHashMap<>();
@@ -236,7 +198,6 @@ public final class ProfileCountDeltaHook {
         metricsField = field;
     }
 
-    /** The helper's cell (a plain View), its TextViews, the one Integer it shows and the session. */
     private static void resolveCell(Method cell) {
         if (!Modifier.isStatic(cell.getModifiers())) throw new IllegalStateException("cell helper is not static");
         Class<?>[] parameters = cell.getParameterTypes();
@@ -253,8 +214,6 @@ public final class ProfileCountDeltaHook {
         cellArg = views.get(0);
         countArg = integers.get(0);
     }
-
-    // ---- hooks ----
 
     private static final XC_MethodHook STEP = new XC_MethodHook() {
         @Override protected void beforeHookedMethod(MethodHookParam param) {
@@ -288,7 +247,7 @@ public final class ProfileCountDeltaHook {
                     if (id == ResIds.id(text.getContext(), FOLLOWERS_VALUE)) { value = text; followers = true; }
                     else if (id == ResIds.id(text.getContext(), FOLLOWING_VALUE)) { value = text; followers = false; }
                 }
-                if (value == null) return; // the posts cell
+                if (value == null) return;
                 Integer count = (Integer) param.args[countArg];
                 String profile = BINDING.get();
                 if (profile != null && count != null) SEEN.put(profile, followers, count, System.currentTimeMillis());
@@ -300,7 +259,6 @@ public final class ProfileCountDeltaHook {
         }
     };
 
-    /** WatchlistStore.apply: the counts headers showed for {@code id} around this analysis. */
     private static int[] countsAtAnalysis(String id, long now) {
         int[] counts = SEEN.counts(id, now);
         ModuleLog.detail(TAG + "baseline for " + id + ": " + (counts != null
@@ -321,8 +279,6 @@ public final class ProfileCountDeltaHook {
         if (diagnostics.add(message)) ModuleLog.detail(TAG + message);
     }
 
-    // ---- the header ----
-
     private static void bind(TextView value, View cell, String profile, String viewer, boolean followers, Integer count) {
         Cell state = value.getTag(R.id.ie_count_delta_cell) instanceof Cell c ? c : null;
         if (state == null) {
@@ -339,10 +295,9 @@ public final class ProfileCountDeltaHook {
         state.followers = followers;
         state.count = count;
         state.shown = String.valueOf(value.getText());
-        state.row.host.invalidate(); // the pre-draw sync places it once laid out
+        state.row.host.invalidate();
     }
 
-    /** The baseline {followers, following} of {@code profile} in {@code viewer}'s watchlist, or null. */
     private static int[] baseline(Context ctx, String viewer, String profile) {
         Context app = ctx.getApplicationContext();
         String self = viewer != null ? viewer : WatchlistStore.self(app);
@@ -350,7 +305,6 @@ public final class ProfileCountDeltaHook {
         long version = WatchlistStore.indexVersion();
         boolean sameSelf = self.equals(baselinesSelf);
         if (!sameSelf || version != baselinesVersion) load(app, self, version);
-        // While a newer index loads, the older one still answers for the same account.
         return sameSelf ? baselines.get(profile) : null;
     }
 
@@ -376,14 +330,12 @@ public final class ProfileCountDeltaHook {
         }, "IE-CountDelta").start();
     }
 
-    /** The row holding the count cells: draws their changes in its overlay. */
     private static final class Row {
         final ViewGroup host;
         final List<Cell> cells = new ArrayList<>(2);
 
         private Row(ViewGroup host) {
             this.host = host;
-            // Registered only while attached, like ProfileFollowStatusHook's label sync.
             ViewTreeObserver.OnPreDrawListener sync = () -> {
                 for (Cell cell : cells) cell.sync();
                 return true;
@@ -397,7 +349,6 @@ public final class ProfileCountDeltaHook {
                     view.getViewTreeObserver().removeOnPreDrawListener(sync);
                 }
             });
-            // addOnAttachStateChangeListener doesn't replay an attach that already happened.
             if (host.isAttachedToWindow()) host.getViewTreeObserver().addOnPreDrawListener(sync);
             hosts.add(host);
         }
@@ -412,7 +363,6 @@ public final class ProfileCountDeltaHook {
             return row;
         }
 
-        /** Drops cells whose TextView Instagram has since replaced or moved out of this row. */
         private void prune() {
             float[] unused = new float[2];
             for (int i = cells.size() - 1; i >= 0; i--) {
@@ -425,7 +375,6 @@ public final class ProfileCountDeltaHook {
         }
     }
 
-    /** One count (followers or following) of a header, as last bound, and its change. */
     private static final class Cell {
         final TextView value;
         final Row row;
@@ -434,7 +383,6 @@ public final class ProfileCountDeltaHook {
         boolean followers;
         Integer count;
         private Typeface source, normal;
-        // The last comparison: its label is formatted (and logged) once, not on every frame.
         private String keyProfile, keyLabel;
         private boolean keyFollowers;
         private int keyCount = -1, keyWas = -1, keyColor;
@@ -469,11 +417,9 @@ public final class ProfileCountDeltaHook {
                 }
             }
             boolean changed = label != null && offset(value, row.host, at) ? place(label, layout) : text.hide();
-            // An overlay drawable that moves may not invalidate the area it moved into.
             if (changed) row.host.invalidate();
         }
 
-        /** Right after the number on its line (left of it in RTL), at the number's baseline. */
         private boolean place(String label, Layout layout) {
             Typeface typeface = value.getTypeface();
             if (normal == null || typeface != source) {
@@ -503,7 +449,6 @@ public final class ProfileCountDeltaHook {
         }
     }
 
-    /** {@code v}'s top-left in {@code host}'s overlay coordinates; false when it isn't inside it. */
     private static boolean offset(View v, View host, float[] out) {
         float x = 0, y = 0;
         View c = v;
@@ -522,10 +467,9 @@ public final class ProfileCountDeltaHook {
         return true;
     }
 
-    /** The change's text, drawn at a baseline position in the host's overlay. */
     private static final class DeltaText extends Drawable {
         private final TextPaint paint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-        private final TextPaint measure = new TextPaint(Paint.ANTI_ALIAS_FLAG); // leaves paint's state for show()
+        private final TextPaint measure = new TextPaint(Paint.ANTI_ALIAS_FLAG);
         private String label;
         private float x, y;
 
@@ -535,11 +479,10 @@ public final class ProfileCountDeltaHook {
             return measure.measureText(label);
         }
 
-        /** Shows {@code label} at ({@code x}, baseline {@code y}); true when anything changed. */
         boolean show(String label, int color, float size, Typeface typeface, float x, float y) {
             if (label.equals(this.label) && color == paint.getColor() && size == paint.getTextSize()
                     && typeface == paint.getTypeface() && x == this.x && y == this.y) return false;
-            invalidateSelf(); // the area it leaves
+            invalidateSelf();
             this.label = label;
             this.x = x;
             this.y = y;

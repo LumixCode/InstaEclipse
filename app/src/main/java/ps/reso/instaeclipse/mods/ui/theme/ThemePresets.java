@@ -14,7 +14,6 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 
 public final class ThemePresets {
 
-    /** Ids above this are generated opposite-mode variants of base preset (id - VARIANT_OFFSET). */
     public static final int VARIANT_OFFSET = 100;
 
     private static final List<ThemePreset> PRESETS;
@@ -60,8 +59,6 @@ public final class ThemePresets {
         list.add(p(29, -15592942, -14803426, -2039584, -9079435, -16718337, -2039584, -13882324, -15592942, -16718337, -59580));
         list.add(p(30, -16117728, -15722448, -1509121, -10452832, -16718218, -1509121, -15196096, -16117728, -15138817, -49023));
 
-        // Every theme also exists in the opposite mode (id = VARIANT_OFFSET + base id), so there is
-        // a full dark set and a full light set. Ordered as sets: all dark themes, then all light.
         List<ThemePreset> dark = new ArrayList<>();
         List<ThemePreset> light = new ArrayList<>();
         for (ThemePreset base : list) {
@@ -76,16 +73,11 @@ public final class ThemePresets {
         PRESETS = Collections.unmodifiableList(ordered);
     }
 
-    // ── Light / dark variant generation ──────────────────────────────────────
-
     private static boolean isLight(IgThemePalette p) {
         return luminance(p.background) > 0.5;
     }
 
-    /** Light version of a dark theme: same accent hue, light surfaces, dark text. */
     private static IgThemePalette toLight(IgThemePalette d) {
-        // Tinted enough to be recognisably this theme (a few percent reads as stock white), with
-        // text and icons kept at reading contrast against the tinted surfaces.
         int a = d.accent;
         int bg = blend(0xFFFFFFFF, a, 0.13f);
         int surface = blend(0xFFFFFFFF, a, 0.07f);
@@ -100,7 +92,6 @@ public final class ThemePresets {
                 divider, divider, bg, bg, link, destructive, destructive);
     }
 
-    /** Dark version of a light theme: same accent hue, dark surfaces, light text. */
     private static IgThemePalette toDark(IgThemePalette l) {
         int a = l.accent;
         int bg = blend(0xFF0E0E11, a, 0.06f);
@@ -115,7 +106,6 @@ public final class ThemePresets {
                 divider, divider, bg, bg, link, destructive, destructive);
     }
 
-    /** Mix {@code from} toward {@code to} by {@code t} (0..1), fully opaque. */
     private static int blend(int from, int to, float t) {
         int r = Math.round(((from >> 16) & 255) * (1 - t) + ((to >> 16) & 255) * t);
         int g = Math.round(((from >> 8) & 255) * (1 - t) + ((to >> 8) & 255) * t);
@@ -123,7 +113,6 @@ public final class ThemePresets {
         return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 
-    /** WCAG relative luminance, 0..1. */
     private static double luminance(int c) {
         double[] ch = {((c >> 16) & 255) / 255.0, ((c >> 8) & 255) / 255.0, (c & 255) / 255.0};
         for (int i = 0; i < 3; i++)
@@ -136,7 +125,6 @@ public final class ThemePresets {
         return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
     }
 
-    /** Darken (or lighten) {@code c} in small steps until it reaches {@code ratio} against {@code bg}. */
     private static int withContrast(int c, int bg, double ratio, boolean lighten) {
         int out = 0xFF000000 | c;
         int target = lighten ? 0xFFFFFFFF : 0xFF000000;
@@ -176,20 +164,11 @@ public final class ThemePresets {
         return String.format(format, base);
     }
 
-    /**
-     * True if preset {@code id} is a light-background theme (suited to light mode). Only these
-     * render a legible, fully-consistent light mode; a dark theme forced into light mode leaves IG's
-     * white feed showing through its dark chrome (#251). Classified by background luminance.
-     */
     public static boolean isLightPreset(int id) {
         for (ThemePreset p : PRESETS) if (p.id == id) return isLight(p.palette);
         return false;
     }
 
-    /**
-     * Values for the light-mode picker (#251): "same as dark" (0), "stock Instagram" (-1), then the
-     * full light set — a dark theme in light mode renders half-themed/illegible, so it is not offered.
-     */
     public static int[] lightModeChoices() {
         List<Integer> ids = new ArrayList<>();
         ids.add(0);
@@ -200,7 +179,6 @@ public final class ThemePresets {
         return out;
     }
 
-    /** Preset ids suited to DARK mode (all non-light-background presets), for the main theme picker. */
     public static int[] darkModeChoices() {
         List<Integer> ids = new ArrayList<>();
         for (ThemePreset p : PRESETS) if (!isLight(p.palette)) ids.add(p.id);

@@ -32,13 +32,6 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 
-/**
- * Removes Meta AI entry points (GitHub #179) by collapsing the Meta AI XML layouts as they inflate.
- * Anchored on STABLE public resource names (never obfuscated X.* ids, no version gate); new names
- * first, legacy last; any name that doesn't resolve on the running build is skipped. Covers the DM
- * composer Meta AI buttons and the "Ask Meta AI" search-results plugin. The network side (stopping
- * Meta AI from replying) is handled in IGNetworkInterceptor under the same flag.
- */
 public class RemoveMetaAIHook {
 
     private static final String ADD_BUTTON_CACHE = "RemoveMetaAI_addButton";
@@ -72,8 +65,6 @@ public class RemoveMetaAIHook {
                     int resource = (int) param.args[0];
                     View result = (View) param.getResult();
                     if (result == null) return;
-                    // PROBE: surface any inflated layout whose name mentions meta/ai, to confirm the
-                    // Meta AI surfaces are XML-inflated (vs Litho/Compose, which this hook can't catch).
                     if (ModuleLog.verbose) try {
                         String rn = result.getResources().getResourceEntryName(resource);
                         if (rn != null && (rn.contains("meta") || rn.contains("_ai_") || rn.endsWith("_ai")))
@@ -82,8 +73,6 @@ public class RemoveMetaAIHook {
                     ensureIds(result);
                     if (targetLayoutIds.isEmpty() || !targetLayoutIds.contains(resource)) return;
 
-                    // inflate(int, ViewGroup, boolean): when attachToRoot, the inflated layout is the
-                    // root's last child; otherwise the returned view IS the inflated layout.
                     View target = result;
                     boolean attached = param.args.length >= 3
                             ? Boolean.TRUE.equals(param.args[2]) : param.args[1] != null;
@@ -117,24 +106,16 @@ public class RemoveMetaAIHook {
         ModuleLog.ok("(IE|RemoveMetaAI) ready");
     }
 
-    /**
-     * Removes the Meta AI surfaces in Reels and on video posts. Anchored on stable marker
-     * strings verified against the exact installed build (447.0.0.21.81) — the earlier
-     * "..._render"→null anchors sat on trace-scope companion stubs that the live Litho path
-     * never invokes, so nothing fired. These target the data/eligibility layer instead, which
-     * runs on the normal path and carries stable strings. Needs the DexKit bridge.
-     */
     public void installReels(ClassLoader classLoader) {
-        installReelsCardEligibility(classLoader); // in-feed reels Meta AI card
-        installVideoAttribution(classLoader);     // Meta AI attribution subtitle (video posts)
-        installReelsOverflowGate(classLoader);    // reel ⋮ "Ask Meta AI" entrypoint
-        installMenuOptionFilter(classLoader);     // GEN_AI MediaOption rows in overflow menus
-        installAddButtonFilter(classLoader);      // ... and rows added one at a time
-        installReelContentDeepDive(classLoader);  // reel "Ask Meta AI about this" (Content Deep Dive)
+        installReelsCardEligibility(classLoader);
+        installVideoAttribution(classLoader);
+        installReelsOverflowGate(classLoader);
+        installMenuOptionFilter(classLoader);
+        installAddButtonFilter(classLoader);
+        installReelContentDeepDive(classLoader);
     }
 
     private void installReelContentDeepDive(ClassLoader cl) {
-        // Fetcher: skip fetching prompt data so there is nothing to render.
         XC_MethodHook skip = new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam p) {
                 if (FeatureFlags.removeMetaAI) p.setResult(null);
@@ -144,10 +125,6 @@ public class RemoveMetaAIHook {
                 "android_purge_26_q3_ClipsContentDeepDivePromptFetcher_fetchContentDeepDivePromptDataForMediaIds",
                 "cdd-fetch", null);
 
-        // The reel ⋮ more-options menu adds the Meta AI ("GenAI info") row via
-        // ClipsOrganicMediaItemViewMoreOptionsController.maybeAddGenAIInfoRow(...). Skip that method
-        // so the row is never appended. Only skip if it's void (a side-effecting row-adder) — never
-        // clobber a method that returns a value the caller uses.
         XC_MethodHook skipIfVoid = new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam p) {
                 if (!FeatureFlags.removeMetaAI) return;
@@ -161,16 +138,10 @@ public class RemoveMetaAIHook {
                 "reel-menu-genai-row", null);
     }
 
-    /** Hook every method that owns a trace-marker string; if returnTypeFilter is non-null, only hook
-     *  methods with that return type (guards the force-false against non-boolean overloads).
-     *  Every hook here blanks, skips or replaces, so a method R8 built from more than the marked
-     *  method (see {@link #sharedReason}) is skipped and logged instead. */
     private void hookByMarker(ClassLoader cl, XC_MethodHook hook,
                               String marker, String label, String returnTypeFilter) {
         int n = 0;
         try {
-            // The checked targets are cached (an empty list too, when every hit was shared): the
-            // full-dex string scan runs once per Instagram build, not on every start.
             String key = "RemoveMetaAI_" + marker + (returnTypeFilter != null ? "|" + returnTypeFilter : "");
             List<Method> targets = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(key, cl) : null;
             if (targets == null) {
@@ -204,7 +175,6 @@ public class RemoveMetaAIHook {
         ModuleLog.detail("(IE|RemoveMetaAI) " + label + ": " + n + " method(s)");
     }
 
-    /** Why a marker hit is more than the marked method, or null when it is that method. */
     private static String sharedReason(Found md, Method m, String marker) {
         Class<?> owner = m.getDeclaringClass();
         if (HookTargetGuard.isMergedLambda(owner, md.data().getOpCodes())) return "R8-merged lambda";
@@ -213,23 +183,16 @@ public class RemoveMetaAIHook {
         return null;
     }
 
-    /**
-     * In-feed Reels Meta AI card. The card is injected by MetaAiClipsEligibilityFetcher: its
-     * fetch method builds the eligible-candidate list and hands it to the generic feed injector.
-     * Skipping that method (return void) means no candidates → the unit is never injected.
-     * Anchored on the fetcher's stable trace markers; the method only reads+clears sets, so a
-     * no-op is side-effect-safe.
-     */
     private void installReelsCardEligibility(ClassLoader cl) {
         XC_MethodHook skip = new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam p) {
-                if (FeatureFlags.removeMetaAI) p.setResult(null); // void → skip candidate build/inject
+                if (FeatureFlags.removeMetaAI) p.setResult(null);
             }
         };
         String[] anchors = {
                 "android_purge_26_q3_MetaAiClipsEligibilityFetcher_fetchEligibility",
                 "android_purge_26_q3_MetaAiClipsEligibilityFetcher_onClipsItemsRequestFinished",
-                "android_purge_26_q3_MetaAiClipsEligibilityFetcher_onClipsItemsRequestSuccess", // IG 446+
+                "android_purge_26_q3_MetaAiClipsEligibilityFetcher_onClipsItemsRequestSuccess",
         };
         int n = 0;
         java.util.Set<String> hooked = new HashSet<>();
@@ -238,7 +201,7 @@ public class RemoveMetaAIHook {
                 for (Found md : DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create().usingStrings(a)))) {
                     String key = md.getDescriptor();
-                    if (!hooked.add(key)) continue; // both markers live on the same method
+                    if (!hooked.add(key)) continue;
                     try { XposedBridge.hookMethod(md.getMethodInstance(cl), skip); n++; }
                     catch (Throwable ignored) {}
                 }
@@ -250,12 +213,6 @@ public class RemoveMetaAIHook {
         ModuleLog.detail("(IE|RemoveMetaAI) reels-card eligibility: " + n + " method(s)");
     }
 
-    /**
-     * Meta AI attribution subtitle on video posts (the "… Meta AI" row on the media). It is
-     * built by MetaAIVideoAttributionSubtitleUseCase.getUiState(Media)->uiState. We can't null
-     * the result (a downstream final field would NPE), so we blank the UI-state's String fields
-     * — the row then renders no Meta AI text. Anchored on the use-case's stable marker string.
-     */
     private void installVideoAttribution(ClassLoader cl) {
         XC_MethodHook blank = new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam p) {
@@ -277,11 +234,6 @@ public class RemoveMetaAIHook {
                 "video-attribution", null);
     }
 
-    // IG 451.0.0.20.80: same gate (X.05cD.A0B — "A && !B" over two MobileConfig booleans, the first
-    // boolean(UserSession) the reel sheet's getBottomSheetHeaderItems builder calls), new ids.
-    // Re-derive on a new build: find the builder via the marker
-    // "android_purge_26_q3_ClipsOrganicMediaItemViewMoreOptionsController_getBottomSheetHeaderItems"
-    // and read the const-wide ids of the first (UserSession)Z it invokes.
     private static final long META_AI_GATE_451_ID_1 = 0x8110d700005b5bL;
     private static final long META_AI_GATE_451_ID_2 = 0x81103500005795L;
 
@@ -312,12 +264,6 @@ public class RemoveMetaAIHook {
         return n;
     }
 
-    /**
-     * Drops the Meta AI item ("Ask Meta AI" / GenAI info) from the reel/post overflow (⋮) menus.
-     * Those menus are built from lists of com.instagram.feed.media.mediaoption.MediaOption$Option;
-     * we hook the list builders (anchored by their referenced enum fields) and remove any option
-     * whose enum name is a Meta-AI one. Stable-field anchored — no obfuscated X.* names.
-     */
     private void installMenuOptionFilter(ClassLoader cl) {
         final String od = "Lcom/instagram/feed/media/mediaoption/MediaOption$Option;";
         XC_MethodHook filter = new XC_MethodHook() {
@@ -341,25 +287,19 @@ public class RemoveMetaAIHook {
                         keep.add(o);
                     }
                     if (!changed) return;
-                    try { ((List<Object>) src).clear(); ((List<Object>) src).addAll(keep); } // mutate in place if possible
-                    catch (Throwable mutateFail) { param.setResult(keep); }               // else replace
+                    try { ((List<Object>) src).clear(); ((List<Object>) src).addAll(keep); }
+                    catch (Throwable mutateFail) { param.setResult(keep); }
                 } catch (Throwable ignored) {}
             }
         };
         hookBuilder(cl, filter, FindMethod.create().matcher(MethodMatcher.create()
                 .returnType("java.util.List").addUsingField(od + "->GEN_AI_INFO:" + od)), "list-GEN_AI_INFO");
-        // Reel options list (ArrayList referencing PLAYBACK_CONTROLS + UNSAVE) — kept for builds
-        // where the reel menu builder does not statically reference GEN_AI_INFO.
         hookBuilder(cl, filter, FindMethod.create().matcher(MethodMatcher.create()
                 .returnType("java.util.ArrayList")
                 .addUsingField(od + "->PLAYBACK_CONTROLS:" + od)
                 .addUsingField(od + "->UNSAVE:" + od)), "reel-options");
     }
 
-    /**
-     * The post and reel ⋮ menus also add rows one at a time through MediaOptionsOverflowMenuCreator's
-     * static add-button method, which the option lists above never see. Skip a Meta AI row there.
-     */
     private void installAddButtonFilter(ClassLoader cl) {
         try {
             Class<?> option = cl.loadClass("com.instagram.feed.media.mediaoption.MediaOption$Option");
@@ -379,7 +319,7 @@ public class RemoveMetaAIHook {
                 @Override protected void beforeHookedMethod(MethodHookParam param) {
                     Object opt = param.args[optionIndex];
                     if (FeatureFlags.removeMetaAI && opt != null && isMetaAiOption(opt.toString())) {
-                        param.setResult(null); // void row-adder: the row is never added
+                        param.setResult(null);
                     }
                 }
             });
@@ -427,7 +367,7 @@ public class RemoveMetaAIHook {
         String n = name.toUpperCase();
         return n.contains("GEN_AI") || n.contains("GENAI") || n.contains("META_AI")
                 || n.contains("METAAI") || n.contains("ASK_META")
-                || n.contains("CONTENT_DEEP_DIVE"); // reel ⋮ "Ask Meta AI about this" (446+)
+                || n.contains("CONTENT_DEEP_DIVE");
     }
 
     private static void collapse(View v) {
@@ -441,20 +381,13 @@ public class RemoveMetaAIHook {
         if (v != null && v.getVisibility() != View.GONE) collapse(v);
     }
 
-    // ── Reel/post action-sheet "About this reel" Content Deep Dive section (view-level) ──────────
-
     private static final java.util.Set<View> watchedSheetDecors =
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
-    // Global layout fires many times per second on the feed; a whole-decor walk on each pass is
-    // a battery drain (see DistractionFreeUIHook, #257). Sweep at once (so an opening sheet never
-    // shows the section), then at most once more per window until SHEET_SWEEP_MS has passed.
     private static final long SHEET_SWEEP_MS = 150;
     private static final android.os.Handler MAIN = new android.os.Handler(android.os.Looper.getMainLooper());
     private static final java.util.Set<View> pendingSheetSweeps =
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
-    /** Arm a one-time global-layout listener that collapses the Content Deep Dive section whenever
-     *  a reel/post action sheet is shown. Called from UIHookManager.setupHooks on every resume. */
     public static void watchActionSheet(Activity a) {
         if (a == null || !FeatureFlags.removeMetaAI) return;
         try {
@@ -479,20 +412,14 @@ public class RemoveMetaAIHook {
             java.util.List<View> composers = new java.util.ArrayList<>();
             findViewsById(root, composerId, composers);
             for (View composer : composers) {
-                // Only inside an action sheet — never the DM thread composer.
                 if (findAncestorById(composer, sheetId) == null) continue;
                 View recycler = findAncestorOfClass(composer, "RecyclerView");
-                // Already-collapsed views are skipped: collapse() always requests a layout, which
-                // would fire this listener again and re-lay out the window every frame.
                 if (!(recycler instanceof ViewGroup rv)) { collapseIfShown(composer); continue; }
-                // Find the recycler item (direct child of the RecyclerView) that holds the composer.
                 View item = composer;
                 while (item.getParent() != rv && item.getParent() instanceof View p) item = p;
                 if (item.getParent() != rv) { collapseIfShown(composer); continue; }
                 int idx = rv.indexOfChild(item);
-                collapseIfShown(item); // the "Ask Meta AI…" composer row
-                // Collapse the section's header + summary directly above it: contiguous
-                // non-clickable, text-bearing items. Stop at the first interactive (action) row.
+                collapseIfShown(item);
                 for (int i = idx - 1; i >= 0 && i >= idx - 3; i--) {
                     View sib = rv.getChildAt(i);
                     if (sib == null || sib.getVisibility() == View.GONE) continue;
@@ -523,7 +450,6 @@ public class RemoveMetaAIHook {
         return null;
     }
 
-    /** True if the subtree has any clickable/focusable control (i.e. an action row, not text). */
     private static boolean isInteractive(View v) {
         if (v == null) return false;
         if ((v.isClickable() || v.isLongClickable()) && !(v instanceof android.widget.TextView)) return true;

@@ -49,29 +49,11 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.ui.ViewAttachHooks;
 
-/**
- * Profile Picture Downloader
- *
- * Strategy:
- *   Hook View.onAttachedToWindow() globally, filter for "expanded_profile_pic" by resource name
- *   (cached as an int ID after first resolution). When found, attach a long-press listener that
- *   opens the picture full-screen and square (pinch to zoom) with a Download button.
- *
- *   Full size: the circle shows a small copy (ImageUrl from IgImageView). The viewed profile's User
- *   (UserDetailFragment -> UserDetailViewModel -> User, tracked on resume) carries the original as
- *   hd_profile_pic_url_info (User ()ProfilePicUrlInfo using that string; ProfilePicUrlInfo keeps a
- *   plain getUrl()). It's used when it is the same picture (same file name as the circle's URL),
- *   otherwise the circle's URL is kept.
- *
- * Gated by FeatureFlags.enableProfileDownload.
- */
 public class ProfilePicDownloadHook {
 
     private static final class Main {
         static final Handler HANDLER = new Handler(Looper.getMainLooper());
     }
-
-    // ── Install ───────────────────────────────────────────────────────────────
 
     private static final String FRAGMENT = "com.instagram.profile.fragment.UserDetailFragment";
     private static final String VIEW_MODEL = "com.instagram.profile.fragment.UserDetailViewModel";
@@ -126,7 +108,6 @@ public class ProfilePicDownloadHook {
         }
     }
 
-    /** The viewed profile's original picture when it is the same image as displayedUrl, else null. */
     private static String hdUrl(String displayedUrl) {
         try {
             Method getter = hdGetter;
@@ -195,12 +176,9 @@ public class ProfilePicDownloadHook {
         return id != 0 && vid == id;
     }
 
-    // ── UI injection ──────────────────────────────────────────────────────────
-
     private static void injectLongPress(View view) {
         try {
             view.setOnLongClickListener(v -> {
-                // Resolve activity lazily at tap time — context is valid at this point
                 Context ctx = v.getContext();
                 Activity activity = activityFromContext(ctx);
 
@@ -221,8 +199,6 @@ public class ProfilePicDownloadHook {
             ModuleLog.error("(IE|ProfileDL) Holding the profile picture will not open it: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
-
-    // ── Viewer ────────────────────────────────────────────────────────────────
 
     public static android.app.Dialog showViewer(Context ctx, String url, String username) {
         android.app.Dialog dialog = new android.app.Dialog(ctx, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
@@ -377,16 +353,8 @@ public class ProfilePicDownloadHook {
                 DownloadMessages.failure(ctx, e), Toast.LENGTH_SHORT).show());
     }
 
-    // ── URL extraction ────────────────────────────────────────────────────────
-
     private static final String IMAGE_URL = "com.instagram.common.typedurl.ImageUrl";
 
-    /**
-     * Extracts the image URL from the profile pic view (CircularImageView extends IgImageView).
-     * IgImageView keeps the non-obfuscated getter getTypedUrl() (the displayed ImageUrl); if a
-     * build drops it, scans the hierarchy for ImageUrl-typed fields (A0E/A0D/A0e on 452) by TYPE,
-     * never by the obfuscated field letter. ImageUrl itself is a non-obfuscated interface.
-     */
     private static String extractUrl(View view) {
         try {
             java.lang.reflect.Method getter = findMethod(view.getClass(), "getTypedUrl");
@@ -401,7 +369,6 @@ public class ProfilePicDownloadHook {
             if (url != null) return url;
         } catch (Throwable ignored) {}
 
-        // Fallback: tag-based URI
         try {
             Object tag = view.getTag();
             if (tag instanceof Uri) return tag.toString();
@@ -412,11 +379,6 @@ public class ProfilePicDownloadHook {
         return null;
     }
 
-    /**
-     * Walks the class hierarchy and reads every field typed as ImageUrl, returning the first one
-     * whose getUrl() yields an http(s) URL. getDeclaredFields() order is unspecified, but all the
-     * candidates point at the same displayed picture (main / tracking / fallback copy).
-     */
     private static String getUrlFromImageUrlFields(View view) {
         for (Class<?> cls = view.getClass(); cls != null && cls != Object.class; cls = cls.getSuperclass()) {
             for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(cls)) {
@@ -432,7 +394,6 @@ public class ProfilePicDownloadHook {
         return null;
     }
 
-    /** ImageUrl.getUrl() if it is an http(s) URL, else null. */
     private static String urlOf(Object imageUrl) throws Throwable {
         if (imageUrl == null) return null;
         Object result = imageUrl.getClass().getMethod("getUrl").invoke(imageUrl);
@@ -449,8 +410,6 @@ public class ProfilePicDownloadHook {
         }
         return null;
     }
-
-    // ── Username extraction ───────────────────────────────────────────────────
 
     @SuppressLint("DiscouragedApi")
     private static String extractUsername(Activity activity) {
@@ -487,8 +446,6 @@ public class ProfilePicDownloadHook {
                 && s.matches("[a-zA-Z0-9._]+")
                 && !s.matches("\\d+");
     }
-
-    // ── Context → Activity ────────────────────────────────────────────────────
 
     private static Activity activityFromContext(Context ctx) {
         while (ctx instanceof ContextWrapper) {

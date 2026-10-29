@@ -9,11 +9,6 @@ import android.widget.LinearLayout;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/**
- * A full custom color palette for Instagram's UI: 15 semantic "slots" (background, surface,
- * text, accent, etc.) that {@link IgColorRemapEngine} and {@link IgThemeEngine} substitute in
- * place of Instagram's own resolved colors.
- */
 public class IgThemePalette {
 
     public static final String SLOT_BACKGROUND = "background";

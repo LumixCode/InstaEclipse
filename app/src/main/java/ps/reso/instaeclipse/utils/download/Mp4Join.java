@@ -18,48 +18,16 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 
-/**
- * Joins a DASH picture track and its sound track into one MP4 by copying boxes and samples, with no
- * MediaMuxer in between.
- *
- * <p>MediaMuxer won't put VP9 into an MP4 on any Android version, nor AV1 before Android 14, though
- * an MP4 holds either and Android's own extractor reads both back from Android 10. Facebook sends
- * each track as a fragmented MP4 of its own: a {@code moov} that describes the track, then
- * {@code moof} and {@code mdat} pairs that hold its samples. This reads each sample's size,
- * duration, flags and composition offset out of the fragments' runs and writes one plain MP4, the
- * kind MediaMuxer writes and every player reads: {@code ftyp}, then a {@code moov} with both tracks
- * and their full sample tables, then one {@code mdat}. Each track's sample descriptions
- * ({@code stsd}) are copied byte for byte, so {@code vp09} with its {@code vpcC}, {@code av01} with
- * its {@code av1C} and {@code mp4a} with its {@code esds} go through unchanged, and so would any
- * other codec. Nothing is decoded or encoded.
- *
- * <p>The samples go straight from file to file, up to half a second of one track at a time,
- * alternating between the tracks by time the way MediaMuxer lays them out. Only the tables are held
- * in memory, 13 bytes a sample: a minute of 30 fps picture beside 44.1 kHz AAC is under 60 KB.
- *
- * <p>Timing is kept exactly. Each sample keeps its duration and composition offset, and each
- * track's edit list is carried over, moved to where the plain file's samples start. So an AAC
- * track's priming stays trimmed by its edit list, a picture's B-frame delay by its own, and both
- * tracks start where they did in Facebook's player. Negative composition offsets become
- * non-negative ones and an edit list that starts that much later, which every player reads.
- *
- * <p>What it can't copy, an encrypted track or a file of another shape, fails as an
- * {@link IOException} before the output holds anything worth keeping.
- */
 final class Mp4Join {
 
     private Mp4Join() {}
 
-    /** The largest {@code moov} or {@code moof} read whole. Facebook's are a few kilobytes. */
     private static final int MAX_HEADER_BOX = 16 * 1024 * 1024;
 
-    /** The most samples one track may list: over nine hours of 60 fps picture. */
     private static final int MAX_SAMPLES = 2_000_000;
 
-    /** The longest run of one track the output keeps together before it turns to the other. */
     private static final double CHUNK_SECONDS = 0.5;
 
-    /** The timescale of the output's movie header and edit lists: milliseconds, as MediaMuxer writes. */
     private static final long MOVIE_TIMESCALE = 1000;
 
     private static final int SAMPLE_IS_NON_SYNC = 0x00010000;
@@ -105,11 +73,6 @@ final class Mp4Join {
 
     private static final int[] IDENTITY = {0x00010000, 0, 0, 0, 0x00010000, 0, 0, 0, 0x40000000};
 
-    /**
-     * Joins [video] and [audio], each a fragmented MP4 of one track, into the plain MP4 [out].
-     * [audio] is null for a picture with no sound. Answers false when [progress] was cancelled,
-     * which is read before the copy starts and before every chunk of it.
-     */
     static boolean join(File video, File audio, File out, Downloader.Progress progress) throws IOException {
         try (RandomAccessFile videoIn = new RandomAccessFile(video, "r");
              RandomAccessFile audioIn = audio == null ? null : new RandomAccessFile(audio, "r")) {
@@ -122,7 +85,6 @@ final class Mp4Join {
         }
     }
 
-    /** Inspection only: prove every indexed sample is present, including its full final duration. */
     static long indexedDurationUs(File file, boolean video, int extractedSamples) throws IOException {
         try (RandomAccessFile input = new RandomAccessFile(file, "r")) {
             Track track = Track.read(input, video ? VIDE : SOUN, video ? "video" : "audio",
@@ -143,13 +105,9 @@ final class Mp4Join {
         }
     }
 
-    // ---------------------------------------------------------------- reading the tracks
-
-    /** One track: what its moov says of it, and each of its samples. */
     private static final class Track {
         final RandomAccessFile file;
         final int handler;
-        /** What the report calls its file: "video" or "audio". */
         final String kind;
         final boolean inspection;
         boolean plainSamples;
@@ -159,14 +117,12 @@ final class Mp4Join {
         long timescale;
         int language;
         long movieTimescale;
-        /** The stsd box's payload, copied whole. */
         ByteBuffer descriptions;
         int descriptionCount;
         byte[] matrix;
         int width;
         int height;
         int volume;
-        /** Each edit as {segment duration in the input's movie timescale, media time, rate}, or null. */
         long[][] edits;
 
         int defaultDescription = 1;
@@ -178,16 +134,13 @@ final class Mp4Join {
         final Ints durations = new Ints();
         final Ints offsets = new Ints();
         final BitSet nonSync = new BitSet();
-        /** Each run of samples whose data lie together: where it starts, its end sample, its description. */
         long[] runStarts = new long[16];
         final Ints runEnds = new Ints();
         final Ints runDescriptions = new Ints();
 
-        /** The decode time of the first sample, and of the next one to be read. */
         long firstDecodeTime = -1;
         long decodeTime;
 
-        /** The chunks the output writes this track's samples in, in order. */
         final List<Chunk> chunks = new ArrayList<>();
 
         Track(RandomAccessFile file, int handler, String kind, boolean inspection) {
@@ -274,7 +227,6 @@ final class Mp4Join {
             if (sample != sizes.size) throw new IOException("Invalid indexed chunk table");
         }
 
-        /** The [size] bytes at [at], which hold one box's payload. */
         private ByteBuffer whole(long at, long size) throws IOException {
             if (size > MAX_HEADER_BOX) throw new IOException("the " + kind + " file has a header box of " + size + " bytes");
             byte[] bytes = new byte[(int) size];
@@ -312,7 +264,6 @@ final class Mp4Join {
             }
         }
 
-        /** Reads [trak] when it's a track of this file's kind. */
         private void trak(ByteBuffer trak) throws IOException {
             List<Box> parts = children(trak);
             Box mdia = find(parts, MDIA);
@@ -384,7 +335,6 @@ final class Mp4Join {
             }
         }
 
-        /** Expands a bounded plain index for verification; this does not enable plain-file joining. */
         private void plain(List<Box> tables, Box stsz, Box stts) throws IOException {
             if (stsz == null || stts == null) throw new IOException("Missing indexed sample table");
             ByteBuffer z = stsz.data.duplicate(); z.position(4);
@@ -452,7 +402,6 @@ final class Mp4Join {
             if (target.size != count) throw new IOException("Invalid indexed timing table");
         }
 
-        /** Reads the samples of this track in [moof], which starts at [moofStart] of a file of [length]. */
         private void fragment(ByteBuffer moof, long moofStart, long length) throws IOException {
             boolean firstTraf = true;
             for (Box traf : children(moof)) {
@@ -499,7 +448,6 @@ final class Mp4Join {
             }
         }
 
-        /** Reads one run, whose data follows [next] unless it names an offset from [base]. Answers where its data ends. */
         private long run(ByteBuffer r, long base, long next, int description, int duration, int size, int sampleFlags,
                 long length) throws IOException {
             int flags = r.getInt() & 0xFFFFFF;
@@ -519,7 +467,6 @@ final class Mp4Join {
                 int sampleDuration = (flags & 0x100) != 0 ? r.getInt() : duration;
                 int sampleSize = (flags & 0x200) != 0 ? r.getInt() : size;
                 int flagsOf = (flags & 0x400) != 0 ? r.getInt() : (i == 0 && hasFirstFlags ? firstFlags : sampleFlags);
-                // Version 1 offsets are signed. Version 0 ones are unsigned, but none over 2^31 is real.
                 int offset = (flags & 0x800) != 0 ? r.getInt() : 0;
                 if (sampleSize < 0) throw new IOException("a sample of the " + kind + " file is over 2 GB");
                 if ((flagsOf & SAMPLE_IS_NON_SYNC) != 0) nonSync.set(sizes.size);
@@ -540,24 +487,16 @@ final class Mp4Join {
             return start + bytes;
         }
 
-        /**
-         * A fragment's samples start at decode time [time]. The first fixes where the track starts.
-         * A later one that doesn't follow on from the samples before it moves the last of them to
-         * end where it starts, so every sample keeps its decode time: a plain file has no gaps.
-         */
         private void startAt(long time) throws IOException {
             if (inspection) {
                 if (time < 0) throw new IOException("Invalid indexed decode time");
                 if (firstDecodeTime < 0 || durations.size == 0) {
-                    // The writer may represent a late start as an empty edit. Verification must
-                    // not invent that delay as evidence that a missing prefix was downloaded.
                     boolean explicitStart = time == 0;
                     if (edits != null) for (long[] edit : edits) {
                         if (edit[1] != -1) { explicitStart = edit[1] >= time; break; }
                     }
                     if (!explicitStart) throw new IOException("Unproven indexed leading gap");
                 } else if (time != decodeTime) {
-                    // Do not reuse the join's gap-normalization as a completeness proof.
                     throw new IOException("Discontinuous indexed decode time");
                 }
             }
@@ -579,17 +518,10 @@ final class Mp4Join {
         }
     }
 
-    // ---------------------------------------------------------------- timing
-
-    /** What the output says of a track's time, worked out from its samples and its edit list. */
     private static final class Timing {
-        /** Added to every composition offset, so none is negative. */
         long shift;
-        /** The decode time the plain file's samples end at. */
         long mediaDuration;
-        /** Each edit as {duration in milliseconds, media time, rate}, or null for none. */
         long[][] edits;
-        /** The track's length in milliseconds. */
         long duration;
 
         Timing(Track track) throws IOException {
@@ -597,7 +529,6 @@ final class Mp4Join {
             for (int i = 0; i < track.count(); i++) lowest = Math.min(lowest, track.offsets.get(i));
             shift = -lowest;
 
-            // Where the last sample shown ends, in the plain file's media time.
             long end = 0;
             long decode = 0;
             for (int i = 0; i < track.count(); i++) {
@@ -615,11 +546,9 @@ final class Mp4Join {
                     if (segment > 0) output.add(new long[] {scale(segment, track.movieTimescale), -1, 0x00010000});
                     continue;
                 }
-                // The plain file's samples start at zero, and at the shift in composition time.
                 long media = edit[1] - track.firstDecodeTime + shift;
                 long shown = segment == 0 ? -1 : scale(segment, track.movieTimescale);
                 if (media < 0) {
-                    // The edit starts before the first sample: that stretch shows nothing.
                     long lead = scale(-media, track.timescale);
                     output.add(new long[] {lead, -1, 0x00010000});
                     if (shown >= 0) shown = Math.max(0, shown - lead);
@@ -640,15 +569,11 @@ final class Mp4Join {
             duration = identity ? scale(mediaDuration, track.timescale) : total;
         }
 
-        /** [value] in [timescale] units as milliseconds, rounded. */
         private static long scale(long value, long timescale) {
             return value / timescale * MOVIE_TIMESCALE + (value % timescale * MOVIE_TIMESCALE + timescale / 2) / timescale;
         }
     }
 
-    // ---------------------------------------------------------------- writing the plain file
-
-    /** A stretch of one track's samples that lie together in its file and go out together. */
     private static final class Chunk {
         final Track track;
         final int first;
@@ -714,10 +639,6 @@ final class Mp4Join {
         while (bytes.hasRemaining()) channel.write(bytes);
     }
 
-    /**
-     * The order the samples go out in: each time a run of the track whose next sample comes first,
-     * up to {@link #CHUNK_SECONDS} of it and never past the end of the run its data lie in.
-     */
     private static List<Chunk> interleave(List<Track> tracks) {
         int n = tracks.size();
         int[] next = new int[n];
@@ -770,7 +691,6 @@ final class Mp4Join {
         return out.bytes();
     }
 
-    /** The moov, its chunk offsets counted from [dataStart], 64-bit when [wide]. */
     private static byte[] moov(List<Track> tracks, Timing[] timing, long dataStart, boolean wide) {
         long duration = 0;
         for (Timing t : timing) duration = Math.max(duration, t.duration);
@@ -890,7 +810,6 @@ final class Mp4Join {
         out.end();
     }
 
-    /** Adds [value] to [table], pairs of a count and a value, as a run of the last pair where it can. */
     private static void runLength(Ints table, int value) {
         if (table.size > 0 && table.get(table.size - 1) == value) {
             table.set(table.size - 2, table.get(table.size - 2) + 1);
@@ -900,7 +819,6 @@ final class Mp4Join {
         }
     }
 
-    /** A header's creation and modification times: none, as MediaMuxer writes them. */
     private static Boxes times(Boxes out, boolean wide) {
         return wide ? out.u64(0).u64(0) : out.u32(0).u32(0);
     }
@@ -910,9 +828,6 @@ final class Mp4Join {
         else out.u32(value);
     }
 
-    // ---------------------------------------------------------------- boxes
-
-    /** A box: its type and its payload. */
     private static final class Box {
         final int type;
         final ByteBuffer data;
@@ -923,7 +838,6 @@ final class Mp4Join {
         }
     }
 
-    /** The boxes inside [parent], from its start to its limit. */
     private static List<Box> children(ByteBuffer parent) throws IOException {
         List<Box> boxes = new ArrayList<>();
         int at = 0;
@@ -953,7 +867,6 @@ final class Mp4Join {
         return null;
     }
 
-    /** [buffer]'s bytes from [from] to [to], as a buffer of their own that starts at zero. */
     private static ByteBuffer slice(ByteBuffer buffer, int from, int to) {
         ByteBuffer copy = buffer.duplicate();
         copy.limit(to);
@@ -969,7 +882,6 @@ final class Mp4Join {
         return (name.charAt(0) << 24) | (name.charAt(1) << 16) | (name.charAt(2) << 8) | name.charAt(3);
     }
 
-    /** Big-endian bytes, with boxes whose sizes are filled in as they end. */
     private static final class Boxes {
         private byte[] bytes = new byte[4096];
         private int size;
@@ -1057,7 +969,6 @@ final class Mp4Join {
         }
     }
 
-    /** A growing list of ints, without boxing each one. */
     private static final class Ints {
         private int[] values = new int[256];
         int size;

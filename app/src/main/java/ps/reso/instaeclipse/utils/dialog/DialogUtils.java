@@ -318,9 +318,7 @@ public class DialogUtils {
             IeDialog dlg = new IeDialog(context).title(title).message(message);
             dlg.primary(I18n.t(context, R.string.ig_dialog_ok), null);
             dlg.show();
-        } catch (Exception e) {
-            // handle UI crash fallback
-        }
+        } catch (Exception e) {}
     }
 
     public static void showCategory(Context context, String key) {
@@ -1110,8 +1108,6 @@ public class DialogUtils {
     }
 
 
-    // ==== SECTIONS ====
-
     private static void importDevConfig(Context context) {
         Bundle extras = new Bundle();
         extras.putString("target_package", context.getPackageName());
@@ -1177,7 +1173,6 @@ public class DialogUtils {
         return I18n.t(context, R.string.cat_spoofDevice) + "  ·  " + spoofDeviceNames(context)[Math.max(i, 0)];
     }
 
-    /** Which device Instagram sees (FeatureFlags.spoofDevice); applies on the next start. */
     private static void showSpoofDeviceDialog(Context context, TextView label) {
         String[] ids = ps.reso.instaeclipse.mods.misc.DeviceSpoofHook.DEVICES;
         int current = Math.max(java.util.Arrays.asList(ids).indexOf(FeatureFlags.spoofDevice), 0);
@@ -1193,12 +1188,10 @@ public class DialogUtils {
                 .show();
     }
 
-    /** Styled per-thread Unsent Messages viewer, opened from the in-thread bin button. */
     public static void showThreadUnsent(Context context, String threadId, String chatName) {
         showThreadUnsent(context, threadId, chatName, null);
     }
 
-    /** {@code onBack}: where Back goes (e.g. the chat's own menu) instead of the main menu. */
     public static void showThreadUnsent(Context context, String threadId, String chatName, Runnable onBack) {
         IeSheet.Page page = threadUnsentPage(context, threadId, chatName, onBack);
         if (onBack != null) IeSheet.open(context, page, onBack);
@@ -1209,8 +1202,6 @@ public class DialogUtils {
         LinearLayout layout = createSwitchLayout(context);
         IePalette p = IePalette.of(context);
 
-        // Never widen to every chat: an unknown thread (null) shows only the entries that were
-        // logged without a chat, so one chat's unsent messages can't appear inside another.
         final java.util.List<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry> entries =
                 ps.reso.instaeclipse.utils.ghost.UnsentLog.getForThread(context, threadId != null ? threadId : "");
 
@@ -1243,7 +1234,6 @@ public class DialogUtils {
         if (entries.isEmpty()) {
             layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_dialog_unsent_empty)));
         } else {
-            // One bordered card per deleted message: "Unsent" tag (accent) and time on top, text below.
             for (int i = 0; i < entries.size(); i++) {
                 ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry e = entries.get(i);
                 LinearLayout row = new LinearLayout(context);
@@ -1278,8 +1268,6 @@ public class DialogUtils {
                 meta.addView(when);
 
                 TextView body = new TextView(context);
-                // A message without text shows what it was ("Reel by @user", "Voice message · 0:29"),
-                // in italics so it never reads as words the sender wrote.
                 body.setText(ps.reso.instaeclipse.utils.ghost.UnsentDetailText.body(context, e));
                 if (ps.reso.instaeclipse.utils.ghost.UnsentDetailText.isDescription(e)) body.setTypeface(null, Typeface.ITALIC);
                 body.setTextColor(p.text);
@@ -1355,7 +1343,6 @@ public class DialogUtils {
                 o.put("time_iso", iso.format(new java.util.Date(e.time)));
                 if (!e.senderLabel().isEmpty()) o.put("sender", e.senderLabel());
                 o.put("text", ps.reso.instaeclipse.utils.ghost.UnsentDetailText.body(context, e));
-                // Marks "text" as a description of a message without text, not its words.
                 if (ps.reso.instaeclipse.utils.ghost.UnsentDetailText.isDescription(e)) {
                     o.put("kind", e.detail != null ? e.detail.kind.id : "unknown");
                 }
@@ -1379,7 +1366,6 @@ public class DialogUtils {
                     return relDir + "/" + fileName;
                 }
             }
-            // Fallback: direct file into public Downloads.
             java.io.File dir = new java.io.File(
                     android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS),
                     "InstaEclipse/" + safe);
@@ -1418,8 +1404,6 @@ public class DialogUtils {
             return new IeSheet.Page(I18n.t(context, R.string.ig_dialog_unsent_title), layout);
         }
 
-        // Folder drill-down (like the story cache): one folder per chat/thread. Entries come
-        // newest-first, so the first non-empty sender seen for a thread is its most recent label.
         java.util.LinkedHashMap<String, java.util.List<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry>> byThread =
                 new java.util.LinkedHashMap<>();
         java.util.HashMap<String, String> nameFor = new java.util.HashMap<>();
@@ -1472,7 +1456,6 @@ public class DialogUtils {
                         .message(I18n.t(context, R.string.ig_unsent_clear_saved_confirm));
                 dlg.secondary(context.getString(android.R.string.cancel), null);
                 dlg.primary(I18n.t(context, R.string.ig_dialog_unsent_clear_yes), () -> {
-                    // Also releases the copies kept in the chats, not only the log.
                     if (!ps.reso.instaeclipse.mods.ghost.KeepUnsentMessagesHook.clearSaved(context, null)) {
                         ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_unsent_clear_failed), Toast.LENGTH_LONG).show();
                         return;
@@ -1735,12 +1718,10 @@ public class DialogUtils {
                         : FeatureFlags.nightReelBlockStartMinutes));
     }
 
-    /** Also used by the companion app's Distraction-Free menu. */
     public static void showDailyReelLimitPicker(Context context, int current, java.util.function.IntConsumer save) {
         showAmountPicker(context, current, false, save);
     }
 
-    /** Also used by the companion app's Downloader menu. */
     public static void showStoryCacheDurationPicker(Context context, int current, java.util.function.IntConsumer save) {
         showAmountPicker(context, ps.reso.instaeclipse.utils.media.StoryCacheRetention.normalize(current), true, save);
     }
@@ -1958,7 +1939,6 @@ public class DialogUtils {
         return button;
     }
 
-    /** Also used by the companion app's Distraction-Free menu. */
     public static void showNightReelTimePicker(Context context, int currentMinutes,
                                                 java.util.function.IntConsumer save) {
         int valid = NightReelSchedule.validMinutes(currentMinutes,
@@ -1998,7 +1978,6 @@ public class DialogUtils {
         return I18n.t(context, R.string.ig_dialog_extras_startup_tab) + "  ·  " + startupTabNames(context)[Math.max(i, 0)];
     }
 
-    /** Which tab Instagram opens on (FeatureFlags.startupTab). */
     private static void showStartupTabDialog(Context context, TextView label) {
         String[] tabs = ps.reso.instaeclipse.mods.ui.StartupTabHook.TABS;
         int current = Math.max(java.util.Arrays.asList(tabs).indexOf(FeatureFlags.startupTab), 0);
@@ -2013,7 +1992,6 @@ public class DialogUtils {
                 .show();
     }
 
-    /** #238: reorder the bottom-nav tabs (FeatureFlags.navTabOrder). */
     private static void showTabOrderDialog(Context context) {
         final String[] ids = ps.reso.instaeclipse.mods.ui.DistractionFreeUIHook.ORDERABLE_TABS;
         final java.util.Map<String, String> labels = new java.util.HashMap<>();
@@ -2093,7 +2071,6 @@ public class DialogUtils {
         return I18n.t(context, R.string.ig_feed_corner_radius) + "  ·  " + feedCornerName(context, FeatureFlags.feedCornerRadius);
     }
 
-    /** Rounded feed post corners (#276): applies to posts as they are laid out. */
     private static void showFeedCornerDialog(Context context, TextView label) {
         CharSequence[] rows = new CharSequence[FEED_CORNER_RADII.length];
         int checked = 0;
@@ -2151,7 +2128,6 @@ public class DialogUtils {
         return I18n.t(context, R.string.ig_story_tray_size) + "  ·  " + FeatureFlags.storyTrayScale + "%";
     }
 
-    /** Story tray size (#283): applies at once, the tray resizes on its next layout. */
     private static void showStoryTraySizeDialog(Context context, TextView label) {
         CharSequence[] rows = new CharSequence[STORY_TRAY_SIZES.length];
         int checked = 0;
@@ -2170,7 +2146,6 @@ public class DialogUtils {
                 .show();
     }
 
-    /** A color value shown as swatch(es) and its hex. */
     public static CharSequence storyRingSwatch(String value) {
         int[] colors = ps.reso.instaeclipse.mods.ui.StoryTrayHook.parseColors(value);
         android.text.SpannableStringBuilder sb = new android.text.SpannableStringBuilder();
@@ -2190,7 +2165,6 @@ public class DialogUtils {
                 : sb.append(storyRingSwatch(FeatureFlags.storyRingColor));
     }
 
-    /** Unseen story ring color (#283): Instagram's, one color, or a gradient of up to 4, with a live preview. */
     private static void showStoryRingColorDialog(Context context, TextView label) {
         try {
             IeDialog dlg = new IeDialog(context).title(I18n.t(context, R.string.ig_story_ring_color));
@@ -2346,12 +2320,6 @@ public class DialogUtils {
         return hideCard;
     }
 
-    /**
-     * Profile spoofer editor: live preview of your profile header, then name / username / bio,
-     * counts (empty = real), the badge and the picture. The picture is chosen in the InstaEclipse
-     * app (Instagram's process can't open a picker for us): "Choose photo" saves what is typed,
-     * closes this and opens the app's picker, which sends the picture back.
-     */
     private static void showProfileSpoofDialog(Context context) {
         try {
             IeDialog dlg = new IeDialog(context).title(I18n.t(context, R.string.ig_profile_spoofer_editor_title));
@@ -2396,12 +2364,10 @@ public class DialogUtils {
         ps.reso.instaeclipse.mods.ui.ProfileSpoofHook.refreshNow();
     }
 
-    /** A typed count, or -1 (keep the real one) when empty or not a number. */
     public static int parseSpoofCount(String s) {
         return ps.reso.instaeclipse.utils.profile.SpoofCounts.parse(s);
     }
 
-    /** Unwraps an Activity from a Context (dialogs run inside IG's activity, possibly wrapped). */
     private static Activity activityOf(Context c) {
         while (c instanceof android.content.ContextWrapper) {
             if (c instanceof Activity) return (Activity) c;
@@ -2410,7 +2376,6 @@ public class DialogUtils {
         return null;
     }
 
-    /** Lists local inbox threads. Each switch explicitly sets hidden state; it never toggles blindly. */
     private static void showChatPicker(Context context) {
         showChatPicker(context, ChatList.HIDE);
     }
@@ -2521,7 +2486,6 @@ public class DialogUtils {
         row.setAlpha(on ? 1f : 0.4f);
     }
 
-    /** The format, or "Device default", with a sample of the current time. */
     private static String timestampFormatName(Context context, String pattern) {
         String sample = ps.reso.instaeclipse.utils.text.TimestampFormat.formatAsPosts(context, pattern, new java.util.Date());
         return pattern.isEmpty() ? I18n.t(context, R.string.ig_timestamp_format_default) + "  ·  " + sample : sample;
@@ -2531,13 +2495,12 @@ public class DialogUtils {
         return I18n.t(context, R.string.ig_timestamp_format) + "  ·  " + timestampFormatName(context, FeatureFlags.exactTimestampFormat);
     }
 
-    /** Date format chooser: presets shown as today's date in that format, plus a custom pattern. */
     private static void showTimestampFormatDialog(Context context, TextView label) {
         try {
             String[] presets = ps.reso.instaeclipse.utils.text.TimestampFormat.PRESETS;
             String current = FeatureFlags.exactTimestampFormat;
             CharSequence[] rows = new CharSequence[presets.length + 1];
-            int checked = presets.length; // custom
+            int checked = presets.length;
             for (int i = 0; i < presets.length; i++) {
                 rows[i] = timestampFormatName(context, presets[i]);
                 if (presets[i].equals(current)) checked = i;
@@ -2605,7 +2568,6 @@ public class DialogUtils {
                 + (d == null || d.isEmpty() ? I18n.t(context, R.string.ig_dialog_extras_share_domain_off) : d);
     }
 
-    /** Custom share domain: replaces instagram.com in links Instagram copies or shares. */
     private static void showShareDomainDialog(Context context, TextView label) {
         try {
             IeDialog dlg = new IeDialog(context)
@@ -2796,7 +2758,6 @@ public class DialogUtils {
         return ps.reso.instaeclipse.mods.ui.theme.ThemePresets.getDisplayName(context, value);
     }
 
-    /** Dark-mode theme: one of the dark presets, or the custom palette when that is in use. */
     private static void pickDarkModeTheme(Context context) {
         int[] presets = ps.reso.instaeclipse.mods.ui.theme.ThemePresets.darkModeChoices();
         final int[] values;
@@ -2822,7 +2783,6 @@ public class DialogUtils {
                 .show();
     }
 
-    /** Light-mode behaviour of the custom theme (#251): same theme, stock Instagram, or a preset. */
     private static void pickLightModeTheme(Context context) {
         final int[] values = ps.reso.instaeclipse.mods.ui.theme.ThemePresets.lightModeChoices();
         String[] labels = new String[values.length];
@@ -2885,7 +2845,6 @@ public class DialogUtils {
                 : I18n.t(context, R.string.ie_download_ceiling, ceiling);
     }
 
-    /** Standard (the original downloader) or Best, with its resolution cap. */
     private static String downloadModeLabel(Context context) {
         return FeatureFlags.downloaderUseOriginal ? I18n.t(context, R.string.ie_downloader_original)
                 : downloadQualityLabel(context, FeatureFlags.downloaderQualityMaxShortSide);
@@ -2972,7 +2931,6 @@ public class DialogUtils {
         }, h -> I18n.t(context, R.string.ig_story_cache_hours, h));
     }
 
-    /** Viewer for the story cache — a list per author; tap to view; plus a clear action. */
     private static void showCachedStories(Context context) {
         IeSheet sheet = IeSheet.showing(context);
         IeSheet.Page from = sheet != null ? sheet.top() : null;
@@ -2991,7 +2949,6 @@ public class DialogUtils {
             layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_story_cache_empty_current)));
             return new IeSheet.Page(I18n.t(context, R.string.ig_story_cache_view), layout);
         }
-        // Level 1: one "folder" row per username; tap opens that user's cached stories.
         java.util.LinkedHashMap<String, java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry>> byUser =
                 new java.util.LinkedHashMap<>();
         for (ps.reso.instaeclipse.utils.media.StoryCache.Entry e : entries) {
@@ -3011,7 +2968,6 @@ public class DialogUtils {
         layout.addView(foldersCard);
         layout.addView(IeRows.actionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_story_cache_clear),
                 "#FF453A", v -> {
-                    // Confirm before permanently deleting every cached story, then refresh the view.
                     try {
                         IeDialog dlg = new IeDialog(context)
                                 .title(I18n.t(context, R.string.ig_story_cache_clear))
@@ -3031,7 +2987,6 @@ public class DialogUtils {
         return self[0];
     }
 
-    /** Level 2: the cached stories for one username. */
     private static void showUserStories(Context context, String author,
                                         java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry> list) {
         LinearLayout layout = createSwitchLayout(context);
@@ -3051,7 +3006,6 @@ public class DialogUtils {
         return I18n.t(context, R.string.ig_story_cache_viewed_at, shortDate(context, e.at));
     }
 
-    /** Opens one cached story full-screen: ImageView for photos, VideoView for videos. */
     private static void openCachedStory(Context context, ps.reso.instaeclipse.utils.media.StoryCache.Entry e) {
         try {
             IePalette p = IePalette.of(context);
@@ -3133,7 +3087,6 @@ public class DialogUtils {
             }
             root.addView(header);
 
-            // Save-to-gallery button (bottom-right): copies the cached file to the gallery.
             TextView save = new TextView(context);
             save.setText(I18n.t(context, R.string.ig_story_cache_save));
             save.setTextColor(Color.WHITE);
@@ -3174,7 +3127,6 @@ public class DialogUtils {
         return sample;
     }
 
-    /** Copies a cached story's local file into the gallery/download folder (off the UI thread). */
     private static void saveCachedStoryToGallery(Context context, ps.reso.instaeclipse.utils.media.StoryCache.Entry e) {
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_story_cache_saving), Toast.LENGTH_SHORT).show();
         ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook.saveLocalFileToGallery(
@@ -3230,7 +3182,6 @@ public class DialogUtils {
         layout.setGravity(Gravity.CENTER_HORIZONTAL);
         layout.setPadding(dp(context, 8), dp(context, 12), dp(context, 8), dp(context, 8));
 
-        // App icon on a soft accent halo (pops in when the page opens).
         android.widget.FrameLayout halo = new android.widget.FrameLayout(context);
         GradientDrawable glow = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
                 new int[]{IePalette.withAlpha(p.accent, 0x55), 0x33BF5AF2});
@@ -3263,7 +3214,6 @@ public class DialogUtils {
         tagline.setPadding(0, dp(context, 2), 0, dp(context, 10));
         layout.addView(tagline);
 
-        // Version chips + feature health (same chips as the menu header).
         View chips = buildStatusChips(context);
         layout.addView(chips);
 
@@ -3296,7 +3246,6 @@ public class DialogUtils {
 
         showSectionDialog(context, I18n.t(context, R.string.ig_dialog_section_about), layout);
 
-        // Entrance: icon pops in, the rest rises in just after it.
         halo.setScaleX(0.6f);
         halo.setScaleY(0.6f);
         halo.setAlpha(0f);
@@ -3457,8 +3406,6 @@ public class DialogUtils {
                 .show();
     }
 
-    // ==== HELPERS ====
-
     private static IeSheet.Page showSectionDialog(Context context, String title, View content) {
         return showSection(context, new IeSheet.Page(title, content));
     }
@@ -3490,12 +3437,10 @@ public class DialogUtils {
         return layout;
     }
 
-    /** Public wrapper so hooks (e.g. the DM thread button) can load a tinted module vector. */
     public static Drawable moduleIcon(Context context, int iconRes, int tintColor) {
         return ModuleResources.icon(context, iconRes, tintColor);
     }
 
-    /** Same, for callers without a Context at hand (resolved against Instagram's Application). */
     public static Drawable moduleIcon(int iconRes, int tintColor) {
         return ModuleResources.icon(ps.reso.instaeclipse.xposedcompat.AndroidAppHelper.currentApplication(), iconRes, tintColor);
     }

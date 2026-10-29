@@ -61,28 +61,6 @@ import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.ui.IePalette;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 
-/**
- * Bulk unsend (#245): select several of your own messages right in the chat and unsend them at once.
- *
- * <p>Entry: an "Unsend multiple" row in the long-press menu of your own message (added by
- * {@link ps.reso.instaeclipse.mods.media.VoiceMessageDownloadHook}, next to IG's own Unsend).
- * It turns the chat into selection mode: a check circle sits beside each of your messages, a tap
- * on a message toggles it (scrolling still works), and a bar at the bottom unsends the selection.
- * The long-pressed message starts selected.
- *
- * <p>Unsending uses Instagram's own path, resolved by shape (no obfuscated names hardcoded):
- * <ul>
- *   <li>the unsend interactor is the class using "DirectUnsendMessageInteractor"; its static
- *       confirm handler invokes the sender's {@code (MessageRef, DirectThreadKey) -> ListenableFuture}
- *       unsend method (X.02Yh.A0F on 451);</li>
- *   <li>the MessageRef is built with the subclass constructor {@code (Message, DirectThreadKey)}
- *       (X.0Vpr on 451);</li>
- *   <li>the sender comes from the per-thread message cache passed to the message lookup
- *       ({@code ": null_direct_message"}, X.0F55 on 451).</li>
- * </ul>
- * Rows of the chat list ({@code id/message_list}) are mapped to their message through each row's
- * RecyclerView layout params (its view holder's bound model).
- */
 public final class BulkUnsend {
 
     private static final String TAG = "(IE|BulkUnsend) ";
@@ -99,10 +77,8 @@ public final class BulkUnsend {
     private static volatile Method senderFor;
     private static volatile String source = "none";
 
-    /** The message cache passed to the last message lookup (the open thread's). */
     private static volatile Object lastCache;
 
-    /** Ids of messages we unsent, so the unsent-messages log does not keep our own. */
     private static final Set<String> OWN_IDS = Collections.synchronizedSet(new LinkedHashSet<>());
     private static final Set<String> PENDING_IDS = Collections.synchronizedSet(new LinkedHashSet<>());
     private static final Map<Class<?>, Field[]> HOLDER_FIELDS = new ConcurrentHashMap<>();
@@ -260,8 +236,6 @@ public final class BulkUnsend {
         return null;
     }
 
-    // ── Thread state ─────────────────────────────────────────────────────────────
-
     static final class Ctx {
         Object sender;
         Object session;
@@ -418,8 +392,6 @@ public final class BulkUnsend {
         });
     }
 
-    // ── Selection mode ───────────────────────────────────────────────────────────
-
     public static void show(Activity act, Object pressed) {
         if (act == null) return;
         if (active != null) active.exit();
@@ -496,7 +468,6 @@ public final class BulkUnsend {
             content.addView(overlay, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
-            // over the composer (hidden while selecting), so the newest message stays visible
             int m = (int) (10 * d);
             blp.setMargins(m, 0, m, m);
             content.addView(bar.view(), blp);
@@ -669,8 +640,6 @@ public final class BulkUnsend {
         }
     }
 
-    /** Draws the check circles and turns taps on our messages into selection toggles; drags still
-     *  scroll the chat (the gesture is handed to the list once it moves). */
     @SuppressLint("ViewConstructor")
     static final class Overlay extends View {
         final Selection s;
@@ -783,8 +752,6 @@ public final class BulkUnsend {
             c.recycle();
         }
     }
-
-    // ── Unsend ───────────────────────────────────────────────────────────────────
 
     private static void unsendAll(Activity act, Ctx c, String thread, List<Object> msgs, Selection selection) {
         Handler main = new Handler(Looper.getMainLooper());

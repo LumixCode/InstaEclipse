@@ -4,7 +4,6 @@ import java.util.List;
 
 import ps.reso.instaeclipse.utils.download.DownloadRequest;
 
-/** Ownership guard for an upstream selector's answer, never a substitute quality policy. */
 final class OriginalMediaSelection {
     static final int MAX_URL_CHARS = 4096;
 
@@ -40,8 +39,6 @@ final class OriginalMediaSelection {
         if (plan.fallbackUrl == null)
             return direct.equals(plan.url) && plan.audioUrl == null ? plan : null;
         if (!direct.equals(plan.fallbackUrl) || manifest == null) return null;
-        // The unchanged upstream parser determines the selected upgrade. Membership is
-        // checked against this item's detached manifest, never a global URL buffer.
         try {
             String[] best = DashAudio.bestVideo(manifest, false);
             String[] compatible = DashAudio.bestVideo(manifest, true);
@@ -50,7 +47,7 @@ final class OriginalMediaSelection {
             String audio = DashAudio.audioUrl(manifest);
             return selectedVideo && java.util.Objects.equals(plan.audioUrl, audio) ? plan : null;
         } catch (RuntimeException malformedOriginal) {
-            return null; // An unavailable Original choice must not corrupt the Custom capture.
+            return null;
         }
     }
 

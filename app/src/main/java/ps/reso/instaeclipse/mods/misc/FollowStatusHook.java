@@ -32,36 +32,16 @@ import ps.reso.instaeclipse.utils.tracker.FollowIndicatorTracker;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 
-/**
- * Follower toast: "follows you" / "doesn't follow you" when a profile opens.
- *
- * Every hook is installed once at startup. IGNetworkInterceptor only reports the user id of each
- * /friendships/show/ request (handleRequest). IG parses the answer into its friendship-status model
- * and applies it to the User it belongs to through one method (IG 451: X.01MY.A0K(status, User,
- * String)); that method's hook reads followed_by and shows the toast for a requested id.
- *
- * The followed_by field is found by its JSON key: the per-field parser (IG 451: X.06M7.A00, the
- * static (parser, status, String) method using "followed_by") is hooked until the field the
- * "followed_by" key fills is known. The name is cached, so later launches skip that hook.
- *
- * Earlier versions hooked the request's callback classes at runtime. On IG 451 one of them is the
- * app-wide RequestCallbackDispatcher (X.03ta), and hooking it mid-flight corrupted the heap on
- * LSPatch 1.2 (blank reel comments, crashes). Never hook classes from inside a request hook.
- */
 public final class FollowStatusHook {
     private static final String KEY = "FollowerToast";
     private static final String TAG = "(IE|FollowerToast) ";
     private static final String USER = "com.instagram.user.model.User";
     private static final String FOLLOWED_BY = "followed_by";
     private static final String FIELD_KEY = "FollowToast_followedBy_v1";
-    /** How long a /friendships/show/ request waits for IG to apply its answer. */
     private static final long PENDING_MS = 60_000;
 
-    /** user id → uptime of its /friendships/show/ request, until IG applies the answer */
     private static final Map<String, Long> pending = new ConcurrentHashMap<>();
-    /** the status model's Boolean followed_by field; null until known */
     private static volatile Field followedBy;
-    /** Boolean fields still null when the parser starts on "followed_by" (learning only) */
     private static final ThreadLocal<List<Field>> unset = new ThreadLocal<>();
 
     public void install(ClassLoader loader) {
@@ -96,19 +76,11 @@ public final class FollowStatusHook {
         }
     }
 
-    /**
-     * The answer is wanted: for the follower toast, or for the profile label's fallback
-     * (ProfileFollowsYouHook), which has no other feed when the User model lacks followed_by.
-     */
     public static boolean wanted() {
         return FeatureFlags.showFollowerToast
                 || (FeatureFlags.showFollowStatusLabel && ps.reso.instaeclipse.mods.ui.ProfileFollowsYouHook.active);
     }
 
-    /**
-     * Called from IGNetworkInterceptor for every request while {@link #wanted}. Only records which
-     * profile's /friendships/show/ was requested: no hooks, no callbacks.
-     */
     public static void handleRequest(URI uri) {
         String path = uri.getPath();
         if (path == null || !path.startsWith("/api/v1/friendships/show/")) return;
@@ -123,11 +95,9 @@ public final class FollowStatusHook {
         pending.put(userId, now);
     }
 
-    /** IG applied a friendship status to a User: toast it when it answers a pending request. */
     private static void onStatusApplied(Object status, Object user) throws IllegalAccessException {
         Field field = followedBy;
         if (field == null || status == null || user == null || pending.isEmpty()) return;
-        // User.toString() returns the id that IG put in the request path (446, 451).
         String userId = String.valueOf(user);
         Long requestedAt = pending.remove(userId);
         if (requestedAt == null || SystemClock.uptimeMillis() - requestedAt > PENDING_MS) return;
@@ -162,10 +132,6 @@ public final class FollowStatusHook {
         }
     }
 
-    /**
-     * Hooks the per-field parser (at startup, like every hook here) until it has seen which Boolean
-     * field the "followed_by" key fills. Only runs while the answer is {@link #wanted}.
-     */
     private static void learnField(Method parseField, Class<?> status) {
         List<Field> candidates = new ArrayList<>();
         for (Field field : status.getDeclaredFields()) {
@@ -200,10 +166,10 @@ public final class FollowStatusHook {
                     } catch (Throwable t) {
                         continue;
                     }
-                    if (filled != null) return; // two fields filled: not a reliable answer
+                    if (filled != null) return;
                     filled = field;
                 }
-                if (filled == null) return; // JSON null: wait for the next answer
+                if (filled == null) return;
                 followedBy = filled;
                 DexKitCache.saveString(FIELD_KEY, filled.getName());
                 ModuleLog.detail(TAG + "followed_by = " + status.getName() + "." + filled.getName());
@@ -211,7 +177,6 @@ public final class FollowStatusHook {
         });
     }
 
-    /** Shows the follow-status toast on the main thread if userId is still pending. */
     private static void showFollowToast(String userId, String username, boolean followsYou) {
         new Handler(Looper.getMainLooper()).post(() -> {
             try {
@@ -224,7 +189,6 @@ public final class FollowStatusHook {
 
                 if (FeatureFlags.showFollowerToast && text != null) CustomToast.showCustomToast(ctx, text);
 
-                // Clear tracker so we don't process duplicate callback triggers
                 FollowIndicatorTracker.currentlyViewedUserId = null;
             } catch (Throwable ignored) {}
         });

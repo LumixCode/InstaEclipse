@@ -17,16 +17,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Ask before refreshing the feed (#278): pulling the home feed down past the refresh point asks
- * "Refresh the feed?" first.
- *
- * <p>The feed's pull-to-refresh is RefreshableNestedScrollingParent (a named class). Its
- * setListener(listener) stores the one-method listener it calls when a pull passes the refresh
- * point; that stored listener is wrapped when a pull starts. On the home feed (the container holding the story tray),
- * the call is held behind the dialog: Refresh runs it, Cancel ends the spinner with
- * setRefreshing(false). Other lists using the same container refresh as before.
- */
 public final class FeedRefreshConfirmHook {
 
     private static final String TAG = "(IE|RefreshConfirm) ";
@@ -52,9 +42,6 @@ public final class FeedRefreshConfirmHook {
                 return;
             }
             final Method setRefreshing = container.getMethod("setRefreshing", boolean.class);
-            // setListener is a one-line setter that compiled callers inline, so the stored listener
-            // is wrapped instead, when Android starts a pull (onNestedScrollAccepted: a framework
-            // callback, always a real call).
             final Class<?> type = set.getParameterTypes()[0];
             java.lang.reflect.Field field = null;
             for (java.lang.reflect.Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(container)) if (f.getType() == type) field = f;
@@ -84,7 +71,6 @@ public final class FeedRefreshConfirmHook {
         }
     }
 
-    /** The listener, behind the dialog on the home feed. */
     private static Object wrap(Class<?> type, Object listener, View view, Method setRefreshing) {
         return Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type}, (proxy, method, args) -> {
             if (method.getDeclaringClass() == Object.class) {
@@ -111,7 +97,6 @@ public final class FeedRefreshConfirmHook {
         }
     }
 
-    /** The home feed's container holds the story tray; other lists using the class don't. */
     @SuppressLint("DiscouragedApi")
     private static boolean isHomeFeed(View container) {
         if (trayId == -1) {
@@ -126,7 +111,6 @@ public final class FeedRefreshConfirmHook {
             if (c instanceof Activity) { ctx = c; break; }
         }
         try {
-            // Anything but Refresh (Cancel, ✕, back, a tap outside) ends the spinner.
             final boolean[] refreshed = {false};
             IeDialog dlg = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_confirm_refresh_question))
                     .onDismiss(() -> { if (!refreshed[0]) cancel.run(); });

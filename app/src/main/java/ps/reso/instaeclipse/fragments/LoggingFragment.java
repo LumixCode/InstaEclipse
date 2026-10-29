@@ -62,13 +62,6 @@ import ps.reso.instaeclipse.utils.log.LogMirrorProvider;
 import ps.reso.instaeclipse.utils.log.Logging;
 import ps.reso.instaeclipse.utils.text.CopyFeedback;
 
-/**
- * Logs tab. Instagram's module log is read from a file in the companion's own storage that the
- * hooked Instagram process keeps appending to (see {@link LogMirrorProvider}), so it works even
- * when Instagram is backgrounded or dead. While Instagram is running we additionally ask it (via
- * broadcast) to re-sync that file; its inline reply is only used as a fallback when the file is
- * missing (e.g. an Instagram process started before this companion version was installed).
- */
 public class LoggingFragment extends Fragment implements TabFragment {
 
     private static final long INSTAGRAM_REPLY_TIMEOUT_MS = 3000;
@@ -113,7 +106,6 @@ public class LoggingFragment extends Fragment implements TabFragment {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final AtomicInteger loadGeneration = new AtomicInteger(0);
 
-    /** Nonce of the last ACTION_REQUEST_LOGS; replies without it are ignored (IpcSecurity). */
     private String logsNonce;
     private final java.util.List<ps.reso.instaeclipse.utils.ipc.ModuleReplies.Pending> logReplies = new java.util.ArrayList<>();
 
@@ -267,9 +259,6 @@ public class LoggingFragment extends Fragment implements TabFragment {
         loadExecutor.shutdownNow();
     }
 
-    // ---------------------------------------------------------------- loading
-
-    /** Shows the saved log right away, then asks running Instagram processes to re-sync it. */
     private void loadLogs() {
         Context ctx = getContext();
         if (ctx == null || listView == null) return;
@@ -336,9 +325,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
                     setCrashReports(crashes);
                 });
             });
-        } catch (Throwable ignored) {
-            // executor shut down (fragment destroyed)
-        }
+        } catch (Throwable ignored) {}
     }
 
     private static List<Entry> readAllEntries(Context ctx, Map<String, String> replies, String companionTag, String clearedAt) {
@@ -358,7 +345,6 @@ public class LoggingFragment extends Fragment implements TabFragment {
                 LogEntries.parseInto(out, lines, sourcePrefix(pkg));
             }
         }
-        // Fallback: a running Instagram that couldn't open the mirror still answers inline.
         for (Map.Entry<String, String> r : replies.entrySet()) {
             if (seen.containsKey(r.getKey())) continue;
             LogEntries.parseInto(out, splitLines(r.getValue()), sourcePrefix(r.getKey()));
@@ -366,7 +352,6 @@ public class LoggingFragment extends Fragment implements TabFragment {
         LogEntries.parseInto(out, splitLines(Logging.getSnapshot()), companionTag + " ");
         out = LogExport.sinceClear(out, clearedAt);
 
-        // Stable merge by timestamp so app + Instagram entries interleave correctly.
         Collections.sort(out, (a, b) -> a.ts.compareTo(b.ts));
         if (out.size() > MAX_ENTRIES) out = new ArrayList<>(out.subList(out.size() - MAX_ENTRIES, out.size()));
         return out;
@@ -396,7 +381,7 @@ public class LoggingFragment extends Fragment implements TabFragment {
                     if (s <= 0) break;
                     skip -= s;
                 }
-                skipFirst = true; // likely a partial line
+                skipFirst = true;
             }
             BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
             String line;
@@ -413,11 +398,8 @@ public class LoggingFragment extends Fragment implements TabFragment {
         return new ArrayList<>(lines);
     }
 
-    // ---------------------------------------------------------------- rendering
-
     private void applyFilter(boolean jump) {
         if (listView == null) return;
-        // Technical details are hidden unless asked for; counts follow what can be shown.
         List<Entry> visible;
         if (showDetails) {
             visible = allEntries;
@@ -507,13 +489,6 @@ public class LoggingFragment extends Fragment implements TabFragment {
         return out;
     }
 
-    // ---------------------------------------------------------------- actions
-
-    /**
-     * Text of the currently filtered entries (full timestamps, callers and levels), capped to the
-     * newest part. "All" also exports the technical details, so a shared log is useful for a bug
-     * report even when they are hidden on screen.
-     */
     private String exportText() {
         List<String> items = new ArrayList<>();
         for (Entry e : allEntries) if (filterKind == FILTER_ALL || e.kind == filterKind) items.add(e.full);
@@ -664,8 +639,6 @@ public class LoggingFragment extends Fragment implements TabFragment {
         } catch (Throwable ignored) {}
     }
 
-    // ---------------------------------------------------------------- adapter
-
     private final class LogAdapter extends RecyclerView.Adapter<LogAdapter.VH> {
         List<Entry> items = new ArrayList<>();
         int colorInfo, colorOk, colorWarn, colorError, colorDetail;
@@ -693,7 +666,6 @@ public class LoggingFragment extends Fragment implements TabFragment {
         @Override
         public void onBindViewHolder(@NonNull VH holder, int position) {
             Entry e = items.get(position);
-            // Technical: the raw entry in monospace. Simple: readable text, one line per entry.
             holder.text.setTypeface(technical ? Typeface.MONOSPACE : Typeface.DEFAULT);
             holder.text.setTextSize(TypedValue.COMPLEX_UNIT_SP, technical ? 12 : 13);
             holder.text.setText(technical ? e.display : e.friendly);

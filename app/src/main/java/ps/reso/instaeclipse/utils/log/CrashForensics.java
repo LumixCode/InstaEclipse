@@ -28,31 +28,11 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * Saves what explains Instagram's last crash into the companion app ({@code files/ig_crash/},
- * through {@link LogMirrorProvider}) and logs one line per earlier process exit.
- *
- * <p>Three sources, read once per start on a background thread:
- * <ul>
- *   <li>Android's exit records ({@link ApplicationExitInfo}): reason, signal, description, and for
- *   a native crash the full tombstone (protobuf, every thread) or an ANR's traces.</li>
- *   <li>Instagram's Breakpad minidumps ({@code app_minidumps}). Breakpad catches native signals
- *   before debuggerd, so its dump keeps the crashing thread's registers and stack (the system
- *   tombstone stops at Breakpad's handler in the unreadable libstartup.so) plus the abort message.
- *   Instagram uploads and deletes them on a later start, so they are copied first thing.</li>
- *   <li>The list of methods this module hooked in the crashed process, with their ArtMethod
- *   addresses ({@link #noteHook}). When ART aborts on "GC tried to mark invalid reference", the
- *   bad value is checked against that list, because on IG 451 / LSPatch 1.2 it was the low half
- *   of an ArtMethod-like pointer written into a DexCache root slot.</li>
- * </ul>
- * The keys already saved are kept in {@code files/instaeclipse_crash_seen} so each item is saved once.
- */
 public final class CrashForensics {
     private static final String TAG = "(IE|Crash) ";
     private static final Uri CRASH_URI = Uri.parse("content://ps.reso.instaeclipse.logmirror/crash/");
     private static final String SEEN_FILE = "instaeclipse_crash_seen";
     private static final String HOOKS_DIR = "instaeclipse_hooks";
-    /** exit records and dumps older than this are history, not news */
     private static final long MAX_AGE_MS = 7L * 24 * 60 * 60 * 1000;
     static final long MAX_COPY_BYTES = 64L * 1024 * 1024;
     private static final int MAX_PARSE_BYTES = 16 * 1024 * 1024;
@@ -79,7 +59,6 @@ public final class CrashForensics {
         }
     }
 
-    /** Records a hooked member and its ArtMethod address; called by XposedBridge.hookMethod. */
     public static void noteHook(Member member) {
         try {
             Hooked h = new Hooked(member, artMethod(member));
@@ -87,9 +66,7 @@ public final class CrashForensics {
                 hooked.add(h);
             }
             scheduleHookWrite();
-        } catch (Throwable ignored) {
-            // diagnostics only
-        }
+        } catch (Throwable ignored) {}
     }
 
     private static long artMethod(Member member) {
@@ -130,7 +107,6 @@ public final class CrashForensics {
         //noinspection ResultOfMethodCallIgnored
         hooks.mkdirs();
 
-        // Dumps first: Instagram's uploader may delete them soon after start.
         File dataDir = new File(ctx.getApplicationInfo().dataDir);
         File[] dirs = dataDir.listFiles(f -> f.isDirectory()
                 && f.getName().toLowerCase(Locale.ROOT).matches(".*(minidump|breakpad|crash).*"));
@@ -142,7 +118,6 @@ public final class CrashForensics {
 
         if (seenOrder.size() != before) writeSeen(seenFile, seenOrder);
 
-        // Only now: the crashed process's hook list had to be read first.
         pruneHookFiles(hooks);
         hooksDir = hooks;
         scheduleHookWrite();
@@ -171,7 +146,7 @@ public final class CrashForensics {
             String name = stamp(f.lastModified()) + "_" + path.replace('/', '~');
             try (InputStream in = new FileInputStream(f)) {
                 long n = save(ctx, name, in, null);
-                remember(key, seen, seenOrder); // a failed copy is retried on the next start
+                remember(key, seen, seenOrder);
                 ModuleLog.detail(TAG + "saved " + path + " from " + stamp(f.lastModified()) + " → ig_crash/" + name + " (" + mb(n) + ")");
             } catch (Throwable e) {
                 ModuleLog.detail(TAG + "could not save " + path + ": " + e);
@@ -181,11 +156,10 @@ public final class CrashForensics {
         }
     }
 
-    /** Logs the crashing thread's name and the abort message Breakpad stored in the dump. */
     private static void describeMinidump(File f) {
         try {
             ByteBuffer b = ByteBuffer.wrap(Files.readAllBytes(f.toPath())).order(ByteOrder.LITTLE_ENDIAN);
-            if (b.getInt(0) != 0x504d444d) return; // "MDMP"
+            if (b.getInt(0) != 0x504d444d) return;
             int n = b.getInt(8), dir = b.getInt(12);
             String thread = null, abort = null;
             for (int i = 0; i < n; i++) {
@@ -214,13 +188,12 @@ public final class CrashForensics {
         if (am == null) return;
         List<ApplicationExitInfo> list = am.getHistoricalProcessExitReasons(null, 0, MAX_EXITS);
         int mine = android.os.Process.myPid();
-        // Oldest first, so the log reads in order.
         for (int i = list.size() - 1; i >= 0; i--) {
             ApplicationExitInfo e = list.get(i);
             if (e.getPid() == mine || now - e.getTimestamp() > MAX_AGE_MS) continue;
             String key = "exit:" + e.getPid() + ":" + e.getTimestamp();
             if (seen.contains(key)) continue;
-            remember(key, seen, seenOrder); // the trace is tried once: the record itself is logged
+            remember(key, seen, seenOrder);
 
             String desc = e.getDescription() == null ? "" : e.getDescription().replace('\n', ' ');
             if (desc.length() > 300) desc = desc.substring(0, 300) + "…";
@@ -230,8 +203,6 @@ public final class CrashForensics {
                     + (desc.isEmpty() ? "" : " '" + desc + "'"));
 
             int r = e.getReason();
-            // Only a crash or freeze of Instagram itself is news to the user; force stops, memory
-            // kills and Instagram's helper processes stay in the technical details above.
             if ((r == ApplicationExitInfo.REASON_CRASH || r == ApplicationExitInfo.REASON_CRASH_NATIVE
                     || r == ApplicationExitInfo.REASON_ANR) && ctx.getPackageName().equals(e.getProcessName())) {
                 String when = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT)
@@ -260,7 +231,6 @@ public final class CrashForensics {
         }
     }
 
-    /** Saves the crashed process's hook list and checks a GC "invalid reference" against it. */
     private static void diagnose(Context ctx, File hooks, int pid, String base, String badHex) {
         File list = new File(hooks, pid + ".txt");
         List<String> lines = new ArrayList<>();
@@ -292,7 +262,7 @@ public final class CrashForensics {
                 }
                 if (art == 0) continue;
                 counted++;
-                long candidate = (art & ~0xffffffffL) | bad; // the bad value with this pointer's high half
+                long candidate = (art & ~0xffffffffL) | bad;
                 long d = Math.abs(art - candidate);
                 if (d == 0) exact = l;
                 else if (d < nearDist) {
@@ -313,7 +283,7 @@ public final class CrashForensics {
         if (hooksDir == null || !hookWritePending.compareAndSet(false, true)) return;
         Thread t = new Thread(() -> {
             try {
-                Thread.sleep(3000); // hooks are installed in bursts: write once per burst
+                Thread.sleep(3000);
             } catch (InterruptedException ignored) {
             }
             hookWritePending.set(false);
@@ -349,7 +319,6 @@ public final class CrashForensics {
         }
     }
 
-    /** Keeps the newest hook lists; the crashed process's was already read. */
     private static void pruneHookFiles(File dir) {
         File[] files = dir.listFiles(File::isFile);
         if (files == null || files.length <= KEEP_HOOK_FILES) return;

@@ -6,13 +6,11 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 
-/** Unknown relationship data is not evidence that someone does not follow you. */
 final class ProfileFollowStatus {
     enum Status { HIDDEN, FOLLOWS_YOU, MUTUAL, DOES_NOT_FOLLOW }
 
     private ProfileFollowStatus() {}
 
-    /** Only header objects supplied to this bind may identify the displayed profile. */
     static Object boundUser(List<Field> userFields, Object[] arguments) throws IllegalAccessException {
         Object result = null;
         for (Field field : userFields) {
@@ -40,7 +38,6 @@ final class ProfileFollowStatus {
         return followedBy ? Status.FOLLOWS_YOU : Status.DOES_NOT_FOLLOW;
     }
 
-    /** A header can carry several projections of the same profile; conflicting identities hide it. */
     static Status fromSchemas(String viewerId, List<Object> schemas, Method stringGetter,
                               Method childGetter, Method booleanGetter) throws ReflectiveOperationException {
         String profileId = null;
@@ -68,7 +65,6 @@ final class ProfileFollowStatus {
                 "following", Boolean.TRUE.equals(following)));
     }
 
-    /** The one profile id the bound projections agree on, or null (none, or conflicting ids). */
     static String profileIdOf(List<Object> schemas, Method stringGetter) throws ReflectiveOperationException {
         String profileId = null;
         for (Object schema : schemas) {

@@ -24,7 +24,6 @@ import java.util.Locale;
 
 import ps.reso.instaeclipse.R;
 
-/** Full color editor: HSV picker, per-channel RGBA sliders, and a hex text field, all kept in sync. */
 public class AdvancedColorPickerDialog extends DialogFragment {
 
     private static final String ARG_TITLE = "title";

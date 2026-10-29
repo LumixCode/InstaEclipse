@@ -23,18 +23,8 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.profile.SpoofAvatar;
 import ps.reso.instaeclipse.utils.profile.SpoofCounts;
 
-/**
- * The profile spoofer's editor, shared by Instagram's InstaEclipse menu (in an IeDialog) and the
- * companion app (in a Material dialog): a live preview styled like Instagram's profile header
- * (picture, username with the badge, posts / followers / following, name, bio) above grouped
- * inputs (Identity, Stats, Badge, Picture) and "Reset all". An empty field keeps the real value.
- *
- * <p>Circles (picture, placeholder, badge) are painted drawables, not shape drawables, so
- * Instagram's theme engine can't recolor them.
- */
 public final class ProfileSpoofEditor {
 
-    /** Colors of the surrounding dialog. */
     public static final class Palette {
         final int text, sub, field, accent, border;
         public Palette(int text, int sub, int field, int accent, int border) {
@@ -42,7 +32,6 @@ public final class ProfileSpoofEditor {
         }
     }
 
-    /** The spoofer's settings; "" / -1 = keep the real value. */
     public static final class Values {
         public String username = "", name = "", bio = "", avatar = "";
         public int posts = -1, followers = -1, following = -1;
@@ -63,11 +52,6 @@ public final class ProfileSpoofEditor {
     private final TextView removePhoto;
     private String avatar;
 
-    /**
-     * @param onChoosePhoto opens a picker; its result goes to {@link #setAvatar}
-     * @param photoNote     shown under the picture buttons (e.g. "opens the InstaEclipse app"), or null
-     * @param knownUsername your real username for the preview, or null
-     */
     public ProfileSpoofEditor(Context ctx, Values v, Palette p, Runnable onChoosePhoto, String photoNote, String knownUsername) {
         this.ctx = ctx;
         this.p = p;
@@ -78,7 +62,6 @@ public final class ProfileSpoofEditor {
         root = new LinearLayout(ctx);
         root.setOrientation(LinearLayout.VERTICAL);
 
-        // ---- Preview: Instagram's profile header ----
         LinearLayout card = new LinearLayout(ctx);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(16), dp(14), dp(16), dp(16));
@@ -120,13 +103,11 @@ public final class ProfileSpoofEditor {
         noteLp.topMargin = dp(10);
         root.addView(note, noteLp);
 
-        // ---- Identity ----
         LinearLayout identity = section(R.string.ig_profile_spoofer_section_identity);
         username = input(identity, R.string.ig_profile_spoofer_username, v.username, false, 30);
         name = input(identity, R.string.ig_profile_spoofer_name, v.name, false, 64);
         bio = input(identity, R.string.ig_profile_spoofer_bio, v.bio, true, MAX_BIO);
 
-        // ---- Stats ----
         LinearLayout stats = section(R.string.ig_profile_spoofer_section_stats);
         LinearLayout statRow = new LinearLayout(ctx);
         stats.addView(statRow, matchWrap());
@@ -134,7 +115,6 @@ public final class ProfileSpoofEditor {
         followers = countInput(statRow, R.string.ig_profile_spoofer_followers, v.followers, true);
         following = countInput(statRow, R.string.ig_profile_spoofer_following, v.following, true);
 
-        // ---- Badge ----
         LinearLayout badge = section(R.string.ig_profile_spoofer_section_badge);
         LinearLayout badgeRow = new LinearLayout(ctx);
         badgeRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -156,7 +136,6 @@ public final class ProfileSpoofEditor {
         badge.addView(badgeRow, matchWrap());
         verified.setOnCheckedChangeListener((b, c) -> refresh());
 
-        // ---- Picture ----
         LinearLayout picture = section(R.string.ig_profile_spoofer_section_picture);
         LinearLayout picRow = new LinearLayout(ctx);
         picRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -184,7 +163,6 @@ public final class ProfileSpoofEditor {
             picture.addView(pn, pnLp);
         }
 
-        // ---- Reset all ----
         TextView reset = text(14, p.accent, true);
         reset.setText(I18n.t(ctx, R.string.ig_profile_spoofer_reset_all));
         reset.setGravity(Gravity.CENTER);
@@ -205,7 +183,6 @@ public final class ProfileSpoofEditor {
 
     public View view() { return root; }
 
-    /** The edited values (avatar included). */
     public Values values() {
         Values v = new Values();
         v.username = username.getText().toString().trim();
@@ -219,7 +196,6 @@ public final class ProfileSpoofEditor {
         return v;
     }
 
-    /** The chosen picture (Base64 JPEG), or "" for none. */
     public void setAvatar(String b64) {
         avatar = b64 == null ? "" : b64;
         refresh();
@@ -264,8 +240,6 @@ public final class ProfileSpoofEditor {
 
     private static String count(int n) { return n < 0 ? "–" : ProfileSpoofHook.shortCount(n); }
 
-    // ---- building blocks ----
-
     private TextView stat(LinearLayout row, int label) {
         LinearLayout col = new LinearLayout(ctx);
         col.setOrientation(LinearLayout.VERTICAL);
@@ -286,7 +260,6 @@ public final class ProfileSpoofEditor {
         return number;
     }
 
-    /** A titled group; its inputs go into the returned layout. */
     private LinearLayout section(int title) {
         TextView t = text(12, p.sub, true);
         t.setText(I18n.t(ctx, title).toUpperCase(java.util.Locale.getDefault()));

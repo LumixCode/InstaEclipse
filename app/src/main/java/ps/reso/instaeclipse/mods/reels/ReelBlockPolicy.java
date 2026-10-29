@@ -2,7 +2,6 @@ package ps.reso.instaeclipse.mods.reels;
 
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 
-/** One precedence model for request, playback, cover text and DM-scroll decisions. */
 public final class ReelBlockPolicy {
     public enum Reason { NONE, DISABLE_REELS, NIGHTTIME, DAILY_LIMIT }
 
@@ -34,8 +33,6 @@ public final class ReelBlockPolicy {
     static boolean shouldLockScrolling(ReelViewerSession session) {
         if (session == null) return false;
         Reason reason = requestReason();
-        // Preserve the existing full-disable DM exception. Quiet hours and the daily cap exempt
-        // only the message-opened reel, so their pager is locked before recommendations appear.
         if (reason == Reason.DISABLE_REELS) return false;
         return session.shouldLockScrolling(reason != Reason.NONE, requestAllowsDm(reason));
     }

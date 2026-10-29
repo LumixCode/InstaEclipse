@@ -15,18 +15,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * Hide community notes on posts and reels (#259).
- *
- * The note isn't a separate media field: it is media_overlay_info.notes_bloks_data, read through
- * one getter of {@code com.instagram.api.schemas.MediaOverlayPayloadSchemaIntf} (CuQ() on 452)
- * by the feed, reels and options-sheet code — all of which already handle null. Return null from
- * that getter on both concrete schema classes. media_overlay_info itself is left alone: it also
- * carries the sensitive-content / misinformation overlays.
- *
- * Anchor: in ImmutablePandoMediaOverlayPayloadSchema the getter reads Pando field hash 0xc2d475a
- * ("notes_bloks_data", same on 451/452); the method name is looked up at runtime.
- */
 public class HideCommunityNotesHook {
 
     private static final String TAG = "(InstaEclipse | CommunityNotes): ";

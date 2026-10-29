@@ -22,12 +22,10 @@ public class SettingsManager {
     public static final String PASSCODE_SET = "lockPasscodeSet";
     public static final String RESTART_PENDING = "restartPendingKeys";
 
-    /** While a passcode is set, only Instagram's Lock menu (it asks for the passcode) turns these off. */
     private static final Set<String> PASSCODE_LOCKS = new HashSet<>(Arrays.asList(
             "lockWholeApp", "lockDirectMessages", "lockSpecificMessages", "lockDirectAlways",
             "lockSavedCollections", "hideSpecificChats"));
     private static SharedPreferences prefs;
-    /** Application context, for pushing in-app changes to the companion (CompanionSync). */
     private static Context appContext;
     public static final Object LOCK = new Object();
     private static final java.util.concurrent.atomic.AtomicInteger LOADS = new java.util.concurrent.atomic.AtomicInteger();
@@ -56,13 +54,11 @@ public class SettingsManager {
     }
 
     private static void save() {
-        // Snapshot to stamp the keys this save changes (see CompanionSync).
         java.util.Map<String, ?> before = new java.util.HashMap<>(prefs.getAll());
         SharedPreferences.Editor editor = prefs.edit();
 
         editor.putBoolean("isDevEnabled", FeatureFlags.isDevEnabled);
 
-        // Ghost Mode
         editor.putBoolean("isGhostSeen", FeatureFlags.isGhostSeen);
         editor.putBoolean("isGhostTyping", FeatureFlags.isGhostTyping);
         editor.putBoolean("isGhostScreenshot", FeatureFlags.isGhostScreenshot);
@@ -100,7 +96,6 @@ public class SettingsManager {
         editor.putBoolean("downloaderAllowFallback", FeatureFlags.downloaderAllowFallback);
         editor.putBoolean("lockUseFingerprint", FeatureFlags.lockUseFingerprint);
 
-        // Quick Toggles
         editor.putBoolean("quickToggleSeen", FeatureFlags.quickToggleSeen);
         editor.putBoolean("quickToggleTyping", FeatureFlags.quickToggleTyping);
         editor.putBoolean("quickToggleScreenshot", FeatureFlags.quickToggleScreenshot);
@@ -111,7 +106,6 @@ public class SettingsManager {
         editor.putBoolean("quickTogglePermanentView", FeatureFlags.quickTogglePermanentView);
         editor.putBoolean("quickToggleAllowScreenshots", FeatureFlags.quickToggleAllowScreenshots);
 
-        // Distraction Free
         editor.putBoolean("isExtremeMode", FeatureFlags.isExtremeMode);
         editor.putBoolean("disableStories", FeatureFlags.disableStories);
         editor.putBoolean("disableFeed", FeatureFlags.disableFeed);
@@ -127,7 +121,6 @@ public class SettingsManager {
         editor.putInt("nightReelBlockEndMinutes", FeatureFlags.nightReelBlockEndMinutes);
         editor.putBoolean("nightReelBlockAllowDM", FeatureFlags.nightReelBlockAllowDM);
 
-        // Clean Feed
         editor.putBoolean("hideSuggestionsInFeed", FeatureFlags.hideSuggestionsInFeed);
         editor.putBoolean("hideThreadsSuggestions", FeatureFlags.hideThreadsSuggestions);
         editor.putBoolean("hideLikedPosts", FeatureFlags.hideLikedPosts);
@@ -166,13 +159,11 @@ public class SettingsManager {
         editor.putBoolean("readReceiptChats", FeatureFlags.readReceiptChats);
         editor.putBoolean("hideThreadsButton", FeatureFlags.hideThreadsButton);
 
-        // Ads
         editor.putBoolean("isAdBlockEnabled", FeatureFlags.isAdBlockEnabled);
         editor.putBoolean("isAnalyticsBlocked", FeatureFlags.isAnalyticsBlocked);
         editor.putBoolean("disableTrackingLinks", FeatureFlags.disableTrackingLinks);
         editor.putBoolean("openLinksExternally", FeatureFlags.openLinksExternally);
 
-        // Misc
         editor.putBoolean("disableStoryFlipping", FeatureFlags.disableStoryFlipping);
         editor.putBoolean("disableVideoAutoPlay", FeatureFlags.disableVideoAutoPlay);
         editor.putBoolean("disableSearchHistory", FeatureFlags.disableSearchHistory);
@@ -246,7 +237,6 @@ public class SettingsManager {
         editor.putString("downloaderCustomPath", FeatureFlags.downloaderCustomPath);
         editor.putString("downloaderCustomUri",  FeatureFlags.downloaderCustomUri);
 
-        // Custom Theme
         editor.putBoolean("customThemeEnabled", FeatureFlags.customThemeEnabled);
         editor.putInt("themePresetId", FeatureFlags.themePresetId);
         editor.putInt("themeLightPresetId", FeatureFlags.themeLightPresetId);
@@ -256,13 +246,11 @@ public class SettingsManager {
 
         editor.apply();
         stampChangedKeys(before);
-        // Instagram -> companion: so the companion app shows what was just changed here.
         CompanionSync.pushAsync(appContext);
 
         FeatureManager.refreshFeatureStatus();
     }
 
-    /** Marks keys whose value this save changed, so an older companion value never overrides them. */
     private static void stampChangedKeys(java.util.Map<String, ?> before) {
         long now = System.currentTimeMillis();
         SharedPreferences.Editor e = null;
@@ -311,7 +299,6 @@ public class SettingsManager {
         dropDeadKeys(prefs);
         FeatureFlags.isDevEnabled = prefs.getBoolean("isDevEnabled", false);
 
-        // Ghost Mode
         FeatureFlags.isGhostSeen = prefs.getBoolean("isGhostSeen", false);
         FeatureFlags.isGhostTyping = prefs.getBoolean("isGhostTyping", false);
         FeatureFlags.isGhostScreenshot = prefs.getBoolean("isGhostScreenshot", false);
@@ -347,7 +334,6 @@ public class SettingsManager {
         FeatureFlags.downloaderAllowFallback = prefs.getBoolean("downloaderAllowFallback", false);
         FeatureFlags.lockUseFingerprint = prefs.getBoolean("lockUseFingerprint", true);
 
-        // Quick Toggles
         FeatureFlags.quickToggleSeen = prefs.getBoolean("quickToggleSeen", false);
         FeatureFlags.quickToggleTyping = prefs.getBoolean("quickToggleTyping", false);
         FeatureFlags.quickToggleScreenshot = prefs.getBoolean("quickToggleScreenshot", false);
@@ -358,7 +344,6 @@ public class SettingsManager {
         FeatureFlags.quickTogglePermanentView = prefs.getBoolean("quickTogglePermanentView", false);
         FeatureFlags.quickToggleAllowScreenshots = prefs.getBoolean("quickToggleAllowScreenshots", false);
 
-        // Distraction Free
         FeatureFlags.isExtremeMode = prefs.getBoolean("isExtremeMode", false);
         FeatureFlags.disableStories = prefs.getBoolean("disableStories", false);
         FeatureFlags.disableFeed = prefs.getBoolean("disableFeed", false);
@@ -380,7 +365,6 @@ public class SettingsManager {
         }
         FeatureFlags.nightReelBlockAllowDM = prefs.getBoolean("nightReelBlockAllowDM", true);
 
-        // Clean Feed
         FeatureFlags.hideSuggestionsInFeed = prefs.getBoolean("hideSuggestionsInFeed", false);
         FeatureFlags.hideThreadsSuggestions = prefs.getBoolean("hideThreadsSuggestions", false);
         FeatureFlags.hideLikedPosts = prefs.getBoolean("hideLikedPosts", false);
@@ -419,13 +403,11 @@ public class SettingsManager {
         FeatureFlags.readReceiptChats = prefs.getBoolean("readReceiptChats", false);
         FeatureFlags.hideThreadsButton = prefs.getBoolean("hideThreadsButton", false);
 
-        // Ads
         FeatureFlags.isAdBlockEnabled = prefs.getBoolean("isAdBlockEnabled", false);
         FeatureFlags.isAnalyticsBlocked = prefs.getBoolean("isAnalyticsBlocked", false);
         FeatureFlags.disableTrackingLinks = prefs.getBoolean("disableTrackingLinks", false);
         FeatureFlags.openLinksExternally = prefs.getBoolean("openLinksExternally", false);
 
-        // Misc
         FeatureFlags.disableStoryFlipping = prefs.getBoolean("disableStoryFlipping", false);
         FeatureFlags.disableVideoAutoPlay = prefs.getBoolean("disableVideoAutoPlay", false);
         FeatureFlags.disableSearchHistory = prefs.getBoolean("disableSearchHistory", false);
@@ -485,7 +467,6 @@ public class SettingsManager {
         FeatureFlags.saveInstants             = prefs.getBoolean("saveInstants", false);
         FeatureFlags.uploadInstants           = prefs.getBoolean("uploadInstants", false);
         FeatureFlags.cacheStories             = prefs.getBoolean("cacheStories", false);
-        // Tolerates a wrong-typed value: a bad companion write must not break every later load.
         FeatureFlags.storyCacheHours          = StoryCacheRetention.fromStored(all.get("storyCacheHours"));
         FeatureFlags.customFontEnabled        = prefs.getBoolean("customFontEnabled", false);
         FeatureFlags.customFontPath           = prefs.getString("customFontPath", "");
@@ -499,13 +480,8 @@ public class SettingsManager {
         FeatureFlags.downloaderCustomPath     = prefs.getString("downloaderCustomPath", "");
         FeatureFlags.downloaderCustomUri      = prefs.getString("downloaderCustomUri",  "");
 
-        // Custom Theme
         FeatureFlags.customThemeEnabled = prefs.getBoolean("customThemeEnabled", false);
         FeatureFlags.themePresetId = prefs.getInt("themePresetId", 1);
-        // #251: "theme in dark mode only" is the default so a custom theme never breaks light mode
-        // (a dark palette's surfaces/text are illegible on IG's light chrome). The old default was 0
-        // ("same theme as dark mode"), which rendered light mode unreadable; migrate it to -1 once
-        // so existing users are fixed, without overriding anyone who later re-selects it on purpose.
         FeatureFlags.themeLightPresetId = prefs.getInt("themeLightPresetId", -1);
         if (!prefs.getBoolean("themeLightMigratedV1", false)) {
             if (FeatureFlags.themeLightPresetId == 0) FeatureFlags.themeLightPresetId = -1;
@@ -568,7 +544,6 @@ public class SettingsManager {
     private static int readReelQuality(SharedPreferences preferences, java.util.Map<String, ?> all) {
         Object stored = all.get("forceReelQuality");
         if (stored instanceof Integer) return (Integer) stored;
-        // Older settings stored a toggle; migrate before loading the remaining flags.
         int quality = Boolean.TRUE.equals(stored) ? 1080 : 0;
         if (stored != null) preferences.edit().putInt("forceReelQuality", quality).apply();
         return quality;
@@ -598,12 +573,6 @@ public class SettingsManager {
         stampChangedKeys(before);
     }
 
-    /**
-     * Gate for every write that does not come from this process's own menus (companion broadcast,
-     * {@link CompanionSync#pull}). A value of the wrong type would make every later getX() throw
-     * and disable the module; Extreme Mode must not be loosened from outside its locked menus, nor
-     * a passcode lock turned off without the passcode.
-     */
     public static boolean acceptsCompanionWrite(SharedPreferences preferences, String key, Object value) {
         if (key == null) return false;
         Refusal reason = PrefsMerge.isPrivate(key) || PrefsMerge.isStatus(key) ? Refusal.PRIVATE
@@ -643,16 +612,10 @@ public class SettingsManager {
         }
     }
 
-    /** True for a lock switch the companion app may turn on but never off (see {@link #isLockedByPasscode}). */
     public static boolean isPasscodeLock(String key) {
         return key != null && PASSCODE_LOCKS.contains(key);
     }
 
-    /**
-     * True when a passcode is set ({@code passcode}: the stored "lockDirectPasscode" value) and
-     * {@code value} would turn one of its locks off or change the locked collections, which
-     * Instagram's own menus do only after asking for the passcode.
-     */
     public static boolean isLockedByPasscode(String key, Object value, Object passcode) {
         if (key == null || !(passcode instanceof String) || ((String) passcode).isEmpty()) return false;
         if ("lockedCollections".equals(key)) return true;

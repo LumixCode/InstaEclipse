@@ -32,7 +32,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/** Reads only the account and User supplied to the native following-row binder. */
 public final class FollowingFollowStatusHook {
     private static final String KEY = "FollowingFollowStatus";
     private static final String TAG = "ie_following_follow_status";
@@ -47,8 +46,6 @@ public final class FollowingFollowStatusHook {
     private static volatile Field knownSubtitle;
     private static volatile int subtitleResId;
 
-    /** {@code context} is Instagram's: the row's subtitle id is looked up here so a renamed
-     *  resource marks the feature broken instead of leaving it "attached" with no labels. */
     @SuppressLint("DiscouragedApi")
     public void install(android.content.Context context, ClassLoader loader) {
         try {
@@ -89,7 +86,6 @@ public final class FollowingFollowStatusHook {
                         Object data = listData.get(param.args[10]);
                         Object user = param.args[6];
                         Object session = param.args[3];
-                        // Both the row and its list must agree: a recycled/search row is not enough.
                         if (data != null && user != null && session != null && param.args[4] == listType.get(data)) {
                             String viewer = (String) viewerId.invoke(session);
                             String listOwner = (String) owner.get(data);
@@ -105,7 +101,6 @@ public final class FollowingFollowStatusHook {
                         bindLabel(anchor, status);
                         if (status != ProfileFollowStatus.Status.HIDDEN) diagnostic("Own following row labelled");
                     } catch (Throwable error) {
-                        // The pre-bind clear prevents stale status when a native projection changes.
                         diagnostic("Following relationship unavailable: " + error.getClass().getSimpleName());
                     }
                 }
@@ -134,7 +129,6 @@ public final class FollowingFollowStatusHook {
         return id;
     }
 
-    /** User.getId() is gone after 446; toString() still delegates to the same id accessor on 446 and 451. */
     private static Method userIdGetter(ClassLoader loader, Class<?> user) throws Exception {
         String key = "FollowingUserId_v1";
         Method cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(key, loader) : null;
@@ -151,7 +145,6 @@ public final class FollowingFollowStatusHook {
         return getter;
     }
 
-    /** The list parameters decide "this is my list" in their constructor from exactly this FollowListData id. */
     private static Field listOwner(Class<?> parameters, Class<?> data) throws Exception {
         String key = "FollowingListOwner_v1";
         String cached = DexKitCache.isCacheValid() ? DexKitCache.loadString(key) : null;
@@ -181,7 +174,6 @@ public final class FollowingFollowStatusHook {
         return fields;
     }
 
-    /** The row keeps several TextViews; the label belongs under the one IG inflates as follow_list_subtitle. */
     private static TextView subtitle(List<Field> texts, Object holder) throws IllegalAccessException {
         if (holder == null) return null;
         Field known = knownSubtitle;
@@ -272,8 +264,6 @@ public final class FollowingFollowStatusHook {
             LinearLayout.LayoutParams layout = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             layout.topMargin = Math.round(2 * subtitle.getResources().getDisplayMetrics().density);
-            // No pre-draw listener: one per recycled row leaked into the window,
-            // and every rebind already clears and re-applies the label, including a toggle-off.
             parent.addView(label, parent.indexOfChild(subtitle) + 1, layout);
         }
         label.setTypeface(Typeface.create(subtitle.getTypeface(), Typeface.NORMAL));

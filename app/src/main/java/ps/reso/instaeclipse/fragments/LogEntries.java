@@ -14,16 +14,14 @@ final class LogEntries {
     static final int KIND_DETAIL = 4;
 
     private static final Pattern TS_PREFIX = Pattern.compile("^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3} .*", Pattern.DOTALL);
-    private static final int TS_LEN = 23; // "yyyy-MM-dd HH:mm:ss.SSS"
+    private static final int TS_LEN = 23;
 
     private LogEntries() {}
 
     static final class Entry {
         final String ts;
         final String full;
-        /** Technical view: time with milliseconds, caller, tag and the whole entry. */
         final String display;
-        /** Simple view: time, feature name and the first line of the message. */
         final String friendly;
         final int kind;
 
@@ -36,7 +34,6 @@ final class LogEntries {
         }
     }
 
-    /** Groups raw lines into entries: a timestamped line starts one, others (stack traces) continue it. */
     static void parseInto(List<Entry> out, List<String> lines, String prefix) {
         String curTs = null;
         StringBuilder cur = null;
@@ -61,7 +58,6 @@ final class LogEntries {
         String display, friendly;
         String message = LogLine.friendly(firstLine(body));
         if (timed) {
-            // Drop the date for display; keep HH:mm:ss.SSS (simple view: HH:mm:ss).
             display = full.substring(11, TS_LEN) + "  " + prefix + LogLine.stripMarker(body);
             friendly = full.substring(11, 19) + "  " + prefix + message;
         } else {
@@ -84,7 +80,6 @@ final class LogEntries {
         return prefix + full;
     }
 
-    /** Level written by ModuleLog; lines from older builds fall back to LogLine's guess. */
     static int classify(String body) {
         switch (LogLine.levelOf(body)) {
             case ERROR: return KIND_ERROR;

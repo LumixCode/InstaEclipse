@@ -6,19 +6,15 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.ghost.UnsentDetail.Kind;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 
-/** What the Unsent viewer shows for a log entry: its text, else what the message was. */
 public final class UnsentDetailText {
     private UnsentDetailText() {}
 
-    /** True when {@link #body} describes the message instead of quoting its words. */
     public static boolean isDescription(UnsentLog.Entry entry) {
         return !entry.hasBody && (entry.detail == null || entry.detail.kind != Kind.TEXT);
     }
 
     public static String body(Context context, UnsentLog.Entry entry) {
         if (entry.hasBody) return entry.text;
-        // Entries from before descriptions existed, captured without a restart copy: say so
-        // rather than guess what they were.
         if (entry.detail == null) return I18n.t(context, R.string.ig_unsent_detail_unknown);
         return entry.detail.format((kind, user) -> name(context, kind, user));
     }
@@ -28,7 +24,6 @@ public final class UnsentDetailText {
         return named != 0 ? I18n.t(context, named, user) : I18n.t(context, res(kind));
     }
 
-    /** The form naming the owner ("Reel by @%1$s"), or 0 when the kind has none. */
     private static int namedRes(Kind kind) {
         switch (kind) {
             case REEL: return R.string.ig_unsent_detail_reel_by;

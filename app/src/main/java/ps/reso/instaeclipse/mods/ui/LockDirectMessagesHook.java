@@ -25,8 +25,6 @@ import ps.reso.instaeclipse.utils.toast.IeToast;
 import ps.reso.instaeclipse.utils.ui.IeColors;
 import ps.reso.instaeclipse.utils.ui.IePalette;
 
-/** Gates the app, a Direct visit, or selected conversations with one shared credential
- *  (PBKDF2, see {@link PasscodeHasher}; five wrong tries lock entry for 30 s). */
 public class LockDirectMessagesHook {
     private static final String LOCKOUT_PREFS = "instaeclipse_lockout";
     private static final DirectLockSession session = new DirectLockSession();
@@ -44,21 +42,8 @@ public class LockDirectMessagesHook {
     private static String currentAccount;
     private static int inboxId, listId, threadId;
     private static long outsideDirectSince;
-    /**
-     * The hidden-inbox gate opens on the third of several quick taps, and the system biometric
-     * prompt closes itself on any tap outside its panel: a fourth tap can close it as it appears.
-     * That gate's prompt still comes up at once, and comes back once if it closes this soon after
-     * being asked for. SystemUI plays its 250 ms show and 350 ms hide animations before it reports
-     * the tap, so the window is well past their sum.
-     */
     private static final long STRAY_TAP_MS = 1500L;
-    /**
-     * After the prompt's window is gone, how long to wait for its close to be reported. Android 11
-     * reports nothing for a tap during the show animation, so the gate's window getting focus back
-     * is the only sign there.
-     */
     private static final long CLOSE_REPORT_MS = 300L;
-    /** How long a re-prompt waits for window focus to settle before checking that the gate has it. */
     private static final long REPROMPT_SETTLE_MS = 200L;
 
     private static final class Gate {
@@ -66,11 +51,7 @@ public class LockDirectMessagesHook {
         final String scope;
         final java.util.concurrent.atomic.AtomicBoolean completed =
                 new java.util.concurrent.atomic.AtomicBoolean();
-        /** The current biometric prompt's; each prompt gets its own (main thread). */
         android.os.CancellationSignal biometric = new android.os.CancellationSignal();
-        // The current prompt (main thread): its number, when it was asked for, whether it is still
-        // up as far as the gate knows, whether the gate's window lost focus to it, and how to show
-        // it once more after a stray tap (null: never).
         int promptId;
         long promptedAt;
         boolean promptOpen, focusLost;
@@ -82,14 +63,6 @@ public class LockDirectMessagesHook {
         }
     }
 
-    /**
-     * Which of a window's frames run the gate check (main thread only). The check resolves the
-     * visible screen by reflection, so steady frames (scrolling, video) run it at most once per
-     * INTERVAL_MS, the last one as a posted check. Opening a screen always lays it out, and for
-     * SETTLE_MS after a layout pass every frame checks, as before this throttle, while the new
-     * screen's transition and lifecycle settle. watchActivity (activity resume and the Direct
-     * inbox/thread onResume) still checks at once.
-     */
     static final class GateThrottle {
         static final long INTERVAL_MS = 100L;
         static final long SETTLE_MS = 500L;
@@ -100,7 +73,6 @@ public class LockDirectMessagesHook {
 
         void laidOut(long now) { settleUntil = now + SETTLE_MS; }
 
-        /** 0: check in this frame; above 0: post the trailing check that much later; below 0: it is posted. */
         long preDraw(long now) {
             if (now < settleUntil || now - lastCheck >= INTERVAL_MS) {
                 lastCheck = now;
@@ -113,7 +85,6 @@ public class LockDirectMessagesHook {
             return lastCheck + INTERVAL_MS - now;
         }
 
-        /** The posted check is due unless a frame checked after the last skipped one. */
         boolean trailingDue(long now) {
             posted = false;
             if (!skipped) return false;
@@ -297,8 +268,6 @@ public class LockDirectMessagesHook {
         }
         try {
             boolean passcodeSet = FeatureFlags.lockDirectPasscode != null && !FeatureFlags.lockDirectPasscode.isEmpty();
-            // The salt, not the hash: the first unlock re-hashes a legacy passcode (PBKDF2), which
-            // must not reset the session and prompt again. A new passcode always gets a new salt.
             boolean appChanged = !settingsSeen || seenPasscode != passcodeSet
                     || !java.util.Objects.equals(seenSalt, FeatureFlags.lockDirectSalt)
                     || seenWholeApp != FeatureFlags.lockWholeApp;
@@ -324,14 +293,9 @@ public class LockDirectMessagesHook {
             if (account != null && !account.equals(currentAccount)) {
                 if (currentAccount != null) appUnlocked = false;
                 currentAccount = account;
-                // A hidden-chats or settings gate was opened from this account's own screen and covers
-                // it, so no switch can happen under it. With the DM locks off the account is first
-                // read only once such a gate is up: dismissing it here closed the triple-tap prompt
-                // on its first frame.
                 Gate open = gates.get(a);
                 if (open == null || !(open.scope.equals("hidden") || open.scope.equals("settings"))) dismissGate(a);
             }
-            // A navigation animation can briefly expose the underlying feed between two Direct fragments.
             if (screen == DirectLockSession.Screen.OTHER) {
                 long now = android.os.SystemClock.elapsedRealtime();
                 if (outsideDirectSince == 0L) {
@@ -427,8 +391,6 @@ public class LockDirectMessagesHook {
         return a != null && authenticate(a, I18n.t(a, R.string.ig_lock_hidden_chats_prompt), "hidden", onSuccess);
     }
 
-    /** Full-screen passcode/biometric gate for a settings or hidden-inbox action; false when no
-     *  passcode is set (the user is told) or a gate is already showing. */
     public static boolean authenticate(Activity a, String title, String scope, Runnable onSuccess) {
         if (a == null || onSuccess == null) return false;
         if (FeatureFlags.lockDirectPasscode == null || FeatureFlags.lockDirectPasscode.isEmpty()) {
@@ -456,14 +418,11 @@ public class LockDirectMessagesHook {
                 if (active == null || active.dialog != this
                         || !active.completed.compareAndSet(false, true)) return;
                 active.biometric.cancel();
-                // Keep the opaque window until navigation has actually left the locked screen.
                 onCancel.run();
             }
 
             @Override public void onWindowFocusChanged(boolean hasFocus) {
                 super.onWindowFocusChanged(hasFocus);
-                // The prompt takes focus while it is up; focus back while it should be up means its
-                // window is gone. Its close report, when there is one, comes within CLOSE_REPORT_MS.
                 Gate active = gates.get(a);
                 if (active == null || active.dialog != this || !active.promptOpen) return;
                 if (!hasFocus) {
@@ -486,13 +445,11 @@ public class LockDirectMessagesHook {
         overlay.setBackgroundColor(palette.backdrop);
         overlay.setLayoutParams(new FrameLayout.LayoutParams(-1, -1));
 
-        // Scrollable so the card is always reachable even on short screens with the keyboard up.
         android.widget.ScrollView scroller = new android.widget.ScrollView(a);
         FrameLayout.LayoutParams svLp = new FrameLayout.LayoutParams(-1, -1);
         scroller.setLayoutParams(svLp);
         scroller.setFillViewport(true);
 
-        // Rounded card holding the prompt.
         LinearLayout col = new LinearLayout(a);
         col.setOrientation(LinearLayout.VERTICAL);
         col.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -536,7 +493,6 @@ public class LockDirectMessagesHook {
         code.setGravity(Gravity.CENTER);
         code.setTextSize(20);
         code.setLetterSpacing(0.15f);
-        // Size the box to a few digits and centre it — no wide empty passcode bar.
         code.setEms(6);
         code.setMinWidth(0);
         code.setMinimumWidth(0);
@@ -546,7 +502,7 @@ public class LockDirectMessagesHook {
         code.setBackground(inBg);
         int ip = dp(a, 12);
         code.setPadding(ip, dp(a, 10), ip, dp(a, 10));
-        LinearLayout.LayoutParams codeLp = new LinearLayout.LayoutParams(-2, -2); // wrap: hugs the digits
+        LinearLayout.LayoutParams codeLp = new LinearLayout.LayoutParams(-2, -2);
         codeLp.gravity = Gravity.CENTER_HORIZONTAL;
         code.setLayoutParams(codeLp);
 
@@ -591,7 +547,6 @@ public class LockDirectMessagesHook {
             }
         });
         unlock.setOnClickListener(v -> attempt.run());
-        // Keyboard "Done" also submits — so the unlock never depends on a button the keyboard hides.
         code.setOnEditorActionListener((v, actionId, ev) -> {
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) { attempt.run(); return true; }
             return false;
@@ -607,8 +562,6 @@ public class LockDirectMessagesHook {
             hideKeyboard(a, code);
             dismissGate(a);
         }));
-        // Wrapper fills the viewport (via fillViewport) and centers the card — so the card itself
-        // stays at its content height instead of the ScrollView stretching it to full screen.
         FrameLayout inner = new FrameLayout(a);
         inner.setLayoutParams(new FrameLayout.LayoutParams(-1, -1));
         inner.addView(col);
@@ -638,13 +591,9 @@ public class LockDirectMessagesHook {
             throw t;
         }
 
-        // Biometric unlock: if the device has an enrolled fingerprint/face and the user hasn't
-        // disabled it, prompt automatically. Success unlocks exactly like a correct passcode; the
-        // passcode field stays as the fallback (the prompt's negative button just dismisses it).
         if (FeatureFlags.lockUseFingerprint && canAuthenticate(a)) {
             if (scope.equals("hidden")) {
                 gate.reprompt = () -> {
-                    // Home or Recents closes the prompt as a user cancel too: not over the launcher.
                     android.view.Window w = dialog.getWindow();
                     if (gates.get(a) == gate && !gate.completed.get() && resumed.contains(a) && !a.isFinishing()
                             && w != null && w.getDecorView().hasWindowFocus()) {
@@ -657,9 +606,8 @@ public class LockDirectMessagesHook {
         return true;
     }
 
-    /** Shows the gate's biometric prompt, a new one in place of any earlier one. */
     private static void promptGate(Activity a, Gate gate, String title, Runnable succeed) {
-        gate.biometric.cancel(); // ends an earlier prompt Android 11 closed without a word
+        gate.biometric.cancel();
         gate.biometric = new android.os.CancellationSignal();
         int id = ++gate.promptId;
         gate.promptedAt = android.os.SystemClock.uptimeMillis();
@@ -672,20 +620,16 @@ public class LockDirectMessagesHook {
         });
     }
 
-    /** A gesture gate's prompt the user closed this soon was hit by a tap of the gesture: once more. */
     private static void repromptAfterStrayTap(Gate gate) {
         Runnable reprompt = gate.reprompt;
         if (reprompt == null || gate.completed.get()
                 || android.os.SystemClock.uptimeMillis() - gate.promptedAt > STRAY_TAP_MS) return;
         gate.reprompt = null;
         ModuleLog.detail("(IE|LockDMs) biometric prompt closed right away: shown again if the gate is still in front");
-        // A moment later, once focus has settled: back on the gate after a stray tap, elsewhere
-        // after Home or Recents.
         main().postDelayed(reprompt, REPROMPT_SETTLE_MS);
     }
 
-    /** True when the device has biometric hardware with something enrolled. */
-    @SuppressLint("MissingPermission") // runs in Instagram, which holds USE_BIOMETRIC
+    @SuppressLint("MissingPermission")
     static boolean canAuthenticate(Activity a) {
         try {
             if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return false;
@@ -694,7 +638,6 @@ public class LockDirectMessagesHook {
             if (bm == null) return false;
             int res;
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                // No-arg canAuthenticate() is deprecated on R+ and can misreport; pass authenticators.
                 res = bm.canAuthenticate(android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK);
             } else {
                 res = bm.canAuthenticate();
@@ -705,23 +648,15 @@ public class LockDirectMessagesHook {
         }
     }
 
-    /** Biometric prompt for callers without a gate of their own (LockedCollectionsHook). */
-    @SuppressLint("MissingPermission") // runs in Instagram, which holds USE_BIOMETRIC
+    @SuppressLint("MissingPermission")
     static void promptBiometric(Activity a, String title, Runnable onSuccess) {
         promptBiometric(a, title, new android.os.CancellationSignal(), onSuccess, null);
     }
 
-    /**
-     * Shows the system biometric prompt; runs onSuccess on the UI thread when auth succeeds, and
-     * onClosed when it ends without: true when the user closed it (a tap outside it, or back),
-     * false for "Use passcode" or an error such as too many tries.
-     */
-    @SuppressLint("MissingPermission") // runs in Instagram, which holds USE_BIOMETRIC
+    @SuppressLint("MissingPermission")
     private static void promptBiometric(Activity a, String title, android.os.CancellationSignal cancellation,
                                         Runnable onSuccess, java.util.function.Consumer<Boolean> onClosed) {
         try {
-            // I18n reads the module's own resources: a.getString(R.string...) would look in
-            // Instagram's table, where our ids mean nothing.
             android.hardware.biometrics.BiometricPrompt prompt =
                     new android.hardware.biometrics.BiometricPrompt.Builder(a)
                             .setTitle(title)
@@ -849,7 +784,6 @@ public class LockDirectMessagesHook {
 
     static int dp(Activity a, int v) { return Math.round(v * a.getResources().getDisplayMetrics().density); }
 
-    /** Dismiss the soft keyboard after a successful unlock so it doesn't linger over the content. */
     static void hideKeyboard(Activity a, View focus) {
         try {
             android.view.inputmethod.InputMethodManager imm =
@@ -858,7 +792,6 @@ public class LockDirectMessagesHook {
         } catch (Throwable ignored) {}
     }
 
-    /** Hash for a NEW passcode: PBKDF2 with the per-install salt (see {@link PasscodeHasher}). */
     public static String hashPass(String passcode) {
         String salt = FeatureFlags.lockDirectSalt == null ? "" : FeatureFlags.lockDirectSalt;
         return PasscodeHasher.hash(passcode, salt);
@@ -886,16 +819,10 @@ public class LockDirectMessagesHook {
         }
     }
 
-    /** Seconds left in the lockout after too many wrong passcodes, or 0. */
     public static int lockoutSecondsLeft() {
         return lockout().secondsLeft();
     }
 
-    /**
-     * Checks a passcode against the stored hash (PBKDF2, or the older salted SHA-256, which is
-     * re-hashed with PBKDF2 on the first successful unlock). Five wrong tries lock entry for 30 s;
-     * during the lockout every attempt fails without being checked.
-     */
     public static synchronized boolean checkPass(String passcode) {
         PasscodeLockout lockout = lockout();
         if (lockout.secondsLeft() > 0) return false;
@@ -912,13 +839,11 @@ public class LockDirectMessagesHook {
         return false;
     }
 
-    /** Message for a failed attempt: the lockout countdown when one is running. */
     public static String failureText(android.content.Context ctx) {
         int s = lockoutSecondsLeft();
         return s > 0 ? I18n.t(ctx, R.string.ig_lock_try_again_in, s) : I18n.t(ctx, R.string.ig_lock_wrong_passcode);
     }
 
-    /** Generate + store a fresh random salt (call right before hashing a NEW passcode). */
     public static void newSalt() {
         FeatureFlags.lockDirectSalt = freshSalt();
     }

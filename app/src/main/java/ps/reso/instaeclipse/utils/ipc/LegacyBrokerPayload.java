@@ -8,7 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-/** Primitive-only bounded snapshot of upstream single-file, audio and HTML-export requests. */
 public final class LegacyBrokerPayload {
     private LegacyBrokerPayload() { }
     private static final Set<String> MEDIA = keys("url", "audioUrl", "fallbackUrl", "filename", "mimeType",

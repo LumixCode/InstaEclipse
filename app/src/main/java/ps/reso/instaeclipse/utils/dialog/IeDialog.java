@@ -31,15 +31,6 @@ import ps.reso.instaeclipse.utils.ui.IeColors;
 import ps.reso.instaeclipse.utils.ui.IePalette;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 
-/**
- * The module's in-Instagram dialog look (same as Search comments): rounded card that follows
- * dark/light mode, bold title with a close ✕, message / custom view / choice rows, and pill
- * buttons (filled primary, plain secondary).
- *
- * <pre>
- * new IeDialog(activity).title("Media info").message(text).primary("Copy", () -> ...).show();
- * </pre>
- */
 public class IeDialog {
 
     public final Context ctx;
@@ -152,8 +143,6 @@ public class IeDialog {
         return g;
     }
 
-    /** Rounded row/card background with a hairline border, so rows stay distinct even when a
-     *  custom theme maps the dialog and row fills to nearly the same colour. */
     public GradientDrawable cardBg() {
         GradientDrawable g = round(field, 14);
         g.setStroke(Math.max(1, dp(1)), border);
@@ -181,8 +170,6 @@ public class IeDialog {
         return this;
     }
 
-    /** One tappable row per label; the row at {@code checked} (or -1) is marked. Tapping runs the
-     *  listener with the index and closes the dialog. */
     public IeDialog choices(CharSequence[] labels, int checked, java.util.function.IntConsumer onPick) {
         for (int i = 0; i < labels.length; i++) {
             final int idx = i;
@@ -235,7 +222,6 @@ public class IeDialog {
         return this;
     }
 
-    /** A rounded card quoting {@code t} (e.g. the comment being copied), cut at {@code maxLines}. */
     public TextView quote(CharSequence t, int maxLines) {
         TextView q = new TextView(ctx);
         q.setText(t);
@@ -249,7 +235,6 @@ public class IeDialog {
         return q;
     }
 
-    /** A rounded input in the dialog's style. */
     public EditText input(CharSequence hint) {
         EditText et = new EditText(ctx);
         et.setHint(hint);
@@ -263,7 +248,6 @@ public class IeDialog {
         return et;
     }
 
-    /** A check box row in the dialog's style. */
     public android.widget.CheckBox checkBox(CharSequence label, boolean checked) {
         android.widget.CheckBox cb = new android.widget.CheckBox(ctx);
         cb.setText(label);
@@ -276,12 +260,10 @@ public class IeDialog {
         return cb;
     }
 
-    /** Filled accent pill; closes the dialog after {@code action} unless {@code keepOpen}. */
     public TextView primary(CharSequence label, Runnable action) { return button(label, action, true, false); }
 
     public TextView primaryKeepOpen(CharSequence label, Runnable action) { return button(label, action, true, true); }
 
-    /** Plain secondary button (e.g. Cancel); {@code action} may be null. */
     public TextView secondary(CharSequence label, Runnable action) { return button(label, action, false, false); }
 
     public TextView destructive(CharSequence label, Runnable action) { return destructive(label, action, false); }
@@ -325,7 +307,6 @@ public class IeDialog {
 
     public IeDialog onDismiss(Runnable r) { onDismiss = r; return this; }
 
-    /** What the ✕, Back and a tap outside do besides closing (e.g. the same as Cancel). */
     public IeDialog onClose(Runnable r) { onClose = r; return this; }
 
     public Dialog show() {

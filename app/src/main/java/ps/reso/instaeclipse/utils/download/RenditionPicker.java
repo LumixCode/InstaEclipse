@@ -8,7 +8,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-/** Dimensions and frame rate decide quality; unrelated codecs' bitrates never decide it. */
 final class RenditionPicker {
     static final class Choice {
         final DownloadRequest.Rendition video;
@@ -72,12 +71,10 @@ final class RenditionPicker {
         if ((order = Long.compare((long) b.width * b.height, (long) a.width * a.height)) != 0) return order;
         if ((order = Double.compare(b.frameRate, a.frameRate)) != 0) return order;
         if (a.codecs.isEmpty() != b.codecs.isEmpty()) return a.codecs.isEmpty() ? 1 : -1;
-        // Bitrate only resolves a tie within the exact same known codec/profile and frame rate.
         if (!a.codecs.isEmpty() && a.codecs.equals(b.codecs) && a.bitrate > 0 && b.bitrate > 0
                 && (order = Long.compare(b.bitrate, a.bitrate)) != 0) return order;
         if ((order = Integer.compare(playability(b.codecs), playability(a.codecs))) != 0) return order;
         if ((order = a.codecs.compareTo(b.codecs)) != 0) return order;
-        // Stable neutral tie-break. Neither direct/DASH nor URL labels get a quality bonus.
         return a.url.compareTo(b.url);
     }
     private static int ceilingGroup(DownloadRequest.Rendition r, int ceiling) {

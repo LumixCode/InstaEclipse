@@ -12,13 +12,8 @@ import java.util.function.BiFunction;
 import ps.reso.instaeclipse.mods.misc.ExactTimestampFormatter;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 
-/**
- * Date/time format for "Show exact dates" (#265): the device's short date + time, one of the
- * presets, or the user's own SimpleDateFormat pattern. Framework-free so it is unit-tested.
- */
 public final class TimestampFormat {
 
-    /** Pattern choices; "" (the first) is the device's own short date + time. */
     public static final String[] PRESETS = {
             "",
             "yyyy-MM-dd HH:mm:ss",
@@ -85,7 +80,6 @@ public final class TimestampFormat {
         return pattern;
     }
 
-    /** A pattern SimpleDateFormat accepts (empty = the device default, also valid). */
     public static boolean isValid(String pattern) {
         if (pattern == null) return false;
         if (pattern.isEmpty()) return true;
@@ -103,7 +97,6 @@ public final class TimestampFormat {
         return valid;
     }
 
-    /** {@code date} in {@code pattern}; the device's short format when it is empty or invalid. */
     public static String format(String pattern, Date date, Locale locale) {
         if (pattern != null && !pattern.isEmpty() && isValid(pattern)) {
             return new SimpleDateFormat(pattern, locale).format(date);

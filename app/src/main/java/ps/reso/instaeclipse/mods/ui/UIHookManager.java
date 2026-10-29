@@ -94,21 +94,11 @@ public class UIHookManager {
         }
     }
 
-    /**
-     * Activities that already have a pending OnGlobalLayoutListener registered.
-     * Used only to prevent duplicate listener registrations when the search view
-     * is not yet visible at setup time.
-     */
     private static final java.util.WeakHashMap<Activity, Boolean> sGlobalListenerPending =
             new java.util.WeakHashMap<>();
-    /**
-     * Tracks whether the GlobalLayoutListener path has completed for an activity,
-     * so we don't keep registering new listeners on every resume after search is found.
-     */
     private static final java.util.WeakHashMap<Activity, Boolean> sSearchWiringDone =
             new java.util.WeakHashMap<>();
 
-    // Resource IDs are constant for a given IG install — cache them statically.
     private static volatile int sSearchTabId = 0;
     private static volatile int sActionBarEndId = 0;
     private static volatile int sInboxButtonId = 0;
@@ -131,30 +121,18 @@ public class UIHookManager {
     }
 
     public static void setupHooks(Activity activity, boolean isMain) {
-        // Ghost emoji visibility must update on every resume (reflects current ghost state).
         addGhostEmojiNextToInbox(activity, GhostModeUtils.isGhostModeActive());
 
-        // Lock DMs: arm the inbox passcode watcher on the main activity (its onCreate is
-        // obfuscated, so a direct hook fails — this runs from the module's resolved main hook).
         ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook.watchActivity(activity);
         ps.reso.instaeclipse.mods.ghost.HideChatsHook.watchActivity(activity);
 
-        // Remove Meta AI: collapse the "About this reel" Content Deep Dive section (AI summary +
-        // "Ask Meta AI…" composer) inside the reel/post action sheet. It is a Litho-rendered
-        // section not reachable via the option/builder hooks, so we strip it at the view level.
         ps.reso.instaeclipse.mods.ui.RemoveMetaAIHook.watchActionSheet(activity);
 
-        // Distraction Free: collapse the story tray / Reels tab at the view level (the network drop
-        // alone leaves IG's cached stories/reels visible on IG 447.0.0.39+).
         ps.reso.instaeclipse.mods.ui.DistractionFreeUIHook.watchActivity(activity);
         ps.reso.instaeclipse.mods.ui.StoryTrayHook.watchActivity(activity);
 
-        // Cache resource IDs once per IG install (string table lookup is non-trivial).
         ensureIdsCached(activity);
 
-        // Always re-apply the search long-press listener. Instagram may overwrite it after
-        // a config change (e.g. when InstaEclipse settings are toggled), so we cannot skip
-        // this on resume — we just avoid the expensive getIdentifier() call via the cache.
         boolean anySearchFound = false;
         if (sSearchTabId != 0) {
             View v = activity.findViewById(sSearchTabId);
@@ -165,9 +143,6 @@ public class UIHookManager {
             if (v != null) anySearchFound = processSearchView(activity, v, "action_bar_end_action_buttons");
         }
 
-        // Register at most ONE GlobalLayoutListener per activity to retry search wiring
-        // when the view isn't inflated yet. Skip if we already found search, if a listener
-        // is already pending, or if the listener already completed successfully.
         if (isMain && !anySearchFound
                 && !Boolean.TRUE.equals(sGlobalListenerPending.get(activity))
                 && !Boolean.TRUE.equals(sSearchWiringDone.get(activity))) {
@@ -210,15 +185,6 @@ public class UIHookManager {
     }
 
     public void mainActivity(ClassLoader classLoader) {
-        // Hook onCreate / onResume of Instagram Main.
-        // IG 448+ no longer declares these overrides on InstagramMainActivity (they live in the
-        // shared base com.instagram.base.activity.IgFragmentActivity, and the activity only has
-        // obfuscated delegates like A1p(Bundle, X)). The old DexKit lookup (declaredClass +
-        // "onCreate"/(Bundle)V, then a "public void() with >=20 opcodes" guess for onResume) found
-        // nothing there, so setupHooks() — the settings entry, ghost emoji, Distraction-Free view
-        // hooks, feature toast — never ran from the main activity. LifecycleHookUtil hooks the
-        // class that actually declares the method and filters by instance, so it resolves on old
-        // builds (declared override, same as before) and new ones alike.
         try {
             String where = LifecycleHookUtil.hookAfter(classLoader, INSTAGRAM_MAIN_ACTIVITY, "onCreate",
                     (activity, param) -> onMainActivityCreated(activity), Bundle.class);
@@ -249,12 +215,6 @@ public class UIHookManager {
             ModuleLog.error("(InstaEclipse): Could not attach to Instagram's main screen; the InstaEclipse menu shortcut and ghost mode toggle may not work", t);
         }
 
-        // Hook View.performLongClick — inbox long-press override.
-        // setOnLongClickListener is unreliable when Instagram has a parent-level touch
-        // interceptor or a custom view that overrides long-press dispatch. Hooking
-        // performLongClick() fires BEFORE any listener/interceptor chain and lets us
-        // fully own the event by returning true via setResult.
-        // This only fires when the user actually long-presses something — not a hot path.
         try {
             XposedHelpers.findAndHookMethod(View.class, "performLongClick", new XC_MethodHook() {
                 @Override
@@ -267,7 +227,7 @@ public class UIHookManager {
                     if (activity == null) return;
                     GhostModeUtils.toggleSelectedGhostOptions(activity);
                     view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
-                    param.setResult(true); // consume — skip Instagram's handler entirely
+                    param.setResult(true);
                 }
             });
         } catch (Throwable t) {
@@ -275,7 +235,6 @@ public class UIHookManager {
                     + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
 
-        // Hook onResume - Modal
         try {
             LifecycleHookUtil.hookAfter(classLoader, "com.instagram.modal.ModalActivity", "onResume",
                     (activity, param) -> activity.runOnUiThread(() -> {
@@ -353,25 +312,17 @@ public class UIHookManager {
         currentActivity = activity;
         trackActivities(activity, false);
 
-        // Use runOnUiThread to ensure we are touching the UI safely
         activity.runOnUiThread(() -> {
             try {
-                // 1. Initialize Hooks
                 setupHooks(activity, true);
 
-                // 2. Delay UI injections slightly.
-                // Instagram's Main is complex; the Inbox/UI might not be inflated immediately.
                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
                     try {
-                        // Add the Ghost Emoji next to Inbox
                         addGhostEmojiNextToInbox(activity, GhostModeUtils.isGhostModeActive());
 
-                        // 3. Show Success Toast
                         if (FeatureFlags.showFeatureToasts && !CustomToast.toastShown) {
                             CustomToast.toastShown = true;
 
-                            // Pass the raw KEY -> hooked map; showFeatureGrid resolves
-                            // each key's label and groups it into a category itself.
                             java.util.LinkedHashMap<String, Boolean> status =
                                     new java.util.LinkedHashMap<>(FeatureStatusTracker.getStatus());
                             CustomToast.showFeatureGrid(activity.getApplicationContext(),
@@ -381,7 +332,7 @@ public class UIHookManager {
                         ModuleLog.warn("(InstaEclipse): Could not add the ghost mode icon or the feature summary: "
                                 + innerE.getClass().getSimpleName() + ": " + innerE.getMessage());
                     }
-                }, 1500); // 1.5s delay to let the UI settle
+                }, 1500);
 
             } catch (Exception e) {
                 ModuleLog.warn("(InstaEclipse): Could not set up InstaEclipse on the main screen: "
@@ -423,7 +374,6 @@ public class UIHookManager {
         }
     }
 
-    /** Registers a broadcast receiver in the Instagram process to handle config imports. */
     public static void registerConfigImportReceiver(android.content.Context context) {
         BroadcastReceiver receiver = new BroadcastReceiver() {
             @Override
@@ -444,7 +394,6 @@ public class UIHookManager {
                 new IntentFilter("ps.reso.instaeclipse.ACTION_IMPORT_CONFIG"));
     }
 
-    /** Registers a receiver in the Instagram process to restore settings from a backup JSON. */
     public static void registerSettingsRestoreReceiver(android.content.Context context) {
         BroadcastReceiver receiver = new BroadcastReceiver() {
             @Override

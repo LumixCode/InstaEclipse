@@ -55,14 +55,6 @@ import ps.reso.instaeclipse.utils.ghost.UnsentMessageStore;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 
-/**
- * Keeps locally removed messages through both live removal and thread reconciliation.
- * Removal events are scoped to account + thread + message; reconcile restores only the
- * owning store's objects. Saved copies bring back messages Instagram reloads from the server after
- * a restart. The separate indicator annotates rows without changing message text.
- * With "keep in chat" off, a removal is only logged and Instagram removes the message as usual.
- * Obfuscated store/reconcile classes are discovered from their diagnostic strings.
- */
 public class KeepUnsentMessagesHook {
 
     private static final String REMOVE_ANCHOR = "Client context should not be null if messageId is null.";
@@ -84,12 +76,10 @@ public class KeepUnsentMessagesHook {
     private static final Map<Key, ClearedScope> clearedScopes = new ConcurrentHashMap<>();
     private static final AtomicLong clears = new AtomicLong();
     private static volatile Boolean listNewestFirst;
-    /** Messages already described (or found not to need it) this process; see describe(). */
     private static final Set<Key> described = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private static final Map<String, String> senderHandles = new ConcurrentHashMap<>();
     private static volatile Method userCacheOf;
     private static volatile List<Method> usersById;
-    // Instagram's direct.db message codec; all null when discovery failed (no restart copies).
     private static Method messageTable, encodeMessage, decodeMessage, messageTime;
     private static Field messageThreadKey;
 
@@ -100,14 +90,10 @@ public class KeepUnsentMessagesHook {
         resolveMessageCodec(classLoader);
         hookRemovePrimitive(classLoader);
         hookReconcile(classLoader);
-        // Unconditional: chat export and voice downloads name their folders from ThreadNames, and
-        // outside the inbox only this listener feeds it.
         CurrentThreadTracker.install(classLoader);
         CurrentThreadTracker.addListener((activity, id) -> rememberThreadName(id, activity));
         if (FeatureFlags.keepUnsentMessages && FeatureFlags.showUnsentIndicator) new UnsentIndicatorHook().install(classLoader);
     }
-
-    // ── DexKit results cached per Instagram build ───────────────────────────────
 
     static List<Method> cachedMethods(String key, ClassLoader loader, CachedLookup.Search<List<Method>> lookup) throws Throwable {
         return CachedLookup.methods(key, loader, lookup);
@@ -133,7 +119,6 @@ public class KeepUnsentMessagesHook {
                     for (var use : data.data().getUsingFields()) {
                         if (!use.getField().getTypeName().equals("java.lang.String")) continue;
                         Field field = use.getField().getFieldInstance(loader);
-                        // The same method also examines avatar text; only the message's own field is its body.
                         if (field.getDeclaringClass().isAssignableFrom(model)) fields.add(field);
                     }
                 }
@@ -146,12 +131,6 @@ public class KeepUnsentMessagesHook {
         }
     }
 
-    /**
-     * Instagram's own row codec for direct messages (the "messages" table of direct.db), so saved
-     * copies decode into exactly the objects Instagram loads from disk. The row writer reads one
-     * long from the message, its timestamp, which orders restored copies, and one thread-key
-     * field, which the decoder requires.
-     */
     private void resolveMessageCodec(ClassLoader loader) {
         try {
             for (Method decode : cachedMethods("KeepUnsent_decode", loader, () -> methodsOf(DexKitQueryCache.methods(
@@ -177,7 +156,7 @@ public class KeepUnsentMessagesHook {
                             if (!call.getReturnTypeName().equals("long") || !call.getParamTypeNames().isEmpty()) continue;
                             Method candidate = call.getMethodInstance(loader);
                             if (!candidate.getDeclaringClass().isAssignableFrom(decode.getReturnType())) continue;
-                            if (time != null && !time.equals(candidate)) return List.of(); // ambiguous message time
+                            if (time != null && !time.equals(candidate)) return List.of();
                             time = candidate;
                         }
                     }
@@ -190,7 +169,7 @@ public class KeepUnsentMessagesHook {
                             if (!use.getField().getTypeName().equals(DTK)) continue;
                             Field candidate = use.getField().getFieldInstance(loader);
                             if (!candidate.getDeclaringClass().isAssignableFrom(decode.getReturnType())) continue;
-                            if (key != null && !key.equals(candidate)) return null; // ambiguous: lend no key
+                            if (key != null && !key.equals(candidate)) return null;
                             key = candidate;
                         }
                     }
@@ -220,10 +199,6 @@ public class KeepUnsentMessagesHook {
                 .declaredClass(table.getName()).returnType("android.content.ContentValues")));
     }
 
-    /** Label the Unsent Messages folder with Instagram's own inbox title for this chat. Before the
-     *  inbox has listed it (a chat opened from a notification), the open chat's own header names
-     *  it. Chats open in ModalActivity, so only the tracker's host window is read, never the
-     *  main activity behind it (that stored the viewer's own handle for every thread). */
     private static void rememberThreadName(String threadId, Activity host) {
         if (threadId == null) return;
         String name = HideChatsHook.knownThreadTitle(threadId);
@@ -232,7 +207,6 @@ public class KeepUnsentMessagesHook {
             return;
         }
         if (host == null) return;
-        // Posted so the header has laid out; it names this chat only while the chat is still open.
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             try {
                 if (!threadId.equals(CurrentThreadTracker.currentThreadId())) return;
@@ -243,9 +217,6 @@ public class KeepUnsentMessagesHook {
         }, 600);
     }
 
-    /** The DM thread header's title (com.instagram.android:id/header_title, which can hold spaces),
-     *  else a handle-like token inside that header. Never a whole-window scan: that picked up
-     *  message words and other chats' names. */
     @SuppressLint("DiscouragedApi")
     private static String findThreadName(Activity a, ViewGroup root) {
         int headerId = a.getResources().getIdentifier("direct_thread_header", "id", a.getPackageName());
@@ -260,8 +231,6 @@ public class KeepUnsentMessagesHook {
         return findHandle(header);
     }
 
-    /** Bounded depth-first scan for a handle-like TextView token (letters/digits/._ with at least
-     *  one letter, so a count or a time is never taken for a name). */
     private static String findHandle(ViewGroup vg) {
         java.util.ArrayDeque<View> stack = new java.util.ArrayDeque<>();
         stack.push(vg);
@@ -282,12 +251,9 @@ public class KeepUnsentMessagesHook {
         return null;
     }
 
-    // Capture from the same native cache used by deletion, before suppressing the operation.
     private void hookRemovePrimitive(ClassLoader classLoader) {
         try {
             int hooked = 0;
-            // Never reuse KeepUnsent_remove: its broad four-argument selector also matched
-            // a visual-message playback update, which is not a deletion event.
             for (Method removal : cachedMethods("KeepUnsent_removal", classLoader, () -> methodsOf(DexKitQueryCache.methods(
                     FindMethod.create().matcher(MethodMatcher.create().usingStrings(REMOVE_ANCHOR).returnType("void")
                             .paramTypes(DTK, "java.lang.Integer", "java.lang.String", "java.lang.String", "boolean"))),
@@ -313,7 +279,6 @@ public class KeepUnsentMessagesHook {
                         lookups.add(method);
                     }
                 }
-                // Both inspected versions expose one server-ID and one client-context query.
                 if (lookups.size() != 2) lookups.clear();
                 Method cacheGetter = entryGetter;
                 Method serverQuery = serverLookup;
@@ -321,7 +286,6 @@ public class KeepUnsentMessagesHook {
                     localRemoval.setAccessible(true);
                     XposedBridge.hookMethod(cacheGetter, new XC_MethodHook() {
                         @Override protected void afterHookedMethod(MethodHookParam param) {
-                            // Runs on every thread-cache lookup: no reflection while the feature is off.
                             if (!FeatureFlags.keepUnsentMessages || param.hasThrowable()
                                     || Boolean.TRUE.equals(clearingLocally.get())) return;
                             rememberNativeThread(param.thisObject, param.args[0], cacheGetter,
@@ -333,10 +297,6 @@ public class KeepUnsentMessagesHook {
                 XposedBridge.hookMethod(removal, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
                         if (Boolean.TRUE.equals(clearingLocally.get())) return;
-                        // Bulk unsend removes the user's own selection on purpose: let Instagram
-                        // remove it and forget anything kept for it (also while the feature is off,
-                        // so a saved copy cannot bring it back later). Otherwise it would stay red
-                        // in the chat and fill the Unsent log.
                         List<String> bulk = bulkUnsendIds(param.args, BulkUnsend::isOwnUnsend);
                         if (!bulk.isEmpty()) {
                             try { releaseBulkUnsend(param.thisObject, param.args[0], cacheGetter, bulk); }
@@ -347,9 +307,6 @@ public class KeepUnsentMessagesHook {
                             return;
                         }
                         if (!FeatureFlags.keepUnsentMessages) return;
-                        // Fail open: Instagram removes the message unless it was captured and is
-                        // kept in the chat. A capture that cannot name its account and thread must
-                        // not leave an unmarked message in the chat that Clear cannot reach.
                         boolean block = false;
                         try {
                             String thread = UnsentIdentity.thread(param.args[0]);
@@ -385,12 +342,10 @@ public class KeepUnsentMessagesHook {
                             if (key != null) {
                                 protectedScopes.add(scope(key.account, key.thread));
                                 block = keepInChat;
-                                // Log-only mode leaves nothing to re-inject or restore.
                                 if (keepInChat && message != null) {
                                     rememberKept(entry, key, message);
                                     saveCopy(key, message, copy);
                                 }
-                                // An empty copy: the encoding failed, so it is only "without text".
                                 markUnsent(message, key, UnsentIdentity.messageIds(message), entry,
                                         copy != null ? copy : new byte[0]);
                                 UnsentIndicatorHook.refreshVisibleRows();
@@ -416,8 +371,6 @@ public class KeepUnsentMessagesHook {
         }
     }
 
-    /** [thread-cache getter, server-ID query, local-only removal]: each is found through the one
-     *  before it, so the list holds as many as resolved, in that order. */
     private static List<Method> nativeParts(ClassLoader loader, Method removal) throws Throwable {
         List<Method> parts = new ArrayList<>();
         MethodData data = DexKitQueryCache.methodData(removal);
@@ -427,7 +380,7 @@ public class KeepUnsentMessagesHook {
             Method candidate = call.getMethodInstance(loader);
             if (candidate.getDeclaringClass() != removal.getDeclaringClass()
                     || candidate.getParameterCount() != 1 || !candidate.getParameterTypes()[0].getName().equals(DTK)) continue;
-            if (entryGetter != null) return parts; // ambiguous thread cache getter
+            if (entryGetter != null) return parts;
             entryGetter = candidate;
         }
         if (entryGetter == null) return parts;
@@ -439,7 +392,7 @@ public class KeepUnsentMessagesHook {
                     || call.getReturnTypeName().equals("void")) continue;
             Method candidate = call.getMethodInstance(loader);
             if (serverLookup != null && serverLookup.getReturnType() != candidate.getReturnType()) {
-                return parts; // ambiguous cached message type
+                return parts;
             }
             serverLookup = candidate;
         }
@@ -450,16 +403,13 @@ public class KeepUnsentMessagesHook {
             if (Modifier.isStatic(candidate.getModifiers()) || candidate.getReturnType() != void.class
                     || !List.of(candidate.getParameterTypes()).equals(List.of(
                     removal.getParameterTypes()[0], String.class, String.class, boolean.class))) continue;
-            if (localRemove != null) return parts; // ambiguous local removal
+            if (localRemove != null) return parts;
             localRemove = candidate;
         }
-        // The shape alone also matches unrelated work (a visual-message viewer method on 439); only
-        // the wrapper that funnels into the hooked removal is Instagram's own local delete.
         if (localRemove != null && invokes(DexKitQueryCache.methodData(localRemove), removal)) parts.add(localRemove);
         return parts;
     }
 
-    /** By name and parameters, so a call through the store's interface counts too. */
     private static boolean invokes(MethodData caller, Method target) {
         List<String> params = new ArrayList<>();
         for (Class<?> type : target.getParameterTypes()) params.add(type.getName());
@@ -485,9 +435,6 @@ public class KeepUnsentMessagesHook {
         return result;
     }
 
-    /** The removal's own String ids (server id and client context) when any of them is a message
-     *  Bulk unsend just unsent; empty otherwise. Only these arguments are compared: Bulk unsend's
-     *  remembered ids also hold timestamp-like Strings that could match unrelated cached fields. */
     static List<String> bulkUnsendIds(Object[] args, Predicate<String> ownUnsend) {
         if (args == null) return Collections.emptyList();
         List<String> ids = new ArrayList<>();
@@ -511,8 +458,6 @@ public class KeepUnsentMessagesHook {
         return expiry != null && now - expiry > EXPIRY_MARGIN_MS;
     }
 
-    /** Drop a bulk-unsent message from what reconcile re-injects, from the removal index and from
-     *  the restart copies; Instagram then removes it like any other own unsend. */
     private static void releaseBulkUnsend(Object store, Object threadKey, Method cacheGetter, List<String> ids) {
         String thread = UnsentIdentity.thread(threadKey);
         String account = UnsentIdentity.account(store);
@@ -599,10 +544,8 @@ public class KeepUnsentMessagesHook {
         return any;
     }
 
-    /** Instagram keeps only each thread's ten newest messages on disk and reloads older history from
-     *  the server, which no longer returns unsent ones; keep a copy in Instagram's own format. */
     private static void saveCopy(Key key, Object message, byte[] copy) {
-        if (copy == null) return; // encodeCopy logged why
+        if (copy == null) return;
         try {
             UnsentMessageStore.save(key.account, key.thread, protectedIds.aliases(key),
                     (long) messageTime.invoke(message), copy);
@@ -611,8 +554,6 @@ public class KeepUnsentMessagesHook {
         }
     }
 
-    /** The message in Instagram's own row format (UTF-8 JSON), or null when the codec or the
-     *  owner's session is unavailable. */
     private static byte[] encodeCopy(Object owner, Object message, Object threadKey) {
         Object table = messageTable(owner);
         if (table == null) {
@@ -627,8 +568,6 @@ public class KeepUnsentMessagesHook {
         }
     }
 
-    /** Messages loaded from the server carry no thread key, and the decoder drops any copy without
-     *  one. Lend the removal's key for the encoding only, as Instagram sets it before saving. */
     private static byte[] encode(Object table, Object message, Object threadKey) throws ReflectiveOperationException {
         synchronized (message) {
             boolean lend = messageThreadKey != null && threadKey != null && messageThreadKey.get(message) == null;
@@ -641,8 +580,6 @@ public class KeepUnsentMessagesHook {
         }
     }
 
-    /** The thread entry's own key, exposed by its metadata object through a no-argument getter.
-     *  Loaded messages often omit their key, so they cannot name the thread themselves. */
     private static String entryThread(Object entry) {
         synchronized (entryThreads) {
             String known = entryThreads.get(entry);
@@ -676,10 +613,6 @@ public class KeepUnsentMessagesHook {
         }
     }
 
-    /** Put saved copies back once the loaded history reaches them, announced like server additions
-     *  so the open chat shows them. Never into a thread or position Instagram has not loaded.
-     *  A later pass drops a restored copy again (the server page lacks it); keep that same object
-     *  and withdraw its removal instead of flickering it out and back in. */
     @SuppressWarnings("unchecked")
     private static void restoreCopies(Object[] args, List<Object> liveList, String account, String thread)
             throws ReflectiveOperationException {
@@ -748,9 +681,6 @@ public class KeepUnsentMessagesHook {
         return grown;
     }
 
-    /** Release only this viewer's retained copies, then use Instagram's local cache/SQLite removal.
-     *  Without that removal only log-only entries may go: a message kept in the chat whose entry
-     *  is cleared would stay there for good as an unmarked ordinary message. */
     public static boolean clearSaved(Context context, String thread) {
         if (thread != null && thread.isEmpty()) return UnsentLog.clearThread(context, thread) != null;
         if (!localClearingAvailable && UnsentLog.hasRetained(context, thread)) return false;
@@ -807,8 +737,6 @@ public class KeepUnsentMessagesHook {
         synchronized void schedule() {
             if (scheduled || !hasCleared(account, thread)) return;
             scheduled = true;
-            // Getter/removal can run under native store locks. Wait until those calls return before
-            // removing anything, and coalesce repeated cache lookups in the same UI turn.
             new Handler(Looper.getMainLooper()).post(() -> {
                 try { purge(); }
                 finally { synchronized (this) { scheduled = false; } }
@@ -832,8 +760,6 @@ public class KeepUnsentMessagesHook {
                         else client = id;
                     }
                     if (server == null && client == null) continue;
-                    // The native wrapper removes from the thread cache and local SQLite, then
-                    // publishes the normal UI delta. It does not send a remote unsend request.
                     remove.invoke(owner, threadKey, server, client, true);
                 }
             } catch (Throwable t) {
@@ -842,11 +768,8 @@ public class KeepUnsentMessagesHook {
         }
     }
 
-    // ── 2. REFRESH/SYNC reconcile: keep protected messages in the live list ──────
     private void hookReconcile(ClassLoader classLoader) {
         XC_MethodHook hook = new XC_MethodHook() {
-            // BEFORE: while the message is still present in the live list (or arriving), cache the
-            // actual message object so we can re-inject it on later passes that no longer carry it.
             @Override
             @SuppressWarnings("unchecked")
             protected void beforeHookedMethod(MethodHookParam param) {
@@ -862,17 +785,12 @@ public class KeepUnsentMessagesHook {
                             Key hit = matchProtected(msg, account, thread);
                             if (hit == null) continue;
                             rememberKept(args[0], hit, msg);
-                            // The entry's session can describe a kept message whose removal was
-                            // captured before its content was cached.
                             markUnsent(msg, hit, UnsentIdentity.messageIds(msg), args[0], null);
                         }
                     }
                 } catch (Throwable ignored) {}
             }
 
-            // AFTER: ensure every cached protected message is present in the live list, and scrub it
-            // from any removed/delta out-list so the removal delta won't fire. Log-only mode keeps
-            // nothing in the chat, so it neither re-injects nor restores.
             @Override
             @SuppressWarnings("unchecked")
             protected void afterHookedMethod(MethodHookParam param) {
@@ -890,7 +808,6 @@ public class KeepUnsentMessagesHook {
                     List<Object> liveList = findLiveList(args);
                     if (!owned.isEmpty() && liveList != null) keepOwned(args, liveList, owned, account, thread);
                     if (saved) learnOrder(liveList, owned.values());
-                    // After the kept messages, so the delta scrub cannot drop a restored addition.
                     restoreCopies(args, liveList, account, thread);
                 } catch (Throwable t) {
                     ModuleLog.warn("(IE|KeepUnsent) Kept messages may disappear from this chat until it is reopened", t);
@@ -900,7 +817,6 @@ public class KeepUnsentMessagesHook {
             @SuppressWarnings("unchecked")
             private void keepOwned(Object[] args, List<Object> liveList, Map<Key, Object> owned,
                                    String account, String thread) {
-                // Scrub this thread's protected messages out of the non-live (delta) lists.
                 for (int i = 1; i < args.length; i++) {
                     if (!(args[i] instanceof List) || args[i] == liveList) continue;
                     Iterator<Object> it = ((List<Object>) args[i]).iterator();
@@ -910,7 +826,6 @@ public class KeepUnsentMessagesHook {
                     }
                 }
 
-                // Re-inject this thread's cached protected messages if missing from its live list.
                 int added = 0;
                 for (Map.Entry<Key, Object> kept : owned.entrySet()) {
                     Key key = kept.getKey();
@@ -937,8 +852,6 @@ public class KeepUnsentMessagesHook {
                     for (Method m : c.getDeclaredMethods()) {
                         if (m.getReturnType() != void.class) continue;
                         Class<?>[] p = m.getParameterTypes();
-                        // A0C: (01gH, List, List, List, List, List) — first param is the declaring class,
-                        // the rest are Lists.
                         if (p.length != 6) continue;
                         if (p[0] != c) continue;
                         boolean rest = true;
@@ -961,8 +874,6 @@ public class KeepUnsentMessagesHook {
         }
     }
 
-    /** The live message list = the List arg that IS a field on the thread entry (args[0]) —
-     *  reconcile rewrites that field in place, so adding to it persists into the store. */
     @SuppressWarnings("unchecked")
     private static List<Object> findLiveList(Object[] args) {
         if (args[0] == null) return null;
@@ -978,8 +889,6 @@ public class KeepUnsentMessagesHook {
         return null;
     }
 
-    /** Opening a chat reconciles only a range, passed as a view of the thread entry's list; the
-     *  entry's list holding the range's messages is the whole loaded history. */
     @SuppressWarnings("unchecked")
     private static List<Object> backingList(Object[] args) {
         if (!(args[1] instanceof List<?> range) || range.isEmpty()) return null;
@@ -1003,9 +912,6 @@ public class KeepUnsentMessagesHook {
         markUnsent(msg, key, knownIds, null, null);
     }
 
-    /** @param owner the thread entry, whose session encodes a message without text to describe it
-     *               (null: never encode); @param copy the message already encoded (empty when that
-     *               failed), or null. */
     private static void markUnsent(Object msg, Key key, List<String> knownIds, Object owner, byte[] copy) {
         if (key == null) return;
         if (UnsentLog.findCleared(key.account, key.thread, knownIds) != null) return;
@@ -1084,9 +990,6 @@ public class KeepUnsentMessagesHook {
         return null;
     }
 
-    /** What a message without text was (a reel, a voice message…), read from Instagram's own
-     *  serialized form. At most one encoding per message, and only while its log entry lacks a
-     *  description: reconcile passes call this for every kept message. */
     private static UnsentDetail describe(Object msg, Key key, List<String> ids, Object owner, byte[] copy) {
         if (described.size() > 1000) described.clear();
         if (copy == null) {

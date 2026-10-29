@@ -11,10 +11,6 @@ import java.util.UUID;
 
 import ps.reso.instaeclipse.mods.media.DataBackup;
 
-/**
- * Picks an InstaEclipse data backup (zip) and sends it to Instagram in pieces
- * (DataBackup.ACTION_RESTORE), where it is put back. Only an Instagram variant can be the target.
- */
 public class DataImportActivity extends Activity {
 
     private static final int PICK = 4321;
@@ -27,7 +23,6 @@ public class DataImportActivity extends Activity {
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
         intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/zip", "application/x-zip-compressed", "application/octet-stream"});
-        // Opens where backups are saved (Download/InstaEclipse).
         intent.putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, android.provider.DocumentsContract.buildDocumentUri(
                 "com.android.externalstorage.documents", "primary:Download/InstaEclipse"));
         startActivityForResult(intent, PICK);

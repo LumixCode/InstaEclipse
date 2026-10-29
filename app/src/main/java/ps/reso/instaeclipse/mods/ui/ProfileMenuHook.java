@@ -41,17 +41,6 @@ import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
-/**
- * Profile ⋮ menu extras: Download all posts (profileMenuTools) and Analyze profile
- * (profileAnalyzer, see ProfileAnalyzer). Copying the username or bio is a hold on them
- * (profileMenuTools, see ProfileTextCopyHook), which reads the bio through {@link #bioOf}.
- *
- * <p>The menu is a plain PopupWindow whose content holds Instagram's context menu
- * (context_menu_start_items). When one opens over a profile, the rows are added, cloned from
- * Instagram's own row so they match it. The username comes from the profile header; the bio from
- * the profile's User model (its "biography" getter, found by the field name's hash like the
- * module's other User getters).
- */
 public final class ProfileMenuHook {
 
     private static final String TAG = "(IE|ProfileMenu) ";
@@ -98,14 +87,10 @@ public final class ProfileMenuHook {
         if (options == 0 || content.findViewById(options) == null) return;
         Activity a = activityOf(content.getContext());
         String username = profileUsername(a);
-        if (username == null) return; // not a profile's menu
+        if (username == null) return;
         inject(pw, content, a, username, 0);
     }
 
-    /**
-     * The menu is a RecyclerView (context_menu_options_list) inside context_menu; its rows exist
-     * only after its first layout, so ours go in, above it, once it has laid out.
-     */
     private static void inject(PopupWindow pw, View content, Activity a, String username, int attempt) {
         try {
             if (!pw.isShowing() && attempt > 0) return;
@@ -113,7 +98,6 @@ public final class ProfileMenuHook {
             View options = content.findViewById(ResIds.id(ctx, "context_menu_options_list"));
             if (!(options instanceof ViewGroup scroller) || !(scroller.getParent() instanceof LinearLayout list)) return;
             if (list.getOrientation() != LinearLayout.VERTICAL) {
-                // context_menu lays its parts side by side; here the list is its only shown part
                 for (int i = 0; i < list.getChildCount(); i++)
                     if (list.getChildAt(i) != scroller && list.getChildAt(i).getVisibility() == View.VISIBLE) return;
                 list.setOrientation(LinearLayout.VERTICAL);
@@ -125,7 +109,6 @@ public final class ProfileMenuHook {
                 return;
             }
 
-            // Our rows and Instagram's list go into one ScrollView, so they scroll together.
             LinearLayout column = new LinearLayout(ctx);
             column.setOrientation(LinearLayout.VERTICAL);
             if (FeatureFlags.profileMenuTools) {
@@ -145,8 +128,6 @@ public final class ProfileMenuHook {
             ViewGroup.LayoutParams old = scroller.getLayoutParams();
             list.removeView(scroller);
             scroller.setNestedScrollingEnabled(false);
-            // Instagram's list keeps a fixed size, so it is laid out once tall enough for every row,
-            // then trimmed to its last row: the ScrollView does all the scrolling.
             column.addView(scroller, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 10_000));
             scroller.post(() -> {
                 View last = scroller.getChildCount() > 0 ? scroller.getChildAt(scroller.getChildCount() - 1) : null;
@@ -163,14 +144,12 @@ public final class ProfileMenuHook {
                     : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.height = fitHeight(content, listHeight, column.getChildCount() * template.getHeight());
             list.addView(sv, at, lp);
-            pw.update(); // the popup measures its new height
+            pw.update();
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "Could not add the extra rows to this menu: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
     }
 
-    /** Height for the rows + list: all of it when it fits on screen, else what is left above the
-     *  screen's bottom (the ScrollView scrolls the rest). */
     private static int fitHeight(View content, int listHeight, int extra) {
         int[] loc = new int[2];
         content.getLocationOnScreen(loc);
@@ -181,7 +160,6 @@ public final class ProfileMenuHook {
         return over <= 0 ? ViewGroup.LayoutParams.WRAP_CONTENT : Math.max(listHeight + extra - over, extra);
     }
 
-    /** x of {@code v} inside {@code ancestor} (layout positions, so the popup's open animation doesn't skew it). */
     private static int leftIn(View v, View ancestor) {
         int x = 0;
         for (View c = v; c != null && c != ancestor; c = c.getParent() instanceof View p ? p : null) x += c.getLeft();
@@ -200,7 +178,6 @@ public final class ProfileMenuHook {
         return UIHookManager.getCurrentActivity();
     }
 
-    /** A row built like Instagram's template row: same padding, background, icon size and text style. */
     private static View row(View template, int iconRes, String label, Runnable action) {
         Context ctx = template.getContext();
         LinearLayout row = new LinearLayout(ctx);
@@ -215,8 +192,6 @@ public final class ProfileMenuHook {
         TextView tplText = firstText(template);
         ImageView tplIcon = firstImage(template);
         int color = tplText != null ? tplText.getCurrentTextColor() : 0xFFFFFFFF;
-        // Instagram's row nests icon and label a few layouts deep; ours places them at the same
-        // on-screen offsets instead of copying each layer's padding.
         int iconX = tplIcon != null ? leftIn(tplIcon, template) : 0;
         int textX = tplText != null ? leftIn(tplText, template) : 0;
         int left = tplIcon != null ? iconX : tplText != null ? textX : template.getPaddingLeft();
@@ -249,15 +224,12 @@ public final class ProfileMenuHook {
         return row;
     }
 
-    /** The open profile's username (its header title), or null when no profile is on screen. */
     public static String profileUsername(Activity a) {
         if (a == null) return null;
         int header = ResIds.id(a, "profile_header_container");
         int title = ResIds.id(a, "action_bar_title");
         int bar = ResIds.id(a, "profile_action_bar");
         if (header == 0 || title == 0) return null;
-        // Profiles stay in the view tree behind other tabs (isShown still true), so both the
-        // header and the profile action bar's title must really be on screen.
         View root = a.getWindow().getDecorView();
         if (onScreen(root, header, 0) == null) return null;
         View t = onScreen(root, title, bar);
@@ -284,7 +256,6 @@ public final class ProfileMenuHook {
         return false;
     }
 
-    /** A view with {@code id} visible on screen, inside a view with {@code ancestorId} if set. */
     private static View onScreen(View root, int id, int ancestorId) {
         java.util.ArrayDeque<View> st = new java.util.ArrayDeque<>();
         st.push(root);
@@ -304,8 +275,6 @@ public final class ProfileMenuHook {
         return false;
     }
 
-    /** The bio from the profile's User model: a User reachable from the shown fragments whose
-     *  username matches the header. Null when the getter, the User or the bio is missing. */
     static String bioOf(Activity a, String username) {
         if (bioGetter == null) return null;
         try {
@@ -316,11 +285,6 @@ public final class ProfileMenuHook {
         }
     }
 
-    /**
-     * Breadth-first from the shown lists' adapters (and the activity) through the Instagram objects
-     * they hold (lists, maps, Kotlin flows, ViewModels), nearest first, for a User with this
-     * username. Instagram's androidx is obfuscated, so fragments can't be listed by name.
-     */
     public static Object findUser(Activity a, String username) {
         Method name = ps.reso.instaeclipse.utils.users.UserUtils.userUsernameGetter;
         if (name == null || a == null) return null;
@@ -439,7 +403,6 @@ public final class ProfileMenuHook {
         return fields;
     }
 
-    // Instagram's androidx classes come from its own class loader, so they are matched by name.
     private static Object call(Object o, String method) {
         try { return o == null ? null : o.getClass().getMethod(method).invoke(o); } catch (Throwable t) { return null; }
     }

@@ -19,17 +19,12 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * Handles Ghost Mode for Direct Messages (DM) in Instagram.
- */
 public class GhostDMSeenHook {
     public void handleSeenBlock() {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
                 if (!SeenPause.blocks(FeatureFlags.isGhostSeen)) return;
-                // Per-chat whitelist (#227): the sender's first String arg is the thread id
-                // ("mark_thread_seen-" + thread_id on 447/451) — let whitelisted chats through.
                 for (Object a : param.args) {
                     if (a instanceof String s) {
                         if (ReadReceiptWhitelist.isAllowed(s)) return;
@@ -40,7 +35,6 @@ public class GhostDMSeenHook {
             }
         };
 
-        // Cache hit — skip DexKit
         if (DexKitCache.isCacheValid()) {
             Method cached = DexKitCache.loadMethod("GhostSeen", Module.hostClassLoader);
             if (cached != null) {
@@ -53,7 +47,6 @@ public class GhostDMSeenHook {
         }
 
         try {
-            // Step 1: Find all methods containing "mark_thread_seen-"
             List<Found> methods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create().usingStrings("mark_thread_seen-")));
 
@@ -67,14 +60,13 @@ public class GhostDMSeenHook {
                 try {
                     reflectMethod = method.getMethodInstance(Module.hostClassLoader);
                 } catch (Throwable e) {
-                    continue; // Skip methods that can't be resolved
+                    continue;
                 }
 
                 int modifiers = reflectMethod.getModifiers();
                 String returnType = method.getReturnTypeName();
                 List<String> paramTypes = method.getParamTypeNames();
 
-                // Step 2: Match: static final void method(?, ?, ?, ...)
                 if (Modifier.isStatic(modifiers)
                         && Modifier.isFinal(modifiers)
                         && returnType.contains("void")

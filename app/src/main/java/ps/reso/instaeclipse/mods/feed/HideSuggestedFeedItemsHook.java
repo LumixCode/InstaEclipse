@@ -24,7 +24,6 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class HideSuggestedFeedItemsHook {
 
-    // v2: the old string-only lookup could cache the wrong class on IG 451 (order-dependent pick).
     private static final String CACHE_KEY_PARSER = "FeedItemParserClass_v2";
     private static final String MEDIA_CLASS = "com.instagram.feed.media.Media";
     private static final String CACHE_KEY_HAS_LIKED = "MediaHasLikedGetter";
@@ -84,13 +83,6 @@ public class HideSuggestedFeedItemsHook {
         }
     }
 
-    /**
-     * The FeedItem parser: the class whose unsafeParseFromJson reads the "clips_netego" unit and
-     * writes the parsed post into a Media field of the FeedItem it builds (IG 451: X.07au building
-     * X.07at; IG 446: X.08qc building X.08qb). Strings alone are ambiguous on 451: "Unknown FeedItem
-     * Type" moved into the FeedItem itself, and clips_netego + media_or_ad also hits a string table
-     * and an enum. So the Media write is required, and exactly one class must match.
-     */
     private static String findFeedItemParser(ClassLoader classLoader) {
         Set<String> classes = new LinkedHashSet<>();
         for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
@@ -101,8 +93,6 @@ public class HideSuggestedFeedItemsHook {
         }
         if (classes.size() == 1) return classes.iterator().next();
         if (classes.isEmpty()) {
-            // The strict query needs the unsafeParseFromJson name; on a build that renamed it,
-            // fall back to the string queries, every match checked for the parser's shape.
             String fallback = findCheckedFeedItemParser(classLoader);
             if (fallback != null) {
                 ModuleLog.detail("(InstaEclipse | HideSuggested): strict FeedItem parser query found nothing, "
@@ -116,10 +106,6 @@ public class HideSuggestedFeedItemsHook {
         return null;
     }
 
-    /**
-     * Fallback lookup by the parser's strings. Other classes use the same strings (on 451 a large
-     * string table, X.0000, matches first), so every match must pass {@link #isFeedItemParser}.
-     */
     private static String findCheckedFeedItemParser(ClassLoader classLoader) {
         String[][] queries = {
                 {"clips_netego", "suggested_users", "Unknown FeedItem Type"},
@@ -134,10 +120,6 @@ public class HideSuggestedFeedItemsHook {
         return null;
     }
 
-    /**
-     * The FeedItem JSON parser: has bridge parse methods and a static serializer
-     * (writer, FeedItem) whose FeedItem declares a Media field.
-     */
     private static boolean isFeedItemParser(String className, ClassLoader classLoader) {
         try {
             Class<?> c = Class.forName(className, false, classLoader);
@@ -214,7 +196,6 @@ public class HideSuggestedFeedItemsHook {
     private void hookBridgeMethod(String className, ClassLoader classLoader, XC_MethodHook hook)
             throws ClassNotFoundException {
         Class<?> clazz = Class.forName(className, false, classLoader);
-        // The filter nulls the parse result, so never on a parser shared through an abstract base.
         if (!HookTargetGuard.ownClass(clazz)) {
             throw new IllegalStateException(className + " is abstract or non-final, not hooked");
         }
@@ -237,11 +218,6 @@ public class HideSuggestedFeedItemsHook {
         }
     }
 
-    // Mark the feature(s) as hooked as soon as the filter is successfully attached, rather
-    // than waiting for a matching feed item to actually be filtered at runtime. The status
-    // toast is built ~1.5s after the main activity's onCreate — whether a suggestion/Threads
-    // unit has scrolled into the feed by then is essentially random, so gating the status on
-    // that produced a false ❌ even when the hook was installed and working correctly.
     private void markHookedForEnabledFlags() {
         if (FeatureFlags.hideSuggestionsInFeed) FeatureStatusTracker.setHooked("HideSuggestionsInFeed");
         if (FeatureFlags.hideThreadsSuggestions) FeatureStatusTracker.setHooked("HideThreadsSuggestions");

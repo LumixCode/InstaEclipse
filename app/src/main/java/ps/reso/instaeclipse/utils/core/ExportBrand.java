@@ -4,11 +4,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-/**
- * InstaEclipse branding shared by every export (chat HTML, comments HTML, follow-list CSV):
- * a banner at the top and a footer at the end of HTML pages, a trailing line in CSV files.
- * Inline styles only, so it looks the same whatever page it is put in.
- */
 public final class ExportBrand {
 
     public static final String NAME = "InstaEclipse";
@@ -19,7 +14,6 @@ public final class ExportBrand {
         return new SimpleDateFormat("d MMM yyyy, HH:mm", Locale.getDefault()).format(new Date());
     }
 
-    /** Top-of-page banner: gradient wordmark + what was exported and when. */
     public static String htmlBanner(String what) {
         return "<div style=\"display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;"
                 + "margin:0 0 14px;padding:12px 16px;border-radius:16px;background:linear-gradient(135deg,#4f5bd5,#962fbf 40%,#d62976 75%,#fa7e1e);"
@@ -34,7 +28,6 @@ public final class ExportBrand {
     public static final String UPSTREAM_OWNER = UPSTREAM.split("/")[3];
     public static final String TELEGRAM = "https://t.me/InstaEclipse";
 
-    /** The Instagram build this release is tested on; "Get APK" opens its APKMirror page. */
     public static final String TESTED_INSTAGRAM = "451.0.0.20.80";
     public static final String TESTED_INSTAGRAM_APK = "https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-"
             + TESTED_INSTAGRAM.replace('.', '-') + "-release/";
@@ -44,7 +37,6 @@ public final class ExportBrand {
     private static final String TELEGRAM_SVG =
             "<svg width=15 height=15 viewBox=\"0 0 24 24\" fill=\"currentColor\" style=\"vertical-align:-2px\"><path d=\"M23.95 2.9 20.3 20.6c-.27 1.22-1 1.52-2.02.95l-5.58-4.12-2.69 2.59c-.3.3-.55.55-1.12.55l.4-5.68L19.6 4.98c.45-.4-.1-.63-.69-.23L5.7 13.03.26 11.33c-1.18-.37-1.2-1.18.25-1.75L22.43 1.2c.98-.37 1.84.22 1.52 1.7z\"/></svg>";
 
-    /** End-of-page footer: gradient wordmark + GitHub / Telegram buttons. */
     public static String htmlFooter() {
         return "<div style=\"margin:30px 0 10px;text-align:center;font:500 12px/1.5 -apple-system,system-ui,Segoe UI,Roboto,sans-serif;color:#8a8a92\">"
                 + "<div style=\"font-weight:800;font-size:16px;letter-spacing:.3px;margin-bottom:10px;"
@@ -57,7 +49,6 @@ public final class ExportBrand {
                 + "Exported " + escape(now()) + "</div>";
     }
 
-    /** A pill link that reads on both light and dark pages (translucent accent fill + accent text). */
     private static String button(String url, String svg, String label) {
         return "<a href=\"" + url + "\" target=_blank rel=noopener style=\"display:inline-flex;align-items:center;gap:7px;"
                 + "padding:8px 16px;border-radius:999px;text-decoration:none;font-weight:700;font-size:13px;"
@@ -65,7 +56,6 @@ public final class ExportBrand {
                 + svg + label + "</a>";
     }
 
-    /** Trailing CSV line (after a blank line, so the data rows stay a clean table). */
     public static String csvFooter() {
         return "\n\"Exported with " + NAME + "\",\"" + now() + "\"\n";
     }

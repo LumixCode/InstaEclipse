@@ -5,11 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * A small JSON reader for the message copies Instagram's own codec writes (UTF-8 JSON text).
- * Objects become maps, arrays lists, numbers doubles. Free of org.json, which plain unit tests
- * lack. Malformed or too deeply nested input throws IllegalArgumentException.
- */
 final class UnsentJson {
     private static final int MAX_DEPTH = 128;
 
@@ -47,7 +42,7 @@ final class UnsentJson {
 
     private Map<String, Object> object(int depth) {
         Map<String, Object> map = new LinkedHashMap<>();
-        i++; // {
+        i++;
         space();
         if (peek() == '}') { i++; return map; }
         while (true) {
@@ -68,7 +63,7 @@ final class UnsentJson {
 
     private List<Object> array(int depth) {
         List<Object> list = new ArrayList<>();
-        i++; // [
+        i++;
         space();
         if (peek() == ']') { i++; return list; }
         while (true) {
@@ -82,7 +77,7 @@ final class UnsentJson {
     }
 
     private String string() {
-        i++; // opening quote
+        i++;
         StringBuilder b = null;
         int start = i;
         while (i < s.length()) {

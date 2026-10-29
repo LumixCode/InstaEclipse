@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import ps.reso.instaeclipse.utils.download.DownloadEngine;
 
-/** Shared file operations, with no host/Xposed dependency. */
 public final class DownloadFiles {
     private static final java.util.regex.Pattern UNSAFE = java.util.regex.Pattern.compile("[^\\p{L}\\p{M}\\p{N} ._-]");
 

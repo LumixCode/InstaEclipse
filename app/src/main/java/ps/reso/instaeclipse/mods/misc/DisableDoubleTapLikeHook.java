@@ -37,13 +37,7 @@ public class DisableDoubleTapLikeHook {
 
     private final Set<String> hookedMethods = new HashSet<>();
 
-    // Feed like methods found via the split anchors (IG 447+), cached as a list.
     private static final String CACHE_FEED_SPLIT = "DoubleTapLikeFeedSplit";
-    // Reel like action (IG 447+): the LikeNavigator.onLikeMedia lambda that picks the source
-    // "DOUBLE_TAP_MEDIA" vs "BUTTON", runs the heart animation, updates local like state, marks
-    // "LIKE_FIRED" and sends the like (X.0C6G.invoke on 452, X.0AxE on 451, X.0Hol on 447).
-    // Reel double-taps reach it from the clips GestureDetector listener's onDoubleTap, so the
-    // stack-gated HOOK blocks only double-tap likes; the like button (no onDoubleTap frame) works.
     private static final String CACHE_REELS_LIKE = "DoubleTapLikeReelsLike";
     private static final String CACHE_BOUND_ACTION = "DoubleTapLikeBoundAction";
 
@@ -73,8 +67,6 @@ public class DisableDoubleTapLikeHook {
 
     public void install(ClassLoader classLoader) {
         boolean cachedFeedHooked = false;
-        // Prefer the proven action boundary: suppressing the gesture callback itself can
-        // also swallow native skip/forward actions and gesture bookkeeping.
         boolean cachedReelsHooked = installReelsLikeAction(classLoader);
         if (DexKitCache.isCacheValid()) {
             Method reelsCached = DexKitCache.loadMethod("DoubleTapLikeReels", classLoader);
@@ -208,7 +200,6 @@ public class DisableDoubleTapLikeHook {
                     ? DexKitCache.loadMethods(CACHE_BOUND_ACTION, loader) : null;
             if (proof == null || proof.size() != 4 || LikeActionBinding.create(proof.get(0),
                     proof.get(1), proof.get(2), proof.subList(3, 4)) == null) {
-                // A negative result is version-scoped by DexKitCache, just like method entries.
                 if (DexKitCache.isCacheValid() && "absent".equals(DexKitCache.loadString(CACHE_BOUND_ACTION)))
                     return false;
                 List<Found> setters = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
@@ -253,8 +244,6 @@ public class DisableDoubleTapLikeHook {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
                         if (callbacks.shouldBlock(FeatureFlags.disableDoubleTapLike, param.thisObject,
                                 param.args, () -> Thread.currentThread().getStackTrace())) {
-                            // The proven void dispatcher discards the result. Other cases of
-                            // this merged lambda and native gesture side effects stay intact.
                             param.setResult(null);
                         }
                     }
@@ -273,7 +262,6 @@ public class DisableDoubleTapLikeHook {
         }
     }
 
-    /** Pure reflection checks, shared by discovery and regression fixtures. */
     static final class LikeActionBinding {
         static LikeActionBinding create(Method setter, Method dispatcher, Method action, List<Method> invokes) {
             if (setter == null || dispatcher == null || action == null || invokes == null) return null;
@@ -302,7 +290,6 @@ public class DisableDoubleTapLikeHook {
         }
     }
 
-    /** Identity-scoped because one merged lambda class implements many unrelated actions. */
     static final class BoundLikeCallbacks {
         private final List<WeakReference<Object>> bound = new ArrayList<>();
         private final String dispatcherClass;

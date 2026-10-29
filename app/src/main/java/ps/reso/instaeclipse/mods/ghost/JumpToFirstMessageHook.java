@@ -28,22 +28,12 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.IePalette;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 
-/**
- * Jump to the first message of a DM thread (#244).
- *
- * A header button (next to IG's right-side action buttons) keeps scrolling the thread's message
- * list up. IG loads older pages itself when the list nears its oldest end, so we only stop once
- * the list can't scroll further up and has stopped growing for a while. UI-only: no IG internals,
- * just the RecyclerView (by class name) and View scrolling. Tap again, or scroll the list, to stop.
- */
 public class JumpToFirstMessageHook {
 
     public static final String CHIP_TAG = "ie_jump_first_chip";
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static int threadHeaderId;
     private static volatile Run running;
-    // The user's own jump: its activity and message list, and where a touch on the list started.
-    // Fed by ThreadHeaderMenu's startup dispatchTouchEvent hook (main thread); never a runtime hook.
     private static WeakReference<Activity> watchedActivity = new WeakReference<>(null);
     private static WeakReference<View> watchedList = new WeakReference<>(null);
     private static float downY = Float.NaN;
@@ -55,7 +45,6 @@ public class JumpToFirstMessageHook {
     }
 
     @SuppressLint("DiscouragedApi")
-    /** Returns true once the button is in the header (or can't be placed in this screen). */
     static boolean inject(Activity a) {
         try {
             if (threadHeaderId == 0) {
@@ -85,9 +74,6 @@ public class JumpToFirstMessageHook {
         run(a, UnsentThreadButtonHook.openChat(a), null);
     }
 
-    /** Scrolls to the first message; {@code onDone} runs once it's reached (or the list is
-     *  missing / the 5 min cap hits), not when the user stops it. Tapping again stops; scrolling
-     *  the list stops only a jump without {@code onDone}. */
     static void run(Activity a, String thread, Consumer<String> onDone) {
         JumpRunPolicy.Request request = JumpRunPolicy.request(running != null, onDone != null);
         if (request == JumpRunPolicy.Request.STOP) {
@@ -163,7 +149,6 @@ public class JumpToFirstMessageHook {
         }
     }
 
-    /** Stops the jump in progress (tap again, or the user scrolled); its onDone does not run. */
     private static void stop(Activity a) {
         if (!cancel()) return;
         toast(a, R.string.ig_jump_first_stopped_loading);
@@ -190,7 +175,6 @@ public class JumpToFirstMessageHook {
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(a, I18n.t(a, text), Toast.LENGTH_SHORT).show();
     }
 
-    /** A drag on {@code list} in {@code a} stops this jump (see {@link #onTouch}). */
     private static void watchDrags(Activity a, View list) {
         dragSlop = ViewConfiguration.get(a).getScaledTouchSlop() * 2;
         downY = Float.NaN;
@@ -198,13 +182,6 @@ public class JumpToFirstMessageHook {
         watchedList = new WeakReference<>(list);
     }
 
-    /**
-     * Every touch of Instagram's activities, from ThreadHeaderMenu's dispatchTouchEvent hook
-     * (installed once at startup: hooking it per jump is the runtime hooking that corrupted the
-     * heap on LSPatch 1.2). A drag on the message list stops the jump: the user took over the
-     * scrolling. Either way counts, as "scroll down" can mean the finger or the content. The
-     * jump's own scrollBy never goes through touch dispatch, so it can't trip this.
-     */
     static void onTouch(Activity a, MotionEvent e) {
         if (running == null || watchedActivity.get() != a) return;
         View list = watchedList.get();
@@ -281,7 +258,6 @@ public class JumpToFirstMessageHook {
         return findMessageList(root);
     }
 
-    /** The tallest visible RecyclerView below the thread header = the message list. */
     private static View findMessageList(View root) {
         View best = null;
         java.util.ArrayDeque<View> st = new java.util.ArrayDeque<>();

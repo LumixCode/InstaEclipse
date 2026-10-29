@@ -104,12 +104,8 @@ public class FollowListExportHook {
 
     private static Class<?> fragClass;
 
-    /** Live list fragments → their root view (followers / following / mutual tabs each have one).
-     *  The root is held weakly: it reaches its own fragment (view-tree lifecycle owner tag), so a
-     *  strong value would keep every fragment, its views and its Activity alive forever. */
     private static final Map<Object, java.lang.ref.WeakReference<View>> live = Collections.synchronizedMap(new java.util.WeakHashMap<>());
 
-    /** Every live list fragment with its root view: {fragment, root}. */
     static List<Object[]> liveLists() {
         List<Object[]> out = new ArrayList<>();
         synchronized (live) {
@@ -121,8 +117,6 @@ public class FollowListExportHook {
         return out;
     }
 
-    /** The tab whose list is on screen right now. The tab pager keeps neighbouring tabs attached
-     *  (isShown() is true for them too), so take the one with the largest on-screen area. */
     static Object[] visibleList() {
         Object[] best = null;
         long bestArea = 0;
@@ -136,9 +130,6 @@ public class FollowListExportHook {
         return best;
     }
 
-    // ---- Export CSV ----
-
-    /** Export CSV: loads the list to the end, then writes it. */
     static void exportList(View root, Object frag) {
         ListInfo info = listInfo(frag);
         String type = info != null && info.type != null ? info.type : FOLLOWERS;
@@ -151,7 +142,6 @@ public class FollowListExportHook {
     private static void export(View root, FollowListLoader.Result r, String type, String owner) {
         Activity act = ps.reso.instaeclipse.mods.ui.UIHookManager.getCurrentActivity();
         android.content.Context ctx = act != null ? act : root.getContext();
-        // Instagram refused the load (rate limit, challenge, action block): say so, save nothing
         if (r.blocked != null) {
             ModuleLog.warn(TAG + "Export stopped: Instagram blocked loading the list (" + r.blocked.kind + "), nothing was saved");
             FollowListLoader.showBlocked(ctx, r.blocked);
@@ -162,12 +152,10 @@ public class FollowListExportHook {
             return;
         }
         String file = CsvCells.fileName(owner, type, System.currentTimeMillis());
-        // a list Instagram flagged as limited: the toast says so
         String note = r.limited ? I18n.t(ctx, R.string.ig_pa_limited_note, ProfileAnalyzer.label(ctx, type)) : null;
         new Thread(() -> writeCsv(ctx, r.users, file, note)).start();
     }
 
-    /** {@code users}: id → {username, full name}; {@code note}: a line added to the done toast, or null. */
     private static void writeCsv(android.content.Context ctx, Map<String, String[]> users, String file, String note) {
         Handler main = new Handler(Looper.getMainLooper());
         java.util.function.Consumer<Throwable> failed = t -> {
@@ -239,20 +227,15 @@ public class FollowListExportHook {
         return bytes;
     }
 
-    // ---- Whose list, which tab (Profile analyzer) ----
-
     static final String FOLLOWERS = "FOLLOWERS", FOLLOWING = "FOLLOWING";
 
-    /** A list fragment's arguments: the logged-in user, the profile whose list it is, and the tab. */
     static final class ListInfo {
-        String self;      // logged-in user id (from the session token argument)
-        String owner;     // the profile whose list this is (FollowListData's numeric String)
-        String type;      // FOLLOWERS / FOLLOWING, or null for other tabs (mutual, suggested, …)
-        String username;  // the profile's username when IG passes it
+        String self;
+        String owner;
+        String type;
+        String username;
     }
 
-    /** What {@code frag} lists, from its FollowListFragment.FollowListData argument (IG's list-type
-     *  enum keeps its constant names; its String fields hold the profile's id). */
     static ListInfo listInfo(Object frag) {
         try {
             android.os.Bundle b = (android.os.Bundle) frag.getClass().getMethod("getArguments").invoke(frag);
@@ -283,11 +266,6 @@ public class FollowListExportHook {
         }
     }
 
-    /**
-     * The follow list screen around {@code frag}: its parent UnifiedFollowFragment keeps its tabs
-     * (IG's list-type enum, constant names kept) in a List and its ViewPager2 in the "viewPager"
-     * field. {ViewPager2, tabs}, or null when {@code frag} isn't a tab of that screen.
-     */
     static Object[] tabsOf(Object frag) {
         try {
             Object parent = null;
@@ -317,8 +295,6 @@ public class FollowListExportHook {
         }
     }
 
-    /** Shows {@code type}'s tab of the follow list screen that holds {@code frag}; false when the
-     *  screen doesn't have that tab. */
     static boolean showTab(Object frag, String type) {
         try {
             Object[] t = tabsOf(frag);
@@ -347,7 +323,6 @@ public class FollowListExportHook {
         return tab;
     }
 
-    /** Your user id when {@code frag} is your own Followers tab, else null. */
     static String ownFollowersOf(Object frag) {
         try {
             android.os.Bundle b = (android.os.Bundle) frag.getClass().getMethod("getArguments").invoke(frag);

@@ -15,17 +15,6 @@ import androidx.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Lives in the companion app. Instagram -> companion settings sync: the hooked Instagram process
- * calls {@link #METHOD_PUSH} with its settings (and their {@code __igts_} / {@code __applied_}
- * stamps) at startup and after every change made in its own menu, and the companion's
- * {@code instaeclipse_cache} is updated per {@link PrefsMerge} (newer change wins). The reply
- * carries the companion's still-pending changes ({@link PrefsMerge#pending}) the other way.
- *
- * <p>Unlike the {@code ACTION_REQUEST_PREFS} round trip, this works when the companion is not
- * running (the call starts it) and doesn't depend on Instagram being alive and unfrozen when the
- * companion opens. Only supported Instagram packages may call it (uid checked via the binder).
- */
 public class PrefsSyncProvider extends ContentProvider {
 
     public static final String AUTHORITY = CommonUtils.MY_PACKAGE_NAME + ".prefsync";
@@ -75,8 +64,6 @@ public class PrefsSyncProvider extends ContentProvider {
         }
         Bundle result = new Bundle();
         result.putInt(RESULT_UPDATED, updated);
-        // Companion changes Instagram never received (it wasn't running, and it usually can't read
-        // this cache through XSharedPreferences): hand them back for CompanionSync to apply.
         for (Map.Entry<String, Object> p : pending.entrySet()) {
             Object v = p.getValue();
             if (v instanceof Long) result.putLong(p.getKey(), (Long) v);

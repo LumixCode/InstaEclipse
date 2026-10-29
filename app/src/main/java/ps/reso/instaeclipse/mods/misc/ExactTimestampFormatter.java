@@ -11,7 +11,6 @@ import java.util.function.BiFunction;
 
 import ps.reso.instaeclipse.utils.text.TimestampFormat;
 
-/** The host's absolute timestamp formatters accept epoch seconds, including their long overloads. */
 public final class ExactTimestampFormatter {
     private static final int FORMATS_PER_THREAD = 4;
     private static volatile PatternMemo lastPattern, lastTimePattern;
@@ -50,11 +49,6 @@ public final class ExactTimestampFormatter {
         return use24HourClock ? "Hms" : "hms";
     }
 
-    /**
-     * The pattern for post, comment and story dates: the user's "Date format" setting when it is
-     * set and valid, otherwise {@code best}, the device's pattern for {@link #skeleton}. The DM
-     * swipe time keeps its time-only skeleton and never uses this.
-     */
     static String pattern(String custom, Locale locale, boolean use24HourClock, BiFunction<Locale, String, String> best) {
         PatternMemo memo = lastPattern;
         if (memo != null && memo.matches(custom, locale, use24HourClock)) return memo.pattern;
@@ -73,8 +67,6 @@ public final class ExactTimestampFormatter {
     }
 
     static long epochSecondsToMillis(double seconds) {
-        // Reject missing timestamps and contemporary millisecond inputs rather than
-        // displaying a misleading date. Instagram cannot contain dates beyond year 9999.
         if (!Double.isFinite(seconds) || seconds <= 0 || seconds > 253402300799D) return -1;
         return (long) (seconds * 1000D);
     }

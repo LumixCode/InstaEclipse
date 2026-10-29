@@ -19,16 +19,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * "Airplane mode": keeps Instagram's realtime (MQTT) connection down while the feed, profiles and
- * other REST browsing keep working. With MQTT down there is no presence ("active now"), no typing
- * or live seen events and no in-app incoming calls; DMs are neither pushed in nor sent live.
- *
- * <p>{@code RealtimeClientManager} keeps its method names: {@code startMqttClient} is skipped
- * while the mode is on, and {@link #apply} stops or restarts every live manager the moment the
- * toggle changes in the Instagram menu, so no restart is needed. Incoming realtime events are
- * dropped too.
- */
 public class AirplaneModeHook {
 
     private static final String TAG = "(InstaEclipse | Airplane): ";
@@ -137,7 +127,6 @@ public class AirplaneModeHook {
         return AndroidAppHelper.currentApplication();
     }
 
-    /** Applies the current {@link FeatureFlags#airplaneMode} to every live realtime manager. */
     public static void apply() {
         if (FeatureFlags.airplaneMode) {
             GATE.switchedOn();

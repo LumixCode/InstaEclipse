@@ -10,7 +10,6 @@ import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-/** Gives the native timestamp its own wrapping row without replacing the view or its actions. */
 final class StoryTimestampLayout {
     private final Map<TextView, OriginalLayout> originals = new WeakHashMap<>();
 
@@ -69,7 +68,6 @@ final class StoryTimestampLayout {
             restoreTextConstraints(view);
             LinearLayout originalRow = row.get();
             LinearLayout currentContainer = container.get();
-            // Do not undo a host-driven move when a holder is repurposed during recycling.
             if (originalRow == null || currentContainer == null || view.getParent() != currentContainer
                     || originalRow.getParent() != currentContainer) return;
             currentContainer.removeView(view);

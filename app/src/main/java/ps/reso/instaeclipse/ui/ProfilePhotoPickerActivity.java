@@ -13,12 +13,6 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.core.CompanionSettings;
 import ps.reso.instaeclipse.utils.profile.SpoofAvatar;
 
-/**
- * Profile spoofer: picks the picture for your own profile when asked from Instagram's menu
- * (Instagram's process can't open a picker for the module). No UI of its own: opens the system
- * picker, stores the picture (SpoofAvatar) as the spoofAvatar setting, sends it to Instagram and
- * closes.
- */
 public class ProfilePhotoPickerActivity extends Activity {
 
     private static final int PICK = 1;
@@ -26,7 +20,7 @@ public class ProfilePhotoPickerActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (savedInstanceState != null) return; // picker already open (recreated)
+        if (savedInstanceState != null) return;
         try {
             startActivityForResult(new ActivityResultContracts.PickVisualMedia().createIntent(this,
                     new PickVisualMediaRequest.Builder()
@@ -58,7 +52,6 @@ public class ProfilePhotoPickerActivity extends Activity {
         }, "IE-ProfilePhoto").start();
     }
 
-    /** Stores the picture in the companion's settings and sends it to Instagram. */
     public static void save(android.content.Context context, String b64) {
         CompanionSettings.put(context, "spoofAvatar", b64);
     }

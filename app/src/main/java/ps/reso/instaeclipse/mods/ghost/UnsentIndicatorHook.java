@@ -34,7 +34,6 @@ import ps.reso.instaeclipse.utils.ghost.UnsentMessageIndex.Key;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/** Marks retained messages without changing their text, copy actions or send payloads. */
 final class UnsentIndicatorHook {
     private static final Map<View, Row> rows = new WeakHashMap<>();
     private static final RowListeners<View, ViewTreeObserver.OnPreDrawListener> preDraw = new RowListeners<>(
@@ -114,7 +113,6 @@ final class UnsentIndicatorHook {
                 installed++;
             }
             if (installed > 0 && bubbleInstalled) FeatureStatusTracker.setHooked("UnsentIndicator");
-            // Same condition FeatureManager registers the feature under.
             else if (FeatureFlags.showUnsentIndicator && FeatureFlags.keepUnsentMessages)
                 FeatureStatusTracker.setBroken("UnsentIndicator");
             ModuleLog.line("(IE|UnsentIndicator) " + (installed > 0 && bubbleInstalled ? "✅ ready"
@@ -127,10 +125,6 @@ final class UnsentIndicatorHook {
         }
     }
 
-    /**
-     * The DM adapter's (holder, position) bind. 446 logs the unseen-message impression inside it;
-     * 451 moved that logging into a row helper the bind calls, so the bind is the anchor or its caller.
-     */
     private static List<Method> findBinders(ClassLoader loader) throws NoSuchMethodException {
         Set<Method> binders = new LinkedHashSet<>();
         for (Found anchor : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
@@ -149,7 +143,6 @@ final class UnsentIndicatorHook {
                 && types.size() == 2 && types.get(1).equals("int");
     }
 
-    /** The row root: RecyclerView's holder base owns the only instance View field (451 binds a subclass). */
     private static Field rowView(Class<?> holder) {
         Field found = null;
         for (Class<?> cls = holder; cls != null && cls != Object.class; cls = cls.getSuperclass()) {
@@ -177,12 +170,6 @@ final class UnsentIndicatorHook {
         return null;
     }
 
-    /**
-     * One pre-draw listener per recycled row view, always serving the message bound to it now.
-     * A listener per message outlived its binding: RecyclerView rebinds detached views, whose
-     * getViewTreeObserver() is a fresh floating observer, so removal missed and the previous
-     * message kept re-marking whichever message the view showed next.
-     */
     private static void observe(View view) {
         if (preDraw.tracks(view)) return;
         java.lang.ref.WeakReference<View> reference = new java.lang.ref.WeakReference<>(view);
@@ -239,8 +226,6 @@ final class UnsentIndicatorHook {
             long removals = KeepUnsentMessagesHook.protectedIds.revision();
             long logged = UnsentLog.revision();
             boolean changed = removals != observedRemovals || logged != observedLog || enabled != wasEnabled;
-            // A pending message can acquire a server ID without another removal or row bind.
-            // Keep the old client alias too, so the persisted deletion still matches after restart.
             boolean identityChanged = false;
             if (deleted || changed) {
                 Object identifier = UnsentIdentity.identifier(message.get());
@@ -261,7 +246,6 @@ final class UnsentIndicatorHook {
             }
             boolean show = enabled && deleted;
             bubbles.setMarked(view, show, ids);
-            // Compose media Instagram already draws red (UnsentBubbleHook) needs no second mark.
             if (mediaMark != null) mediaMark.update(show && !bubbles.marksMedia(view));
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 if (show && markedDescription == null) {

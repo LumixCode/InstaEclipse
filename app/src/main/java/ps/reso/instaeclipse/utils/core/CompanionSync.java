@@ -20,24 +20,6 @@ import ps.reso.instaeclipse.Xposed.SettingsEvents;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.media.StoryCacheRetention;
 
-/**
- * Instagram side of the settings sync. Instagram -> companion: {@link #pushAsync}. The rest of
- * this class is the companion -> Instagram half, for changes the live broadcast
- * missed: Instagram was not running, or was frozen in the background when the companion sent
- * them.
- *
- * <p>The companion stamps every setting it sends with {@code __ts_<key>} in its
- * {@code instaeclipse_cache} prefs (see {@link CommonUtils#broadcastToInstagram}), which the
- * hooked app reads through the framework's remote preferences (libxposed API 102, see
- * {@link RemotePrefsMirror}) where it can, and otherwise gets back as the pending values in the
- * companion provider's reply to every {@link #pushAsync} (embedded LSPatch, companion not bound).
- * Only values that match a known setting's type ({@link ps.reso.instaeclipse.utils.ipc.ModuleReplies#isPreferenceValue})
- * are applied. On startup and whenever an activity resumes,
- * a companion value is applied when its stamp is newer than both the last companion value
- * applied for that key ({@code __applied_<key>}) and the last change made to that key from
- * inside Instagram ({@code __igts_<key>}, written by {@link SettingsManager#saveAllFlags}), so an
- * older companion value never overwrites a newer in-app change.
- */
 public final class CompanionSync {
 
     static final String TS = "__ts_";
@@ -60,10 +42,6 @@ public final class CompanionSync {
 
     private CompanionSync() {}
 
-    /**
-     * Pull on a background thread (activity resume). The live side effects the broadcast receiver
-     * runs (theme repaint, chat buttons, airplane mode...) follow on the main thread.
-     */
     public static void pullAsync(Context context) {
         Context app = context.getApplicationContext() != null ? context.getApplicationContext() : context;
         WORKER.execute(() -> {
@@ -73,10 +51,6 @@ public final class CompanionSync {
         });
     }
 
-    /**
-     * Applies newer companion settings at startup; returns true when something changed. No live
-     * side effects: nothing is on screen yet and the hooks install after this.
-     */
     public static boolean pull(Context context) {
         int applied = applyNewer(context, true).size();
         startupApplied += applied;
@@ -98,18 +72,14 @@ public final class CompanionSync {
         startupApplied = 0;
     }
 
-    /** Applies newer companion settings; returns the keys it applied. */
     static synchronized List<String> applyNewer(Context context, boolean startup) {
         long now = clock.getAsLong();
         if (!THROTTLE.due(now)) return new ArrayList<>();
         try {
-            // Small, throttled, off the main thread: always re-read.
             Map<String, ?> all = remote.get();
             THROTTLE.read(now, all.isEmpty());
             if (startup && !all.isEmpty()) remoteAvailable = true;
             if (all.isEmpty() && !emptyLogged) {
-                // Remote preferences unavailable (LSPatch local mode, companion not bound yet):
-                // only the provider reply in push() brings companion changes back then.
                 emptyLogged = true;
                 ModuleLog.detail("(InstaEclipse) Sync: companion remote preferences empty or unavailable");
             }
@@ -122,10 +92,6 @@ public final class CompanionSync {
         }
     }
 
-    /**
-     * Applies the companion values in {@code all} (settings plus their {@code __ts_} stamps) that
-     * are newer than anything Instagram applied or changed itself; returns the keys it applied.
-     */
     private static List<String> applyFrom(Context context, Map<String, ?> all) {
         if (all == null || all.isEmpty()) return new ArrayList<>();
         try {
@@ -233,13 +199,6 @@ public final class CompanionSync {
         return v instanceof Long ? (Long) v : 0L;
     }
 
-    /**
-     * Instagram -> companion: pushes Instagram's settings (with their __igts_ / __applied_
-     * stamps) to the companion's {@link PrefsSyncProvider}, which keeps any newer companion
-     * change (see {@link PrefsMerge}). Called at startup and after every in-app change, so the
-     * companion shows the same values without having to reach a live Instagram process.
-     * Back-to-back requests are coalesced into one push.
-     */
     public static void pushAsync(Context context) {
         pusher.accept(context);
     }
@@ -282,8 +241,6 @@ public final class CompanionSync {
                     .call(PrefsSyncProvider.URI, PrefsSyncProvider.METHOD_PUSH, null, b);
             int n = r != null ? r.getInt(PrefsSyncProvider.RESULT_UPDATED, 0) : 0;
             if (n > 0) ModuleLog.line("(InstaEclipse) Sync: updated " + n + " setting(s) in the companion app");
-            // The reply carries companion changes made while Instagram wasn't running. The pull
-            // can't see them when the framework has no remote preferences (embedded LSPatch).
             if (r == null || r.size() <= 1) return;
             Map<String, Object> pending = new java.util.HashMap<>();
             for (String k : r.keySet()) {
@@ -293,17 +250,10 @@ public final class CompanionSync {
             if (applied.isEmpty()) return;
             new Handler(Looper.getMainLooper()).post(() -> SettingsEvents.afterChange(applied));
         } catch (Throwable t) {
-            // Companion not installed / too old (no provider): the ACTION_REQUEST_PREFS reply
-            // still syncs when the companion is opened while Instagram is running.
             ModuleLog.detail("(InstaEclipse) Sync: companion push failed: " + t);
         }
     }
 
-    /**
-     * Settings are taken from the provider only when its app is the real companion: the same
-     * bar the sync broadcast receiver sets (holding the permission proves nothing when the
-     * companion is absent, since any app can then declare it).
-     */
     private static boolean isCompanionProvider(Context context) {
         android.content.pm.PackageManager pm = context.getPackageManager();
         android.content.pm.ProviderInfo pi = pm.resolveContentProvider(PrefsSyncProvider.AUTHORITY, 0);
@@ -311,7 +261,6 @@ public final class CompanionSync {
                 && IpcSecurity.isCompanionPermission(context);
     }
 
-    /** Live broadcast applied: remember its stamp so the next pull doesn't apply it again. */
     public static void markApplied(Context context, String key, long ts) {
         if (key == null || ts <= 0) return;
         context.getSharedPreferences("instaeclipse_prefs", Context.MODE_PRIVATE)

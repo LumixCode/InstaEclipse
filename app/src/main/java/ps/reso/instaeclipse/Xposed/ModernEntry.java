@@ -9,10 +9,6 @@ import ps.reso.instaeclipse.xposedcompat.ModernBackend;
 import ps.reso.instaeclipse.xposedcompat.XC_LoadPackage;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
-/**
- * Entry for libxposed API 101/102 frameworks (Vector 2.2+), listed in
- * META-INF/xposed/java_init.list. Runs the same {@link Module} bootstrap as {@link LegacyEntry}.
- */
 public class ModernEntry extends XposedModule {
 
     private final Module module = new Module();

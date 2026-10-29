@@ -10,11 +10,6 @@ import android.widget.Toast;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.media.ShareLinkDownloadHook;
 
-/**
- * "Download with InstaEclipse" in the Android share sheet (#236): takes a shared Instagram
- * post/reel link and opens it in Instagram with a marker; the module (running in Instagram)
- * then saves the media and sends Instagram back to the background. No UI of its own.
- */
 public class ShareDownloadActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {

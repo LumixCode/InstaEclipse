@@ -1,6 +1,5 @@
 package ps.reso.instaeclipse.utils.media;
 
-/** Local retention starts when a story is captured, independently of Instagram's expiry. */
 public final class StoryCacheRetention {
     public static final int DEFAULT_HOURS = 24;
     public static final int MIN_HOURS = 1;
@@ -23,7 +22,6 @@ public final class StoryCacheRetention {
 
     public static boolean expired(long capturedAt, long now, int hours) {
         if (capturedAt <= 0) return true;
-        // Wall-clock corrections must not expire a newly captured story or overflow its age.
         return now >= capturedAt && now - capturedAt >= durationMillis(hours);
     }
 }

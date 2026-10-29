@@ -8,15 +8,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * What an unsent message without text was ("Reel by @user", "Voice message · 0:29", "Sticker"),
- * read from the JSON Instagram's own message codec writes (the format of the restart copies).
- * Key names are Instagram's server field names (item_type, voice_media, clip, xma…), which
- * survive the obfuscation of the model classes. Only the message's own top-level payload counts:
- * a replied-to or forwarded message never describes its parent.
- *
- * The unsent log stores kind + user + duration + extra, so the label follows the UI language.
- */
 public final class UnsentDetail {
 
     public enum Kind {
@@ -29,7 +20,6 @@ public final class UnsentDetail {
         PRODUCT("product"), POLL("poll"), NOTE_REPLY("note_reply"), UNAVAILABLE("unavailable"),
         ACTIVITY("activity"), SHARED("shared");
 
-        /** Stored in the log; never rename one. */
         public final String id;
 
         Kind(String id) { this.id = id; }
@@ -40,34 +30,26 @@ public final class UnsentDetail {
         }
     }
 
-    /** Names {@code kind} in the UI language, with {@code user} (a handle without "@") when it is
-     *  given and the kind has a form that names its owner. */
     public interface Labels { String name(Kind kind, String user); }
 
-    /** The message was captured and had no text, but its kind could not be read. */
     public static final UnsentDetail NO_TEXT = new UnsentDetail(Kind.NO_TEXT, null, 0, null);
 
     static final int MAX_EXTRA = 80;
     static final int MAX_TEXT = 2000;
     private static final Pattern HANDLE = Pattern.compile("[a-z0-9._]{1,30}");
     private static final Pattern URL = Pattern.compile("(?i)\\b(?:https?://|www\\.)\\S+");
-    // First path segments of instagram.com links that are not a profile.
     private static final Set<String> NOT_PROFILES = Set.of("p", "reel", "reels", "stories", "tv", "explore",
             "direct", "accounts", "about", "legal", "web", "s", "share", "music", "audio", "locations");
 
     public final Kind kind;
-    /** Owner handle without "@", or null. */
     public final String user;
-    /** Play length in ms, 0 when unknown or not media. */
     public final long durationMs;
-    /** The message's own words, a link's host, a place, an emoji…, or null. */
     public final String extra;
 
     private UnsentDetail(Kind kind, String user, long durationMs, String extra) {
         this.kind = kind; this.user = user; this.durationMs = durationMs; this.extra = extra;
     }
 
-    /** A stored detail; null when its kind is unknown to this build. */
     public static UnsentDetail of(String kindId, String user, long durationMs, String extra) {
         Kind kind = Kind.of(kindId);
         return kind == null ? null : make(kind, user, durationMs, extra);
@@ -80,7 +62,6 @@ public final class UnsentDetail {
         return new UnsentDetail(kind, handle(user), Math.max(0, durationMs), words);
     }
 
-    /** "Reel by @user", "Voice message · 0:29", "Link: example.com"; a TEXT detail is its text. */
     public String format(Labels labels) {
         StringBuilder b = new StringBuilder();
         if (kind != Kind.TEXT) b.append(labels.name(kind, user));
@@ -89,7 +70,6 @@ public final class UnsentDetail {
         return b.toString();
     }
 
-    /** m:ss, or h:mm:ss from one hour; a clip shorter than a second shows as 0:01. */
     public static String duration(long ms) {
         long total = Math.max(1, Math.round(ms / 1000.0));
         long h = total / 3600, m = total % 3600 / 60, s = total % 60;
@@ -97,8 +77,6 @@ public final class UnsentDetail {
                 : String.format(Locale.ROOT, "%d:%02d", m, s);
     }
 
-    /** The detail of a message serialized by Instagram's codec, or null when it is unreadable or
-     *  its payload is unknown. Never throws. */
     public static UnsentDetail fromMessageJson(String json) {
         try {
             return UnsentJson.parse(json) instanceof Map<?, ?> message ? describe(message) : null;
@@ -113,7 +91,6 @@ public final class UnsentDetail {
         return detail != null ? detail : byPayload(m);
     }
 
-    /** Instagram writes the content type's server name; enum-style names are accepted too. */
     private static String itemType(Map<?, ?> m) {
         String type = str(m, "item_type");
         if (type == null) return null;
@@ -173,7 +150,6 @@ public final class UnsentDetail {
         }
     }
 
-    /** No (known) item_type: the payload the message carries decides. */
     private static UnsentDetail byPayload(Map<?, ?> m) {
         if (obj(m, "voice_media") != null) return voice(m);
         if (obj(m, "clip") != null) return clip(m);
@@ -197,8 +173,6 @@ public final class UnsentDetail {
         return text(m);
     }
 
-    // ── payloads ────────────────────────────────────────────────────────────────
-
     private static UnsentDetail text(Map<?, ?> m) {
         String text = str(m, "text");
         return text == null ? null : make(Kind.TEXT, null, 0, text);
@@ -208,13 +182,11 @@ public final class UnsentDetail {
         Map<?, ?> voice = obj(m, "voice_media");
         long ms = (long) num(voice, "duration_ms");
         Map<?, ?> media = obj(voice, "media");
-        // The clip's audio info states its length in ms too.
         if (ms <= 0) ms = (long) deepNum(media, "duration", 3);
         if (ms <= 0) ms = videoMs(media);
         return make(Kind.VOICE, null, ms, null);
     }
 
-    /** A photo or video sent in the chat itself; disappearing when it can be viewed once or replayed. */
     private static UnsentDetail direct(Map<?, ?> media, boolean disappearing) {
         if (media == null) return null;
         int type = (int) num(media, "media_type");
@@ -247,7 +219,6 @@ public final class UnsentDetail {
         return make(Kind.REEL, owner(media != null ? media : clip), 0, null);
     }
 
-    /** A shared feed post; Instagram's product type tells reels and stories apart. */
     private static UnsentDetail mediaShare(Map<?, ?> m) {
         Map<?, ?> media = obj(m, "media_share");
         if (media == null) media = obj(obj(m, "direct_media_share"), "media");
@@ -269,7 +240,6 @@ public final class UnsentDetail {
         return make(Kind.STORY, user, 0, null);
     }
 
-    /** A reply to (or a mention in) a story; a reply's own words are kept. */
     private static UnsentDetail reelShare(Map<?, ?> m) {
         Map<?, ?> reel = obj(m, "reel_share");
         String user = owner(obj(reel, "media"));
@@ -285,14 +255,12 @@ public final class UnsentDetail {
         return make(Kind.PROFILE, str(obj(m, "profile"), "username"), 0, null);
     }
 
-    /** "Like: ❤️" when the like states its emoji; never an id or a word. */
     private static UnsentDetail like(Map<?, ?> m) {
         String emoji = str(m, "like");
         if (emoji != null && (emoji.length() > 16 || emoji.matches(".*[\\p{L}\\p{N}].*"))) emoji = null;
         return make(Kind.LIKE, null, 0, emoji);
     }
 
-    /** A link's host ("Link: example.com"); its words when it has no readable address. */
     private static UnsentDetail link(Map<?, ?> m) {
         Map<?, ?> link = obj(m, "link");
         String url = str(obj(link, "link_context"), "link_url");
@@ -311,10 +279,8 @@ public final class UnsentDetail {
         return make(kind, null, 0, str(event, "description"));
     }
 
-    /** An Instagram share card (XMA) with a known kind; its header names the owner. */
     private static UnsentDetail share(Map<?, ?> m, Kind kind) {
         Map<?, ?> card = xma(m);
-        // Some shares also carry the shared media itself under "media".
         Map<?, ?> media = obj(m, "media");
         if (kind == Kind.POST && (urlKind(str(card, "target_url")) == Kind.REEL
                 || "clips".equals(str(media, "product_type")))) kind = Kind.REEL;
@@ -322,7 +288,6 @@ public final class UnsentDetail {
         return make(kind, user != null ? user : owner(media), 0, null);
     }
 
-    /** A share card of a type this build does not name: its link decides, else "Shared content". */
     private static UnsentDetail xmaShare(Map<?, ?> m) {
         Map<?, ?> card = xma(m);
         Kind kind = urlKind(str(card, "target_url"));
@@ -338,9 +303,6 @@ public final class UnsentDetail {
         return make(kind, null, 0, title);
     }
 
-    // ── fields ──────────────────────────────────────────────────────────────────
-
-    /** Share cards are written as "xma" or, for the xma_* types, as the "hscroll_share" list. */
     private static Map<?, ?> xma(Map<?, ?> m) {
         Map<?, ?> card = obj(m, "xma");
         if (card != null) return card;
@@ -350,7 +312,6 @@ public final class UnsentDetail {
         return null;
     }
 
-    /** A share card's header names the owner; a story or profile link names it too. */
     private static String cardOwner(Map<?, ?> card) {
         String user = handle(str(card, "header_title_text"));
         return user != null ? user : userFromUrl(str(card, "target_url"));
@@ -378,7 +339,6 @@ public final class UnsentDetail {
         return null;
     }
 
-    /** The handle in instagram.com/stories/<user>/…, instagram.com/_u/<user> or instagram.com/<user>. */
     static String userFromUrl(String url) {
         List<String> path = segments(url);
         if (path.size() >= 2 && (path.get(0).equals("stories") || path.get(0).equals("_u"))) return handle(path.get(1));
@@ -399,7 +359,6 @@ public final class UnsentDetail {
         }
     }
 
-    /** example.com for http://www.example.com/page; null when it is no web address. */
     static String host(String url) {
         if (url == null) return null;
         String u = url.trim();
@@ -414,7 +373,6 @@ public final class UnsentDetail {
         }
     }
 
-    /** An Instagram username (lowercase letters, digits, "." and "_"), without "@"; else null. */
     static String handle(String value) {
         if (value == null) return null;
         String h = value.trim();
@@ -422,7 +380,6 @@ public final class UnsentDetail {
         return HANDLE.matcher(h).matches() && h.matches(".*[a-z_].*") ? h : null;
     }
 
-    /** One line, at most {@code max} characters (cut with "…"); null when empty. */
     static String clean(String value, int max) {
         if (value == null) return null;
         String s = value.replaceAll("\\s+", " ").trim();
@@ -443,7 +400,6 @@ public final class UnsentDetail {
         return t.isEmpty() ? null : t;
     }
 
-    /** The first positive number under {@code key} in the subtree, at most {@code depth} levels down. */
     private static double deepNum(Object node, String key, int depth) {
         if (depth < 0) return 0;
         if (node instanceof Map<?, ?> map) {

@@ -16,26 +16,12 @@ import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Spoof device: Instagram sees the phone as a Pixel 11 Pro XL or a Galaxy S26 Ultra. Instagram
- * limits some features to those phones by brand and model, among them downloading HDR (AV1/HLG)
- * video: other phones only get the SDR versions from its servers.
- *
- * <p>Only Instagram's view changes: the {@link Build} fields and the matching system properties
- * (model, brand, manufacturer, device, fingerprint, SoC) in Instagram's own process. The Android
- * version is left alone, so Instagram never calls system APIs the phone doesn't have.
- *
- * <p>While the spoof is on, the developer options that HDR playback needs ({@link #HDR_OVERRIDES})
- * are merged into Instagram's mc_overrides.json; turning the spoof off takes them out again.
- * Both happen at Instagram's start, so a change applies on the next restart.
- */
 public final class DeviceSpoofHook {
 
     public static final String PIXEL = "pixel";
     public static final String S26 = "s26";
     public static final String[] DEVICES = {"", PIXEL, S26};
 
-    /** Developer options for HDR video (MobileConfig overrides, mc_overrides.json format). */
     static final String HDR_OVERRIDES = "{\"66119:\":[\"0: : true\"],\"110796:\":[\"92: : true\"],"
             + "\"74463:\":[\"4: : true\",\"20: : false\"],\"86550:\":[\"9: : true\"],\"77821:\":[\"42: : true\"],"
             + "\"107732:\":[\"12: : true\"],\"124768:\":[\"32: : true\",\"12: : true\"],"
@@ -46,7 +32,6 @@ public final class DeviceSpoofHook {
 
     private static final String APPLIED_MARKER = "mobileconfig/ie_spoof_overrides_applied";
 
-    /** One device: Build field values, plus extra system features it reports. */
     private static final class Profile {
         final String manufacturer, brand, model, device, product, fingerprint, buildId, socManufacturer, socModel, platform;
         final Set<String> features;
@@ -67,7 +52,6 @@ public final class DeviceSpoofHook {
         }
     }
 
-    // Pixel 11 Pro XL (kodiak), from its official August 2026 firmware.
     private static final Profile PIXEL_11_PRO_XL = new Profile("Google", "google", "Pixel 11 Pro XL", "kodiak", "kodiak",
             "google/kodiak/kodiak:17/CD1A.260714.001.A9/15938155:user/release-keys", "CD1A.260714.001.A9",
             "Google", "Tensor G6", "malibu",
@@ -76,8 +60,6 @@ public final class DeviceSpoofHook {
             "com.google.android.feature.GOOGLE_BUILD",
             "com.google.android.feature.GOOGLE_EXPERIENCE");
 
-    // Galaxy S26 Ultra (SM-S948B). Its codename and fingerprint aren't public, so the device,
-    // product and fingerprint stay the phone's own (null).
     private static final Profile GALAXY_S26_ULTRA = new Profile("samsung", "samsung", "SM-S948B", null, null,
             null, null, "QTI", "SM8850", null);
 
@@ -99,7 +81,6 @@ public final class DeviceSpoofHook {
         return null;
     }
 
-    /** Called from Application.attach, before Instagram reads anything about the device. */
     public static void apply(ClassLoader classLoader) {
         ps.reso.instaeclipse.utils.feature.RestartPending.capture("spoofDevice", FeatureFlags.spoofDevice);
         Profile p = profile();
@@ -152,7 +133,7 @@ public final class DeviceSpoofHook {
         if (value == null) return;
         try {
             XposedHelpers.setStaticObjectField(c, field, value);
-        } catch (Throwable ignored) {} // SOC_* only exist on Android 12+
+        } catch (Throwable ignored) {}
     }
 
     private static String prop(Profile p, String key, Map<String, String> known) {
@@ -187,12 +168,6 @@ public final class DeviceSpoofHook {
         }
     }
 
-    // ---- HDR developer options ----
-
-    /**
-     * Brings Instagram's mc_overrides.json in line with the spoof: merges {@link #HDR_OVERRIDES}
-     * in when it's on, and takes exactly those entries out again once it's turned off.
-     */
     public static void syncOverrides(Context context) {
         try {
             File marker = new File(context.getFilesDir(), APPLIED_MARKER);

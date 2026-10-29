@@ -30,27 +30,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * Persistent, size-bounded ring buffer of log lines, used to power the in-app log viewer
- * (LoggingFragment). Runs independently in whichever process calls init() — Instagram's
- * hooked process and the companion app each keep their own buffer/file, since a hooked
- * process can't directly read another process's memory.
- *
- * In Instagram's process the buffer is additionally mirrored into a file owned by the companion
- * app (see {@link LogMirrorProvider} / {@link #enableMirror}), so the companion's Logs tab can
- * show Instagram's log even when Instagram is backgrounded or no longer running.
- *
- * Consecutive identical lines are collapsed into a single "(×N)" entry to avoid the buffer
- * filling up with noise from a hook that logs the same thing on every call.
- */
 public final class Logging {
 
     private static final long FLUSH_DELAY_MS = 750;
-    // Broadcast extras ride the Binder transaction buffer (~1MB total, shared across all
-    // in-flight transactions in the process), and Java strings are UTF-16 (2 bytes/char), so
-    // this must stay well under half a million chars or the reply broadcast triggers
-    // TransactionTooLargeException -> the receiving process gets killed with
-    // CannotDeliverBroadcastException instead of ever seeing the intent.
     private static final int IPC_MAX_CHARS = 150000;
     private static final long MAX_FILE_BYTES = 4 * 1024 * 1024;
     private static final long MAX_LOCAL_BYTES = 2 * MAX_FILE_BYTES;
@@ -81,12 +63,9 @@ public final class Logging {
     private static boolean rewriteAll;
     private static boolean replaceLast;
 
-    // Mirror into the companion app's storage (Instagram process only).
     private static final Uri MIRROR_URI = Uri.parse("content://ps.reso.instaeclipse.logmirror/log");
     private static Context mirrorContext;
     private static ParcelFileDescriptor mirrorPfd;
-    // Mirror and log-file state is only touched on the IO thread; LOCK guards LINES alone, so
-    // logging from the main thread never waits for disk I/O.
     private static volatile FileOutputStream mirrorOut;
     private static long mirrorBytes;
     private static long mirrorLastStart = -1;
@@ -156,11 +135,6 @@ public final class Logging {
         }
     }
 
-    /**
-     * Instagram process only: open (asynchronously) an append-only FD on the companion's mirror
-     * file and keep every future line flowing into it. Safe to call repeatedly; failures (e.g.
-     * companion not installed) are logged to logcat and retried on the next {@link #refreshMirror}.
-     */
     public static void enableMirror(Context context) {
         refreshMirror(context, null);
     }
@@ -214,7 +188,6 @@ public final class Logging {
         else rewriteMirror(encode(early), lastBytes(early));
     }
 
-    /** True while Instagram's buffer is being mirrored into the companion's storage. */
     public static boolean isMirrorActive() {
         return mirrorOut != null;
     }
@@ -335,7 +308,6 @@ public final class Logging {
 
     private static void scheduleFlushLocked(long delayMs) {
         if (!initialized || ioHandler == null) return;
-        // Keep the first deadline even under a continuous stream of repeated/new events.
         if (flushScheduled && delayMs > 0) return;
         ioHandler.removeCallbacks(FLUSH_RUNNABLE);
         flushScheduled = ioHandler.postDelayed(FLUSH_RUNNABLE, delayMs);

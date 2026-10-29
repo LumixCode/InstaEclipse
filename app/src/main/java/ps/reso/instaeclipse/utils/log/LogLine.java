@@ -6,17 +6,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Format of one stored log line body (what follows the timestamp), shared by the writer
- * ({@link ModuleLog}) and the Logs tab. A body starts with a level marker, then the caller and
- * the message: {@code "W/ [ExactTimestampHook.install:76] (ExactTimestamps) Story layout ..."}.
- * Lines written before levels existed have no marker; {@link #legacyLevel} guesses theirs.
- *
- * Pure Java so the parsing is unit-tested on the JVM.
- */
 public final class LogLine {
 
-    /** Ordered by severity. DETAIL lines are technical diagnostics, hidden in the simple view. */
     public enum Level {
         DETAIL('D'), INFO('I'), OK('S'), WARN('W'), ERROR('E');
 
@@ -28,11 +19,9 @@ public final class LogLine {
     }
 
     private static final Pattern CALLER = Pattern.compile("^\\[[\\w$.]+:\\d+] ");
-    // "(IE|KeepUnsent) ", "(InstaEclipse | DoubleTapLike): ", "(InstaEclipse): ", "(ExactTimestamps) "
     private static final Pattern TAG = Pattern.compile("^\\(([A-Za-z][\\w| .-]{0,48})\\):? ?");
     private static final Pattern CAMEL = Pattern.compile("(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])");
 
-    /** Feature names for tags that do not read well when split at capitals. */
     private static final Map<String, String> NAMES = new HashMap<>();
 
     static {
@@ -175,12 +164,10 @@ public final class LogLine {
 
     private LogLine() {}
 
-    /** "W/ " for WARN; ModuleLog prepends it to every body it writes. */
     public static String marker(Level level) {
         return level.marker + "/ ";
     }
 
-    /** The marked level, else a guess for an old unmarked line. */
     public static Level levelOf(String body) {
         Level marked = markedLevel(body);
         return marked != null ? marked : legacyLevel(body);
@@ -192,16 +179,10 @@ public final class LogLine {
         return null;
     }
 
-    /** The body without its level marker, as it looked before levels existed. */
     public static String stripMarker(String body) {
         return markedLevel(body) != null ? body.substring(3) : body;
     }
 
-    /**
-     * The level of a message logged through {@link ModuleLog#line}: the status emoji the code
-     * already writes, else INFO. Never a keyword guess, so "skipped=0" or a tag named "Crash"
-     * is not an error.
-     */
     public static Level emojiLevel(String message) {
         if (message == null) return Level.INFO;
         if (message.contains("❌")) return Level.ERROR;
@@ -210,7 +191,6 @@ public final class LogLine {
         return Level.INFO;
     }
 
-    /** Lines saved by older builds: status emoji first, then keywords in the message only. */
     static Level legacyLevel(String body) {
         Level emoji = emojiLevel(body);
         if (emoji != Level.INFO) return emoji;
@@ -222,7 +202,6 @@ public final class LogLine {
         return Level.INFO;
     }
 
-    /** Text after the marker, the "[Class.method:line]" caller and the "(tag)". */
     public static String message(String body) {
         String rest = withoutCaller(stripMarker(body));
         Matcher tag = TAG.matcher(rest);
@@ -234,10 +213,6 @@ public final class LogLine {
         return caller.find() ? body.substring(caller.end()) : body;
     }
 
-    /**
-     * The simple view of a body: "Keep unsent messages: hooks installed" instead of
-     * "S/ [KeepUnsentMessagesHook.install:412] (IE|KeepUnsent) ✅ hooks installed".
-     */
     public static String friendly(String body) {
         String rest = withoutCaller(stripMarker(body));
         Matcher tag = TAG.matcher(rest);
@@ -248,7 +223,6 @@ public final class LogLine {
         return text.isEmpty() ? name : name + ": " + text;
     }
 
-    /** "IE|DL|DexKit" -> "Downloads · code search", "InstaEclipse | DoubleTapLike" -> "Double tap like". */
     static String featureName(String tag) {
         StringBuilder out = new StringBuilder();
         for (String raw : tag.split("\\|")) {
@@ -270,7 +244,6 @@ public final class LogLine {
             if (word.isEmpty()) continue;
             if (out.length() > 0) {
                 out.append(' ');
-                // Keep acronyms (DM, UI, AI) upper case; lower-case ordinary words.
                 boolean acronym = word.length() > 1 && word.equals(word.toUpperCase(Locale.ROOT));
                 out.append(acronym ? word : word.toLowerCase(Locale.ROOT));
             } else {

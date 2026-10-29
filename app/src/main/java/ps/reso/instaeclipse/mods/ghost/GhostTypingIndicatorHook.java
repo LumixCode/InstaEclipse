@@ -39,7 +39,6 @@ public class GhostTypingIndicatorHook {
         }
 
         try {
-            // Step 1: Find methods containing the string "is_typing_indicator_enabled"
             List<Found> methods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create().usingStrings("is_typing_indicator_enabled")));
 
@@ -57,7 +56,6 @@ public class GhostTypingIndicatorHook {
                 try {
                     reflectMethod = method.getMethodInstance(Module.hostClassLoader);
                 } catch (Throwable e) {
-                    // Skip method if it can't be resolved
                     continue;
                 }
 

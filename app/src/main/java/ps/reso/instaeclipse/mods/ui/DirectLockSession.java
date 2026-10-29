@@ -4,7 +4,6 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-/** Unlock grants follow navigation boundaries, never an intermediate layout with no header. */
 public final class DirectLockSession {
     public enum Screen { UNKNOWN, OTHER, INBOX, THREAD, DIRECT }
 

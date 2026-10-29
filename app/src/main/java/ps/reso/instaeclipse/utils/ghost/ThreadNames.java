@@ -22,12 +22,6 @@ import java.util.Set;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Persistent best-effort map of DM thread id -> display name (username), stored as JSON in
- * Instagram's own filesDir. Populated whenever a thread is opened (KeepUnsentMessagesHook resolves
- * the open thread's header handle), and read back by the Unsent Messages viewer so its per-chat
- * folders can be labelled with a username instead of an opaque thread id.
- */
 public class ThreadNames {
 
     static final int MAX_IDS_PER_QUERY = 500;
@@ -37,11 +31,6 @@ public class ThreadNames {
             ThreadNames::cleanupOnce);
     private static final Set<String> notFound = new HashSet<>();
 
-    /**
-     * Older builds labelled threads with whatever chat header (or even message word) was on screen,
-     * so one name ended up on several unrelated ids. Drop every name shared by more than one id,
-     * once; the real names are learned again the next time each chat is opened.
-     */
     private static boolean cleanupOnce(Map<String, String> names) {
         try {
             Context ctx = AndroidAppHelper.currentApplication();
@@ -61,13 +50,11 @@ public class ThreadNames {
         }
     }
 
-    /** Record a thread's display name (no-op for empty inputs or an unchanged value). */
     public static void put(String threadId, String name) {
         if (threadId == null || threadId.isEmpty() || name == null || name.trim().isEmpty()) return;
         store.put(threadId, name.trim());
     }
 
-    /** Best-known name for a thread id, or "" if unknown. */
     public static String get(String threadId) {
         return threadId == null ? "" : store.get(threadId);
     }

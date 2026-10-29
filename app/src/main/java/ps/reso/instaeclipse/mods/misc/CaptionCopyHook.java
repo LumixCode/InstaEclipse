@@ -44,19 +44,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.text.CopyFeedback;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 
-/**
- * Hold a feed or reel caption to copy it.
- *
- * Feed captions are IgTextLayoutView text; reel captions are Litho text inside
- * clips_caption_component, and tapping a reel caption's "…" opens a comment sheet whose top row
- * shows the whole caption (Litho text next to clips_author_info_component). Captions are usually
- * collapsed, so the full caption comes from the post's Media: the reel page's holder, the sheet's
- * post, or the caption's own link spans. A view counts as a caption only when its visible text
- * shows that Media's caption, so comments (also IgTextLayoutView) behave as before.
- * Touches are watched instead of adding a long-click listener: the caption's link spans take the
- * press before View's own long-press detection sees it, and Litho reuses hosts for other
- * components, so a listener would leak onto them.
- */
 public class CaptionCopyHook {
     private static final String TEXT_VIEW = "com.instagram.ui.widget.textview.IgTextLayoutView";
     private static final String LITHO_HOST = "com.facebook.litho.ComponentHost";
@@ -69,17 +56,13 @@ public class CaptionCopyHook {
     private static final Map<Class<?>, Field[]> LINK_FIELDS = new ConcurrentHashMap<>();
 
     private static Method captionGetter;
-    private static Method captionText;   // caption object -> caption text
+    private static Method captionText;
 
-    // One gesture at a time; touch events arrive on the main thread.
     private static WeakReference<View> pressed = new WeakReference<>(null);
     private static Runnable pendingCopy;
     private static boolean copied;
     private static float downX, downY;
     private static int reelCaptionId = -1, authorInfoId = -1, sheetListId = -1;
-    // Reel captions a link span resolved, newest first. An expanded reel caption (00jG.A08 on
-    // IG 451) drops the "… more" span, so unless it has @mentions or #hashtags nothing in it leads
-    // to the Media; the tap that expanded it resolved the caption through that span.
     private static final ArrayDeque<String> recentReelCaptions = new ArrayDeque<>();
     private static final int RECENT_REEL_CAPTIONS = 16;
 
@@ -94,8 +77,6 @@ public class CaptionCopyHook {
         int hooked = 0;
         for (String type : new String[]{TEXT_VIEW, LITHO_HOST}) {
             try {
-                // The compat lookup also walks superclasses: if this type stopped overriding
-                // onTouchEvent it would bind View's, hooking every view in the app.
                 Class<?> cls = XposedHelpers.findClass(type, loader);
                 Method onTouch = XposedHelpers.findMethodExact(cls, "onTouchEvent", MotionEvent.class);
                 if (onTouch.getDeclaringClass() != cls) {
@@ -116,14 +97,6 @@ public class CaptionCopyHook {
         markBuiltCaptions(loader);
     }
 
-    // ── Caption text → post ──────────────────────────────────────────────────
-
-    /**
-     * Inert span tying caption text to its post. Instagram's caption builder gets the post through
-     * its config, but an expanded reel caption (00jG.A08 on 451) or a short one keeps no link span
-     * leading back to it, so the builder's output is tagged with it here. Equal for the same post,
-     * so rebuilt captions still compare equal.
-     */
     static final class CaptionMedia {
         final WeakReference<Object> media;
 
@@ -142,14 +115,9 @@ public class CaptionCopyHook {
         }
     }
 
-    private static volatile Field[] mediaPath; // caption config -> ... -> Media
+    private static volatile Field[] mediaPath;
     private static volatile Class<?> mediaPathOf;
 
-    /**
-     * Tags every caption text Instagram's caption builder (the class of the " [...]" builder, 00jG
-     * on 451) returns: the collapsed, expanded and short forms all come from its methods that take
-     * the caption config, which reaches the Media in two hops (08jO -> 05Af -> Media).
-     */
     private static void markBuiltCaptions(ClassLoader loader) {
         try {
             Method builder = DexKitCache.isCacheValid() ? DexKitCache.loadMethod("CaptionCopy_builder", loader) : null;
@@ -162,7 +130,6 @@ public class CaptionCopyHook {
                 if (builder == null) { ModuleLog.warn("(IE|Caption) Copying expanded or short Reels captions may not work in this Instagram version (caption builder not found)"); return; }
                 DexKitCache.saveMethod("CaptionCopy_builder", builder);
             }
-            // The config type: the builder's parameter that leads to a Media.
             Class<?> config = null;
             for (Class<?> p : builder.getParameterTypes()) if (pathToMedia(p) != null) { config = p; break; }
             if (config == null) { ModuleLog.warn("(IE|Caption) Copying expanded or short Reels captions may not work in this Instagram version (caption config not found)"); return; }
@@ -214,7 +181,6 @@ public class CaptionCopyHook {
         } catch (Throwable ignored) {}
     }
 
-    /** Fields from this type to a Media: one of its own, or one of a field's (two hops). */
     private static Field[] pathToMedia(Class<?> type) {
         if (type.isPrimitive() || !isInstagram(type.getName())) return null;
         for (Field f : instanceFields(type)) {
@@ -240,8 +206,6 @@ public class CaptionCopyHook {
         }
         return out;
     }
-
-    // ── Caption text ─────────────────────────────────────────────────────────
 
     private static void resolveCaptionGetter(ClassLoader classLoader) {
         if (DexKitCache.isCacheValid()) {
@@ -295,7 +259,6 @@ public class CaptionCopyHook {
                 impl = found.get(0).getMethodInstance(classLoader);
                 DexKitCache.saveMethod("CaptionText", impl);
             }
-            // Call it through the caption type, so every implementation (Pando or immutable) answers.
             captionText = captionType.isInterface() ? captionType.getMethod(impl.getName()) : impl;
             captionText.setAccessible(true);
             ModuleLog.detail("(IE|Caption) captionText=" + captionType.getName() + "." + captionText.getName());
@@ -315,8 +278,6 @@ public class CaptionCopyHook {
         }
     }
 
-    // ── Hold to copy ─────────────────────────────────────────────────────────
-
     private static final XC_MethodHook TOUCH = new XC_MethodHook() {
         private final HookFrames.Slot frames = new HookFrames.Slot();
 
@@ -333,8 +294,6 @@ public class CaptionCopyHook {
                     if (!ours) return;
                     boolean wasCopied = copied;
                     cancel();
-                    // Finish a copied hold as a cancel, so the release doesn't also open a link
-                    // or expand the caption.
                     if (wasCopied) {
                         event.setAction(MotionEvent.ACTION_CANCEL);
                         frame.put(RESTORE_UP, Boolean.TRUE);
@@ -352,7 +311,6 @@ public class CaptionCopyHook {
                 ((MotionEvent) param.args[0]).setAction(MotionEvent.ACTION_UP);
             } else if (Boolean.TRUE.equals(frame.get(CLAIM))
                     && Boolean.FALSE.equals(param.getResult())) {
-                // A press between the caption's links: keep the gesture so the hold is seen.
                 param.setResult(Boolean.TRUE);
             }
         }
@@ -373,7 +331,6 @@ public class CaptionCopyHook {
             copied = true;
             view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
             copyToClipboard(view.getContext(), caption);
-            // Instagram can toggle a reel caption on long press too; the hold is ours now.
             view.cancelLongPress();
         };
         MAIN.postDelayed(pendingCopy, ViewConfiguration.getLongPressTimeout());
@@ -394,8 +351,6 @@ public class CaptionCopyHook {
 
     private static String captionOf(View view, String hookedType) {
         try {
-            // Litho text counts in a reel's caption, or in the caption row on top of the comment
-            // sheet that tapping a reel caption's "…" opens.
             boolean litho = LITHO_HOST.equals(hookedType);
             boolean reel = litho && inReelCaption(view);
             boolean sheet = litho && !reel && inSheetCaption(view);
@@ -405,8 +360,6 @@ public class CaptionCopyHook {
             String visible = shown.toString();
             Spanned spanned = shown instanceof Spanned text ? text : null;
             List<Object> media = new ArrayList<>();
-            // A reel caption's own page knows its reel whatever the text carries (often plain text,
-            // with no link back); the caption atop a comment sheet belongs to the sheet's post.
             Object page = reel ? pageMedia(view) : sheet ? CommentSearchHook.sheetPost() : null;
             if (page != null) media.add(page);
             if (spanned != null) {
@@ -474,19 +427,12 @@ public class CaptionCopyHook {
         return out;
     }
 
-    // Page holder class -> its {item field, Media getter} pairs.
     private static final java.util.Map<Class<?>, List<Object[]>> PAGE_PATHS = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /**
-     * The reel of the page around this view. Instagram tags each reel page's root
-     * (RoundedCornerFrameLayout, in LithoClipsItemDefinition.bindView) with its holder, which keeps
-     * the bound reel item; the item hands out its Media (017l.Cgu() on 451).
-     */
     private static Object pageMedia(View view) {
         View current = view;
         for (int depth = 0; current != null && depth < 30; depth++) {
             Object media = taggedMedia(current);
-            // The page root can also be a sibling of the caption's own branch.
             if (media == null && depth > 0 && current instanceof android.view.ViewGroup group) {
                 for (int i = 0; i < group.getChildCount() && media == null; i++) media = taggedMedia(group.getChildAt(i));
             }
@@ -501,7 +447,6 @@ public class CaptionCopyHook {
         return tag != null && isInstagram(tag.getClass().getName()) ? itemMedia(tag) : null;
     }
 
-    /** The first Media one of the holder's items hands out (06Sp.A01 017l → Cgu() on 451). */
     private static Object itemMedia(Object holder) {
         for (Object[] path : PAGE_PATHS.computeIfAbsent(holder.getClass(), CaptionCopyHook::mediaPaths)) {
             try {
@@ -513,7 +458,6 @@ public class CaptionCopyHook {
         return null;
     }
 
-    /** Every (item field, Media getter) pair of a holder type; other items (players, state) have none or answer null. */
     private static List<Object[]> mediaPaths(Class<?> holder) {
         List<Object[]> paths = new ArrayList<>();
         for (Field field : instanceFields(holder)) {
@@ -524,7 +468,6 @@ public class CaptionCopyHook {
         return paths;
     }
 
-    /** No-arg Media getters of a type, interface ones (Cgu) first. */
     private static List<Method> mediaGetters(Class<?> type) {
         List<Method> out = new ArrayList<>();
         for (Method m : type.getMethods()) {
@@ -541,7 +484,6 @@ public class CaptionCopyHook {
         if (recentReelCaptions.size() > RECENT_REEL_CAPTIONS) recentReelCaptions.removeLast();
     }
 
-    /** The comment/caption interface's text accessor (02Rd.DhX on 451), or null if unresolved. */
     static Method textAccessor() {
         return captionText;
     }
@@ -570,11 +512,6 @@ public class CaptionCopyHook {
         return getter;
     }
 
-    /**
-     * Litho text in the caption row of a comment sheet (the Litho sheet a reel caption's "…"
-     * opens): the row also holds the author info (clips_author_info_component), and it sits in the
-     * sheet's list (sticky_header_list).
-     */
     @SuppressLint("DiscouragedApi")
     private static boolean inSheetCaption(View view) {
         if (authorInfoId == -1) {
@@ -612,7 +549,6 @@ public class CaptionCopyHook {
         return false;
     }
 
-    /** Media objects the caption's links point at, nearest first, through Instagram classes only. */
     private static List<Object> linkedMedia(Spanned text) {
         List<Object> media = new ArrayList<>();
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());

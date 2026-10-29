@@ -13,18 +13,9 @@ import java.util.Locale;
 import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.core.CompanionSettings;
 
-/**
- * The spoofed location and its recently used history, shared by the map picker (companion app),
- * the companion's Location menu and the in-Instagram sheet.
- *
- * <p>History is stored as a small JSON array ({@code spoofRecent}) next to {@code spoofLat},
- * {@code spoofLng} and {@code spoofLabel}, so it rides the existing string-pref sync to
- * Instagram's process.
- */
 public final class LocationPresets {
 
     public static final int MAX_RECENT = 6;
-    /** Picks closer than this to an existing entry replace it instead of adding a new one. */
     static final double SAME_PLACE_METERS = 75;
 
     public static final class Preset {
@@ -38,7 +29,6 @@ public final class LocationPresets {
             this.label = label == null ? "" : label;
         }
 
-        /** Label when known, otherwise the rounded coordinates. */
         public String title() {
             return label.isEmpty() ? coords(lat, lng) : label;
         }
@@ -60,9 +50,7 @@ public final class LocationPresets {
                 double lat = o.getDouble("lat"), lng = o.getDouble("lng");
                 if (valid(lat, lng)) out.add(new Preset(lat, lng, o.optString("label", "")));
             }
-        } catch (Throwable ignored) {
-            // corrupt history: start over rather than break the picker
-        }
+        } catch (Throwable ignored) {}
         return out;
     }
 
@@ -72,13 +60,10 @@ public final class LocationPresets {
             for (Preset p : presets) {
                 arr.put(new JSONObject().put("lat", p.lat).put("lng", p.lng).put("label", p.label));
             }
-        } catch (Throwable ignored) {
-            // JSONObject.put only throws for NaN/inf, which valid() excludes
-        }
+        } catch (Throwable ignored) {}
         return arr.toString();
     }
 
-    /** History with {@code picked} moved to the front, near-duplicates dropped, capped. */
     public static List<Preset> remember(List<Preset> recent, Preset picked) {
         List<Preset> out = new ArrayList<>();
         out.add(picked);
@@ -94,7 +79,6 @@ public final class LocationPresets {
                 && !(lat == 0.0 && lng == 0.0);
     }
 
-    /** "41.0082, 28.9784" (also ";" or space separated) → {lat, lng}; null when not coordinates. */
     public static double[] parseCoordinates(String text) {
         if (text == null) return null;
         java.util.regex.Matcher m = java.util.regex.Pattern
@@ -105,7 +89,6 @@ public final class LocationPresets {
         return valid(lat, lng) ? new double[]{lat, lng} : null;
     }
 
-    /** Haversine distance. */
     public static double distanceMeters(double lat1, double lng1, double lat2, double lng2) {
         double r = 6_371_000;
         double dLat = Math.toRadians(lat2 - lat1), dLng = Math.toRadians(lng2 - lng1);
@@ -139,10 +122,8 @@ public final class LocationPresets {
         return false;
     }
 
-    /** Max distance of a spoofed fix from the picked point. */
     static final double JITTER_METERS = 4.0;
 
-    /** Uniform point within {@link #JITTER_METERS} of (lat, lng); u1/u2 are uniform [0, 1). */
     static double[] jitter(double lat, double lng, double u1, double u2) {
         double r = JITTER_METERS * Math.sqrt(u1);
         double theta = 2 * Math.PI * u2;

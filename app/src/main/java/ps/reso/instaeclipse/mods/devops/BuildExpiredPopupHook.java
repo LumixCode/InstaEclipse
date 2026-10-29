@@ -23,22 +23,15 @@ public class BuildExpiredPopupHook {
 
     public void install(ClassLoader classLoader) {
 
-        // No-op the method that shows the popup — blocks all three internal paths:
-        //   1. lockout_active pref = true  → shows immediately
-        //   2. snooze expired              → shows via snooze dialog
-        //   3. age threshold exceeded      → shows force-update dialog
         XC_MethodHook noOpHook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
                 if (FeatureFlags.removeBuildExpiredPopup) {
-                    param.setResult(null); // void return → method becomes no-op
+                    param.setResult(null);
                 }
             }
         };
 
-        // Secondary defence: hook the snooze-expired boolean check.
-        // Returns false so even if the show method is not found, the snooze
-        // check keeps reporting "not expired".
         XC_MethodHook falseHook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
@@ -50,7 +43,6 @@ public class BuildExpiredPopupHook {
 
         boolean hookedMain = false;
 
-        // ── Cache path ────────────────────────────────────────────────────────
         if (DexKitCache.isCacheValid()) {
             Method show = DexKitCache.loadMethod(CACHE_SHOW, classLoader);
             if (show != null) {
@@ -64,9 +56,7 @@ public class BuildExpiredPopupHook {
             }
         }
 
-        // ── DexKit path ───────────────────────────────────────────────────────
         try {
-            // Primary: find the show-popup method via "lockout_active" string.
             List<Found> showMethods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .usingStrings("lockout_active")
@@ -78,7 +68,6 @@ public class BuildExpiredPopupHook {
 
                 Class<?>[] params = method.getParameterTypes();
                 if (params.length < 1) continue;
-                // Must take FragmentActivity as first arg; skip boolean-only variants
                 if (!params[0].getName().contains("FragmentActivity")) continue;
 
                 XposedBridge.hookMethod(method, noOpHook);

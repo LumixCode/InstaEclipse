@@ -36,32 +36,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * DM share sheet cleanup, anchored on stable names verified on IG 436 / 446 / 447 / 451:
- *  - Hide "Create group" (#240, FeatureFlags.hideShareCreateGroup): the plain button
- *    {@code direct_private_share_create_group_button} inside
- *    instagram.features.direct.fragment.sharesheet.DirectShareSheetFragment, plus the
- *    {@code new_group_pog_view} and {@code direct_send_to_group_button_vertical} variants. IG re-shows
- *    them when the selection changes, so a pre-draw sweep scoped to the sheet hides them before any
- *    frame shows them. The multi-recipient facepile variants, inflated from layouts
- *    {@code direct_private_share_create_group_facepile_button/_view}, are collapsed as they inflate.
- *    "Send to new group chat (N)" under "Send separately" once two or more chats are selected is
- *    {@code direct_send_to_group_button_vertical/_horizontal} (both ids exist on IG 451), built in
- *    code, so the same sweep hides it. Their parents ({@code direct_multi_select_message_composer},
- *    {@code direct_send_to_group_button_container}) animate layout changes (446 layout; 451's
- *    binder tunes the container's LayoutTransition): a GONE set after IG's VISIBLE was laid out
- *    ended the button's delayed fade-in and drew it fading out for 300 ms.
- *    A listener on that LayoutTransition sees IG's VISIBLE and hides the button in the next frame's
- *    animation phase, before its layout, without the parent's fade or moves.
- *  - With Create group hidden, nothing but the label told "Send separately" from "Send", so the
- *    main button ({@code direct_send_button_multi_select}, an IgdsButton) gets its own fill while
- *    two or more chats are selected. Both sheets that show it (DirectShareSheetFragment and the
- *    private story recipient picker) drive it through DirectShareSheetFragmentMessageComposerViewBinder:
- *    its (List, boolean, UserSession) method shows the group buttons, i.e. several chats; its
- *    no-argument reset and one-argument single-chat methods hide them. See {@link SendTint}.
- *  - Always on: the external share actions ({@code direct_external_reshare_row}) get equal slots and
- *    are vertically centred; on IG 446 "Copy link" sat 42 px lower than its neighbours.
- */
 public class ShareSheetCleanupHook {
 
     private static final String FRAGMENT =
@@ -74,7 +48,7 @@ public class ShareSheetCleanupHook {
             "direct_private_share_create_group_button",
             "new_group_pog_view",
             "direct_send_to_group_button_vertical",
-            "direct_send_to_group_button_horizontal", // IG 451+ (binder sets one of the two)
+            "direct_send_to_group_button_horizontal",
     };
     private static final String CACHE_REMOVER = "ShareRowDecorationRemover_v1";
     private static final String CACHE_DECORATIONS = "ShareRowDecorationList_v1";
@@ -83,14 +57,7 @@ public class ShareSheetCleanupHook {
     private static final String IGDS_BUTTON = "com.instagram.igds.components.button.IgdsButton";
     private static final String USER_SESSION = "com.instagram.common.session.UserSession";
 
-    /**
-     * "Send separately" fill while Create group is hidden: green 700. White label 5.0:1 (IG's own
-     * #0095F6 send button is 3.2:1); 5.0:1 against the light sheet and 3.0:1 against the dark one
-     * (#262626). Hue 142 degrees is far from both IG primaries (#0095F6, 204; Prism #4A5DF9, 233), and
-     * green vs blue stays distinct with red-green colour blindness.
-     */
     static final int SEPARATE_SEND_FILL = 0xFF15803D;
-    /** SRC_IN keeps the Paint's alpha, so IG's pressed (70 %) and disabled (30 %) fills still show. */
     private static final ColorFilter SEPARATE_SEND_FILTER =
             new PorterDuffColorFilter(SEPARATE_SEND_FILL, PorterDuff.Mode.SRC_IN);
 
@@ -101,7 +68,6 @@ public class ShareSheetCleanupHook {
     private static int sendButtonId;
     private static final Set<Integer> layoutIds = new HashSet<>();
 
-    // Send button colour; all of it runs on the main thread (binder calls and pre-draw).
     private static Class<?> igdsButtonClass;
     private static Field[] binderViewFields;
     private static Field buttonStyleField;
@@ -116,7 +82,6 @@ public class ShareSheetCleanupHook {
     private static Method removeShareDecoration;
     private static Field shareDecorations;
 
-    /** Runs inside IG's setVisibility(VISIBLE) on a child of an animated container. */
     static final LayoutTransition.TransitionListener APPEARING_WATCHER = new LayoutTransition.TransitionListener() {
         @Override public void startTransition(LayoutTransition transition, ViewGroup container, View view, int type) {
             if (type == LayoutTransition.APPEARING && FeatureFlags.hideShareCreateGroup
@@ -154,13 +119,12 @@ public class ShareSheetCleanupHook {
                     View target = result;
                     boolean attached = param.args.length >= 3
                             ? Boolean.TRUE.equals(param.args[2]) : param.args[1] != null;
-                    // Attached inflation returns the parent; only the new child was inflated.
                     if (attached && param.args[1] != null && result instanceof ViewGroup root
                             && root.getChildCount() > 0) {
                         target = root.getChildAt(root.getChildCount() - 1);
                     }
                     if (layoutIds.contains(res)) collapse(target);
-                    else sweep(target); // recycled pogs, before their first draw
+                    else sweep(target);
                 } catch (Throwable ignored) {
                 }
             }
@@ -174,7 +138,7 @@ public class ShareSheetCleanupHook {
             ModuleLog.detail("(IE|ShareSheet) inflate hook failed");
         }
 
-        hookSendButtonColour(classLoader); // extra: not counted, the status is about hiding Create group
+        hookSendButtonColour(classLoader);
 
         if (hooked > 0) FeatureStatusTracker.setHooked("HideShareCreateGroup");
         if (hooked > 0) ModuleLog.ok("(IE|ShareSheet) ready");
@@ -185,10 +149,6 @@ public class ShareSheetCleanupHook {
     private static void watch(View root) {
         try {
             ensureIds(root.getResources(), root.getContext().getPackageName());
-            // Pre-draw, not global layout: IG re-shows Create group without a layout pass we could
-            // catch in time. The observer is window-wide, so it must never cancel a draw (a
-            // cancelling one froze IG on the Reels comment share sheet), and it lives only while
-            // the sheet is attached.
             ViewTreeObserver.OnPreDrawListener listener = () -> {
                 cleanUp(root);
                 return true;
@@ -228,8 +188,6 @@ public class ShareSheetCleanupHook {
             View v = stack.pop();
             if (isCreateGroup(v.getId())) {
                 watchAppearing(v);
-                // ConstraintLayout child: GONE only (width/height 0 would mean "match constraints").
-                // Fallback for a VISIBLE the watcher missed: in pre-draw it is already laid out.
                 if (v.getVisibility() != View.GONE) {
                     hideWithoutTransition(v);
                     ModuleLog.probe("(IE|ShareSheet) create group hidden by sweep");
@@ -240,7 +198,6 @@ public class ShareSheetCleanupHook {
         }
     }
 
-    /** Hears IG show the button while its layout is still pending (once per container). */
     static void watchAppearing(View button) {
         if (!(button.getParent() instanceof ViewGroup parent)) return;
         LayoutTransition transition = parent.getLayoutTransition();
@@ -251,11 +208,6 @@ public class ShareSheetCleanupHook {
         ModuleLog.probe("(IE|ShareSheet) watching create group container");
     }
 
-    /**
-     * Still inside IG's setVisibility: a GONE here would re-enter it, and a plain post runs only
-     * after the next traversal. Frame callbacks run in the animation phase, before that frame's
-     * layout, so the button never takes space or draws.
-     */
     static void hideBeforeNextLayout(View button) {
         Choreographer.getInstance().postFrameCallback(frameTimeNanos -> {
             if (!FeatureFlags.hideShareCreateGroup || button.getVisibility() == View.GONE) return;
@@ -264,12 +216,6 @@ public class ShareSheetCleanupHook {
         });
     }
 
-    /**
-     * GONE without the parent's LayoutTransition. Its DISAPPEARING type would end the button's
-     * pending fade-in (alpha 1) and keep drawing it while it fades out; its CHANGE_DISAPPEARING
-     * type cancels the neighbours' queued moves, and with no animator it sets up no new ones
-     * (the default ones slide them back after a 300 ms delay). Both are restored right after.
-     */
     static void hideWithoutTransition(View button) {
         LayoutTransition transition = button.getParent() instanceof ViewGroup parent
                 ? parent.getLayoutTransition() : null;
@@ -323,14 +269,6 @@ public class ShareSheetCleanupHook {
         }
     }
 
-    /**
-     * Hooks the composer binder by signature only (its class name is stable, its method names are
-     * not): the (List, boolean, UserSession) method runs when two or more chats are selected; the
-     * no-argument reset and the one-argument methods other than click listeners and the visibility
-     * switch (one chat, single-thread mode) end that state. The (UserSession, String) text setter is
-     * left alone: it is small enough for ART to inline into its callers. All the clearing methods are
-     * hooked first, and the colour only when every one of them is, so nothing can leave it on.
-     */
     private static void hookSendButtonColour(ClassLoader classLoader) {
         try {
             Class<?> binder = XposedHelpers.findClassIfExists(COMPOSER_BINDER, classLoader);
@@ -394,13 +332,12 @@ public class ShareSheetCleanupHook {
         };
     }
 
-    /** Records whether the binder's sheet has several chats selected and recolours its send button. */
     private static void setSeveralChats(Object binder, boolean several) throws IllegalAccessException {
         View button = sendButton(binder);
         if (button == null) return;
         SendTint tint = sendTints.get(button);
         if (tint == null) {
-            if (!several) return; // never recoloured: nothing to put back
+            if (!several) return;
             tint = new SendTint(button);
             sendTints.put(button, tint);
         }
@@ -408,7 +345,6 @@ public class ShareSheetCleanupHook {
         tint.update(button);
     }
 
-    /** The binder keeps the sheet's root in a View field; the button is found there by its id. */
     private static View sendButton(Object binder) throws IllegalAccessException {
         Field[] fields = binderViewFields;
         if (fields == null) {
@@ -430,13 +366,6 @@ public class ShareSheetCleanupHook {
         return null;
     }
 
-    /**
-     * IgdsButton paints its own fill (no background drawable): a per-style renderer, replaced when
-     * the style changes, draws a round rect with one Paint whose colour and alpha follow IG's state
-     * list (pressed, disabled). A colour filter on that Paint outlives those updates. Renderer and
-     * Paint are obfuscated, so both are found by type: the IgdsButton field whose value holds
-     * exactly one Paint.
-     */
     static Paint fillPaint(View button) {
         try {
             Field style = buttonStyleField(button);
@@ -490,7 +419,6 @@ public class ShareSheetCleanupHook {
         return count;
     }
 
-    /** The renderer's only instance Paint, or null when it has none or several (another style). */
     private static Field paintField(Class<?> renderer) {
         if (fillPaintFields.containsKey(renderer)) return fillPaintFields.get(renderer);
         Field found = null;
@@ -508,12 +436,6 @@ public class ShareSheetCleanupHook {
         return found;
     }
 
-    /**
-     * One send button's colour: on while IG shows its several-chats state and Create group is
-     * hidden, otherwise the Paint gets back the filter it had (normally none). While the button is
-     * attached, a pre-draw check follows the setting being switched with the sheet open and IG
-     * rebuilding the button's renderer. Like the sheet observer in watch(), it never cancels a draw.
-     */
     private static final class SendTint implements ViewTreeObserver.OnPreDrawListener,
             View.OnAttachStateChangeListener {
         private final WeakReference<View> button;
@@ -563,7 +485,6 @@ public class ShareSheetCleanupHook {
             b.invalidate();
         }
 
-        /** Puts back the Paint's own filter, unless something replaced ours in the meantime. */
         private void restore() {
             if (tinted != null && tinted.getColorFilter() == SEPARATE_SEND_FILTER) tinted.setColorFilter(original);
             tinted = null;
@@ -571,7 +492,6 @@ public class ShareSheetCleanupHook {
         }
     }
 
-    /** Keep external share actions evenly spaced and vertically centered, including recycled items. */
     static void alignActionButtons(View root, int rowId, int buttonId) {
         if (root == null || rowId == 0 || buttonId == 0) return;
         java.util.ArrayDeque<View> stack = new java.util.ArrayDeque<>();
@@ -582,11 +502,6 @@ public class ShareSheetCleanupHook {
             if (view.getId() == rowId) {
                 layoutShareItems(group, buttonId);
                 if (watchedShareRows.add(group)) {
-                    // Scrolling attaches recycled buttons without a global-layout event. Align
-                    // this small row before drawing, and release its observer when dismissed.
-                    // The observer is window-wide, so it must never cancel a draw: the Reels
-                    // comment share sheet never lays the resized items out, which froze the
-                    // whole of Instagram until the user scrolled.
                     View.OnAttachStateChangeListener watcher = new View.OnAttachStateChangeListener() {
                         private ViewTreeObserver observer;
                         private final ViewTreeObserver.OnPreDrawListener listener =
@@ -631,8 +546,6 @@ public class ShareSheetCleanupHook {
             if (params == null) continue;
             boolean resize = params.width != width;
             params.width = width;
-            // Native label-sized items and their margins give Copy link a different gap. The
-            // equal slots include the spacing, so keep only the row's existing outside padding.
             if (params instanceof ViewGroup.MarginLayoutParams margins) {
                 resize |= margins.leftMargin != 0 || margins.rightMargin != 0
                         || margins.getMarginStart() != 0 || margins.getMarginEnd() != 0;
@@ -642,8 +555,6 @@ public class ShareSheetCleanupHook {
             }
             if (resize) item.setLayoutParams(params);
             if (item.getHeight() <= 0 || item.getHeight() > height) continue;
-            // The host and module have separate RecyclerView classes. Framework Views work in
-            // both; deriving the offset from layout bounds also prevents accumulated shifts.
             float offset = group.getPaddingTop() + (height - item.getHeight()) / 2f - item.getTop();
             if (Math.abs(item.getTranslationY() - offset) > .5f) item.setTranslationY(offset);
         }
@@ -656,8 +567,6 @@ public class ShareSheetCleanupHook {
         Boolean complete = shareDecorationsCleared.get(row);
         if (complete != null) return complete;
         shareDecorationsCleared.put(row, false);
-        // Only the matched external share row reaches here. Post once so native RecyclerView
-        // layout/scroll callbacks finish before its decoration-removal assertion is evaluated.
         row.post(() -> {
             try {
                 java.util.List<?> current = (java.util.List<?>) decorations.get(row);
@@ -665,7 +574,6 @@ public class ShareSheetCleanupHook {
             } catch (Throwable t) {
                 ModuleLog.detail("(IE|ShareSheet) Cannot remove share-row spacing", t);
             } finally {
-                // A host change must not repeatedly enqueue cleanup.
                 shareDecorationsCleared.put(row, true);
                 row.requestLayout();
             }
@@ -681,7 +589,7 @@ public class ShareSheetCleanupHook {
             if (remover != null && listName != null) {
                 try {
                     decorations = remover.getDeclaringClass().getDeclaredField(listName);
-                } catch (NoSuchFieldException ignored) {} // stale cache: rediscover below
+                } catch (NoSuchFieldException ignored) {}
             }
             if (decorations == null) {
                 var matches = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
@@ -691,8 +599,6 @@ public class ShareSheetCleanupHook {
                 if (matches.size() != 1) throw new IllegalStateException("Ambiguous decoration remover");
                 var data = matches.get(0);
                 remover = data.getMethodInstance(loader);
-                // Both the remover and its list are obfuscated. Resolve the list used by the native
-                // remover so its normal inset invalidation and layout bookkeeping still run.
                 for (var use : data.data().getUsingFields()) {
                     Field field = use.getField().getFieldInstance(loader);
                     if (Modifier.isStatic(field.getModifiers())

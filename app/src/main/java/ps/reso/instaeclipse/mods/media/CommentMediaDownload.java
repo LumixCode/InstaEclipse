@@ -21,19 +21,6 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.toast.IeToast;
 
-/**
- * The GIF or photo of a comment, for the Download row of the comment long-press menu.
- *
- * The menu's comment UI model wraps the comment behind Instagram's comment interface (02Rd on
- * 451), the type with a no-arg getter returning {@link #GIPHY}. Everything else is found by
- * shape on that interface, never by obfuscated names:
- *   GIF:   that getter's value; its CommentGiphyMedia* image sets (Instagram's CDN proxy and
- *          Giphy's own) end in fixed_height.getUrl(), the animated GIF drawn in the comment.
- *   Photo: the getter whose type has both a Media getter and a MediaOverlayPayloadSchemaIntf
- *          getter (media_comment_info). The linked-post info (media_info) has no overlay getter,
- *          so a text comment never picks up another post's media.
- * Pando-backed getters throw for fields the query didn't fetch, so every call is guarded.
- */
 public final class CommentMediaDownload {
 
     private static final String TAG = "(InstaEclipse | CopyComment): ";
@@ -42,20 +29,17 @@ public final class CommentMediaDownload {
     private static final String OVERLAY = "com.instagram.api.schemas.MediaOverlayPayloadSchemaIntf";
     private static final String MEDIA = "com.instagram.feed.media.Media";
 
-    /** Per comment interface: {giphy getter, photo-info getter, photo-info -> Media getter}. */
     private static final Map<Class<?>, Method[]> GETTERS = new ConcurrentHashMap<>();
     private static final Set<String> LOGGED = ConcurrentHashMap.newKeySet();
 
     private CommentMediaDownload() {}
 
-    /** A comment's media: a GIF (giphy info object) or a photo (its Media). */
     public static final class Found {
         public final boolean gif;
         final Object source;
         Found(boolean gif, Object source) { this.gif = gif; this.source = source; }
     }
 
-    /** {comment interface, comment} held by the menu model (or the model itself), else null. */
     public static Object[] comment(Object model) {
         if (model == null) return null;
         for (Class<?> c = model.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
@@ -75,7 +59,6 @@ public final class CommentMediaDownload {
         return null;
     }
 
-    /** The comment's GIF or photo, or null for a text-only comment. Main thread, cheap. */
     public static Found find(Class<?> iface, Object comment) {
         Method[] g = getters(iface);
         Object giphy = call(g[0], comment);
@@ -86,9 +69,7 @@ public final class CommentMediaDownload {
         return null;
     }
 
-    /** Saves the media into the download folder; called on the row tap. */
     public static void save(Context ctx, Found found, String commenter) {
-        // Read the URL on the UI thread, where Instagram itself reads these models.
         String url = found.gif ? gifUrl(found.source) : photoUrl(ctx, found.source);
         if (url == null) {
             ModuleLog.error(TAG + "Could not save the comment " + (found.gif ? "GIF" : "photo") + ": no download link found");
@@ -97,7 +78,6 @@ public final class CommentMediaDownload {
         }
         logOnce("url:" + found.gif + ":" + host(url), "media URL host " + host(url));
         IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_comment_gif_downloading), Toast.LENGTH_SHORT).show();
-        // .jpg by default; MediaTypeDetector renames GIF bytes to .gif.
         String filename = FeedVideoDownloadHook.buildFilename(commenter,
                 found.gif ? "comment_gif" : "comment_photo", null, false);
         Context app = ctx.getApplicationContext() != null ? ctx.getApplicationContext() : ctx;
@@ -140,10 +120,6 @@ public final class CommentMediaDownload {
         return g;
     }
 
-    /**
-     * The URLs under the giphy info's image sets (fixed_height.getUrl()), walking only
-     * CommentGiphyMedia* types. Prefers one the companion's download service accepts.
-     */
     private static String gifUrl(Object giphy) {
         List<String> urls = new ArrayList<>();
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -170,11 +146,6 @@ public final class CommentMediaDownload {
         return pickGifUrl(urls);
     }
 
-    /**
-     * Instagram's own CDN copy first, then Giphy's: both pass the download engine's address rules
-     * (MediaUrlPolicy), which the companion applies to every save it is handed. Otherwise the
-     * first URL, which only a save inside Instagram can fetch.
-     */
     static String pickGifUrl(List<String> urls) {
         for (String u : urls) if (DownloadEngine.isAllowedMediaUrl(u) && !isGiphy(u)) return u;
         for (String u : urls) if (DownloadEngine.isAllowedMediaUrl(u)) return u;
@@ -186,7 +157,6 @@ public final class CommentMediaDownload {
         return h != null && (h.equals("giphy.com") || h.endsWith(".giphy.com"));
     }
 
-    /** The CommentGiphyMedia* interfaces an object implements (getters are called through them). */
     private static List<Class<?>> giphyTypes(Class<?> cls) {
         List<Class<?>> types = new ArrayList<>();
         for (Class<?> c = cls; c != null && c != Object.class; c = c.getSuperclass()) {
@@ -207,7 +177,7 @@ public final class CommentMediaDownload {
         try {
             return m.invoke(target);
         } catch (Throwable t) {
-            return null; // unfetched Pando field
+            return null;
         }
     }
 

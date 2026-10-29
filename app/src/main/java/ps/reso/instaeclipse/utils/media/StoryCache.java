@@ -38,29 +38,22 @@ import ps.reso.instaeclipse.utils.download.DownloadEngine;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Local cache of viewed stories, so they stay viewable after they expire or the poster deletes
- * them. Modeled on UnsentLog: a JSON index in Instagram's filesDir + the media files themselves
- * under filesDir/ie_stories/. Populated as the user views stories (StoryDownloadHook capture), read
- * back by the in-IG viewer (DialogUtils). Pruned by the selected retention and a total-size cap.
- */
 public class StoryCache {
 
     private static final String INDEX = "ie_story_cache.json";
     private static final String DIR = "ie_stories";
-    private static final long MAX_BYTES = 500L * 1024 * 1024;    // 500 MB cap
+    private static final long MAX_BYTES = 500L * 1024 * 1024;
     private static final long STARTUP_PRUNE_DELAY_MS = 10_000L;
 
     public static class Entry {
         public final String id, author, mime, path;
         public final boolean video;
-        public final long at;          // captured-at epoch ms
-        public final long expiringAt;  // IG's expiring_at epoch ms (0 = unknown)
+        public final long at;
+        public final long expiringAt;
         Entry(String id, String author, String mime, boolean video, String path, long at, long expiringAt) {
             this.id = id; this.author = author; this.mime = mime; this.video = video; this.path = path;
             this.at = at; this.expiringAt = expiringAt;
         }
-        /** True once past IG's expiry (the story would no longer be in the live tray). */
         public boolean isExpired() { return expiringAt > 0 && System.currentTimeMillis() > expiringAt; }
     }
 
@@ -126,10 +119,8 @@ public class StoryCache {
     }
 
     private static final List<Entry> cache = new ArrayList<>();
-    // Story ids being downloaded, so two binds of the same story cannot capture it twice.
     private static final Set<String> inFlight = new HashSet<>();
     private static volatile boolean loaded = false;
-    // The index could not be read or set aside: keep the cache off without re-reading it per call.
     private static volatile boolean loadFailed = false;
     private static AtomicFile storage;
     private static volatile Map<String, Long> index = Collections.emptyMap();
@@ -163,7 +154,6 @@ public class StoryCache {
     }
 
     private static Context ctx() { return AndroidAppHelper.currentApplication(); }
-    /** Per-author folder: filesDir/ie_stories/<username>/ (falls back to "unknown"). */
     private static File storyDir(String author) {
         Context c = ctx(); if (c == null) return null;
         String sub = ps.reso.instaeclipse.mods.media.DownloadFiles.safeSegment(author, "unknown");
@@ -206,10 +196,6 @@ public class StoryCache {
         }
     }
 
-    /**
-     * Keeps the unreadable bytes as INDEX.corrupt and starts an empty index, so one damaged file
-     * (e.g. truncated by an older non-atomic write) does not switch the cache off for good.
-     */
     private static void setAsideUnreadableIndex(AtomicFile file) {
         File index = file == null ? null : file.getBaseFile();
         File corrupt = index == null ? null : new File(index.getPath() + ".corrupt");
@@ -262,7 +248,6 @@ public class StoryCache {
         AtomicFile file;
         long at;
         synchronized (StoryCache.class) {
-            // Do not overwrite a saved index after a failed or premature read.
             if (!loaded || storage == null) return;
             snapshot = new ArrayList<>(cache);
             file = storage;
@@ -329,7 +314,6 @@ public class StoryCache {
         return id.replaceAll("[^A-Za-z0-9._-]", "_");
     }
 
-    /** Applies the current duration to existing entries, without a timer or another download. */
     public static void refresh() {
         if (!ensureLoaded()) return;
         if (prune()) persist();
@@ -348,7 +332,6 @@ public class StoryCache {
         }), STARTUP_PRUNE_DELAY_MS);
     }
 
-    /** Drops expired entries, then oldest-first while over the size cap; deletes their files. */
     private static boolean prune() {
         List<Entry> snapshot;
         synchronized (StoryCache.class) {
@@ -371,7 +354,6 @@ public class StoryCache {
                 total += sizes[i];
             }
         }
-        // Size cap: cache is append-ordered (oldest first), so evict from the front.
         for (int i = 0; i < snapshot.size() && total > MAX_BYTES; i++) {
             if (sizes[i] < 0) continue;
             total -= sizes[i];
@@ -415,15 +397,9 @@ public class StoryCache {
         QUEUE.post("capture:" + id, () -> capture(id, author, url, video, expiringAt));
     }
 
-    /**
-     * Captures a story: downloads its media to the private cache dir and indexes it. Runs the
-     * network I/O on the caller's thread — call from a background executor. No-op if already cached.
-     */
     public static void capture(String id, String author, String url, boolean video, long expiringAt) {
         if (id == null || id.isEmpty() || url == null || url.isEmpty()) return;
         if (!ensureLoaded()) return;
-        // Prune before the duplicate check: a re-viewed story whose entry expired downloads to
-        // that entry's path, so pruning the stale entry later would delete the fresh file.
         if (prune()) persist();
         synchronized (StoryCache.class) {
             if (!loaded || contains(id) || !inFlight.add(id)) return;
@@ -457,7 +433,6 @@ public class StoryCache {
         }
     }
 
-    /** Snapshot of cached stories, newest first, for the viewer. */
     public static List<Entry> entries() {
         refresh();
         List<Entry> copy;

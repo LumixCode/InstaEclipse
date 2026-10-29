@@ -22,16 +22,8 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * "Follows you" label on profiles (#239), instead of only the follower toast.
- *
- * After UserDetailFragment's onUserUpdated (static method using "UserDetailFragment.onUserUpdated":
- * A0d on 452, A0h on 451) the viewed User is read from the fragment's UserDetailViewModel and its
- * followed_by getter (User ()Boolean using "followed_by"; null = unknown/own profile → no label).
- */
 public class ProfileFollowsYouHook {
 
-    /** True once installed; IGNetworkInterceptor feeds /friendships/show/ results only then. */
     public static volatile boolean active;
 
     private static final String TAG = "(InstaEclipse | FollowsYou): ";
@@ -75,7 +67,6 @@ public class ProfileFollowsYouHook {
                     apply(frag, null);
                 }
             });
-            // Also on every resume of a profile screen (onUserUpdated doesn't fire on all profiles).
             Class<?> base = cl.loadClass("androidx.fragment.app.Fragment");
             ps.reso.instaeclipse.xposedcompat.XposedHelpers.findAndHookMethod(base, "onResume", new XC_MethodHook() {
                 @Override
@@ -102,13 +93,6 @@ public class ProfileFollowsYouHook {
         }
     }
 
-    /**
-     * Result of IG's /friendships/show/ call (parsed by FollowStatusHook while this label or the
-     * follower toast is on): used when the User model doesn't carry followed_by yet (common for
-     * accounts you don't follow).
-     */
-    /** userId -> followed_by from /friendships/show/, kept so a result that arrives before the
-     *  profile screen registers is still applied. */
     private static final FollowsYouCache RESULTS = new FollowsYouCache();
 
     public static void onFollowResult(String userId, boolean followedBy) {

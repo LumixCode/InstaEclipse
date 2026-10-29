@@ -20,27 +20,12 @@ import ps.reso.instaeclipse.utils.core.AtomicFiles;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.AndroidAppHelper;
 
-/**
- * Earlier versions of edited DMs, recorded by EditHistoryHook and kept as JSON in Instagram's own
- * filesDir, so the "Edited" history survives restarts. One entry per message, matched by any of its
- * ids (server item id, client context) within the account's thread. The account or thread can be
- * unknown when an edit arrived in place (Instagram's sync engine rewrites the stored message, with
- * no session or thread key at hand); a later tap on that message fills them in.
- *
- * Bounded: the newest {@link #MAX_MESSAGES} messages, {@link #MAX_VERSIONS} versions each, texts cut
- * at {@link #MAX_CHARS}. The bookkeeping is framework-free and unit-tested; only {@link #shared()}
- * and {@link #persist()} touch the file.
- */
 public final class EditHistoryStore {
 
-    /** One text the message had. */
     public static final class Version {
         public final String text;
-        /** When this text appeared, epoch ms; 0 when unknown. */
         public final long time;
-        /** The text as it was first sent. */
         public final boolean original;
-        /** {@link #time} is when this phone noticed the edit, not a time Instagram gave. */
         public final boolean noticed;
 
         public Version(String text, long time, boolean original, boolean noticed) {
@@ -70,7 +55,6 @@ public final class EditHistoryStore {
     private static boolean loaded;
 
     private final int capacity, maxVersions;
-    /** Least recently changed first. */
     private final List<Entry> entries = new ArrayList<>();
 
     public EditHistoryStore(int capacity, int maxVersions) {
@@ -79,16 +63,10 @@ public final class EditHistoryStore {
         this.maxVersions = maxVersions;
     }
 
-    /** The texts as stored: cut at {@link #MAX_CHARS}. */
     public static String cut(String text) {
         return text == null || text.length() <= MAX_CHARS ? text : text.substring(0, MAX_CHARS);
     }
 
-    /**
-     * Instagram replaced the message's text {@code before} with {@code after} (observed at {@code now}).
-     * {@code beforeIsOriginal} when the message had no edits yet, so {@code before} is the text as
-     * sent at {@code sentAt}. Returns whether anything was stored.
-     */
     public synchronized boolean recordEdit(String account, String thread, Collection<String> ids, String before,
                                            String after, boolean beforeIsOriginal, long sentAt, long now) {
         LinkedHashSet<String> keys = clean(ids);
@@ -104,9 +82,7 @@ public final class EditHistoryStore {
             entries.add(entry);
         } else {
             String last = entry.versions.isEmpty() ? null : entry.versions.get(entry.versions.size() - 1).text;
-            // The same edit seen again (another copy of the message, or the sync and the merge both).
             if (after.equals(last)) return claim(entry, account, thread, keys);
-            // An edit in between was missed: the replaced text has no known start time.
             if (!before.equals(last)) {
                 entry.versions.add(new Version(before, 0, beforeIsOriginal && entry.versions.isEmpty(), false));
             }
@@ -117,12 +93,6 @@ public final class EditHistoryStore {
         return true;
     }
 
-    /**
-     * Earlier versions Instagram sent with the message ({@code server}, oldest first, the current text
-     * excluded), merged into what was recorded here; {@code complete} when they cover every edit, so the
-     * first is the original. Also fills in an account or thread that was unknown when the edit was
-     * recorded. Returns whether anything changed.
-     */
     public synchronized boolean mergeServer(String account, String thread, Collection<String> ids,
                                             List<Version> server, boolean complete, long now) {
         LinkedHashSet<String> keys = clean(ids);
@@ -156,7 +126,6 @@ public final class EditHistoryStore {
         return changed;
     }
 
-    /** The stored versions of one message, oldest first (empty when none). */
     public synchronized List<Version> versions(String account, String thread, Collection<String> ids) {
         Entry entry = match(account, thread, clean(ids));
         return entry == null ? Collections.emptyList() : new ArrayList<>(entry.versions);
@@ -164,11 +133,6 @@ public final class EditHistoryStore {
 
     public synchronized int size() { return entries.size(); }
 
-    /**
-     * Instagram's versions are the backbone (its order and times win); a version recorded here that
-     * Instagram does not list goes after the last one already placed, before the first later one
-     * whose time is known to be later.
-     */
     static List<Version> merge(List<Version> server, List<Version> local) {
         List<Version> merged = new ArrayList<>(server);
         int last = -1;
@@ -202,7 +166,6 @@ public final class EditHistoryStore {
         return true;
     }
 
-    /** Newest match first; an unknown account or thread on either side does not rule a match out. */
     private Entry match(String account, String thread, LinkedHashSet<String> ids) {
         if (ids.isEmpty()) return null;
         for (int i = entries.size() - 1; i >= 0; i--) {
@@ -226,7 +189,6 @@ public final class EditHistoryStore {
         entry.updated = now;
         entries.remove(entry);
         entries.add(entry);
-        // Keep the original when a message was edited more often than the bound.
         while (entry.versions.size() > maxVersions) {
             entry.versions.remove(entry.versions.get(0).original ? 1 : 0);
         }
@@ -241,9 +203,6 @@ public final class EditHistoryStore {
 
     private static boolean empty(String s) { return s == null || s.isEmpty(); }
 
-    // ── File (Instagram process only) ───────────────────────────────────────
-
-    /** The process-wide store, read from Instagram's filesDir on first use. */
     public static EditHistoryStore shared() {
         synchronized (SHARED) {
             if (!loaded) load();
@@ -251,7 +210,6 @@ public final class EditHistoryStore {
         return SHARED;
     }
 
-    /** Writes the shared store off the caller's thread. */
     public static void persist() {
         if (DataBackup.restoring()) return;
         String json;
@@ -270,7 +228,7 @@ public final class EditHistoryStore {
 
     private static void load() {
         Context ctx = AndroidAppHelper.currentApplication();
-        if (ctx == null) return; // too early in startup: try again on the next use
+        if (ctx == null) return;
         file = new File(ctx.getFilesDir(), FILE_NAME);
         loaded = true;
         if (!file.isFile()) return;
@@ -283,7 +241,6 @@ public final class EditHistoryStore {
             List<Entry> recorded = new ArrayList<>(SHARED.entries);
             SHARED.entries.clear();
             SHARED.fromJson(new JSONObject(new String(b, StandardCharsets.UTF_8)));
-            // Edits recorded before the file could be read are newer than anything in it.
             for (Entry e : recorded) {
                 SHARED.entries.removeIf(old -> !Collections.disjoint(old.ids, e.ids));
                 SHARED.entries.add(e);

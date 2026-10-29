@@ -6,7 +6,6 @@ import java.util.List;
 
 import ps.reso.instaeclipse.utils.download.DownloadRequest;
 
-/** Detached at the user action. Never stores an Instagram object, View or mutable model list. */
 final class SelectedMediaSnapshot {
     interface Access {
         Value read(Object receiver, String property) throws Exception;
@@ -56,8 +55,6 @@ final class SelectedMediaSnapshot {
 
     private static SelectedMediaSnapshot capture(Object selected, Access a, int depth,
             String parentOwner, Object post) throws Exception {
-        // Preserve upstream discovery order before the new getters materialize native data.
-        // A missing legacy helper does not make the independent custom request unavailable.
         String originalVideo = null, originalImage = null;
         try { originalVideo = a.originalVideo(selected); } catch (Exception | LinkageError ignored) { }
         try { originalImage = a.originalImage(selected, depth > 0); } catch (Exception | LinkageError ignored) { }
@@ -126,7 +123,6 @@ final class SelectedMediaSnapshot {
                 : DownloadRequest.AudioExpectation.UNKNOWN;
         if (!video && image == null && children.isEmpty())
             throw new IllegalStateException("Selected media has no resolved downloadable candidates");
-        // A failed or missing video binding must never silently turn a video into its cover.
         if (video && manifest == null && renditions.isEmpty())
             throw new IllegalStateException("Selected video has no exposed downloadable candidates");
         return new SelectedMediaSnapshot(id, owner, manifest, image, video, music, audio,

@@ -31,30 +31,8 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 
-/**
- * Hides two header buttons that have no view id of their own:
- *  - the Threads button in a profile's action bar (right_action_bar_buttons), and
- *  - the Blend button in a DM thread header (header_right_buttons).
- * They are matched by their content description ("…Threads…" / "Blend…": product names that
- * Instagram keeps untranslated), inside those containers only. A layout listener on each
- * activity's window re-hides them whenever Instagram rebuilds the header.
- *
- * Your own profile's Threads button also goes with "Hide Threads suggestions", and is stopped
- * before it is built: Instagram adds it (IG 451: model X.090q in X.0L2A.A15, and the older
- * action-bar path X.0AU8.Ae6 with id profile_header_barcelona_app_switcher_button) only when one
- * gate returns true, X.0AZB.A06(UserSession, boolean isSelf, boolean)Z. Anchor: the gate's class owns
- * the only 6-parameter boolean method that uses "com.instagram.barcelona" (X.0AZB.A02, the
- * "Threads installed" check), and the gate is that class's only instance method
- * (UserSession, boolean, boolean) -> boolean. Forcing it false leaves the other buttons alone
- * (create and the menu are added after it either way) and skips the badge tooltip with it.
- * Fallback for a build where the gate is missing or inlined: after the unobfuscated, final
- * com.instagram.profile.actionbar.ProfileActionBar binds its buttons (its only 6-parameter void
- * method, which empties both containers and adds a fresh ImageView per button), its "Threads"
- * child is hidden before it is drawn.
- */
 public class HideHeaderButtonsHook {
     private static final String TAG = "(IE|HideButtons) ";
-    // v1: X.0AZB.A06 on IG 451 (X.0EHO.A04 on 446).
     private static final String CACHE_GATE = "HideThreads_profileGate_v1";
     private static final String USER_SESSION = "com.instagram.common.session.UserSession";
     private static final String PROFILE_ACTION_BAR = "com.instagram.profile.actionbar.ProfileActionBar";
@@ -86,7 +64,6 @@ public class HideHeaderButtonsHook {
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Hiding the Threads and Blend buttons will not work: setup failed", t);
         }
-        // Reflection only, so it is in place before the DexKit lookup of the gate.
         hookProfileActionBar(cl);
         hookThreadsGate(cl);
     }

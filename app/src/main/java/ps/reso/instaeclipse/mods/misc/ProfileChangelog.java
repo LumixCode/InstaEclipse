@@ -28,27 +28,6 @@ import ps.reso.instaeclipse.utils.toast.IeToast;
 import ps.reso.instaeclipse.utils.ui.IeColors;
 import ps.reso.instaeclipse.utils.users.WatchlistStore;
 
-/**
- * A watched profile's changelog, the only view of what the profile analyzer saved: "Changelog" in
- * the follow list screen's tools menu (FollowListToolsIcon) once the analyzer saved a check of that
- * profile, the analyzer result's Changelog button and a profile's row in the in-app Watchlist.
- *
- * <p>Every saved check, newest first (ProfileChangelogPolicy): when it ran, what it was compared
- * with, how many accounts each list had and Instagram's own counts (where saved), notes on how a
- * list was compared (a new baseline, a kept list, a limited or partly hidden list), then the
- * accounts that newly followed / stopped following the profile and that it started / stopped
- * following. New accounts that may only have been missed by the check before are in their own
- * section, and accounts a check didn't list that don't count as gone yet are shown in grey ("not
- * listed in this analysis, unconfirmed"); a loss confirmed after a while says when the account was
- * last listed. Rows are added a page at a time ("Show more"), so thousands of changes open quickly.
- * Tap an account to open it in Instagram (its own https://www.instagram.com/&lt;username&gt;/ link,
- * handled by Instagram), hold it to copy the username.
- *
- * <p>A check with changes offers "Mark these changes as unreliable (keep the lists)": after the
- * user confirms, its changes leave the log (WatchlistStore.markUnreliable); the saved lists stay,
- * an older list is never restored. The dialog also removes the profile from the watchlist and
- * opens it.
- */
 final class ProfileChangelog {
 
     private static final String TAG = "(IE|Changelog) ";
@@ -56,14 +35,11 @@ final class ProfileChangelog {
 
     private ProfileChangelog() {}
 
-    /** When the watchlist of {@code self} last saved a check of {@code id} (0: never). Reads a file. */
     static long lastCheck(Context app, String self, String id) {
         WatchlistStore.Entry e = WatchlistStore.find(WatchlistStore.loadIndex(app, self), id);
         return e != null ? e.lastCheck : 0;
     }
 
-    /** Opens the changelog of profile {@code id} from the watchlist of {@code self}; {@code name}:
-     *  its username when the profile file has none. */
     static void show(Context ctx, String self, String id, String name) {
         Context app = ctx.getApplicationContext();
         new Thread(() -> {
@@ -124,7 +100,6 @@ final class ProfileChangelog {
         return confirm;
     }
 
-    /** Adds the rows a page at a time, with "Show more" at the end while rows are left. */
     private static final class Page {
         final IeDialog dlg;
         final Context ctx;
@@ -177,8 +152,6 @@ final class ProfileChangelog {
             list.addView(more, lp);
         }
 
-        /** A check's heading: when, what it was compared with, the counts, notes, and the
-         *  "mark unreliable" action while it has changes. */
         View check(ProfileChangelogPolicy.Group g, boolean top) {
             SpannableStringBuilder sb = new SpannableStringBuilder(I18n.t(ctx, R.string.ig_pa_analysis_of, df.format(new Date(g.ts))));
             sb.setSpan(new StyleSpan(Typeface.BOLD), 0, sb.length(), 0);
@@ -231,8 +204,6 @@ final class ProfileChangelog {
             return card;
         }
 
-        /** Asks before removing a check's changes; on "Remove changes" they leave the log (the
-         *  lists stay) and the changelog opens again. */
         void confirmUnreliable(ProfileChangelogPolicy.Group g) {
             int n = g.kept();
             IeDialog c = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_pa_analysis_of, df.format(new Date(g.ts))))
@@ -260,8 +231,6 @@ final class ProfileChangelog {
             return I18n.t(ctx, R.string.ig_pa_cl_list, I18n.t(ctx, label), listed, ig);
         }
 
-        /** A section's heading in the analyzer result's style: green for gains, red for losses,
-         *  grey for what isn't confirmed. */
         View section(ProfileChangelogPolicy.Group g, ProfileChangelogPolicy.Section s) {
             TextView h = new TextView(dlg.ctx);
             h.setText(I18n.t(ctx, ProfileAnalyzer.sectionTitle(s), name, g.of(s).size()));
@@ -272,9 +241,6 @@ final class ProfileChangelog {
             return h;
         }
 
-        /** "@username  Full name": tap opens the profile in Instagram, hold copies the username.
-         *  Without a username the account's id is shown (hold copies it). A loss or not-listed
-         *  account that wasn't listed for a while also says when it was last listed. */
         View account(ProfileChangelogPolicy.Group g, ProfileChangelogPolicy.Section s, WatchlistStore.Event e) {
             boolean named = e.username != null && !e.username.isEmpty();
             SpannableStringBuilder sb = new SpannableStringBuilder(named ? "@" + e.username : "id " + e.id);

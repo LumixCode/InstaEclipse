@@ -9,10 +9,6 @@ import android.os.Bundle;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Launches one of InstaEclipse's own Activities (e.g. LocationPickerActivity) from code
- * running inside Instagram's hooked process. Uses an authenticated one-shot capability for the private target Activity.
- */
 public final class ModuleActivityLauncher {
 
     private ModuleActivityLauncher() {}

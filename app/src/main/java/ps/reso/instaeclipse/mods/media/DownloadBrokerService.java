@@ -21,14 +21,12 @@ import java.util.UUID;
 import ps.reso.instaeclipse.utils.ipc.BrokerPayload;
 import ps.reso.instaeclipse.utils.ipc.CompanionBridge;
 
-/** Only this broker is exported. Tokens target private components and cannot be filled in. */
 public final class DownloadBrokerService extends Service {
     private final Handler expiry = new Handler(Looper.getMainLooper());
     private final IBinder broker = new Binder() {
         @Override protected boolean onTransact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
             if (code == INTERFACE_TRANSACTION) { reply.writeString(CompanionBridge.DESCRIPTOR); return true; }
             if (code < CompanionBridge.DOWNLOAD || code > CompanionBridge.ACTIVITY) return super.onTransact(code, data, reply, flags);
-            // onBind cannot authenticate its eventual callers. Check the actual transaction UID.
             if (!CompanionBridge.isTrustedCaller(DownloadBrokerService.this, Binder.getCallingUid()))
                 throw new SecurityException("Companion request denied");
             if (reply == null || data.dataSize() > BrokerPayload.MAX_PARCEL_BYTES || data.hasFileDescriptors())
@@ -70,7 +68,6 @@ public final class DownloadBrokerService extends Service {
                 PendingIntent token;
                 if (code == CompanionBridge.ACTIVITY) {
                     ActivityOptions options = ActivityOptions.makeBasic();
-                    // API 35 creator opt-in, while keeping compilation/API 28 compatibility.
                     if (Build.VERSION.SDK_INT >= 35) {
                         try { ActivityOptions.class.getMethod("setPendingIntentCreatorBackgroundActivityStartMode", int.class)
                                 .invoke(options, 1); } catch (ReflectiveOperationException error) {
@@ -79,7 +76,6 @@ public final class DownloadBrokerService extends Service {
                     }
                     token = PendingIntent.getActivity(DownloadBrokerService.this, 0, target, tokenFlags, options.toBundle());
                 } else token = PendingIntent.getForegroundService(DownloadBrokerService.this, 0, target, tokenFlags);
-                // Never retain signed URLs in a persistent queue; unused capabilities expire.
                 expiry.postDelayed(token::cancel, 30_000);
                 reply.writeNoException();
                 token.writeToParcel(reply, Parcelable.PARCELABLE_WRITE_RETURN_VALUE);

@@ -60,18 +60,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
 import ps.reso.instaeclipse.utils.ui.CompanionRestartHint;
 import ps.reso.instaeclipse.utils.ui.Links;
 
-/**
- * Full-screen OpenStreetMap picker for the coordinates the GPS spoof reports to Instagram.
- *
- * <ul>
- *   <li>Search (Nominatim) lists up to six matches; pasted "lat, lng" coordinates jump
- *   straight to the point.</li>
- *   <li>When the map settles, the place under the pin is named via reverse geocoding (debounced
- *   to respect Nominatim's one-request-per-second policy).</li>
- *   <li>Recently used places show as chips; the confirmed place is saved with its name and
- *   pushed to Instagram through {@link LocationPresets#applyFromCompanion}.</li>
- * </ul>
- */
 public class LocationPickerActivity extends AppCompatActivity {
 
     public static final String EXTRA_LAT = "lat";
@@ -109,9 +97,7 @@ public class LocationPickerActivity extends AppCompatActivity {
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService io = Executors.newSingleThreadExecutor();
 
-    /** Name of the place under the pin; empty until reverse geocoding answers. */
     private String currentLabel = "";
-    /** Set when the pin was placed from a named source (search hit / recent chip). */
     private boolean labelLocked;
     private GeoPoint target;
     private final Runnable reverseTask = this::reverseGeocodeCenter;
@@ -203,8 +189,6 @@ public class LocationPickerActivity extends AppCompatActivity {
             @Override public boolean onZoom(ZoomEvent e) { onCenterChanged(); return false; }
         });
 
-        // Only a finger on the map releases a name that came from search or a recent chip;
-        // programmatic animateTo() also fires scroll events.
         map.setOnTouchListener((v, e) -> {
             if (e.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
                 labelLocked = false;
@@ -282,8 +266,6 @@ public class LocationPickerActivity extends AppCompatActivity {
         outState.putBoolean(STATE_LABEL_LOCKED, labelLocked);
     }
 
-    // ---- map ------------------------------------------------------------------------------
-
     private void onCenterChanged() {
         GeoPoint c = (GeoPoint) map.getMapCenter();
         coordText.setText(LocationPresets.coords(c.getLatitude(), c.getLongitude()));
@@ -304,8 +286,6 @@ public class LocationPickerActivity extends AppCompatActivity {
         coordText.setText(LocationPresets.coords(lat, lng));
         if (!labelLocked) onCenterChanged();
     }
-
-    // ---- recent places ---------------------------------------------------------------------
 
     private void buildRecentChips() {
         ChipGroup group = findViewById(R.id.recent_chips);
@@ -329,8 +309,6 @@ public class LocationPickerActivity extends AppCompatActivity {
         String first = comma > 0 ? s.substring(0, comma) : s;
         return first.length() > 28 ? first.substring(0, 27) + "…" : first;
     }
-
-    // ---- search ----------------------------------------------------------------------------
 
     private void onSearch(String query) {
         hideKeyboard();
@@ -399,8 +377,6 @@ public class LocationPickerActivity extends AppCompatActivity {
         return tv.resourceId;
     }
 
-    // ---- reverse geocoding -------------------------------------------------------------------
-
     private void reverseGeocodeCenter() {
         GeoPoint c = (GeoPoint) map.getMapCenter();
         double lat = c.getLatitude(), lng = c.getLongitude();
@@ -410,14 +386,12 @@ public class LocationPickerActivity extends AppCompatActivity {
                 JSONObject o = new JSONObject(fetch(String.format(Locale.US,
                         "https://nominatim.openstreetmap.org/reverse?format=json&zoom=16&lat=%.6f&lon=%.6f", lat, lng)));
                 name = o.optString("display_name", "");
-            } catch (Throwable ignored) {
-                // offline or rate-limited: coordinates are shown instead
-            }
+            } catch (Throwable ignored) {}
             String result = name;
             main.post(() -> {
                 GeoPoint now = (GeoPoint) map.getMapCenter();
                 if (labelLocked || Math.abs(now.getLatitude() - lat) > 1e-6 || Math.abs(now.getLongitude() - lng) > 1e-6) {
-                    return; // the map moved on since this request
+                    return;
                 }
                 currentLabel = result;
                 placeName.setText(result.isEmpty() ? getString(R.string.loc_picker_unnamed) : result);

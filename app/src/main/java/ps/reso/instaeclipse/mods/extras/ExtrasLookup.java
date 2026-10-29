@@ -15,10 +15,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * DexKit lookups shared by the "Extras" hooks: resolve once, cache the result per IG version,
- * and remember misses so a feature IG removed doesn't cost a DexKit scan on every launch.
- */
 final class ExtrasLookup {
 
     interface Finder {
@@ -55,21 +51,17 @@ final class ExtrasLookup {
         return null;
     }
 
-    /** Methods whose body references every given string. */
     static List<Found> byStrings(String... strings) {
         return DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create().usingStrings(strings)));
     }
 
-    /** First method invoked by {@code owner} that is static and satisfies {@code test}. */
     static Method firstStaticInvoke(Found owner, ClassLoader cl, Predicate<Method> test) {
         for (MethodData inv : DexKitQueryCache.invokes(owner)) {
             if (!inv.isMethod()) continue;
             try {
                 Method m = inv.getMethodInstance(cl);
                 if (Modifier.isStatic(m.getModifiers()) && test.test(m)) return m;
-            } catch (Throwable ignored) {
-                // unresolvable framework/synthetic reference
-            }
+            } catch (Throwable ignored) {}
         }
         return null;
     }

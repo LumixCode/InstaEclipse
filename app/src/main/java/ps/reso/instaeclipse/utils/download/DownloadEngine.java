@@ -17,9 +17,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Blocking worker API. The caller owns publishing the verified file and closing Result. */
 public final class DownloadEngine {
-    /** Cheap shape check for the IPC boundary. Fetch still validates DNS and every redirect. */
     public static boolean isAllowedMediaUrl(String url) {
         return MediaUrlPolicy.shapeRefusal(url) == null;
     }
@@ -45,7 +43,6 @@ public final class DownloadEngine {
     public static final class Failure extends IOException {
         public final boolean canOfferFallback;
         public final String status;
-        /** Fixed diagnostic tags only; never exception messages, URLs, IDs or file paths. */
         public final String diagnostic;
         public final int tried;
         public final boolean deterministic;
@@ -125,7 +122,6 @@ public final class DownloadEngine {
                 ? "Selected exposed DASH tracks" : "Selected discovered direct candidate");
     }
 
-    /** Fetches one media file into an empty internal-cache destination; the caller owns publication. */
     public static String fetch(Context context, String url, File destination, String expectedMime,
             Cancellation cancellation, Progress listener) throws Failure {
         return fetch(context, url, destination, expectedMime, cancellation, listener, false, true);
@@ -136,7 +132,6 @@ public final class DownloadEngine {
         return fetch(context, url, destination, expectedMime, cancellation, null, false, false);
     }
 
-    /** A source for upstream audio extraction may contain video, but must contain real audio. */
     public static String fetchAudioSource(Context context, String url, File destination,
             Cancellation cancellation, Progress listener) throws Failure {
         return fetch(context, url, destination, "audio/mp4", cancellation, listener, true, true);
@@ -383,9 +378,6 @@ public final class DownloadEngine {
                 }
                 int sampleCount = 0;
                 long minTime = Long.MAX_VALUE, maxTime = Long.MIN_VALUE;
-                // A seek to time zero can skip negative preroll after a plain-MP4 edit list,
-                // while the fragmented path still returns it. A fresh extractor per track
-                // reads every encoded sample from its true start, including that preroll.
                 MediaExtractor samples = new MediaExtractor();
                 try {
                     samples.setDataSource(file.getAbsolutePath());
@@ -431,8 +423,6 @@ public final class DownloadEngine {
             int sampleCount) throws IOException {
         if (duration > 0 && sampleCount > 0 && maxTime - minTime + durationTolerance(duration) >= duration)
             return duration;
-        // PTS describes a sample's start, not its end. For sparse/held samples, prove the final
-        // duration from the bounded index, including exact count and byte-range agreement.
         long indexedDuration;
         try { indexedDuration = Mp4Join.indexedDurationUs(file, video, sampleCount); }
         catch (IOException | RuntimeException error) {
@@ -456,12 +446,6 @@ public final class DownloadEngine {
         if (size < 0 || size > 32 * 1024 * 1024) throw new IOException("Sample buffer exceeds limit");
         return Math.max(size, 1024 * 1024);
     }
-    /**
-     * Whether track {@code i} is the Dolby Vision view of another track. For backward-compatible
-     * Dolby Vision (an AV1 or HEVC picture with a {@code dvvC}/{@code dvcC} box, as Instagram's
-     * HDR streams are) Android 13 lists the one MP4 track twice under the same track id: as
-     * video/dolby-vision and as its base codec. Only the base codec's entry is a separate picture.
-     */
     static boolean isDolbyVisionAlias(MediaExtractor ex, int i) {
         MediaFormat f = ex.getTrackFormat(i);
         if (!MediaFormat.MIMETYPE_VIDEO_DOLBY_VISION.equals(f.getString(MediaFormat.KEY_MIME))
@@ -491,8 +475,6 @@ public final class DownloadEngine {
     }
 
     static boolean usesPortableJoin(Metadata video, Metadata audio) {
-        // Sparse/held tracks need their indexed final duration. Native muxing only receives PTS
-        // and can change their duration and B-frame timing; the portable writer copies both.
         return video.videoCodec.equals("video/x-vnd.on2.vp9") || video.videoCodec.equals("video/av01")
                 || needsIndexedEnd(video.durationUs, video.videoFirstUs, video.videoLastUs, video.videoSamples)
                 || (audio != null && needsIndexedEnd(audio.audioDurationUs, audio.audioFirstUs,
@@ -503,7 +485,6 @@ public final class DownloadEngine {
         return samples > 0 && duration > 0 && last - first + durationTolerance(duration) < duration;
     }
 
-    /** Shared production route for already inspected DASH sources; no quality or encoding change. */
     static boolean joinTracks(File video, File audio, File out, Metadata sourceVideo, Metadata sourceAudio,
             Cancellation cancellation, Progress listener) throws IOException {
         checkCancelled(cancellation);
@@ -512,7 +493,6 @@ public final class DownloadEngine {
                 : nativeJoin(video, audio, out, cancellation);
     }
 
-    /** Adapted from HushGram DashSave: interleaved stream-copy and a shared negative-time offset. */
     static boolean nativeJoin(File video, File audio, File out, Cancellation cancellation) throws IOException {
         MediaExtractor v = new MediaExtractor(), a = new MediaExtractor();
         MediaMuxer mux = null; boolean started = false;
@@ -545,7 +525,6 @@ public final class DownloadEngine {
             mux.stop(); started = false;
             return true;
         } finally {
-            // Each cleanup runs even when another native cleanup fails.
             try { if (mux != null) { try { if (started) mux.stop(); } finally { mux.release(); } } }
             finally { try { v.release(); } finally { a.release(); } }
         }

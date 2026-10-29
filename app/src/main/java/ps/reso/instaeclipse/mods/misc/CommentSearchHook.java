@@ -52,34 +52,14 @@ import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * Search inside the comments sheet (#230).
- *
- * - Comment list view-model = declaring class of the method using
- *   "select_comment_screen_pin_comment_tap" (X.054n on 452, X.0BCO on 451). Its static UI-state
- *   builder (the static method taking the VM class among its params and returning an object)
- *   is re-run on every update; after it we collect the rows that carry a User (author) and the
- *   comment text (longest String field) — i.e. every comment loaded so far.
- * - Sheet fragment = class whose onViewCreated uses "Failed to ingest comments close signal"
- *   (X.0Ivg on 452, X.0RtS on 451); Instagram's Explore magnifier is added at the end of the
- *   sheet's "For you" sort row there (see addPill).
- * - The icon opens a dialog: type to filter by author or text; tap a result to copy it.
- * Only comments IG has loaded are searched (scroll to load more first).
- */
 public class CommentSearchHook {
 
     private static final String TAG = "(IE|CommentSearch) ";
     private static final String USER = "com.instagram.user.model.User";
-    /** {username, text, comment id, parent comment id ("" = top level), likes, reply count, created (s), media id};
-     *  the post caption row has no ids (its user = the post author) */
     private static volatile List<String[]> latest = new ArrayList<>();
-    /** The latest comment UI-state object and the comments-sheet fragment — walked at export time to
-     *  find the post's Media object (so the post's own photos/videos can be saved with the comments). */
     private static volatile java.lang.ref.WeakReference<Object> lastState = new java.lang.ref.WeakReference<>(null);
     private static java.lang.ref.WeakReference<Object> lastFragment = new java.lang.ref.WeakReference<>(null);
     private static volatile String[] postRow;
-    // IG's own comment JSON serializer (static void (generator, Comment) using "parent_comment_id")
-    // and the JSON factory's (Writer) -> generator method: field names stay readable across versions
     private static Method commentSerializer, jsonWriterMethod;
     private static Class<?> jsonFactory, commentType;
     private static Object jsonFactoryInstance;
@@ -87,13 +67,10 @@ public class CommentSearchHook {
     private static final java.util.regex.Pattern NUMERIC = java.util.regex.Pattern.compile("[0-9_:.-]+");
     private static volatile Method mediaIdGetter;
     private static final Map<Object, String[]> ROW_CACHE = Collections.synchronizedMap(new java.util.WeakHashMap<>());
-    /** the open comments sheet (its list is scrolled by "Load all") */
     private static java.lang.ref.WeakReference<View> sheet = new java.lang.ref.WeakReference<>(null);
     private static final android.os.Handler MAIN = new android.os.Handler(android.os.Looper.getMainLooper());
     private static volatile Runnable loading;
-    /** Remembered state of the "Also save the post's photos/videos" export option. */
     private static boolean exportPostMedia = true;
-    /** ids / tracking tokens (long, no spaces, base64-ish) are never the comment text */
     private static final java.util.regex.Pattern TOKEN = java.util.regex.Pattern.compile("[A-Za-z0-9+/=_-]{32,}");
 
     public void install(ClassLoader cl) {
@@ -152,8 +129,6 @@ public class CommentSearchHook {
                 ModuleLog.warn(TAG + "Comment search works on the text only: likes, dates and replies cannot be read: " + t);
             }
             try {
-                // The sort selector row's model takes the sort-order enum, whose int field is the label.
-                // Both sort-row queries are cached: no full-dex scan on later starts.
                 for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingEqStrings("sort_order_selector_row")))) {
                     Class<?> model = cl.loadClass(md.getClassName());
@@ -166,7 +141,6 @@ public class CommentSearchHook {
                 ModuleLog.warn(TAG + "The search icon goes to the sheet's header instead of the sort row: " + t);
             }
             try {
-                // The sort row's composable: the moment it composes, look for it on screen.
                 int selectors = 0;
                 for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("CommentSortOrderSelector.kt")))) {
@@ -256,12 +230,11 @@ public class CommentSearchHook {
                 } catch (Throwable ignored) {}
             }
             if (user == null) continue;
-            // a real Comment model counts even without text (GIF / image comments)
             boolean comment = commentType != null && commentType.isInstance(o);
             if (comment) {
                 String u = UserUtils.callUsernameGetter(user);
                 String[] row = u != null ? commentRow(o, u) : null;
-                if (row != null) { out.put(row[2], row); continue; } // by comment id (newer state wins)
+                if (row != null) { out.put(row[2], row); continue; }
             }
             if (text != null && !text.isEmpty() && !NUMERIC.matcher(text).matches()) {
                 String u = UserUtils.callUsernameGetter(user);
@@ -271,7 +244,6 @@ public class CommentSearchHook {
             }
         }
         postRow = post;
-        // the row view-models wrap the Comment model: keep the model's row (it has ids), drop the wrapper's
         Set<String> withId = new java.util.HashSet<>();
         for (String[] r : out.values()) if (!r[2].isEmpty()) withId.add(r[0] + "\u0000" + r[1]);
         List<String[]> rows = new ArrayList<>();
@@ -279,10 +251,6 @@ public class CommentSearchHook {
         return rows;
     }
 
-    /**
-     * The "For you" sort row's model in the UI state, or null: collect()'s walk without reading any
-     * comment (no text, author or serializer), stopping at the first hit. For caption copy alone.
-     */
     private static Object findSortRow(Object state) {
         if (sortRowModel == null) return null;
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -348,7 +316,6 @@ public class CommentSearchHook {
         return CommentSearchPolicy.header(rows, ours ? post : null);
     }
 
-    /** A Comment model as a row, via IG's own serializer (cached: the models are immutable). */
     private static String[] commentRow(Object c, String user) {
         if (commentSerializer == null || jsonFactory == null) return null;
         if (!commentType.isInstance(c)) {
@@ -385,7 +352,6 @@ public class CommentSearchHook {
 
     private static boolean rowLogged;
 
-    /** Compose roots can't hold child views: use the nearest real ViewGroup above them. */
     private static View host(View root) {
         View v = root;
         while (v != null && v.getClass().getName().contains("ComposeView")) {
@@ -396,14 +362,7 @@ public class CommentSearchHook {
 
     private static final String ICON_TAG = "ie_comment_search";
 
-    /**
-     * Instagram's own Explore magnifier at the end of the sheet's "For you ⌄" sort row. That row is
-     * an item of the Compose comment list and scrolls with it, so the icon sits in an overlay above
-     * the list and follows the row (see {@link SortRowOverlay}). Without a sort row to follow (the
-     * Litho sheet, or a sheet whose list has none) it goes to the end of the sheet header.
-     */
     private static void addPill(View root, Object fragment) {
-        // The sheet's content container: the Compose sheet's host, or the Litho sheet's parent.
         ViewGroup content = root instanceof FrameLayout f ? f
                 : root.getParent() instanceof FrameLayout p ? p
                 : root instanceof ViewGroup g ? g : null;
@@ -423,7 +382,6 @@ public class CommentSearchHook {
         headerIcon(content, newIcon(ctx, tint));
     }
 
-    /** The magnifier: 24dp glyph in a 44dp touch target, tinted like Instagram's primary icons. */
     @android.annotation.SuppressLint({"UseCompatLoadingForDrawables", "ClickableViewAccessibility"})
     private static android.widget.ImageView newIcon(Context ctx, int tint) {
         float d = ctx.getResources().getDisplayMetrics().density;
@@ -460,8 +418,6 @@ public class CommentSearchHook {
                 ModuleLog.error(TAG + "Could not open comment search", t);
             }
         });
-        // The bottom sheet's touch handling can swallow the click (DOWN/UP reach the icon but
-        // performClick never runs), so act on UP ourselves; a drag that leaves the icon cancels.
         final int slop = android.view.ViewConfiguration.get(ctx).getScaledTouchSlop();
         final float[] down = new float[2];
         icon.setOnTouchListener((v, e) -> {
@@ -492,10 +448,6 @@ public class CommentSearchHook {
         return icon;
     }
 
-    /**
-     * igds_color_primary_icon from the comments fragment's themed context: the reel sheet is dark
-     * through the fragment (NIGHT day-night mode), not through the views' own context.
-     */
     private static int iconTint(Context ctx, Object fragment) {
         Context themed = null;
         try {
@@ -524,7 +476,6 @@ public class CommentSearchHook {
         return night ? 0xFFF5F5F5 : 0xFF000000;
     }
 
-    /** Fallback: the icon at the end of the sheet header (next to the "Comments" title). */
     private static void headerIcon(ViewGroup content, android.widget.ImageView icon) {
         if (icon.getParent() != null) return;
         float d = content.getResources().getDisplayMetrics().density;
@@ -535,7 +486,7 @@ public class CommentSearchHook {
                 ViewGroup.LayoutParams hl = headerParams(row, margin, icon.getLayoutParams().width);
                 if (hl != null) {
                     row.addView(icon, hl);
-                    if (!(row instanceof FrameLayout)) { // centred like the title: move it to the row end
+                    if (!(row instanceof FrameLayout)) {
                         icon.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
                             boolean rtl = row.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
                             v.setTranslationX(rtl ? margin - l : (row.getWidth() - margin) - r);
@@ -565,7 +516,6 @@ public class CommentSearchHook {
         }
     }
 
-    /** The layout holding the sheet's "Comments" title (id title_text_view), nearest to the sheet. */
     private static ViewGroup headerRow(View sheet) {
         int id = ResIds.id(sheet.getContext(), "title_text_view");
         if (id == 0) return null;
@@ -576,24 +526,18 @@ public class CommentSearchHook {
         return null;
     }
 
-    /** Layout params that put the icon at the end of the header row, vertically centred
-     *  (FrameLayout gravity, or ConstraintLayout constraints to the parent). */
     private static ViewGroup.LayoutParams headerParams(ViewGroup row, int endMargin, int size) throws Exception {
         if (row instanceof FrameLayout) {
             FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(size, size, Gravity.END | Gravity.CENTER_VERTICAL);
             lp.setMarginEnd(endMargin);
             return lp;
         }
-        // ConstraintLayout (its LayoutParams class is renamed by R8): copy the title's params, which
-        // centre it in the row, then slide the icon to the row end once it is laid out.
         View title = null;
         for (int i = 0; i < row.getChildCount(); i++)
             if (row.getChildAt(i) instanceof TextView t && t.getId() != View.NO_ID && (t.getId() >>> 24) != 0
                     && "title_text_view".equals(row.getResources().getResourceEntryName(t.getId()))) title = t;
         if (title == null) return null;
         ViewGroup.LayoutParams src = title.getLayoutParams();
-        // Only (int,int) survives R8: build one and copy the primitive fields (the constraints);
-        // object fields (the layout's internal widget) must stay the icon's own.
         ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams)
                 src.getClass().getConstructor(int.class, int.class).newInstance(size, size);
         for (Class<?> k = src.getClass(); k != null && k != Object.class; k = k.getSuperclass())
@@ -606,7 +550,6 @@ public class CommentSearchHook {
         return lp;
     }
 
-    /** Labels of the sort selector ("For you", "Newest", ...), from its enum's string ids. */
     private static Set<String> sortLabels(Context ctx) {
         String locale = ctx.getResources().getConfiguration().getLocales().toLanguageTags();
         if (locale.equals(sortLabelsLocale)) return sortLabelSet;
@@ -630,15 +573,12 @@ public class CommentSearchHook {
     }
 
     private static Class<?> sortEnum;
-    /** The "For you" sort row's list item model (0Bqq on 451). */
     private static Class<?> sortRowModel;
     private static Set<String> sortLabelSet = Collections.emptySet();
     private static String sortLabelsLocale;
     private static volatile int stateUpdates;
-    /** Whether the latest comment UI state holds the sort row, and when it was built (uptime ms). */
     private static volatile boolean stateHasSortRow;
     private static volatile long stateAt;
-    /** The post of the open comment sheet (the sort row model's Media), for copying its caption. */
     private static volatile java.lang.ref.WeakReference<Object> sheetPost = new java.lang.ref.WeakReference<>(null);
     private static Field postField;
 
@@ -663,13 +603,6 @@ public class CommentSearchHook {
         }
     }
 
-    /**
-     * Full-size, click-through layer over the comment list holding the search icon. It reads the
-     * sort row's position during its own draw: from the Compose list's accessibility tree, or, in
-     * the Litho sheet a reel caption's "…" opens, from the label view (an RCTextView in a
-     * RecyclerView row). The overlay draws after the list, which lays out inside its dispatchDraw,
-     * so the position is from the same frame and the icon moves with the row while scrolling.
-     */
     @android.annotation.SuppressLint("ViewConstructor")
     private static final class SortRowOverlay extends FrameLayout {
         private static final int NONE = Integer.MIN_VALUE;
@@ -678,10 +611,8 @@ public class CommentSearchHook {
         private final FrameLayout content;
         private final android.widget.ImageView icon, headerIcon;
         private final int iconSize, edge;
-        /** The Compose views of the sheet (from the last scan), and the one holding the sort row. */
         private final List<java.lang.ref.WeakReference<View>> lists = new ArrayList<>();
         private java.lang.ref.WeakReference<View> list = new java.lang.ref.WeakReference<>(null);
-        /** The sort label when it is a real view (the Litho sheet's RCTextView), else null. */
         private java.lang.ref.WeakReference<View> labelView = new java.lang.ref.WeakReference<>(null);
         private int nodeId = NONE, fullHeight, startUpdates, waits;
         private long nextScan, attachedAt;
@@ -694,12 +625,7 @@ public class CommentSearchHook {
             invalidate();
         };
         private final android.view.ViewTreeObserver.OnPreDrawListener preDraw = () -> {
-            // Must always return true: a cancelling pre-draw listener freezes Instagram.
             if (lists.isEmpty()) {
-                // No list tracked yet (still loading, or the Litho sheet's row is off screen): look
-                // again only when something in the sheet content (the parent) changed. An
-                // unconditional invalidate here schedules the next frame itself, so the window
-                // redrew nonstop. A sheet without a list has the header icon.
                 if (!fallbackUsed && getParent() instanceof View c && c.isDirty()) invalidate();
                 return true;
             }
@@ -722,12 +648,11 @@ public class CommentSearchHook {
             setFocusable(false);
             setElevation(30 * d);
             FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(iconSize, iconSize, Gravity.TOP | Gravity.END);
-            lp.setMarginEnd((int) (6 * d)); // glyph centred on the comments' like-heart column
+            lp.setMarginEnd((int) (6 * d));
             icon.setVisibility(INVISIBLE);
             addView(icon, lp);
         }
 
-        /** The comment state changed or the sort row just composed: look for it on the next frame. */
         static void poke() {
             SortRowOverlay o = live.get();
             if (o == null) return;
@@ -745,7 +670,6 @@ public class CommentSearchHook {
             attachedAt = android.os.SystemClock.uptimeMillis();
             startUpdates = stateUpdates;
             getViewTreeObserver().addOnPreDrawListener(preDraw);
-            // An idle sheet draws nothing new: look for the row a few times while it opens.
             for (long delay : new long[]{100, 300, 700, 1500}) postDelayed(this::invalidate, delay);
             postDelayed(this::checkFallback, FALLBACK_AFTER);
         }
@@ -768,18 +692,12 @@ public class CommentSearchHook {
             super.dispatchDraw(canvas);
         }
 
-        /**
-         * The header is only for a list without a sort row. While this sheet's state has one, the
-         * icon waits for the row to scroll into view: a sheet opened from the caption puts the
-         * caption above it, which can push the row below the fold.
-         */
         private void checkFallback() {
             if (found || fallbackUsed || !isAttachedToWindow()) return;
             if (stateHasSortRow && stateAt >= attachedAt - 1500) {
                 if (!waitLogged) { waitLogged = true; ModuleLog.probe(TAG + "search icon waits for the sort row to scroll into view"); }
                 return;
             }
-            // No sort row yet: wait while comments are still loading, then use the header.
             if (stateUpdates == startUpdates && ++waits < 8) { postDelayed(this::checkFallback, 1500); return; }
             useFallback("no sort row in the list");
         }
@@ -791,7 +709,6 @@ public class CommentSearchHook {
             post(() -> headerIcon(content, headerIcon));
         }
 
-        /** One redraw once the scan throttle ends, so a row that appeared meanwhile isn't missed. */
         private void rescanIn(long delay) {
             if (rescanPending) return;
             rescanPending = true;
@@ -799,7 +716,6 @@ public class CommentSearchHook {
         }
 
         private void track() throws Exception {
-            // The Litho sheet (opened from the caption) shows the sort label as a real view.
             View label = labelView.get();
             if (label != null && label.isAttachedToWindow() && label.isShown() && showsSortLabel(label)) {
                 place(label);
@@ -840,7 +756,6 @@ public class CommentSearchHook {
             place(n.getText());
         }
 
-        /** Puts the icon on the label's row: a label view, or a Compose node whose screen bounds are in `bounds`. */
         private void place(Object what) {
             if (what instanceof View label) {
                 label.getLocationOnScreen(listLoc);
@@ -850,7 +765,6 @@ public class CommentSearchHook {
             bounds.offset(-loc[0], -loc[1]);
             if (bounds.isEmpty()) { show(false); return; }
             fullHeight = Math.max(fullHeight, bounds.height());
-            // Compose clips a partly scrolled-off row's bounds: keep the centre of its full height.
             int cy = bounds.centerY();
             if (bounds.height() < fullHeight && clip != null) {
                 if (bounds.top <= clip.top) cy = bounds.bottom - fullHeight / 2;
@@ -864,7 +778,6 @@ public class CommentSearchHook {
                 ModuleLog.probe(TAG + "search icon on sort row " + (what instanceof View v ? v.getClass().getSimpleName() : "'" + what + "'")
                         + " at " + bounds.toShortString()
                         + " after " + (android.os.SystemClock.uptimeMillis() - attachedAt) + " ms");
-                // The header fallback ran while comments were slow to load: keep a single icon.
                 if (headerIcon.getParent() instanceof ViewGroup g) g.removeView(headerIcon);
             }
         }
@@ -874,10 +787,6 @@ public class CommentSearchHook {
             if (icon.getVisibility() != v) icon.setVisibility(v);
         }
 
-        /**
-         * The sort label among real views (the Litho sheet: an RCTextView in a RecyclerView row):
-         * a view whose text is a label, starting at the list's leading edge. Topmost wins.
-         */
         private View scanViews() {
             View best = null;
             int bestTop = Integer.MAX_VALUE;
@@ -917,7 +826,6 @@ public class CommentSearchHook {
             return false;
         }
 
-        /** The nearest RecyclerView above a view: the list it scrolls in. */
         private View scroller(View v) {
             for (View p = v.getParent() instanceof View pv ? pv : null; p != null && p != content;
                  p = p.getParent() instanceof View pv ? pv : null) {
@@ -927,7 +835,6 @@ public class CommentSearchHook {
             return null;
         }
 
-        /** Where a view-based row can show: its RecyclerView, else the sheet content. */
         private android.graphics.Rect scrollerBounds(View label) {
             View s = scroller(label);
             View area = s != null ? s : content;
@@ -937,7 +844,6 @@ public class CommentSearchHook {
                     listLoc[0] - loc[0] + area.getWidth(), listLoc[1] - loc[1] + area.getHeight());
         }
 
-        /** The topmost sort label across the sheet's Compose views; remembers its view and node. */
         private android.view.accessibility.AccessibilityNodeInfo scanAll() throws Exception {
             lists.clear();
             boolean anyProvider = false;
@@ -963,12 +869,6 @@ public class CommentSearchHook {
             return best;
         }
 
-        /**
-         * The sort label node: its text is a label, and it starts at the list's leading edge (a
-         * comment that just says "Newest" starts after its avatar). Depth-first in list order, so
-         * the first hit is the topmost and a visible sort row (one of the first items) is found
-         * after a few nodes; the cap keeps a scan cheap while the row is scrolled away.
-         */
         private int scan(android.view.accessibility.AccessibilityNodeProvider p, View l) throws Exception {
             l.getLocationOnScreen(listLoc);
             boolean rtl = l.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
@@ -1000,7 +900,6 @@ public class CommentSearchHook {
             return false;
         }
 
-        /** Where the row can show: the nearest scrolling node above it, else the list view. */
         private android.graphics.Rect scrollBounds(android.view.accessibility.AccessibilityNodeProvider p,
                                                    android.view.accessibility.AccessibilityNodeInfo n, View l) {
             android.graphics.Rect r = new android.graphics.Rect();
@@ -1025,10 +924,6 @@ public class CommentSearchHook {
 
     private static final Map<Class<?>, Object[]> TEXT_ACCESS = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /**
-     * The texts a view shows: a TextView's text, a Litho host's text items, or a rendercore
-     * RCTextView's text (kept in its CharSequence / Layout fields; it has no public getter).
-     */
     static List<CharSequence> viewTexts(View v) {
         List<CharSequence> out = new ArrayList<>();
         try {
@@ -1070,7 +965,6 @@ public class CommentSearchHook {
         return fields.toArray();
     }
 
-    /** The shown Compose views in the sheet content, tallest (the comment list) first. */
     private static List<View> composeViews(View root) {
         List<View> out = new ArrayList<>();
         java.util.ArrayDeque<View> st = new java.util.ArrayDeque<>();
@@ -1476,7 +1370,6 @@ public class CommentSearchHook {
         }
     }
 
-    /** Gives focus back to IG's window (or takes it again) while the dialog stays shown and tappable. */
     private static void focusable(android.app.Dialog dlg, boolean on) {
         android.view.Window w = dlg.getWindow();
         if (w == null) return;
@@ -1713,9 +1606,6 @@ public class CommentSearchHook {
         return HtmlExport.comment(r[0], meta.toString(), r[1], extra);
     }
 
-    /** The post's own media URLs (photos/videos, carousel-aware): finds the post Media object in the
-     *  retained comment UI state by matching its getId() to the post's media id, then reuses the
-     *  downloader's extractor. Empty when the Media object can't be found. */
     private static List<String> postMediaUrls(Context ctx, String mediaId, Object post) {
         if (mediaId == null || mediaId.isEmpty()) return new ArrayList<>();
         if (post != null && CommentSearchPolicy.sameMedia(mediaIdOf(post), mediaId)) {
@@ -1734,7 +1624,6 @@ public class CommentSearchHook {
         return new ArrayList<>();
     }
 
-    /** BFS a graph for the Media whose getId() matches the post id, then extract its URLs. */
     private static List<String> walkForMedia(Context ctx, Object root, String mediaId) {
         Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         java.util.ArrayDeque<Object> q = new java.util.ArrayDeque<>();
@@ -1749,7 +1638,6 @@ public class CommentSearchHook {
                 if (o instanceof java.util.Map<?, ?> mp) { for (Object v : mp.values()) q.add(v); continue; }
                 String n = o.getClass().getName();
                 if (!n.startsWith("X.") && !n.startsWith("com.instagram.")) continue;
-                // Is this the post Media? Media objects expose a public getId().
                 if (!idGetters.containsKey(o.getClass())) {
                     Method g = null;
                     try { g = o.getClass().getMethod("getId"); if (g.getReturnType() != String.class) g = null; }
@@ -1788,7 +1676,6 @@ public class CommentSearchHook {
         return g;
     }
 
-    /** The text with every case-insensitive occurrence of the query given a tinted background. */
     private static CharSequence highlight(String text, String query, int color) {
         if (query.isEmpty()) return text;
         android.text.SpannableString s = new android.text.SpannableString(text);
@@ -1805,16 +1692,12 @@ public class CommentSearchHook {
         loading = null;
     }
 
-    /** Scrolls the sheet's comment list to its end until nothing new loads for 3 s (IG fetches
-     *  the next page itself near the end). Progress = comments collected so far. */
     private static void loadAll(java.util.function.IntConsumer progress, java.util.function.Consumer<Boolean> done) {
         View root = sheet.get();
         if (!replyLinksBuilt && root != null) {
             replyLinks = buildReplyLinks(root.getContext());
             replyLinksBuilt = true;
         }
-        // Reels open comments in a half-height sheet; at that size the list can't scroll far
-        // enough for Instagram to fetch more pages. Drag the sheet open to full height first.
         if (root != null && expandSheet(root)) {
             Runnable start = new Runnable() {
                 @Override
@@ -1849,11 +1732,6 @@ public class CommentSearchHook {
         return links;
     }
 
-    /**
-     * Drags the comments sheet's handle to the top of the screen, the way a finger would: touch
-     * events dispatched into Instagram's own window, so no permission is needed and the sheet's
-     * own drag logic opens it. Returns true when a drag was started (the sheet was not open yet).
-     */
     private static boolean expandSheet(View sheetRoot) {
         try {
             View decor = sheetRoot.getRootView();
@@ -1864,7 +1742,7 @@ public class CommentSearchHook {
             handle.getLocationInWindow(at);
             float x = at[0] + handle.getWidth() / 2f, fromY = at[1] + handle.getHeight() / 2f;
             float toY = decor.getHeight() * 0.06f;
-            if (fromY < decor.getHeight() * 0.25f) return false; // already (nearly) full height
+            if (fromY < decor.getHeight() * 0.25f) return false;
             final long down = android.os.SystemClock.uptimeMillis();
             final int steps = 12;
             decor.dispatchTouchEvent(android.view.MotionEvent.obtain(down, down, android.view.MotionEvent.ACTION_DOWN, x, fromY, 0));
@@ -1893,7 +1771,7 @@ public class CommentSearchHook {
 
     private static void startLoadAll(java.util.function.IntConsumer progress, java.util.function.Consumer<Boolean> done) {
         View root = sheet.get();
-        View list = root != null ? scrollable(root) : null; // inside the sheet, not the feed behind it
+        View list = root != null ? scrollable(root) : null;
         ModuleLog.detail(TAG + "load all: list=" + (list != null ? list.getClass().getName() + " h=" + list.getHeight() : null));
         if (list == null) {
             ModuleLog.warn(TAG + "Could not load all comments: the comment list was not found, only the comments shown so far are searched");
@@ -1913,7 +1791,6 @@ public class CommentSearchHook {
                     done.accept(false);
                     return;
                 }
-                // open every visible "View N replies" link first; scroll on once none are left
                 int opened = expandReplies(list);
                 if (opened > 0) lastChange[0] = System.currentTimeMillis();
                 else scrollDown(list);
@@ -1944,7 +1821,6 @@ public class CommentSearchHook {
         MAIN.post(loading);
     }
 
-    /** The comment list: the tallest shown RecyclerView, else the tallest vertically scrollable view. */
     private static View scrollable(View root) {
         View rv = null, any = null, compose = null;
         java.util.ArrayDeque<View> st = new java.util.ArrayDeque<>();
@@ -1954,7 +1830,6 @@ public class CommentSearchHook {
             if (!v.isShown()) continue;
             if (isRecyclerView(v.getClass()) && (rv == null || v.getHeight() > rv.getHeight())) rv = v;
             if ((v.canScrollVertically(1) || v.canScrollVertically(-1)) && (any == null || v.getHeight() > any.getHeight())) any = v;
-            // 452: the list is a Compose LazyColumn (doesn't report scrollability to the View system)
             if (v.getClass().getName().equals("androidx.compose.ui.platform.AndroidComposeView")
                     && (compose == null || v.getHeight() > compose.getHeight())) compose = v;
             if (v instanceof ViewGroup g) for (int i = 0; i < g.getChildCount(); i++) st.push(g.getChildAt(i));
@@ -1971,8 +1846,6 @@ public class CommentSearchHook {
     private static volatile boolean replyLinksBuilt;
     private static boolean a11yLogged;
 
-    /** Clicks the "View N (more) replies" links currently on screen through the list's accessibility
-     *  tree (Compose draws them, so there are no Views to click). Returns how many were clicked. */
     private static int expandReplies(View list) {
         try {
             android.view.accessibility.AccessibilityNodeProvider p = list.getAccessibilityNodeProvider();
@@ -1989,8 +1862,6 @@ public class CommentSearchHook {
                 nodes++;
                 CharSequence t = n.getText() != null ? n.getText() : n.getContentDescription();
                 if (id != View.NO_ID && CommentSearchPolicy.isReplyLink(replyLinks, t)) {
-                    // the link text isn't clickable itself (a click on it is accepted but does nothing):
-                    // click the nearest clickable node above it
                     int target = id;
                     android.view.accessibility.AccessibilityNodeInfo cur = n;
                     for (int up = 0; up < 5 && cur != null && !cur.isClickable(); up++) {
@@ -2017,7 +1888,6 @@ public class CommentSearchHook {
         ModuleLog.probe(TAG + "replies: " + msg);
     }
 
-    /** RecyclerView scrolls directly; other lists (Compose) get a synthetic upward drag. */
     private static void scrollDown(View list) {
         if (isRecyclerView(list.getClass())) {
             list.scrollBy(0, list.getHeight() * 3);

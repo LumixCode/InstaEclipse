@@ -17,19 +17,6 @@ import java.io.FileNotFoundException;
 
 import ps.reso.instaeclipse.utils.core.CommonUtils;
 
-/**
- * Lives in the companion app. Hands a hooked Instagram process an append-mode file descriptor
- * on a file inside the companion's own storage ({@code files/ig_logs/<package>.log}).
- *
- * <p>Instagram's {@link Logging} keeps that descriptor open and writes every log line into it,
- * so the companion's Logs tab can read Instagram's log straight from disk even when Instagram
- * is backgrounded, frozen or dead — no live request/reply round-trip needed.
- *
- * <p>{@code crash/<name>} instead hands out a fresh file in {@code files/ig_crash/} for one crash
- * dump or tombstone that {@link CrashForensics} saves after a crash.
- *
- * <p>Only the supported Instagram packages may open it, and only for writing.
- */
 public class LogMirrorProvider extends ContentProvider {
 
     public static final String AUTHORITY = CommonUtils.MY_PACKAGE_NAME + ".logmirror";
@@ -40,12 +27,10 @@ public class LogMirrorProvider extends ContentProvider {
     static final long MAX_CRASH_BYTES = 256L * 1024 * 1024;
     static final long MAX_MIRROR_BYTES = 16L * 1024 * 1024;
 
-    /** Directory (in the companion's private storage) holding one mirrored log per package. */
     public static File mirrorDir(Context context) {
         return new File(context.getFilesDir(), DIR);
     }
 
-    /** Crash dumps and tombstones Instagram saved after a crash ({@code files/ig_crash/}). */
     public static File crashDir(Context context) {
         return new File(context.getFilesDir(), CRASH_DIR);
     }
@@ -82,7 +67,7 @@ public class LogMirrorProvider extends ContentProvider {
         int uid = Binder.getCallingUid();
         String pkg = null;
         if (uid == Process.myUid()) {
-            pkg = CommonUtils.IG_PACKAGE_NAME; // local testing only
+            pkg = CommonUtils.IG_PACKAGE_NAME;
         } else {
             String[] pkgs = ctx.getPackageManager().getPackagesForUid(uid);
             if (pkgs != null) {
@@ -96,7 +81,6 @@ public class LogMirrorProvider extends ContentProvider {
         }
         if (pkg == null) throw new SecurityException("caller is not a supported Instagram package");
 
-        // crash/<name>: a crash dump saved by CrashForensics, written whole (truncating)
         java.util.List<String> seg = uri.getPathSegments();
         if (seg.size() == 2 && "crash".equals(seg.get(0))) {
             String name = seg.get(1).replaceAll("[^A-Za-z0-9._~-]", "_");

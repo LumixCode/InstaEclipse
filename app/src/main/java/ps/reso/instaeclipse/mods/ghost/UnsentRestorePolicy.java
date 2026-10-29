@@ -1,14 +1,8 @@
 package ps.reso.instaeclipse.mods.ghost;
 
-/** Where a saved unsent message goes back into a thread's sorted, partially loaded message list. */
 final class UnsentRestorePolicy {
     private UnsentRestorePolicy() {}
 
-    /**
-     * Index that keeps {@code loaded} sorted, or -1 when the message is older than everything
-     * loaded. Older history is fetched page by page; restoring past the oldest loaded message would
-     * show it next to newer messages before the ones in between have loaded.
-     */
     static int restoreIndex(long[] loaded, long time, Boolean learned) {
         if (loaded.length == 0) return 0;
         Boolean own = direction(loaded);

@@ -2,11 +2,6 @@ package ps.reso.instaeclipse.xposedcompat;
 
 import java.lang.reflect.Member;
 
-/**
- * Before/after hook callback, same shape as the legacy {@code de.robv.android.xposed.XC_MethodHook}
- * so feature code keeps its hooks unchanged. {@link XposedBridge} runs it on the active backend
- * (legacy XposedBridge, or the libxposed API 102 interceptor chain).
- */
 public abstract class XC_MethodHook {
 
     public static final int PRIORITY_DEFAULT = 50;
@@ -25,17 +20,14 @@ public abstract class XC_MethodHook {
 
     protected void afterHookedMethod(MethodHookParam param) throws Throwable {}
 
-    /** Runs {@link #beforeHookedMethod} (for backends outside this package). */
     public final void callBefore(MethodHookParam param) throws Throwable {
         beforeHookedMethod(param);
     }
 
-    /** Runs {@link #afterHookedMethod} (for backends outside this package). */
     public final void callAfter(MethodHookParam param) throws Throwable {
         afterHookedMethod(param);
     }
 
-    /** The hooked call: its method, receiver, arguments and (after the call) its outcome. */
     public static final class MethodHookParam {
         public Member method;
         public Object thisObject;
@@ -43,7 +35,6 @@ public abstract class XC_MethodHook {
 
         private Object result;
         private Throwable throwable;
-        /** set when a before-callback decided the outcome, so the original is not called */
         public boolean returnEarly;
 
         public Object getResult() {
@@ -70,14 +61,12 @@ public abstract class XC_MethodHook {
             this.returnEarly = true;
         }
 
-        /** Backend use: the original's outcome, without marking the call as decided. */
         public void setOutcome(Object result, Throwable throwable) {
             this.result = result;
             this.throwable = throwable;
         }
     }
 
-    /** Returned by the hook methods; removes the hook. */
     public interface Unhook {
         Member getHookedMethod();
 

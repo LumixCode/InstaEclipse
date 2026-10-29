@@ -4,7 +4,6 @@ import java.time.LocalTime;
 
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 
-/** Phone-local quiet hours. Wrapped ranges cross midnight; equal endpoints are inactive. */
 public final class NightReelSchedule {
     public static final int DEFAULT_START_MINUTES = 22 * 60;
     public static final int DEFAULT_END_MINUTES = 7 * 60;

@@ -17,17 +17,10 @@ public class FeatureStatusTracker {
     private static final Map<String, Boolean> features = Collections.synchronizedMap(new HashMap<>());
     private static final Map<String, Integer> labels   = Collections.synchronizedMap(new HashMap<>());
 
-    // Names whose hook has installed. Kept independently of `features` so that a later
-    // setEnabled() (e.g. the companion-sync re-runs refreshFeatureStatus after hooks are
-    // already installed) can't wipe the hooked state back to a ❌ in the load toast. Xposed
-    // hooks persist for the process, so once hooked, a feature stays hooked.
     private static final Set<String> hooked = Collections.synchronizedSet(new HashSet<>());
 
-    // Names whose hook FAILED to resolve/install (feature is enabled but not working). Surfaced in
-    // the load toast as a red mark instead of the feature silently reading "enabled".
     private static final Set<String> broken = Collections.synchronizedSet(new HashSet<>());
 
-    // Told about every change (on the changing thread), so an open menu can count hooks live.
     private static final List<Runnable> listeners = new CopyOnWriteArrayList<>();
 
     public static void addListener(Runnable listener) {
@@ -43,13 +36,11 @@ public class FeatureStatusTracker {
     }
 
     public static void setEnabled(String name, int labelResId) {
-        features.put(name, hooked.contains(name));   // preserve hooked state across re-registration
+        features.put(name, hooked.contains(name));
         labels.put(name, labelResId);
         changed();
     }
 
-    /** Mark an enabled feature as broken (its hook could not be resolved/installed). Registers a
-     *  label so it still shows up in the toast even if setEnabled was never called for it. */
     public static void setBroken(String name, int labelResId) {
         broken.add(name);
         labels.put(name, labelResId);
@@ -57,9 +48,6 @@ public class FeatureStatusTracker {
         changed();
     }
 
-    /** Mark broken reusing whatever label was already registered (label comes from FeatureManager).
-     *  Call this from a hook's "could not resolve" path, guarded by the feature's own flag so a
-     *  disabled feature never shows as broken. */
     public static void setBroken(String name) {
         broken.add(name);
         features.put(name, false);
@@ -79,7 +67,7 @@ public class FeatureStatusTracker {
     public static void setHooked(String name) {
         if (hooked.contains(name) && !broken.contains(name) && !Boolean.FALSE.equals(features.get(name))) return;
         hooked.add(name);
-        broken.remove(name); // a successful hook clears any earlier broken mark
+        broken.remove(name);
         if (features.containsKey(name)) {
             features.put(name, true);
         }
@@ -101,11 +89,6 @@ public class FeatureStatusTracker {
         return !features.isEmpty();
     }
 
-    /**
-     * One plain summary for the Logs tab once every hook has been set up: the Instagram version,
-     * how many features are turned on, and by name the ones that could not be loaded. Features
-     * that never report back (they hook lazily) are listed only in the technical details.
-     */
     public static void logSummary(Context ctx) {
         try {
             String version = "?";

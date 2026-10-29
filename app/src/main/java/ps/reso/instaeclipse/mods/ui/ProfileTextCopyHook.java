@@ -37,31 +37,6 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 
-/**
- * Hold a profile's username or bio to copy it (profileMenuTools; this replaced the ⋮ menu's Copy
- * username / Copy bio rows). The copy feedback is the caption's: the hold's haptic tick, the
- * clipboard, and a toast only before Android 13 (CopyFeedback).
- *
- * <p>Username: a profile's action bar is com.instagram.profile.actionbar.ProfileActionBar (R8
- * keeps that name; its only void method taking an Activity, A00 on 451, binds it). The title
- * (action_bar_title) sits in action_bar_username_container, the part of the bar that takes taps:
- * its binder ("ProfileActionBarViewBinder", 0Abv.A04 on 451) gives the container a click listener
- * (the account switcher on your own profile) and nothing sets a long-click listener on it. So a
- * long-click listener goes on the container on every bind; a tap still does what it did, and a
- * handled long click skips the tap and plays the View's own haptic tick.
- *
- * <p>Bio: the header's category, bio, links and address are one Compose view,
- * profile_user_info_compose_view ("ProfileUserInfoViewBinder.setupSharedComposeView"). The bio in
- * it (ProfileBioComponent / ProfileExpandableText) is a clickable box (it expands "… more") around
- * text with @mention and #hashtag links; those composables only use single-click modifiers on 451,
- * none with a long press. Touches on that view's AndroidComposeView are watched, as
- * CaptionCopyHook watches captions. When a press is held, the accessibility nodes under the finger
- * (Compose has no views to look at) tell whether it is on the bio: their text has to show the bio
- * of the profile's User model (ProfileMenuHook's "biography" getter) or, if the model has none or
- * it isn't what is shown, the bio the header was built with (the ProfileBioComponent UI state, as
- * in ProfileSpoofHook). That full bio is copied and the release becomes a cancel, so it neither
- * opens a link nor expands the bio. A tap, or a hold anywhere else, goes through untouched.
- */
 public final class ProfileTextCopyHook {
 
     private static final String TAG = "(IE|ProfileCopy) ";
@@ -72,7 +47,6 @@ public final class ProfileTextCopyHook {
 
     private static int titleId = -1, containerId, userInfoId = -1;
 
-    // One hold at a time; touch events arrive on the main thread.
     private static final WeakReference<View> NONE = new WeakReference<>(null);
     private static WeakReference<View> pressed = NONE;
     private static Runnable pendingCopy;
@@ -81,7 +55,6 @@ public final class ProfileTextCopyHook {
     private static boolean copied;
     private static float downX, downY;
 
-    /** Bios profile headers were built with, by username, most recently built last. */
     private static final Map<String, String> HEADER_BIOS = new LinkedHashMap<>() {
         @Override protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
             return size() > 16;
@@ -100,8 +73,6 @@ public final class ProfileTextCopyHook {
         ModuleLog.detail(TAG + "hold-to-copy: username bind hooks=" + title
                 + ", bio touches=" + bio + ", header bio=" + header);
     }
-
-    // ── Username ─────────────────────────────────────────────────────────────
 
     private static int hookTitle(ClassLoader cl) {
         try {
@@ -126,10 +97,8 @@ public final class ProfileTextCopyHook {
         }
     }
 
-    /** Title containers that have our listener. */
     private static final Set<View> TITLES = Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
-    /** Puts the hold listener on the bar's title container (or takes it off when the feature is off). */
     @SuppressLint("DiscouragedApi")
     private static void attachTitle(View bar) {
         try {
@@ -146,7 +115,6 @@ public final class ProfileTextCopyHook {
                 target.setOnLongClickListener(HOLD_TITLE);
                 TITLES.add(target);
             } else if (TITLES.remove(target)) {
-                // Instagram gives it no long-click listener of its own: back to how it was.
                 target.setOnLongClickListener(null);
                 target.setLongClickable(false);
             }
@@ -163,18 +131,15 @@ public final class ProfileTextCopyHook {
         try {
             CopyFeedback.copy(v.getContext(), "username", name, R.string.ig_toast_comment_copied);
             ModuleLog.line(TAG + "Username copied");
-            return true; // a handled long click plays the View's haptic tick and skips the tap
+            return true;
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Could not copy the username: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             return false;
         }
     };
 
-    // ── Bio ──────────────────────────────────────────────────────────────────
-
     private static boolean hookBioTouches(ClassLoader cl) {
         try {
-            // The compat lookup also walks superclasses: bind only the class's own override.
             Class<?> cls = XposedHelpers.findClass(COMPOSE_VIEW, cl);
             Method dispatch = XposedHelpers.findMethodExact(cls, "dispatchTouchEvent", MotionEvent.class);
             if (dispatch.getDeclaringClass() != cls) {
@@ -203,8 +168,6 @@ public final class ProfileTextCopyHook {
                     if (!ours) return;
                     boolean wasCopied = copied;
                     cancel();
-                    // Finish a copied hold as a cancel, so the release doesn't also open a link
-                    // or expand the bio.
                     if (wasCopied) {
                         event.setAction(MotionEvent.ACTION_CANCEL);
                         restoreView = view;
@@ -225,8 +188,6 @@ public final class ProfileTextCopyHook {
                 event.setAction(MotionEvent.ACTION_UP);
             } else if (param.thisObject == pressed.get() && event.getActionMasked() == MotionEvent.ACTION_DOWN
                     && !Boolean.TRUE.equals(param.getResult())) {
-                // Nothing in Compose took the press, so the rest of the gesture (its release
-                // included) goes elsewhere: don't time a hold that can't be seen ending.
                 cancel();
             }
         }
@@ -268,7 +229,6 @@ public final class ProfileTextCopyHook {
         return Math.abs(event.getX() - downX) > slop || Math.abs(event.getY() - downY) > slop;
     }
 
-    /** The Compose view of a profile header's user info (category, bio, links, address). */
     @SuppressLint("DiscouragedApi")
     private static boolean inUserInfo(View view) {
         if (userInfoId == -1) {
@@ -284,7 +244,6 @@ public final class ProfileTextCopyHook {
         return false;
     }
 
-    /** The bio to copy for a hold at this screen point, or null when the point isn't on the bio. */
     private static String heldBio(View compose, int x, int y) {
         List<String> held = heldTexts(compose, x, y);
         if (held.isEmpty()) return null;
@@ -309,12 +268,8 @@ public final class ProfileTextCopyHook {
         return bio;
     }
 
-    /**
-     * Texts of the accessibility nodes under a screen point, innermost first: Compose draws the
-     * bio, so its node tree (what TalkBack reads) is where the text and its bounds are.
-     */
     private static List<String> heldTexts(View compose, int x, int y) {
-        List<Object[]> hits = new ArrayList<>(); // {depth, text}
+        List<Object[]> hits = new ArrayList<>();
         try {
             AccessibilityNodeProvider provider = compose.getAccessibilityNodeProvider();
             if (provider == null) {
@@ -323,7 +278,7 @@ public final class ProfileTextCopyHook {
                 return new ArrayList<>();
             }
             Rect bounds = new Rect();
-            ArrayDeque<int[]> queue = new ArrayDeque<>(); // {virtual view id, depth}
+            ArrayDeque<int[]> queue = new ArrayDeque<>();
             queue.add(new int[]{View.NO_ID, 0});
             Set<Integer> seen = new HashSet<>();
             int nodes = 0;
@@ -351,8 +306,6 @@ public final class ProfileTextCopyHook {
         return texts;
     }
 
-    // ── The bio each header was built with ───────────────────────────────────
-
     private static String ownHeaderBio(String username) {
         if (username == null) return null;
         synchronized (HEADER_BIOS) {
@@ -360,7 +313,6 @@ public final class ProfileTextCopyHook {
         }
     }
 
-    /** The open profile's header bio first, then the others, most recently built first. */
     private static List<String> headerBios(String username) {
         List<String> out = new ArrayList<>();
         synchronized (HEADER_BIOS) {

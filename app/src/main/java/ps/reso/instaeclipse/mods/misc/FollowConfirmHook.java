@@ -37,14 +37,6 @@ import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
-/**
- * Ask before following. Instagram's follow manager (the class holding "follow_unknown" and
- * "last_follow_status") handles every Follow button: it first marks the user as followed, which
- * flips the button, then hands the action to one static sender (manager, User, action enum, ...)
- * that queues the request and sends it. A follow (action "create") is held at that sender behind a
- * dialog: Follow sends it unchanged, Cancel puts the user's follow status back with the manager's
- * own setter, so the button returns to "Follow" and nothing was sent. Unfollows pass untouched.
- */
 public class FollowConfirmHook {
 
     private static final String TAG = "(InstaEclipse | FollowConfirm): ";
@@ -65,11 +57,8 @@ public class FollowConfirmHook {
     private static Method resumeWith;
     private static final ThreadLocal<Boolean> REPLAYING = new ThreadLocal<>();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
-    /** The manager's (FollowStatus, User, boolean) setter, used to undo the flip on Cancel. */
     private static Method statusSetter;
-    /** The manager's reset (profile model -> re-read status), found as its 1-arg method calling the setter. */
     private static Method resetMethod;
-    /** User's current follow status (FollowStatus enum), read by the manager's setter. */
     private static Method statusGetter;
     private static int profileButtonId;
     private static boolean replayingClick;
@@ -167,11 +156,6 @@ public class FollowConfirmHook {
         FeatureStatusTracker.setHooked("ConfirmFollows");
     }
 
-    /**
-     * The profile header's Follow button goes through its own handler (the profile fragment), so it
-     * is held at the tap: while you don't follow the profile yet (read from its User model), the tap
-     * waits for the dialog and is replayed on Follow. Taps on "Following" / "Requested" pass.
-     */
     private static void hookProfileButton() {
         XposedBridge.hookAllMethods(android.view.View.class, "performClick", new XC_MethodHook() {
             @Override
@@ -217,7 +201,6 @@ public class FollowConfirmHook {
         }
     }
 
-    /** The profile header's follow: FollowUserDataSourceImpl's suspend method taking the action enum. */
     private static void hookDataSource(Class<?> managerClass) {
         try {
             Class<?> ds = Module.hostClassLoader.loadClass(DATA_SOURCE);
@@ -359,8 +342,6 @@ public class FollowConfirmHook {
         }
     }
 
-    /** Runs the held call again; its result goes to a stand-in continuation that borrows the
-     *  original's coroutine context. */
     private static void resend(Method method, Object self, Object[] args) {
         int ci = FollowConfirmPolicy.continuationIndex(method.getParameterTypes());
         Object original = args[ci];
@@ -373,8 +354,8 @@ public class FollowConfirmHook {
                     default: return "InstaEclipse follow";
                 }
             }
-            if (m.getParameterCount() == 0) return m.invoke(original); // the coroutine context
-            return null; // resumeWith: the follow finished
+            if (m.getParameterCount() == 0) return m.invoke(original);
+            return null;
         });
         Object[] again = args.clone();
         again[ci] = standIn;
@@ -389,7 +370,6 @@ public class FollowConfirmHook {
         }
     }
 
-    /** Cancel: the manager re-reads the profile's real status (its reset after a failed follow). */
     private static void reset(Object dataSource, Object[] args, Class<?> managerClass) {
         ModuleLog.line(TAG + "Profile follow cancelled");
         Method r = resetMethod;
@@ -461,7 +441,6 @@ public class FollowConfirmHook {
         }
     }
 
-    /** Back to "not following": a follow only starts from there. */
     private static void undo(Member method, Object[] args) {
         ModuleLog.line(TAG + "Follow cancelled");
         Method setter = statusSetter;
@@ -482,8 +461,6 @@ public class FollowConfirmHook {
         }
     }
 
-    // Instagram's follow-status event ((FollowStatus, user id), posted on the session's event bus
-    // after every follow tap): the feed's inline buttons and suggestion cards redraw from it.
     private static Constructor<?> statusEvent;
     private static Method busFactory, busPost;
 

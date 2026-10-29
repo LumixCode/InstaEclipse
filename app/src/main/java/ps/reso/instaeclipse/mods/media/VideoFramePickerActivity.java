@@ -35,14 +35,12 @@ import ps.reso.instaeclipse.utils.ipc.BrokerPayload;
 import ps.reso.instaeclipse.utils.log.Logging;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/** Private, broker-launched picker. URLs and source video never enter saved instance state. */
 public final class VideoFramePickerActivity extends AppCompatActivity {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
     private final DownloadEngine.Cancellation cancellation = new DownloadEngine.Cancellation();
     private final AtomicBoolean closed = new AtomicBoolean();
     private final AtomicInteger generation = new AtomicInteger();
-    // The following three resources are accessed only by the serial worker.
     private FrameSessionCache.Session session;
     private DownloadEngine.Result downloaded;
     private VideoFrameExtractor extractor;
@@ -72,7 +70,6 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
         worker.execute(this::prepare);
     }
 
-    /** One frame at the usual 30 fps: the step buttons move the selection by this much. */
     private static final long FRAME_US = 1_000_000 / 30;
     private View stepBack, stepForward;
 
@@ -93,7 +90,6 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
             return insets;
         });
 
-        // Top bar: close + title (Back and ✕ both leave; nothing is saved without Save PNG).
         LinearLayout bar = new LinearLayout(this);
         bar.setGravity(Gravity.CENTER_VERTICAL);
         ImageView close = new ImageView(this);
@@ -114,7 +110,6 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
         bar.addView(title);
         root.addView(bar);
 
-        // The frame, on a rounded black card; spinner in the middle, status chip at the bottom.
         android.widget.FrameLayout card = new android.widget.FrameLayout(this);
         android.graphics.drawable.GradientDrawable cardBg = new android.graphics.drawable.GradientDrawable();
         cardBg.setColor(0xFF000000);
@@ -145,7 +140,6 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
         cardLp.topMargin = dp(8);
         root.addView(card, cardLp);
 
-        // Time, then the scrubber with one-frame steps on each side.
         position = new TextView(this);
         position.setGravity(Gravity.CENTER);
         position.setTextSize(17);
@@ -212,7 +206,6 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
         return b;
     }
 
-    /** Moves the selection by one frame and keeps the slider in step. */
     private void step(long deltaUs) {
         if (!ready || saving) return;
         long end = Math.max(0, durationUs - 1);
@@ -284,7 +277,6 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
                         if (!alive() || current != generation.get()) { bitmap.recycle(); return; }
                         Bitmap old = shownBitmap;
                         shownBitmap = bitmap; preview.setImageBitmap(bitmap);
-                        // Detach the previous drawable before releasing its pixel allocation.
                         if (old != null) old.recycle();
                         status.setText(getString(R.string.ie_frame_ready, exportWidth, exportHeight));
                         progress.setVisibility(View.GONE); save.setEnabled(true);
@@ -341,7 +333,6 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
         });
     }
 
-    /** Serial-worker only; called after cancellation, failure, save, and lifecycle destruction. */
     private boolean cleanup() {
         boolean cleaned = true;
         if (extractor != null) {
@@ -370,7 +361,6 @@ public final class VideoFramePickerActivity extends AppCompatActivity {
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     @Override protected void onSaveInstanceState(Bundle state) {
         super.onSaveInstanceState(state);
-        // No request, URLs, media identifiers, filenames or file paths are saved here.
     }
     @Override protected void onDestroy() {
         closed.set(true); cancellation.cancel(); generation.incrementAndGet();

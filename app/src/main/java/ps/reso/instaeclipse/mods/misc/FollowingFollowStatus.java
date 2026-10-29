@@ -13,7 +13,6 @@ final class FollowingFollowStatus {
                 || "SELF_FOLLOWING".equals(listType)) || Boolean.FALSE.equals(following)) {
             return ProfileFollowStatus.Status.HIDDEN;
         }
-        // A partially refreshed native User can carry two conflicting projections.
         if (directFollowedBy != null && relationshipFollowedBy != null
                 && !directFollowedBy.equals(relationshipFollowedBy)) return ProfileFollowStatus.Status.HIDDEN;
         Boolean followedBy = relationshipFollowedBy != null ? relationshipFollowedBy : directFollowedBy;

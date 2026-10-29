@@ -22,32 +22,15 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * Custom UI font: replace Instagram's text typeface with a user-supplied .ttf/.otf.
- *
- * Framework-level (version-proof, no obfuscated names): every IG typeface load ultimately goes
- * through android.graphics.Typeface.createFromAsset / createFromFile (IG's TypefaceRepository uses
- * createFromAsset for bundled fonts and createFromFile for downloaded ones). We hook those and
- * return the user's font when the feature is on. This build ships no icon-glyph font (icons are
- * vector drawables), so replacing the text typeface doesn't break icons; we still skip any asset
- * whose name looks like an icon/glyph font as a safeguard.
- *
- * The font is picked via the system file picker (ACTION_GET_CONTENT) and copied into the module's
- * filesDir; applied on the next process start (Typeface results are cached by IG).
- */
 public class CustomFontHook {
 
     public static final int FONT_PICK_REQUEST = 0x1F09;
     public static final int EMOJI_PICK_REQUEST = 0x1F0A;
-    // Every pick is copied to a new file (prefix + time): the process maps the active font file
-    // (Typeface and Font load it via mmap), so rewriting it in place crashed text drawing (SIGBUS).
-    // Older copies are deleted at the next start, once nothing maps them.
     private static final String FONT_PREFIX = "ie_custom_font";
     private static final String EMOJI_PREFIX = "ie_custom_emoji";
 
     private static volatile Typeface userFont;
     private static volatile String loadedFrom;
-    // Guards our own createFromFile(userPath) call from re-entering the hook (infinite recursion).
     private static final ThreadLocal<Boolean> loading = ThreadLocal.withInitial(() -> Boolean.FALSE);
 
     public void install(ClassLoader cl) {
@@ -56,7 +39,6 @@ public class CustomFontHook {
         deleteSupersededFonts();
     }
 
-    /** Deletes the font copies a later pick replaced, off the main thread. */
     private static void deleteSupersededFonts() {
         final String font = FeatureFlags.customFontPath, emoji = FeatureFlags.customEmojiPath;
         if ((font == null || font.isEmpty()) && (emoji == null || emoji.isEmpty())) return;
@@ -68,10 +50,6 @@ public class CustomFontHook {
         }, "IE-FontCleanup").start();
     }
 
-    /**
-     * Deletes the files next to current whose name starts with prefix and that were written before
-     * it, and returns how many. Deletes nothing when current is missing; a newer file is kept.
-     */
     static int deleteSuperseded(String prefix, String current) {
         if (current == null || current.isEmpty()) return 0;
         File keep = new File(current);
@@ -118,7 +96,7 @@ public class CustomFontHook {
         XC_MethodHook replace = new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam p) {
                 if (!(FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled)) return;
-                if (Boolean.TRUE.equals(loading.get())) return; // our own load
+                if (Boolean.TRUE.equals(loading.get())) return;
                 for (Object a : p.args) {
                     if (a instanceof String s) {
                         if (IconFontGuard.iconName(s)) return;
@@ -141,10 +119,6 @@ public class CustomFontHook {
             XposedHelpers.findAndHookMethod(Typeface.class, "createFromFile", String.class, replace);
         } catch (Throwable ignored) {}
 
-        // Catch-all: many IG text views get their typeface via Typeface.create(...) or cached
-        // repository typefaces, which the createFrom* hooks miss. Hook TextView.setTypeface to force
-        // our font on EVERY text view (this build renders icons as vector drawables, not an icon
-        // font, so replacing text typefaces app-wide is safe). beforeHook swaps the arg.
         XC_MethodHook setTf1 = new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam p) {
                 if (!(FeatureFlags.customFontEnabled || FeatureFlags.customEmojiEnabled) || Boolean.TRUE.equals(loading.get())) return;
@@ -184,11 +158,6 @@ public class CustomFontHook {
             }
         }
 
-        // Litho/Compose text (DM chats, captions) is drawn via a Paint, not a TextView. Hooking
-        // Paint.setTypeface reached it but is far too hot (ART's JIT crashes IG within a minute), so
-        // cover the cold load-time paths instead: typefaces built from fonts/resources
-        // (Typeface.Builder / CustomFallbackBuilder) and the system defaults a null Paint typeface
-        // or a "sans-serif" family resolves to.
         XC_MethodHook built = new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam p) {
                 if (Boolean.TRUE.equals(loading.get()) || iconFonts.keep(p.getResult()) || p.getResult() == null) return;
@@ -209,8 +178,6 @@ public class CustomFontHook {
     }
 
 
-    /** Points Typeface.DEFAULT/SANS_SERIF/DEFAULT_BOLD, the default native typeface and the
-     *  sans-serif entries of the system font map at the active font (keeping each one's weight/style). */
     private static void replaceSystemDefaults() {
         Typeface tf = getActiveTypeface();
         if (tf == null) return;
@@ -231,7 +198,6 @@ public class CustomFontHook {
                 @SuppressWarnings("unchecked")
                 java.util.Map<String, Typeface> orig = (java.util.Map<String, Typeface>)
                         XposedHelpers.getStaticObjectField(Typeface.class, "sSystemFontMap");
-                // read-only on Android 13: swap in an edited copy
                 java.util.Map<String, Typeface> map = new android.util.ArrayMap<>(orig.size());
                 map.putAll(orig);
                 for (java.util.Map.Entry<String, Typeface> e : orig.entrySet()) {
@@ -251,7 +217,6 @@ public class CustomFontHook {
     }
 
     private void installPickResultHook() {
-        // Receive the picked font file (launched from the module's "Pick font file" action).
         try {
             XposedHelpers.findAndHookMethod(Activity.class, "onActivityResult",
                     int.class, int.class, Intent.class, new XC_MethodHook() {
@@ -307,7 +272,6 @@ public class CustomFontHook {
         return userFont;
     }
 
-    // ── Combined text+emoji typeface (font-fallback method) ────────────────────
     private static Typeface combo;
     private static String comboPrimary, comboEmoji;
     private static volatile Styled styled;
@@ -321,12 +285,6 @@ public class CustomFontHook {
         }
     }
 
-    /**
-     * The typeface to force on text. When custom emoji is on, this is a CustomFallbackBuilder
-     * typeface: primary = the custom text font (or a system font) for normal text, with the emoji
-     * font added as a fallback family so emoji codepoints render from it. When only custom font is
-     * on, it's just the text font.
-     */
     private static Typeface getActiveTypeface() {
         if (FeatureFlags.customEmojiEnabled && FeatureFlags.customEmojiPath != null
                 && !FeatureFlags.customEmojiPath.isEmpty()) {
@@ -343,7 +301,6 @@ public class CustomFontHook {
         if (combo != null && primaryPath.equals(comboPrimary) && emojiPath.equals(comboEmoji)) return combo;
         try {
             if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
-                // Pre-29: no CustomFallbackBuilder — fall back to just the text font.
                 combo = getUserFont();
             } else {
                 android.graphics.fonts.Font primary = new android.graphics.fonts.Font.Builder(
@@ -352,7 +309,7 @@ public class CustomFontHook {
                         new File(emojiPath)).build();
                 android.graphics.fonts.FontFamily primFam = new android.graphics.fonts.FontFamily.Builder(primary).build();
                 android.graphics.fonts.FontFamily emojiFam = new android.graphics.fonts.FontFamily.Builder(emoji).build();
-                loading.set(Boolean.TRUE); // our own build: skip the Builder hooks
+                loading.set(Boolean.TRUE);
                 try {
                     combo = new Typeface.CustomFallbackBuilder(primFam)
                             .addCustomFallback(emojiFam)
@@ -370,7 +327,6 @@ public class CustomFontHook {
         return combo;
     }
 
-    /** Copies the picked font Uri into a new file in filesDir and records the path. */
     private static boolean saveFont(Activity act, android.net.Uri uri) {
         try {
             File out = copyFont(act, uri, FONT_PREFIX);
@@ -389,11 +345,6 @@ public class CustomFontHook {
         }
     }
 
-    /**
-     * Copies the picked file to a temp file, checks that it is a font and renames it to a new name
-     * (prefix + time). Null when it can't be read or isn't a font; the active font file is never
-     * opened for writing, so a failed or partial copy leaves it working.
-     */
     private static File copyFont(Activity act, android.net.Uri uri, String prefix) throws java.io.IOException {
         File dir = act.getFilesDir();
         File tmp = File.createTempFile(prefix, ".tmp", dir);
@@ -414,8 +365,6 @@ public class CustomFontHook {
         }
     }
 
-    /** True when the file loads as a font. Typeface.createFromFile can't tell: for bad data it
-     *  returns the default typeface (API 28) or the fallback family (29+); Font.Builder throws. */
     private static boolean isFont(File file) {
         try {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
@@ -432,12 +381,10 @@ public class CustomFontHook {
         }
     }
 
-    /** Launches the system font-file picker from the given Activity. */
     public static void launchPicker(Activity act) {
         launchPickerFor(act, FONT_PICK_REQUEST, I18n.t(act, R.string.ig_custom_font_pick));
     }
 
-    /** Launches the picker for the emoji font. */
     public static void launchEmojiPicker(Activity act) {
         launchPickerFor(act, EMOJI_PICK_REQUEST, I18n.t(act, R.string.ig_custom_emoji_pick));
     }
@@ -454,26 +401,7 @@ public class CustomFontHook {
         }
     }
 
-    // ── Custom emoji (EmojiCompat) ─────────────────────────────────────────────
-    //
-    // IG uses androidx.emoji2 (obfuscated). The emoji font is loaded lazily ~500ms after start by
-    // emoji2's FontRequestMetadataLoader, whose background worker hands the result (or failure) to
-    // a MetadataRepoLoaderCallback. All of it is located by emoji2's own strings, not by X.* name.
-
-    /**
-     * Font-fallback method: rather than feeding EmojiCompat a special metadata font (which requires
-     * a NotoColorEmojiCompat-format file), we DISABLE EmojiCompat so it stops converting emoji into
-     * its-own-font spans. Emoji then render through the normal text pipeline, where the emoji font
-     * is added as a fallback family on the active typeface (see getCombo). This works with any plain
-     * color-emoji .ttf (CBDT/CBLC + cmap), e.g. a raw Apple emoji font.
-     *
-     * Disable = make the metadata loader worker report failure to its callback (onFailed, see
-     * failEmojiLoad), leaving EmojiCompat in the FAILED state where process() is a no-op.
-     */
     private void installEmojiHook(final ClassLoader cl) {
-        // Version-proof: the androidx.emoji2 FontRequestMetadataLoader worker run() is anchored by
-        // emoji2's own library strings (X.00aO.run on IG 451). The old hardcoded X.00aC#EXz path
-        // matched a single build only (an ANR reporter on 447.0.0.1, absent on 451), so it is gone.
         if (!installEmojiWorkerHook(cl)) ModuleLog.error("(IE|Emoji) Will not work: Instagram's emoji loader was not found in this Instagram version");
     }
 
@@ -512,10 +440,6 @@ public class CustomFontHook {
         }
     }
 
-    /**
-     * Finds the MetadataRepoLoaderCallback reachable from the worker (worker -> loader -> callback,
-     * depth ≤ 2) — an abstract class with a void (Throwable) method (onFailed) — and calls onFailed.
-     */
     private static boolean failEmojiLoad(Object obj, int depth) throws Exception {
         if (obj == null || depth > 2) return false;
         for (Class<?> c = obj.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
@@ -542,13 +466,12 @@ public class CustomFontHook {
         return false;
     }
 
-    /** Saves the picked emoji font (any loadable .ttf/.otf; rendered via the fallback typeface). */
     private static boolean saveEmoji(Activity act, android.net.Uri uri) {
         try {
             File out = copyFont(act, uri, EMOJI_PREFIX);
             if (out == null) return false;
             FeatureFlags.customEmojiPath = out.getAbsolutePath();
-            combo = null; // force rebuild with the new emoji font
+            combo = null;
             return true;
         } catch (Throwable t) {
             ModuleLog.error("(IE|Emoji) Could not save the picked emoji font: " + t.getClass().getSimpleName() + ": " + t.getMessage());
@@ -568,7 +491,6 @@ public class CustomFontHook {
         return t;
     }
 
-    /** Typeface.create(…, weight, …) only accepts 1..1000; getWeight() can report 0. */
     private static int weightOf(Typeface t) {
         int w = t.getWeight();
         return w < 1 || w > 1000 ? 400 : w;

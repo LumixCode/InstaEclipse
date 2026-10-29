@@ -33,42 +33,25 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Upload an Instant from gallery (#199). The quicksnap camera is Jetpack Compose with a suspend,
- * obfuscated send pipeline, so we don't build the payload. Instead:
- *   1. Detect the camera is open (a QuickSnapCameraViewModel instance method fires) and inject a
- *      floating "Gallery" chip onto the hosting Activity's decor (the module's decor-overlay
- *      pattern — works regardless of the Compose content).
- *   2. The chip launches the system image picker.
- *   3. We receive the pick by hooking base Activity.onActivityResult (filtered by a unique request
- *      code, so IG's Activity subclassing doesn't matter), decode it to a Bitmap, and mark it
- *      pending.
- *   4. When the user taps the shutter, QuickSnapCameraViewModel.A02(Context,Bitmap,Bitmap,…) fires;
- *      we swap the captured Bitmap (arg1) for the gallery bitmap and let IG build+send the payload.
- */
 public class InstantUploadHook {
 
     private static final String VM_CLASS =
             "com.instagram.quicksnap.camera.domain.QuickSnapCameraViewModel";
-    private static final int PICK_REQUEST = 0x1E5A; // unique request code for our picker
+    private static final int PICK_REQUEST = 0x1E5A;
 
     static volatile Bitmap pendingBitmap;
-    private static volatile long pendingSetAt = 0;   // when pendingBitmap was armed (staleness guard)
-    // The camera screen that received the pick; weak, so an armed pick never pins a closed screen.
+    private static volatile long pendingSetAt = 0;
     private static volatile java.lang.ref.WeakReference<Activity> pendingHost;
     private static final long PENDING_TTL_MS = 5 * 60 * 1000;
     private static final Runnable EXPIRE_PICK = InstantUploadHook::dropPick;
-    private static FrameLayout chip;           // the injected gallery button (main thread only)
-    private static View preview;               // "tap shutter" hint shown once a photo is picked
-    private static FrameLayout chipBtn;        // the round button inside chip
-    private static View chipIcon;              // gallery glyph (idle state)
-    private static ImageView chipThumb;        // picked photo, circle-cropped (ready state)
-    private static View chipBadge;             // green check badge (ready state)
-    private static Activity chipHost;          // the Activity we injected them on
+    private static FrameLayout chip;
+    private static View preview;
+    private static FrameLayout chipBtn;
+    private static View chipIcon;
+    private static ImageView chipThumb;
+    private static View chipBadge;
+    private static Activity chipHost;
     private static boolean lifecycleRegistered = false;
-    // True while OUR gallery picker is on top of the camera. The camera screen pauses/stops while
-    // the picker is open; the chip must survive that, otherwise backing out of the picker without
-    // choosing anything leaves the camera with no Gallery chip until it is reopened.
     private static volatile boolean pickerOpen = false;
 
     public void install(ClassLoader cl) {
@@ -77,7 +60,6 @@ public class InstantUploadHook {
         hookPickerResult();
     }
 
-    // ── 4. The bitmap swap (verified: A02 arg1 = captured Bitmap) ──────────────
     private void hookSwap(ClassLoader cl) {
         try {
             Class<?> vm = XposedHelpers.findClass(VM_CLASS, cl);
@@ -91,13 +73,9 @@ public class InstantUploadHook {
             XC_MethodHook swap = new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam p) {
                     try {
-                        if (!binding.accepts(p.args)) return; // suspend re-entry passes nulls
-                        // Read once: leaving the camera clears the pick on the main thread.
+                        if (!binding.accepts(p.args)) return;
                         Bitmap selected = pendingBitmap;
                         Activity host = pickHost();
-                        // Drop a stale pick so it can't hijack a much-later real capture: one that
-                        // timed out, or whose camera screen is gone even if no callback said so.
-                        // A merely finishing camera may still be committing this very shot.
                         if (selected != null && (System.currentTimeMillis() - pendingSetAt > PENDING_TTL_MS
                                 || host == null || host.isDestroyed())) {
                             clearPick();
@@ -110,9 +88,7 @@ public class InstantUploadHook {
                                 Bitmap.Config config = selected.getConfig();
                                 secondary = selected.copy(config != null ? config : Bitmap.Config.ARGB_8888, false);
                             }
-                            // Validate both replacements before touching either argument.
                             if (!binding.replace(p.args, selected, secondary)) return;
-                            // A pick armed again meanwhile is the next shot's, not this one's.
                             if (pendingBitmap == selected) clearPick();
                             FeedVideoDownloadHook.mainHandler.post(InstantUploadHook::removeChip);
                             ModuleLog.line("(IE|InstantUpload) Sent the gallery photo as this Instant");
@@ -133,7 +109,6 @@ public class InstantUploadHook {
         }
     }
 
-    /** A unique photo handoff, with declared argument slots checked before mutation. */
     static final class SwapBinding {
         final Method method;
         final int secondaryBitmapIndex;
@@ -158,8 +133,6 @@ public class InstantUploadHook {
                 boolean legacy = p.length == 9 && p[2] == bitmapType && p[3] == vm
                         && modelType(p[4], bitmapType) && p[5] == String.class && p[6] == String.class
                         && modelType(p[7], bitmapType) && p[8] == long.class;
-                // Preserve 451+'s single-Bitmap capture family without selecting an arbitrary
-                // overload. Video/File handoffs and archive/void helpers are never photo targets.
                 boolean modern = modelType(p[2], bitmapType) && p[2] != vm;
                 int bitmaps = 0, owners = 0, ownerIndex = -1;
                 for (int i = 0; i < p.length; i++) {
@@ -203,14 +176,10 @@ public class InstantUploadHook {
         }
     }
 
-    // ── 1. Camera-open detection → inject the Gallery chip ─────────────────────
     private void hookCameraOpen(ClassLoader cl) {
         registerLifecycle(cl);
         try {
             Class<?> vm = XposedHelpers.findClass(VM_CLASS, cl);
-            // Hook the VM's no-arg void instance methods structurally (not a hardcoded letter like
-            // "A15") — any one firing means the quicksnap camera VM is live, i.e. the camera is
-            // on screen. Injection is idempotent + gated to the modal, so hooking several is safe.
             XC_MethodHook onActive = new XC_MethodHook() {
                 @Override protected void afterHookedMethod(MethodHookParam p) {
                     quickSnapActiveAt = android.os.SystemClock.uptimeMillis();
@@ -233,15 +202,10 @@ public class InstantUploadHook {
         }
     }
 
-    /**
-     * Remove the chip the moment its host screen is paused, so it never lingers on other menus
-     * (the modal window/decor is reused across surfaces, so a left-over chip would show app-wide).
-     */
     private void registerLifecycle(ClassLoader cl) {
         registerLifecycle(0);
     }
 
-    /** Hooks may install before the Application exists; retry for up to ~30 s until it does. */
     private static void registerLifecycle(int attempt) {
         if (lifecycleRegistered) return;
         try {
@@ -261,10 +225,6 @@ public class InstantUploadHook {
     }
 
     static final class Lifecycle implements android.app.Application.ActivityLifecycleCallbacks {
-        // Leaving the camera Activity drops an armed pick along with its chip and thumbnail, so a
-        // later shot is always what the camera sees. Our own picker pausing the camera is not
-        // leaving (pickerOpen); paging away inside the same Activity sends no callback, and the
-        // expiry bounds that case.
         @Override public void onActivityPaused(Activity a) {
             if (a == watchHost && !pickerOpen) stopWatch();
             if (a == chipHost && !pickerOpen) removeChip();
@@ -279,13 +239,9 @@ public class InstantUploadHook {
             if (a == chipHost) { pickerOpen = false; removeChip(); }
             if (a == pickHost()) dropPick();
         }
-        // If focus moves to any other screen, the chip must not follow — kill it. It is
-        // re-injected only when the quicksnap camera signals open again (A15).
         @Override public void onActivityResumed(Activity a) {
             if (chip != null && a != chipHost) removeChip();
             if (pendingBitmap != null && a != pickHost()) dropPick();
-            // The quicksnap screens live in a modal; watch it so the chip appears whenever
-            // the camera page is on screen, however the user got there.
             if (FeatureFlags.uploadInstants && a.getClass().getName().contains("ModalActivity")) startWatch(a);
         }
         @Override public void onActivityCreated(Activity a, android.os.Bundle b) {}
@@ -296,8 +252,7 @@ public class InstantUploadHook {
     static void armPick(Bitmap bmp, Activity host) {
         pendingSetAt = System.currentTimeMillis();
         pendingHost = new java.lang.ref.WeakReference<>(host);
-        pendingBitmap = bmp;   // last, so a reader that sees the bitmap also sees its host
-        // Expire the pick and its green chip together, even while the camera stays open.
+        pendingBitmap = bmp;
         FeedVideoDownloadHook.mainHandler.removeCallbacks(EXPIRE_PICK);
         FeedVideoDownloadHook.mainHandler.postDelayed(EXPIRE_PICK, PENDING_TTL_MS);
     }
@@ -314,16 +269,11 @@ public class InstantUploadHook {
         FeedVideoDownloadHook.mainHandler.removeCallbacks(EXPIRE_PICK);
     }
 
-    /** Main thread: the green chip and thumbnail must never outlive the pick they announce. */
     private static void dropPick() {
         clearPick();
         removeChip();
     }
 
-    /**
-     * Ready state: the button shows the picked photo (circle-cropped, white ring, green check
-     * badge) and a small "tap shutter" hint sits just above the shutter, never covering it.
-     */
     private static void markChipReady(Activity act, Bitmap bmp) {
         try {
             View decor = act.getWindow().getDecorView();
@@ -355,7 +305,6 @@ public class InstantUploadHook {
                 FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-                // The shutter ring's top edge is ~188dp above the navigation bar; float just above it.
                 lp.bottomMargin = navInset(act, decor) + dp(act, 198);
                 hint.setLayoutParams(lp);
                 hint.setVisibility(chip != null ? chip.getVisibility() : View.VISIBLE);
@@ -371,13 +320,12 @@ public class InstantUploadHook {
 
     private static final int GREEN = Color.parseColor("#30D158");
 
-    /** Idle (bmp == null): gallery glyph on a dark disc. Ready: the picked photo + check badge. */
     private static void applyChipState(Activity act, Bitmap bmp) {
         if (chip == null || chipBtn == null) return;
         boolean ready = bmp != null;
         GradientDrawable disc = new GradientDrawable();
         disc.setShape(GradientDrawable.OVAL);
-        disc.setColor(Color.parseColor("#33FFFFFF"));       // same grey as IG's flash/flip discs
+        disc.setColor(Color.parseColor("#33FFFFFF"));
         disc.setStroke(dp(act, ready ? 2 : 1), ready ? Color.WHITE : Color.parseColor("#26FFFFFF"));
         GradientDrawable mask = new GradientDrawable();
         mask.setShape(GradientDrawable.OVAL);
@@ -410,7 +358,6 @@ public class InstantUploadHook {
         preview = null;
     }
 
-    /** A drawable from the module APK (R.drawable ids only resolve against the module's Resources). */
     private static Drawable moduleDrawable(Activity act, int id) {
         try {
             return I18n.moduleResources(act).getDrawable(id, null);
@@ -419,7 +366,6 @@ public class InstantUploadHook {
         }
     }
 
-    /** Height of the navigation bar overlapping the bottom of the (edge-to-edge) decor. */
     @SuppressLint({"DiscouragedApi", "InternalInsetResource"})
     private static int navInset(Activity act, View decor) {
         try {
@@ -457,17 +403,13 @@ public class InstantUploadHook {
 
     private static void injectChip(Activity act) {
         try {
-            // Only inject on the camera's own modal window — never the long-lived MainTabActivity
-            // (which would glue the chip app-wide). The quicksnap camera runs in a modal activity.
             if (!act.getClass().getName().contains("ModalActivity")) return;
-            if (chip != null && chipHost == act) return; // already showing on this screen
-            removeChip();                                 // clear any stale chip from a prior screen
+            if (chip != null && chipHost == act) return;
+            removeChip();
 
             View decor = act.getWindow().getDecorView();
             if (!(decor instanceof ViewGroup)) return;
 
-            // A round dark button in IG's own control style (like the flash/flip discs), sitting in
-            // the "Friends" row directly under the flash button — clear of shutter, flash and pill.
             int btnSize = dp(act, 48), badgeSize = dp(act, 18), box = btnSize + dp(act, 6);
             FrameLayout c = new FrameLayout(act);
             c.setClipChildren(false);
@@ -484,7 +426,7 @@ public class InstantUploadHook {
                     v.animate().scaleX(0.88f).scaleY(0.88f).setDuration(90).start();
                 else if (a == android.view.MotionEvent.ACTION_UP || a == android.view.MotionEvent.ACTION_CANCEL)
                     v.animate().scaleX(1f).scaleY(1f).setDuration(140).start();
-                return false; // let the click + ripple run
+                return false;
             });
 
             ImageView thumb = new ImageView(act);
@@ -514,7 +456,7 @@ public class InstantUploadHook {
                 int s = dp(act, 24);
                 iv.setLayoutParams(new FrameLayout.LayoutParams(s, s, Gravity.CENTER));
                 icon = iv;
-            } else {                                    // module resources unavailable: emoji glyph
+            } else {
                 TextView tv = new TextView(act);
                 tv.setText("🖼");
                 tv.setTextSize(18);
@@ -532,7 +474,7 @@ public class InstantUploadHook {
             badge.setImageTintList(ColorStateList.valueOf(GREEN));
             GradientDrawable badgeBg = new GradientDrawable();
             badgeBg.setShape(GradientDrawable.OVAL);
-            badgeBg.setColor(Color.WHITE);                // shows through the check cut-out
+            badgeBg.setColor(Color.WHITE);
             badgeBg.setStroke(dp(act, 1), Color.BLACK);
             badge.setBackground(badgeBg);
             badge.setLayoutParams(new FrameLayout.LayoutParams(badgeSize, badgeSize, Gravity.TOP | Gravity.END));
@@ -540,8 +482,6 @@ public class InstantUploadHook {
             badge.setVisibility(View.GONE);
             c.addView(badge);
 
-            // IG centres its row on the screen: flash disc at centre - 106dp, "Friends" pill row
-            // ~40dp above the navigation bar.
             FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(box, box);
             lp.gravity = Gravity.BOTTOM | Gravity.LEFT;
             int width = decor.getWidth() > 0 ? decor.getWidth() : act.getResources().getDisplayMetrics().widthPixels;
@@ -560,8 +500,6 @@ public class InstantUploadHook {
             chipHost = act;
             applyChipState(act, null);
             watchCamera();
-            // A chip re-injected by WATCH or the VM hook must show an armed pick as ready, never as
-            // idle: an idle-looking chip would let the next shutter press send the old photo.
             Bitmap pick = pendingBitmap;
             if (pick != null && pickHost() == act) markChipReady(act, pick);
             ModuleLog.detail("(IE|InstantUpload) gallery chip injected");
@@ -570,14 +508,9 @@ public class InstantUploadHook {
         }
     }
 
-    // The camera and "Your instants" are pages of one horizontal pager in the same modal, so the
-    // chip follows the camera preview (app:id/camera_view): shown only while that page is on screen.
     private static final long WATCH_MS = 300;
     private static int cameraViewId;
-    private static Activity watchHost;          // the resumed modal being watched (main thread only)
-    // The camera in a chat (and other cameras) also has a camera_view inside a ModalActivity; only
-    // the Instants (quicksnap) camera drives QuickSnapCameraViewModel. Show the chip only when that
-    // view model has been active since the watched modal came up.
+    private static Activity watchHost;
     private static volatile long quickSnapActiveAt;
     private static volatile long watchStartedAt;
     private static final Runnable WATCH = new Runnable() {
@@ -585,7 +518,6 @@ public class InstantUploadHook {
             Activity host = watchHost;
             if (host == null || !FeatureFlags.uploadInstants) return;
             boolean hasCam = hasCameraView(host);
-            // 2 s margin: the quicksnap view model can start just before its modal reports resumed.
             boolean on = hasCam && (quickSnapActiveAt >= watchStartedAt - 2000 || isQuickSnapCamera(host))
                     && cameraOnScreen(host);
             if (on && (chip == null || chipHost != host)) injectChip(host);
@@ -594,14 +526,11 @@ public class InstantUploadHook {
                 if (chip.getVisibility() != vis) chip.setVisibility(vis);
                 if (preview != null && preview.getVisibility() != vis) preview.setVisibility(vis);
             }
-            // Modals without a camera (comments, profiles…) are checked rarely.
             FeedVideoDownloadHook.mainHandler.postDelayed(this, hasCam ? WATCH_MS : 1000);
         }
     };
 
     private static void startWatch(Activity act) {
-        // Coming back from our own picker keeps watchHost (pause skips stopWatch while pickerOpen);
-        // restarting the window there would hide the chip of an armed pick until the VM fires again.
         if (act != watchHost) watchStartedAt = android.os.SystemClock.uptimeMillis();
         watchHost = act;
         FeedVideoDownloadHook.mainHandler.removeCallbacks(WATCH);
@@ -622,7 +551,7 @@ public class InstantUploadHook {
         try {
             if (cameraViewId == 0) cameraViewId = act.getResources().getIdentifier("camera_view", "id", act.getPackageName());
             View cam = cameraViewId == 0 ? null : act.getWindow().getDecorView().findViewById(cameraViewId);
-            if (cam == null) return true; // no preview to follow on this build: keep the chip
+            if (cam == null) return true;
             if (!cam.isShown() || cam.getWidth() == 0) return false;
             int[] at = new int[2];
             cam.getLocationOnScreen(at);
@@ -632,10 +561,6 @@ public class InstantUploadHook {
         }
     }
 
-    /** Opened straight from the Instants stack, the camera never touches its view model until the
-     *  grid is opened, so the screen is recognised by its own views instead: the quicksnap camera
-     *  draws named com.instagram.quicksnap.camera.ui views (cover frame, dual bounds); the chat
-     *  camera does not. Remembered per window once seen. */
     private static final java.util.Map<Activity, Boolean> quickSnapHosts = new java.util.WeakHashMap<>();
     private static final java.util.Map<Activity, Long> quickSnapMisses = new java.util.WeakHashMap<>();
 
@@ -690,11 +615,6 @@ public class InstantUploadHook {
         }
     }
 
-    /**
-     * Picker closed without a usable image (cancelled, nothing chosen, or undecodable): drop any
-     * half-armed pick so the next shutter press is a normal capture, and put the Gallery chip back
-     * in its default state on the camera screen.
-     */
     private static void restoreChipAfterCancel(Activity act) {
         clearPick();
         removePreview();
@@ -707,7 +627,6 @@ public class InstantUploadHook {
         chip.bringToFront();
     }
 
-    // ── 3. Receive the pick (hook base Activity.onActivityResult) ──────────────
     private void hookPickerResult() {
         try {
             XposedHelpers.findAndHookMethod(Activity.class, "onActivityResult",
@@ -721,7 +640,7 @@ public class InstantUploadHook {
                                 Activity act = (Activity) p.thisObject;
                                 Uri uri = res == Activity.RESULT_OK && p.args[2] != null
                                         ? ((Intent) p.args[2]).getData() : null;
-                                if (uri == null) {          // backed out / picked nothing
+                                if (uri == null) {
                                     restoreChipAfterCancel(act);
                                     return;
                                 }
@@ -762,12 +681,8 @@ public class InstantUploadHook {
         }
     }
 
-    // Cap the picked image's long edge. Full-resolution gallery photos (e.g. 4000×3000) can
-    // intermittently choke IG's send/transcoder; a capture-sized bitmap is what the pipeline
-    // expects, so downscaling makes the upload reliable.
     private static final int MAX_EDGE = 1440;
 
-    /** Decodes a picked image Uri to a downscaled SOFTWARE bitmap (hardware bitmaps can't be copied). */
     private static Bitmap decode(Activity act, Uri uri) {
         try {
             ImageDecoder.Source src = ImageDecoder.createSource(act.getContentResolver(), uri);
@@ -791,7 +706,6 @@ public class InstantUploadHook {
         return Math.round(v * a.getResources().getDisplayMetrics().density);
     }
 
-    /** Best-effort current resumed Activity via ActivityThread (A02/VM carry no Activity). */
     @SuppressWarnings("unchecked")
     static Activity currentActivity() {
         try {

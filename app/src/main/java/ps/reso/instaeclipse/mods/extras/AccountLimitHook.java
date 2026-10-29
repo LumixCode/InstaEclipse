@@ -9,11 +9,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Lifts the logged-in account limit (5). The account switcher's "add account" handler (the method
- * logging "account_switcher_max_limit_reached") asks a static {@code canAddAccount(session, max)}
- * check — {@code loggedInCount < max} — and forcing it true lets the add-account flow continue.
- */
 public class AccountLimitHook {
 
     public void install(ClassLoader cl) {

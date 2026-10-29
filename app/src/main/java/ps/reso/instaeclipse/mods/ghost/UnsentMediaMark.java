@@ -30,16 +30,6 @@ import java.util.WeakHashMap;
 
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 
-/**
- * Renderer-independent mark for a retained non-text message, in the same red as an unsent text
- * bubble: a voice message's own bubble turns red, any other media (reels, posts, photos, videos)
- * gets a red outline around its bubble.
- *
- * The voice bubble (the legacy VoiceContentViewHolder row) is a LayerDrawable of ShapeDrawables that
- * Instagram repaints on every bind, so only its fill paints' colours change here, and the paints are
- * restored when the mark goes. Tinting, colour filters or alpha would outlive the bind and leak to
- * the next message the recycled row shows.
- */
 final class UnsentMediaMark {
     static final int COLOR = 0xFFCF4545;
     private static final int UNRESOLVED = -1;
@@ -84,7 +74,6 @@ final class UnsentMediaMark {
         }
         changed |= ring.resize(row.getWidth(), row.getHeight());
         changed |= ring.anchor(row, bubble);
-        // An overlay added with empty bounds may not invalidate its newly occupied region.
         if (changed) row.invalidate();
     }
 
@@ -115,8 +104,6 @@ final class UnsentMediaMark {
         ring = null;
     }
 
-    // ── Voice: Instagram's own bubble, painted red ───────────────────────────
-
     @SuppressLint("DiscouragedApi")
     private static View voiceBubble(View row) {
         if (voiceId == UNRESOLVED) {
@@ -128,9 +115,7 @@ final class UnsentMediaMark {
         return voice != null && voice.getVisibility() == View.VISIBLE ? voice : null;
     }
 
-    /** False when the voice bubble has no ShapeDrawable fill to repaint (the outline is used then). */
     private boolean paintRed(View container) {
-        // The bubble drawable is the container's background, or one of its children's.
         List<View> candidates = new ArrayList<>(List.of(container));
         if (container instanceof ViewGroup group) {
             for (int i = 0; i < group.getChildCount(); i++) candidates.add(group.getChildAt(i));
@@ -156,7 +141,6 @@ final class UnsentMediaMark {
         boolean changed = false;
         for (Paint paint : fills) {
             if (paint.getColor() == COLOR && paint.getShader() == null) continue;
-            // Instagram's paint as of now: after a repaint this replaces the older copy.
             savedPaints.put(paint, new Paint(paint));
             paint.setShader(null);
             paint.setColor(COLOR);
@@ -180,7 +164,6 @@ final class UnsentMediaMark {
         paintedBackground = null;
     }
 
-    /** The visible filled shapes of a bubble drawable; strokes (received-bubble borders) stay. */
     private static void collectFills(Drawable drawable, List<Paint> out, int depth) {
         if (drawable == null || depth > 3) return;
         if (drawable instanceof ShapeDrawable shape) {
@@ -191,7 +174,6 @@ final class UnsentMediaMark {
         } else if (drawable instanceof DrawableWrapper wrapper) {
             collectFills(wrapper.getDrawable(), out, depth + 1);
         } else {
-            // Instagram's own wrappers keep the shape in a plain Drawable field.
             for (Field field : drawableFields(drawable.getClass())) {
                 try {
                     collectFills((Drawable) field.get(drawable), out, depth + 1);
@@ -220,13 +202,6 @@ final class UnsentMediaMark {
         }
     }
 
-    // ── Other media: a red outline around the bubble ─────────────────────────
-
-    /**
-     * The message bubble, or null to use the whole row. The row spans the full width while a
-     * received message sits on the left. The bubble is the largest child of Instagram's content
-     * row; the sender avatar and forward shortcut are its smaller siblings.
-     */
     @SuppressLint("DiscouragedApi")
     private static View bubble(View row) {
         if (contentId == UNRESOLVED) {
@@ -245,10 +220,6 @@ final class UnsentMediaMark {
 
     private static long area(View view) { return (long) view.getWidth() * view.getHeight(); }
 
-    /**
-     * The bubble's corner radius from its outline (its rounded background), or from the view that
-     * fills it (the rounded media frame). Shared media bubbles are rounded by Instagram either way.
-     */
     private static float cornerRadius(View bubble, float fallback) {
         Outline outline = new Outline();
         View current = bubble;
@@ -262,7 +233,6 @@ final class UnsentMediaMark {
                     if (radius > 0) return radius;
                 } catch (Throwable ignored) {}
             }
-            // Down into the child that fills most of it (the media inside the bubble).
             View next = null;
             if (current instanceof ViewGroup group) {
                 for (int i = 0; i < group.getChildCount(); i++) {
@@ -301,7 +271,6 @@ final class UnsentMediaMark {
             return false;
         }
 
-        /** Follows the bubble (row coordinates) and its corner radius; null uses the whole row. */
         boolean anchor(View row, View view) {
             if (view == null) {
                 if (!anchored) return false;

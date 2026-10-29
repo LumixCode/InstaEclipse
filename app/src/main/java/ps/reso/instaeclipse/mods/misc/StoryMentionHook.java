@@ -73,8 +73,6 @@ public class StoryMentionHook {
         return I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_btn_view_mentions);
     }
 
-    // ── DexKit: resolve the two-step mention pipeline ────────────────────────
-
     private static void resolveMentionPipeline(ClassLoader classLoader) {
         if (DexKitCache.isCacheValid()) {
             Method g = DexKitCache.loadMethod("MentionsRawGetter", classLoader);
@@ -165,9 +163,6 @@ public class StoryMentionHook {
 
             for (Object item : list) {
                 if (item == null) continue;
-                // The converter returns Interactive stickers, not raw Users — the mentioned
-                // User lives in one of Interactive's own fields (unless a future version
-                // returns Users directly, which this also handles).
                 Object user = item.getClass().getName().equals("com.instagram.user.model.User")
                         ? item : findFieldByType(item, "com.instagram.user.model.User");
                 if (user == null) continue;
@@ -179,8 +174,6 @@ public class StoryMentionHook {
         }
         return usernames;
     }
-
-    // ── Mentions dialog ───────────────────────────────────────────────────────
 
     private static void showMentionsDialog(Context ctx, List<String> usernames) {
         mainHandler.post(() -> {

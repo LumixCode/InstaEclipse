@@ -44,13 +44,6 @@ public class StoryDownloadHook {
     private static final String TRAY = "StoryTray_members_v1";
     private static final String CAPTURE = "StoryCapture_v1";
 
-    // ── Entry point ──────────────────────────────────────────────────────────
-
-    // ── Highlight "Download all" (#250) ─────────────────────────────────────
-    // Reel model = class using "Reel with pending media should have an owner." (X.04aX on 452,
-    // X.04ey on 451). A highlight's reel has a String id starting with "highlight:"; its
-    // (UserSession) -> List methods return the ReelItems (the whole highlight is fetched by
-    // feed/reels_media/ when it opens).
     private static Class<?> reelClass;
 
     private static List<?> highlightItems(Object reel, Object holder) {
@@ -291,12 +284,6 @@ public class StoryDownloadHook {
         }
     }
 
-    // ── Highlight long-press menu (profile tray): "Download whole highlight" ──
-    // Helper = class of the menu builder A0G(View, ?, ReelItem, Integer), the only method using
-    // "HighlightsTrayDialogHelper" (X.0MGm on 452); it holds the Activity, UserSession and the highlight
-    // reel. The builder shows either the legacy dialog (rows via add(String, OnClickListener), then a
-    // no-arg -> List collects them) or the newer popup (List of rows passed to set(List); rows come from
-    // the helper's static (rowIface, String) -> List factory, rowIface = boolean method + void click).
     private static final ThreadLocal<Object> trayHelper = new ThreadLocal<>();
     private static final Set<Object> trayDialogsDone = Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
@@ -393,7 +380,6 @@ public class StoryDownloadHook {
         return new Method[]{addRow, legacyItems, popupSet, rowFactory};
     }
 
-    /** Long-press row tapped: download every item of the highlight the helper was built for. */
     private static void trayDownload(Object helper) {
         Object reel = reelClass != null ? readFieldByTypeName(helper, reelClass.getName()) : null;
         Object session = readFieldByTypeName(helper, "com.instagram.common.session.UserSession");
@@ -407,14 +393,9 @@ public class StoryDownloadHook {
         List<?> items = highlightItemsWith(reel, session);
         ModuleLog.detail("(IE|HighlightTray) items loaded: " + (items != null ? items.size() : -1));
         if (items != null && !items.isEmpty()) { downloadHighlightItems(ctx, items); return; }
-        loadThenDownload(ctx, reel, session); // highlight never opened: only its cover is known
+        loadThenDownload(ctx, reel, session);
     }
 
-    // Reel loader = first ctor param of the class using "reel_store_on_story_unavailable" (X.02jU on
-    // 452), obtained from a static (UserSession) -> loader getter. register(callback, reelId, String,
-    // boolean) calls back at once when the reel is already loaded, else when fetch(reason enum, reelId,
-    // module, Map) completes; callback = success(String id, boolean) / failure(String id). The loader
-    // only keeps a WeakReference to the callback, so a strong one is held here until it fires.
     private static Method loaderGetter, loaderRegister, loaderUnregister, loaderFetch;
     private static volatile boolean loaderSearched;
     private static final Set<Object> pendingLoads = Collections.synchronizedSet(new java.util.HashSet<>());
@@ -542,8 +523,7 @@ public class StoryDownloadHook {
         } catch (Throwable ignored) {}
     }
 
-    // ── Story cache: capture each VIEWED story (per-page bind, fires for every story shown) ──
-    private static java.lang.reflect.Method expiringGetter; // Media."expiring_at" getter, () -> Long
+    private static java.lang.reflect.Method expiringGetter;
 
     private void resolveExpiringGetter(ClassLoader cl) {
         try {
@@ -564,11 +544,6 @@ public class StoryDownloadHook {
         } catch (Throwable t) { ModuleLog.detail("(IE|StoryCache) expiring getter: " + t); }
     }
 
-    /**
-     * Hooks the story viewer's per-page bind (ReelViewerFragment.onCurrentActiveItemBound — anchored
-     * by that stable string; the method name is obfuscated) which fires for EVERY story shown. Its
-     * first ReelItem param is the current story; we record it to the story cache.
-     */
     private void installStoryCaptureHook(ClassLoader cl) {
         XC_MethodHook capture = new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam p) {
@@ -639,12 +614,6 @@ public class StoryDownloadHook {
         return getter.invoke(item);
     }
 
-    /**
-     * Every CharSequence[] option builder of the story-options helper class (X.0mt9 on 452).
-     * IG 452 moved the "[INTERNAL] …" rows into a private List helper (A0c), so the builder used
-     * for other people's stories (A0t) no longer contains the anchor string itself; taking all
-     * CharSequence[] methods of the anchor's declaring class(es) catches it again.
-     */
     public static java.util.Set<Method> storyOptionBuilders(List<Found> anchorMethods, ClassLoader classLoader) {
         java.util.Set<Method> out = new java.util.LinkedHashSet<>();
         java.util.Set<Class<?>> owners = new java.util.LinkedHashSet<>();
@@ -733,7 +702,6 @@ public class StoryDownloadHook {
         return out;
     }
 
-    /** The original Story selectors, restricted to the already resolved selected Media. */
     static String originalVideoFromSelected(Object media) {
         return FeedVideoDownloadHook.bestVideoUrlFromMedia(media);
     }
@@ -754,17 +722,9 @@ public class StoryDownloadHook {
         return urls.isEmpty() ? null : pickBestUrl(urls);
     }
 
-    // ── URL extraction ────────────────────────────────────────────────────────
-
-    /**
-     * A ReelItem's own Media field, kept free of Android types for unit tests. IG 446/451 give
-     * ReelItem two Media fields: the final one its constructor sets (A12/A17, the field A0G() and
-     * Cgu() return) and the mutable A08 holding the feed post a story ring was opened from.
-     */
     static final class OwnMedia {
         private OwnMedia() { }
 
-        /** The only instance field of {@code typeName}, else the only final one; null when ambiguous. */
         static Field field(Class<?> cls, String typeName) {
             Field only = null, onlyFinal = null;
             int all = 0, finals = 0;
@@ -784,7 +744,6 @@ public class StoryDownloadHook {
         }
     }
 
-    /** Reads the first field whose declared type name equals {@code typeName}. */
     private static Object readFieldByTypeName(Object obj, String typeName) {
         Class<?> cls = obj.getClass();
         while (cls != null && cls != Object.class) {
@@ -799,7 +758,6 @@ public class StoryDownloadHook {
         return null;
     }
 
-    /** Depth-limited field-graph scan for Instagram CDN URL strings. */
     private static void scanCdnUrls(Object obj, List<String> out, int depth, Set<Object> visited) {
         if (obj == null || depth > 5 || out.size() >= 20) return;
         if (!visited.add(obj)) return;
@@ -831,26 +789,12 @@ public class StoryDownloadHook {
         }
     }
 
-    // ── Image candidate scanner ───────────────────────────────────────────────
-
     private static final class CandidateInfo {
         final String url;
         final int    area;
         CandidateInfo(String url, int area) { this.url = url; this.area = area; }
     }
 
-    /**
-     * Walks the object graph looking for Instagram image Candidate objects.
-     * A Candidate is identified by having:
-     *   • At least one String field/method that is a CDN image URL (not video)
-     *   • At least two int/long fields/methods whose values are plausible pixel dimensions (50–20 000 px)
-     *
-     * Field names are ignored — they are obfuscated in Instagram builds.
-     * No-arg methods are also probed to handle Pando/LiveTree JNI-backed nodes where
-     * data is not exposed as Java fields (fixes lower-quality photos on some story types).
-     * The two largest plausible-dimension ints are multiplied to estimate the area.
-     */
-    /** {url, area} of the largest image candidate reachable from {@code media}, or null. */
     static Object[] largestImage(Object media) {
         List<CandidateInfo> candidates = new ArrayList<>();
         collectImageCandidates(media, candidates, Collections.newSetFromMap(new IdentityHashMap<>()), 0);
@@ -867,7 +811,6 @@ public class StoryDownloadHook {
         String cn = obj.getClass().getName();
         if (cn.startsWith("android.") || cn.startsWith("java.lang.") || cn.startsWith("kotlin.")) return;
 
-        // Scan this object's own fields looking for (url + dims) pattern
         String candidateUrl = null;
         List<Integer> dims = new ArrayList<>();
 
@@ -892,7 +835,6 @@ public class StoryDownloadHook {
             cls = cls.getSuperclass();
         }
 
-        // Method probe for Pando/LiveTree JNI-backed nodes — data not exposed as Java fields
         if (cn.startsWith("X.") || cn.startsWith("com.instagram.") || cn.startsWith("com.facebook.")) {
             cls = obj.getClass();
             while (cls != null && cls != Object.class) {
@@ -921,10 +863,9 @@ public class StoryDownloadHook {
         if (candidateUrl != null && dims.size() >= 2) {
             dims.sort(Collections.reverseOrder());
             out.add(new CandidateInfo(candidateUrl, dims.get(0) * dims.get(1)));
-            return; // leaf candidate — don't recurse further into it
+            return;
         }
 
-        // Not a candidate — recurse into Instagram/Facebook/X. objects and lists
         cls = obj.getClass();
         while (cls != null && cls != Object.class) {
             for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(cls)) {
@@ -949,13 +890,11 @@ public class StoryDownloadHook {
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
     private static boolean isCdnUrl(String url) {
         if (url == null || url.isEmpty()) return false;
         if (!url.startsWith("http://") && !url.startsWith("https://")) return false;
         if (!url.contains("cdninstagram.com") && !url.contains("fbcdn.net")) return false;
-        if (url.contains("/t51.") && url.contains("-19/")) return false; // profile pics
+        if (url.contains("/t51.") && url.contains("-19/")) return false;
         return true;
     }
 
@@ -963,11 +902,6 @@ public class StoryDownloadHook {
         return FeedVideoDownloadHook.isVideoUrl(url);
     }
 
-    /**
-     * Prefer video URLs; among images pick the one with the largest pixel area.
-     * Instagram embeds resolution as NNNxNNN in CDN paths (e.g. 1080x1920), so
-     * parsing it directly is the most reliable way to select the full-size copy.
-     */
     private static String pickBestUrl(List<String> urls) {
         for (String u : urls) if (isVideoUrl(u)) return u;
         String best = null;
@@ -979,18 +913,15 @@ public class StoryDownloadHook {
         return best != null ? best : urls.get(0);
     }
 
-    /** Extracts the largest NNNxNNN area found inside a CDN URL. */
     private static int parseUrlArea(String url) {
         int maxArea = 0;
         int i = 0;
         while (i < url.length()) {
-            // Find a digit run
             if (!Character.isDigit(url.charAt(i))) { i++; continue; }
             int numStart = i;
             while (i < url.length() && Character.isDigit(url.charAt(i))) i++;
-            // Must be followed by 'x'
             if (i >= url.length() || url.charAt(i) != 'x') continue;
-            i++; // skip 'x'
+            i++;
             if (i >= url.length() || !Character.isDigit(url.charAt(i))) continue;
             int numMid = i;
             while (i < url.length() && Character.isDigit(url.charAt(i))) i++;

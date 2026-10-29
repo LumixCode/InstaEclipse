@@ -16,7 +16,6 @@ import java.util.Map;
 import ps.reso.instaeclipse.BuildConfig;
 import ps.reso.instaeclipse.utils.core.SettingsSchema;
 
-/** Protected commands and request-specific Binder replies; no public reply broadcasts. */
 public final class ModuleReplies {
     public static final String CONTROL_PERMISSION = ps.reso.instaeclipse.utils.core.IpcSecurity.PERMISSION;
     private static final String EXTRA_REPLY = BuildConfig.APPLICATION_ID + ".ipc.REPLY";
@@ -30,9 +29,7 @@ public final class ModuleReplies {
 
     public interface Callback { void onReply(Bundle data); }
 
-    /** The permission applies to the broadcaster, not to the hooked host's UID. */
     public static void registerControlReceiver(Context context, BroadcastReceiver receiver, IntentFilter filter) {
-        // Without the companion any app can declare the permission name; then nothing registers.
         if (!ps.reso.instaeclipse.utils.core.IpcSecurity.isCompanionPermission(context)) return;
         if (Build.VERSION.SDK_INT >= 33) {
             context.registerReceiver(receiver, filter, CONTROL_PERMISSION, null, Context.RECEIVER_EXPORTED);
@@ -41,7 +38,6 @@ public final class ModuleReplies {
         }
     }
 
-    /** Sends a capability only to an explicitly selected, certificate-verified host. */
     public static Pending request(Context context, Intent request, Callback callback) {
         String target = request.getPackage();
         if (target == null || !CompanionBridge.isTrustedHost(context, target)) return null;
@@ -57,7 +53,6 @@ public final class ModuleReplies {
         }
     }
 
-    /** Called only from a permission-protected host receiver. Never falls back to broadcasting. */
     public static boolean reply(Intent request, Bundle data) {
         try {
             ResultReceiver receiver = request.getParcelableExtra(EXTRA_REPLY);
@@ -81,7 +76,6 @@ public final class ModuleReplies {
         }
     }
 
-    /** Cancellation/reply delivery run on the main thread; canceled capabilities retain no UI callback. */
     public static final class Pending {
         private final Handler main = new Handler(Looper.getMainLooper());
         private Callback callback;
@@ -104,8 +98,6 @@ public final class ModuleReplies {
             main.postDelayed(expiry, REPLY_LIFETIME_MS);
         }
         void attachTo(Intent request) {
-            // Bundles record the concrete Parcelable class name. Send a framework instance so
-            // the host can unmarshal this capability without our anonymous subclass's loader.
             Parcel parcel = Parcel.obtain();
             try {
                 receiver.writeToParcel(parcel, 0);
@@ -119,7 +111,6 @@ public final class ModuleReplies {
         }
     }
 
-    /** Reject mismatched actions before typed Intent getters can supply a default of the wrong type. */
     public static boolean isPreferenceUpdate(String action, String key, Object value) {
         String prefix = BuildConfig.APPLICATION_ID;
         boolean actionType = (prefix + ".ACTION_UPDATE_PREF").equals(action) && value instanceof Boolean
@@ -132,8 +123,6 @@ public final class ModuleReplies {
         Class<?> type = PREFERENCE_TYPES.get(key);
         if (type == null || !type.isInstance(value)) return false;
         if (!(value instanceof String)) return true;
-        // The profile spoofer's picture is a small Base64 JPEG, larger than any other string
-        // setting: only that key gets the higher limit, and only for Base64 text.
         if ("spoofAvatar".equals(key)) return ps.reso.instaeclipse.utils.profile.SpoofAvatar.isValid((String) value);
         return ((String) value).length() <= MAX_PREFERENCE_STRING_CHARS;
     }

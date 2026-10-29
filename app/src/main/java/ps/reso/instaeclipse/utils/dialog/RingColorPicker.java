@@ -33,13 +33,6 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.ui.StoryTrayHook;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 
-/**
- * Story ring color picker (#283): a live ring preview, then Instagram's colors, one color, or a
- * gradient of 2 to 4 colors. Presets fill it in one tap; the selected color is tuned with hue,
- * saturation and brightness sliders or typed as hex. Built from plain views so the same picker
- * runs inside Instagram and in the companion app. The value it reports is the storyRingColor
- * setting: "" (Instagram's), "#RRGGBB" or "#RRGGBB,#RRGGBB,..." .
- */
 public final class RingColorPicker {
 
     public static final String[] SOLID_PRESETS = {"#3897F0", "#0A84FF", "#5E5CE6", "#A855F7", "#FF2D92",
@@ -47,12 +40,10 @@ public final class RingColorPicker {
     public static final String[] GRADIENT_PRESETS = {"#FF0066,#7638FA", "#00C6FF,#0072FF",
             "#F9D423,#FF4E50", "#43E97B,#38F9D7", "#FA709A,#FEE140", "#8E2DE2,#4A00E0",
             "#FF9A9E,#FAD0C4,#A18CD1", "#12C2E9,#C471ED,#F64F59", "#FEDA75,#FA7E1E,#D62976,#962FBF"};
-    /** Instagram's own unseen ring, for the preview of the default. */
     private static final int[] INSTAGRAM = {0xFFFEDA75, 0xFFFA7E1E, 0xFFD62976, 0xFF962FBF, 0xFF4F5BD5};
     private static final int MAX_STOPS = 4;
     private static final int DEFAULT = 0, SOLID = 1, GRADIENT = 2;
 
-    /** Colors of the surrounding dialog, so the picker matches either menu. */
     public static final class Palette {
         final int text, sub, field, accent;
         public Palette(int text, int sub, int field, int accent) {
@@ -212,8 +203,6 @@ public final class RingColorPicker {
         refresh();
     }
 
-    // ---- state ----
-
     private String value() {
         if (mode == DEFAULT) return "";
         StringBuilder sb = new StringBuilder();
@@ -297,8 +286,6 @@ public final class RingColorPicker {
         satTrack.setColors(new int[]{Color.HSVToColor(new float[]{h, 0f, v}), Color.HSVToColor(new float[]{h, 1f, v})});
         valTrack.setColors(new int[]{0xFF000000, Color.HSVToColor(new float[]{h, s, 1f})});
     }
-
-    // ---- rows ----
 
     private void updatePresets() {
         String[] set = mode == GRADIENT ? GRADIENT_PRESETS : SOLID_PRESETS;
@@ -408,8 +395,6 @@ public final class RingColorPicker {
         lp.setMarginEnd(dp(6));
         return lp;
     }
-
-    // ---- views ----
 
     private SeekBar slider(int max) {
         SeekBar s = new SeekBar(ctx);
@@ -549,8 +534,6 @@ public final class RingColorPicker {
         @Override public void setColorFilter(android.graphics.ColorFilter filter) { }
         @Override public int getOpacity() { return android.graphics.PixelFormat.TRANSLUCENT; }
     }
-
-    // ---- helpers ----
 
     private static int[] toArray(List<Integer> list) {
         int[] out = new int[list.size()];

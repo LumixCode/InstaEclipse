@@ -31,7 +31,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/** All chooser callbacks close over these detached values, never Instagram models or Views. */
 public final class SelectedMediaDownloads {
     private static final ExecutorService WORKER = Executors.newSingleThreadExecutor();
 
@@ -58,13 +57,11 @@ public final class SelectedMediaDownloads {
             this.type = type;
             this.options = options;
             this.original = original;
-            // Feed/Reel audio is opt-in; keep Story's existing available-format behavior.
             audioAllowed = "story".equals(type) || offerAudioDownload;
             String base = FeedVideoDownloadHook.buildFilename(DownloadFiles.segment(media.owner, 64), type,
                     DownloadFiles.segment(media.id, 112), false);
             base = base.substring(0, base.lastIndexOf('.'));
             audioFilename = base + "_audio.m4a";
-            // Keep the complete Custom request for the frame picker, regardless of the toggle.
             video = media.video ? media.request(filename(base, true), options) : null;
             originalVideo = media.video && media.originalVideoUrl != null
                     ? new DownloadRequest(media.id, media.owner, filename(base, true), null,
@@ -114,11 +111,10 @@ public final class SelectedMediaDownloads {
         captureAndShowPost(ctx, media, type, null);
     }
 
-    /** {@code currentSlide}: slide count -> the carousel slide on screen (-1 when unknown), or null. */
     static void captureAndShowPost(Context ctx, Object media, String type,
             java.util.function.IntUnaryOperator currentSlide) {
         try {
-            Captured captured = capture(ctx, media, type); // Synchronous, at Download tap.
+            Captured captured = capture(ctx, media, type);
             int n = captured.children.size();
             showPost(ctx, captured, n > 1 && currentSlide != null ? currentSlide.applyAsInt(n) : -1);
         } catch (Throwable error) { unavailable(ctx, error); }
@@ -132,7 +128,6 @@ public final class SelectedMediaDownloads {
         showPost(ctx, captured, -1, onClosed);
     }
 
-    /** A carousel offers the slide on screen and all of them, like 0.8.0; any slide is one tap further. */
     static void showPost(Context ctx, Captured captured, int current) {
         showPost(ctx, captured, current, null);
     }
@@ -174,7 +169,6 @@ public final class SelectedMediaDownloads {
         dialog.show();
     }
 
-    /** Every slide, with one toast for the batch instead of one per item. */
     static void startAll(Context ctx, Captured captured) {
         toast(ctx, I18n.t(ctx, R.string.ig_toast_downloading_all_n_items, captured.children.size()));
         BatchTally batch = new BatchTally(captured.children.size());
@@ -214,10 +208,6 @@ public final class SelectedMediaDownloads {
         }
     }
 
-    /** The frame picker decodes with Android's own frame reader, and some phones' AV1/VP9 software
-     *  decoders hand it frames with the color channels mixed up (a magenta/green picture). H.264
-     *  decodes correctly everywhere and Instagram offers it at full resolution, so the picker
-     *  always prefers it, whatever the Downloader setting. */
     static DownloadRequest frameRequest(Captured captured) {
         DownloadRequest v = captured.video;
         if (v == null || v.options.originalSelection) return v;
@@ -240,21 +230,14 @@ public final class SelectedMediaDownloads {
         start(ctx, captured, video, null);
     }
 
-    /** {@code batch}: part of "Download all", which shows its own toast, so no per-item ones. */
     static void start(Context ctx, Captured captured, boolean video, BatchTally batch) {
         start(ctx, captured, video, batch, false);
     }
 
-    /**
-     * The companion can't be reached (Instagram can't bind to it: autostart / background limits on
-     * some phones, or the app missing). The file is saved by Instagram itself instead, to
-     * Download/InstaEclipse, since the folder chosen in the companion is only writable there.
-     */
     static boolean companionUnreachable(String error) {
         return CompanionBridge.isUnreachable(error);
     }
 
-    /** Instagram saves it itself; a warning only when that can't be the chosen folder. */
     static void savedLocally(Context ctx, String mime) {
         if (!DownloadPublisher.reachesChosenFolder(FeatureFlags.downloaderCustomPath, mime))
             toast(ctx, I18n.t(ctx, R.string.ig_dl_companion_fallback));
@@ -305,7 +288,6 @@ public final class SelectedMediaDownloads {
         String filename = captured.originalVideo.filename;
         WORKER.submit(() -> {
             try {
-                // Preserve upstream 0.8.1 automatic progressive fallback and native merge.
                 String base = plan.fallbackUrl == null ? plan.url : plan.fallbackUrl;
                 String[] upgrade = plan.fallbackUrl == null ? null : new String[]{plan.url, plan.audioUrl};
                 boolean delegated = FeedVideoDownloadHook.downloadCapturedOriginal(ctx, base,
@@ -346,8 +328,6 @@ public final class SelectedMediaDownloads {
             } catch (DownloadEngine.Failure failure) {
                 if (cancel.isCancelled()) { failed(ctx, R.string.ie_download_cancelled); reportFailed(ctx, batch); }
                 else if (failure.canOfferFallback && !request.options.allowFallback && canShow(ctx)) {
-                    // Occupy this serial worker until the prompt is dismissed, so a later item
-                    // of a batch cannot cover a decision about this one.
                     if (offerFallbackAndWait(ctx, DownloadMessages.reason(failure), cancel))
                         startVideo(ctx, allowFallback(request, failure), batch, local);
                     else reportFailed(ctx, batch);
@@ -426,7 +406,6 @@ public final class SelectedMediaDownloads {
         return dialog.onDismiss(dismissed);
     }
 
-    /** Downloads run quietly behind a toast at the start and one at the end, as in 0.8.0 (#287). */
     private static final DownloadEngine.Progress NO_PROGRESS = (phase, done, total) -> { };
     private static final Runnable NOTHING = () -> { };
     private static final Map<BatchTally, int[]> SUMMARIES = Collections.synchronizedMap(new WeakHashMap<>());
@@ -441,7 +420,6 @@ public final class SelectedMediaDownloads {
         toast(ctx, I18n.t(ctx, R.string.ie_download_unavailable));
     }
 
-    /** No quality suffix in the name, like 0.8.0; the save picks a free name for a repeat download. */
     private static String filename(String base, boolean video) {
         return base + (video ? ".mp4" : ".jpg");
     }

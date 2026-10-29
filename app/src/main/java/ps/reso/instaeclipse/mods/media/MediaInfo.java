@@ -29,15 +29,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * "Media info" (#231): resolution, duration, codec, audio, the available video qualities (from the
- * DASH manifest) and the file size of the post / visible carousel slide.
- *
- * Values come from com.instagram.feed.media.Media getters found by their JSON key
- * (declaredClass Media + no args + usingEqStrings(key) + return type — the same pattern the
- * downloader uses for video_dash_manifest), resolved lazily and cached. Size = HEAD Content-Length
- * of the URL the downloader would save.
- */
 public final class MediaInfo {
 
     private static final String MEDIA = "com.instagram.feed.media.Media";
@@ -74,12 +65,9 @@ public final class MediaInfo {
             final List<MediaInfoRows.Row> shown = rows;
             FeedVideoDownloadHook.mainHandler.post(() -> {
                 try {
-                    // The menu's context may belong to a sheet that has closed by now; show on the
-                    // Activity under it (a post opened from a profile has its own, above the main one).
                     Context host = ps.reso.instaeclipse.mods.ui.UIHookManager.dialogHost(ctx);
                     ModuleLog.detail("(IE|MediaInfo) showing " + shown.size() + " rows on " + host.getClass().getSimpleName());
                     IeDialog dlg = dialog(host, shown);
-                    // Song + Spotify / YouTube Music / Apple Music, like Story Info.
                     ps.reso.instaeclipse.mods.misc.StoryInfoHook.addMusic(dlg, host, media);
                     if (mediaUrl[0] != null) dlg.secondary(I18n.t(host, R.string.ig_media_open_with), () -> openWith(host, mediaUrl[0]));
                     dlg.primary(I18n.t(host, R.string.ig_dialog_ok), null);
@@ -126,7 +114,6 @@ public final class MediaInfo {
         return dlg;
     }
 
-    /** Hands the media's direct CDN link to any app that can open it (player, browser, editor). */
     private static void openWith(Context host, String url) {
         try {
             android.content.Intent view = new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url));
@@ -168,7 +155,6 @@ public final class MediaInfo {
         return facts;
     }
 
-    /** "1080×1920 · 3.21 Mbps · avc1.64001F" for each video Representation, best first. */
     static List<String> representations(String manifest) {
         return representations(manifest, Locale.US);
     }

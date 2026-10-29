@@ -11,29 +11,17 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Opens Instagram on the chosen tab. The main activity picks its first tab from intent extras
- * holding a tab enum name (FEED, CLIPS, DIRECT, SEARCH, PROFILE, NEWS): the entrance-module extra
- * on a normal launch, {@code MainActivityAccountHelper.STARTUP_TAB} after an account switch. Both
- * are set on a fresh launch unless IG set one itself; IG falls back to its default tab when the
- * chosen one is not on the bottom bar.
- */
 public class StartupTabHook {
 
     private static final String TAG = "(InstaEclipse | StartupTab): ";
 
-    /** Tab enum names offered in the settings, in bottom-bar order ("" = Instagram's default). */
     public static final String[] TABS = {"", "FEED", "CLIPS", "DIRECT", "SEARCH", "PROFILE", "NEWS"};
 
-    /** Read only on the account-switch path. */
     static final String EXTRA = "MainActivityAccountHelper.STARTUP_TAB";
-    /** Read on a normal launch when no cold-start flag picks a tab. */
     static final String ENTRANCE_EXTRA = "INSTAGRAM_MAIN_ACTIVITY_INTENT_ENTRANCE_MODULE_EXTRA_FIELD";
-    /** Marks a launch intent this hook rewrote. */
     static final String MARK = "ie_startup_tab";
     private static final String APPLIED = "ie_startup_tab_applied";
 
-    /** Launcher alias; the activity behind it is {@link #MAIN_CLASS}. */
     private static final String MAIN = "com.instagram.android.activity.MainTabActivity";
     private static final String MAIN_CLASS = "com.instagram.mainactivity.InstagramMainActivity";
 
@@ -45,18 +33,16 @@ public class StartupTabHook {
     }
 
     public void install(ClassLoader cl) {
-        // The main activity lives in a secondary dex that isn't loaded yet when hooks install,
-        // so hook the framework's activity-creation entry point and match it by name.
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
                 if (FeatureFlags.startupTab.isEmpty() || !(param.args[0] instanceof Activity)) return;
-                if (param.args.length > 1 && param.args[1] != null) return; // recreated: keep the user's tab
+                if (param.args.length > 1 && param.args[1] != null) return;
                 Activity activity = (Activity) param.args[0];
                 if (!isMainActivity(activity)) return;
                 Intent intent = activity.getIntent();
                 if (intent == null || intent.hasExtra(EXTRA) || intent.hasExtra(ENTRANCE_EXTRA)) return;
-                if (!Intent.ACTION_MAIN.equals(intent.getAction())) return; // deep links pick their own tab
+                if (!Intent.ACTION_MAIN.equals(intent.getAction())) return;
                 String tab = StartupTabPolicy.tabToOpen(FeatureFlags.startupTab, StartupTabPolicy::flagOn);
                 if (tab.isEmpty()) return;
                 intent.putExtra(EXTRA, tab);
@@ -76,8 +62,6 @@ public class StartupTabHook {
             ModuleLog.detail(TAG + "callActivityOnCreate not found");
             return;
         }
-        // During onCreate IG puts "is_cold_start_feed"/"is_cold_start_reel_tab" on the launch
-        // intent, and those win over the entrance extra; hide them on intents we rewrote.
         try {
             java.util.Set<String> coldStart = new java.util.HashSet<>(
                     java.util.Arrays.asList("is_cold_start_feed", "is_cold_start_reel_tab"));
@@ -95,8 +79,6 @@ public class StartupTabHook {
             ModuleLog.warn(TAG + "Instagram may still open on its default tab after a fresh start");
             ModuleLog.detail(TAG + "Intent.getBooleanExtra missing");
         }
-        // The extras can be read while the tab controller is still null, so the pick is dropped;
-        // switch tabs through the controller once the activity first resumes.
         for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(android.app.Instrumentation.class)) {
             if (!m.getName().equals("callActivityOnResume")) continue;
             XposedBridge.hookMethod(m, new XC_MethodHook() {
@@ -119,11 +101,6 @@ public class StartupTabHook {
         ModuleLog.detail(TAG + "hooked Instrumentation.callActivityOnCreate x" + hooked);
     }
 
-    /**
-     * Calls the main activity's tab controller: a field whose type declares
-     * {@code void (TabEnum, String, boolean)}, with the tab enum resolved from that parameter type
-     * by name.
-     */
     @SuppressWarnings({"unchecked", "rawtypes"})
     static void switchTab(Activity activity, String tab) {
         for (Class<?> c = activity.getClass(); c != null && c != Activity.class; c = c.getSuperclass()) {
@@ -143,9 +120,7 @@ public class StartupTabHook {
                         m.invoke(controller, value, null, false);
                         ModuleLog.line(TAG + "Opened on the startup tab: " + tab);
                         return;
-                    } catch (IllegalArgumentException notThisEnum) {
-                        // enum without that constant: not the tab enum
-                    } catch (Throwable t) {
+                    } catch (IllegalArgumentException notThisEnum) {} catch (Throwable t) {
                         ModuleLog.warn(TAG + "Could not switch to the startup tab: " + t.getClass().getSimpleName() + ": " + t.getMessage());
                         return;
                     }

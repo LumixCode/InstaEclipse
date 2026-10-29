@@ -17,10 +17,6 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class AdBlocker {
 
-    // Marker string referenced inside the ad-insertion decision method.
-    // IG >= 437 refactored SponsoredContentController and dropped the old
-    // "SponsoredContentController.insertItem" trace tag, so we try the new
-    // marker first and fall back to the legacy one for older installs.
     private static final String[] INSERT_ITEM_MARKERS = {
             "Is ad pod",
             "SponsoredContentController.insertItem"
@@ -75,7 +71,7 @@ public class AdBlocker {
                         ModuleLog.detail("(InstaEclipse | AdBlocker): hooked (marker='" + marker + "'): " +
                                 method.getClassName() + "." + method.getName());
                         FeatureStatusTracker.setHooked("AdBlocker");
-                        return; // Stop after first successful hook
+                        return;
 
                     } catch (Throwable hookEx) {
                         ModuleLog.detail("(InstaEclipse | AdBlocker): candidate failed: " +

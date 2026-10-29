@@ -45,16 +45,6 @@ import static ps.reso.instaeclipse.mods.misc.StoryInfoPolicy.num;
 import static ps.reso.instaeclipse.mods.misc.StoryInfoPolicy.plain;
 import static ps.reso.instaeclipse.mods.misc.StoryInfoPolicy.str;
 
-/**
- * Story ⋯ menu extras: "Story Info" (exact times, music, location, hashtags, reshare source, app,
- * alt text, size, countdown, question, highlights) plus "Quiz Answer" / "Poll Results" on stories
- * that carry those stickers.
- *
- * Each story field is read through Media's paramCount-0 getter guarded by its JSON key (found by
- * DexKit). The returned models are turned into plain maps with their JSON keys through the
- * models' own 0-arg Map serializer, so every value below is looked up by its API key name,
- * never by an obfuscated field name.
- */
 public class StoryInfoHook {
 
     private static final String[] KEYS = {
@@ -175,15 +165,12 @@ public class StoryInfoHook {
         return !getters.isEmpty();
     }
 
-    // ── Reading values ───────────────────────────────────────────────────────
-
     private static Object raw(Object media, String key) {
         Method g = getters.get(key);
         if (g == null) return null;
         try { return g.invoke(media); } catch (Throwable t) { return null; }
     }
 
-    /** The field as a JSON-like tree: Map (JSON keys), List, String, Number, Boolean. */
     static Object value(Object media, String key) {
         return tree(raw(media, key), 0, Collections.newSetFromMap(new IdentityHashMap<>()));
     }
@@ -204,10 +191,6 @@ public class StoryInfoHook {
 
     private static final Map<Class<?>, Object> serializerArgs = new ConcurrentHashMap<>();
 
-    /**
-     * The model's own serializer to a JSON-keyed Map: the synthetic {@code Map x(Options)} (full map,
-     * its options object has a no-arg constructor) or the synthetic {@code Map x()}.
-     */
     private static Method mapMethod(Class<?> c) {
         Method m = mapMethods.get(c);
         if (m == null) {
@@ -270,8 +253,6 @@ public class StoryInfoHook {
                 if (r instanceof Map) return tree(r, depth, seen);
             } catch (Throwable ignored) {}
         }
-        // No serializer (e.g. sticker wrappers): keep its non-null fields under their raw names,
-        // so the named models inside them are still reachable by find().
         Map<String, Object> out = new LinkedHashMap<>();
         for (Class<?> c = o.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
             for (Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(c)) {
@@ -292,8 +273,6 @@ public class StoryInfoHook {
         if (secs > 100_000_000_000L) secs /= 1000;
         return TimestampFormat.dialogDateTime(ctx, secs * 1000);
     }
-
-    // ── Story Info ───────────────────────────────────────────────────────────
 
     private static void showInfo(Context ctx, Object media) {
         IeDialog dlg = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_btn_story_info))
@@ -337,7 +316,6 @@ public class StoryInfoHook {
         rows += row(dlg, ctx, R.string.ig_si_shared_from, author == null ? null : "@" + author, null);
         for (String p : posts) rows += row(dlg, ctx, R.string.ig_si_original_post, p, p);
 
-        // Paid partnership / collab partners are not stickers, so Mentions never lists them.
         List<String> sponsors = usernames(raw(media, "sponsor_tags"));
         for (String u : sponsors)
             rows += row(dlg, ctx, R.string.ig_si_paid_partnership, "@" + u, "https://www.instagram.com/" + u + "/");
@@ -399,8 +377,6 @@ public class StoryInfoHook {
         dlg.show();
     }
 
-    /** Adds the Music row and, for licensed songs, the streaming buttons; for posts and reels
-     *  (Media Info) as well as stories. Returns false when the media has no music. */
     public static boolean addMusic(IeDialog dlg, Context ctx, Object media) {
         ensureGetters();
         String[] song;
@@ -411,7 +387,6 @@ public class StoryInfoHook {
         return true;
     }
 
-    /** Spotify / YouTube Music / Apple Music search buttons for a song. */
     private static LinearLayout musicLinks(IeDialog dlg, Context ctx, String query) {
         LinearLayout bar = new LinearLayout(ctx);
         bar.setOrientation(LinearLayout.HORIZONTAL);
@@ -425,7 +400,6 @@ public class StoryInfoHook {
             Object[] a = apps[i];
             String url = (String) a[1];
             android.widget.ImageView b = new android.widget.ImageView(ctx);
-            // In its own colours (no tint); read from the loaded module APK.
             android.graphics.drawable.Drawable logo = ModuleResources.drawable(ctx, (Integer) a[2]);
             if (logo != null) b.setImageDrawable(logo);
             b.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
@@ -444,7 +418,6 @@ public class StoryInfoHook {
         return parts.isEmpty() ? null : String.join(sep, parts);
     }
 
-    /** One "label / value" row; tap copies the value, long-press opens {@code link}. */
     private static int row(IeDialog dlg, Context ctx, int labelRes, String value, String link) {
         if (value == null || value.isEmpty()) return 0;
         LinearLayout box = new LinearLayout(ctx);
@@ -469,8 +442,6 @@ public class StoryInfoHook {
         dlg.view(box);
         return 1;
     }
-
-    // ── Quiz / polls ─────────────────────────────────────────────────────────
 
     private static List<Object> stickers(Object media, String key, String inner) {
         List<Object> out = new ArrayList<>();
@@ -594,8 +565,6 @@ public class StoryInfoHook {
         return t;
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
     private static void copy(Context ctx, String text) {
         CopyFeedback.copy(ctx, "story", text, R.string.ig_si_copied);
     }
@@ -608,7 +577,6 @@ public class StoryInfoHook {
         } catch (Throwable ignored) {}
     }
 
-    /** Usernames of every User found in a raw model graph (User objects or JSON-keyed user maps). */
     private static List<String> usernames(Object root) {
         List<String> out = new ArrayList<>();
         collectUsers(root, 0, out, Collections.newSetFromMap(new IdentityHashMap<>()));

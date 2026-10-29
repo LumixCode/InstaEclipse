@@ -9,9 +9,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
-/** What "Hide onboarding prompts" swallows; kept Android-free for JVM tests. */
 final class OnboardingPromptPolicy {
-    /** App ids of the server-sent "Set up on new device" pages: contacts sync, location services. */
     static final String CONTACTS_SETUP = "com.bloks.www.bloks.ig.ndx.ci.entry.screen";
     static final String LOCATION_SETUP = "com.bloks.www.bloks.ig.ndx.ls.entry.screen";
 
@@ -20,12 +18,6 @@ final class OnboardingPromptPolicy {
 
     private OnboardingPromptPolicy() {}
 
-    /**
-     * The onboarding app id that a screen opener or screen-data object names in one of its own
-     * String fields, or null. Obfuscation renames the field, never the server's app id. Only app
-     * classes are read: framework objects (maps, boxed ints) never carry it, and their fields can
-     * be hidden API.
-     */
     static String skippedScreen(Object screen) {
         if (screen == null) return null;
         for (Field field : stringFields(screen.getClass())) {
@@ -60,10 +52,6 @@ final class OnboardingPromptPolicy {
                 || "android.permission.ACCESS_BACKGROUND_LOCATION".equals(permission);
     }
 
-    /**
-     * The permissions still worth asking Android for. Already-granted location permissions stay
-     * because Android answers them without a dialog; returns the same array when nothing changes.
-     */
     static String[] withoutUngrantedLocation(String[] requested, Predicate<String> granted) {
         if (requested == null) return null;
         List<String> kept = new ArrayList<>(requested.length);
@@ -73,7 +61,6 @@ final class OnboardingPromptPolicy {
         return kept.size() == requested.length ? requested : kept.toArray(new String[0]);
     }
 
-    /** Instagram's permission-result callback: an interface method taking the GRANTED/DENIED enum. */
     static Method resultMethod(Class<?> type) {
         if (type == null || !type.isInterface()) return null;
         for (Method method : type.getMethods()) {
@@ -83,7 +70,6 @@ final class OnboardingPromptPolicy {
         return null;
     }
 
-    /** By name(): the enum's fields are obfuscated, the names it was built with are not. */
     static Object deniedConstant(Class<?> type) {
         if (type == null || !type.isEnum()) return null;
         for (Object constant : type.getEnumConstants()) {

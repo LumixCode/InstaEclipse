@@ -29,15 +29,6 @@ import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * Saved one tap away on your own profile (#237): a bookmark button in the profile action bar
- * (next to Threads / Options) that opens Instagram's own Saved screen.
- *
- * Opening Saved reuses exactly what instagram://saved does: SavedUrlHandlerActivity (class name
- * kept by R8) builds the Saved fragment with a static (session, String, boolean, boolean) factory
- * and shows it with a static (Fragment, FragmentActivity, session) navigator; both are taken from
- * that method's invokes. The own profile is the one whose action bar has the create (+) button.
- */
 public class SavedOnProfileHook {
     private static final String TAG = "(IE|SavedProfile) ";
     private static final String HANDLER = "com.instagram.urlhandlers.saved.SavedUrlHandlerActivity";
@@ -52,7 +43,7 @@ public class SavedOnProfileHook {
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
 
     public void install(ClassLoader cl) {
-        if (!FeatureFlags.savedOnProfile) return; // applies after an Instagram restart
+        if (!FeatureFlags.savedOnProfile) return;
         try {
             List<Method> invoked = new ArrayList<>();
             for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
@@ -63,8 +54,6 @@ public class SavedOnProfileHook {
                     try { m = inv.getMethodInstance(cl); } catch (Throwable t) { continue; }
                     Class<?>[] p = m.getParameterTypes();
                     Class<?> fragment = cl.loadClass("androidx.fragment.app.Fragment");
-                    // 452+: the handler builds the navigator itself (make(activity, session) ->
-                    // push(Bundle, Fragment) -> commit()) instead of calling one static helper.
                     if (!Modifier.isStatic(m.getModifiers())) {
                         if (p.length == 2 && p[0] == android.os.Bundle.class && p[1] == fragment) navPush = m;
                         invoked.add(m);
@@ -77,8 +66,6 @@ public class SavedOnProfileHook {
                     else if (p.length == 3 && p[0] == fragment && Activity.class.isAssignableFrom(p[1])
                             && m.getReturnType() == void.class) {
                         navigator = m;
-                        // It runs IG's FragmentNavigator with the back stack turned off (link-handler
-                        // use): keep its pieces to push Saved with a back stack (Back -> profile).
                         for (MethodData n : inv.getInvokes()) {
                             try {
                                 if (n.isConstructor()) navCtor = n.getConstructorInstance(cl);
@@ -114,7 +101,6 @@ public class SavedOnProfileHook {
                     try { root = (View) frag.getClass().getMethod("getView").invoke(frag); } catch (Throwable t) { return; }
                     if (root == null) return;
                     root.postDelayed(() -> inject(frag, root), 500);
-                    // IG rebuilds the action bar buttons after resume (dropping ours): re-add when missing
                     if (watched.add(root)) watch(frag, root);
                 }
             });
@@ -196,17 +182,15 @@ public class SavedOnProfileHook {
         try {
             android.content.Context ctx = root.getContext();
             android.content.res.Resources r = root.getResources();
-            // Cached: this runs on every global layout of other users' profiles too.
             int createId = ResIds.id(ctx, "profile_header_create_button");
             int rightId = ResIds.id(ctx, "right_action_bar_buttons");
-            if (createId == 0 || rightId == 0 || root.findViewById(createId) == null) return; // not your profile
+            if (createId == 0 || rightId == 0 || root.findViewById(createId) == null) return;
             if (!(root.findViewById(rightId) instanceof ViewGroup bar) || bar.findViewWithTag(BTN_TAG) != null) return;
             ImageView btn = new ImageView(root.getContext());
             btn.setTag(BTN_TAG);
             int icon = ResIds.drawable(ctx, "instagram_save_outline_24");
             if (icon != 0) {
                 btn.setImageResource(icon);
-                // tint like the neighbouring action bar icons
                 View sib = bar.getChildCount() > 0 ? bar.getChildAt(0) : null;
                 if (sib instanceof ImageView iv && iv.getImageTintList() != null) btn.setImageTintList(iv.getImageTintList());
                 else if (sib instanceof ImageView iv && iv.getColorFilter() != null) btn.setColorFilter(iv.getColorFilter());
@@ -225,8 +209,6 @@ public class SavedOnProfileHook {
         }
     }
 
-    /** The UserSession held by the fragment (fields are typed with an obfuscated interface, so
-     *  match the value's class), looking one object deeper if needed. */
     private static Object findSession(Object o, int depth) {
         java.util.List<Object> next = new java.util.ArrayList<>();
         for (Class<?> c = o.getClass(); c != null && c != Object.class; c = c.getSuperclass())
@@ -264,7 +246,7 @@ public class SavedOnProfileHook {
                 navCommit.invoke(nav);
             } else if (navCtor != null && navPush != null && navCommit != null
                     && navCtor.getParameterTypes().length == 2 && navCtor.getDeclaringClass() == navPush.getDeclaringClass()) {
-                Object nav = navCtor.newInstance(act, session); // back stack on by default
+                Object nav = navCtor.newInstance(act, session);
                 navPush.invoke(nav, null, saved);
                 navCommit.invoke(nav);
             } else {

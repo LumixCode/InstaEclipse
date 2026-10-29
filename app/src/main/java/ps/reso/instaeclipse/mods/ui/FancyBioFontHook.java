@@ -22,12 +22,6 @@ import ps.reso.instaeclipse.utils.text.FancyText;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 
-/**
- * Edit profile: the bio's "Change font" button (an Instagram Plus upsell) opens the module's
- * fancy-text picker instead. The bio is rewritten with Unicode look-alike letters
- * ({@link FancyText}), so it is plain text that shows the same for everyone. Views are found by
- * their resource names, nothing obfuscated.
- */
 public final class FancyBioFontHook {
 
     private static int bioId, cardId, labelId;
@@ -89,7 +83,6 @@ public final class FancyBioFontHook {
         card.setTag(R.id.ie_fancy_font, Boolean.TRUE);
     }
 
-    /** The bio's text field (the form field around it reports itself as an EditText too). */
     private static EditText input(View v) {
         if (v instanceof EditText e && !(v instanceof ViewGroup)) return e;
         if (v instanceof ViewGroup g)
@@ -100,7 +93,6 @@ public final class FancyBioFontHook {
         return null;
     }
 
-    /** The upsell's gem icon: it's no longer a paid feature. */
     private static void hideIcons(View v) {
         if (v instanceof ImageView) v.setVisibility(View.GONE);
         else if (v instanceof TextView t) {
@@ -111,7 +103,6 @@ public final class FancyBioFontHook {
             for (int i = 0; i < g.getChildCount(); i++) hideIcons(g.getChildAt(i));
     }
 
-    /** The style new typing gets, per bio field (0 = normal). */
     private static final Map<EditText, Integer> STYLE = Collections.synchronizedMap(new WeakHashMap<>());
 
     public static void pick(Activity a, EditText input) {
@@ -145,12 +136,6 @@ public final class FancyBioFontHook {
         return null;
     }
 
-    /**
-     * Styles what's typed from now on; text already there keeps its look. Keyboards rewrite the
-     * word being typed (the "composing" region) on every key, so that region is re-styled each
-     * time and its composing span is put back over the styled text, or the keyboard would lose
-     * track of it and repeat the word.
-     */
     private static final class Typing implements android.text.TextWatcher {
         private final EditText input;
         private int start, count;

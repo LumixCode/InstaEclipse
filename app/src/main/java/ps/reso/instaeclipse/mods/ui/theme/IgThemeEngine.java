@@ -13,12 +13,6 @@ import ps.reso.instaeclipse.utils.core.CommonUtils;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Maps Instagram's theme attrs and color resources to one of {@link IgThemePalette}'s 15 slots
- * by matching on the resource's own NAME (e.g. "igds_color_primary_background"), not its
- * numeric ID or declaring class — Instagram's design-system resource names are stable across
- * versions even though the obfuscated classes referencing them are not.
- */
 public final class IgThemeEngine {
 
     private static volatile IgThemePalette activePalette;
@@ -30,16 +24,12 @@ public final class IgThemeEngine {
 
     private IgThemeEngine() {}
 
-    // Night state the cached palette was resolved for (-1 = none yet). Only consulted when the
-    // user picked a separate light-mode behaviour (FeatureFlags.themeLightPresetId != 0, #251).
     private static volatile int paletteNight = -1;
 
     public static boolean isActive() {
         return themeEnabled() && !IgColorRemapEngine.isBypassing();
     }
 
-    /** The custom theme's accent when a theme is active, else {@code fallback}. For our own UI
-     *  (menus, dialogs, toggles) so highlights match the chosen theme. */
     public static int accentOr(int fallback) {
         try {
             if (!themeEnabled()) return fallback;
@@ -50,18 +40,11 @@ public final class IgThemeEngine {
         }
     }
 
-    /**
-     * Custom theme enabled for the CURRENT day/night mode. With themeLightPresetId == -1 the theme
-     * applies only in dark mode, so light mode shows stock Instagram (dark presets made light mode
-     * illegible — #251).
-     */
     public static boolean themeEnabled() {
         if (!FeatureFlags.customThemeEnabled) return false;
         return FeatureFlags.themeLightPresetId != -1 || nightCached();
     }
 
-    /** Dark mode as Instagram sees it: the foreground activity's configuration (IG's own in-app
-     *  dark-mode setting overrides the system one per activity), else the app's, else the system's. */
     public static boolean isNightNow() {
         return isNight(null);
     }
@@ -99,7 +82,6 @@ public final class IgThemeEngine {
 
     public static IgThemePalette getActivePalette() {
         if (FeatureFlags.themeLightPresetId > 0) {
-            // A different preset is used in light mode: re-resolve when the mode flips.
             int night = nightCached() ? 1 : 0;
             if (night != paletteNight) {
                 synchronized (IgThemeEngine.class) {
@@ -262,9 +244,6 @@ public final class IgThemeEngine {
         return name.startsWith("igds_color_") ? 1 : -1;
     }
 
-    // IG's grey scale by exact name: a substring test ("grey_1") also caught the dark grey_12/16/21/
-    // 22/24 backgrounds. The dark greys are IG's elevated, secondary and tertiary backgrounds (the
-    // base page is black), so they take the surface slot; the light greys are secondary text.
     private static final Set<String> SURFACE_GREYS = Set.of("bds_grey_7", "bds_grey_8", "bds_grey_9", "bds_grey_10",
             "bds_grey_12", "bds_grey_16", "bds_grey_21", "bds_grey_22", "bds_grey_24", "igds_prism_gray_08", "igds_prism_gray_10");
     private static final Set<String> SECONDARY_GREYS = Set.of("bds_grey_1", "bds_grey_2", "bds_grey_3", "bds_grey_4",
@@ -279,7 +258,6 @@ public final class IgThemeEngine {
         if (name.contains(IgThemePalette.SLOT_DESTRUCTIVE) || (name.contains("badge") && name.contains(IgThemePalette.SLOT_ICON))) return 14;
         if (name.contains("error")) return 13;
         if (name.contains(IgThemePalette.SLOT_LINK)) return 12;
-        // badge_color is #0095F6, IG's button blue.
         if (name.contains("primary_button") || name.contains("bds_blue") || name.equals("emphasized_action_color")
                 || name.equals("badge_color")) return 5;
         if (name.contains("indigo") || name.contains("blue") || name.contains("emphasized") || name.contains("gradient")
@@ -288,11 +266,9 @@ public final class IgThemeEngine {
         if (name.contains(IgThemePalette.SLOT_BORDER) || name.contains("stroke")) return 9;
         if (name.contains("status_bar")) return 10;
         if (name.contains("nav")) return 11;
-        // The base page color: igds_primary_background is @bds_white, or @bds_black at night.
         if (name.contains("black") || name.contains("primary_background") || name.contains("media_background")) return 0;
         if (SURFACE_GREYS.contains(name) || name.contains("elevated") || name.contains("highlight")
                 || name.contains(IgThemePalette.SLOT_SURFACE)) return 1;
-        // bottom_sheet_undo_redo_color is @bds_white.
         if (name.equals("bds_grey_0") || name.equals("igds_prism_gray_00") || name.contains("white")
                 || name.equals("bottom_sheet_undo_redo_color")) return 2;
         if (SECONDARY_GREYS.contains(name) || name.contains("secondary")) return 3;

@@ -33,32 +33,15 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.IgTint;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 
-/**
- * One module button in the DM thread header (right of the back arrow) whose popup lists the
- * thread actions (unsent messages, export, jump to first, hide chat). Each feature registers its
- * entry with {@link #add}; a separate 40dp button per feature pushed the chat name off the header.
- * With {@code hideChatMenuButton} the button stays in the header but GONE, so the header looks
- * native and the entries still live on it; three quick taps in the free header space between the
- * chat name and the call buttons open the same popup.
- */
 final class ThreadHeaderMenu {
     static final String TAG = "ie_thread_menu";
     static final String[] ORDER = {"unsent", "export", "jump", "read", "hide", "lock"};
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
-    /**
-     * How long a held header tap waits for the next one before it reaches Instagram. Half of
-     * QuickTapSequence's 800 ms for all three taps, so a moderate triple tap is not cut short by
-     * the first replay opening the chat details; a single tap on the name opens them this late.
-     */
     private static final long REPLAY_DELAY_MS = 400;
 
     private record Entry(CharSequence label, Runnable action) {}
 
-    /**
-     * The entries live on the button itself: every action captures its chat's Activity, which
-     * reaches the button, so a static (even weak-keyed) map would pin every chat ever opened.
-     */
-    @SuppressLint({"AppCompatCustomView", "ViewConstructor"}) // runs inside Instagram, built in code
+    @SuppressLint({"AppCompatCustomView", "ViewConstructor"})
     private static final class MenuButton extends android.widget.ImageView {
         final Map<String, Entry> entries = new LinkedHashMap<>();
         WeakReference<View> tintFrom;
@@ -70,12 +53,10 @@ final class ThreadHeaderMenu {
         }
     }
 
-    // Header gesture state. Touch dispatch and the replay both run on the main thread.
     private static final QuickTapSequence gapTaps = new QuickTapSequence();
     private static WeakReference<View> lastHeader;
     private static WeakReference<MenuButton> heldButton;
     private static MotionEvent heldDown;
-    /** The held tap's copies while its replay is pending, so dropReplay can recycle them. */
     private static MotionEvent replayDown, replayUp;
     private static Runnable pendingReplay;
     private static boolean tracking, stillTap, replaying;
@@ -90,11 +71,6 @@ final class ThreadHeaderMenu {
 
     private ThreadHeaderMenu() {}
 
-    /**
-     * The open chat's button. A hidden cached chat keeps its own header and button, which
-     * findViewWithTag can return first: only a button whose containers are all visible counts
-     * (the button itself can be GONE, see hideChatMenuButton).
-     */
     private static MenuButton shownButton(Activity a) {
         MenuButton cached = attached(shownButtons.get(a));
         if (cached != null && cached.getParent() instanceof View parent && parent.isShown()) return cached;
@@ -132,7 +108,6 @@ final class ThreadHeaderMenu {
         return null;
     }
 
-    /** True if the open thread's menu already lists {@code key}. */
     static boolean has(Activity a, String key) {
         Map<String, Entry> m = entriesOf(shownButton(a));
         return m != null && m.containsKey(key);
@@ -147,7 +122,6 @@ final class ThreadHeaderMenu {
         return m != null && m.size() > (m.containsKey(key) ? 1 : 0);
     }
 
-    /** Adds (or replaces) an entry, creating the menu button if needed. False if the header isn't there. */
     static boolean add(Activity a, String key, CharSequence label, Runnable action) {
         try {
             View btn = shownButton(a);
@@ -158,7 +132,7 @@ final class ThreadHeaderMenu {
             m.put(key, new Entry(label, action));
             revision++;
             if (btn instanceof MenuButton b) b.tint();
-            btn.setVisibility(buttonVisibility()); // the option may have changed since the chat opened
+            btn.setVisibility(buttonVisibility());
             return true;
         } catch (Throwable t) {
             ModuleLog.warn("(IE|ThreadMenu) Could not add \"" + key + "\" to the chat menu", t);
@@ -166,7 +140,6 @@ final class ThreadHeaderMenu {
         }
     }
 
-    /** Drops {@code key}; the button goes once no entry is left (a feature switched off). */
     static void remove(Activity a, String key) {
         View btn = shownButton(a);
         Map<String, Entry> m = entriesOf(btn);
@@ -176,7 +149,6 @@ final class ThreadHeaderMenu {
         if (btn.getParent() instanceof ViewGroup g) g.removeView(btn);
     }
 
-    /** Opens the open chat's menu again (Back from a list opened from it). */
     static void reopen(Activity a) {
         try {
             View btn = shownButton(a);
@@ -194,10 +166,6 @@ final class ThreadHeaderMenu {
         if (header == null) return null;
         ViewGroup target;
         int insertAt;
-        // The chat header's own back arrow is header_left_button (446, 451); action_bar_button_back
-        // is the generic action bar's and is not in the chat header, which put the button in front
-        // of the arrow. The main activity can hold other action bars (and hidden cached chats), so
-        // only the arrow on screen next to this header counts.
         View back = findShown(header, ResIds.id(a, "header_left_button"));
         int backId = ResIds.id(a, "action_bar_button_back");
         for (View scope = header; scope != null && scope != decor && back == null;
@@ -205,7 +173,6 @@ final class ThreadHeaderMenu {
         if (back != null && back.getParent() instanceof ViewGroup g) {
             target = g;
             int bi = g.indexOfChild(back);
-            // visually to the right of the back arrow: after it in LTR, before it in RTL
             insertAt = g.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL ? bi : bi + 1;
         } else if (header instanceof ViewGroup g) {
             target = g;
@@ -242,7 +209,6 @@ final class ThreadHeaderMenu {
         return btn;
     }
 
-    /** The view with {@code id} that is actually on screen; a hidden cached chat can hold another. */
     static View findShown(View root, int id) {
         if (root == null || id == 0 || !root.isShown()) return null;
         return findVisible(root, id);
@@ -279,9 +245,6 @@ final class ThreadHeaderMenu {
                 .show();
     }
 
-    /** Hooks Instagram's touch dispatch for the hidden-button gesture (the option is checked per
-     *  touch, so it applies without a restart) and Jump to first's scroll-to-stop. Both activities
-     *  share IgFragmentActivity's method. */
     static void installTapGesture(ClassLoader loader) {
         java.util.Set<Method> hooked = new java.util.HashSet<>();
         for (String name : new String[]{"com.instagram.mainactivity.InstagramMainActivity",
@@ -293,10 +256,7 @@ final class ThreadHeaderMenu {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
                         if (!(param.thisObject instanceof Activity a)) return;
                         MotionEvent event = (MotionEvent) param.args[0];
-                        // Sees every touch, swallowed below or not; returns at once without a jump.
                         JumpToFirstMessageHook.onTouch(a, event);
-                        // Not gated on the option: switched off while a chat stays open, its
-                        // hidden button must still come back (see gapButton).
                         if (!replaying && onTouch(a, event)) param.setResult(true);
                     }
                 });
@@ -311,12 +271,6 @@ final class ThreadHeaderMenu {
         ModuleLog.detail("(IE|ThreadMenu) tap gesture hooked " + hooked.size() + " method(s)");
     }
 
-    /**
-     * True when the event is part of a touch in the header gap, which Instagram must not see yet.
-     * The gap belongs to the clickable title container (it fills the header up to the call
-     * buttons), so a tap there opens the chat details: each held tap is replayed unchanged once no
-     * further tap follows within {@link #REPLAY_DELAY_MS}, and only the third quick tap opens the menu.
-     */
     private static boolean onTouch(Activity a, MotionEvent e) {
         switch (e.getActionMasked()) {
             case MotionEvent.ACTION_DOWN -> {
@@ -357,7 +311,7 @@ final class ThreadHeaderMenu {
                 if (down == null || btn == null || !stillTap
                         || e.getEventTime() - e.getDownTime() > ViewConfiguration.getLongPressTimeout()) {
                     recycle(down);
-                    gapTaps.reset(); // a drag or long press in the gap is dropped, never replayed
+                    gapTaps.reset();
                     return true;
                 }
                 if (gapTaps.tap(e.getEventTime())) {
@@ -374,7 +328,6 @@ final class ThreadHeaderMenu {
                     pendingReplay = null;
                     replayDown = replayUp = null;
                     gapTaps.reset();
-                    // Only into the same chat: after leaving it the spot holds something else.
                     View h = header != null ? header.get() : null;
                     try {
                         if (h == null || !h.isShown()) return;
@@ -398,7 +351,6 @@ final class ThreadHeaderMenu {
         return tracking;
     }
 
-    /** A new touch either continues the tap sequence or goes elsewhere: the held tap is not sent. */
     private static void dropReplay() {
         if (pendingReplay == null) return;
         MAIN.removeCallbacks(pendingReplay);
@@ -408,16 +360,10 @@ final class ThreadHeaderMenu {
         replayDown = replayUp = null;
     }
 
-    /** Our MotionEvent.obtain copies go back to the pool once they are dropped or replayed. */
     private static void recycle(MotionEvent e) {
         if (e != null) e.recycle();
     }
 
-    /**
-     * The open chat's menu button when (x, y) lies in its header's free space after the name, and
-     * the button is hidden. Also brings that button in line with the option, which can change
-     * while the chat stays open (companion app, menu): switched off, the button comes back.
-     */
     @SuppressLint("DiscouragedApi")
     private static MenuButton gapButton(Activity a, float x, float y) {
         if (headerId == 0) {
@@ -429,8 +375,6 @@ final class ThreadHeaderMenu {
         }
         View header = lastHeader != null ? lastHeader.get() : null;
         if (header == null || !header.isShown()) {
-            // Every touch in Instagram lands here: walk the views only for the gesture, while a
-            // chat is open. A button the option hid is in lastHeader (set where it was found).
             if (!FeatureFlags.hideChatMenuButton || CurrentThreadTracker.currentThreadId() == null) return null;
             header = findShown(a.getWindow().getDecorView(), headerId);
             if (header == null) return null;
@@ -439,7 +383,6 @@ final class ThreadHeaderMenu {
         if (!(header.findViewWithTag(TAG) instanceof MenuButton btn) || btn.entries.isEmpty()) return null;
         int visibility = buttonVisibility();
         if (btn.getVisibility() != visibility) {
-            // The header re-lays out around the button, so this touch goes to Instagram as is.
             btn.setVisibility(visibility);
             return null;
         }
@@ -460,17 +403,12 @@ final class ThreadHeaderMenu {
         int[] name = {Integer.MAX_VALUE, Integer.MIN_VALUE};
         int boxWidth = titleBox.getWidth() - titleBox.getPaddingLeft() - titleBox.getPaddingRight();
         drawnExtent(titleBox, boxWidth, name, loc);
-        if (name[0] > name[1]) return null; // nothing drawn yet: no name to measure from
+        if (name[0] > name[1]) return null;
         float d = a.getResources().getDisplayMetrics().density;
         int[] span = HeaderTapZone.span(name[0], name[1], barLeft, barRight, rtl, (int) (8 * d), (int) (24 * d));
         return span != null && x >= span[0] && x < span[1] ? btn : null;
     }
 
-    /**
-     * Widens ext to the screen x-range v draws: its visible leaf views, a TextView only its text.
-     * The username / "Active now" line is a plain View as wide as the name box (boxWidth) with its
-     * text in a background Drawable, so it is left out (HeaderTapZone.boundsShowName).
-     */
     private static void drawnExtent(View v, int boxWidth, int[] ext, int[] loc) {
         if (v.getVisibility() != View.VISIBLE || v.getWidth() == 0) return;
         if (v instanceof ViewGroup g) {
@@ -481,8 +419,6 @@ final class ThreadHeaderMenu {
         if (!HeaderTapZone.boundsShowName(textOrImage, v.getWidth(), boxWidth)) return;
         v.getLocationOnScreen(loc);
         int left = loc[0], right = loc[0] + v.getWidth();
-        // A title stretched across the header draws its text at one end; the rest is free space.
-        // Side icons (a verified badge) sit at the view's edges, so then the whole view counts.
         Layout text = v instanceof TextView t ? t.getLayout() : null;
         if (text != null && text.getLineCount() > 0) {
             TextView t = (TextView) v;

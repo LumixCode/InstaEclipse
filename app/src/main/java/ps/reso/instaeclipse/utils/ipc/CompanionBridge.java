@@ -36,15 +36,12 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.download.DownloadRequest;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 
-/** Authenticated capability client. No host URL, configuration or exception text is logged. */
 public final class CompanionBridge {
     public static final String DESCRIPTOR = BuildConfig.APPLICATION_ID + ".CompanionBroker.v1";
     public static final int DOWNLOAD = IBinder.FIRST_CALL_TRANSACTION;
     public static final int LEGACY = DOWNLOAD + 1;
     public static final int ACTIVITY = DOWNLOAD + 2;
     public static final String SERVICE = "ps.reso.instaeclipse.mods.media.DownloadBrokerService";
-    // Official Instagram signing identity; never enroll a host by package name alone.
-    // hasSigningCertificate also validates its signing-history descendants (APK v3 rotation).
     static final byte[][] HOST_SIGNERS = {
             hex("5f3e50f435583c9ae626302a71f7340044087a7e2c60adacfc254205a993e305"),
             hex("3a10c50c18ba937506c2875e9047be74f8fd8b86fae2ff9feaa50a81fcb4c014")
@@ -89,7 +86,6 @@ public final class CompanionBridge {
     private interface Writer { void write(Parcel parcel); }
     private static final class Main { static final Handler HANDLER = new Handler(Looper.getMainLooper()); }
 
-    /** Name alone never enrolls a host. This intentionally excludes companion and clone packages. */
     public static boolean isTrustedHost(Context context, String packageName) {
         if (context == null || !BrokerPayload.HOST.equals(packageName)) return false;
         try {
@@ -100,15 +96,9 @@ public final class CompanionBridge {
         } catch (Throwable ignored) { return false; }
     }
 
-    /** Patched Instagram (sourceDir + install time) -> whether its recorded signer matched. */
     private static volatile String lspatchCheckedFor;
     private static volatile boolean lspatchTrusted;
 
-    /**
-     * LSPatch re-signs the app it patches with its own key and records the original signer in
-     * assets/lspatch/config.json ("originalSignature", the certificate in hex). Without root that
-     * is how Instagram arrives, so its recorded signer is checked against the same pinned hash.
-     */
     private static boolean lspatchOriginalSigner(Context context, String packageName) {
         try {
             android.content.pm.PackageInfo info = context.getPackageManager().getPackageInfo(packageName, 0);
@@ -158,7 +148,6 @@ public final class CompanionBridge {
         return out;
     }
 
-    /** Called only inside a Binder transaction with Binder.getCallingUid(), never a claimed extra. */
     public static boolean isTrustedCaller(Context context, int uid) {
         if (uid == Process.myUid()) return true;
         try {
@@ -192,7 +181,6 @@ public final class CompanionBridge {
         downloadLegacy(context, legacy, callback);
     }
 
-    /** Captures all upstream download/export options before crossing the process boundary. */
     public static void downloadLegacy(Context context, Intent intent, Callback callback) {
         try {
             Bundle extras = LegacyBrokerPayload.validate(intent == null ? null : intent.getExtras());
@@ -200,7 +188,6 @@ public final class CompanionBridge {
         } catch (RuntimeException invalid) { report(callback, INVALID); }
     }
 
-    /** True means scheduled, not launched. Completion/failure is reported asynchronously. */
     public static boolean launchActivity(Context context, Intent intent) {
         try {
             ComponentName component = intent.getComponent();
@@ -286,16 +273,12 @@ public final class CompanionBridge {
             try {
                 expectedUid = app.getPackageManager().getApplicationInfo(BuildConfig.APPLICATION_ID, 0).uid;
             } catch (Exception missing) {
-                // Instagram can't see the app: not installed for this user (Dual Messenger, Secure
-                // Folder, work profile) or hidden from it.
                 unreachable("not installed for this Instagram (Dual Messenger / Secure Folder / work profile?) " + missing);
                 return;
             }
             try {
                 bindAttempted = true;
                 boolean bound = app.bindService(new Intent().setClassName(BuildConfig.APPLICATION_ID, SERVICE), this, Context.BIND_AUTO_CREATE);
-                // Refused by the system: the app is asleep or not allowed to start from another app
-                // (Samsung sleeping / deep sleeping apps, Xiaomi autostart, battery restrictions).
                 if (!bound) unreachable("start refused by the system (sleeping app / autostart / battery limits)");
             } catch (Exception error) { unreachable("bind failed: " + error); }
         }

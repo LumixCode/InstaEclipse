@@ -4,13 +4,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-/**
- * Member lists that never throw. On Android 12 and older, {@code getDeclaredFields()} and friends
- * throw NoClassDefFoundError for a whole class when one member mentions a newer platform type
- * (Instagram's classes reference e.g. android.window.OnBackInvokedDispatcher, Android 13). The
- * hooks walk Instagram's classes by member types, so such a class is treated as having no members
- * instead of aborting the walk (seen on Redmi phones: Story Info and Story links stopped working).
- */
 public final class SafeReflect {
     private static final Field[] NO_FIELDS = new Field[0];
     private static final Method[] NO_METHODS = new Method[0];

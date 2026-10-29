@@ -42,18 +42,6 @@ import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * Search your story's viewers (Instagram Plus–style, our own implementation; no Plus check is
- * touched). Filters the viewers Instagram has already loaded.
- *
- * - Viewer adapter: declaring class of the method using "search_result_rendered"
- *   (X.0U9B on 452, X.0Q5U on 451). Its private (List, boolean×3) void method is the only place
- *   viewer rows are built; we filter that list. Its public no-arg method using
- *   "dismissed_reel_viewers_list_megaphone" rebuilds the list (called after the query changes).
- * - Viewer record: class using "XDTViewerFeedbackDict" holds the viewer's
- *   com.instagram.user.model.User (found by type); username via UserUtils.
- * - UI: an EditText added above the RecyclerView that uses this adapter.
- */
 public class StoryViewerSearchHook {
 
     private static final String TAG = "(IE|ViewerSearch) ";
@@ -113,7 +101,6 @@ public class StoryViewerSearchHook {
                     if (q == null || q.isEmpty() || !(param.args[0] instanceof List<?> list)) return;
                     List<Object> out = new ArrayList<>();
                     for (Object item : list) {
-                        // keep non-viewer rows (headers, footers) untouched
                         if (recordClass != null && !recordClass.isInstance(item)) { out.add(item); continue; }
                         String u = username(item);
                         if (u != null && u.toLowerCase(Locale.ROOT).contains(q)) out.add(item);
@@ -142,7 +129,6 @@ public class StoryViewerSearchHook {
         return null;
     }
 
-    /** Adds the search box above the RecyclerView showing this adapter (once per adapter). */
     private static void injectSearchBox(Object adapter) {
         if (INJECTED.containsKey(adapter)) return;
         Activity top = UIHookManager.topActivity();

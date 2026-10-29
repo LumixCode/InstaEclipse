@@ -5,14 +5,12 @@ import ps.reso.instaeclipse.R;
 public class FeatureManager {
 
     public static void refreshFeatureStatus() {
-        // Developer Options
         if (FeatureFlags.isDevEnabled) {
             FeatureStatusTracker.setEnabled("DevOptions", R.string.ig_dialog_dev_enable);
         } else {
             FeatureStatusTracker.setDisabled("DevOptions");
         }
 
-        // Ghost Mode
         if (FeatureFlags.isGhostSeen) {
             FeatureStatusTracker.setEnabled("GhostSeen", R.string.ig_dialog_ghost_hide_dm_seen);
         } else {
@@ -76,10 +74,6 @@ public class FeatureManager {
             FeatureStatusTracker.setDisabled("KeepUnsentMessages");
         }
 
-        // Auto-Clear Cache is a filesystem operation (clears IG's cache dirs on background),
-        // not an Instagram-code hook, so it has no meaningful ✅/❌ "hooked" state — intentionally
-        // omitted from the load toast (it was always showing a ❌ despite working).
-
         if (FeatureFlags.removeMetaAI) {
             FeatureStatusTracker.setEnabled("RemoveMetaAI", R.string.ig_dialog_misc_remove_meta_ai);
         } else {
@@ -98,7 +92,6 @@ public class FeatureManager {
             FeatureStatusTracker.setDisabled("HideSpecificChats");
         }
 
-        // Clean Feed
         if (FeatureFlags.hideSuggestionsInFeed) {
             FeatureStatusTracker.setEnabled("HideSuggestionsInFeed", R.string.ig_dialog_clean_feed_hide_suggested);
         } else {
@@ -142,14 +135,12 @@ public class FeatureManager {
         }
 
 
-        // Miscellaneous
         if (FeatureFlags.disableTrackingLinks) {
             FeatureStatusTracker.setEnabled("DisableTrackingLinks", R.string.ig_dialog_ad_disable_tracking);
         } else {
             FeatureStatusTracker.setDisabled("DisableTrackingLinks");
         }
 
-        // Both profile-label hooks (ProfileFollowStatusHook, ProfileFollowsYouHook) report this key.
         if (FeatureFlags.showFollowStatusLabel) {
             FeatureStatusTracker.setEnabled("FollowStatusLabel", R.string.cat_showFollowStatusLabel);
         } else {
@@ -288,7 +279,6 @@ public class FeatureManager {
             FeatureStatusTracker.setDisabled("DisableDoubleTapLike");
         }
 
-        // ── Newer features (concise labels for the load toast's dense grid) ───
         reg(FeatureFlags.chatExport,           "ChatExport",           R.string.cat_chatExport);
         reg(FeatureFlags.fancyBioFont,         "FancyBioFont",         R.string.ig_dialog_fancy_bio_font);
         reg(FeatureFlags.keepEditHistory,      "EditHistory",          R.string.ig_dialog_ghost_edit_history);
@@ -332,7 +322,6 @@ public class FeatureManager {
         reg(FeatureFlags.unlockPlusBenefits,   "UnlockPlusBenefits",   R.string.cat_unlockPlusBenefits);
         reg(FeatureFlags.nightReelBlockEnabled, "NightReelBlock",      R.string.ig_night_reels_enable);
         reg(FeatureFlags.dailyReelLimitEnabled, "DailyReelLimit",      R.string.ig_reel_limit_enable);
-        // Child rows count only while their parent feature is on; the child preference is kept.
         reg(FeatureFlags.showUnsentIndicator && FeatureFlags.keepUnsentMessages,
                 "UnsentIndicator", R.string.ig_feature_unsent_indicator);
         reg(FeatureFlags.manualStorySeen && FeatureFlags.isGhostStory,
@@ -355,7 +344,6 @@ public class FeatureManager {
         reg(FeatureFlags.hideTabHome || FeatureFlags.hideTabReels || FeatureFlags.hideTabCreate
                 || FeatureFlags.hideTabMessages || FeatureFlags.hideTabActivity || FeatureFlags.hideTabProfile,
                 "HideNavTabs", R.string.menu_nav_tabs);
-        // Distraction Free: each section turned off
         reg(FeatureFlags.disableStories,       "DisableStoriesSection",  R.string.ig_dialog_distraction_disable_stories);
         reg(FeatureFlags.disableFeed,          "DisableFeedSection",     R.string.ig_dialog_distraction_disable_feed);
         reg(FeatureFlags.disableReels || FeatureFlags.disableReelsExceptDM,
@@ -375,7 +363,6 @@ public class FeatureManager {
         }
     }
 
-    /** Register a feature in the load toast when enabled, or drop it when off. */
     private static void reg(boolean enabled, String key, int labelResId) {
         if (enabled) FeatureStatusTracker.setEnabled(key, labelResId);
         else FeatureStatusTracker.setDisabled(key);

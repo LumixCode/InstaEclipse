@@ -135,8 +135,6 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
     }
 
     static Object ownedMenuMedia(Object handler, Class<?> creatorType, Class<?> mediaType) {
-        // The tapped feed menu owns its selected Media. Its unrelated fragment and
-        // listener fields can reach other posts and must not affect this selection.
         Object creator = uniqueDirectTypedField(handler, creatorType);
         return creator == null ? null : uniqueDirectTypedField(creator, mediaType);
     }
@@ -181,7 +179,6 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
     }
 
     static Object ownedDirectMedia(Object handler, Class<?> ownerType, Class<?> mediaType) {
-        // Used only with the runtime-resolved native Reel option dispatcher owner.
         if (handler == null || ownerType == null || !ownerType.isInstance(handler)) return null;
         return uniqueDirectTypedField(handler, mediaType);
     }
@@ -208,7 +205,6 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
         SelectedMediaAdapter adapter = installed;
         if (adapter == null || adapter.reelItemMedia == null) return null;
         Object item = ownedStoryItem(dispatcher, receiver, args, adapter.reelItemClass);
-        // Stop at ReelItem; nested wrappers and its secondary Media field are not selection.
         return item == null ? null : adapter.reelItemMedia.invoke(item);
     }
 
@@ -279,9 +275,6 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
             }
         }
         if (owners.size() > 1 || targets.size() > 1) return null;
-        // The native overflow dispatcher reads its own direct ReelItem field. Its other
-        // controller/listener arguments can reach preloaded Stories and are not selection.
-        // Static helpers receive the same declaring-class owner as an explicit argument.
         try {
             for (Object owner : owners) {
                 for (Class<?> c = ownerType; c != null && c != Object.class; c = c.getSuperclass()) {
@@ -323,8 +316,6 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
     }
 
     private void resolve(ClassLoader loader, String type, String key) {
-        // Schema-key tables also match <clinit>()V. Filter its DEX metadata BEFORE trying
-        // Java reflection: DexKit cannot turn a class initializer into a java.lang.Method.
         Queries queries = queries(loader, type);
         if (queries == Queries.NONE) return;
         Resolution result = new Resolution();
@@ -334,8 +325,6 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
         try {
             Method method = result.matches.iterator().next();
             add(key, method);
-            // Resolve the interface declaration from this build's concrete Pando getter;
-            // it dispatches correctly when a sibling non-Pando implementation is returned.
             for (Class<?> iface : method.getDeclaringClass().getInterfaces()) {
                 try { add(key, iface.getMethod(method.getName())); } catch (Throwable ignored) { }
             }

@@ -58,7 +58,7 @@ public final class DataBackup {
     private static final String EDITS = "ie_edit_history.json";
     private static final String READ_RECEIPTS = "ie_read_receipt_whitelist.json";
     private static final String SET_ASIDE = ".corrupt";
-    private static final int MAX_UNSENT = 1000; // UnsentLog keeps the same number of entries
+    private static final int MAX_UNSENT = 1000;
     private static final long MAX_BYTES = 64L << 20;
     static final int PIECE_CHARS = 120_000;
     static final long TIMEOUT_MS = 60_000;
@@ -83,8 +83,6 @@ public final class DataBackup {
                 || base.equals(READ_RECEIPTS) || base.equals("ie_post_counts.json")
                 || base.startsWith("ie_watch") || base.startsWith("ie_followers_history_");
     }
-
-    // ----- backup -----
 
     public static void export(Activity a) {
         Context app = a.getApplicationContext();
@@ -126,7 +124,6 @@ public final class DataBackup {
         }, "IE-DataBackup").start();
     }
 
-    /** Opens the companion's file picker, which sends the chosen backup back to Instagram. */
     public static void pickAndRestore(Activity a) {
         Intent i = new Intent();
         i.setComponent(new ComponentName("ps.reso.instaeclipse", "ps.reso.instaeclipse.mods.devops.config.DataImportActivity"));
@@ -134,8 +131,6 @@ public final class DataBackup {
         i.putExtra("target_package", a.getPackageName());
         ps.reso.instaeclipse.utils.ipc.CompanionBridge.launchActivity(a, i);
     }
-
-    // ----- restore -----
 
     private static final Object LOCK = new Object();
     private static final Runnable EXPIRE = DataBackup::expire;
@@ -400,10 +395,6 @@ public final class DataBackup {
         return EditHistoryStore.merged(onPhone, fromBackup).getBytes(StandardCharsets.UTF_8);
     }
 
-    /**
-     * Deleted messages from the backup and the phone, each once, oldest first, newest kept (rule:
-     * {@link UnsentMerge}). Null when the phone's log exists but can't be read: it stays as is.
-     */
     static byte[] mergeUnsent(File current, byte[] backup) throws Exception {
         List<UnsentMerge.Row> fromBackup = unsentRows(new JSONArray(new String(backup, StandardCharsets.UTF_8)));
         List<UnsentMerge.Row> onPhone = new ArrayList<>();
@@ -411,7 +402,6 @@ public final class DataBackup {
             byte[] bytes;
             try { bytes = new android.util.AtomicFile(current).readFully(); }
             catch (java.io.IOException unreadable) { return null; }
-            // A damaged log can't be loaded by UnsentLog either: the backup replaces it.
             try { onPhone = unsentRows(new JSONArray(new String(bytes, StandardCharsets.UTF_8))); }
             catch (org.json.JSONException damaged) { ModuleLog.detail(TAG + "phone's unsent log unreadable, using the backup's: " + damaged.getMessage()); }
         }
@@ -425,7 +415,6 @@ public final class DataBackup {
         return out.toString().getBytes(StandardCharsets.UTF_8);
     }
 
-    /** UnsentLog's JSON entries (t, a, th, id, ids, m, body, cleared, logOnly) as merge rows. */
     private static List<UnsentMerge.Row> unsentRows(JSONArray arr) {
         List<UnsentMerge.Row> rows = new ArrayList<>();
         for (int i = 0; i < arr.length(); i++) {
@@ -436,7 +425,6 @@ public final class DataBackup {
             if (ids != null) for (int j = 0; j < ids.length(); j++) aliases.add(ids.optString(j));
             boolean cleared = o.optBoolean("cleared", false);
             String text = o.optString("m", "");
-            // UnsentLog reads a missing "body" as true (entries from before the flag existed).
             boolean hasBody = !cleared && o.optBoolean("body", true) && !text.isEmpty();
             rows.add(new UnsentMerge.Row(o, o.optLong("t"), o.optString("a", ""), o.optString("th", ""),
                     o.optString("id", ""), text, cleared, hasBody, o.optBoolean("logOnly", false), aliases));
@@ -444,18 +432,12 @@ public final class DataBackup {
         return rows;
     }
 
-    /**
-     * A {thread id: text} store (hidden chats, chat names) from the backup added to the phone's,
-     * whose entries win: a restore never unhides or renames a chat. Null when the phone's file
-     * exists but can't be read: it stays as is.
-     */
     private static byte[] mergeKeepCurrent(File current, byte[] backup) throws Exception {
         Map<String, Object> onPhone = new LinkedHashMap<>();
         if (current.exists()) {
             byte[] bytes;
             try { bytes = java.nio.file.Files.readAllBytes(current.toPath()); }
             catch (java.io.IOException unreadable) { return null; }
-            // A damaged file loads as empty in HiddenThreads/ThreadNames too: nothing to keep.
             try { onPhone = toMap(new JSONObject(new String(bytes, StandardCharsets.UTF_8))); }
             catch (org.json.JSONException damaged) { ModuleLog.detail(TAG + "phone's " + current.getName() + " unreadable, using the backup's: " + damaged.getMessage()); }
         }
@@ -474,10 +456,6 @@ public final class DataBackup {
         return map;
     }
 
-    /**
-     * The backup's ids the phone doesn't have (older, so listed first), then every phone entry with
-     * its own value.
-     */
     static Map<String, Object> unionKeepCurrent(Map<String, ?> backup, Map<String, ?> current) {
         Map<String, Object> out = new LinkedHashMap<>();
         for (Map.Entry<String, ?> e : backup.entrySet())
@@ -486,14 +464,6 @@ public final class DataBackup {
         return out;
     }
 
-    /**
-     * The unsent-log merge rule, free of org.json so plain unit tests can run it. One row per
-     * message: rows with a message id match on account + thread + any shared id (UnsentLog keeps a
-     * message's server and client ids as aliases); id-less rows from older builds match on time +
-     * thread + text. On a clash a cleared row wins (a restore never brings back what was cleared),
-     * then a row with the message text, then the phone's own row. The ids of all matched rows are
-     * kept together and a log-only flag on any of them stays.
-     */
     static final class UnsentMerge {
 
         static final class Row {
@@ -501,7 +471,6 @@ public final class DataBackup {
             final long time;
             final String account, thread, id, text;
             final boolean cleared, hasBody, logOnly;
-            /** The message id first, then its aliases. */
             final Set<String> ids = new LinkedHashSet<>();
 
             Row(Object source, long time, String account, String thread, String id, String text,
@@ -521,7 +490,6 @@ public final class DataBackup {
 
             int rank() { return cleared ? 2 : hasBody ? 1 : 0; }
 
-            /** The keys this row can be found under. */
             List<String> keys() {
                 if (id.isEmpty()) return Arrays.asList("t|" + time + "|" + thread + "|" + text);
                 List<String> keys = new ArrayList<>();
@@ -538,7 +506,6 @@ public final class DataBackup {
             boolean logOnly;
 
             void add(Row row) {
-                // Strictly better only: on a tie the row seen first (the phone's) stays.
                 if (best == null || row.rank() > best.rank()) best = row;
                 ids.addAll(row.ids);
                 logOnly |= row.logOnly;
@@ -554,7 +521,6 @@ public final class DataBackup {
 
         private UnsentMerge() {}
 
-        /** Phone rows first so they win ties; returns oldest first, at most {@code cap} (the newest). */
         static List<Row> merge(List<Row> phone, List<Row> backup, int cap) {
             Map<String, Group> byKey = new HashMap<>();
             List<Group> groups = new ArrayList<>();
@@ -577,8 +543,6 @@ public final class DataBackup {
             return out;
         }
 
-        /** The row's own id decides; otherwise one alias match. Aliases that point at two
-         *  different messages join neither, as in UnsentMessageIndex. */
         private static Group find(Map<String, Group> byKey, Row row) {
             if (row.id.isEmpty()) return byKey.get(row.keys().get(0));
             Group own = byKey.get(row.idKey(row.id));
@@ -611,7 +575,6 @@ public final class DataBackup {
                 IeToast.makeText(ctx, text, longer ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT).show());
     }
 
-    /** For the companion: the zip's Base64 split into broadcast-sized pieces. */
     public static List<String> pieces(InputStream in) throws Exception {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         byte[] buf = new byte[16384];

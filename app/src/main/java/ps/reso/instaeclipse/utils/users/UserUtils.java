@@ -45,7 +45,6 @@ public class UserUtils {
 
     public static boolean isValidUsername(String s) {
         if (s == null || s.isEmpty()) return false;
-        // Rejects Caps, Spaces, and Arabic. Accepts only valid IG usernames.
         return USERNAME.matcher(s).matches();
     }
 

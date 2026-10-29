@@ -8,7 +8,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** Hook entry points with the legacy XposedBridge names, run on the active {@link HookBackend}. */
 public final class XposedBridge {
 
     private static volatile HookBackend backend;
@@ -16,7 +15,6 @@ public final class XposedBridge {
 
     private XposedBridge() {}
 
-    /** Installed once by the entry class the framework loaded. */
     public static void setBackend(HookBackend b) {
         backend = b;
     }
@@ -58,7 +56,6 @@ public final class XposedBridge {
         return out;
     }
 
-    /** Calls the original method, skipping every hook on it. */
     public static Object invokeOriginalMethod(Member method, Object thisObject, Object[] args) throws Throwable {
         return backend().invokeOriginal(method, thisObject, args);
     }

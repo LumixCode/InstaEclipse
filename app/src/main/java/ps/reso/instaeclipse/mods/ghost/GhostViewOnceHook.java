@@ -30,10 +30,6 @@ public class GhostViewOnceHook {
             }
         }
 
-        // Primary anchor (IG 447+): the visual view-once "item seen" reporter was inlined
-        // into the handler. It contains BOTH the stable REST path and the visual media type
-        // "raven_media". The voice sibling uses the SAME path but "voice_media", so ANDing
-        // "raven_media" selects only the view-once (visual) reporter — never voice.
         if (tryHookViewOnce(
                 FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("direct_v2/visual_threads/%s/item_seen/", "raven_media")),
@@ -91,16 +87,6 @@ public class GhostViewOnceHook {
         };
     }
 
-    /**
-     * Skips a DM mutation processor's send, Gx1(context, callback, mutation) on 451, and still
-     * completes the mutation. DirectMutationManager (X.04xt.A03) marks the mutation "executing"
-     * before calling the processor and only the callback completes it; the next-mutation picker
-     * (X.04xt.A00) stops at an executing entry, so a bare skip stalled every later mutation of that
-     * queue (the chat's seen/voice markers, or its text sends). IG's own fire-and-forget processor
-     * X.05uj.Gx1 ends with callback.FpP(null, null): the success path, which marks the mutation
-     * "uploaded" and schedules the next one without sending anything. Without such a callback
-     * (legacy anchors) this is a plain skip.
-     */
     static void skipMutation(XC_MethodHook.MethodHookParam param, String tag) {
         param.setResult(null);
         try {
@@ -115,11 +101,6 @@ public class GhostViewOnceHook {
         }
     }
 
-    /**
-     * The mutation callback's completion method: the interface's only instance void (error, String)
-     * method (X.0lfj.FpP on 451, null error = success). Null for a class (the 451 replay of the
-     * legacy anchor gets a message model here) or when the pick is ambiguous.
-     */
     static Method completionMethod(Class<?> callback) {
         if (callback == null || !callback.isInterface()) return null;
         Method found = null;

@@ -20,16 +20,10 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.text.TimestampFormat;
 import ps.reso.instaeclipse.utils.toast.IeToast;
 
-/**
- * The "Edited" history: one card per version, oldest first, each headed by what it is (original,
- * earlier version, current) and when it appeared, in the "Show exact dates" format. Times this
- * phone only noticed (the edit arrived while the module watched) say so.
- */
 final class EditHistoryDialog {
 
     private EditHistoryDialog() {}
 
-    /** Shows the rows on the resumed activity; {@code missing} edits have no saved version. */
     static void show(List<EditHistoryTimeline.Row> rows, int missing) {
         Activity host = host();
         if (host == null) {
@@ -48,7 +42,6 @@ final class EditHistoryDialog {
         dlg.show();
     }
 
-    /** Says plainly that nothing earlier was saved for this message. */
     static void none() {
         Context ctx = host();
         if (ctx == null) ctx = ps.reso.instaeclipse.xposedcompat.AndroidAppHelper.currentApplication();

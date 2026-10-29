@@ -2,7 +2,6 @@ package ps.reso.instaeclipse.mods.misc;
 
 import java.util.List;
 
-/** Argument layout verified against the Timestamp.kt -> IgText call in Instagram 446 and 451. */
 final class StoryTimestampComposeLayout {
     private StoryTimestampComposeLayout() {}
 
@@ -16,9 +15,6 @@ final class StoryTimestampComposeLayout {
     }
 
     static void wrap(Object[] arguments) {
-        // IgText's native defaults are unlimited lines, Clip overflow and soft wrapping.
-        // Changing only this invocation's default mask leaves no persistent view mutation;
-        // the normal single-line/ellipsis arguments apply on the next disabled rebind.
         arguments[15] = ((Integer) arguments[15]) | 0x1500;
     }
 }

@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Locale;
 
-/** Detects downloaded media from its response header and file signature. */
 final class MediaTypeDetector {
 
     enum Kind { VIDEO, IMAGE, AUDIO, UNKNOWN }
@@ -25,7 +24,6 @@ final class MediaTypeDetector {
 
     private MediaTypeDetector() {}
 
-    /** Only for a MIME returned by DownloadEngine.fetch after signature/track verification. */
     static Result verified(String mime, String filename) {
         String extension = switch (mime) {
             case "image/jpeg" -> ".jpg";
@@ -57,8 +55,6 @@ final class MediaTypeDetector {
         if (kind == Kind.IMAGE) {
             return requestedFilename == null ? new Result(kind, sniffed, null) : verified(sniffed, requestedFilename);
         }
-        // Voice messages use the same MP4 container as videos. The caller knows
-        // this is an audio message even when the CDN labels it video/mp4.
         if (kind == Kind.VIDEO && fromContentType(requestedMime) == Kind.AUDIO) {
             kind = Kind.AUDIO;
         }
@@ -143,8 +139,6 @@ final class MediaTypeDetector {
         String audio = audioSignature(header, length);
         if (audio != null) return audio;
 
-        // MP4 and HEIF/AVIF share ISO-BMFF's ftyp box. Inspect the major brand so
-        // still images are not mislabeled as video.
         if (length >= 12 && header[4] == 'f' && header[5] == 't'
                 && header[6] == 'y' && header[7] == 'p') {
             String brand = new String(header, 8, 4, java.nio.charset.StandardCharsets.US_ASCII)

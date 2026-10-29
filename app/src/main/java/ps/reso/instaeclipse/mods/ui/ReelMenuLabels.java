@@ -23,23 +23,8 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Titles for the module's rows in the reel overflow (⋮) menu, such as Media info and Playback
- * speed. Those rows ride on internal debug MediaOption$Option carriers. Reels resolve each row's
- * label natively from its option (there is no text parameter like the post menu has), and on 446
- * the resolver soft-reports an unknown option and returns 0. So the resolver is handed COPY_LINK
- * for a registered carrier, which gives a valid Instagram string id, and the row builders then
- * get our title. Owners register carriers in {@link #EXTRA_REEL_LABELS} (option name -> module
- * string); a row whose listener carries any other option is left untouched.
- *
- * Builder discovery is call-graph anchored, not shape-only (a shape-only query once matched the
- * wrong method after an Instagram update): label resolver (unique string) -> void row-adders that
- * invoke it and take a MediaOption$Option -> the void row builders those adders call. Several
- * menu-surface variants exist, so every matching builder is hooked.
- */
 public final class ReelMenuLabels {
 
-    /** Carrier option name -> module string resource used as that row's title in the reel menu. */
     public static final Map<String, Integer> EXTRA_REEL_LABELS = new ConcurrentHashMap<>();
 
     private static final String RESOLVER_ANCHOR = "Unsupported text row for Clips Viewer Overflow menu.";
@@ -92,7 +77,6 @@ public final class ReelMenuLabels {
         }
     }
 
-    /** Reel label resolver (int res id for an option): answer COPY_LINK's id for registered carriers. */
     private static void hookReelLabelResolver(Method resolver) {
         try {
             XposedBridge.hookMethod(resolver, new XC_MethodHook() {
@@ -127,7 +111,6 @@ public final class ReelMenuLabels {
             }
         }
 
-        // Row-adder methods: invoke the resolver AND take a MediaOption$Option.
         List<Found> adderResults = DexKitQueryCache.methods(FindMethod.create()
                 .matcher(MethodMatcher.create()
                         .returnType("void")
@@ -145,7 +128,6 @@ public final class ReelMenuLabels {
                 if (p == mediaOptionEnumClass) { takesOption = true; break; }
             if (!takesOption) continue;
 
-            // Row builders: the void methods this adder CALLS.
             List<Found> builderResults;
             try {
                 builderResults = DexKitQueryCache.methods(FindMethod.create()
@@ -179,9 +161,6 @@ public final class ReelMenuLabels {
         }
     }
 
-    // Builder shape: void; first param Context; second param View.OnClickListener; >=1 String
-    // param (the title). Harmless on any other match: the hook is a no-op unless a registered
-    // carrier listener is present.
     private static boolean isRowBuilderShape(Method m) {
         if (m.getReturnType() != void.class) return false;
         Class<?>[] p = m.getParameterTypes();
@@ -197,8 +176,6 @@ public final class ReelMenuLabels {
         Class<?> cls = listener.getClass();
         while (cls != null && cls != Object.class) {
             for (Field f : cls.getDeclaredFields()) {
-                // Wrapper classes often store the option in a generically-typed Object field,
-                // so match by runtime value type, not declared field type.
                 if (!mediaOptionEnumClass.isAssignableFrom(f.getType()) && f.getType() != Object.class)
                     continue;
                 try {
@@ -212,9 +189,6 @@ public final class ReelMenuLabels {
         return null;
     }
 
-    // Fires for every reel-menu row builder; a no-op unless one of the args is the click listener
-    // wrapping a registered carrier. Then it replaces the row title: the first String arg after the
-    // last OnClickListener arg.
     private static final XC_MethodHook BUILDER_LABEL = new XC_MethodHook() {
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {

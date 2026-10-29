@@ -27,12 +27,6 @@ import java.util.function.Predicate;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Copies of retained messages in Instagram's own serialized form, one file each in Instagram's
- * filesDir. Instagram keeps only each thread's newest messages on disk and reloads older history
- * from the server, which no longer returns unsent ones; these copies let them be restored.
- * Clearing the unsent log deletes the matching copies.
- */
 public final class UnsentMessageStore {
     public static final class Saved {
         public final String account, thread;
@@ -135,9 +129,6 @@ public final class UnsentMessageStore {
         return new ArrayList<>(out);
     }
 
-    /** The copy of one message, matched by any of its ids within the account's thread, or null.
-     *  Before the copies are loaded only that message's own file is read (it is named after the
-     *  first id it was saved under), so the Unsent viewer never reads every copy to label a row. */
     public static Saved find(String account, String thread, List<String> ids) {
         if (account == null || thread == null || ids == null || ids.isEmpty()) return null;
         List<File> candidates = new ArrayList<>();
@@ -183,13 +174,11 @@ public final class UnsentMessageStore {
         removeWhere(known -> known.file.equals(copy.file), copy.file);
     }
 
-    /** Delete the copies of one message, matched by any of its ids within the account's thread. */
     public static void removeMessage(String account, String thread, List<String> ids) {
         if (account == null || thread == null || ids == null || ids.isEmpty()) return;
         removeWhere(copy -> copy.matches(account, thread, ids), null);
     }
 
-    /** Delete copies for one thread, or for the whole account when {@code thread} is null. */
     public static void clear(String account, String thread) {
         if (account == null) return;
         removeWhere(copy -> account.equals(copy.account) && (thread == null || thread.equals(copy.thread)), null);

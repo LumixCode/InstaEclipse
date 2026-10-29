@@ -68,14 +68,11 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // NOTE: intentionally NOT applying DynamicColors — 0.7 ships a fixed branded dark palette
-        // (see Theme.InstaEclipse); adopting the wallpaper palette here would override the brand.
         super.onCreate(savedInstanceState);
         permissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {});
         NoticeQueue.WhatChanged.from(CompanionUiPrefs.get(this), NoticeQueue.WhatChanged.APP_FROM,
                 () -> CommonUtils.companionCache(this).getAll(), () -> false);
-        if (savedInstanceState == null) VersionCheckUtility.checkForUpdates(this); // not again on rotation
-        // Stale companion-cache keys are dropped once per process in InstaEclipseApp.onCreate.
+        if (savedInstanceState == null) VersionCheckUtility.checkForUpdates(this);
 
         setContentView(R.layout.activity_main);
 
@@ -89,7 +86,6 @@ public class MainActivity extends AppCompatActivity {
         version.setText("v" + BuildConfig.VERSION_NAME);
         findViewById(R.id.toolbar_version_target).setOnClickListener(v -> showHelpAbout());
 
-        // Prevent status bar color changes on scroll
         AppBarLayout appBarLayout = findViewById(R.id.app_bar_layout);
         if (appBarLayout != null) {
             appBarLayout.setExpanded(true, false);
@@ -99,10 +95,6 @@ public class MainActivity extends AppCompatActivity {
         bottomNavigation = findViewById(R.id.bottom_navigation);
         FrameLayout fragmentContainer = findViewById(R.id.fragment_container);
 
-        // On targetSdk 35+, edge-to-edge is enforced. The BottomNavigationView absorbs the
-        // system gesture inset via fitsSystemWindows, making its actual height larger than the
-        // fixed 82dp we had in XML. Sync the fragment container's bottom padding to match the
-        // nav bar's real height after each layout pass.
         bottomNavigation.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
             int navHeight = v.getHeight();
             if (fragmentContainer.getPaddingBottom() != navHeight) {

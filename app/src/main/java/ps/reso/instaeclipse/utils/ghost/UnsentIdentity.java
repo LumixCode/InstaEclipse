@@ -26,7 +26,6 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.ModuleBridge;
 import ps.reso.instaeclipse.utils.core.SafeReflect;
 
-/** Bounded lookup on the bound row, never across adapter collections or adjacent messages. */
 public final class UnsentIdentity {
     public static final String SESSION = "com.instagram.common.session.UserSession";
     public static final String THREAD = "com.instagram.model.direct.DirectThreadKey";
@@ -37,13 +36,8 @@ public final class UnsentIdentity {
     private static final String EXPIRY = "message_expiration_timestamp_ms";
     private static volatile Field sender;
     private static volatile boolean senderLooked;
-    // Cached lookups: the Lock gate reads the open screen's account several times a second, and
-    // each call used to load the class, throw NoSuchMethodException and list every field again.
-    /** Classes found by name, per loader. Only hits: a class missing now may be loaded later. */
     private static final Map<ClassLoader, Map<String, Class<?>>> types = new ConcurrentHashMap<>();
-    /** Public no-arg methods by class and name, misses included. */
     private static final Map<Class<?>, Map<String, Optional<Method>>> methods = new ConcurrentHashMap<>();
-    /** Each class's own non-static, non-primitive fields, already accessible. */
     private static final Map<Class<?>, Field[]> objectFields = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Method[]> identifierGetters = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Field[]> stringFields = new ConcurrentHashMap<>();
@@ -64,8 +58,6 @@ public final class UnsentIdentity {
                     if (session.isInstance(current)) return (String) userId.invoke(current);
                 } catch (ReflectiveOperationException ignored) {}
             }
-            // Store, entry and row each own a direct session. A nested controller can belong to
-            // another account, so it must never supply ownership for retained private messages.
             Object value = session.isInstance(owner) ? owner : directValue(owner, session);
             return value == null ? null : (String) userId.invoke(value);
         } catch (Throwable ignored) { return null; }
@@ -82,7 +74,6 @@ public final class UnsentIdentity {
         return type;
     }
 
-    /** The class's public no-arg method of that name, or null. */
     static Method publicMethod(Class<?> cls, String name) {
         return methods.computeIfAbsent(cls, ignored -> new ConcurrentHashMap<>())
                 .computeIfAbsent(name, ignored -> {
@@ -137,7 +128,6 @@ public final class UnsentIdentity {
         return "null".equals(id) ? null : id;
     }
 
-    /** Current row data is stored through RecyclerView's typed item interface (getType()). */
     public static Object boundData(Object holder, Class<?> messageClass) {
         for (Field field : boundFields(holder.getClass())) {
             try {
@@ -173,7 +163,6 @@ public final class UnsentIdentity {
             for (Field field : objectFields(cls)) {
                 try {
                     Object value = field.get(owner);
-                    // ModalActivity declares a base Session field holding a UserSession.
                     if (!type.isInstance(value)) continue;
                     if (result != null && result != value) return null;
                     result = value;
@@ -314,7 +303,6 @@ public final class UnsentIdentity {
         try { return (String) field.get(message); } catch (IllegalAccessException ignored) { return null; }
     }
 
-    /** Direct scalar fields only: quoted messages and shared media must never mark the parent. */
     public static List<String> strings(Object message) {
         List<String> out = new ArrayList<>();
         if (message == null) return out;

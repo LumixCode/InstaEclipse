@@ -3,18 +3,10 @@ package ps.reso.instaeclipse.utils.text;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * "Fonts" for plain text fields (the bio): letters swapped for their Unicode look-alikes
- * (Mathematical Alphanumeric Symbols, circled, fullwidth, small caps). Latin letters and digits
- * have every style, Greek has the bold/italic ones. Strikethrough and underline are combining
- * marks, so they work in any language (Cyrillic, Arabic, ...). The result is ordinary text, so it
- * shows the same in every app. Framework-free so it is unit-tested.
- */
 public final class FancyText {
 
     public static final int STYLE_COUNT = 15;
 
-    // {A, a, 0, Greek Α} first code points per style (-1 = keep as is)
     private static final int[][] BASES = {
             {'A', 'a', '0', -1},
             {0x1D400, 0x1D41A, 0x1D7CE, 0x1D6A8},
@@ -35,10 +27,8 @@ public final class FancyText {
     private static final String SMALL_CAPS = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ";
     private static final int ITALIC = 2, DOUBLE = 8, CIRCLED = 10, SMALL = 12, STRIKE = 13, UNDER = 14;
     private static final int STRIKE_MARK = 0x0336, UNDER_MARK = 0x0332;
-    // Greek in the math blocks: Α..Ω (0x391..0x3A9, 0x3A2 = ϴ there), ∇, then α..ω (0x3B1..0x3C9)
     private static final int GREEK_CAP = 0x391, GREEK_SMALL = 0x3B1, GREEK_LEN = 25;
 
-    /** styled code point -> plain character */
     private static final Map<Integer, Integer> PLAIN = new HashMap<>();
 
     static {
@@ -59,7 +49,6 @@ public final class FancyText {
 
     private FancyText() {}
 
-    /** {@code text} in style {@code style} (styled input is turned back to plain first). */
     public static String convert(String text, int style) {
         if (text == null) return "";
         StringBuilder out = new StringBuilder(text.length() * 2);

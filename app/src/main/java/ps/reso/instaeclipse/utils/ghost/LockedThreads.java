@@ -7,7 +7,6 @@ import ps.reso.instaeclipse.mods.ui.LockDirectMessagesHook;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.core.SettingsManager;
 
-/** Canonical Direct thread IDs and labels; persisted through the existing settings store. */
 public final class LockedThreads {
     private static String cachedJson;
     private static final Map<String, String> threads = new LinkedHashMap<>();
@@ -61,8 +60,6 @@ public final class LockedThreads {
             threads.clear();
             threads.putAll(next);
             cachedJson = json;
-        } catch (org.json.JSONException ignored) {
-            // A malformed settings update must not erase previously protected IDs.
-        }
+        } catch (org.json.JSONException ignored) {}
     }
 }

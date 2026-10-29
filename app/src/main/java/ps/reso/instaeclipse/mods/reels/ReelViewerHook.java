@@ -42,10 +42,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.ui.ViewPager2Input;
 
-/**
- * Counts organic viewer impressions, not preloads; covers cached viewers entered by swiping (#220).
- * Also owns the Reels pager input lock: the DM-reel restriction lock and "Lock Reels scrolling".
- */
 public final class ReelViewerHook {
     private static final String CONFIG = "com.instagram.clips.intf.ClipsViewerConfig";
     private static final String SOURCE = "com.instagram.clips.intf.ClipsViewerSource";
@@ -130,8 +126,6 @@ public final class ReelViewerHook {
                         @Override protected void beforeHookedMethod(MethodHookParam param) {
                             try {
                                 players.add(param.thisObject);
-                                // The outer resume methods resolve the item before calling the
-                                // item-bearing hooks. A stale ID here could cut off the final reel.
                                 if (!suppliesItem) {
                                     if (FeatureFlags.disableReels && !FeatureFlags.disableReelsExceptDM) param.setResult(null);
                                     return;
@@ -186,7 +180,6 @@ public final class ReelViewerHook {
         }
     }
 
-    /** True when no reel restriction is on and no pager lock or cover is left from an earlier one. */
     private boolean idle() {
         return !(FeatureFlags.disableReels || FeatureFlags.dailyReelLimitEnabled
                 || FeatureFlags.nightReelBlockEnabled || FeatureFlags.reelsLockScroll)
@@ -345,9 +338,6 @@ public final class ReelViewerHook {
                 });
             }
             inputSetter = setter;
-            // Input disabling stops swipes/accessibility paging. Also guard explicit page jumps once
-            // the opened reel is laid out; initial DM positioning must still be allowed. "Lock Reels
-            // scrolling" is not checked here, so IG's own auto-scroll keeps advancing.
             for (Method method : PagerJumpFilter.jumps(pager)) {
                 XposedBridge.hookMethod(method, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
@@ -370,12 +360,9 @@ public final class ReelViewerHook {
             ModuleLog.error("(IE|ReelLimit) Could not turn on locking the reel scroll (blocked reels are still covered)", t);
         }
         try {
-            // Pull-to-refresh on top of a locked pager would still reload the feed.
             Class<?> refresh = XposedHelpers.findClass(
                     "instagram.features.clips.viewer.ui.ClipsSwipeRefreshLayout", loader);
             Method intercept = XposedHelpers.findMethodExact(refresh, "onInterceptTouchEvent", MotionEvent.class);
-            // The compat lookup also walks superclasses; an inherited one is shared by every
-            // refresh layout (or every ViewGroup), so only the layout's own override is hooked.
             if (intercept.getDeclaringClass() != refresh) {
                 throw new NoSuchMethodException("onInterceptTouchEvent is inherited from "
                         + intercept.getDeclaringClass().getName());
@@ -420,11 +407,9 @@ public final class ReelViewerHook {
             }
             locked |= gate.isLocked();
         }
-        // Lets idle() skip work only once every lock taken earlier has been released.
         anyPagerLocked = locked;
     }
 
-    /** Swipe input: "Lock Reels scrolling" locks every reel pager, on top of the DM-reel lock. */
     private boolean inputLock(View view) {
         return FeatureFlags.reelsLockScroll || ReelBlockPolicy.shouldLockScrolling(sessionForView(view));
     }
@@ -472,8 +457,6 @@ public final class ReelViewerHook {
     private void bindImpressionSources(ClassLoader loader) {
         int bindings = 0;
         try {
-            // This registrar receives both the viewer config and the logger source forwarded to
-            // organic impression handlers. Match their identity, never the currently visible tab.
             for (Constructor<?> constructor : impressionRegistrars(loader)) {
                 Class<?>[] types = constructor.getParameterTypes();
                 int configIndex = configParam(types);
@@ -497,7 +480,6 @@ public final class ReelViewerHook {
         ModuleLog.detail("(IE|ReelLimit) DM impression source hooks=" + bindings);
     }
 
-    /** Registrar constructors taking the viewer config. DexKitCache stores Methods only, so cache class names. */
     private static List<Constructor<?>> impressionRegistrars(ClassLoader loader)
             throws ReflectiveOperationException {
         List<Constructor<?>> result = new ArrayList<>();
@@ -512,9 +494,6 @@ public final class ReelViewerHook {
             return result;
         }
         Set<String> classes = new LinkedHashSet<>();
-        // Any registrar marker, then the owning class's config-taking constructor: on IG 451 the
-        // "_init" marker sits in a class without the config (X.056c), while the registrar that
-        // takes it (X.054k) only carries "_addAction".
         for (var data : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .addUsingString("ClipsViewerSponsoredViewpointRegistrar_", StringMatchType.Contains)))) {
             String owner = data.getClassName();
@@ -543,7 +522,6 @@ public final class ReelViewerHook {
     }
 
     private static Object viewerConfig(Object viewer) {
-        // The fragment exposes its config through a getter, not necessarily a Bundle or direct field.
         for (Class<?> c = viewer.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
             for (Method method : c.getDeclaredMethods()) {
                 if (Modifier.isStatic(method.getModifiers()) || method.getParameterCount() != 0
@@ -569,7 +547,6 @@ public final class ReelViewerHook {
         if (DexKitCache.isCacheValid()) {
             List<Method> cached = DexKitCache.loadMethods(key, loader);
             if (cached != null && !cached.isEmpty()) return cached;
-            // A builder without this anchor must not pay a DexKit scan on every launch.
             if (MISSING.equals(DexKitCache.loadString(key))) return new ArrayList<>();
         }
         List<Method> result = new ArrayList<>();

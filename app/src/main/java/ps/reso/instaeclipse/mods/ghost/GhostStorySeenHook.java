@@ -20,24 +20,11 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * Hide Story / Reel Views.
- *
- * MODERN (IG 442+/447): seen-reports go through a per-session store (LX/00dS,
- * "PendingReelSeenStateStore") extending the batch base LX/04Qy ("PendingActionStore").
- * Two send paths, both building the "media/seen/" request via the item builder (LX/00dT.A04):
- *   1. Batch: reels inserted into the pending map (base A0D(String,Object)/A0E(Map)) and flushed.
- *   2. Immediate: on story-viewer stop/back, the store's A0O(item)V builds+sends one item
- *      directly (bypasses the pending map — this is the path a normal story view takes).
- * Fix: no-op BOTH the inserts and the immediate sender, scoped to the store, when the feature
- * is on. All are void / result-unused → NPE-safe (unlike nulling the builder A04).
- */
 public class GhostStorySeenHook {
 
     private static final String CACHE_KEY = "GhostStorySeen_v3";
 
     public void handleStorySeenBlock() {
-        // Fast path: whichever path was resolved+cached last (per IG version).
         if (DexKitCache.isCacheValid()) {
             String storeName = DexKitCache.loadString(CACHE_KEY);
             if (storeName != null) {
@@ -60,14 +47,12 @@ public class GhostStorySeenHook {
         ModuleLog.error("(InstaEclipse | StoryBlock): Could not turn on hiding story views: not supported by this Instagram version");
     }
 
-    /** IG 442+/447: block the reel-seen store's inserts + immediate sender. */
     private boolean tryModernBatchBlock() {
         try {
             List<Found> seenMethods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create().usingStrings("media/seen/")));
             if (seenMethods.isEmpty()) return false;
 
-            // The (1-arg, object-returning) builder — its declaring class is the pending ITEM.
             Found builder = null;
             for (Found m : seenMethods) {
                 if (m.getParamCount() == 1 && !"void".equals(m.getReturnTypeName())) {
@@ -112,14 +97,6 @@ public class GhostStorySeenHook {
         }
     }
 
-    /**
-     * Hooks (to no-op, when isGhostStory) the modern reel-seen store's send paths:
-     *   - base inserts: (String,Object)->void and (Map)->void   [batch path]
-     *   - store's own immediate sender: (item)->void            [A0O, direct path]
-     * Base inserts are shared with other stores, so they are gated on the receiver being an
-     * instance of {@code storeClass}; the immediate sender is declared on the store itself.
-     * Returns the number of methods hooked.
-     */
     private int hookStoreSendersScopedTo(final Class<?> storeClass) {
         XC_MethodHook gate = new XC_MethodHook() {
             @Override
@@ -129,14 +106,13 @@ public class GhostStorySeenHook {
                         && storeClass.isInstance(param.thisObject)) {
                     if (param.args.length == 1 && !(param.args[0] instanceof Map)
                             && ManualStorySeenHook.isExplicitItem(param.args[0])) return;
-                    param.setResult(null); // void: skip the send / queue — nothing reported
+                    param.setResult(null);
                 }
             }
         };
 
         int hooked = 0;
 
-        // Batch inserts live on the base class (PendingActionStore).
         for (Class<?> c = storeClass.getSuperclass(); c != null && c != Object.class; c = c.getSuperclass()) {
             boolean found = false;
             for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(c)) {
@@ -148,11 +124,9 @@ public class GhostStorySeenHook {
                 try { m.setAccessible(true); XposedBridge.hookMethod(m, gate); hooked++; found = true; }
                 catch (Throwable t) { ModuleLog.warn("(InstaEclipse | StoryBlock): Some story views may still be sent", t); }
             }
-            if (found) break; // inserts all live on the same base level
+            if (found) break;
         }
 
-        // Immediate sender: the store's OWN void method taking a single non-framework object
-        // (the pending item, e.g. LX/00dT). That is A0O — builds+sends one seen directly.
         for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(storeClass)) {
             if (m.getReturnType() != void.class) continue;
             Class<?>[] p = m.getParameterTypes();

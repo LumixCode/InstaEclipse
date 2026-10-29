@@ -6,16 +6,6 @@ import java.security.MessageDigest;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
-/**
- * Hashing for the DM / whole-app lock passcode.
- *
- * <p>New hashes use PBKDF2-HMAC-SHA256 and are stored as {@code pbkdf2$<iterations>$<hex>}.
- * Hashes created by older builds are a bare hex {@code sha256(salt + passcode)}; they still
- * verify, and {@link #needsUpgrade} tells the caller to re-hash after a successful unlock.
- *
- * <p>A short numeric PIN has a tiny keyspace, so no hash makes it strong against someone who
- * can read Instagram's private prefs. PBKDF2 only raises the cost of that offline guess.
- */
 public final class PasscodeHasher {
 
     static final int ITERATIONS = 60_000;
@@ -29,7 +19,6 @@ public final class PasscodeHasher {
     }
 
     public static boolean verify(String passcode, String salt, String stored) {
-        // Android's BouncyCastle PBKDF2 throws on an empty password; no stored hash is ever of "".
         if (passcode == null || passcode.isEmpty() || stored == null || stored.isEmpty()) return false;
         String s = salt == null ? "" : salt;
         String candidate;
@@ -51,7 +40,6 @@ public final class PasscodeHasher {
                 stored.getBytes(StandardCharsets.UTF_8));
     }
 
-    /** True for legacy SHA-256 hashes or PBKDF2 hashes with fewer iterations than today. */
     public static boolean needsUpgrade(String stored) {
         if (stored == null || stored.isEmpty()) return false;
         if (!stored.startsWith(PREFIX)) return true;

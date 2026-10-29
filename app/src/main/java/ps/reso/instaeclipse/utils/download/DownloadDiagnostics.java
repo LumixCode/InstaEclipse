@@ -2,13 +2,11 @@ package ps.reso.instaeclipse.utils.download;
 
 import java.io.IOException;
 
-/** Persistent failure taxonomy. Matches internal messages; never returns any part of an exception. */
 final class DownloadDiagnostics {
     enum Phase { DOWNLOAD_VIDEO, DOWNLOAD_AUDIO, INSPECT_VIDEO, INSPECT_AUDIO, JOIN_PORTABLE, JOIN_NATIVE,
         INSPECT_OUTPUT, VERIFY_OUTPUT }
     private DownloadDiagnostics() { }
 
-    /** Numbers from the failed inspection only; no file, URL, track name or caught cause retained. */
     static final class CoverageFailure extends IOException {
         final boolean video;
         final long durationUs, minPtsUs, maxPtsUs, fileBytes, fragmentDurationUs;
@@ -32,7 +30,6 @@ final class DownloadDiagnostics {
         String result = "phase=" + phase.name() + " cause=" + cause(error);
         if (error instanceof CoverageFailure) {
             CoverageFailure coverage = (CoverageFailure) error;
-            // Primitive values have bounded decimal representations, even at their type limits.
             result += " track=" + (coverage.video ? "VIDEO" : "AUDIO")
                     + " durationUs=" + coverage.durationUs + " minPtsUs=" + coverage.minPtsUs
                     + " maxPtsUs=" + coverage.maxPtsUs + " samples=" + coverage.sampleCount
@@ -69,8 +66,6 @@ final class DownloadDiagnostics {
         if (error instanceof CoverageFailure) return "SAMPLE_COVERAGE";
         if (!(error instanceof IOException)) return "PLATFORM_RUNTIME";
         String message = error.getMessage();
-        // Platform errors can contain signed addresses or paths. Only exact owned messages are
-        // classified; bounded template matches below also return constants, never captured text.
         if (message == null || message.length() > 256) return "PLATFORM_IO";
         switch (message) {
             case "Encrypted media": return "ENCRYPTED_TRACK";

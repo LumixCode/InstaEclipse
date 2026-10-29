@@ -15,16 +15,9 @@ import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 
-/**
- * The profile spoofer's picture ({@code FeatureFlags.spoofAvatar}): a square JPEG of at most
- * {@link #MAX_SIDE} px, stored as Base64 so it travels like any other string setting
- * (prefs, companion sync, settings backup). Encoding runs in the companion app (it can open a
- * picker); decoding runs in both, cached so a value is decoded once.
- */
 public final class SpoofAvatar {
 
     public static final int MAX_SIDE = 320;
-    /** 320x320 at quality 85 is ~20-45 KB of JPEG, ~30-60 K Base64 chars; headroom on top. */
     public static final int MAX_CHARS = 96 * 1024;
 
     private static String cachedValue;
@@ -32,7 +25,6 @@ public final class SpoofAvatar {
 
     private SpoofAvatar() {}
 
-    /** Empty (no picture) or Base64 text within {@link #MAX_CHARS}. Pure Java, unit tested. */
     public static boolean isValid(String value) {
         if (value == null) return false;
         if (value.length() > MAX_CHARS) return false;
@@ -45,11 +37,6 @@ public final class SpoofAvatar {
         return true;
     }
 
-    /**
-     * Reads the picked image, rotates it upright (ImageDecoder applies EXIF), center-crops it to a
-     * square, scales it to at most {@link #MAX_SIDE} px and returns it as Base64 JPEG (quality 85,
-     * lowered if it would not fit {@link #MAX_CHARS}). Returns null when it can't be read.
-     */
     public static String encode(ContentResolver resolver, Uri uri) {
         Bitmap src = null;
         try {
@@ -65,7 +52,7 @@ public final class SpoofAvatar {
             int out = Math.min(side, MAX_SIDE);
             Bitmap square = Bitmap.createBitmap(out, out, Bitmap.Config.ARGB_8888);
             Canvas c = new Canvas(square);
-            c.drawColor(0xFFFFFFFF); // JPEG has no alpha: transparent PNGs get a white background
+            c.drawColor(0xFFFFFFFF);
             Rect from = new Rect((src.getWidth() - side) / 2, (src.getHeight() - side) / 2,
                     (src.getWidth() + side) / 2, (src.getHeight() + side) / 2);
             c.drawBitmap(src, from, new Rect(0, 0, out, out), new Paint(Paint.FILTER_BITMAP_FLAG));
@@ -87,7 +74,6 @@ public final class SpoofAvatar {
         }
     }
 
-    /** The picture of {@code value}, decoded once per value; null when empty or unreadable. */
     public static synchronized Bitmap bitmap(String value) {
         if (value == null || value.isEmpty()) return null;
         if (value.equals(cachedValue)) return cachedBitmap;
@@ -101,8 +87,6 @@ public final class SpoofAvatar {
         return b;
     }
 
-    /** A circle-cropped drawable of {@code bitmap}, painted with a shader (not a shape drawable,
-     *  which Instagram's theme engine may recolor). */
     public static final class CircleDrawable extends Drawable {
         public final Bitmap bitmap;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
@@ -134,7 +118,6 @@ public final class SpoofAvatar {
         @Override public int getOpacity() { return PixelFormat.TRANSLUCENT; }
     }
 
-    /** Placeholder for "no picture chosen": a grey circle with a person outline. */
     public static final class PlaceholderDrawable extends Drawable {
         private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint figure = new Paint(Paint.ANTI_ALIAS_FLAG);

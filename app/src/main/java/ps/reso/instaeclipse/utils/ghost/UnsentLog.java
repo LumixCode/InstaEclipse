@@ -31,34 +31,19 @@ import ps.reso.instaeclipse.mods.media.DataBackup;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Persistent log of observed local removals, including the current user's own unsends, captured by
- * KeepUnsentMessagesHook. Stored as JSON in Instagram's own filesDir, so it survives thread
- * refreshes and app restarts (unlike the in-thread copy, which IG re-syncs away). Read back by the
- * in-IG "Unsent Messages" viewer (DialogUtils) — both run in the Instagram process, so no
- * cross-process channel is needed.
- *
- * Each entry also records the account, thread and server/client message aliases. Older accountless entries
- * remain in the file but cannot safely be attributed to the account currently viewing it.
- * Cleared entries retain only IDs and time, so another local callback cannot restore their content.
- * A message without text keeps its old placeholder in "m" (older builds and backups read it) and
- * what it was ({@link UnsentDetail}: a reel, a voice message…) in "d".
- */
 public class UnsentLog {
 
     public static class Entry {
-        public final long time;       // when we captured it (wall clock)
-        public final String thread;   // thread id it belongs to (for per-thread filtering)
-        public final String sender;   // best-effort sender label (may be "")
+        public final long time;
+        public final String thread;
+        public final String sender;
         public final String text;
         public final String account;
         public final String messageId;
         public final String by;
         public final boolean hasBody;
         public final boolean cleared;
-        /** Captured while "keep in chat" was off: Instagram removed the message, nothing stayed in the chat. */
         public final boolean logOnly;
-        /** What a message without text was; null when unknown (entries from before this existed). */
         public final UnsentDetail detail;
         public Entry(long time, String account, String thread, String messageId, String sender, String text) {
             this(time, account, thread, messageId, sender, "", text, true, false, false, null);
@@ -89,7 +74,6 @@ public class UnsentLog {
             return !by.equalsIgnoreCase(name);
         }
 
-        /** No text and no (or only the generic) description yet. */
         private boolean lacksDetail() {
             return !cleared && !hasBody && (detail == null || detail.kind == UnsentDetail.Kind.NO_TEXT);
         }
@@ -144,7 +128,6 @@ public class UnsentLog {
     private static UnsentMessageIndex clearedIds = new UnsentMessageIndex(MAX_ENTRIES);
     private static long revisionBase;
     private static volatile long revision;
-    /** Entries already looked up in the restart copies this process (see getForThread). */
     private static final Set<UnsentMessageIndex.Key> copyLookups = new HashSet<>();
 
     public static synchronized UnsentMessageIndex.Key findUnsent(String account, String thread, Iterable<String> ids) {
@@ -489,8 +472,6 @@ public class UnsentLog {
         }
     }
 
-    /** "d": {k: kind, u: owner handle, ms: play length, x: extra words}; null when absent or of a
-     *  kind this build does not know. */
     static UnsentDetail readDetail(Map<?, ?> d) {
         if (d == null) return null;
         return UnsentDetail.of(text(d.get("k"), ""), text(d.get("u"), null), number(d.get("ms")),
@@ -506,7 +487,6 @@ public class UnsentLog {
         return d;
     }
 
-    /** Capture only a known unsend, keyed by account + thread + message, never by message text. */
     public static synchronized void add(String account, String thread, String messageId, String sender, String text) {
         add(account, thread, Collections.singletonList(messageId), sender, text);
     }
@@ -515,13 +495,11 @@ public class UnsentLog {
         add(account, thread, ids, sender, text, false);
     }
 
-    /** @param logOnly the message was not kept in the chat (it stays only here); fixed at first capture. */
     public static synchronized void add(String account, String thread, List<String> ids, String sender, String text,
                                         boolean logOnly) {
         add(account, thread, ids, sender, text, logOnly, null);
     }
 
-    /** @param detail what a message without text was; fills an entry that lacks one. */
     public static synchronized void add(String account, String thread, List<String> ids, String sender, String text,
                                         boolean logOnly, UnsentDetail detail) {
         add(account, thread, ids, sender, text, logOnly, detail, null);
@@ -550,7 +528,6 @@ public class UnsentLog {
             clearedIds.recordAliases(account, thread, ids);
             return revision != clearedIds.revision();
         }
-        // Ambiguous aliases must not resurrect either of two cleared messages.
         if (ids != null) for (String id : ids) if (clearedIds.contains(account, thread, id)) return false;
         long revision = deletions.revision();
         UnsentMessageIndex.Key key = deletions.recordAliases(account, thread, ids);
@@ -560,8 +537,6 @@ public class UnsentLog {
             Entry old = cache.get(i);
             if (!old.account.equals(key.account) || !old.thread.equals(key.thread) || !old.messageId.equals(key.message)) continue;
             String who = valid(by) && (old.by.isEmpty() || newerWins) ? by : old.by;
-            // A removal is useful even when the native cache has already dropped its body. A later
-            // exact row/reconcile capture may fill it in without duplicating the deletion event.
             if (hasBody && (!old.hasBody || newerWins)) {
                 String label = newerWins && sender != null && !sender.isEmpty() ? sender : old.sender;
                 cache.set(i, new Entry(old.time, old.account, old.thread, old.messageId, label, who, text,
@@ -579,8 +554,6 @@ public class UnsentLog {
             return revision != deletions.revision();
         }
         cache.add(new Entry(time, account, thread, key.message, sender == null ? "" : sender, by,
-                // Kept as before for older builds and backups; the viewer shows the detail instead.
-                // Log-only mode keeps nothing in the chat, so "retained" would be wrong there.
                 hasBody ? text : logOnly ? "[Unsent message]" : "[Retained message]", hasBody, false, logOnly,
                 hasBody ? null : detail));
         while (cache.size() > MAX_ENTRIES) {
@@ -594,14 +567,11 @@ public class UnsentLog {
         revision = loaded ? revisionBase + deletions.revision() : 0;
     }
 
-    /** A real description replaces none or the generic "without text" one, never the other way. */
     private static boolean improves(Entry old, UnsentDetail detail) {
         return detail != null && old.lacksDetail()
                 && (old.detail == null || detail.kind != UnsentDetail.Kind.NO_TEXT);
     }
 
-    /** True when the message's entry has no text and no description yet (or none exists), so a
-     *  capture should take the trouble to describe it. */
     public static synchronized boolean needsDetail(String account, String thread, List<String> ids) {
         if (!ready()) return false;
         UnsentMessageIndex.Key key = deletions.find(account, thread, ids);
@@ -614,10 +584,8 @@ public class UnsentLog {
         return true;
     }
 
-    /** An entry logged before descriptions existed and the ids its restart copy may be saved under. */
     private record CopyLookup(Entry entry, List<String> ids) {}
 
-    /** The entries to describe from their restart copy, each once per process. Call under the lock. */
     private static List<CopyLookup> pendingCopyLookups(List<Entry> shown) {
         List<CopyLookup> out = new ArrayList<>();
         for (Entry entry : shown) {
@@ -631,9 +599,6 @@ public class UnsentLog {
         return out;
     }
 
-    /** Reads the restart copies: disk I/O, so never under the lock (the removal hook logs through
-     *  it on Instagram's thread). A copy exists only for a message that was captured, so without
-     *  text it is at least "a message without text". */
     private static Map<Entry, UnsentDetail> readCopies(List<CopyLookup> lookups) {
         Map<Entry, UnsentDetail> found = new IdentityHashMap<>();
         for (CopyLookup lookup : lookups) {
@@ -646,12 +611,11 @@ public class UnsentLog {
         return found;
     }
 
-    /** Stores what readCopies found for entries still in the log unchanged. Call under the lock. */
     private static void applyDescriptions(Map<Entry, UnsentDetail> found) {
         int described = 0;
         for (Map.Entry<Entry, UnsentDetail> description : found.entrySet()) {
             int index = cache.indexOf(description.getKey());
-            if (index < 0) continue; // cleared, filled in or dropped meanwhile
+            if (index < 0) continue;
             cache.set(index, description.getKey().with(description.getValue(), description.getKey().by));
             described++;
         }
@@ -661,7 +625,6 @@ public class UnsentLog {
                 + " from their copies");
     }
 
-    /** All entries, newest first. */
     public static List<Entry> getAll(Context context) {
         awaitLoaded(VIEWER_WAIT_MS);
         synchronized (UnsentLog.class) {
@@ -673,7 +636,6 @@ public class UnsentLog {
         }
     }
 
-    /** Entries for one thread id, newest first; entries without text are described where possible. */
     public static List<Entry> getForThread(Context context, String thread) {
         awaitLoaded(VIEWER_WAIT_MS);
         List<CopyLookup> lookups;
@@ -707,8 +669,6 @@ public class UnsentLog {
         return markCleared(viewer(context), null);
     }
 
-    /** True when the viewer's saved entries in {@code thread} (all threads when null) include a
-     *  message that was kept in the chat, which only Instagram's own local removal can take out. */
     public static boolean hasRetained(Context context, String thread) {
         awaitLoaded(VIEWER_WAIT_MS);
         return hasRetained(viewer(context), thread);
@@ -723,7 +683,6 @@ public class UnsentLog {
         return false;
     }
 
-    /** Clear content only in this thread; return its account only after the durable write succeeds. */
     public static String clearThread(Context context, String thread) {
         String account = viewer(context);
         return thread != null ? markCleared(account, thread) : null;
@@ -794,14 +753,10 @@ public class UnsentLog {
     private static boolean valid(String value) { return value != null && !value.isEmpty(); }
 
     private static boolean belongsToCurrentAccount(Entry entry) {
-        // Old records lacked account identity. Preserve the file, but never attribute them to a
-        // guessed account or display another account's messages after an account switch.
         return currentAccount != null && !currentAccount.isEmpty() && currentAccount.equals(entry.account);
     }
 
     private static void refreshAccount(Context context) {
-        // Use the viewer's actual activity, including ModalActivity, not the last MainActivity
-        // observed by another hook or the account that most recently bound a message.
         currentAccount = null;
         for (int i = 0; context != null && i < 10; i++) {
             if (context instanceof Activity) {

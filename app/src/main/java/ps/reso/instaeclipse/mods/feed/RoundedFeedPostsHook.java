@@ -11,15 +11,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 
-/**
- * Rounded feed posts (#276): the corners of a post's photo or video are rounded to the chosen
- * radius.
- *
- * <p>Every post's media sits in a MediaFrameLayout (id media_group, a named class). Each one gets a
- * layout listener when it is created; on layout the post's outermost media view (the video_container
- * host around it when there is one, so overlays are clipped too) is clipped to a rounded outline.
- * No view tree is walked, so a feed full of playing videos costs nothing extra.
- */
 public final class RoundedFeedPostsHook {
 
     private static final String MEDIA_FRAME = "com.instagram.ui.widget.framelayout.MediaFrameLayout";

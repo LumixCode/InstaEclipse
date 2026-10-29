@@ -19,27 +19,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Makes Instagram see the coordinates picked in LocationPickerActivity instead of the device's.
- *
- * <p>Every device fix reaches the app over Binder as a parcelled {@link Location}: platform
- * LocationManager listeners, {@code getCurrentLocation}, PendingIntent updates and Play
- * Services' fused provider alike. Rewriting the object as it is unparcelled
- * ({@code Location.CREATOR.createFromParcel}) therefore covers every delivery path at once and
- * keeps the object's fields consistent, so {@code distanceTo()} and friends agree with the
- * getters. Smaller hooks round it off:
- * <ul>
- *   <li>getters on locations built inside the process (e.g. a cached last fix) are rewritten
- *   lazily, limited to device providers so Instagram's own place objects are untouched;</li>
- *   <li>the mock flags read false, and a fix is handed out immediately on request so Instagram
- *   gets one even indoors without GPS;</li>
- *   <li>location permission checks answer "granted" while spoofing, so Instagram works with the
- *   spoofed position without ever being given the real permission (see hookPermissions);</li>
- *   <li>nearby Wi-Fi, cell and Bluetooth signals, which Instagram uploads next to the fix and
- *   which locate the device on their own, are hidden while spoofing (see hookNearbySignals).</li>
- * </ul>
- * Each fix lands a few meters from the target with a varying accuracy, like a real receiver.
- */
 public class LocationSpoofHook {
 
     private static final String TAG = "(InstaEclipse | SpoofLocation): ";
@@ -71,7 +50,6 @@ public class LocationSpoofHook {
         return FeatureFlags.spoofLocation && LocationPresets.valid(FeatureFlags.spoofLat, FeatureFlags.spoofLng);
     }
 
-    /** Binder deliveries: rewrite each Location as it is created from its parcel. */
     private static void hookUnparcel() throws NoSuchMethodException {
         Method create = Location.CREATOR.getClass().getDeclaredMethod("createFromParcel", Parcel.class);
         XposedBridge.hookMethod(create, new XC_MethodHook() {
@@ -83,7 +61,6 @@ public class LocationSpoofHook {
         });
     }
 
-    /** In-process locations: rewrite on first read. Cheap when the location is already spoofed. */
     private static void hookGetters() throws NoSuchMethodException {
         XC_MethodHook lazy = new XC_MethodHook() {
             @Override
@@ -105,10 +82,8 @@ public class LocationSpoofHook {
 
         XposedBridge.hookMethod(Location.class.getDeclaredMethod("isFromMockProvider"), ACTIVE_ONLY_FALSE);
         try {
-            XposedBridge.hookMethod(Location.class.getDeclaredMethod("isMock"), ACTIVE_ONLY_FALSE); // API 31+
-        } catch (NoSuchMethodException ignored) {
-            // older platform: isFromMockProvider only
-        }
+            XposedBridge.hookMethod(Location.class.getDeclaredMethod("isMock"), ACTIVE_ONLY_FALSE);
+        } catch (NoSuchMethodException ignored) {}
     }
 
     private static void hookManager() {
@@ -132,7 +107,6 @@ public class LocationSpoofHook {
             switch (m.getName()) {
                 case "getLastKnownLocation":
                 case "getLastLocation":
-                    // No cached fix (or no permission, see hookPermissions): hand out the target.
                     XposedBridge.hookMethod(m, new XC_MethodHook() {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) {
@@ -148,7 +122,6 @@ public class LocationSpoofHook {
                     XposedBridge.hookMethod(m, request);
                     break;
                 case "getCurrentLocation":
-                    // (provider[/request], CancellationSignal, Executor, Consumer<Location>)
                     XposedBridge.hookMethod(m, new XC_MethodHook() {
                         @SuppressWarnings("unchecked")
                         @Override
@@ -184,12 +157,6 @@ public class LocationSpoofHook {
         }
     }
 
-    /**
-     * Lets Instagram use the spoofed location without holding the real location permission:
-     * permission checks for fine/coarse location answer "granted" while spoofing, so the app
-     * asks for a fix, and the manager hooks above answer with the spoofed one. The same answer
-     * also starts IG's Wi-Fi, cell and BLE collection, which hookNearbySignals empties.
-     */
     private static void hookPermissions() {
         try {
             Class<?> impl = Class.forName("android.app.ContextImpl");
@@ -218,7 +185,6 @@ public class LocationSpoofHook {
         }
     }
 
-    /** Cell identity getters IG 451 reads (X.0BjH.A00 cell_info, X.02re), answered "unavailable". */
     private static final String[] CELL_ID_GETTERS = {"getCi", "getCid", "getNci", "getLac", "getTac", "getPci",
             "getPsc", "getCpid", "getBasestationId", "getNetworkId", "getSystemId", "getLatitude", "getLongitude"};
     private static final String[] CELL_IDENTITIES = {"android.telephony.CellIdentityGsm",
@@ -226,15 +192,6 @@ public class LocationSpoofHook {
             "android.telephony.CellIdentityLte", "android.telephony.CellIdentityNr",
             "android.telephony.CellIdentityCdma"};
 
-    /**
-     * IG 451 uploads nearby networks next to the fix (X.0MCK builds X.0BjH with wifi_info,
-     * scan_results, bluetooth_info and cell_info), and BSSIDs and cell ids locate the device on
-     * their own. While spoofing the app sees what an app without location access sees: no Wi-Fi
-     * scan (X.03rn.A01), a redacted connection (X.0FJJ.A00 reads WifiInfo), no cells
-     * (X.02rb.A07 / A04) and no BLE scan. Cells that still arrive through listeners
-     * (X.05r9 CellInfoListener, requestCellInfoUpdate) have their identity getters answer
-     * "unavailable". Only the real calls are skipped, so nothing throws without the permission.
-     */
     private static void hookNearbySignals() {
       try {
         XC_MethodHook emptyList = new XC_MethodHook() {
@@ -243,7 +200,6 @@ public class LocationSpoofHook {
                 if (spoofing()) param.setResult(new java.util.ArrayList<>());
             }
         };
-        // ScanResult.BSSID is a field IG reads directly (X.0FKv, X.04ic), so the list goes.
         hookNamed(android.net.wifi.WifiManager.class, "getScanResults", java.util.List.class, emptyList);
         hookNamed(android.net.wifi.WifiInfo.class, "getBSSID", String.class, constant("02:00:00:00:00:00"));
         hookNamed(android.net.wifi.WifiInfo.class, "getSSID", String.class, constant("<unknown ssid>"));
@@ -254,7 +210,6 @@ public class LocationSpoofHook {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
                 if (!spoofing() || !(param.method instanceof Method)) return;
-                // CellInfo.UNAVAILABLE / UNAVAILABLE_LONG
                 param.setResult(((Method) param.method).getReturnType() == long.class ? (Object) Long.MAX_VALUE : Integer.MAX_VALUE);
             }
         };
@@ -266,14 +221,9 @@ public class LocationSpoofHook {
                     hookNamed(c, methods, getter, int.class, unavailable);
                     hookNamed(c, methods, getter, long.class, unavailable);
                 }
-            } catch (Throwable ignored) {
-                // CellIdentityNr is API 29+
-            }
+            } catch (Throwable ignored) {}
         }
 
-        // IG's only BLE scan (com.facebook.blescan.BleScanOperation, started by the location
-        // request X.0FJJ.A03 through X.0LYZ.A01) sleeps for its window and then reads what its
-        // callback collected; a scan that never starts leaves that list empty.
         hookNamed(android.bluetooth.le.BluetoothLeScanner.class, "startScan", void.class, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
@@ -295,7 +245,6 @@ public class LocationSpoofHook {
         };
     }
 
-    /** Hooks each concrete method of {@code c} named {@code name} that returns {@code type}. */
     private static void hookNamed(Class<?> c, String name, Class<?> type, XC_MethodHook hook) {
         hookNamed(c, ps.reso.instaeclipse.utils.core.SafeReflect.methods(c), name, type, hook);
     }
@@ -337,14 +286,12 @@ public class LocationSpoofHook {
         return null;
     }
 
-    /** Platform providers only; places Instagram builds itself use their own provider names. */
     static boolean isDeviceFix(Location loc) {
         String p = loc.getProvider();
         return p != null && (p.equals(LocationManager.GPS_PROVIDER) || p.equals(LocationManager.NETWORK_PROVIDER)
                 || p.equals(LocationManager.PASSIVE_PROVIDER) || p.equals("fused"));
     }
 
-    /** Extras key marking a Location this hook already rewrote (survives copies of the object). */
     static final String MARK = "ie_spoofed";
 
     private static boolean isSpoofed(Location loc) {
@@ -352,7 +299,6 @@ public class LocationSpoofHook {
         return extras != null && extras.getBoolean(MARK, false);
     }
 
-    /** Moves {@code loc} to a jittered point around the target and clears its mock marks. */
     static void apply(Location loc) {
         double[] p = LocationPresets.jitter(FeatureFlags.spoofLat, FeatureFlags.spoofLng, RANDOM.nextDouble(), RANDOM.nextDouble());
         loc.setLatitude(p[0]);

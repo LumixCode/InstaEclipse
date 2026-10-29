@@ -6,7 +6,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 
-/** Native Story menus contain labels; retain their order and runtime container type. */
 final class StoryMenuOptions {
     private StoryMenuOptions() { }
 

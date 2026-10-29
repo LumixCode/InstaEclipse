@@ -12,43 +12,20 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 
-/**
- * Distraction Free — view-level removal of the story tray and the Reels tab.
- *
- * The network interceptor already drops the story/reels metadata requests, but IG 447.0.0.39+ falls
- * back to its locally-cached stories/reels (media streams from the CDN, which distraction-free does
- * not block), so they stay visible. To make them actually disappear we collapse the real Views by
- * their stable public resource names (verified from the live view tree, never obfuscated X.* ids):
- *   - story tray  -> com.instagram.android:id/reels_tray_container   (disableStories or hideStoriesTray)
- *   - Reels tab   -> com.instagram.android:id/clips_tab              (disableReels or hideTabReels)
- *
- * Armed from {@link UIHookManager#setupHooks} on every resume; a one-time global-layout listener per
- * window re-applies the collapse because IG rebuilds these views as you navigate, and restores what
- * it collapsed once a toggle is turned off. Everything is wrapped in try/catch, so a miss can never
- * crash Instagram.
- */
 public class DistractionFreeUIHook {
 
     private static volatile boolean idsResolved = false;
-    private static int trayId = 0;      // reels_tray_container (story tray)
-    private static int clipsTabId = 0;  // clips_tab (Reels bottom-nav tab)
-    // IG 447+ hosts the main tabs in a swipeable ViewPager2 (swipeable_tab_view_pager): swiping
-    // left from Home (or right from Messages) opened Reels even with the tab hidden (#220).
+    private static int trayId = 0;
+    private static int clipsTabId = 0;
     private static int tabPagerId = 0;
 
-    // Customize navigation bar (#238): bottom-nav tab ids (stable names, present 436 → 451). The
-    // search tab is deliberately not offered — long-pressing it opens the InstaEclipse settings.
     private static final String[] NAV_TAB_NAMES =
             {"feed_tab", "clips_tab", "creation_tab", "direct_tab", "news_tab", "profile_tab"};
     private static final int[] navTabIds = new int[NAV_TAB_NAMES.length];
-    // Instagram Plus ("aura") upsell button, badges and lock icons (same ids 451/452).
     private static final String[] PLUS_UPSELL_NAMES =
             {"aura_upsell_button", "aura_list_badge", "aura_list_badge_stub", "aura_badge_lock_icon", "aura_badge_chevron"};
     private static final int[] plusUpsellIds = new int[PLUS_UPSELL_NAMES.length];
-    // Disable Discover People: the profile's "Discover people" carousel (IG shows cached
-    // suggestions even when the network drop blocks new ones).
     private static int discoverPeopleId = 0;
-    // Hide Instants: the stack of Instants (quicksnap) photos floating over the app.
     private static int instantsId = 0;
 
     private static boolean navTabHidden(int index) {
@@ -70,12 +47,8 @@ public class DistractionFreeUIHook {
 
     private static final java.util.Set<View> watchedDecors =
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
-    // Views this hook collapsed -> {visibility, width, height} before collapsing, for a live restore.
     private static final java.util.Map<View, int[]> collapsedViews = new java.util.WeakHashMap<>();
 
-    // Global layout fires many times per second on the main feed (video, animations). Walking the
-    // whole decor tree on every pass was a measurable battery drain (#257), so sweeps triggered by
-    // layout are coalesced: at most one pending sweep per window, run SWEEP_DEBOUNCE_MS later.
     private static final long SWEEP_DEBOUNCE_MS = 400;
     private static final android.os.Handler MAIN = new android.os.Handler(android.os.Looper.getMainLooper());
     private static final java.util.Set<View> pendingSweeps =
@@ -88,7 +61,6 @@ public class DistractionFreeUIHook {
                 || tabOrder.sweeps(FeatureFlags.navTabOrder) || FeatureFlags.disableDiscoverPeople || FeatureFlags.hideInstants;
     }
 
-    /** A sweep is needed while a flag is on, or to restore views collapsed before a flag went off. */
     private static boolean needsSweep() {
         return anyFlag() || !collapsedViews.isEmpty();
     }
@@ -113,8 +85,6 @@ public class DistractionFreeUIHook {
         } catch (Throwable ignored) {}
     }
 
-    /** Collapse the enabled targets in this activity, and keep them collapsed via a one-time
-     *  global-layout listener on the window decor. Called on every main/modal resume. */
     public static void watchActivity(final Activity a) {
         if (a == null) return;
         try {
@@ -122,8 +92,6 @@ public class DistractionFreeUIHook {
             if (needsSweep()) sweep(a);
             final View decor = a.getWindow() != null ? a.getWindow().getDecorView() : null;
             if (decor == null || !watchedDecors.add(decor)) return;
-            // Registered even with every flag off: a toggle flipped in the in-app dialog causes no
-            // resume, so this listener is what applies or restores it live.
             decor.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
                 if (!needsSweep() || !pendingSweeps.add(decor)) return;
                 MAIN.postDelayed(() -> {
@@ -138,8 +106,6 @@ public class DistractionFreeUIHook {
         try {
             View root = a.getWindow() != null ? a.getWindow().getDecorView() : null;
             if (!(root instanceof ViewGroup)) return;
-            // One hide decision per id, applied in one pass: restoring a view for one flag must
-            // never undo another flag's hide (clips_tab is hidden by Disable Reels or Hide Reels tab).
             SparseBooleanArray hide = new SparseBooleanArray();
             if (trayId != 0) hide.put(trayId, FeatureFlags.disableStories || FeatureFlags.hideStoriesTray);
             for (int i = 0; i < NAV_TAB_NAMES.length; i++)
@@ -172,13 +138,6 @@ public class DistractionFreeUIHook {
         return TabOrderPolicy.isCustom(saved);
     }
 
-    /**
-     * Customize navigation bar (#238): puts the tab views in the user's order
-     * (FeatureFlags.navTabOrder, comma-separated tab id names; unlisted tabs keep their relative
-     * order after the listed ones). Only the slots the tabs already occupy are reused, so other
-     * children of the bar stay where they are. Tabs are found by id, so their click handling is
-     * unaffected.
-     */
     private static boolean reorderTabs(Activity a, ViewGroup root, String order) {
         int feedId = ResIds.id(a, "feed_tab");
         View feed = feedId != 0 ? root.findViewById(feedId) : null;
@@ -212,12 +171,6 @@ public class DistractionFreeUIHook {
 
     private static boolean pagerTouchHooked;
 
-    /**
-     * Instagram re-enables the pager's user-input flag when you return to Home, so clearing it
-     * once isn't enough. Hook the pager's inner RecyclerView touch handlers (where ViewPager2
-     * checks that flag) and report "not handled" for the main tab pager while Reels are off.
-     * Page content still gets every touch (onInterceptTouchEvent=false lets children handle it).
-     */
     private static void hookPagerTouch(View pager) {
         if (pagerTouchHooked || !(pager instanceof ViewGroup g)) return;
         Class<?> inner = null;
@@ -250,8 +203,6 @@ public class DistractionFreeUIHook {
         ModuleLog.detail("(IE|DistractUI) main tab pager touch gate on " + inner.getName() + ": " + n);
     }
 
-    // Swipe between Home and Messages while Reels is off (Reels sits between them in IG's pager):
-    // the pager itself no longer scrolls, so a clear horizontal swipe taps the real tab button.
     private static float swipeDownX, swipeDownY;
     private static boolean swipeDone;
 
@@ -272,7 +223,6 @@ public class DistractionFreeUIHook {
                 View root = pagerChild.getRootView();
                 View home = findTab(root, "feed_tab"), dm = findTab(root, "direct_tab");
                 if (home == null || dm == null) return;
-                // finger moving left = next page (Home → Reels → Messages); right = back.
                 if (dx < 0 && home.isSelected()) dm.post(dm::performClick);
                 else if (dx > 0 && dm.isSelected()) home.post(home::performClick);
                 break;
@@ -287,7 +237,6 @@ public class DistractionFreeUIHook {
 
     private static boolean swipeLogged;
 
-    /** Turns off swipe navigation between main tabs (tab buttons keep working). */
     private static void disableTabSwipe(ViewGroup root) {
         java.util.ArrayDeque<View> stack = new java.util.ArrayDeque<>();
         stack.push(root);
@@ -299,7 +248,7 @@ public class DistractionFreeUIHook {
                     java.lang.reflect.Field f = ps.reso.instaeclipse.utils.ui.ViewPager2Input.field(v);
                     if (f != null && f.getBoolean(v)) {
                         f.setBoolean(v, false);
-                        if (!swipeLogged) { // IG turns it back on every few seconds; we keep switching it off
+                        if (!swipeLogged) {
                             swipeLogged = true;
                             ModuleLog.detail("(IE|DistractUI) main tab swipe disabled (Reels off) via " + f.getName());
                         }
@@ -328,8 +277,6 @@ public class DistractionFreeUIHook {
     }
 
     private static void collapse(View v) {
-        // A constructor may expose a still-hidden control before the host binds its real state.
-        // Do not remember that placeholder as the visibility to restore when the feature is off.
         if (v == null || v.getVisibility() == View.GONE) return;
         ViewGroup.LayoutParams lp = v.getLayoutParams();
         if (!collapsedViews.containsKey(v)) {

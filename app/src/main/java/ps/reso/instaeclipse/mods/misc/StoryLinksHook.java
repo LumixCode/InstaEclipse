@@ -32,14 +32,6 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.text.CopyFeedback;
 
-/**
- * Story link stickers: when the open story has link stickers, the story ⋯ menu gets
- * "Copy Link" (one link) or "Story Links (n)" (several, listed in a dialog).
- *
- * Links come from Media's paramCount-0 List getters guarded by the "story_link_stickers" /
- * "story_cta" JSON keys (same idea as StoryMentionHook's "reel_mentions"), and the URLs are
- * collected by walking the sticker objects for http(s) strings, so no obfuscated names are used.
- */
 public class StoryLinksHook {
 
     private static final String[] KEYS = {"story_link_stickers", "story_cta"};
@@ -85,8 +77,6 @@ public class StoryLinksHook {
         ModuleLog.ok("(IE|StoryLinks) Ready");
     }
 
-    // ── DexKit ────────────────────────────────────────────────────────────────
-
     private static void resolveGetters(ClassLoader classLoader) {
         if (DexKitCache.isCacheValid()) {
             List<Method> cached = DexKitCache.loadMethods("StoryLinkGetters", classLoader);
@@ -117,8 +107,6 @@ public class StoryLinksHook {
         }
         if (!getters.isEmpty()) DexKitCache.saveMethods("StoryLinkGetters", getters);
     }
-
-    // ── Link extraction ──────────────────────────────────────────────────────
 
     static List<String> linksOf(Object media) {
         LinkedHashSet<String> out = new LinkedHashSet<>();
@@ -163,7 +151,6 @@ public class StoryLinksHook {
         }
     }
 
-    /** The real target of an http(s) string; l.instagram.com redirects are unwrapped. */
     private static String unwrap(String s) {
         if (!s.startsWith("http://") && !s.startsWith("https://")) return null;
         String target = ExternalLinkPolicy.shimTarget(s);
@@ -174,8 +161,6 @@ public class StoryLinksHook {
         } catch (Throwable ignored) {}
         return ExternalLinkPolicy.stripFbclid(s);
     }
-
-    // ── UI ───────────────────────────────────────────────────────────────────
 
     private static String label(int count) {
         Context app = AndroidAppHelper.currentApplication();

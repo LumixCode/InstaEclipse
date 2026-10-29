@@ -3,51 +3,35 @@ package ps.reso.instaeclipse.mods.ads;
 import java.util.Locale;
 import java.util.Set;
 
-/** Pure (framework-free) tracking-param removal used by {@link TrackingLinkDisable}; unit-tested. */
 public final class TrackingParamStripper {
 
     private TrackingParamStripper() {}
 
-    // Instagram links inside arbitrary share text ("Check this out https://www.instagram.com/p/…").
-    // Not inside another domain (notinstagram.com), and closing punctuation after it stays text.
     private static final String URL_CHARS = "A-Za-z0-9\\-._~:/?#\\[\\]@!$&'()*+,;=%";
     private static final java.util.regex.Pattern IG_URL = java.util.regex.Pattern.compile(
             "(?i)(?<![a-z0-9.@-])(?:https?://)?(?:[a-z0-9-]+\\.)*instagram\\.com/[" + URL_CHARS + "]*?"
                     + "(?=[).,;:!?'\"\\]]*(?:[^" + URL_CHARS + "]|$))");
 
-    /** Hosts whose links are the ones Instagram shares (posts, reels, stories, profiles). */
     private static final Set<String> SHARE_HOSTS = Set.of("instagram.com", "www.instagram.com", "m.instagram.com");
 
-    /**
-     * First path segments of app areas whose query can carry real input (login redirects, OAuth,
-     * the API). Links there only lose the known tracking keys; every other path is a share link.
-     */
     private static final Set<String> APP_PATHS = Set.of("accounts", "oauth", "challenge", "api", "graphql",
             "ajax", "web", "direct", "emails", "session", "privacy", "legal", "about", "developer", "static",
-            "_n", "_u"); // in-app deep links (e.g. _n/reels_audio_page?audio_id=)
+            "_n", "_u");
 
-    /** Query keys that change what a share link opens; every other key on one is share tracking. */
     private static final Set<String> FUNCTIONAL = Set.of(
-            "img_index",                                        // carousel slide (#252)
-            "comment_id", "open_comments", "open_like_count",   // Instagram's own comment/likes links
-            "q",                                                // explore/search/keyword term
-            "hl");                                              // interface language
+            "img_index",
+            "comment_id", "open_comments", "open_like_count",
+            "q",
+            "hl");
 
-    /** True for query keys that only track the sharer/session (never change what the link opens). */
     private static boolean isTrackingParam(String key) {
         String k = key.toLowerCase(Locale.ROOT);
         return k.equals("igshid") || k.equals("igsh") || k.equals("igsi") || k.equals("ig_rid") || k.equals("ig_mid")
                 || k.equals("stkn") || k.startsWith("utm_") || k.equals("story_media_id")
                 || k.equals("saved_by") || k.equals("saved-by")
-                || k.equals("psln"); // per-share id on "Copy link" (IG 452)
+                || k.equals("psln");
     }
 
-    /**
-     * Returns the text with tracking params removed from every Instagram link in it, or null when
-     * nothing changed. Instagram's server keeps renaming the per-share id (igshid, igsh, igsi, psln,
-     * mdkz, …), so share links keep only {@link #FUNCTIONAL} keys; other links drop
-     * the known tracking keys. Kept params stay in order, and any #fragment is preserved.
-     */
     public static String strip(String text) {
         if (text == null || !text.toLowerCase(Locale.ROOT).contains("instagram.com/")) return null;
         java.util.regex.Matcher m = IG_URL.matcher(text);
@@ -92,7 +76,6 @@ public final class TrackingParamStripper {
         return kept.length() > 0 ? base + "?" + kept + fragment : base + fragment;
     }
 
-    /** A link on Instagram's main host outside {@link #APP_PATHS} (never the l.instagram.com link shim). */
     private static boolean isShareLink(String base) {
         String lower = base.toLowerCase(Locale.ROOT);
         int scheme = lower.indexOf("://");

@@ -56,8 +56,6 @@ public final class ExactTimestampHook {
             if (methods.isEmpty()) throw new IllegalStateException("Absolute date formatter not found");
             installContentScopes(classLoader, methods);
             for (Method method : methods) installFormatter(method);
-            // The content formatters are already live, so neither optional surface may mark the
-            // whole feature broken or stop the other from installing.
             try {
                 installDmTime(classLoader);
             } catch (Throwable error) {
@@ -118,8 +116,6 @@ public final class ExactTimestampHook {
 
             @Override protected void afterHookedMethod(MethodHookParam param) {
                 HookFrames.Frame frame = frames.exit();
-                // Xposed invokes the after hook even when the host binder throws. Do not test
-                // the setting here: it may have changed while a nested bind was in progress.
                 if (Boolean.TRUE.equals(frame.get(marker))) scope.exit();
             }
         });
@@ -144,8 +140,6 @@ public final class ExactTimestampHook {
             formatter = target.getMethodInstance(loader);
             scopes = new ArrayList<>();
             for (MethodData caller : DexKitQueryCache.callersUncached(target)) {
-                // The message metadata builder and the native call-message timestamp helper
-                // are the two reference callers. Inbox digests use different helpers.
                 if (caller.getUsingStrings().contains(DM_METADATA_ANCHOR)
                         || signature(caller, "com.instagram.common.session.UserSession", "long", "boolean", "boolean")) {
                     scopes.add(caller.getMethodInstance(loader));
@@ -165,8 +159,6 @@ public final class ExactTimestampHook {
                     Locale locale = context.getResources().getConfiguration().getLocales().get(0);
                     String pattern = ExactTimestampFormatter.timePattern(locale, DateFormat.is24HourFormat(context),
                             DateFormat::getBestDateTimePattern);
-                    // Direct messages carry microseconds; the native helper divides by 1000
-                    // before constructing Date. Keep this time-only swipe label compact.
                     String exact = ExactTimestampFormatter.formatMicros(((Number) param.args[2]).longValue(),
                             locale, TimeZone.getDefault(), pattern);
                     if (exact != null) param.setResult(exact);
@@ -182,8 +174,6 @@ public final class ExactTimestampHook {
                 ? DexKitCache.loadMethods(COMPOSE_STORY_CACHE, loader) : null;
         if (methods == null || methods.size() != 2) {
             if (knownAbsent(COMPOSE_STORY_CACHE)) throw new IllegalStateException("Compose story timestamp entry missing");
-            // Compose source markers carry a line number that moves between versions (446
-            // Timestamp.kt:12, 451 :13), so match the file prefix; the shape check stays exact.
             List<Found> entries = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .returnType("void").addUsingString(
                             "instagram.features.stories.mvvm.feature.header.compose.Timestamp (Timestamp.kt:",
@@ -236,8 +226,6 @@ public final class ExactTimestampHook {
             relativeCore = onlyStringDelegate(storyFormatter, storyFormatter.getClassName());
             dateCore = onlyStringDelegate(relativeCore, storyFormatter.getClassName());
         } catch (IllegalStateException entryChanged) {
-            // ReelItem's single (Context)->String entry is this path's one point of failure. The
-            // date utility itself is still unique by its format strings, so fall back to that.
             ModuleLog.detail("(ExactTimestamps) Story entry unusable (" + entryChanged.getMessage()
                     + "), using the date utility anchor");
             storyFormatter = null;
@@ -247,10 +235,6 @@ public final class ExactTimestampHook {
         }
         String owner = dateCore.getClassName();
 
-        // The same wrappers feed post captions/footers, ReelItem and both Compose and legacy
-        // comment headers. Resolve from their call graph, never from translated text or an
-        // obfuscated name. The utility also contains elapsed-time and future-countdown helpers;
-        // those have different signatures and must retain their original behavior.
         Map<String, Method> methods = new LinkedHashMap<>();
         List<Found> candidates = DexKitQueryCache.methods(FindMethod.create()
                 .matcher(MethodMatcher.create().declaredClass(owner).returnType("java.lang.String")));
@@ -265,8 +249,6 @@ public final class ExactTimestampHook {
                 methods.put(candidate.getDescriptor(), candidate.getMethodInstance(classLoader));
             }
         }
-        // Older/archived stories use the same utility's calendar formatter instead of the
-        // relative wrappers. Its first double is the item date; the second is the current date.
         for (MethodData call : dateCore.getInvokes()) {
             if (call.getClassName().equals(owner) && signature(call, "java.lang.String", "double", "double")) {
                 methods.put(call.getDescriptor(), call.getMethodInstance(classLoader));
@@ -295,12 +277,6 @@ public final class ExactTimestampHook {
         return storyFormatter;
     }
 
-    /**
-     * Upstream's anchor: the date utility is the only class using "%d:%02d:%02d", "MMMM d" and
-     * "MMM d" (436-451). Returns {relative "ago" core, date core}. The relative core is the one
-     * taking the utility itself and a single time, so countdown helpers (no utility parameter) and
-     * the date core (two times) are never picked.
-     */
     private static MethodData[] anchoredCores(ClassLoader loader) throws Exception {
         Method core = null;
         for (FoundClass utility : DexKitQueryCache.classes(FindClass.create().matcher(ClassMatcher.create()
@@ -328,7 +304,6 @@ public final class ExactTimestampHook {
         return new MethodData[]{relativeCore, dateCore};
     }
 
-    /** static String m(Resources, Enum, ownClass, Integer, double, double, boolean, boolean, boolean, boolean) */
     private static Method findFormatter(Class<?> c) {
         for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(c)) {
             Class<?>[] p = m.getParameterTypes();
@@ -379,7 +354,6 @@ public final class ExactTimestampHook {
                     Resources resources = param.args[0] instanceof Resources supplied
                             ? supplied : context.getResources();
                     Locale locale = resources.getConfiguration().getLocales().get(0);
-                    // The "Date format" setting, else the device's own pattern with seconds.
                     String pattern = ExactTimestampFormatter.pattern(FeatureFlags.exactTimestampFormat, locale,
                             DateFormat.is24HourFormat(context), DateFormat::getBestDateTimePattern);
                     String exact = ExactTimestampFormatter.formatSeconds(

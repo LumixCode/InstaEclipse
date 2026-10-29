@@ -21,15 +21,8 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Colors that never pass through Resources/Context/TypedArray.getColor: text colors and tints
- * (ColorStateList), plain color backgrounds (ColorDrawable / GradientDrawable) and icon tints
- * (color filters). Hooked where those colors are created, not where they are drawn — drawing
- * (Paint.setColor) runs every frame and is too hot for a hook on Android 13's JIT.
- */
 final class IgThemeColorSourceHooks {
 
-    // Source list -> its themed copy, and every themed copy we produced (so it is never re-themed).
     private static final Map<ColorStateList, ColorStateList> CSL_CACHE =
             Collections.synchronizedMap(new WeakHashMap<>());
     private static final Map<ColorStateList, WeakReference<ColorStateList>> THEMED =
@@ -60,7 +53,6 @@ final class IgThemeColorSourceHooks {
         return IgThemeEngine.isActive() && !IgColorRemapEngine.isBypassing() && IgColorRemapEngine.isReady();
     }
 
-    /** The themed copy of {@code in} (same states, every color remapped), cached per source list. */
     static ColorStateList theme(ColorStateList in) {
         if (in == null || !active()) return in;
         int gen = IgColorRemapEngine.generation();
@@ -136,11 +128,6 @@ final class IgThemeColorSourceHooks {
         return hook(() -> XposedHelpers.findAndHookConstructor(cls, args), cls, "<init>");
     }
 
-    /**
-     * Color backgrounds reused from Android's drawable cache are rebuilt from a shared ColorState via
-     * a private constructor, so a color cached before the theme was ready would stay stock forever.
-     * Recolor those copies (mutated first, so the shared cached state itself is left alone).
-     */
     private static int hookCachedColorDrawables() {
         try {
             ps.reso.instaeclipse.xposedcompat.XposedBridge.hookAllConstructors(ColorDrawable.class, new XC_MethodHook() {
@@ -163,9 +150,6 @@ final class IgThemeColorSourceHooks {
         }
     }
 
-    // Compose screens (e.g. the DM inbox) draw straight onto an android.graphics.Paint and never
-    // touch resources, so their colors are themed at Paint.setColor — but only while a Compose view
-    // is recording its drawing (UI thread), leaving ordinary views and the module's own UI alone.
     private static int composeDrawDepth;
     private static final Thread MAIN_THREAD = Looper.getMainLooper().getThread();
 
@@ -210,12 +194,6 @@ final class IgThemeColorSourceHooks {
         }
     }
 
-    /**
-     * The constructor/setColor hooks miss call sites where ART inlined those tiny methods into
-     * precompiled framework code (e.g. a header's plain white background). draw() is a virtual
-     * call every background goes through, so it is the dependable place: recolor once, after which
-     * the themed color maps to itself and each later frame costs a single table lookup.
-     */
     private static int hookColorDrawableDraw() {
         try {
             XposedHelpers.findAndHookMethod(ColorDrawable.class, "draw", android.graphics.Canvas.class, new XC_MethodHook() {

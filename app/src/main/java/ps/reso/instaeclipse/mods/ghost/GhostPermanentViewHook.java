@@ -17,24 +17,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * Makes view-once and view-twice (replayable) media behave like permanent media.
- *
- * Instagram parses the server's JSON "view_mode" field in unsafeParseFromJson
- * (class X/1Ui in build 423) and stores it as a plain String on the media model.
- *
- * Possible values:
- *   "once"       — view once (disappears after one open)
- *   "replayable" — view twice (one extra replay allowed)
- *   "permanent"  — normal media, always accessible
- *
- * We hook the parser method after it runs and replace any non-permanent
- * view_mode value with "permanent" so Instagram renders the media normally.
- *
- * DexKit fingerprint: method using both "archived_media_timestamp" AND "view_mode"
- * with exactly 1 parameter (the JSON reader). This distinguishes it from the
- * companion serializer method in the same class which has 2 parameters.
- */
 public class GhostPermanentViewHook {
 
     public static final String PERMANENT = "permanent";
@@ -64,8 +46,6 @@ public class GhostPermanentViewHook {
                 return;
             }
 
-            // Pick the method whose return type is not void (the parser returns the model object;
-            // the serializer returns void). Fall back to the first candidate if none match.
             Method target = null;
             for (Found md : methods) {
                 try {
@@ -77,7 +57,6 @@ public class GhostPermanentViewHook {
                 } catch (Throwable ignored) {}
             }
             if (target == null) {
-                // Fallback: just use the first found
                 try {
                     target = methods.get(0).getMethodInstance(classLoader);
                 } catch (Throwable t) {

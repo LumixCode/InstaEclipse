@@ -45,39 +45,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
-/**
- * The blue heart of a like {@link LikeUndoHook} holds: blue from the hold until the like is sent,
- * when Instagram's own red shows, or taken back.
- *
- * <p>It is recolored in Instagram's own heart drawable, not on screen. The feed and the reels like
- * buttons (X.07Ab and X.099d on 451) draw the liked heart red in one of three ways, which
- * Instagram's server picks per account:
- * <ul>
- * <li>animated: a heart drawable (X.07Ay, in component X.019P) whose filled layer fades in over
- *     the outline and carries a red colour filter;</li>
- * <li>reels, not animated: a StateListDrawable whose selected state is the filled heart with the
- *     red filter (in image component X.06gJ);</li>
- * <li>feed, not animated: an icon component (X.07Ac) that wraps ufi_heart_icon and tints it red
- *     while the button is selected (one drawable for both looks, so it is recolored only while
- *     its like is held, after it is made its own: Instagram shares it unless it mutates it).</li>
- * </ul>
- * While a like is held, that red layer gets a blue colour filter, which also wins over a tint;
- * putting Instagram's filter back brings the red. Instagram keeps these drawables across
- * re-renders, so no re-render is needed either way.
- *
- * <p>The feed's Compose like row (Ufi, X.057g on 451) instead gives its liked heart (drawable
- * instagram_heart_filled_24) a Compose colour in an icon spec (X.064E). While a like is held that
- * colour is blue, and the composition reads a Compose state of ours; writing it when the like is
- * sent or taken back recomposes the row with Instagram's red.
- *
- * <p>Found from the reels button's "clips_ufi_like_button_component" tag: the animated heart is
- * the component it builds with a Drawable subclass and a size, every render that builds that
- * component is a like button, and the components those renders build with an ImageView.ScaleType
- * are the other two. A render's post is the one field path from it to its Media, matched by id.
- *
- * <p>A story's heart ({@link StoryLikeUndoHook}) is the image of the story footer's like button,
- * an ImageView; its bind hands it to {@link #storyHeart}, which paints it the same way.
- */
 final class LikeHeartTint {
     private static final String TAG = "(InstaEclipse | LikeUndo): ";
     private static final String CACHE_KEY = "LikeHeartRenders";
@@ -88,55 +55,37 @@ final class LikeHeartTint {
     private static final String COMPOSE_ROW_KEY = "LikeHeartComposeRow_v1";
     private static final String COMPOSE_SPEC_KEY = "LikeHeartComposeSpec_v1";
     private static final String COMPOSE_COLOR_KEY = "LikeHeartComposeColor_v1";
-    /** Instagram's own blue, for a like that is not sent yet. */
     static final int LIKE_BLUE = 0xFF0095F6;
-    /** Instagram paints its heart with SRC_ATOP; the blue does the same. */
     private static final ColorFilter BLUE = new PorterDuffColorFilter(LIKE_BLUE, PorterDuff.Mode.SRC_ATOP);
-    /** A story like button's image tint while its like is held ({@link #storyHeart}). */
     private static final ColorStateList BLUE_TINT = ColorStateList.valueOf(LIKE_BLUE);
-    /** A touch older than this when the like comes did not cause it. */
     private static final long TOUCH_MAX_AGE_MS = 1500;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final int[] SELECTED = {android.R.attr.state_selected};
     private static final int ANIMATED = 0, STATE_LIST = 1, ICON = 2, COMPOSE = 3;
     private static final String[] KINDS = {"animated", "state list", "icon", "compose"};
 
-    /** The id of the post whose like button this thread renders right now. */
     private static final ThreadLocal<String> RENDERING = new ThreadLocal<>();
-    /** Every heart Instagram built (the drawable it mounts), its red layer and post. Guarded by itself. */
     private static final Map<Drawable, Heart> hearts = new WeakHashMap<>();
-    /** Icon components built for a liked post, until they make their drawable. Guarded by itself. */
     private static final Map<Object, String> icons = new WeakHashMap<>();
-    /** The posts whose heart is blue now, by id, and their tint. Guarded by {@link #hearts}. */
     private static final Map<String, LikeHeartTint> blue = new HashMap<>();
-    /** Instagram's own filter of each red layer while it is blue (main thread). */
     private static final Map<Drawable, ColorFilter> original = new WeakHashMap<>();
-    /** Instagram's own filter last seen per kind of heart (the class of the drawable it mounts), for a
-     *  red layer that came blue (main thread). */
     private static final Map<Class<?>, ColorFilter> ownFilters = new HashMap<>();
-    /** How long after its like's window a heart may still be blue before the safety net resets it. */
     static final long EXPIRE_GRACE_MS = 2000;
-    /** Hearts built per way of drawing them, for the log. */
     private static final AtomicIntegerArray seen = new AtomicIntegerArray(KINDS.length);
     private static Field filled;
     private static Method mediaId;
 
-    /** The id of the post whose Compose like row this thread composes right now. */
     private static final ThreadLocal<String> COMPOSING = new ThreadLocal<>();
-    /** Compose states our compositions read, by post id. Guarded by {@link #hearts}. */
     private static final Map<String, Object> composeStates = new HashMap<>();
     private static Object blueColor;
     private static int heartFilled;
     private static Parcelable.Creator<?> stateCreator;
     private static Method stateGet, stateSet;
 
-    // The last touch in an Instagram activity, recorded while the undo window or Ask before
-    // liking is on: a like's dialog opens over the screen it was made in.
     private static volatile long touchTime;
     private static volatile WeakReference<Activity> touchActivity = new WeakReference<>(null);
     private static boolean tracking;
 
-    /** A heart's red layer and the post it was built for (the drawable it mounts is the key). */
     private static final class Heart {
         final Drawable red;
         volatile String id;
@@ -148,9 +97,7 @@ final class LikeHeartTint {
     }
 
     private final String id;
-    /** The hearts this tint turned blue: the drawable Instagram mounts, and its red layer. */
     private final Map<Drawable, Drawable> painted = new IdentityHashMap<>();
-    /** The story like buttons this tint turned blue, and the image tint each had (main thread). */
     private final Map<ImageView, ColorStateList> buttons = new IdentityHashMap<>();
     private boolean done;
 
@@ -158,7 +105,6 @@ final class LikeHeartTint {
         this.id = id;
     }
 
-    /** Where a like came from: the activity of the touch just before it. */
     static final class Origin {
         final boolean touched;
         final WeakReference<Activity> activity;
@@ -168,23 +114,17 @@ final class LikeHeartTint {
             this.activity = new WeakReference<>(activity);
         }
 
-        /** Now, on the thread Instagram likes on. */
         static Origin capture() {
             long age = SystemClock.uptimeMillis() - touchTime;
             return new Origin(touchTime != 0 && age >= 0 && age <= TOUCH_MAX_AGE_MS, touchActivity.get());
         }
 
-        /**
-         * The activity the like's touch landed in while it is still there, else {@code fallback}.
-         * Posts and reels opened from a chat run in their own activity above the main one.
-         */
         Activity activityOr(Activity fallback) {
             Activity touchedIn = touched ? activity.get() : null;
             return touchedIn != null && !touchedIn.isFinishing() && !touchedIn.isDestroyed() ? touchedIn : fallback;
         }
     }
 
-    /** Records touches from now on (the Activity method every Instagram screen passes them to). */
     static synchronized void trackTouches() {
         if (tracking) return;
         tracking = true;
@@ -207,7 +147,6 @@ final class LikeHeartTint {
         }
     }
 
-    /** Hooks the like buttons' renders and the components they draw the heart with. */
     static void install() {
         try {
             ClassLoader loader = Module.hostClassLoader;
@@ -303,7 +242,6 @@ final class LikeHeartTint {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
                     String id = RENDERING.get();
-                    // One drawable for both looks: the view's selected state picks the red.
                     if (id == null) return;
                     synchronized (icons) {
                         icons.put(param.thisObject, id);
@@ -323,7 +261,7 @@ final class LikeHeartTint {
                         if (id == null) return;
                         Drawable heart = drawableIn(param.getResult());
                         if (heart == null) return;
-                        Drawable inner = drawableIn(heart); // what the icon's wrapper draws
+                        Drawable inner = drawableIn(heart);
                         built(id, heart, inner != null ? inner : heart, ICON);
                     }
                 });
@@ -348,7 +286,6 @@ final class LikeHeartTint {
         return layer;
     }
 
-    /** Hooks the feed's Compose like row: the composable, and the icon spec it builds the heart with. */
     private static void installCompose() {
         try {
             ClassLoader loader = Module.hostClassLoader;
@@ -403,7 +340,6 @@ final class LikeHeartTint {
                 ModuleLog.detail(TAG + "Compose like row not found");
                 return;
             }
-            // The row's UI state holds its Media.
             int stateAt = -1;
             Field media = null;
             Class<?>[] params = row.getParameterTypes();
@@ -424,7 +360,7 @@ final class LikeHeartTint {
             }
             Constructor<?> color = spec.getParameterTypes()[colorAt].getDeclaredConstructor(long.class);
             color.setAccessible(true);
-            blueColor = color.newInstance(((long) LIKE_BLUE) << 32); // an sRGB Compose Color
+            blueColor = color.newInstance(((long) LIKE_BLUE) << 32);
             Class<?> state = Class.forName("androidx.compose.runtime.ParcelableSnapshotMutableState", false, loader);
             stateCreator = (Parcelable.Creator<?>) state.getField("CREATOR").get(null);
             stateGet = state.getMethod("getValue");
@@ -468,7 +404,6 @@ final class LikeHeartTint {
                         }
                     }
                     param.args[colorArg] = blueColor;
-                    // Read here, inside the row's own composition: writing it recomposes the row.
                     try {
                         stateGet.invoke(read);
                     } catch (Throwable t) {
@@ -493,7 +428,6 @@ final class LikeHeartTint {
         }
     }
 
-    /** Whether an icon spec's arguments draw the liked (filled) heart. */
     private static boolean filledHeart(Object[] args) {
         if (heartFilled == 0) {
             heartFilled = ps.reso.instaeclipse.utils.ui.ResIds.drawable(
@@ -504,7 +438,6 @@ final class LikeHeartTint {
         return false;
     }
 
-    /** A Compose state of our own, made the way Android restores one (structural equality). */
     private static Object newState() {
         Parcel p = Parcel.obtain();
         try {
@@ -517,7 +450,6 @@ final class LikeHeartTint {
         }
     }
 
-    /** The like buttons' renders: every caller of the animated heart the reels button builds. */
     private static List<Method> likeRenders(ClassLoader loader) throws NoSuchMethodException {
         List<Method> renders = new ArrayList<>();
         for (Found reels : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
@@ -534,7 +466,6 @@ final class LikeHeartTint {
         return renders;
     }
 
-    /** The animated heart component's constructor: (modifier, a Drawable subclass, size). */
     private static boolean animatedHeart(Constructor<?> c) {
         Class<?>[] p = c.getParameterTypes();
         return p.length == 3 && p[2] == long.class && p[1] != Drawable.class && Drawable.class.isAssignableFrom(p[1]);
@@ -557,10 +488,6 @@ final class LikeHeartTint {
         return names.toString();
     }
 
-    /**
-     * The animated heart's filled layer: of its two Drawable fields, the one its size does not come
-     * from (the outline sets the size and is always drawn; the filled heart fades in over it).
-     */
     private static Field filledLayer(Class<?> heart) throws Throwable {
         List<Field> drawables = new ArrayList<>();
         for (Field f : heart.getDeclaredFields()) {
@@ -581,10 +508,6 @@ final class LikeHeartTint {
         return layer;
     }
 
-    /**
-     * The layer of {@code heart} that Instagram paints red: the animated heart's filled layer, or a
-     * state list's selected state; null if none.
-     */
     private static Drawable redLayer(Drawable heart) {
         try {
             if (filled != null && filled.getDeclaringClass().isInstance(heart)) return (Drawable) filled.get(heart);
@@ -597,7 +520,6 @@ final class LikeHeartTint {
         return null;
     }
 
-    /** The first Drawable an object of Instagram's holds in a field (a component's or a wrapper's). */
     private static Drawable drawableIn(Object owner) {
         for (Class<?> c = owner == null ? null : owner.getClass(); c != null && c.getName().startsWith("X."); c = c.getSuperclass()) {
             for (Field f : c.getDeclaredFields()) {
@@ -611,7 +533,6 @@ final class LikeHeartTint {
         return null;
     }
 
-    /** The fields from a render's component to its Media: the shortest path through Instagram's own types. */
     static Field[] mediaPath(Class<?> render) {
         List<Class<?>> types = new ArrayList<>(List.of(render));
         List<List<Field>> paths = new ArrayList<>(List.of(List.of()));
@@ -633,7 +554,7 @@ final class LikeHeartTint {
                     }
                 }
             }
-            if (found.size() > 1) return null; // two posts: whose heart it is can't be told
+            if (found.size() > 1) return null;
             if (found.size() == 1) {
                 for (Field f : found.get(0)) f.setAccessible(true);
                 return found.get(0).toArray(new Field[0]);
@@ -664,7 +585,6 @@ final class LikeHeartTint {
         }
     }
 
-    /** Instagram built (or rebuilt) {@code heart} for post {@code id}'s like button, on any thread. */
     private static void built(String id, Drawable heart, Drawable red, int kind) {
         if (red == null) return;
         if (seen.getAndIncrement(kind) == 0) {
@@ -675,11 +595,10 @@ final class LikeHeartTint {
             Heart known = hearts.get(heart);
             if (known != null && known.red == red) known.id = id;
             else hearts.put(heart, new Heart(red, id));
-            if (blue.isEmpty()) return; // nothing is blue, so nothing to paint or put back
+            if (blue.isEmpty()) return;
             tint = blue.get(id);
         }
         MAIN.post(() -> {
-            // A heart recycled for another post must not stay blue.
             for (LikeHeartTint other : blueTints()) {
                 if (!other.id.equals(id)) other.unpaint(heart);
             }
@@ -693,12 +612,6 @@ final class LikeHeartTint {
         }
     }
 
-    /**
-     * Turns {@code media}'s heart blue until {@link #clear()}; null when the post has no id. Called
-     * as soon as the like is held, on any thread, so a heart Instagram redraws in this frame is
-     * already blue. Hearts it builds for the post meanwhile turn blue too; a tint already on it is
-     * taken over.
-     */
     static LikeHeartTint show(Object media) {
         String id = idOf(media);
         if (id == null) {
@@ -708,7 +621,6 @@ final class LikeHeartTint {
         return showById(id);
     }
 
-    /** {@link #show(Object)} for a media known by its id (a story's like). */
     static LikeHeartTint showById(String id) {
         LikeHeartTint tint = new LikeHeartTint(id);
         Map<Drawable, Drawable> found = new IdentityHashMap<>();
@@ -732,21 +644,11 @@ final class LikeHeartTint {
         return tint;
     }
 
-    /**
-     * A story's like button was bound to story {@code id} (main thread). Its heart is the image of
-     * an ImageView (ufi_heart_icon, red through the button's image tint while it is selected), so
-     * it is blue while that story's like is held and the button shows it liked, and never blue for
-     * another story the button now shows.
-     *
-     * <p>The blue is the button's image tint, not a color filter: the heart is a selector, and a
-     * selector that was given a color filter once stops passing its tint to the state it shows next,
-     * so after the like went out the liked heart drew untinted (black).
-     */
     static void storyHeart(String id, ImageView button) {
         LikeHeartTint tint;
         List<LikeHeartTint> tints;
         synchronized (hearts) {
-            if (blue.isEmpty()) return; // nothing is blue, so nothing to paint or put back
+            if (blue.isEmpty()) return;
             tint = id == null ? null : blue.get(id);
             tints = new ArrayList<>(blue.values());
         }
@@ -755,25 +657,21 @@ final class LikeHeartTint {
             if (other != tint || !liked) other.unpaintButton(button);
         }
         if (tint == null || !liked || tint.done || button.getImageTintList() == BLUE_TINT) return;
-        // A bind that set Instagram's tint again replaces the one to put back.
         tint.buttons.put(button, button.getImageTintList());
         button.setImageTintList(BLUE_TINT);
         ModuleLog.probe(TAG + "heart blue (story)");
     }
 
-    /** Instagram's tint back on a story like button this tint turned blue (main thread). */
     private void unpaintButton(ImageView button) {
         if (!buttons.containsKey(button)) return;
         ColorStateList own = buttons.remove(button);
         try {
-            // Unless a bind already set Instagram's own again.
             if (button.getImageTintList() == BLUE_TINT) button.setImageTintList(own);
         } catch (Throwable t) {
             ModuleLog.warn(TAG + "Could not put the story heart's colour back: " + t);
         }
     }
 
-    /** Instagram's own heart again (main thread; once); a Compose row recomposes with it. */
     void clear() {
         if (done) return;
         done = true;
@@ -798,11 +696,6 @@ final class LikeHeartTint {
         for (ImageView button : new ArrayList<>(buttons.keySet())) unpaintButton(button);
     }
 
-    /**
-     * A newer like of the same post takes over this tint's blue hearts (main thread). If that one is
-     * already over (taken back before its own paint ran here), they get Instagram's colour back
-     * instead: a finished tint never puts anything back.
-     */
     private void handOver(LikeHeartTint next) {
         if (done) return;
         done = true;
@@ -816,7 +709,6 @@ final class LikeHeartTint {
         buttons.clear();
     }
 
-    /** Safety net (main thread): a heart still blue this long after its like goes back to red. */
     private void expire() {
         if (done) return;
         boolean compose;
@@ -829,11 +721,6 @@ final class LikeHeartTint {
         clear();
     }
 
-    /**
-     * Instagram's colour back on every heart of post {@code id} that is still drawn blue although no
-     * like of it is held (main thread). Catches what the tints don't know: a red layer Instagram or
-     * Android rebuilt from a blue one's state comes blue too.
-     */
     private static void sweep(String id) {
         Map<Drawable, Drawable> mine = new IdentityHashMap<>();
         synchronized (hearts) {
@@ -859,7 +746,6 @@ final class LikeHeartTint {
         if (fixed > 0) ModuleLog.warn(TAG + "Put Instagram's colour back on " + fixed + " heart layer(s) left blue");
     }
 
-    /** The layer Instagram paints red in {@code heart} now (it may have rebuilt it since it was painted). */
     private static Drawable currentRed(Drawable heart) {
         Drawable red = redLayer(heart);
         if (red == null) red = drawableIn(heart);
@@ -870,12 +756,9 @@ final class LikeHeartTint {
         if (done || painted.containsKey(heart)) return;
         painted.put(heart, red);
         try {
-            // Its own state first: a drawable from a resource shares its filter with every copy.
             red.mutate();
             if (!original.containsKey(red)) {
                 ColorFilter own = red.getColorFilter();
-                // A layer made from a blue one's state comes blue: never keep our blue as Instagram's
-                // colour, or putting it back would leave the heart blue for good.
                 if (own == BLUE) own = ownFilters.get(heart.getClass());
                 else ownFilters.put(heart.getClass(), own);
                 original.put(red, own);

@@ -21,19 +21,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Story tray (#283): a smaller tray, so more stories fit in a row, and a custom color for the ring
- * around unseen stories.
- *
- * <p>Size: the tray (com.instagram.android:id/reels_tray_container) holds the horizontal list of
- * stories. That list is scaled from its top left and widened by the same factor, so it still spans
- * the screen and shows more items; the container's height shrinks to match, so the feed moves up.
- * Android maps touches through the scale, so taps land on the right story.
- *
- * <p>Ring color: every story ring gradient is built by GradientSpinner's static
- * (GradientSpinner, float[], float[], float[], int[] colors, int, int) -> LinearGradient; the colors
- * are swapped there. Close Friends' green ring is left alone, so it keeps its meaning.
- */
 public final class StoryTrayHook {
 
     private static final String SPINNER = "com.instagram.ui.widget.gradientspinner.GradientSpinner";
@@ -113,9 +100,6 @@ public final class StoryTrayHook {
         }
     }
 
-    // ---- ring color ----
-
-    /** "#RRGGBB", or 2 to 4 of them for a gradient; null for Instagram's own colors or invalid input. */
     public static int[] parseColors(String value) {
         if (value == null || value.trim().isEmpty()) return null;
         String[] parts = value.split(",");
@@ -145,7 +129,6 @@ public final class StoryTrayHook {
         return out;
     }
 
-    /** {@code count} colors running through the custom colors in order. */
     static int[] spread(int[] custom, int count) {
         int[] out = new int[count];
         for (int i = 0; i < count; i++) {
@@ -164,7 +147,6 @@ public final class StoryTrayHook {
         return 0xFF000000 | (r << 16) | (g << 8) | bl;
     }
 
-    /** Close Friends' ring: every color a clear green. */
     private static boolean isCloseFriends(int[] colors) {
         float[] hsv = new float[3];
         for (int c : colors) {
@@ -174,9 +156,6 @@ public final class StoryTrayHook {
         return true;
     }
 
-    // ---- tray size ----
-
-    /** Called on every main / modal resume (UIHookManager); keeps the tray sized while it lays out. */
     public static void watchActivity(Activity a) {
         if (a == null) return;
         try {
@@ -206,10 +185,6 @@ public final class StoryTrayHook {
         }
     }
 
-    /**
-     * Layout fires many times per second on the feed, so the window is only walked while a size is
-     * set, or to put back a tray scaled before the size went back to 100 (no tree walk to find out).
-     */
     private static boolean needsWalk() {
         return FeatureFlags.storyTrayScale < 100 || !scaled.isEmpty();
     }
@@ -225,7 +200,6 @@ public final class StoryTrayHook {
         if (v instanceof ViewGroup g) for (int i = 0; i < g.getChildCount(); i++) collect(g.getChildAt(i), out);
     }
 
-    /** Scales the tray's list to {@code percent} of its size; 100 puts Instagram's layout back. */
     static void scale(ViewGroup container, int percent) {
         if (container.getChildCount() == 0) return;
         View list = container.getChildAt(0);

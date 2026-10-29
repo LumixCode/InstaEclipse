@@ -6,12 +6,6 @@ import android.util.SparseIntArray;
 
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Two-tier color substitution: an exact/RGB lookup table built from every color the palette
- * actually touches, plus a luminance/hue "fuzzy" classifier for any color that slips through
- * (so arbitrary colors baked into Instagram's own drawables/bitmaps still land on a roughly
- * plausible slot instead of staying unthemed).
- */
 public final class IgColorRemapEngine {
 
     private static final ThreadLocal<Integer> BYPASS_DEPTH = ThreadLocal.withInitial(() -> 0);
@@ -22,8 +16,6 @@ public final class IgColorRemapEngine {
     private static volatile SparseIntArray exactTable;
     private static volatile SparseIntArray rgbTable;
     private static volatile FuzzyCache fuzzyCache;
-    // Light theme in light mode: resource id -> corrected color for name-mapped resources whose slot
-    // would flip ink/paper (see keepLightPolarity). Null when not in that mode.
     private static volatile SparseIntArray resPolarityFix;
 
     private static volatile int fuzzyBg, fuzzySurface, fuzzyPrimary, fuzzySecondary, fuzzyButton, fuzzyLink, fuzzyDestructive;
@@ -55,7 +47,6 @@ public final class IgColorRemapEngine {
         }
     }
 
-    // Bumped whenever the table is dropped, so caches derived from it (themed ColorStateLists) refresh.
     private static volatile int generation;
 
     public static int generation() {
@@ -71,7 +62,6 @@ public final class IgColorRemapEngine {
         resPolarityFix = null;
     }
 
-    /** Corrected color for a name-mapped resource when a light theme runs in light mode, else null. */
     public static Integer polarityFix(int resId) {
         SparseIntArray fix = resPolarityFix;
         if (fix == null) return null;
@@ -156,8 +146,6 @@ public final class IgColorRemapEngine {
         fuzzyDarkTheme = ((r * 0.299d) + (g * 0.587d) + (b * 0.114d)) / 255.0d < 0.2d;
     }
 
-    // Both need real saturation: a near-white with a faint blue tint (e.g. a light theme's own
-    // background) is a surface, not a link or a button.
     private static boolean isAccentBlue(int r, int g, int b) {
         return b > 160 && b > r + 30 && b > g + 10 && b - Math.min(r, g) > 60;
     }
@@ -178,19 +166,11 @@ public final class IgColorRemapEngine {
         Resources res = context.getResources();
         mapCanonical(exact, rgb, palette);
         mapFromSlots(exact, rgb, res, palette);
-        // The canonical table assumes Instagram's dark resources (black = background, white = text).
-        // When a light theme runs while Instagram is in light mode, IG draws its text and icons in
-        // black, so that assumption would paint them in the light background color and hide them.
         if (!fuzzyDarkTheme && !IgThemeEngine.nightCached()) {
             keepLightPolarity(exact, palette);
             keepLightPolarity(rgb, palette);
             resPolarityFix = buildResourcePolarityFix(res, palette);
         }
-        // The palette's own colors are already final: never remap them a second time. A color is
-        // routinely remapped twice (ColorDrawable ctor then setColor, valueOf on a getColor result,
-        // the draw hook), so a palette color that equals a stock one (Pure OLED's black, Carbon
-        // Fiber's #E0E0E0) must not keep that stock color's entry. Every result of remap has a
-        // palette RGB, so making those RGBs map to themselves at any alpha makes remap idempotent.
         SparseIntArray own = new SparseIntArray(IgThemePalette.SLOT_KEYS.length);
         for (String key : IgThemePalette.SLOT_KEYS) {
             int v = palette.get(key) & 0x00FFFFFF;
@@ -327,13 +307,6 @@ public final class IgColorRemapEngine {
         }
     }
 
-    /**
-     * Light theme in light mode: an original and its replacement must stay on the same side of the
-     * light/dark line — dark ink stays ink, light paper stays paper. Entries that flip (dark text
-     * mapped to a light surface, or a white surface mapped to dark text) are re-pointed at the
-     * matching slot of the light palette. Accent/link/destructive colors aren't gray, so they are
-     * left alone.
-     */
     private static void keepLightPolarity(SparseIntArray table, IgThemePalette palette) {
         for (int i = 0; i < table.size(); i++) {
             int to = table.valueAt(i);
@@ -343,7 +316,6 @@ public final class IgColorRemapEngine {
         }
     }
 
-    /** Same rule for colors assigned by resource name (IgThemeEngine.colorForResource). */
     private static SparseIntArray buildResourcePolarityFix(Resources res, IgThemePalette palette) {
         SparseIntArray out = new SparseIntArray(64);
         SparseIntArray colorResToSlot = IgThemeEngine.getColorResToSlot();
@@ -359,13 +331,9 @@ public final class IgColorRemapEngine {
         return out;
     }
 
-    /** {@code to}, or the light-palette slot on the same ink/paper side as the gray {@code from}. */
     private static int lightPolarity(int from, int to, IgThemePalette palette) {
         if (!isNeutral(from)) return to;
         double lf = lum(from), lt = lum(to);
-        // A light gray (a surface) never becomes a saturated accent: a button-named resource whose
-        // light-mode value is a gray surface would otherwise flood trays/bars with the accent color.
-        // Dark ink turning into a dark accent (themed icons) is intended and left alone.
         boolean flips = (isStrongColor(to) && lf > 0.6d)
                 || (lf < 0.6d && lt > 0.75d)
                 || (lf > 0.8d && lt < 0.4d);
@@ -374,7 +342,6 @@ public final class IgColorRemapEngine {
         return lf < 0.25d ? palette.primaryText : palette.secondaryText;
     }
 
-    /** A clearly colored (accent-like) value, as opposed to a gray or a lightly tinted gray. */
     private static boolean isStrongColor(int c) {
         int r = (c >> 16) & 0xFF, g = (c >> 8) & 0xFF, b = c & 0xFF;
         return Math.max(r, Math.max(g, b)) - Math.min(r, Math.min(g, b)) > 70;

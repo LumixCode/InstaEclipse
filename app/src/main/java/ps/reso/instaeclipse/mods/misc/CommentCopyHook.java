@@ -28,20 +28,6 @@ import ps.reso.instaeclipse.utils.text.CopyFeedback;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 import ps.reso.instaeclipse.utils.users.UserUtils;
 
-/**
- * Adds a Copy Comment row (comments with text) and a Download GIF / image row (comments with a
- * GIF or photo, see {@link CommentMediaDownload}) to Instagram's own comment long-press menu
- * (IG 446+).
- *
- * The menu is a PopupWindow whose rows the comment presenter builds from (icon, label, callback)
- * row models. Everything is found by shape from the stable effect-handler class, so obfuscated
- * renames don't break discovery:
- *   presenter: a handler field type with a (..., List, float) void method; it gets the comment
- *   popup:     the presenter's PopupWindow field, whose (List) void methods receive the rows
- *   row:       the list's element class and its (Drawable, Drawable, callback, Integer,
- *              String, String, boolean x5) constructor. Instagram calls the callback's void
- *              method on tap, then dismisses the menu when its boolean method returns true.
- */
 public class CommentCopyHook {
 
     private static final String EFFECT_HANDLER_CLASS =
@@ -131,7 +117,6 @@ public class CommentCopyHook {
         return menu;
     }
 
-    /** The comment model is the presenter argument that carries its author. */
     private static Object commentArg(Object[] args) {
         try {
             Class<?> user = Class.forName("com.instagram.user.model.User", false,
@@ -154,12 +139,12 @@ public class CommentCopyHook {
         @Override
         protected void beforeHookedMethod(MethodHookParam param) {
             MenuCall call = menuCall.get();
-            if (call == null || call.rowAdded || !FeatureFlags.enableCopyComment) return; // one menu, one row
+            if (call == null || call.rowAdded || !FeatureFlags.enableCopyComment) return;
             if (!(param.args[0] instanceof List<?> rows) || rows.isEmpty()) return;
             call.rowsSeen = true;
             try {
                 Constructor<?> row = rowConstructor(rows.get(0).getClass());
-                if (row == null) return; // not rows we can build
+                if (row == null) return;
                 call.rowAdded = true;
                 Object[] comment = CommentMediaDownload.comment(call.comment);
                 String text = commentText(call.comment, comment);
@@ -168,7 +153,6 @@ public class CommentCopyHook {
                 if (text == null && media == null) return;
                 Context ctx = ((PopupWindow) param.thisObject).getContentView().getContext();
                 List<Object> out = new ArrayList<>(rows);
-                // Before Instagram's tinted (destructive) rows such as Report, like its own order.
                 int at = firstTintedRow(rows);
                 if (text != null) {
                     out.add(at++, newRow(row, rows.get(0), ctx, "instagram_copy_pano_outline_24",
@@ -187,7 +171,6 @@ public class CommentCopyHook {
         }
     };
 
-    /** (Drawable, Drawable, callback, Integer, String, String, boolean...): 5 flags on 446, 6 on 451. */
     private static Constructor<?> rowConstructor(Class<?> rowClass) {
         Constructor<?> cached = rowConstructors.get(rowClass);
         if (cached != null) return cached;
@@ -205,10 +188,6 @@ public class CommentCopyHook {
         return null;
     }
 
-    /**
-     * The row callback must be exactly Instagram's tap + dismiss pair. Any other shape could have
-     * our proxy run the action without a tap, or return null where Instagram needs a value.
-     */
     private static boolean tapAndDismissOnly(Class<?> callback) {
         if (!callback.isInterface()) return false;
         Method[] methods = callback.getMethods();
@@ -222,7 +201,6 @@ public class CommentCopyHook {
         return tap && dismiss;
     }
 
-    /** Destructive rows carry a tint colour; ours goes just before the first one. */
     private static int firstTintedRow(List<?> rows) {
         for (int i = 0; i < rows.size(); i++) {
             Object row = rows.get(i);
@@ -250,14 +228,13 @@ public class CommentCopyHook {
                             default: return "CopyCommentRow";
                         }
                     }
-                    if (method.getReturnType() == boolean.class) return true; // dismiss after tap
+                    if (method.getReturnType() == boolean.class) return true;
                     if (method.getReturnType() == void.class) onTap.run();
                     return null;
                 });
         Drawable drawable = null;
         int id = ResIds.drawable(ctx, icon);
         if (id != 0) drawable = ctx.getDrawable(id);
-        // Same arguments Instagram passes for its own untinted rows; the flags follow below.
         Object[] args = new Object[row.getParameterCount()];
         args[1] = drawable;
         args[2] = callback;
@@ -268,10 +245,6 @@ public class CommentCopyHook {
         return created;
     }
 
-    /**
-     * Instagram passes the same flag constants for every row of this menu, but their number and
-     * order change between versions (5 on 446, 6 on 451): copy them from one of its own rows.
-     */
     private static void copyFlags(Object from, Object to) {
         for (Field f : to.getClass().getDeclaredFields()) {
             if (f.getType() != boolean.class || Modifier.isStatic(f.getModifiers())) continue;
@@ -282,24 +255,18 @@ public class CommentCopyHook {
         }
     }
 
-    /**
-     * The comment's text, or null when it has none (a GIF or photo on its own). Read through the
-     * comment interface's text accessor (02Rd.DhX on 451, which CaptionCopyHook resolves): the menu
-     * model also holds ids and other strings, so the length guess is only the fallback.
-     */
     private static String commentText(Object holder, Object[] comment) {
         Method accessor = CaptionCopyHook.textAccessor();
         if (comment != null && accessor != null && accessor.getDeclaringClass().isInstance(comment[1])) {
             try {
                 Object text = accessor.invoke(comment[1]);
                 return text instanceof String s && !s.trim().isEmpty() ? s.trim() : null;
-            } catch (Throwable ignored) {} // unfetched Pando field: fall back to the guess
+            } catch (Throwable ignored) {}
         }
         String text = holder == null ? null : findLongestTextField(holder);
         return text == null || text.trim().isEmpty() ? null : text.trim();
     }
 
-    /** The comment author's username, for the saved file's name. */
     private static String commenter(Object holder) {
         if (holder == null) return null;
         for (Class<?> c = holder.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
@@ -315,7 +282,6 @@ public class CommentCopyHook {
         return null;
     }
 
-    /** The comment text is the model's longest String that isn't an id or a URL. */
     private static String findLongestTextField(Object model) {
         String best = null;
         for (Field f : model.getClass().getDeclaredFields()) {
@@ -326,7 +292,6 @@ public class CommentCopyHook {
                 if (val == null || val.isEmpty()) continue;
                 if (val.matches("\\d+")) continue;
                 if (val.matches("\\d+_\\d+")) continue;
-                // A just-posted comment's temporary id is a UUID, longer than a short reply.
                 if (val.matches("[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}")) continue;
                 if (val.startsWith("http")) continue;
                 if (best == null || val.length() > best.length()) best = val;

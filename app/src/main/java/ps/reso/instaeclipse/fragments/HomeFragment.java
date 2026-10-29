@@ -196,12 +196,6 @@ public class HomeFragment extends Fragment implements TabFragment {
         handler.postDelayed(syncShortcuts, SYNC_DELAY_MS);
     };
 
-    /**
-     * Liveness ping: the module answers ACTION_REQUEST_PREFS with ACTION_SEND_PREFS from inside a
-     * running Instagram process. A reply proves the module is loaded; no reply just means
-     * Instagram isn't running, so we fall back to the plain install state. We only use the reply
-     * as a signal — FeaturesFragment remains the one that syncs its contents into the cache.
-     */
     private String pingNonce;
     private ps.reso.instaeclipse.utils.ipc.ModuleReplies.Pending pingReply;
 
@@ -326,10 +320,6 @@ public class HomeFragment extends Fragment implements TabFragment {
     public void onTabReselected() {
         if (getView() instanceof NestedScrollView) ((NestedScrollView) getView()).smoothScrollTo(0, 0);
     }
-
-    // =========================================================
-    // STATUS HERO
-    // =========================================================
 
     private void checkInstagramStatus() {
         PackageManager pm = requireContext().getPackageManager();
@@ -525,7 +515,6 @@ public class HomeFragment extends Fragment implements TabFragment {
     private void pingModule() {
         if (installedPackages == null || installedPackages.isEmpty() || pingReceiverRegistered) return;
         try {
-            // Same registration as FeaturesFragment: the reply comes from the Instagram process.
             if (pingReply != null) pingReply.cancel();
             pingReceiverRegistered = true;
             pingNonce = ps.reso.instaeclipse.utils.core.IpcSecurity.newNonce();
@@ -535,10 +524,6 @@ public class HomeFragment extends Fragment implements TabFragment {
                     "ps.reso.instaeclipse.ACTION_SEND_PREFS", pingReceiver);
         } catch (Throwable ignored) { }
     }
-
-    // =========================================================
-    // QUICK ACTIONS
-    // =========================================================
 
     private void restartInstagram() {
         restarting = true;
@@ -556,10 +541,6 @@ public class HomeFragment extends Fragment implements TabFragment {
             }
         });
     }
-
-    // =========================================================
-    // QUICK SHORTCUTS
-    // =========================================================
 
     private List<String> getPinnedKeys() {
         return ShortcutPicker.pinned(uiPrefs.getString(CompanionUiPrefs.HOME_PINNED_SHORTCUTS, null));
@@ -854,11 +835,6 @@ public class HomeFragment extends Fragment implements TabFragment {
                 .show();
     }
 
-    // =========================================================
-    // STYLE HELPERS
-    // =========================================================
-
-    /** 40dp rounded-square tonal container, same recipe as FeaturesFragment's row icons. */
     private void applyTonalSquare(View container, ImageView icon, int accent) {
         if (container == null) return;
         GradientDrawable bg = new GradientDrawable();

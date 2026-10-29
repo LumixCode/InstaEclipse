@@ -106,7 +106,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private ImageButton btnBack;
     private TextInputLayout tilSearch;
     private TextInputEditText etSearch;
-    /** True while the search text is being changed programmatically (skip re-filtering). */
     private boolean suppressSearchWatcher = false;
     private ActivityResultLauncher<Uri> dirPickerLauncher;
     private ActivityResultLauncher<String[]> restoreFileLauncher;
@@ -118,12 +117,10 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     private String searchShown;
     private boolean restoringMenu;
     private OnBackPressedCallback backCallback;
-    /** True once Instagram answered the current request with today's reel count. */
     private boolean reelUsageSynced;
     private int reelsWatchedToday;
     private String reelUsageDate = "";
 
-    /** Nonce of the last ACTION_REQUEST_PREFS; replies without it are ignored (IpcSecurity). */
     private String prefsNonce;
     private ps.reso.instaeclipse.utils.ipc.ModuleReplies.Pending prefsReply, configReply;
     private final android.os.Handler configTimer = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -141,11 +138,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 Bundle bundle = intent.getExtras();
                 if (bundle != null) {
                     SharedPreferences.Editor editor = localCache.edit();
-                    // Older builds stored the reply's nonce extra as if it were a setting.
                     editor.remove(ps.reso.instaeclipse.utils.core.IpcSecurity.EXTRA_NONCE);
                     editor.remove("dailyReelsWatchedToday").remove("dailyReelUsageDate");
-                    // Instagram's values, minus the ones this app changed more recently (pending
-                    // in Instagram) — see PrefsMerge. Also drops the nonce and stamp extras.
                     Map<String, Object> incoming = new HashMap<>();
                     for (String key : bundle.keySet()) incoming.put(key, bundle.get(key));
                     Object watched = incoming.remove("dailyReelsWatchedToday");
@@ -226,7 +220,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         fragmentView = inflater.inflate(R.layout.fragment_features, container, false);
         localCache = ps.reso.instaeclipse.utils.core.CommonUtils.companionCache(requireContext());
 
-        // Downloads to a chosen folder need this app to start from Instagram, and the folder's grant.
         String folder = localCache.getString("downloaderCustomUri", "");
         if (ps.reso.instaeclipse.utils.core.BackgroundAccess.folderGrantLost(requireContext(), folder))
             ps.reso.instaeclipse.utils.core.BackgroundAccess.askToRechooseFolder(requireContext(), folder,
@@ -237,7 +230,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
         recyclerFeatures = fragmentView.findViewById(R.id.recycler_features);
         recyclerFeatures.setLayoutManager(new LinearLayoutManager(requireContext()));
-        // Disable change animations so conditional enabled/alpha updates are instant, not crossfaded
         recyclerFeatures.setItemAnimator(null);
         adapter = new FeatureAdapter();
         recyclerFeatures.setAdapter(adapter);
@@ -264,7 +256,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
             }
             return false;
         });
-        // Dismiss the keyboard once the user starts scrolling through results
         recyclerFeatures.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(@NonNull RecyclerView rv, int newState) {
@@ -329,10 +320,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         updateBackEnabled();
     }
 
-    // =========================================================
-    // MENU DATA MODEL & ADAPTER
-    // =========================================================
-
     public static class FeatureItem {
         public static final int TYPE_HEADER = 0;
         public static final int TYPE_SWITCH = 1;
@@ -356,29 +343,20 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         public int accentColor;
         public boolean isExtreme;
         public List<String> childKeys;
-        /** When this switch is turned ON, also stage this key as true (parent dependency). */
         public String dependsOn;
-        /** When this switch is turned OFF, also stage this key as false (child cascade). */
         public String cascadeOffKey;
-        /** Switch is only enabled when at least one key in this list is currently true. */
         public List<String> requiresAnyOf;
-        /** Switch is locked (disabled) when this key is currently true. */
         public String disabledWhenTrue;
         public String subtitleWhenOn;
         public Runnable onTurnOn;
-        /** False when another setting overrides this row (fixed when the menu is built). */
         public boolean enabled = true;
 
         public int segmentPosition;
         public int segmentSize;
 
-        /** Secondary line under the title (e.g. "3 on" on main-menu category rows). */
         public String subtitle;
-        /** Subtitle drawn in the accent (primary) colour instead of the muted variant colour. */
         public boolean subtitleActive;
-        /** Row navigates into a sub-menu: shows a trailing chevron. */
         public boolean isNav;
-        /** Main-menu row: rendered as a standalone rounded card. */
         public boolean isCategory;
     }
 
@@ -481,7 +459,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_feature_header, parent, false);
                 return new HeaderViewHolder(v);
             } else if (viewType == 2) {
-                // Spacer: a plain transparent view with fixed height
                 View v = new View(parent.getContext());
                 v.setLayoutParams(new RecyclerView.LayoutParams(
                         RecyclerView.LayoutParams.MATCH_PARENT,
@@ -531,7 +508,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
                 bindIcon(itemHolder.ivIcon, item.iconRes, item.accentColor);
 
-                // Master switches get a tinted card + bold text to stand out from regular items
                 boolean isMaster = item.type == FeatureItem.TYPE_MASTER_SWITCH;
                 if (isMaster) {
                     int bg = MaterialColors.getColor(itemHolder.itemView, com.google.android.material.R.attr.colorSecondaryContainer);
@@ -580,7 +556,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 }
                 itemHolder.ivChevron.setVisibility(item.isNav ? View.VISIBLE : View.GONE);
 
-                // Main-menu rows are standalone rounded cards with a small gap; sub-menu rows stay segmented
                 ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) itemHolder.itemView.getLayoutParams();
                 int wantBottom = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
                         item.isCategory ? 6f : 2f, getResources().getDisplayMetrics());
@@ -705,7 +680,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
             }
         }
 
-        /** Refreshes any item whose enabled state depends on runtime conditions. */
         void refreshConditionalItems() {
             if ("focus".equals(currentMenu)) {
                 recyclerFeatures.post(() -> {
@@ -759,7 +733,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         showMenu(key, title, definitions, true, inPlace);
     }
 
-    /** @param animate false for live search updates (no header transition / list slide-in per keystroke). */
     private void showMenu(String key, String title, List<Object> definitions, boolean animate, boolean inPlace) {
         currentMenu = key;
         boolean isMain = "main".equals(key);
@@ -1356,7 +1329,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return item.disabledReason;
     }
 
-    /** True when the row has no {@link FeatureItem#requiresAnyOf} or one of those keys is on. */
     private boolean requirementMet(FeatureItem item) {
         if (item.requiresAnyOf == null) return true;
         for (String key : item.requiresAnyOf) {
@@ -1369,7 +1341,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return etSearch != null && etSearch.getText() != null && etSearch.getText().toString().trim().length() > 0;
     }
 
-    /** Clears the search field without re-rendering (used when navigating away from the main menu). */
     private void clearSearchSilently() {
         if (etSearch == null) return;
         if (etSearch.getText() != null && etSearch.getText().length() > 0) {
@@ -1606,7 +1577,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 }).setNegativeButton(android.R.string.cancel, null).show();
     }
 
-    /** #238: reorder the bottom-nav tabs (saved as the "navTabOrder" string pref). */
     private void showTabOrderDialog() {
         final String[] ids = ps.reso.instaeclipse.mods.ui.DistractionFreeUIHook.ORDERABLE_TABS;
         final java.util.Map<String, String> labels = new java.util.HashMap<>();
@@ -1686,7 +1656,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return d.isEmpty() ? getString(R.string.ig_dialog_extras_share_domain_off) : d;
     }
 
-    /** Custom share domain (saved as the "customShareDomain" string pref). */
     private void showShareDomainDialog() {
         final android.widget.EditText input = new android.widget.EditText(requireContext());
         input.setSingleLine(true);
@@ -1738,7 +1707,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return pattern.isEmpty() ? getString(R.string.ig_timestamp_format_default) + "  ·  " + sample : sample;
     }
 
-    /** Presets shown as today's date in that format, plus a custom pattern with a live preview. */
     private void showTimestampFormatDialog() {
         String[] presets = ps.reso.instaeclipse.utils.text.TimestampFormat.PRESETS;
         String current = localCache.getString("exactTimestampFormat", "");
@@ -1826,7 +1794,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return spoofDeviceNames()[Math.max(i, 0)];
     }
 
-    /** Which device Instagram sees (saved as the "spoofDevice" string pref). */
     private void showSpoofDeviceDialog() {
         String[] ids = ps.reso.instaeclipse.mods.misc.DeviceSpoofHook.DEVICES;
         int current = Math.max(Arrays.asList(ids).indexOf(localCache.getString("spoofDevice", "")), 0);
@@ -1846,7 +1813,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return startupTabNames()[Math.max(i, 0)];
     }
 
-    /** Which tab Instagram opens on (saved as the "startupTab" string pref). */
     private void showStartupTabDialog() {
         String[] tabs = ps.reso.instaeclipse.mods.ui.StartupTabHook.TABS;
         int current = Math.max(Arrays.asList(tabs).indexOf(localCache.getString("startupTab", "")), 0);
@@ -1866,10 +1832,8 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         reloadCurrentMenu();
     }
 
-    /** The open spoofer editor, so a picked photo lands in it. */
     private ps.reso.instaeclipse.utils.dialog.ProfileSpoofEditor profileSpoofEditor;
 
-    /** Same editor as inside Instagram (preview + grouped fields); the photo is picked here. */
     private void showProfileSpoofDialog() {
         Context c = requireContext();
         ps.reso.instaeclipse.utils.dialog.ProfileSpoofEditor.Values v = new ps.reso.instaeclipse.utils.dialog.ProfileSpoofEditor.Values();
@@ -1904,7 +1868,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 .show();
     }
 
-    /** Sends only what changed, so untouched settings keep Instagram's newer values. */
     private void saveProfileSpoof(ps.reso.instaeclipse.utils.dialog.ProfileSpoofEditor.Values old,
                                   ps.reso.instaeclipse.utils.dialog.ProfileSpoofEditor.Values now) {
         if (!now.username.equals(old.username)) write("spoofUsername", now.username);
@@ -1917,7 +1880,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         if (now.verified != old.verified) write("spoofVerified", now.verified);
     }
 
-    /** Picked photo: downscaled, JPEG, Base64 (SpoofAvatar), into the open editor; saved with it. */
     private void onProfilePhotoPicked(Uri uri) {
         if (uri == null || !isAdded()) return;
         Context app = requireContext().getApplicationContext();
@@ -2043,7 +2005,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return ps.reso.instaeclipse.mods.ui.theme.ThemePresets.getDisplayName(requireContext(), value);
     }
 
-    /** Dark-mode theme: one of the dark presets, or the custom palette when that is in use. */
     private void pickDarkModeTheme() {
         int current = localCache.getInt("themePresetId", 1);
         int[] presets = ps.reso.instaeclipse.mods.ui.theme.ThemePresets.darkModeChoices();
@@ -2071,7 +2032,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 .show();
     }
 
-    /** Light-mode behaviour of the custom theme (#251). */
     private void pickLightModeTheme() {
         final int[] values = ps.reso.instaeclipse.mods.ui.theme.ThemePresets.lightModeChoices();
         int current = localCache.getInt("themeLightPresetId", -1);
@@ -2121,7 +2081,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return v.isEmpty() ? getString(R.string.ig_story_ring_default) : v.replace(",", " → ");
     }
 
-    /** Same picker as inside Instagram: live preview, one color or a gradient of up to 4. */
     private void chooseStoryRingColor() {
         Context ctx = requireContext();
         String[] picked = {localCache.getString("storyRingColor", "")};
@@ -2191,14 +2150,12 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         return getString(R.string.feat_download_folder_default, MediaStoreTarget.DEFAULT_FOLDER);
     }
 
-    /** Standard (the original downloader) or Best, with its resolution cap. */
     private String downloadModeLabel() {
         if (getCurrentState("downloaderUseOriginal")) return getString(R.string.ie_downloader_original);
         int ceiling = localCache.getInt("downloaderQualityMaxShortSide", 0);
         return ceiling <= 0 ? getString(R.string.ie_download_best) : getString(R.string.ie_download_ceiling, ceiling);
     }
 
-    /** One choice for both: Standard, or Best with no cap / up to a resolution. */
     private void chooseDownloadQuality() {
         int[] values = {-1, 0, 2160, 1440, 1080, 720, 480};
         String[] labels = new String[values.length];
@@ -2223,10 +2180,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     dialog.dismiss(); reloadCurrentMenu();
                 }).setView(hint).setNegativeButton(android.R.string.cancel, null).show();
     }
-
-    // =========================================================
-    // TOOLS ACTIONS & HANDLERS
-    // =========================================================
 
     private void pickDownloadFolder() {
         dirPickerLauncher.launch(null);
@@ -2462,12 +2415,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                 .show();
     }
 
-    // =========================================================
-    // STAGING LOGIC
-    // =========================================================
-
-    /** A switch applies at once, like in Instagram's menu: saved, stamped and sent to Instagram
-     *  live (or picked up by Instagram's sync on its next start / resume). No Save step. */
     private void stageChange(String prefKey, boolean isChecked) {
         if (localCache.getBoolean(prefKey, defaultState(prefKey)) == isChecked) return;
         write(prefKey, isChecked);
@@ -2518,13 +2465,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         CompanionRestartHint.show(getActivity(), CompanionSettings.putAll(requireContext(), values));
     }
 
-    // =========================================================
-    // LIFECYCLE BROADCAST REGISTRATION
-    // =========================================================
-
-    /** Settings changed elsewhere (inside Instagram, pushed by its sync, or a restore) redraw the
-     *  page on screen, so both menus always show the same values. Coalesced and posted, so a burst
-     *  of changes or a change made from a switch callback never rebinds mid-toggle. */
     private final Runnable syncRefresh = this::reloadCurrentMenu;
     private final SharedPreferences.OnSharedPreferenceChangeListener prefsListener = (prefs, key) -> {
         View v = getView();
@@ -2533,7 +2473,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         v.postDelayed(syncRefresh, 250);
     };
 
-    /** Asks Instagram for its current settings; only the reply carrying this nonce is accepted. */
     private void requestPrefs() {
         if (prefsReply != null) prefsReply.cancel();
         prefsNonce = ps.reso.instaeclipse.utils.core.IpcSecurity.newNonce();

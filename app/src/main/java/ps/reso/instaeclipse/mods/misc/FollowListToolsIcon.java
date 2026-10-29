@@ -54,9 +54,8 @@ final class FollowListToolsIcon {
         return FeatureFlags.profileAnalyzer || FeatureFlags.followListExport;
     }
 
-    /** A follow list tab's view was created: give its screen's action bar the icon. */
     static void attach(View listRoot) {
-        FollowListLoader.warmPause(listRoot.getContext()); // read on tap
+        FollowListLoader.warmPause(listRoot.getContext());
         attach(listRoot, 0);
     }
 
@@ -64,7 +63,6 @@ final class FollowListToolsIcon {
         try {
             ViewGroup bar = barAbove(listRoot);
             if (bar == null) {
-                // the tab's view may not be in the window yet
                 if (tries < 5) listRoot.postDelayed(() -> attach(listRoot, tries + 1), 300);
                 else if (!loggedNoBar) {
                     loggedNoBar = true;
@@ -107,7 +105,6 @@ final class FollowListToolsIcon {
         ModuleLog.detail(TAG + "layout listeners: " + watchedBars.size());
     }
 
-    /** The shown action_bar nearest above {@code v} (each tab of Instagram's main screen has its own). */
     static ViewGroup barAbove(View v) {
         int id = ResIds.id(v.getContext(), "action_bar");
         if (id == 0) return null;
@@ -119,8 +116,6 @@ final class FollowListToolsIcon {
         return null;
     }
 
-    /** Adds the icon while a follow list screen is shown under {@code bar}, removes it otherwise,
-     *  and keeps it at the bar's end, level with the title. */
     private static void sync(ViewGroup bar) {
         try {
             View icon = bar.findViewWithTag(ICON_TAG);
@@ -130,7 +125,6 @@ final class FollowListToolsIcon {
                 return;
             }
             if (icon == null) icon = add(bar);
-            // Instagram also clears the click listeners of a bar's buttons when it resets the bar
             if (!icon.hasOnClickListeners()) icon.setOnClickListener(FollowListToolsIcon::onTap);
             place(bar, icon);
         } catch (Throwable t) {
@@ -158,8 +152,6 @@ final class FollowListToolsIcon {
             if (at[1] + root.getHeight() <= barBottom) continue;
             long[] s = screens.get(e[0]);
             long now = android.os.SystemClock.uptimeMillis();
-            // a list not (yet) in the tabbed screen is looked at again after 2 s: its parent may
-            // still be setting up its tabs
             if (s == null || ((s[0] & SCREEN) == 0 && now - s[1] > 2000)) {
                 FollowListExportHook.ListInfo info = FollowListExportHook.listInfo(e[0]);
                 int f = (FollowListExportHook.tabsOf(e[0]) != null ? SCREEN : 0) | (info != null ? KNOWN : 0);
@@ -186,9 +178,6 @@ final class FollowListToolsIcon {
             if (lp == null) lp = new LinearLayout.LayoutParams(size, ViewGroup.LayoutParams.MATCH_PARENT);
             row.addView(icon, 0, lp);
         } else {
-            // Where Instagram's own right-side buttons go: at least two after the title container
-            // (X.00gD.A0U: indexOfChild(title) + 2) and before the bar's last child, the views
-            // Instagram keeps when it clears a bar (X.00gD.A18 drops everything in between).
             int at = bar.getChildCount() - 1;
             int titleId = ResIds.id(ctx, "action_bar_textview_custom_title_container");
             View titleBox = titleId != 0 ? bar.findViewById(titleId) : null;
@@ -200,7 +189,6 @@ final class FollowListToolsIcon {
         return icon;
     }
 
-    /** IG's row of right-side action buttons (created only when a screen has some). */
     private static ViewGroup rightButtons(ViewGroup bar) {
         int id = ResIds.id(bar.getContext(), "action_bar_right_side_buttons");
         View row = id != 0 ? bar.findViewById(id) : null;
@@ -221,11 +209,9 @@ final class FollowListToolsIcon {
             lp.addRule(RelativeLayout.CENTER_VERTICAL);
             return lp;
         }
-        return new ViewGroup.MarginLayoutParams(size, h); // other layouts: placed by translation below
+        return new ViewGroup.MarginLayoutParams(size, h);
     }
 
-    /** Moves the icon to the bar's end edge (only outwards, and never over a view shown after it)
-     *  and level with the title's centre. Translation only: nothing is laid out again. */
     private static void place(ViewGroup bar, View icon) {
         if (icon.getWidth() == 0) return;
         if (icon.getParent() == bar && !(bar instanceof FrameLayout) && !(bar instanceof RelativeLayout)) {
@@ -246,12 +232,10 @@ final class FollowListToolsIcon {
         icon.getLocationInWindow(i);
         float iconCentre = i[1] - icon.getTranslationY() + icon.getHeight() / 2f;
         float dy = t[1] + title.getHeight() / 2f - iconCentre;
-        if (Math.abs(dy) > bar.getHeight() / 2f) dy = 0; // not this bar's title row
+        if (Math.abs(dy) > bar.getHeight() / 2f) dy = 0;
         if (Math.abs(icon.getTranslationY() - dy) >= 1) icon.setTranslationY(dy);
     }
 
-    /** The bar's title (the profile's username on follow list screens): a title id, else the shown
-     *  text with the largest font in the bar. */
     static TextView title(ViewGroup bar) {
         for (String name : new String[]{"action_bar_title", "action_bar_textview_title", "action_bar_title_textview"}) {
             int id = ResIds.id(bar.getContext(), name);
@@ -296,7 +280,7 @@ final class FollowListToolsIcon {
         if (glyph == null) glyph = ctx.getDrawable(android.R.drawable.ic_menu_search);
         if (glyph != null) glyph = glyph.mutate();
         icon.setImageDrawable(glyph);
-        icon.setScaleType(ImageView.ScaleType.CENTER); // the 24dp glyph in the middle of the touch target
+        icon.setScaleType(ImageView.ScaleType.CENTER);
         IgTint.copy(back(bar), icon);
         TypedValue ripple = new TypedValue();
         if (ctx.getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, ripple, true) && ripple.resourceId != 0) {
@@ -308,8 +292,6 @@ final class FollowListToolsIcon {
         icon.setOnClickListener(FollowListToolsIcon::onTap);
         return icon;
     }
-
-    // ---- tap ----
 
     private static void onTap(View v) {
         try {
@@ -335,7 +317,6 @@ final class FollowListToolsIcon {
             String name = info != null && info.username != null ? info.username : ProfileAnalyzer.titleOf(v);
             String title = title(ctx, name, info, FollowListLoader.expectedCount(frag, info));
             if (actions.contains(FollowListPolicy.Action.ANALYZE)) {
-                // Changelog only for a profile with a saved check: look in the watchlist index (a file) first
                 Context app = ctx.getApplicationContext();
                 new Thread(() -> {
                     String self = null;
@@ -403,8 +384,6 @@ final class FollowListToolsIcon {
         }
     }
 
-    /** Runs {@code a}, after a warning when loading lists pauses for this account after Instagram
-     *  blocked a load (FollowListLoader.pause): it only runs when the user picks "Load anyway". */
     private static void run(FollowListPolicy.Action a, View v, Object frag, View root, FollowListExportHook.ListInfo info) {
         FollowListPolicy.Block paused = FollowListLoader.pause(v.getContext(), info != null ? info.self : null);
         if (paused != null) {

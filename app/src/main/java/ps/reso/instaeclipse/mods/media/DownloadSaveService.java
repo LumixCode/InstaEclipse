@@ -40,19 +40,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * Foreground service that runs in the companion-app process and saves downloaded media
- * to a SAF (Storage Access Framework) folder.
- *
- * <p>The companion app holds the persistable SAF permission for folders picked via
- * FeaturesFragment.  The Xposed module (running in Instagram's process) cannot use
- * that permission directly, so it forwards the CDN URL(s) to this service as plain
- * string extras.  The service downloads the media itself — no file-descriptor passing
- * across different UIDs is required.
- *
- * <p>For video+audio-separate streams the service also handles the merge step locally.
- * Download progress is reported via a live-updating foreground notification.
- */
 public class DownloadSaveService extends Service {
 
     static final String EXTRA_REQUEST = "selectedDownloadRequest";
@@ -65,11 +52,10 @@ public class DownloadSaveService extends Service {
 
     static final String CHANNEL_ID  = "ie_dl_save";
     static final String DONE_GROUP = "ie_dl_done";
-    static final int    NOTIF_ID    = 0x49455344; // "IESD" — ongoing progress
-    private static final int    DONE_NOTIF_BASE = 0x49455345; // per-startId completion notifs
+    static final int    NOTIF_ID    = 0x49455344;
+    private static final int    DONE_NOTIF_BASE = 0x49455345;
     static final int DONE_SUMMARY_ID = 0x49455346;
 
-    /** Throttle: minimum ms between notification updates. */
     private static final long NOTIF_INTERVAL_MS = 250;
 
     private NotificationManager nm;
@@ -146,7 +132,7 @@ public class DownloadSaveService extends Service {
         }
 
         String url       = intent.getStringExtra("url");
-        String audioUrl  = intent.getStringExtra("audioUrl"); // null → single-stream
+        String audioUrl  = intent.getStringExtra("audioUrl");
         String filename  = intent.getStringExtra("filename");
         String mimeType  = intent.getStringExtra("mimeType");
         String username  = intent.getStringExtra("username");
@@ -290,8 +276,6 @@ public class DownloadSaveService extends Service {
         });
     }
 
-    // ── Download helpers ──────────────────────────────────────────────────────
-
     private SavedMedia downloadAndSave(String url, String filename, String mimeType,
                                        String saveUri, String username, boolean usernameFolder)
             throws Exception {
@@ -329,7 +313,6 @@ public class DownloadSaveService extends Service {
         File ta  = new File(cacheDir, "ie_sa_" + ts + ".mp4");
         File out = new File(cacheDir, "ie_sm_" + ts + ".mp4");
         try {
-            // Video download: 0–60 %
             String video = getString(R.string.ig_toast_downloading_video);
             pushProgress(video, 0, 100, false);
             downloadToFile(videoUrl, tv, "video/mp4", (done, total) -> {
@@ -339,7 +322,6 @@ public class DownloadSaveService extends Service {
                 }
             });
 
-            // Audio download: 60–80 %
             String audio = getString(R.string.ig_toast_downloading_audio);
             pushProgress(audio, 60, 100, false);
             downloadToFile(audioUrl, ta, "audio/mp4", (done, total) -> {
@@ -349,7 +331,6 @@ public class DownloadSaveService extends Service {
                 }
             });
 
-            // Merge: 80–95 % (indeterminate — MediaMuxer gives no callbacks)
             pushProgress(getString(R.string.ig_toast_merging_video_audio), 80, 100, true);
             StreamMerge.mergeVideoAudio(tv.getAbsolutePath(), ta.getAbsolutePath(), out.getAbsolutePath());
 
@@ -369,7 +350,6 @@ public class DownloadSaveService extends Service {
         }
     }
 
-    /** Downloads a video and saves only its audio track as .m4a (AAC copied as-is, no re-encode). */
     private SavedMedia downloadExtractAudioAndSave(String videoUrl, String filename, String saveUri,
                                                    String username, boolean usernameFolder,
                                                    long trimStartMs, long trimDurationMs)
@@ -398,10 +378,6 @@ public class DownloadSaveService extends Service {
         }
     }
 
-    /**
-     * Same, keeping only {@code durationUs} of audio from {@code startUs} (re-timed to start at 0);
-     * a duration of -1 keeps the rest of the track. Samples are copied, never re-encoded.
-     */
     static void extractAudioTrack(String videoPath, String outPath, long startUs, long durationUs)
             throws Exception {
         MediaExtractor ex = new MediaExtractor();
@@ -444,8 +420,6 @@ public class DownloadSaveService extends Service {
         }
     }
 
-    // ── SAF write ────────────────────────────────────────────────────────────
-
     private Uri writeViaSaf(File src, String filename, String mimeType,
                              String saveUri, String username, boolean usernameFolder)
             throws Exception {
@@ -459,8 +433,6 @@ public class DownloadSaveService extends Service {
         return DownloadPublisher.saveToSaf(this, src, filename, mimeType, saveUri,
                 username, usernameFolder, cancellation);
     }
-
-    // ── Chat export (HTML + media batch into a nested subfolder) ───────────────
 
     private void handleChatExport(Intent intent, int startId) {
         final String subdir       = DownloadRequestValidator.sanitizeSubdir(intent.getStringExtra("chatExportSubdir"));
@@ -578,7 +550,6 @@ public class DownloadSaveService extends Service {
         void write(OutputStream out) throws Exception;
     }
 
-    /** Resolves (creating each segment) a nested subfolder like "chats/chat_x" under the SAF tree. */
     private ExportDir resolveNestedDir(String saveUri, String subPath) throws Exception {
         DocumentFile dir = DocumentFile.fromTreeUri(this, Uri.parse(saveUri));
         if (dir == null || !dir.canWrite()) {
@@ -600,7 +571,6 @@ public class DownloadSaveService extends Service {
         return new ExportDir(dir, fresh);
     }
 
-    /** Writes src into an already-resolved SAF directory, replacing any existing file of that name. */
     private Uri writeFileToDir(ExportDir dir, File src, String filename, String mimeType)
             throws Exception {
         return writeToDir(dir, filename, mimeType, os -> DownloadFiles.copy(src, os, cancellations.get(activeJobId)));
@@ -628,11 +598,8 @@ public class DownloadSaveService extends Service {
         }
     }
 
-    // ── Network / merge utilities ─────────────────────────────────────────────
-
     @FunctionalInterface
     interface ProgressCallback {
-        /** @param bytesRead bytes downloaded so far; @param totalBytes -1 if unknown */
         void onProgress(long bytesRead, long totalBytes);
     }
 
@@ -641,11 +608,7 @@ public class DownloadSaveService extends Service {
         return DownloadEngine.fetch(this, url, dest, mime, cancellations.get(activeJobId),
                 (phase, done, total) -> { if (cb != null) cb.onProgress(done, total); });
     }
-    // ── Notification helpers ──────────────────────────────────────────────────
 
-    /**
-     * Unconditionally updates the foreground notification (use for phase transitions).
-     */
     private void pushProgress(String text, int progress, int max, boolean indeterminate) {
         lastNotifPct = progress;
         lastNotifMs  = System.currentTimeMillis();
@@ -666,10 +629,6 @@ public class DownloadSaveService extends Service {
             nm.notify(NOTIF_ID, buildProgressNotification(text, progressValue, progressMax, progressIndeterminate));
     }
 
-    /**
-     * Throttled update — called on every chunk read. Skips the notify call if
-     * less than {@link #NOTIF_INTERVAL_MS} have passed AND progress changed < 2 %.
-     */
     private void maybeUpdateProgress(String text, int pct, int max) {
         maybeUpdateProgress(text, pct, max, false);
     }
@@ -760,21 +719,11 @@ public class DownloadSaveService extends Service {
         nm.notify(startId, builder.build());
     }
 
-    /**
-     * Posts a non-ongoing completion/error notification that persists after the service stops.
-     * Uses {@code DONE_NOTIF_BASE + startId} so concurrent downloads don't collide.
-     */
-    /**
-     * Posts a persistent completion notification.
-     * If {@code fileUri} is non-null, tapping the notification opens the saved file
-     * in the device's default viewer (gallery, video player, etc.).
-     */
     private void postDoneNotification(int startId, String text, String mimeType, Uri fileUri) {
         postDoneNotification(startId, text, mimeType, fileUri, fileUri != null);
     }
 
     private void postDoneNotification(int startId, String text, String mimeType, Uri fileUri, boolean success) {
-        // Build a tap-to-open PendingIntent when we have a valid file URI
         android.app.PendingIntent contentIntent = null;
         if (fileUri != null && mimeType != null) {
             Intent viewIntent = new Intent(Intent.ACTION_VIEW);
@@ -791,7 +740,6 @@ public class DownloadSaveService extends Service {
     }
 
     private void showToast(String msg) {
-        // Use application context — service context is invalid after stopSelf() fires
         Context appCtx = getApplicationContext();
         new Handler(Looper.getMainLooper()).post(() ->
                 ps.reso.instaeclipse.utils.toast.IeToast.makeText(appCtx, msg, Toast.LENGTH_SHORT).show());

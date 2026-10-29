@@ -13,16 +13,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 
-/**
- * Hooks an activity lifecycle method even when the activity does not declare its own override.
- *
- * XposedHelpers.findAndHookMethod only looks at DECLARED methods, so "InstagramMainActivity#onResume"
- * throws NoSuchMethodError on IG 448+ (the override was moved into the shared base class
- * com.instagram.base.activity.IgFragmentActivity). This walks up from the target class to the class
- * that actually declares the method, hooks that method ONCE, and dispatches only to callbacks whose
- * target class matches the runtime instance — so it works whether or not IG declares the override,
- * and old builds (where the target declares it) behave exactly as before.
- */
 public final class LifecycleHookUtil {
 
     public interface AfterCallback {
@@ -35,10 +25,6 @@ public final class LifecycleHookUtil {
 
     private LifecycleHookUtil() {}
 
-    /**
-     * @return a short description of the hooked method (for logging)
-     * @throws NoSuchMethodException if neither the class nor any superclass declares it
-     */
     public static synchronized String hookAfter(ClassLoader classLoader, String className, String methodName,
                                                 AfterCallback callback, Class<?>... paramTypes)
             throws ClassNotFoundException, NoSuchMethodException {

@@ -17,17 +17,6 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
-/**
- * Limits the home feed to accounts the user follows by forcing the feed/timeline request's
- * {@code pagination_source} parameter to {@code "following"}.
- *
- * <p>The feed request builder (IG 452: {@code X.02zt.A01}) is found by its "homecoming_all" +
- * "X-IG-PRIMED-FEED-REQUEST" strings. It fills a generic request builder (a parameter, X.03gG on
- * 452) through {@code (String, String)} adders — some add query/body params, others headers.
- * Every such adder is hooked, but only acts while the feed builder is on the stack
- * (ThreadLocal), so no other API request is touched. If IG skipped the parameter on this code
- * path, it is appended after the builder returns through an adder seen adding a param.
- */
 public class FollowingOnlyFeedHook {
 
     private static final String TAG = "(InstaEclipse | FollowingFeed): ";
@@ -37,7 +26,6 @@ public class FollowingOnlyFeedHook {
     private static final String CACHE_BUILD = "FollowingFeed_build";
     private static final String CACHE_ADDERS = "FollowingFeed_adders";
 
-    /** Per-call state; non-null only while the feed request builder is running. */
     private static final class CallState {
         boolean paramSeen;
         Method paramAdder;
@@ -122,7 +110,6 @@ public class FollowingOnlyFeedHook {
                     param.args[1] = VALUE;
                     ModuleLog.probe("(IE|FollowingFeed) pagination_source forced");
                 } else if (st.paramAdder == null && isParamKey(key)) {
-                    // Headers are "X-IG-…"-style; body/query params are lower_snake_case.
                     st.paramAdder = (Method) param.method;
                 }
             }
@@ -148,7 +135,6 @@ public class FollowingOnlyFeedHook {
         return null;
     }
 
-    /** Index of the request-builder parameter: the one whose class declares (String, String) adders. */
     private static int builderIndex(Method build) {
         Class<?>[] p = build.getParameterTypes();
         for (int i = 0; i < p.length; i++) {
@@ -162,7 +148,6 @@ public class FollowingOnlyFeedHook {
         return adders(build.getParameterTypes()[builderIndex(build)]);
     }
 
-    /** Every non-static {@code void (String, String)} method declared on the request builder. */
     private static List<Method> adders(Class<?> builder) {
         List<Method> out = new ArrayList<>();
         for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(builder)) {

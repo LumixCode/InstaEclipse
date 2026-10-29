@@ -9,25 +9,6 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Crash guard for the carousel / realtime teardown race seen on Instagram 446+ and 447.0.0.39+.
- *
- * When a carousel's realtime media stream (and, downstream, the Analytics2 event pipeline) is torn
- * down — e.g. right after a download or copy-media action — IG's native
- * {@code TigonRepeatingForwardingRequestToken} / analytics processor can still submit a task to a
- * {@link java.util.concurrent.ScheduledThreadPoolExecutor} that has ALREADY shut down. The executor's
- * default {@link java.util.concurrent.ThreadPoolExecutor.AbortPolicy} then throws
- * {@link java.util.concurrent.RejectedExecutionException}, which unwinds back through native JNI and
- * hard-crashes Instagram (every crash variant terminates at AbortPolicy.rejectedExecution). The task
- * can never run on a dead executor, so the only sane outcome is to drop it — exactly what a
- * DiscardPolicy would do — instead of crashing.
- *
- * This hook narrows to precisely that: it intercepts {@code AbortPolicy.rejectedExecution} and
- * swallows the rejection ONLY when the target executor is already shut down. A rejection on a live
- * executor (genuine queue-full backpressure) still throws normally, so nothing about normal
- * operation changes. The hook sits on the rejection path only (never a hot path) and is fully
- * try/catch-guarded.
- */
 public class TerminatedExecutorGuard {
 
     enum Decision { DROP, THROW }

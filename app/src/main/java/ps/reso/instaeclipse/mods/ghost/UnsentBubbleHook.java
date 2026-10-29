@@ -28,13 +28,11 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/** Style a retained message's own native surface; never mutate its shared chat theme. */
 final class UnsentBubbleHook {
     private static final long UNSENT_RED = (long) UnsentMediaMark.COLOR << 32;
     private static final String ITEM = "instagram.features.direct.messagethread.TextMessageComposableHolder.Item (TextMessageComposableHolder.kt:61)";
     private static final String PROVIDED_VALUES = "instagram.features.direct.messagethread.MessageComposableHolder.getProvidedValues (MessageComposableHolder.kt:167)";
     private static final String TEXT = "com.instagram.direct.messagethread.compose.TextMessageInternal (TextMessage.kt:134)";
-    // Line-free: the text and media lambdas differ only by a line number that drifts per build.
     private static final String BACKGROUND = "com.instagram.direct.messagethread.compose.background.bubbleBackground.<anonymous> (MessageBubbleBackground.kt:";
     private static final String VOICE = "instagram.features.direct.thread.feature.messagelist.message.voice.ui.VoiceMessage (VoiceMessage.kt:105)";
     private static final String VOICE_CONTENT = "instagram.features.direct.thread.feature.messagelist.message.voice.ui.VoiceMessage.<anonymous> (VoiceMessage.kt:246)";
@@ -85,13 +83,8 @@ final class UnsentBubbleHook {
         }
     }
 
-    /** [text holder Item, text bubble background lambda, its native fill]; empty when any is missing. */
     private static List<Method> findText(ClassLoader loader) throws Exception {
         List<Found> items = anchored(ITEM, true, m -> m.returnType("void"));
-        // This native text lambda handles both gradients and solid fills. The other
-        // bubbleBackground overload belongs to media/voice/XMA, including quoted media, and has
-        // the same shape and trace prefix, so the text one is the lambda whose factory
-        // TextMessageInternal calls (line 73 on 446, 78 on 451).
         Set<String> textCalls = new LinkedHashSet<>();
         for (Found composable : anchored(TEXT, true, m -> m)) {
             for (MethodData call : composable.data().getInvokes()) textCalls.add(call.getDescriptor());
@@ -107,7 +100,7 @@ final class UnsentBubbleHook {
             List<String> types = call.getParamTypeNames();
             if (call.isConstructor() || !Modifier.isStatic(call.getModifiers()) || types.size() != 3
                     || !types.get(2).equals("long") || !call.getReturnTypeName().equals(types.get(0))) continue;
-            if (fill != null) return List.of(); // native background fill ambiguous
+            if (fill != null) return List.of();
             fill = call.getMethodInstance(loader);
         }
         if (fill == null) return List.of();
@@ -203,13 +196,9 @@ final class UnsentBubbleHook {
                 if (!UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) return;
                 if (param.hasThrowable() || views.isEmpty()) return;
                 try {
-                    // Nested Compose restarts bypass the holder's Item call. Resolve the
-                    // current owning view each time instead of retaining a lambda's old row.
                     Object view = consumeLocal.invoke(param.args[1], localView);
                     State state = view instanceof View ? views.get(view) : null;
                     if (state == null || !state.textBubble) return;
-                    // A snapshot read subscribes this composition to live deletion/setting changes.
-                    // Let the original run first so its Compose groups always remain balanced.
                     if (Boolean.TRUE.equals(readState.invoke(state.nativeValue))) {
                         param.setResult(nativeFill.invoke(null, param.args[0], nativeShape.get(param.thisObject), UNSENT_RED));
                     }
@@ -239,13 +228,11 @@ final class UnsentBubbleHook {
         }
     }
 
-    /** Whether this row's Compose voice or shared-media surface is already drawn red. */
     boolean marksMedia(View view) {
         State state = view == null ? null : views.get(view);
         return state != null && state.marked && state.nativeMedia;
     }
 
-    /** Makes the row available while its native binder creates Compose media before IDs are attached. */
     Object beginBind(View view) {
         State previous = bindingState.get();
         if (!installed || view == null) return previous;
@@ -330,7 +317,6 @@ final class UnsentBubbleHook {
                     MediaScope scope = previewScope.get();
                     if (param.hasThrowable() || scope == null || scope.shape != param.args[1]) return;
                     try {
-                        // Stroke the native preview shape; the image, play button and gesture modifier stay intact.
                         if (isMarked(scope)) {
                             param.setResult(border.invoke(null, param.getResult(), param.args[1], 2f, UNSENT_RED));
                             scope.state.nativeMedia = true;
@@ -345,7 +331,6 @@ final class UnsentBubbleHook {
         }
     }
 
-    /** [VoiceMessage, its content lambda, the voice surface factory]; empty when any is missing. */
     private List<Method> findVoice(ClassLoader loader) throws Exception {
         List<Found> voices = anchored(VOICE, true, m -> m);
         List<Found> contents = anchored(VOICE_CONTENT, true, m -> m);
@@ -359,14 +344,13 @@ final class UnsentBubbleHook {
                     || types[2] != nativeFill.getParameterTypes()[0]
                     || !nativeFill.getParameterTypes()[1].isAssignableFrom(types[1])
                     || method.getReturnType() != types[2]) continue;
-            if (factory != null) return List.of(); // voice surface ambiguous
+            if (factory != null) return List.of();
             factory = method;
         }
         if (factory == null) return List.of();
         return List.of(voices.get(0).getMethodInstance(loader), contents.get(0).getMethodInstance(loader), factory);
     }
 
-    /** [border, then render, clip and shape for each of PREVIEWS]; empty when any is missing. */
     private List<Method> findPreview(ClassLoader loader) throws Exception {
         Method border = resolveBorder(loader);
         if (border == null) return List.of();
@@ -397,7 +381,6 @@ final class UnsentBubbleHook {
 
     private boolean isMarked(MediaScope scope) throws Exception {
         if (scope == null) return false;
-        // Read even while unmarked so the actual voice/preview composition observes later unsends.
         boolean marked = Boolean.TRUE.equals(readState.invoke(scope.state.nativeValue));
         return marked && UnsentMediaIdentity.matches(scope.state.ids, scope.ids);
     }
@@ -415,17 +398,13 @@ final class UnsentBubbleHook {
                     List<String> renderedIds = identity.ids(param);
                     State state = null;
                     Object view = consumeLocal.invoke(param.args[0], localView);
-                    // Text overrides LocalView with its row. Media may retain the nested Compose host.
                     for (View host = view instanceof View ? (View) view : null; host != null;
                          host = host.getParent() instanceof View ? (View) host.getParent() : null) {
                         state = views.get(host);
                         if (state == null) continue;
                         break;
                     }
-                    // During the holder bind, Compose can run before afterHookedMethod attaches IDs.
-                    // Reading that row's state now subscribes it to the marked update at bind end.
                     if (state == null) state = bindingState.get();
-                    // Later independent recompositions may expose a detached AndroidComposeView.
                     if (state == null) state = findUniqueState(renderedIds);
                     if (state != null) target.set(new MediaScope(state, renderedIds));
                 } catch (Throwable error) { report(error); }
@@ -467,11 +446,9 @@ final class UnsentBubbleHook {
                     && List.of(method.getParameterTypes()).equals(List.of(nativeFill.getParameterTypes()[0],
                     nativeFill.getParameterTypes()[1], float.class, long.class))) borders.add(method);
         }
-        return borders.size() == 1 ? borders.iterator().next() : null; // null: border ambiguous
+        return borders.size() == 1 ? borders.iterator().next() : null;
     }
 
-    /** Methods using {@code anchor}. Compose trace strings end in a source line number that drifts
-     *  between builds, so with no exact hit {@code byPrefix} retries on the text before ".kt:". */
     private static List<Found> anchored(String anchor, boolean byPrefix,
                                         java.util.function.UnaryOperator<MethodMatcher> shape) {
         List<Found> exact = DexKitQueryCache.methods(FindMethod.create().matcher(

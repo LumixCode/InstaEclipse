@@ -18,7 +18,6 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.helpers.DefaultHandler;
 
-/** Only static, single-period, single whole-file BaseURL representations are supported. */
 final class DashManifest {
     enum State { ABSENT, SUPPORTED, UNSUPPORTED, ENCRYPTED, INVALID, TOO_LARGE }
     static final class Track {
@@ -51,8 +50,6 @@ final class DashManifest {
             DocumentBuilderFactory f = DocumentBuilderFactory.newInstance();
             f.setNamespaceAware(true);
             f.setExpandEntityReferences(false);
-            // Android's XML implementation lacks some JAXP features. DOCTYPE/entity rejection
-            // above is unconditional; this hardening is additional on implementations supporting it.
             try { f.setFeature("http://xml.org/sax/features/external-general-entities", false); } catch (Exception ignored) { }
             try { f.setFeature("http://xml.org/sax/features/external-parameter-entities", false); } catch (Exception ignored) { }
             javax.xml.parsers.DocumentBuilder builder = f.newDocumentBuilder();

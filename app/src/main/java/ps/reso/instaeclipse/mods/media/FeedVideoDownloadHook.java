@@ -46,46 +46,34 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class FeedVideoDownloadHook {
 
-    // ── Class/method refs resolved once at hook install time ─────────────────
     private static final String MEDIA = "com.instagram.feed.media.Media";
     private static Class<?> mediaClass;
     private static final List<Method> resolvedVideoVersionsGetters = new ArrayList<>();
     private static Method resolvedMediaTypeMethod;
-    private static Method   methodImageUrl;         // MediaExtKt: static (Context, Media) -> String, or
-                                                    // (Context, Media) -> ExtendedImageUrl on IG 452+
-    private static Method   extendedImageUrlGetUrl; // ExtendedImageUrl.getUrl(), when methodImageUrl returns it
-    private static Method   carouselMediaGetter;    // Media."carousel_media" getter: () -> List<Media> (IG 447+)
-    private static Method   hasAudioGetter;         // "has_audio" getter: () -> Boolean (Media)
-    // Posts with Instagram music: the video is silent and the song is a separate file.
-    private static Method   musicMetadataGetter;    // "music_metadata" getter (feed posts)
-    private static Method   clipsMetadataGetter;    // "clips_metadata" getter (reels)
-    private static Method   dashManifestGetter;     // "video_dash_manifest" getter: () -> String (Media 447+, LiveTreeMediaDict <= 446)
+    private static Method   methodImageUrl;
+    private static Method   extendedImageUrlGetUrl;
+    private static Method   carouselMediaGetter;
+    private static Method   hasAudioGetter;
+    private static Method   musicMetadataGetter;
+    private static Method   clipsMetadataGetter;
+    private static Method   dashManifestGetter;
 
     private static Class<?> userClass;
-    private static Method   mediaAuthorGetter; // () -> UserClass on com.instagram.feed.media.Media
-    // userUsernameGetter lives in UserUtils — resolved here and stored there
+    private static Method   mediaAuthorGetter;
 
-    // ── Uri.parse fallback buffer ─────────────────────────────────────────────
     private static final class UrlEntry {
         final String url; final long time;
         UrlEntry(String u) { url = u; time = System.currentTimeMillis(); }
     }
     private static final int MAX_URLS = 200;
-    private static final Deque<UrlEntry> videoUrlBuffer = new ArrayDeque<>(); // DexKit-captured video URLs
-    // Bounded: at most 4 downloads/lookups at once, extra work queues instead of spawning a thread each.
+    private static final Deque<UrlEntry> videoUrlBuffer = new ArrayDeque<>();
     static final ExecutorService executor    = MediaHttp.newDownloadExecutor(4);
     static final Handler         mainHandler = new Handler(Looper.getMainLooper());
 
-    // ── Entry point ──────────────────────────────────────────────────────────
-
     public void install(ClassLoader classLoader) {
-        // Load Media and MediaExtKt
         try {
             mediaClass = classLoader.loadClass("com.instagram.feed.media.Media");
             Class<?> mediaExtKt = classLoader.loadClass("com.instagram.feed.media.MediaExtKt");
-            // Find static (Context, Media) -> String method (name changes every version).
-            // IG 452 dropped it; the same lookup now ends one step earlier and returns the
-            // ExtendedImageUrl (MediaExtKt.A0Y), whose URL we read via its getUrl().
             Method extVariant = null;
             for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.methods(mediaExtKt)) {
                 Class<?>[] p = m.getParameterTypes();
@@ -111,13 +99,6 @@ public class FeedVideoDownloadHook {
         } catch (Throwable ignored) {}
     }
 
-    /**
-     * Probes all no-parameter String-returning methods on {@code obj} (including superclass
-     * declared methods) and returns the first one that yields an Instagram CDN URL.
-     *
-     * This is needed for Pando/LiveTree JNI nodes (LX/VPC carousel items, LX/5q9) whose
-     * image URLs are only accessible via obfuscated JNI-backed methods, not via fields.
-     */
     private static String probeCdnUrlViaStringMethods(Object obj) {
         if (obj == null) return null;
         Class<?> cls = obj.getClass();
@@ -137,16 +118,12 @@ public class FeedVideoDownloadHook {
         return null;
     }
 
-    /**
-     * Collects ALL CDN video URLs found by walking the VideoVersionIntf graph inside {@code obj}.
-     * Prefers m86 URLs (combined audio+video stream) — those are sorted to the front of the list.
-     */
     static void collectAllVideoUrls(Object obj, List<String> out, Set<Object> visited, int depth) {
         if (obj == null || depth > 7 || !visited.add(obj)) return;
 
         if (looksLikeVideoVersion(obj)) {
             addVideoVersionUrl(obj, out);
-            return; // don't recurse into VideoVersionIntf objects
+            return;
         }
 
         if (obj instanceof Map<?, ?> map) {
@@ -187,8 +164,6 @@ public class FeedVideoDownloadHook {
             cls = cls.getSuperclass();
         }
 
-        // Pando/LiveTree frequently keeps video_versions in native storage. Calling
-        // its no-arg List getter materializes the VideoVersion objects for inspection.
         cls = obj.getClass();
         while (cls != null && cls != Object.class) {
             for (Method method : ps.reso.instaeclipse.utils.core.SafeReflect.methods(cls)) {
@@ -212,7 +187,6 @@ public class FeedVideoDownloadHook {
     private static boolean looksLikeVideoVersion(Object item) {
         if (item == null) return false;
         String name = item.getClass().getName().toLowerCase(Locale.US);
-        // "videourl" covers modern IG (442+/447) com.instagram.model.mediasize.VideoUrlImpl.
         return name.contains("videoversion") || name.contains("video_version")
                 || name.contains("videourl");
     }
@@ -236,14 +210,9 @@ public class FeedVideoDownloadHook {
         if (!out.contains(url)) out.add(url);
     }
 
-    /** Returns the best video URL from the media object: the tallest version, m86 (combined stream) on a tie. */
     static String bestVideoUrlFromMedia(Object media) {
         List<String> all = new ArrayList<>();
         collectVideoUrlsFromDictionary(media, all);
-        // When IG's own video_versions getter ran on this exact media object and returned no
-        // video, it is a photo. Don't fall back to the deep graph walk: it reaches other media
-        // held by this one (related/suggested posts, sibling slides) and returned an unrelated
-        // video for photo posts on IG 452.
         if (all.isEmpty() && isDirectVideoVersionsOwner(media)) return null;
         if (all.isEmpty()) {
             Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -252,11 +221,6 @@ public class FeedVideoDownloadHook {
         return pickVideoUrl(media, all);
     }
 
-    /**
-     * A carousel slide's own video, read through the trusted video_versions getter on the slide
-     * itself. No graph walk: from a photo slide it reaches the post's music clip (or a sibling's
-     * video) through back-references, so "Download all" saved that one MP4 once per slide.
-     */
     private static String ownVideoUrl(Object slide) {
         List<String> found = new ArrayList<>();
         for (Method getter : resolvedVideoVersionsGetters) {
@@ -267,19 +231,12 @@ public class FeedVideoDownloadHook {
         return pickVideoUrl(slide, found);
     }
 
-    /**
-     * The version of {@code media} to download out of its URLs {@code all}: the tallest, m86 on a
-     * tie (VideoUrlRanking). Records a taller DASH stream of the same media in DASH_UPGRADE.
-     */
     private static String pickVideoUrl(Object media, List<String> all) {
         VideoUrlRanking.Pick pick = VideoUrlRanking.pick(all, VIDEO_HEIGHT);
         if (pick == null) return null;
         if (pick.height <= 0) return pick.url;
         String best = pick.url;
         int bestH = pick.height;
-        // The player streams DASH; its tallest stream is often above every progressive file
-        // (e.g. 1080p DASH vs a 720p video_versions MP4). Remember it so the download fetches
-        // that stream + the audio and merges them, keeping the progressive file as the fallback.
         String[] dash = DashAudio.bestVideo(dashManifest(media),
                 android.os.Build.VERSION.SDK_INT < 34);
         int dashH = dash != null ? Integer.parseInt(dash[1]) : -1;
@@ -289,14 +246,12 @@ public class FeedVideoDownloadHook {
         return best;
     }
 
-    /** progressive URL -> {taller DASH video URL, DASH audio URL or null} */
     private static final Map<String, String[]> DASH_UPGRADE = Collections.synchronizedMap(
             new java.util.LinkedHashMap<>(16, 0.75f, true) {
                 @Override
                 protected boolean removeEldestEntry(Map.Entry<String, String[]> e) { return size() > 50; }
             });
 
-    /** video version URL -> its height, filled whenever a video_versions list is read */
     private static final Map<String, Integer> VIDEO_HEIGHT = Collections.synchronizedMap(
             new java.util.LinkedHashMap<>(64, 0.75f, true) {
                 @Override
@@ -317,11 +272,6 @@ public class FeedVideoDownloadHook {
         }
     }
 
-    /**
-     * Invokes the Pando-backed video_versions accessor. These values often do not exist as
-     * Java fields until the JNI getter is called, so the regular object-graph walk misses
-     * them on current Instagram builds.
-     */
     private static boolean isDirectVideoVersionsOwner(Object media) {
         if (media == null) return false;
         for (Method getter : resolvedVideoVersionsGetters) {
@@ -342,7 +292,6 @@ public class FeedVideoDownloadHook {
     private static void collectUrlsFromVideoVersionsMethod(Object dict, Method getter,
                                                             List<String> out) {
         try {
-            // read every quality, not the one "Force reel quality" leaves for the player
             Object result = ForceReelQualityHook.raw(() -> getter.invoke(dict));
             if (!(result instanceof List<?> items) || items.isEmpty()) return;
 
@@ -365,19 +314,9 @@ public class FeedVideoDownloadHook {
         if (item == null) return null;
         String url = tryGetUrl(item);
         if (url != null && isCdnMediaUrl(url)) return url;
-        // Modern Instagram (442+/447): the version element is
-        // com.instagram.model.mediasize.VideoUrlImpl, whose interface exposes no
-        // getUrl():String — the CDN URL is stored in a plain String field instead.
-        // Reflect the item's String fields and pick the one that is a CDN media URL.
         return videoUrlFromStringFields(item);
     }
 
-    /**
-     * Fallback URL extraction for modern video-version models (e.g. VideoUrlImpl) that keep the
-     * CDN URL in a String field rather than exposing a getUrl() accessor. Walks the item's
-     * declared String fields across its class hierarchy and returns the first CDN media URL.
-     * Version-agnostic: matches by URL shape ({@link #isCdnMediaUrl}), not by obfuscated name.
-     */
     private static String videoUrlFromStringFields(Object item) {
         if (item == null) return null;
         Class<?> cls = item.getClass();
@@ -396,10 +335,6 @@ public class FeedVideoDownloadHook {
         return null;
     }
 
-    /**
-     * Tries to call getUrl() on an object if it's available (handles VideoVersionIntf
-     * and any other object that exposes a stable getUrl() method).
-     */
     private static String tryGetUrl(Object obj) {
         if (obj == null) return null;
         try {
@@ -411,7 +346,6 @@ public class FeedVideoDownloadHook {
         }
     }
 
-    /** Among multiple resolutions of the same image, prefer the full-size original. */
     private static String pickBestImageUrl(List<String> images) {
         for (String url : images) {
             if (!url.contains("/s150x") && !url.contains("/s240x") &&
@@ -423,10 +357,6 @@ public class FeedVideoDownloadHook {
         return images.get(0);
     }
 
-    /**
-     * Recursively scans an object's fields for Instagram CDN URL strings.
-     * Only descends into X.* / com.instagram.* / com.facebook.* objects.
-     */
     private static final int MAX_SCAN_DEPTH = 6;
     private static final int MAX_SCAN_URLS  = 20;
 
@@ -440,7 +370,6 @@ public class FeedVideoDownloadHook {
         if (cn.startsWith("android.") || cn.startsWith("java.lang.")  ||
             cn.startsWith("java.util.concurrent.") || cn.startsWith("kotlin.")) return;
 
-        // Also try getUrl() for Pando tree nodes that expose it via method (not field)
         String directUrl = tryGetUrl(obj);
         if (directUrl != null && isCdnMediaUrl(directUrl) && !out.contains(directUrl))
             out.add(directUrl);
@@ -471,8 +400,6 @@ public class FeedVideoDownloadHook {
             cls = cls.getSuperclass();
         }
     }
-
-    // ── Buffer helpers ────────────────────────────────────────────────────────
 
     static void rememberVideoUrl(String url) {
         if (url == null || !isCdnMediaUrl(url)) return;
@@ -518,7 +445,6 @@ public class FeedVideoDownloadHook {
         return found.size() == 1 ? found.get(0) : null;
     }
 
-    /** Instagram's has_audio for this media: TRUE / FALSE, or null when unknown. */
     static Boolean hasAudio(Object media) {
         Method getter = hasAudioGetter;
         if (media == null || getter == null || !getter.getDeclaringClass().isInstance(media)) return null;
@@ -530,8 +456,6 @@ public class FeedVideoDownloadHook {
         }
     }
 
-    /** Audio track URL of a video/reel (from its DASH manifest), or null (photos, no manifest). */
-    /** Child Media of a carousel (carousel_media getter), or null when not a carousel / unavailable. */
     static List<?> carouselChildren(Object media) {
         if (media == null || carouselMediaGetter == null) return null;
         try {
@@ -544,7 +468,6 @@ public class FeedVideoDownloadHook {
         }
     }
 
-    /** The media's DASH manifest XML (video_dash_manifest), or null. */
     static String dashManifest(Object media) {
         Method getter = dashManifestGetter;
         if (media == null || getter == null) return null;
@@ -577,9 +500,6 @@ public class FeedVideoDownloadHook {
             Object manifest = getter.invoke(target);
             String audio = manifest instanceof String s ? DashAudio.audioUrl(s) : null;
             if (audio != null) return audio;
-            // Carousel container: the manifest lives on the child video item(s), not the album.
-            // Fall back to the first child that has an audio track (per-slide resolution is done
-            // at the call site, which passes the specific child; this is the safety net).
             List<?> children = carouselChildren(media);
             if (children != null) {
                 for (Object child : children) {
@@ -594,29 +514,10 @@ public class FeedVideoDownloadHook {
         }
     }
 
-    /**
-     * Optional download chooser. Offers "Audio only" (#234, when enabled and the media has an audio
-     * track) next to the normal download. Otherwise it just runs {@code downloadAction}, so the
-     * default download path is unchanged. (Copy image, #228, is its own post-menu row.)
-     */
-    /**
-     * Where the audio of {@code media} can be saved from, or null when audio-only should not be
-     * offered (option off, not a video, or Instagram marks it silent). Prefers the DASH audio track;
-     * a video served only as a progressive MP4 has none, so its audio is pulled out after download.
-     * Returns {url, extractFromVideo}.
-     */
     static Object[] audioSource(Object media) {
         return audioSource(media, media);
     }
 
-    /**
-     * Audio to save for {@code media} (a single post or the carousel slide being viewed): its own
-     * sound track, or else the song attached to the post ({@code post}; for a carousel the music
-     * belongs to the album, not the slide). Returns {url, extract, trimStartMs, trimDurationMs,
-     * postWide} where extract means "run through the extractor" (video → audio track, or song →
-     * clip), a duration of -1 keeps everything, and postWide marks the post's song (the same audio
-     * for every item) as opposed to one slide's own sound.
-     */
     static Object[] audioSource(Object media, Object post) {
         if (!FeatureFlags.offerAudioDownload || media == null) return null;
         String dashAudio = extractAudioUrl(media);
@@ -660,7 +561,6 @@ public class FeedVideoDownloadHook {
         return null;
     }
 
-    /** First non-null value of a no-arg method on {@code obj} whose return type is {@code typeName}. */
     private static Object callByReturnType(Object obj, String typeName) {
         if (obj == null) return null;
         Class<?> type;
@@ -679,11 +579,6 @@ public class FeedVideoDownloadHook {
         return null;
     }
 
-    /**
-     * Instagram's own "model as named fields" map (keys are the JSON field names, e.g.
-     * "progressive_download_url"); some models take a context object built with its no-arg
-     * constructor. Field names are stable where the getter names are obfuscated per version.
-     */
     private static java.util.Map<?, ?> fieldMap(Object obj) {
         if (obj == null) return null;
         for (Method m : ps.reso.instaeclipse.utils.core.SafeReflect.publicMethods(obj.getClass())) {
@@ -703,14 +598,13 @@ public class FeedVideoDownloadHook {
         return null;
     }
 
-    /** A no-arg getter on Media that reads the given JSON field (matched by its field-name string). */
     private static Method resolveMediaGetter(ClassLoader classLoader, String field) {
         try {
             for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .declaredClass("com.instagram.feed.media.Media")
                     .paramCount(0)
                     .usingEqStrings(List.of(field))))) {
-                if (md.getName().startsWith("<")) continue; // <clinit>/<init> also mention the field
+                if (md.getName().startsWith("<")) continue;
                 try {
                     Method m = md.getMethodInstance(classLoader);
                     if (m.getReturnType() == void.class) continue;
@@ -725,7 +619,6 @@ public class FeedVideoDownloadHook {
         return null;
     }
 
-    /** Saves an audio-only (.m4a) stream; same destinations as other downloads. */
     static void downloadAudio(Context ctx, String url, String filename, String username) {
         downloadAudio(ctx, url, filename, username, false);
     }
@@ -735,17 +628,12 @@ public class FeedVideoDownloadHook {
         downloadAudio(ctx, url, filename, username, extractFromVideo, 0, -1);
     }
 
-    /**
-     * @param extractFromVideo run {@code url} through the extractor: keep only its audio track and,
-     *                         when trimDurationMs &gt; 0, only that range (a post's music clip).
-     */
     static void downloadAudio(Context ctx, String url, String filename, String username,
                               boolean extractFromVideo, long trimStartMs, long trimDurationMs) {
         ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, I18n.t(ctx, R.string.ig_toast_downloading_audio), Toast.LENGTH_SHORT).show();
         downloadAudio(ctx, url, filename, username, extractFromVideo, trimStartMs, trimDurationMs, false);
     }
 
-    /** {@code local}: saved by Instagram itself (the app couldn't be reached). */
     private static void downloadAudio(Context ctx, String url, String filename, String username,
                               boolean extractFromVideo, long trimStartMs, long trimDurationMs, boolean local) {
         executor.submit(() -> {
@@ -817,14 +705,7 @@ public class FeedVideoDownloadHook {
         }
     }
 
-    /**
-     * Uses DexKit to find the user class (via "username_missing_during_update") and then
-     * locates the no-arg method on MutableMediaDictIntf (or its superinterfaces) that
-     * returns an instance of that class. This gives us a stable way to get the post author
-     * from the LiveTreeMediaDict without guessing obfuscated method names.
-     */
     private static void resolveUsernameGetter(ClassLoader classLoader) {
-        // Cache hit: restore userClass and userUsernameGetter without DexKit
         if (DexKitCache.isCacheValid()) {
             String cachedClassName = DexKitCache.loadString("UserClass");
             Method cachedGetter    = DexKitCache.loadMethod("UsernameGetter", classLoader);
@@ -840,7 +721,6 @@ public class FeedVideoDownloadHook {
         }
 
         try {
-            // Step 1: find the user class via the stable validation string
             List<Found> userMethods = DexKitQueryCache.methods(FindMethod.create()
                     .matcher(MethodMatcher.create()
                             .usingStrings("username_missing_during_update")));
@@ -855,8 +735,6 @@ public class FeedVideoDownloadHook {
             DexKitCache.saveString("UserClass", userClass.getName());
             ModuleLog.detail("(IE|DL|Username) userClass=" + userClass.getName());
 
-            // Resolve the username getter on User via the stable GraphQL field ID -265713450
-            // (== "username".hashCode(), a JDK-fixed constant → valid across builds).
             try {
                 List<Found> ugMethods = DexKitQueryCache.methods(FindMethod.create()
                         .matcher(MethodMatcher.create()
@@ -881,10 +759,6 @@ public class FeedVideoDownloadHook {
         }
     }
 
-    // ── Download dispatch ─────────────────────────────────────────────────────
-
-    // ── Filename + directory helpers (package-accessible for StoryDownloadHook) ──
-
     static String buildFilename(String username, String type, String mediaId, boolean isVideo) {
         return DownloadNames.buildFilename(username, type, mediaId, isVideo,
                 FeatureFlags.downloaderAddTimestamp, System.currentTimeMillis());
@@ -898,12 +772,6 @@ public class FeedVideoDownloadHook {
         return DownloadPublisher.openStream(ctx, filename, "text/html", "comments");
     }
 
-    /**
-     * A file inside a chat export's own folder: {@code <download>/chats/<sub>/<filename>}
-     * ({@code sub} may itself be nested, e.g. {@code <folder>/media}). The chat's HTML and its
-     * media/ folder must stay side by side, so the subfolder is always applied here regardless of
-     * the "username folder" downloader setting.
-     */
     public static OutputStream openChatExportFile(Context ctx, String sub, String filename, String mime)
             throws Exception {
         String folder = "chats" + (sub == null || sub.isEmpty() ? "" : "/" + sub);
@@ -915,10 +783,6 @@ public class FeedVideoDownloadHook {
         DownloadPublisher.save(ctx, tempFile, filename, mimeType, username, new DownloadEngine.Cancellation());
     }
 
-    /**
-     * Public helper: copies an already-downloaded LOCAL file into the gallery/download destination
-     * off the UI thread, with success/failure toasts. Used by the cached-story viewer (cross-package).
-     */
     public static void saveLocalFileToGallery(Context ctx, String localPath, String author,
                                               String id, boolean video, String okMsg, String failMsg) {
         executor.submit(() -> {
@@ -940,10 +804,6 @@ public class FeedVideoDownloadHook {
         });
     }
 
-    /**
-     * Reads the companion app's latest SAF URI from its shared prefs WITHOUT overwriting
-     * FeatureFlags — callers decide what to do with the value.
-     */
     private static String readCompanionUri() {
         try {
             return ps.reso.instaeclipse.xposedcompat.CompanionPrefs.getString("downloaderCustomUri", "");
@@ -952,16 +812,6 @@ public class FeedVideoDownloadHook {
         }
     }
 
-    /**
-     * Downloads {@code url} and saves it with the configured destination.
-     *
-     * When a custom SAF URI is configured, the CDN URL is forwarded to
-     * {@link DownloadSaveService} in the companion-app process — it holds the SAF
-     * permission (granted when the user picked the folder in FeaturesFragment) and writes
-     * the file directly.  No file-descriptor passing across UIDs is required.
-     *
-     * @return {@code true} when delegated (async — service shows its own toast).
-     */
     static boolean downloadAndSave(Context ctx, String url, String filename,
                                    boolean isVideo, String username) throws Exception {
         String[] dash = isVideo ? DASH_UPGRADE.get(url) : null;
@@ -973,7 +823,6 @@ public class FeedVideoDownloadHook {
         return downloadCapturedOriginal(ctx, url, filename, isVideo, username, dash, false);
     }
 
-    /** {@code local}: saved by Instagram itself (the app couldn't be reached). */
     private static boolean downloadCapturedOriginal(Context ctx, String url, String filename, boolean isVideo,
             String username, String[] dash, boolean local) throws Exception {
         String uri = local ? "" : FeatureFlags.downloaderCustomUri.isEmpty() ? readCompanionUri() : FeatureFlags.downloaderCustomUri;
@@ -1021,9 +870,6 @@ public class FeedVideoDownloadHook {
             }
         }
 
-        // No custom folder configured → download to a neutral temporary file first.
-        // The response and file signature decide the final MIME/extension; CDN URL text
-        // alone is not reliable on recent Instagram versions.
         File temp = File.createTempFile("ie_dl_", ".bin", ctx.getCacheDir());
         try {
             String responseType = downloadToFileAndGetType(url, temp);
@@ -1032,7 +878,6 @@ public class FeedVideoDownloadHook {
             ModuleLog.detail("(IE|DL|Type) requested=" + (isVideo ? "video" : "image")
                     + " response=" + responseType + " detected=" + detected.kind
                     + " file=" + detected.filename);
-            // The detected MIME, so a sniffed audio or GIF file is not saved as image/jpeg.
             saveFileToDestination(ctx, temp, detected.filename, detected.mimeType, username);
         } finally {
             //noinspection ResultOfMethodCallIgnored
@@ -1041,7 +886,6 @@ public class FeedVideoDownloadHook {
         return false;
     }
 
-    /** @param fallbackUrl saved instead when the merge fails (e.g. a codec the muxer can't write) */
     private static void delegateUrlToCompanionApp(Context ctx,
                                                    String url,
                                                    String audioUrl,
@@ -1062,10 +906,6 @@ public class FeedVideoDownloadHook {
         ModuleLog.detail("(IE|DL) Submitted companion download request");
     }
 
-    /**
-     * A companion download's result: when the app can't be reached, {@code saveLocally} (if any)
-     * saves it from Instagram instead; any other error is shown.
-     */
     private static void companionResult(Context ctx, String error, String mime, Runnable saveLocally) {
         if (error == null) return;
         if (saveLocally != null && SelectedMediaDownloads.companionUnreachable(error)) {
@@ -1077,21 +917,12 @@ public class FeedVideoDownloadHook {
                 DownloadMessages.companionFailure(ctx, error), Toast.LENGTH_SHORT).show());
     }
 
-    /**
-     * Package-accessible: collects Instagram CDN media URLs from the given object graph.
-     * Used by PostDownloadContextMenuHook as a fallback URL source.
-     */
     static List<String> collectCdnUrls(Object obj) {
         List<String> out = new ArrayList<>();
         scanForCdnUrls(obj, out, 0, Collections.newSetFromMap(new IdentityHashMap<>()));
         return out;
     }
 
-    /**
-     * Package-accessible: extracts the image URL from a Media object using MediaExtKt helper.
-     * Returns null if not available (e.g. MediaExtKt not resolved or media is a video-only post).
-     */
-    /** Calls the resolved MediaExtKt image-url method; returns the URL String (or null). */
     private static Object invokeImageUrl(Context ctx, Object media) throws Exception {
         Object r = methodImageUrl.invoke(null, ctx, media);
         if (r != null && extendedImageUrlGetUrl != null) r = extendedImageUrlGetUrl.invoke(r);
@@ -1108,12 +939,10 @@ public class FeedVideoDownloadHook {
         }
     }
 
-    /** Upstream photo discovery order, scoped to the selected item. The caller verifies ownership. */
     static String originalImageFromSelected(Context ctx, Object media, boolean carouselChild) {
         String image = imageUrlFromMedia(ctx, media);
         if (image != null) return image;
         if (carouselChild) {
-            // Original MutableMediaDict carousel fallback, after its native image helper.
             String probed = probeCdnUrlViaStringMethods(media);
             if (probed != null) return probed;
         }
@@ -1125,7 +954,6 @@ public class FeedVideoDownloadHook {
     static boolean hasCompanionDestination() {
         return !FeatureFlags.downloaderCustomUri.isEmpty() || !readCompanionUri().isEmpty();
     }
-    /** Detach upstream's chosen DASH upgrade before any chooser is shown. */
     static OriginalMediaSelection.Plan originalPlan(Object media, String progressive) {
         if (progressive == null) return null;
         Integer height = VIDEO_HEIGHT.get(progressive);
@@ -1139,20 +967,12 @@ public class FeedVideoDownloadHook {
     public static List<String> extractAllUrlsFromMedia(Context ctx, Object media) {
         if (media == null) return new ArrayList<>();
 
-        // Step 0 (IG 447+): carousel-first. Must run BEFORE the single-video short-circuit —
-        // otherwise a carousel that contains a video collapses to one URL (the graph walk in
-        // bestVideoUrlFromMedia returns the first video/audio it finds anywhere). Only fires
-        // when the "carousel_media" accessor resolved (absent on older builds → falls through).
         List<String> carousel = extractCarouselUrls(ctx, media);
         if (carousel != null && carousel.size() >= 2) return carousel;
 
-        // Step A: single video
         String videoUrl = bestVideoUrlFromMedia(media);
         if (videoUrl != null) return new ArrayList<>(List.of(videoUrl));
 
-        // A Reel/video must never fall through to its image_versions2 cover. If exact
-        // model extraction failed, only accept a URL that belongs to this media object's
-        // own graph and was independently identified as video.
         if (isMediaVideo(media)) {
             List<String> mediaUrls = collectCdnUrls(media);
             for (String candidate : mediaUrls) {
@@ -1166,23 +986,15 @@ public class FeedVideoDownloadHook {
             return new ArrayList<>();
         }
 
-        // Step C: single photo
         String imageUrl = imageUrlFromMedia(ctx, media);
         if (imageUrl != null) return new ArrayList<>(List.of(imageUrl));
 
-        // Step D: CDN scan fallback
         List<String> cdnUrls = collectCdnUrls(media);
         if (!cdnUrls.isEmpty()) return new ArrayList<>(List.of(cdnUrls.get(0)));
 
         return new ArrayList<>();
     }
 
-    /**
-     * IG 447+ carousel extraction: reads one child Media per slide via the "carousel_media"
-     * accessor and resolves each slide's own URL (video slide → its video_versions; photo slide
-     * → its image). Returns null when this isn't a carousel or the accessor is unavailable, so
-     * the caller falls back to the legacy single-media / dict-based paths.
-     */
     private static List<String> extractCarouselUrls(Context ctx, Object media) {
         if (carouselMediaGetter == null) return null;
         try {
@@ -1199,8 +1011,6 @@ public class FeedVideoDownloadHook {
             for (Object child : items) {
                 if (child == null) continue;
                 String v = ownVideoUrl(child);
-                // Only when the slide's own getter can't be called on it (other model shapes) fall back to the
-                // general lookup; for a direct owner an empty result means "photo slide", never a graph walk.
                 if (v == null && !isDirectVideoVersionsOwner(child)) v = bestVideoUrlFromMedia(child);
                 if (v != null) { urls.add(v); continue; }
                 String img = imageUrlFromMedia(ctx, child);
@@ -1219,21 +1029,7 @@ public class FeedVideoDownloadHook {
         }
     }
 
-    // ── Copy Media Link (#117) ────────────────────────────────────────────────
-    //
-    // Single URL (reel / single post) → copy straight to clipboard. Carousel → a chooser
-    // sheet with one pill per slide plus "copy all", so the user picks the exact slide
-    // (the visible-slide index can't be resolved reliably when several feed carousels are
-    // on screen at once, so we don't guess — we let the user choose).
-
     static void copyLinkToClipboard(Context ctx, String url) {
-        // Defer the actual setPrimaryClip: writing the clipboard synchronously re-enters IG's own
-        // OnPrimaryClipChangedListener on the main thread. On a carousel that collides with IG's
-        // realtime request-stream executor being torn down (the visible slide's prefetch scope),
-        // and IG's native TigonRepeatingForwardingRequestToken then schedules on the dead executor
-        // → RejectedExecutionException (a fatal in IG's own code, not ours). Posting the write a
-        // beat later (past the ~200ms clip-listener debounce + the sheet-dismiss frame) moves it
-        // out of that teardown window. Framework-only; clipboard contents unchanged.
         mainHandler.postDelayed(() -> {
             try {
                 CopyFeedback.copy(ctx, ClipData.newPlainText("InstaEclipse", url), I18n.t(ctx, R.string.ig_copy_link_copied));
@@ -1258,14 +1054,11 @@ public class FeedVideoDownloadHook {
             ps.reso.instaeclipse.utils.dialog.IeDialog dlg = new ps.reso.instaeclipse.utils.dialog.IeDialog(ctx)
                     .title(I18n.t(ctx, R.string.ie_copy_media_link))
                     .message(I18n.t(ctx, R.string.ig_dl_carousel_subtitle, n))
-                    // One row per slide (the dialog body scrolls for long carousels)
                     .choices(slides, -1, idx -> copyLinkToClipboard(ctx, urls.get(idx)));
             dlg.primary(I18n.t(ctx, R.string.ig_copy_link_all, n), () -> {
                 StringBuilder sb = new StringBuilder();
                 for (String u : urls) sb.append(u).append('\n');
                 final String allText = sb.toString().trim();
-                // Deferred like copyLinkToClipboard — keep the clipboard write out of the
-                // carousel realtime-stream teardown window (see that method's note).
                 mainHandler.postDelayed(() -> {
                     try {
                         CopyFeedback.copy(ctx, ClipData.newPlainText("InstaEclipse", allText),
@@ -1322,52 +1115,20 @@ public class FeedVideoDownloadHook {
                 + (error instanceof HttpStatusException http ? " " + http.code : "") + " from " + host;
     }
 
-    /**
-     * Returns true if this CDN URL points to an Instagram feed media item
-     * (photo or video) — not a profile picture, UI asset, or other non-media content.
-     *
-     * Key CDN path segments:
-     *   t51.2885-15  = feed photo (INCLUDE)
-     *   t51.2885-19  = profile picture (EXCLUDE)
-     *   t50.2886-16  = feed video (INCLUDE)
-     *   t51.39750    = exclude (story thumbnails / non-feed content)
-     */
     static boolean isCdnMediaUrl(String url) {
         if (!url.startsWith("http://") && !url.startsWith("https://")) return false;
         if (!url.contains("cdninstagram.com") && !url.contains("fbcdn.net")) return false;
-        // Exclude profile pictures: the t51 CDN path always uses suffix -19 for avatars
-        // regardless of the bucket number (t51.2885-19, t51.82787-19, etc.)
-        // Pattern: /t51.<digits>-19/
         if (url.contains("/t51.") && url.contains("-19/")) return false;
-        // Exclude other known non-feed content
         if (url.contains("t51.39750")) return false;
         return true;
     }
 
-    /**
-     * Returns true if this CDN URL is a video (not a still image or audio-only track).
-     *
-     * Instagram CDN naming convention:
-     *   t50.xxxx = all video CDN path segments (t50.2886-16, t50.29441-2, t50.16800-16, etc.)
-     *   t51.xxxx = image content
-     *   /o1/     = Reels/Clips video (path may omit t50 segment)
-     *
-     * Known audio-only (exclude):
-     *   /o1/v/t2/ = background music track for Reels
-     */
     static boolean isVideoUrl(String url) {
         if (url == null) return false;
-        // Source-aware classification: a URL returned by VideoVersionIntf or by the
-        // Pando video_versions getter is a video even when the CDN path is opaque.
         if (wasCapturedAsVideo(url)) return true;
         String lower = url.toLowerCase(Locale.US);
-        // All Instagram video CDN path segments begin with t50.
-        // Covers all variants: t50.2886-16, t50.29441-2, t50.16800-16, etc.
         if (lower.contains("t50.")) return true;
-        // Reels/Clips CDN paths use /o1/ regardless of whether they carry a t50 segment.
-        // Note: /o1/v/t2/ is NOT audio-only — it is the standard Reels progressive MP4 path.
         if (lower.contains("/o1/") || lower.contains("%2fo1%2f")) return true;
-        // Newer CDN variants may omit t50/o1 while retaining the explicit container or MIME.
         return lower.contains(".mp4")
                 || lower.contains("mime_type=video")
                 || lower.contains("mime%2ftype=video");

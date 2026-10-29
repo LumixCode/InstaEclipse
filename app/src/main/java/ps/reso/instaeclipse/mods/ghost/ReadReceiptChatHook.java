@@ -20,13 +20,6 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 
-/**
- * Per-chat read receipts (#227), chosen from inside the chat: with "Send read receipts to specific
- * chats" on, the thread header menu gets "Send read receipts in this chat" / "Stop read receipts in
- * this chat". Same triggers and thread-id lookup as HideChatsHook (thread activities' onResume plus
- * the thread-fragment tracker), so it works whether the chat is a ModalActivity or a fragment.
- * GhostDMSeenHook and the network interceptor let "Seen" through for listed threads.
- */
 public class ReadReceiptChatHook {
 
     private static final Set<View> pendingDecors = Collections.newSetFromMap(new WeakHashMap<>());
@@ -72,7 +65,6 @@ public class ReadReceiptChatHook {
         }
     }
 
-    /** True once the entry is in this thread's menu (the header must be on screen). */
     private static boolean tryInject(Activity a, String openThread) {
         View header = ThreadHeaderMenu.shownHeader(a);
         if (header == null) return false;
@@ -82,7 +74,6 @@ public class ReadReceiptChatHook {
         return addEntry(a, threadId, header);
     }
 
-    /** (Re)adds the entry so its label matches the chat's current state. */
     private static boolean addEntry(Activity a, String threadId, View header) {
         boolean on = ReadReceiptWhitelist.isListed(threadId);
         String label = I18n.t(a, on ? R.string.ig_read_receipt_chat_off : R.string.ig_read_receipt_chat_on);

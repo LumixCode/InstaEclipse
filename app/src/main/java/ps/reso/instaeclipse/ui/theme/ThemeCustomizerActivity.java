@@ -66,9 +66,6 @@ public class ThemeCustomizerActivity extends AppCompatActivity implements Advanc
     private boolean presetsExpanded = true;
     private boolean customExpanded = true;
     private int selectedPresetId = 1;
-    // The gallery follows the phone's mode: in dark mode it lists and saves the dark theme
-    // (themePresetId), in light mode the light theme (themeLightPresetId). The activity is
-    // recreated when the mode changes, so this is re-read every time.
     private boolean lightMode;
 
     @Override
@@ -117,7 +114,6 @@ public class ThemeCustomizerActivity extends AppCompatActivity implements Advanc
         colorSlots.setAdapter(slotAdapter);
 
         if (lightMode) {
-            // Custom colors edit the dark theme's palette; the light theme is chosen from the set.
             findViewById(R.id.theme_custom_header).setVisibility(View.GONE);
             customContent.setVisibility(View.GONE);
             findViewById(R.id.theme_light_note).setVisibility(View.VISIBLE);
@@ -236,7 +232,6 @@ public class ThemeCustomizerActivity extends AppCompatActivity implements Advanc
         CompanionSettings.putAll(this, values);
     }
 
-    /** Light mode: only the enable switch and the light theme id; the dark theme is left as is. */
     private void persistLight(boolean enabled) {
         LinkedHashMap<String, Object> values = new LinkedHashMap<>();
         values.put(KEY_ENABLED, enabled);

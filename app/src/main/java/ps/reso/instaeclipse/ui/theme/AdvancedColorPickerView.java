@@ -17,7 +17,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewParent;
 
-/** Self-contained HSV color picker: hue strip + saturation/value box + live preview swatch. */
 public class AdvancedColorPickerView extends View {
 
     public interface OnColorChangedListener {

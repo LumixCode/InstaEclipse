@@ -15,7 +15,6 @@ import java.util.function.Consumer;
 
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/** Resources belonging to the loaded module, including APKs embedded by LSPatch. */
 public final class ModuleResources {
     private static final Consumer<Runnable> BACKGROUND = task -> new Thread(task, "IE-Res").start();
 
@@ -49,7 +48,6 @@ public final class ModuleResources {
             ApplicationInfo info = archive.applicationInfo;
             info.sourceDir = modulePath;
             info.publicSourceDir = modulePath;
-            // Numeric resource IDs must match the loaded code, not a different companion version.
             return pm.getResourcesForApplication(info);
         } catch (Exception e) {
             ModuleLog.detail("(IE|Resources) APK resources unavailable; trying installed module", e);
@@ -85,10 +83,6 @@ public final class ModuleResources {
                 Context.CONTEXT_IGNORE_SECURITY).getResources();
     }
 
-    /**
-     * A drawable from the loaded module APK, or null (logged). Replaces the XModuleResources
-     * loaders, which produced blank icons under embedded LSPatch.
-     */
     public static Drawable drawable(Context context, int resId) {
         try {
             return get(context).getDrawable(resId, null);

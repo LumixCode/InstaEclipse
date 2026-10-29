@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** Only observed removal events enter this index; receiving a message is not an unsend. */
 public final class UnsentMessageIndex {
     public static final class Key {
         public final String account, thread, message;
@@ -45,7 +44,6 @@ public final class UnsentMessageIndex {
         return recordAliases(account, thread, Collections.singletonList(message)) != null;
     }
 
-    /** Server and client IDs identify one removal, including rows that still have only a client ID. */
     public synchronized Key recordAliases(String account, String thread, List<String> ids) {
         if (!valid(account) || !valid(thread) || ids == null) return null;
         LinkedHashSet<String> aliases = new LinkedHashSet<>();
@@ -58,7 +56,6 @@ public final class UnsentMessageIndex {
             if (keys == null) continue;
             for (Key key : keys) {
                 if (!account.equals(key.account) || !thread.equals(key.thread) || key.equals(match)) continue;
-                // A pair that would join different observed deletions is ambiguous; change neither.
                 if (match != null) return null;
                 match = key;
             }
@@ -89,7 +86,6 @@ public final class UnsentMessageIndex {
                 && find(account, thread, Collections.singletonList(message)) != null;
     }
 
-    /** Some live items omit their thread key. Accept only an unambiguous event in this account. */
     public synchronized Key find(String account, String thread, Iterable<String> ids) {
         if (!valid(account) || ids == null) return null;
         Key match = null;

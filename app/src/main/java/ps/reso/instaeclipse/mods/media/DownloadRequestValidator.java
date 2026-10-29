@@ -1,21 +1,11 @@
 package ps.reso.instaeclipse.mods.media;
 
-/**
- * Input validation for {@link DownloadSaveService}. The service is exported (Instagram runs
- * under a different uid), so any app can start it and every extra is untrusted. Pure Java so it
- * can be unit-tested on the JVM.
- */
 public final class DownloadRequestValidator {
 
     static final int MAX_NAME_LENGTH = 120;
 
     private DownloadRequestValidator() {}
 
-    /**
-     * Strips path separators, control characters and leading dots so the value can only ever
-     * name a single entry inside the chosen SAF folder. Returns {@code fallback} if nothing
-     * usable is left.
-     */
     public static String sanitizeFileName(String name, String fallback) {
         if (name == null) return fallback;
         StringBuilder sb = new StringBuilder(name.length());
@@ -33,7 +23,6 @@ public final class DownloadRequestValidator {
         return out.isEmpty() ? fallback : out;
     }
 
-    /** A relative folder path ("a/b") with every segment sanitized; "." / ".." segments dropped. */
     public static String sanitizeSubdir(String path) {
         if (path == null) return null;
         StringBuilder out = new StringBuilder();

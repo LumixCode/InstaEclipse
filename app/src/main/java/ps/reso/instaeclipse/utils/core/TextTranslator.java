@@ -10,14 +10,6 @@ import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Hands a piece of text to the user's translation app (#233) — no network or API keys of our own.
- *
- * Tries, in order: the system translate intent (handled by Google Translate and others), a
- * PROCESS_TEXT chooser (DeepL, Translate, …), then a plain share sheet. Each step is a straight
- * startActivity in try/catch rather than a resolveActivity check, because Instagram's own
- * package-visibility (<queries>) would hide most handlers from a lookup.
- */
 public final class TextTranslator {
 
     private TextTranslator() {}

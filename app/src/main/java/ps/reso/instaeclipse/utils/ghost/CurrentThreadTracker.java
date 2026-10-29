@@ -24,22 +24,6 @@ import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
-/**
- * Tracks the DM thread that is currently open, independent of which activity hosts it.
- *
- * Every DM thread screen is an androidx Fragment that receives its DirectThreadKey in its arguments
- * (e.g. "DirectFragment.DIRECT_FRAGMENT_ARGUMENT_THREAD_KEY"). androidx.fragment.app.Fragment keeps
- * its public lifecycle names and m* field names in every IG build (verified 436 / 447 / 451), and every
- * subclass must chain to super.onResume()/onPause() — so hooking the base methods sees every
- * fragment. A resumed fragment whose mArguments hold a DirectThreadKey is the open thread.
- *
- * Replaces two fragile id sources: the "igThreadIgid" (DirectThreadKey, boolean) tracker (string moved
- * off that method on IG 451) and the activity intent-extra scan (only works when the thread is hosted
- * in its own ModalActivity, not when it is a fragment inside InstagramMainActivity — issue #254).
- * Listeners are notified on the main thread after a thread fragment resumes, which also gives the
- * header-button hooks a reliable "thread opened" signal (a fragment transaction fires no activity
- * onResume).
- */
 public final class CurrentThreadTracker {
 
     public interface Listener {
@@ -65,8 +49,6 @@ public final class CurrentThreadTracker {
     private static volatile Field argumentsField, viewField;
     private static final Map<Class<?>, Object[][]> CONTROLLERS = new ConcurrentHashMap<>();
 
-    /** Resumed fragments that carry a thread key, oldest first (a thread-keyed sheet/viewer can sit
-     *  on top of the open thread; when it pauses, the thread underneath is current again). */
     private static final java.util.ArrayList<Object[]> RESUMED = new java.util.ArrayList<>();
 
     private static final class Main {
@@ -75,7 +57,6 @@ public final class CurrentThreadTracker {
 
     private CurrentThreadTracker() {}
 
-    /** Thread id of the DM thread fragment currently resumed, or null. */
     public static String currentThreadId() {
         synchronized (RESUMED) {
             prune(null);
@@ -328,7 +309,6 @@ public final class CurrentThreadTracker {
         }
     }
 
-    /** The first all-digit id (a thread id) in {@code o}'s fields, IG classes only, depth-limited. */
     private static String numericId(Object o, int depth, java.util.Set<Object> seen) {
         if (o == null || depth > 2 || !seen.add(o)) return null;
         if (o instanceof String str) return str.length() >= 10 && str.chars().allMatch(Character::isDigit) ? str : null;
@@ -347,7 +327,6 @@ public final class CurrentThreadTracker {
         return null;
     }
 
-    /** DirectThreadKey's thread id is its first non-empty instance String field (same rule as the hooks). */
     public static String firstStringField(Object o) {
         if (o == null) return null;
         try {

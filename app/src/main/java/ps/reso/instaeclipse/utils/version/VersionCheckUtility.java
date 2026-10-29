@@ -46,7 +46,6 @@ public class VersionCheckUtility {
         long now = System.currentTimeMillis();
         if (!UpdateCheckPolicy.shouldCheck(now, ui.getLong(CompanionUiPrefs.LAST_UPDATE_CHECK, 0), BuildConfig.DEBUG)) return;
         ui.edit().putLong(CompanionUiPrefs.LAST_UPDATE_CHECK, now).apply();
-        // Hold the activity weakly: the request can outlive a rotation or back press.
         WeakReference<Activity> ref = new WeakReference<>(activity);
         EXECUTOR.execute(() -> {
             ReleaseInfo result = fetch();

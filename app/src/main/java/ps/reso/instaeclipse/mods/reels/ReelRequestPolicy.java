@@ -2,7 +2,6 @@ package ps.reso.instaeclipse.mods.reels;
 
 import java.net.URI;
 
-/** The DM exception changes reel delivery only; it must never skip other network privacy checks. */
 public final class ReelRequestPolicy {
     private static final String CLIPS = "/clips/";
     private static final String[] CREATION_ENDPOINTS = {"drafts", "delete_draft", "draft_content",
@@ -21,8 +20,6 @@ public final class ReelRequestPolicy {
         boolean discovery = path.contains("/explore_clips/");
         if (!clips && !discovery) return false;
         if (!allowDM) return true;
-        // DM-opened items remain fetchable while a restriction is active. The viewer validates the
-        // source and permits only that first item; this endpoint alone is not proof of a DM entry.
         return discovery || !path.endsWith("/clips/items/") || hasPagination(uri.getRawQuery());
     }
 

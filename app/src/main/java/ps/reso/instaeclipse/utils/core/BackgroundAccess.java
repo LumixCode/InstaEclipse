@@ -12,12 +12,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import ps.reso.instaeclipse.R;
 
-/**
- * Downloads to a chosen folder are saved by this app, started from Instagram. When the system
- * keeps the app asleep (battery optimization, Samsung's Sleeping apps, Xiaomi autostart) Instagram
- * can't start it and those downloads fall back to Download. So the app asks once to run
- * unrestricted: when a folder is chosen, and on opening while a folder is set.
- */
 public final class BackgroundAccess {
 
     public static final String FOLDER_LOST_DISMISSED_FOR = "folderLostDismissedFor";
@@ -29,7 +23,6 @@ public final class BackgroundAccess {
         return pm == null || pm.isIgnoringBatteryOptimizations(ctx.getPackageName());
     }
 
-    /** Asks if still restricted. {@code always}: also when asked before (a folder was just chosen). */
     public static void askIfNeeded(Context ctx, boolean always) {
         SharedPreferences prefs = CompanionUiPrefs.get(ctx);
         if (unrestricted(ctx) || (!always && prefs.getBoolean(CompanionUiPrefs.BACKGROUND_ACCESS_ASKED, false))) return;
@@ -42,7 +35,7 @@ public final class BackgroundAccess {
                 .show();
     }
 
-    @SuppressLint("BatteryLife") // sideloaded companion: running unrestricted is what downloads need
+    @SuppressLint("BatteryLife")
     private static void request(Context ctx) {
         try {
             ctx.startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
@@ -55,10 +48,6 @@ public final class BackgroundAccess {
         }
     }
 
-    /**
-     * The chosen download folder is reachable only while its grant is kept (it can be lost after a
-     * reinstall or clearing data, while the setting comes back through sync).
-     */
     public static boolean folderGrantLost(Context ctx, String uri) {
         if (uri == null || uri.isEmpty() || !uri.startsWith("content://")) return false;
         for (android.content.UriPermission p : ctx.getContentResolver().getPersistedUriPermissions())
@@ -66,7 +55,6 @@ public final class BackgroundAccess {
         return true;
     }
 
-    /** Asks to choose the folder again; {@code choose} opens the folder picker. */
     public static void askToRechooseFolder(Context ctx, String uri, Runnable choose, Runnable useDefault) {
         SharedPreferences ui = CompanionUiPrefs.get(ctx);
         if (uri.equals(ui.getString(FOLDER_LOST_DISMISSED_FOR, null))) return;

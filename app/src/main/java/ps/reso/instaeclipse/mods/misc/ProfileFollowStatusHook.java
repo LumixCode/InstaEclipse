@@ -35,7 +35,6 @@ import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.ui.ResIds;
 
-/** Profile-bound relationship metadata; never infers the viewed profile from unrelated requests. */
 public final class ProfileFollowStatusHook {
     private static final String KEY = "FollowStatusLabel";
     private static final String TAG = "ie_profile_follow_status";
@@ -46,10 +45,8 @@ public final class ProfileFollowStatusHook {
     private static final String BOUND_KEY = "ProfileFollowBound_v1_";
     private static final Set<String> diagnostics = Collections.synchronizedSet(new HashSet<>());
     private static final String[] NAME_IDS = {"profile_header_full_name", "profile_header_full_name_above_vanity"};
-    /** igds_color_secondary_text attr id; -1 until resolved (0 = Instagram has none). */
     private static volatile int secondaryTextAttr = -1;
 
-    /** Returns whether the header binder was hooked; ProfileFollowsYouHook runs either way. */
     public boolean install(ClassLoader loader) {
         try {
             final Method viewerId = Class.forName(SESSION, false, loader).getMethod("getUserId");
@@ -86,7 +83,6 @@ public final class ProfileFollowStatusHook {
                             if (account != null) status = reader.read((String) viewerId.invoke(account), param.args);
                             if (status == ProfileFollowStatus.Status.HIDDEN) diagnostic("Profile relationship hidden, self, or not available yet");
                         } catch (Throwable error) {
-                            // A partial model must clear a recycled profile's old label, not imply "no".
                             diagnostic("Profile relationship read failed: " + error.getClass().getSimpleName());
                         }
                         bindLabel(root, status, profile);
@@ -123,7 +119,6 @@ public final class ProfileFollowStatusHook {
     private interface ProfileReader {
         ProfileFollowStatus.Status read(String viewerId, Object[] arguments) throws Exception;
 
-        /** The bound profile's id, or null when the bind doesn't identify one profile. */
         String profileId(Object[] arguments) throws Exception;
     }
 
@@ -217,8 +212,6 @@ public final class ProfileFollowStatusHook {
         Method cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(key, loader) : null;
         if (cached != null) return cached;
         Set<Method> common = null;
-        // Required child accessors differ across native callers. Their shared accessor is the
-        // nullable friendship_status child, so absent relationship data never becomes false.
         for (var caller : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingNumbers("friendship_status".hashCode(), "followed_by".hashCode())))) {
             Set<Method> children = new HashSet<>();
@@ -293,12 +286,6 @@ public final class ProfileFollowStatusHook {
         bindLabel(root, status, null);
     }
 
-    /**
-     * IG binds the header rows one by one and again on every refresh, and only some binds carry
-     * the relationship. A bind of the profile the label already shows that lacks it keeps the
-     * label: hiding it there and showing it on the next bind made the header line flicker. Another
-     * profile (a recycled header), your own profile or conflicting data still hide it.
-     */
     static void bindLabel(View root, ProfileFollowStatus.Status status, String profile) {
         bindLabel(root, status, profile, false);
     }
@@ -342,8 +329,6 @@ public final class ProfileFollowStatusHook {
             }
             parent.addView(label, parent == anchor ? parent.getChildCount() : parent.indexOfChild(anchor) + 1, layout);
             TextView added = label;
-            // Registered only while attached: a window-wide listener per visited profile would
-            // outlive its header and run on every frame.
             int[] synced = {-1, -1};
             ViewTreeObserver.OnPreDrawListener sync = () -> {
                 int width = contentWidth(root), on = FeatureFlags.showFollowStatusLabel ? 1 : 0;
@@ -363,7 +348,6 @@ public final class ProfileFollowStatusHook {
                     restoreRow(added, parent);
                 }
             });
-            // addView already dispatched the attach before the listener above existed.
             if (label.isAttachedToWindow()) label.getViewTreeObserver().addOnPreDrawListener(sync);
         }
         TextView name = findName(root);
@@ -379,7 +363,6 @@ public final class ProfileFollowStatusHook {
         applyVisibility(label, FeatureFlags.showFollowStatusLabel);
     }
 
-    /** Applies a live toggle-off and keeps the label within the header width once it is laid out. */
     static void syncLabel(View root, TextView label) {
         boolean visible = FeatureFlags.showFollowStatusLabel
                 && label.getTag(R.id.ie_follow_status_state) != ProfileFollowStatus.Status.HIDDEN;
@@ -407,18 +390,14 @@ public final class ProfileFollowStatusHook {
     private static void restoreRow(TextView label, View row) {
         Object previous = label.getTag(R.id.ie_follow_status_row_visibility);
         if (!(previous instanceof Integer)) return;
-        // Restore before IG binds again so a new profile's native visibility takes precedence.
         if (row.getVisibility() == View.VISIBLE) row.setVisibility((Integer) previous);
         label.setTag(R.id.ie_follow_status_row_visibility, null);
     }
 
-    // Ids are resolved once (ResIds): the binder runs for every header row on each profile list
-    // refresh, label on or off, and getIdentifier scans Instagram's 36.7k unsorted resource keys.
     private static View findAnchor(View root) {
         TextView name = findName(root);
         if (name != null && name.getParent() instanceof LinearLayout parent
                 && parent.getOrientation() == LinearLayout.VERTICAL) return name;
-        // Current IG uses a ConstraintLayout header with a dedicated inline metadata row.
         int rowId = ResIds.id(root.getContext(), "internal_only_badges");
         View row = rowId == 0 ? null : root.findViewById(rowId);
         return row instanceof LinearLayout ? row : null;
@@ -436,7 +415,7 @@ public final class ProfileFollowStatusHook {
     @SuppressLint("DiscouragedApi")
     private static ColorStateList secondaryTextColor(Context context, View anchor) {
         int attribute = secondaryTextAttr;
-        if (attribute < 0) { // once per process, like the ids above
+        if (attribute < 0) {
             attribute = context.getResources().getIdentifier("igds_color_secondary_text", "attr", context.getPackageName());
             secondaryTextAttr = attribute;
         }

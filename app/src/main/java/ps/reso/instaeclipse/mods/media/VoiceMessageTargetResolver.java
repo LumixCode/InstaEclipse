@@ -3,14 +3,12 @@ package ps.reso.instaeclipse.mods.media;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
-/** Reads only the selected message's voice payload, never a quoted/replied-to message. */
 final class VoiceMessageTargetResolver {
     private VoiceMessageTargetResolver() {}
 
     static Object find(Object value, Class<?> messageType, Class<?> voiceType) {
         if (value == null) return null;
         if (messageType.isInstance(value)) return readTypedField(value, voiceType);
-        // Instagram's save action wraps the selected message in a MessageInfo object.
         Object message = readTypedField(value, messageType);
         return message == null ? null : readTypedField(message, voiceType);
     }

@@ -40,35 +40,13 @@ import ps.reso.instaeclipse.utils.ui.IeColors;
 import ps.reso.instaeclipse.utils.users.FollowersHistory;
 import ps.reso.instaeclipse.utils.users.WatchlistStore;
 
-/**
- * Profile analyzer: watch another profile's Followers and Following lists for changes.
- *
- * <p>"Analyze profile" in a profile's ⋮ menu (or in the tools button of a profile's follow list
- * screen, FollowListToolsIcon) starts an analysis of that profile. From the menu, the profile
- * header's followers count is tapped to open the follow list screen. A driver then waits for the
- * profile's Followers tab to be on screen and loads it to the end with IG's own pager
- * (FollowListLoader, the same as Export CSV), switches to the Following tab (the
- * UnifiedFollowFragment's ViewPager2) and loads it too. Only when both lists loaded to the end
- * (every extra pass included) are they compared with the last snapshot (WatchlistStore, with how
- * each load went: passes, repeats, Instagram's count, limits) and the result shown, with
- * Instagram's own counts next to what it listed when it listed fewer (it leaves out e.g.
- * deactivated or hidden accounts), how a list was compared when it wasn't compared as usual, and
- * how many accounts weren't listed this time (not counted as gone yet). A private account you
- * don't follow has no list to open, so the analysis says so instead. When Instagram refuses a load
- * (rate limit, challenge, action block) the analysis ends at once, the other list isn't loaded and
- * nothing is saved; while loading lists pauses after such a block, the ⋮ menu's "Analyze profile"
- * warns first (FollowListLoader.pause). Saved checks are shown by the changelog (ProfileChangelog),
- * also from the result and the Watchlist.
- */
 public final class ProfileAnalyzer {
 
     private static final String TAG = "(IE|ProfileAnalyzer) ";
     static final int RESULT_ROWS = 300;
-    /** how often the driver looks for the profile's list while it isn't loading one */
     private static final long POLL_MS = 300;
     private static final Handler H = new Handler(Looper.getMainLooper());
 
-    /** One analysis in progress. */
     private static final class Session {
         final String id;
         String username, self;
@@ -78,7 +56,6 @@ public final class ProfileAnalyzer {
         boolean seen, busy, hinted;
         int tabTries;
         Map<String, String[]> followers, following;
-        /** how each list's load went (passes, repeats, Instagram's count, limited, hidden accounts) */
         WatchlistStore.ListCheck followersLoad, followingLoad;
         Context ctx;
 
@@ -96,9 +73,6 @@ public final class ProfileAnalyzer {
 
     private ProfileAnalyzer() {}
 
-    // ---- entry points ----
-
-    /** "Analyze profile" in the ⋮ menu of {@code username}'s profile ({@code user}: its User model). */
     public static void start(Activity a, Object user, String username) {
         if (!FeatureFlags.profileAnalyzer || a == null) return;
         if (!InstallRunner.ran("FollowListExportHook")) {
@@ -112,7 +86,6 @@ public final class ProfileAnalyzer {
         }
         Context app = a.getApplicationContext();
         String self = WatchlistStore.self(app);
-        // loading lists pauses after Instagram blocked a load: warn, run only on "Load anyway"
         FollowListPolicy.Block paused = FollowListLoader.pause(a, self);
         if (paused != null) {
             ModuleLog.detail(TAG + "analyze from menu during the pause after " + paused.kind + ": warned first");
@@ -146,7 +119,6 @@ public final class ProfileAnalyzer {
         if (session == s) session = null;
     }
 
-    /** "Analyze profile" in the follow list screen's tools button ({@code info}: the tab on screen). */
     static void startFromList(View v, FollowListExportHook.ListInfo info) {
         if (!FeatureFlags.profileAnalyzer) return;
         if (info == null) {
@@ -154,7 +126,7 @@ public final class ProfileAnalyzer {
             return;
         }
         Session cur = session;
-        if (cur != null && cur.id.equals(info.owner)) return; // already analyzing this profile
+        if (cur != null && cur.id.equals(info.owner)) return;
         String name = info.username != null ? info.username : titleOf(v);
         if (name == null && info.self != null) {
             WatchlistStore.Entry e = WatchlistStore.find(WatchlistStore.loadIndex(v.getContext().getApplicationContext(), info.self), info.owner);
@@ -202,8 +174,6 @@ public final class ProfileAnalyzer {
         }
     }
 
-    // ---- the driver: wait for the profile's lists, load each to the end ----
-
     private static void drive(Session s) {
         if (session != s || s.busy) return;
         long now = SystemClock.uptimeMillis();
@@ -212,7 +182,6 @@ public final class ProfileAnalyzer {
         FollowListExportHook.ListInfo info = vis != null ? FollowListExportHook.listInfo(vis[0]) : null;
         if (info == null || !s.id.equals(info.owner)) {
             if (!s.seen && now - s.started > 9000) {
-                // the list never opened: a private profile you don't follow, or the tap missed
                 end(s);
                 if (s.fromMenu) cantOpen(s.ctx, s.name());
                 return;
@@ -234,7 +203,6 @@ public final class ProfileAnalyzer {
 
         String type = info.type != null && missing(s, info.type) ? info.type : null;
         if (type == null) {
-            // a tab that isn't needed (mutual, suggested, or the list already loaded): go to the missing one
             String want = s.followers == null ? FollowListExportHook.FOLLOWERS : FollowListExportHook.FOLLOWING;
             if (now >= s.nextTabAt) {
                 if (s.tabTries < 3 && FollowListExportHook.showTab(vis[0], want)) {
@@ -249,8 +217,6 @@ public final class ProfileAnalyzer {
             return;
         }
 
-        // the tab may still be fetching its first page: wait until accounts are in (or a short while;
-        // the loader itself also waits for a first page and retries a failed one)
         Object frag = vis[0];
         if (FollowListLoader.accountsShown(root) == 0) {
             if (s.warmSince == 0) s.warmSince = now;
@@ -260,7 +226,7 @@ public final class ProfileAnalyzer {
         s.busy = true;
         String title = I18n.t(s.ctx, R.string.ig_pa_loading_title, s.name(), label(s.ctx, type));
         if (!FollowListLoader.loadAll(root, frag, title, I18n.t(s.ctx, R.string.ig_follow_load_stop), r -> loaded(s, type, r))) {
-            s.busy = false; // another list is loading (an export): try again shortly
+            s.busy = false;
             H.postDelayed(() -> drive(s), 1000);
         }
     }
@@ -272,8 +238,6 @@ public final class ProfileAnalyzer {
     private static void loaded(Session s, String type, FollowListLoader.Result r) {
         s.busy = false;
         if (session != s) return;
-        // Instagram refused the load (rate limit, challenge, action block): the analysis ends here,
-        // the other list isn't loaded and nothing is saved
         if (r.blocked != null) {
             end(s);
             ModuleLog.warn(TAG + "Analysis stopped: Instagram blocked loading the " + type + " list (" + r.blocked + "), nothing was saved");
@@ -287,9 +251,6 @@ public final class ProfileAnalyzer {
         }
         ModuleLog.line(TAG + type + " loaded: " + users.size() + (r.expected >= 0 ? " of " + r.expected : "")
                 + (r.complete ? "" : " (incomplete)") + (r.interrupted ? " (an extra pass ended early)" : ""));
-        // an empty list only counts when Instagram's own count says 0 (the loader checked it); an
-        // extra pass that ended early (stopped, left the list, a failed page) leaves a list as
-        // incomplete as a first pass that did, so nothing is saved either
         boolean compare = s.followersOnly ? FollowersHistory.shouldCompare(r.complete, r.interrupted, r.limited, users.size())
                 : r.complete && !r.interrupted && !(users.isEmpty() && r.expected != 0);
         if (!compare) {
@@ -318,7 +279,6 @@ public final class ProfileAnalyzer {
         H.post(() -> drive(s));
     }
 
-    /** How a list's load went, as the watchlist keeps it with the check. */
     private static WatchlistStore.ListCheck load(FollowListLoader.Result r) {
         WatchlistStore.ListCheck q = new WatchlistStore.ListCheck();
         q.received = r.received;
@@ -342,7 +302,6 @@ public final class ProfileAnalyzer {
             if (self == null) self = "0";
             WatchlistStore.Profile p = WatchlistStore.loadProfile(app, self, s.id);
             if (s.username != null) p.username = s.username;
-            // what this analysis is compared with (apply replaces it)
             String before = p.lastCheck > 0
                     ? " since " + logTime(p.lastCheck) + " (then " + p.followers.size() + "/" + p.following.size()
                     + " listed, " + p.missingFollowers.size() + "/" + p.missingFollowing.size() + " not listed, Instagram "
@@ -377,8 +336,6 @@ public final class ProfileAnalyzer {
         }).start();
     }
 
-    /** Instagram's count for a saved list when it was listed: its own, else the header's at the
-     *  last analysis; "?" when neither is known. */
     private static String countThen(WatchlistStore.Profile p, WatchlistStore.ListState st, int header) {
         if (st.expected >= 0) return String.valueOf(st.expected);
         return p.baseAt > 0 && p.baseAt == p.lastCheck && header >= 0 ? String.valueOf(header) : "?";
@@ -388,7 +345,6 @@ public final class ProfileAnalyzer {
         return q.uncertain > 0 ? " (" + q.uncertain + " uncertain)" : "";
     }
 
-    /** One list's load and comparison, for the log. */
     static String listLine(String type, WatchlistStore.ListCheck q) {
         StringBuilder sb = new StringBuilder(type).append(": received ").append(q.received).append(", repeated ").append(q.repeated)
                 .append(", distinct ").append(q.distinct).append(", passes ").append(q.passes);
@@ -411,9 +367,6 @@ public final class ProfileAnalyzer {
         return new java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.ROOT).format(new Date(ts));
     }
 
-    // ---- opening the profile's followers list from its header ----
-
-    /** Taps the profile header's followers count (Instagram opens the follow list screen). */
     @SuppressLint("DiscouragedApi")
     private static boolean openFollowers(Activity a) {
         try {
@@ -427,7 +380,6 @@ public final class ProfileAnalyzer {
                 View v = id != 0 ? decor.findViewById(id) : null;
                 if (v != null && v.isShown() && tapUp(v)) { ModuleLog.detail(TAG + "opened followers via " + n); return true; }
             }
-            // any shown view whose id names the followers count
             ArrayDeque<View> st = new ArrayDeque<>();
             st.push(decor);
             while (!st.isEmpty()) {
@@ -450,7 +402,6 @@ public final class ProfileAnalyzer {
         return false;
     }
 
-    /** Clicks the nearest view (itself or a parent, a few levels up) that has a click listener. */
     private static boolean tapUp(View v) {
         View c = v;
         for (int i = 0; i < 4 && c != null; i++, c = c.getParent() instanceof View p ? p : null)
@@ -467,10 +418,6 @@ public final class ProfileAnalyzer {
         }
     }
 
-    // ---- result, watchlist ----
-
-    /** The result's sections of changes, in the order shown (not-listed accounts are a count in
-     *  its text; the changelog lists them). */
     private static final ProfileChangelogPolicy.Section[] RESULT_SECTIONS = {
             ProfileChangelogPolicy.Section.B_FOLLOWED, ProfileChangelogPolicy.Section.B_FOLLOWED_MAYBE,
             ProfileChangelogPolicy.Section.B_UNFOLLOWED, ProfileChangelogPolicy.Section.GAINED,
@@ -492,8 +439,6 @@ public final class ProfileAnalyzer {
                         : I18n.t(ctx, R.string.ig_pa_counts, r.followers, r.following));
                 if (r.added.isEmpty()) head += "\n\n" + I18n.t(ctx, R.string.ig_pa_no_changes);
             }
-            // what Instagram listed short of its counts, how a list was compared when not as usual,
-            // and how many accounts weren't listed this time
             String notes = resultNotes(ctx, r);
             if (!notes.isEmpty()) head += "\n" + notes;
             if (saveFailed) head += "\n" + I18n.t(ctx, R.string.ig_pa_save_failed);
@@ -519,7 +464,6 @@ public final class ProfileAnalyzer {
         }
     }
 
-    /** A section's heading text (args: the profile's username, the count). */
     static int sectionTitle(ProfileChangelogPolicy.Section s) {
         return switch (s) {
             case GAINED -> R.string.ig_pa_sec_gained;
@@ -586,7 +530,6 @@ public final class ProfileAnalyzer {
         }
     }
 
-    /** A user row: tap opens the profile in Instagram, hold copies the username. */
     private static TextView userRow(IeDialog dlg, Context ctx, CharSequence text, String username) {
         TextView row = new TextView(dlg.ctx);
         row.setText(text);
@@ -611,7 +554,6 @@ public final class ProfileAnalyzer {
         dlg.view(note);
     }
 
-    /** The in-app menu's Watchlist: watched profiles with their last analysis; tap opens the changelog. */
     public static void showWatchlist(Context ctx) {
         Context app = ctx.getApplicationContext();
         new Thread(() -> {
@@ -657,17 +599,10 @@ public final class ProfileAnalyzer {
         }
     }
 
-    // ---- helpers ----
-
     static String label(Context ctx, String type) {
         return I18n.t(ctx, FollowListExportHook.FOLLOWERS.equals(type) ? R.string.ig_pa_followers : R.string.ig_pa_following);
     }
 
-    /**
-     * The lines about what Instagram listed, each starting with a line break ("" when there is
-     * nothing to say): "Instagram listed X of N" for each list it listed short, then a note per list
-     * it flagged as limited, and the deactivated / hidden accounts note when a short list wasn't.
-     */
     static String listedNotes(Context ctx, String[] types, int[] listed, int[] expected, boolean[] limited) {
         StringBuilder lines = new StringBuilder(), notes = new StringBuilder();
         boolean shortNote = false;
@@ -684,14 +619,6 @@ public final class ProfileAnalyzer {
         return lines.toString() + notes;
     }
 
-    /**
-     * The analyzer result's lines, each starting with a line break ("" when there is nothing to
-     * say): "Instagram listed X of N" for each list it listed short, how a list was compared when
-     * not as usual and the accounts Instagram hides ({@link #compareNotes}), the deactivated /
-     * hidden accounts note when a list is short by more than the accounts Instagram says it hides
-     * (and isn't limited), then per list how many accounts weren't listed this time (not counted
-     * as gone yet).
-     */
     static String resultNotes(Context ctx, WatchlistStore.Result r) {
         String[] types = {FollowListExportHook.FOLLOWERS, FollowListExportHook.FOLLOWING};
         int[] listed = {r.followers, r.following};
@@ -713,12 +640,6 @@ public final class ProfileAnalyzer {
         return sb.toString();
     }
 
-    /**
-     * Per list (null: not recorded), each starting with a line break: how it was compared when not
-     * as usual (a new baseline because the saved list was clearly less complete, the saved list
-     * kept because this load was, a list Instagram limits: additions only or nothing compared, a
-     * baseline after a limited list) and how many accounts Instagram says it hides from it.
-     */
     static String compareNotes(Context ctx, WatchlistStore.ListCheck followers, WatchlistStore.ListCheck following) {
         StringBuilder sb = new StringBuilder();
         String[] types = {FollowListExportHook.FOLLOWERS, FollowListExportHook.FOLLOWING};
@@ -742,7 +663,6 @@ public final class ProfileAnalyzer {
         return sb.toString();
     }
 
-    /** The follow list screen's title (the profile's username). */
     static String titleOf(View v) {
         try {
             ViewGroup bar = FollowListToolsIcon.barAbove(v);
