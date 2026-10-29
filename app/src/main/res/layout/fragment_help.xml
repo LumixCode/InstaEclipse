@@ -238,7 +238,7 @@
                     android:textAppearance="?attr/textAppearanceBodyMedium"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
-                <LinearLayout
+                <ps.reso.instaeclipse.fragments.FitButtonRow
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
@@ -249,13 +249,13 @@
                         style="@style/Widget.Material3.Button.TonalButton.Icon"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="6dp"
                         android:layout_weight="1"
                         android:contentDescription="@string/go_to_github"
                         android:ellipsize="end"
                         android:maxLines="1"
                         android:text="@string/help_github_issues"
                         app:icon="@drawable/ic_github_logo"
+                        app:iconGravity="textStart"
                         app:iconSize="18dp" />
 
                     <com.google.android.material.button.MaterialButton
@@ -263,15 +263,15 @@
                         style="@style/Widget.Material3.Button.TonalButton.Icon"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
                         android:layout_weight="1"
                         android:contentDescription="@string/go_to_telegram"
                         android:ellipsize="end"
                         android:maxLines="1"
                         android:text="@string/telegram"
                         app:icon="@drawable/ic_telegram_logo"
+                        app:iconGravity="textStart"
                         app:iconSize="18dp" />
-                </LinearLayout>
+                </ps.reso.instaeclipse.fragments.FitButtonRow>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
