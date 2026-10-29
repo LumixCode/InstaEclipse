@@ -32,7 +32,7 @@
     <string name="cat_sec_passcode">Passcode</string>
     <string name="cat_lockWholeApp_desc">Asks for the passcode when Instagram opens</string>
     <string name="cat_lockWholeApp_desc_grace">Asks when Instagram opens, not after a photo, camera or link trip under a minute</string>
-    <string name="cat_lockWholeAppGrace">Home, Recents or locking the screen during that trip normally still asks</string>
+    <string name="cat_lockWholeAppGrace">Pressing Home, opening Recents or locking the screen during that trip still asks on most phones</string>
     <string name="cat_lockDirectMessages_desc">Asks for the passcode before your inbox opens</string>
     <string name="cat_lockDirectAlways_desc">After you leave Messages or a locked chat</string>
     <string name="cat_lockSavedCollections">Lock Saved collections</string>
