@@ -20,7 +20,7 @@
     <string name="cat_permanentViewMode">Replay view-once media</string>
     <string name="cat_permanentViewMode_desc">View-once and view-twice photos and videos open like normal ones</string>
     <string name="cat_sec_seen_online">Seen and online</string>
-    <string name="cat_manualStorySeen_desc">Adds “Mark as seen” to the story ⋮ menu</string>
+    <string name="cat_manualStorySeen_desc">Adds “Mark this story as seen” to the story ⋮ menu</string>
     <string name="cat_readReceiptChats_desc_list">Chosen chats still get Seen. Manage them in Chats that get read receipts</string>
     <string name="cat_airplaneMode">Appear offline</string>
     <string name="cat_airplaneMode_desc">Hides “Active now”; messages and calls stop arriving live</string>
@@ -130,7 +130,7 @@
     <string name="cat_followListExport_desc">From the tools button on a followers or following list</string>
     <string name="cat_sec_profile_tools">Profile tools</string>
     <string name="cat_profileMenuTools">Copy username and bio, download all</string>
-    <string name="cat_profileMenuTools_desc">Hold the username or bio to copy; ⋮ menu › Download all</string>
+    <string name="cat_profileMenuTools_desc">Hold the username or bio to copy; ⋮ menu › Download all posts</string>
     <string name="cat_fancyBioFont_desc">A font button in Edit profile</string>
     <string name="cat_sec_this_phone">Only on this phone</string>
     <string name="cat_profileSpoofer">Change how your profile looks</string>
