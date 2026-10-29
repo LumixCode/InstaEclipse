@@ -55,6 +55,7 @@ public final class ModuleBridge {
     private static volatile Throwable failure;
     private static volatile boolean needed;
     private static boolean runtimeNoted;
+    private static int generation;
 
     private ModuleBridge() {}
 
@@ -165,12 +166,14 @@ public final class ModuleBridge {
     }
 
     public static void useForTest(DexKitBridge testBridge) {
+        int gen;
         synchronized (LOCK) {
             factory = NATIVE;
             started = true;
             startedBy = "test";
+            gen = generation;
         }
-        finish(testBridge, null);
+        finish(testBridge, null, gen);
     }
 
     public static void failForTest(Error loadError) {
@@ -193,6 +196,7 @@ public final class ModuleBridge {
 
     static void resetForTest(Factory testFactory) {
         synchronized (LOCK) {
+            generation++;
             factory = testFactory;
             libDir = null;
             apkPath = null;
@@ -230,6 +234,7 @@ public final class ModuleBridge {
         Factory f;
         String lib;
         String apk;
+        int gen;
         synchronized (LOCK) {
             if (started) return true;
             if (apkPath == null) return false;
@@ -238,17 +243,18 @@ public final class ModuleBridge {
             f = factory;
             lib = libDir;
             apk = apkPath;
+            gen = generation;
         }
         if (allowSync && LegacyPaths.has(LegacyPaths.BRIDGE)) {
-            create(f, lib, apk);
+            create(f, lib, apk, gen);
             return true;
         }
         try {
-            Thread t = new Thread(() -> create(f, lib, apk), THREAD);
+            Thread t = new Thread(() -> create(f, lib, apk, gen), THREAD);
             t.setPriority(Thread.NORM_PRIORITY);
             t.start();
         } catch (Throwable e) {
-            finish(null, e);
+            finish(null, e, gen);
         }
         return true;
     }
@@ -271,7 +277,7 @@ public final class ModuleBridge {
         return bridge;
     }
 
-    private static void create(Factory f, String lib, String apk) {
+    private static void create(Factory f, String lib, String apk, int gen) {
         StartupTrace.Span span = StartupTrace.begin(StartupTrace.DEXKIT);
         DexKitBridge created = null;
         Throwable error = null;
@@ -286,11 +292,12 @@ public final class ModuleBridge {
         } finally {
             StartupTrace.end(span);
         }
-        finish(created, error);
+        finish(created, error, gen);
     }
 
-    private static void finish(DexKitBridge created, Throwable error) {
+    private static void finish(DexKitBridge created, Throwable error, int gen) {
         synchronized (LOCK) {
+            if (gen != generation) return;
             bridge = created;
             failure = created == null ? error : null;
             done = true;
