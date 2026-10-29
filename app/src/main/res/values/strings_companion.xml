@@ -4,7 +4,7 @@
     <string name="theme_custom_reset" tools:ignore="MissingTranslation">Custom colours reset</string>
     <string name="theme_undo" tools:ignore="MissingTranslation">Undo</string>
     <string name="theme_preset_selected" tools:ignore="MissingTranslation">Selected</string>
-    <string name="theme_custom_dark_only" tools:ignore="MissingTranslation">Custom colours apply to the dark theme</string>
+    <string name="theme_custom_dark_only" tools:ignore="MissingTranslation">Custom colours are for dark mode. Switch your phone to dark mode to edit them</string>
     <string name="loc_osm_attribution" translatable="false">© OpenStreetMap contributors</string>
     <string name="loc_picker_clear_search" tools:ignore="MissingTranslation">Clear search</string>
     <string name="dev_config_open_instagram" tools:ignore="MissingTranslation">Open Instagram first, then try again</string>
