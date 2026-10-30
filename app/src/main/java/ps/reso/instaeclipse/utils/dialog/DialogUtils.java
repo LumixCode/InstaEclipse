@@ -508,8 +508,7 @@ public class DialogUtils {
     private static String describe(Context context, FeatureCatalog.Item item) {
         String desc = item.desc != 0 ? I18n.t(context, item.desc) : null;
         if (item.restartOn == FeatureCatalog.Restart.NONE) return desc;
-        return lines(desc, I18n.t(context, item.restartOn == FeatureCatalog.Restart.BOTH
-                ? R.string.ig_restart_to_apply_both : R.string.ig_restart_to_apply_hint));
+        return lines(desc, I18n.t(context, R.string.ig_restart_to_apply_both));
     }
 
     private static String subtitleOf(Context context, FeatureCatalog.Item item) {

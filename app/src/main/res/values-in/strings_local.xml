@@ -6,7 +6,6 @@
     <string name="ig_hide_chats_picker_empty">Belum ada obrolan yang dimuat. Buka kotak masuk sekali, lalu kembali ke sini.</string>
     <string name="ig_hide_chats_picker_hint">Pilih obrolan di sini, atau buka obrolan, buka menu InstaEclipse-nya (tombol di bagian atasnya, atau ketuk tiga kali setelah nama obrolan jika tombol itu disembunyikan) lalu pilih Sembunyikan obrolan. Obrolan tersembunyi bisa dikembalikan dari daftar ini.</string>
     <string name="ig_hide_chat_menu_button">Sembunyikan tombol obrolan InstaEclipse</string>
-    <string name="ig_restart_to_apply_hint">Jika diaktifkan, berlaku setelah Instagram dimulai ulang</string>
     <string name="ig_dialog_ghost_keep_unsent_chat">Simpan pesan yang dibatalkan</string>
     <string name="ig_feature_keep_unsent_in_chat">Biarkan tetap di obrolan</string>
     <string name="ig_unsent_detail_unknown">Detail tidak tersimpan</string>

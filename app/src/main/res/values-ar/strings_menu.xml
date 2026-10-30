@@ -26,7 +26,7 @@
     <string name="ig_restart_bar">أعد تشغيل Instagram لتطبيق التغييرات</string>
     <string name="ig_restart_bar_action">إعادة التشغيل</string>
     <string name="menu_health_broken">تعذّر الارتباط بإصدار Instagram هذا</string>
-    <string name="menu_health_restart">فُعّلت بعد بدء Instagram – أعد التشغيل لتطبيقها</string>
+    <string name="menu_health_restart">تغيّر بعد بدء Instagram – أعد التشغيل لتطبيقها</string>
     <string name="menu_health_locks">الأقفال تحتاج إلى رمز مرور</string>
     <string name="menu_health_unconfirmed">لم يتأكد بعد</string>
     <string name="ie_font_saved">تم حفظ الخط. أعد تشغيل Instagram لاستخدامه</string>

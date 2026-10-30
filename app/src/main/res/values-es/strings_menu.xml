@@ -26,7 +26,7 @@
     <string name="ig_restart_bar">Reinicia Instagram para aplicarlo</string>
     <string name="ig_restart_bar_action">Reiniciar</string>
     <string name="menu_health_broken">No se pudo conectar con esta versión de Instagram</string>
-    <string name="menu_health_restart">Activado después de abrir Instagram: reinicia para aplicarlo</string>
+    <string name="menu_health_restart">Cambiado después de abrir Instagram: reinicia para aplicarlo</string>
     <string name="menu_health_locks">Los bloqueos necesitan código</string>
     <string name="menu_health_unconfirmed">Aún sin confirmar</string>
     <string name="ie_font_saved">Fuente guardada. Reinicia Instagram para usarla</string>

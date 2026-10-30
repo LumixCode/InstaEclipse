@@ -26,7 +26,7 @@
     <string name="ig_restart_bar">重启 Instagram 以应用</string>
     <string name="ig_restart_bar_action">重启</string>
     <string name="menu_health_broken">无法接入此 Instagram 版本</string>
-    <string name="menu_health_restart">在 Instagram 启动后才开启，需重启才能生效</string>
+    <string name="menu_health_restart">在 Instagram 启动后有更改，需重启才能生效</string>
     <string name="menu_health_locks">锁定需要密码</string>
     <string name="menu_health_unconfirmed">尚未确认</string>
     <string name="ie_font_saved">字体已保存。重启 Instagram 后生效</string>

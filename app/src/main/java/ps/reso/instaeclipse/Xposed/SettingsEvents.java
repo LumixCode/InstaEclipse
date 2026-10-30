@@ -26,6 +26,7 @@ import ps.reso.instaeclipse.utils.dialog.RestartPrompt;
 import ps.reso.instaeclipse.utils.feature.RestartPending;
 import ps.reso.instaeclipse.utils.feature.RestartPromptRule;
 import ps.reso.instaeclipse.utils.ghost.GhostModeUtils;
+import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.media.StoryCache;
 import ps.reso.instaeclipse.utils.media.StoryCachePrompt;
 
@@ -102,8 +103,15 @@ public final class SettingsEvents {
 
     private static void promptRestart(Collection<String> applied, boolean recreating) {
         SettingsManager.publishRestartPending();
-        List<String> prompt = RestartPromptRule.toPrompt(RestartPending.affected(applied), RestartPending.pending(), RestartPrompt.shown());
-        if (!prompt.isEmpty()) RestartPrompt.show(recreating ? null : UIHookManager.topActivity(), prompt);
+        Set<String> pending = RestartPending.pending();
+        RestartPrompt.retain(pending);
+        List<String> prompt = RestartPromptRule.toPrompt(RestartPending.affected(applied), pending, RestartPrompt.shown());
+        if (prompt.isEmpty()) {
+            ModuleLog.detail("(IE|Restart) No restart prompt for " + applied + ", pending: " + RestartPromptRule.format(pending));
+            return;
+        }
+        ModuleLog.detail("(IE|Restart) Restart prompt for " + RestartPromptRule.format(prompt));
+        RestartPrompt.show(recreating ? null : UIHookManager.topActivity(), prompt);
     }
 
     private static Set<String> keys(String... keys) {

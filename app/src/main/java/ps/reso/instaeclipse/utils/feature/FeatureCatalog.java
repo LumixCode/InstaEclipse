@@ -40,7 +40,7 @@ public final class FeatureCatalog {
 
     public enum Side { BOTH, IG_ONLY, COMPANION_ONLY }
 
-    public enum Restart { NONE, ON_ONLY, BOTH }
+    public enum Restart { NONE, BOTH }
 
     public interface Values {
         boolean bool(String key, boolean def);
@@ -314,7 +314,7 @@ public final class FeatureCatalog {
             page("location", Group.PRIVACY, R.drawable.ic_pin, R.string.ig_dialog_menu_location,
                     section(0,
                             sw("spoofLocation", R.string.ig_dialog_location_spoof_enable, R.drawable.ic_pin)
-                                    .desc(R.string.cat_spoofLocation_desc).restart(Restart.ON_ONLY).status("SpoofLocation").words("spoof"),
+                                    .desc(R.string.cat_spoofLocation_desc).restart(Restart.BOTH).status("SpoofLocation").words("spoof"),
                             picker("locationPlace", R.string.ig_dialog_location_current_title, R.drawable.ic_search),
                             picker("locationRecent", R.string.ig_dialog_location_recent, R.drawable.ic_timer))),
             page("downloads", Group.MEDIA, R.drawable.ic_download, R.string.ig_dialog_menu_downloader,
@@ -331,13 +331,13 @@ public final class FeatureCatalog {
                                     .status("ProfileDownload")),
                     section(R.string.cat_sec_in_chats,
                             sw("enableDmMediaDownload", R.string.cat_enableDmMediaDownload, R.drawable.ic_download)
-                                    .desc(R.string.cat_enableDmMediaDownload_desc).restart(Restart.ON_ONLY).status("DmMediaDownload")
+                                    .desc(R.string.cat_enableDmMediaDownload_desc).restart(Restart.BOTH).status("DmMediaDownload")
                                     .aliases(R.string.ig_dialog_downloader_dm_media),
                             sw("enableVoiceDownload", R.string.cat_enableVoiceDownload, R.drawable.ic_download)
-                                    .desc(R.string.cat_enableVoiceDownload_desc).restart(Restart.ON_ONLY).status("VoiceDownload")
+                                    .desc(R.string.cat_enableVoiceDownload_desc).restart(Restart.BOTH).status("VoiceDownload")
                                     .aliases(R.string.ig_dialog_downloader_voice),
                             sw("enableStickerDownload", R.string.cat_enableStickerDownload, R.drawable.ic_download)
-                                    .desc(R.string.cat_enableStickerDownload_desc).restart(Restart.ON_ONLY).status("StickerDownload")
+                                    .desc(R.string.cat_enableStickerDownload_desc).restart(Restart.BOTH).status("StickerDownload")
                                     .aliases(R.string.ig_dialog_downloader_stickers),
                             sw("saveInstants", R.string.cat_saveInstants, R.drawable.ic_download)
                                     .desc(R.string.cat_saveInstants_desc).status("SaveInstants")
@@ -375,7 +375,7 @@ public final class FeatureCatalog {
             page("quality", Group.MEDIA, R.drawable.ic_sparkle, R.string.menu_quality,
                     section(0,
                             picker("forceReelQuality", R.string.ig_dialog_quality_force_reels, R.drawable.ic_movie)
-                                    .restart(Restart.ON_ONLY).status("ForceReelQuality").countWhen(FeatureCatalog::forcesReelQuality),
+                                    .restart(Restart.BOTH).status("ForceReelQuality").countWhen(FeatureCatalog::forcesReelQuality),
                             sw("highResolutionImages", R.string.ig_dialog_extras_high_res_images, R.drawable.ic_gallery)
                                     .status("highResolutionImages"),
                             sw("maxUploadQuality", R.string.ig_dialog_max_upload_quality, R.drawable.ic_upload)
@@ -404,7 +404,7 @@ public final class FeatureCatalog {
                                     .restart(Restart.BOTH).status("ExpandCaptions")
                                     .aliases(R.string.ig_dialog_clean_feed_expand_captions),
                             sw("exactTimestamps", R.string.ig_dialog_misc_exact_timestamps, R.drawable.ic_timer)
-                                    .desc(R.string.cat_exactTimestamps_desc).restart(Restart.ON_ONLY).status("ExactTimestamps"),
+                                    .desc(R.string.cat_exactTimestamps_desc).restart(Restart.BOTH).status("ExactTimestamps"),
                             picker("exactTimestampFormat", R.string.ig_timestamp_format, R.drawable.ic_timer)
                                     .requires("exactTimestamps"),
                             sw("enablePhotoZoom", R.string.cat_enablePhotoZoom, R.drawable.ic_search)
@@ -442,12 +442,12 @@ public final class FeatureCatalog {
                             sw("reelsLockScroll", R.string.ig_dialog_extras_reels_lock_scroll, R.drawable.ic_movie)
                                     .status("reelsLockScroll"),
                             sw("forceReelScrubber", R.string.ig_dialog_downloader_reel_scrubber, R.drawable.ic_movie)
-                                    .restart(Restart.ON_ONLY).status("ForceReelScrubber"),
+                                    .restart(Restart.BOTH).status("ForceReelScrubber"),
                             sw("holdLeftSlowMotion", R.string.cat_holdLeftSlowMotion, R.drawable.ic_movie)
-                                    .desc(R.string.cat_holdLeftSlowMotion_desc).restart(Restart.ON_ONLY)
+                                    .desc(R.string.cat_holdLeftSlowMotion_desc).restart(Restart.BOTH)
                                     .status("HoldSlowMotion").aliases(R.string.ig_dialog_reels_hold_left_slow),
                             sw("offerPlaybackSpeed", R.string.cat_offerPlaybackSpeed, R.drawable.ic_movie)
-                                    .desc(R.string.cat_offerPlaybackSpeed_desc).restart(Restart.ON_ONLY).status("PlaybackSpeed")
+                                    .desc(R.string.cat_offerPlaybackSpeed_desc).restart(Restart.BOTH).status("PlaybackSpeed")
                                     .aliases(R.string.ig_dialog_downloader_offer_speed))),
             page("focus", Group.BROWSE, R.drawable.ic_timer, R.string.cat_title_focus,
                     section(R.string.cat_sec_today,
@@ -494,7 +494,7 @@ public final class FeatureCatalog {
                                     .uncounted().aliases(R.string.ig_night_reels_allow_dm)),
                     section(R.string.cat_sec_less_clutter,
                             sw("removeMetaAI", R.string.ig_dialog_misc_remove_meta_ai, R.drawable.ic_sparkle)
-                                    .restart(Restart.ON_ONLY).status("RemoveMetaAI"),
+                                    .restart(Restart.BOTH).status("RemoveMetaAI"),
                             sw("hideOnboardingPrompts", R.string.ig_dialog_extras_hide_onboarding, R.drawable.ic_block)
                                     .desc(R.string.cat_hideOnboardingPrompts_desc).status("hideOnboardingPrompts")
                                     .words("location prompt"),
@@ -515,7 +515,7 @@ public final class FeatureCatalog {
                                     .defaultOn().uncounted(),
                             sw("showUnsentIndicator", R.string.ig_feature_unsent_indicator, R.drawable.ic_chat)
                                     .desc(R.string.cat_showUnsentIndicator_desc).requires("keepUnsentMessages")
-                                    .restart(Restart.ON_ONLY).status("UnsentIndicator"),
+                                    .restart(Restart.BOTH).status("UnsentIndicator"),
                             sw("showUnsentButton", R.string.ig_feature_show_unsent_button, R.drawable.ic_delete)
                                     .requires("keepUnsentMessages").defaultOn().uncounted(),
                             action("unsentLog", R.string.ig_dialog_unsent_title, R.drawable.ic_chat)
@@ -530,12 +530,12 @@ public final class FeatureCatalog {
                                     .desc(R.string.cat_chatExport_desc).status("ChatExport")
                                     .aliases(R.string.ig_dialog_ghost_chat_export),
                             sw("translateMessages", R.string.cat_translateMessages, R.drawable.ic_chat)
-                                    .desc(R.string.cat_translateMessages_desc).restart(Restart.ON_ONLY).status("ChatTranslate")
+                                    .desc(R.string.cat_translateMessages_desc).restart(Restart.BOTH).status("ChatTranslate")
                                     .aliases(R.string.ig_dialog_translate_messages),
                             sw("bulkUnsend", R.string.ig_dialog_bulk_unsend, R.drawable.ic_chat)
-                                    .desc(R.string.cat_bulkUnsend_desc).restart(Restart.ON_ONLY).status("BulkUnsend"),
+                                    .desc(R.string.cat_bulkUnsend_desc).restart(Restart.BOTH).status("BulkUnsend"),
                             sw("confirmCalls", R.string.ig_call_confirm, R.drawable.ic_shield)
-                                    .restart(Restart.ON_ONLY).status("ConfirmCalls"),
+                                    .restart(Restart.BOTH).status("ConfirmCalls"),
                             sw("hideChatMenuButton", R.string.ig_hide_chat_menu_button, R.drawable.ic_tune)
                                     .desc(R.string.cat_hideChatMenuButton_desc).status("ChatMenuTripleTap")),
                     section(R.string.cat_sec_inbox,
@@ -550,16 +550,16 @@ public final class FeatureCatalog {
                     section(R.string.cat_sec_instants,
                             sw("hideInstants", R.string.ig_hide_instants, R.drawable.ic_block).status("HideInstants"),
                             sw("uploadInstants", R.string.ig_dialog_misc_upload_instants, R.drawable.ic_upload)
-                                    .restart(Restart.ON_ONLY).status("UploadInstants"))),
+                                    .restart(Restart.BOTH).status("UploadInstants"))),
             page("interactions", Group.SOCIAL, R.drawable.ic_heart, R.string.menu_likes_comments,
                     section(R.string.cat_sec_likes,
                             sw("disableDoubleTapLike", R.string.ig_dialog_misc_disable_double_tap_like, R.drawable.ic_heart)
                                     .status("DisableDoubleTapLike"),
                             sw("likeUndo", R.string.cat_likeUndo, R.drawable.ic_heart)
-                                    .desc(R.string.cat_likeUndo_desc).restart(Restart.ON_ONLY).status("LikeUndo")
+                                    .desc(R.string.cat_likeUndo_desc).restart(Restart.BOTH).status("LikeUndo")
                                     .aliases(R.string.ig_dialog_misc_like_undo),
                             sw("confirmLikes", R.string.ig_confirm_likes, R.drawable.ic_heart)
-                                    .restart(Restart.ON_ONLY).status("ConfirmLikes"),
+                                    .restart(Restart.BOTH).status("ConfirmLikes"),
                             sw("disableRepost", R.string.ig_dialog_misc_disable_repost, R.drawable.ic_block)
                                     .status("DisableRepost")),
                     section(R.string.cat_sec_comments,
@@ -568,7 +568,7 @@ public final class FeatureCatalog {
                             sw("commentSearch", R.string.ig_dialog_misc_comment_search, R.drawable.ic_search)
                                     .status("CommentSearch"),
                             sw("enableCaptionCopy", R.string.ig_dialog_misc_copy_caption, R.drawable.ic_content_copy)
-                                    .desc(R.string.cat_enableCaptionCopy_desc).restart(Restart.ON_ONLY).status("CaptionCopy"))),
+                                    .desc(R.string.cat_enableCaptionCopy_desc).restart(Restart.BOTH).status("CaptionCopy"))),
             page("profiles", Group.SOCIAL, R.drawable.ic_at, R.string.menu_profiles,
                     section(R.string.cat_sec_followers,
                             sw("showFollowStatusLabel", R.string.cat_showFollowStatusLabel, R.drawable.ic_notification)
@@ -579,7 +579,7 @@ public final class FeatureCatalog {
                             sw("showFollowingFollowStatus", R.string.ig_feature_following_follow_status, R.drawable.ic_at)
                                     .desc(R.string.cat_showFollowingFollowStatus_desc).status("FollowingFollowStatus"),
                             sw("profileAnalyzer", R.string.cat_profileAnalyzer, R.drawable.ic_search)
-                                    .desc(R.string.cat_profileAnalyzer_desc).restart(Restart.ON_ONLY)
+                                    .desc(R.string.cat_profileAnalyzer_desc).restart(Restart.BOTH)
                                     .status("ProfileAnalyzer", "FollowersHistory")
                                     .aliases(R.string.ig_profile_analyzer, R.string.ig_feat_followers_history)
                                     .words("unfollow", "followers history"),
@@ -587,29 +587,29 @@ public final class FeatureCatalog {
                             action("watchlist", R.string.ig_pa_watchlist, R.drawable.ic_eye)
                                     .requires("profileAnalyzer").side(Side.IG_ONLY),
                             sw("followListExport", R.string.ig_dialog_misc_follow_export, R.drawable.ic_download)
-                                    .desc(R.string.cat_followListExport_desc).restart(Restart.ON_ONLY).status("FollowListExport")),
+                                    .desc(R.string.cat_followListExport_desc).restart(Restart.BOTH).status("FollowListExport")),
                     section(R.string.cat_sec_profile_tools,
                             sw("profileMenuTools", R.string.cat_profileMenuTools, R.drawable.ic_content_copy)
                                     .desc(R.string.cat_profileMenuTools_desc).status("ProfileMenuTools")
                                     .aliases(R.string.ig_profile_menu_tools),
                             sw("savedOnProfile", R.string.ig_saved_on_profile, R.drawable.ic_save)
-                                    .restart(Restart.ON_ONLY).status("SavedOnProfile"),
+                                    .restart(Restart.BOTH).status("SavedOnProfile"),
                             sw("hideThreadsButton", R.string.ig_dialog_hide_threads_button, R.drawable.ic_block)
                                     .overriddenBy("hideThreadsSuggestions").status("HideThreadsButton"),
                             sw("fancyBioFont", R.string.ig_dialog_fancy_bio_font, R.drawable.ic_notification)
                                     .desc(R.string.cat_fancyBioFont_desc).status("FancyBioFont"),
                             sw("confirmFollows", R.string.ig_confirm_follows, R.drawable.ic_notification)
-                                    .restart(Restart.ON_ONLY).status("ConfirmFollows")),
+                                    .restart(Restart.BOTH).status("ConfirmFollows")),
                     section(R.string.cat_sec_this_phone,
                             sw("profileSpoofer", R.string.cat_profileSpoofer, R.drawable.ic_eye)
-                                    .desc(R.string.cat_profileSpoofer_desc).restart(Restart.ON_ONLY)
+                                    .desc(R.string.cat_profileSpoofer_desc).restart(Restart.BOTH)
                                     .status("ProfileSpoofer").aliases(R.string.ig_profile_spoofer).words("spoof"),
                             action("profileSpoofEdit", R.string.ig_profile_spoofer_edit, R.drawable.ic_tune)
                                     .requires("profileSpoofer").words("spoof"),
                             action("profilePhoto", R.string.ig_profile_spoofer_choose_photo, R.drawable.ic_gallery)
                                     .requires("profileSpoofer").side(Side.COMPANION_ONLY),
                             sw("postCountSpoof", R.string.cat_postCountSpoof, R.drawable.ic_heart)
-                                    .desc(R.string.cat_postCountSpoof_desc).restart(Restart.ON_ONLY)
+                                    .desc(R.string.cat_postCountSpoof_desc).restart(Restart.BOTH)
                                     .status("PostCountSpoof").aliases(R.string.ig_post_counts_feature).words("spoof"))),
             page("theme", Group.APPEARANCE, R.drawable.ic_palette, R.string.ig_dialog_menu_theme,
                     section(R.string.theme_section_colors,
@@ -620,11 +620,11 @@ public final class FeatureCatalog {
                             picker("themeLightPresetId", R.string.theme_light_mode, R.drawable.ic_palette)),
                     section(R.string.theme_section_fonts,
                             sw("customFontEnabled", R.string.ig_dialog_misc_custom_font, R.drawable.ic_palette)
-                                    .restart(Restart.ON_ONLY).status("CustomFont"),
+                                    .restart(Restart.BOTH).status("CustomFont"),
                             action("customFontPick", R.string.ig_custom_font_pick, R.drawable.ic_palette)
                                     .side(Side.IG_ONLY),
                             sw("customEmojiEnabled", R.string.ig_dialog_misc_custom_emoji, R.drawable.ic_palette)
-                                    .restart(Restart.ON_ONLY).status("CustomEmoji"),
+                                    .restart(Restart.BOTH).status("CustomEmoji"),
                             action("customEmojiPick", R.string.ig_custom_emoji_pick, R.drawable.ic_palette)
                                     .side(Side.IG_ONLY))),
             page("navigation", Group.APPEARANCE, R.drawable.ic_tune, R.string.menu_navigation,
@@ -781,7 +781,6 @@ public final class FeatureCatalog {
             Object was = restartState(item, before);
             Object now = restartState(item, merged);
             if (Objects.equals(was, now)) continue;
-            if (item.restartOn == Restart.ON_ONLY && (!on(now) || on(was))) continue;
             out.add(item.key);
         }
         return out;

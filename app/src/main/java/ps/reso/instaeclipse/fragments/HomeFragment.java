@@ -675,8 +675,7 @@ public class HomeFragment extends Fragment implements TabFragment {
         if (locked) texts.addView(subLine(row, lockedHint));
         if (item.restartOn != FeatureCatalog.Restart.NONE) {
             texts.addView(subLine(row, getString(restartWaiting().contains(item.key) ? R.string.feat_restart_waiting
-                    : item.restartOn == FeatureCatalog.Restart.BOTH
-                    ? R.string.ig_restart_to_apply_both : R.string.ig_restart_to_apply_hint)));
+                    : R.string.ig_restart_to_apply_both)));
         }
         LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         textLp.setMarginStart(dp(14));

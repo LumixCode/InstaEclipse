@@ -26,7 +26,7 @@
     <string name="ig_restart_bar">Zrestartuj Instagram, aby zastosować</string>
     <string name="ig_restart_bar_action">Restartuj</string>
     <string name="menu_health_broken">Nie udało się podłączyć do tej wersji Instagrama</string>
-    <string name="menu_health_restart">Włączono po starcie Instagrama – zrestartuj, aby zastosować</string>
+    <string name="menu_health_restart">Zmieniono po starcie Instagrama – zrestartuj, aby zastosować</string>
     <string name="menu_health_locks">Blokady wymagają kodu</string>
     <string name="menu_health_unconfirmed">Jeszcze niepotwierdzone</string>
     <string name="ie_font_saved">Zapisano czcionkę. Zrestartuj Instagram, aby jej użyć</string>

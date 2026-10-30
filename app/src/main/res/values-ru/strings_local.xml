@@ -6,7 +6,6 @@
     <string name="ig_hide_chats_picker_empty">Чаты ещё не загружены. Откройте список чатов, затем вернитесь сюда.</string>
     <string name="ig_hide_chats_picker_hint">Выберите чаты здесь или откройте чат, затем его меню InstaEclipse (кнопка в заголовке или тройное касание после названия чата, если кнопка скрыта) и выберите «Скрыть чат». Скрытые чаты можно вернуть из этого списка.</string>
     <string name="ig_hide_chat_menu_button">Скрыть кнопку InstaEclipse в чате</string>
-    <string name="ig_restart_to_apply_hint">Включение вступит в силу после перезапуска Instagram</string>
     <string name="ig_dialog_ghost_keep_unsent_chat">Сохранять удалённые сообщения</string>
     <string name="ig_feature_keep_unsent_in_chat">Оставлять их в чате</string>
     <string name="ig_unsent_detail_unknown">Подробности не сохранены</string>

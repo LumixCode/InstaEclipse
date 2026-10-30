@@ -6,7 +6,6 @@
     <string name="ig_hide_chats_picker_empty">עדיין לא נטענו צ\'אטים. פתח את תיבת ההודעות פעם אחת ואז חזור לכאן.</string>
     <string name="ig_hide_chats_picker_hint">בחר צ\'אטים כאן, או פתח צ\'אט, פתח את תפריט InstaEclipse שלו (הכפתור בכותרת, או הקשה משולשת אחרי שם הצ\'אט כשהכפתור מוסתר) ובחר \"הסתרת הצ\'אט\". אפשר לשחזר צ\'אטים מוסתרים מהרשימה הזו.</string>
     <string name="ig_hide_chat_menu_button">הסתר את כפתור הצ\'אט של InstaEclipse</string>
-    <string name="ig_restart_to_apply_hint">ההפעלה תיכנס לתוקף אחרי הפעלה מחדש של Instagram</string>
     <string name="ig_dialog_ghost_keep_unsent_chat">שמור הודעות שבוטלו</string>
     <string name="ig_feature_keep_unsent_in_chat">השאר אותן בצ\'אט</string>
     <string name="ig_unsent_detail_unknown">הפרטים לא נשמרו</string>

@@ -26,7 +26,7 @@
     <string name="ig_restart_bar">重新啟動 Instagram 以套用</string>
     <string name="ig_restart_bar_action">重新啟動</string>
     <string name="menu_health_broken">無法掛接到此 Instagram 版本</string>
-    <string name="menu_health_restart">在 Instagram 啟動後才開啟 – 重新啟動以套用</string>
+    <string name="menu_health_restart">在 Instagram 啟動後有變更 – 重新啟動以套用</string>
     <string name="menu_health_locks">鎖定需要密碼</string>
     <string name="menu_health_unconfirmed">尚未確認</string>
     <string name="ie_font_saved">字體已儲存。重新啟動 Instagram 即可使用</string>

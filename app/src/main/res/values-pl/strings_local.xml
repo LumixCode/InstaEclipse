@@ -6,7 +6,6 @@
     <string name="ig_hide_chats_picker_empty">Nie wczytano jeszcze czatów. Otwórz raz skrzynkę odbiorczą i wróć tutaj.</string>
     <string name="ig_hide_chats_picker_hint">Wybierz czaty tutaj albo otwórz czat, otwórz jego menu InstaEclipse (przycisk w nagłówku lub trzykrotne dotknięcie za nazwą czatu, gdy przycisk jest ukryty) i wybierz „Ukryj czat”. Ukryte czaty możesz przywrócić z tej listy.</string>
     <string name="ig_hide_chat_menu_button">Ukryj przycisk InstaEclipse w czacie</string>
-    <string name="ig_restart_to_apply_hint">Włączenie zadziała po restarcie Instagrama</string>
     <string name="ig_dialog_ghost_keep_unsent_chat">Zachowuj cofnięte wiadomości</string>
     <string name="ig_feature_keep_unsent_in_chat">Zostawiaj je w czacie</string>
     <string name="ig_unsent_detail_unknown">Nie zapisano szczegółów</string>

@@ -6,7 +6,6 @@
     <string name="ig_hide_chats_picker_empty">尚未加载任何聊天。请先打开一次收件箱，然后返回这里。</string>
     <string name="ig_hide_chats_picker_hint">在这里选择聊天；或者打开一个聊天，打开它的 InstaEclipse 菜单（顶部栏中的按钮；按钮隐藏时，在聊天名称后面连点三下），然后选择“隐藏聊天”。隐藏的聊天可以在此列表中恢复。</string>
     <string name="ig_hide_chat_menu_button">隐藏 InstaEclipse 聊天按钮</string>
-    <string name="ig_restart_to_apply_hint">开启后需重启 Instagram 才能生效</string>
     <string name="ig_dialog_ghost_keep_unsent_chat">保留已撤回的消息</string>
     <string name="ig_feature_keep_unsent_in_chat">保留在聊天中</string>
     <string name="ig_unsent_detail_unknown">未保存详情</string>

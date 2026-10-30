@@ -6,7 +6,6 @@
     <string name="ig_hide_chats_picker_empty">Aún no hay chats cargados. Abre tu bandeja de entrada una vez y vuelve aquí.</string>
     <string name="ig_hide_chats_picker_hint">Elige chats aquí, o abre un chat, abre su menú de InstaEclipse (el botón de su cabecera, o tres toques tras el nombre del chat si ese botón está oculto) y elige «Ocultar chat». Los chats ocultos se pueden recuperar desde esta lista.</string>
     <string name="ig_hide_chat_menu_button">Ocultar el botón de InstaEclipse en los chats</string>
-    <string name="ig_restart_to_apply_hint">Al activarlo, se aplica tras reiniciar Instagram</string>
     <string name="ig_dialog_ghost_keep_unsent_chat">Conservar mensajes anulados</string>
     <string name="ig_feature_keep_unsent_in_chat">Mantenerlos en el chat</string>
     <string name="ig_unsent_detail_unknown">Detalles no guardados</string>

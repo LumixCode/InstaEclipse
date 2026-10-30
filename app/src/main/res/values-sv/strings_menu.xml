@@ -26,7 +26,7 @@
     <string name="ig_restart_bar">Starta om Instagram för att tillämpa</string>
     <string name="ig_restart_bar_action">Starta om</string>
     <string name="menu_health_broken">Kunde inte kopplas till den här Instagram-versionen</string>
-    <string name="menu_health_restart">Påslaget efter att Instagram startade – starta om för att tillämpa</string>
+    <string name="menu_health_restart">Ändrat efter att Instagram startade – starta om för att tillämpa</string>
     <string name="menu_health_locks">Lås behöver en kod</string>
     <string name="menu_health_unconfirmed">Inte bekräftat ännu</string>
     <string name="ie_font_saved">Teckensnitt sparat. Starta om Instagram för att tillämpa</string>

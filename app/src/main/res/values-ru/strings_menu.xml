@@ -26,7 +26,7 @@
     <string name="ig_restart_bar">Перезапустите Instagram для применения</string>
     <string name="ig_restart_bar_action">Перезапустить</string>
     <string name="menu_health_broken">Не удалось подключиться к этой версии Instagram</string>
-    <string name="menu_health_restart">Включено после запуска Instagram — перезапустите для применения</string>
+    <string name="menu_health_restart">Изменено после запуска Instagram — перезапустите для применения</string>
     <string name="menu_health_locks">Блокировкам нужен код-пароль</string>
     <string name="menu_health_unconfirmed">Ещё не подтверждено</string>
     <string name="ie_font_saved">Шрифт сохранён. Перезапустите Instagram, чтобы применить</string>

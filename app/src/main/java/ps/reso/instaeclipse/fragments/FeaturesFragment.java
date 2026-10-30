@@ -1285,8 +1285,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         String text = item.desc != 0 ? getString(item.desc) : null;
         if (item.restartOn != FeatureCatalog.Restart.NONE) {
             text = lines(text, getString(restartWaiting().contains(item.key) ? R.string.feat_restart_waiting
-                    : item.restartOn == FeatureCatalog.Restart.BOTH
-                    ? R.string.ig_restart_to_apply_both : R.string.ig_restart_to_apply_hint));
+                    : R.string.ig_restart_to_apply_both));
         }
         return text;
     }

@@ -6,7 +6,6 @@
     <string name="ig_hide_chats_picker_empty">Inga chattar har laddats ännu. Öppna din inkorg en gång och kom sedan tillbaka hit.</string>
     <string name="ig_hide_chats_picker_hint">Välj chattar här, eller öppna en chatt, öppna dess InstaEclipse-meny (knappen i chattens sidhuvud, eller ett trippeltryck efter chattnamnet när knappen är dold) och välj Dölj chatt. Dolda chattar kan återställas från den här listan.</string>
     <string name="ig_hide_chat_menu_button">Dölj InstaEclipse-knappen i chattar</string>
-    <string name="ig_restart_to_apply_hint">Att slå på den träder i kraft efter omstart av Instagram</string>
     <string name="ig_dialog_ghost_keep_unsent_chat">Behåll ångrade meddelanden</string>
     <string name="ig_feature_keep_unsent_in_chat">Behåll dem i chatten</string>
     <string name="ig_unsent_detail_unknown">Detaljer sparades inte</string>

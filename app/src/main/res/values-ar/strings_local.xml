@@ -6,7 +6,6 @@
     <string name="ig_hide_chats_picker_empty">لم تُحمَّل أي محادثات بعد. افتح صندوق الوارد مرة واحدة، ثم عُد إلى هنا.</string>
     <string name="ig_hide_chats_picker_hint">اختر المحادثات هنا، أو افتح محادثة ثم افتح قائمة InstaEclipse الخاصة بها (الزر في أعلاها، أو اضغط ثلاث مرات بعد اسم المحادثة عندما يكون ذلك الزر مخفيًا) واختر «إخفاء المحادثة». يمكن استعادة المحادثات المخفية من هذه القائمة.</string>
     <string name="ig_hide_chat_menu_button">إخفاء زر InstaEclipse في المحادثة</string>
-    <string name="ig_restart_to_apply_hint">يسري التفعيل بعد إعادة تشغيل Instagram</string>
     <string name="ig_dialog_ghost_keep_unsent_chat">الاحتفاظ بالرسائل الملغاة</string>
     <string name="ig_feature_keep_unsent_in_chat">الاحتفاظ بها في المحادثة</string>
     <string name="ig_unsent_detail_unknown">لم تُحفظ التفاصيل</string>

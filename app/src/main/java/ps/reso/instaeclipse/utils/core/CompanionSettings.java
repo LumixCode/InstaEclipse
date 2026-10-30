@@ -9,13 +9,16 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 
 import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
+import ps.reso.instaeclipse.utils.feature.RestartPromptRule;
 import ps.reso.instaeclipse.utils.ipc.BrokerPayload;
 import ps.reso.instaeclipse.utils.ipc.CompanionBridge;
+import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 public final class CompanionSettings {
 
@@ -48,7 +51,7 @@ public final class CompanionSettings {
         else if (value instanceof Integer) intent.putExtra("value", (int) (Integer) value);
         else intent.putExtra("value", (String) value);
         sendToInstagram(context, intent);
-        return FeatureCatalog.restartKeys(before, Collections.singletonMap(key, value));
+        return restartNeeded(cache, before, Collections.singletonMap(key, value));
     }
 
     public static Set<String> putAll(Context context, LinkedHashMap<String, ?> values) {
@@ -67,7 +70,7 @@ public final class CompanionSettings {
         editor.apply();
         sendToInstagram(context, new Intent(CommonUtils.ACTION_APPLY_SETTINGS)
                 .putExtra("values", bundle).putExtra("ts", now));
-        return FeatureCatalog.restartKeys(before, values);
+        return restartNeeded(cache, before, values);
     }
 
     public static void sendToInstagram(Context context, Intent intent) {
@@ -83,6 +86,30 @@ public final class CompanionSettings {
         try {
             if (CompanionBridge.isTrustedHost(context, BrokerPayload.HOST)) context.sendBroadcast(intent);
         } catch (Throwable ignored) {}
+    }
+
+    private static Set<String> restartNeeded(SharedPreferences cache, Map<String, Object> before, Map<String, ?> after) {
+        Set<String> waiting = waiting(cache);
+        Set<String> out = new LinkedHashSet<>();
+        for (String key : FeatureCatalog.restartKeys(before, after)) {
+            FeatureCatalog.Item item = FeatureCatalog.item(key);
+            if (item != null && item.kind == FeatureCatalog.Kind.SWITCH && waiting.contains(key)) {
+                ModuleLog.detail("(InstaEclipse) Restart: " + key + " is back to what Instagram started with, so no restart is asked");
+                continue;
+            }
+            out.add(key);
+        }
+        return out;
+    }
+
+    private static Set<String> waiting(SharedPreferences cache) {
+        Object stored;
+        try {
+            stored = cache.getString(SettingsManager.RESTART_PENDING, "");
+        } catch (ClassCastException e) {
+            stored = null;
+        }
+        return RestartPromptRule.parse(stored);
     }
 
     private static Map<String, Object> current(SharedPreferences cache, Collection<String> keys) {

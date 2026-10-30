@@ -27,7 +27,7 @@
     <string name="ig_restart_bar">Restart Instagram to apply</string>
     <string name="ig_restart_bar_action">Restart</string>
     <string name="menu_health_broken">Could not attach to this Instagram version</string>
-    <string name="menu_health_restart">Turned on after Instagram started – restart to apply</string>
+    <string name="menu_health_restart">Changed after Instagram started – restart to apply</string>
     <string name="menu_health_locks">Locks need a passcode</string>
     <string name="menu_health_unconfirmed">Not confirmed yet</string>
     <string name="ie_font_saved">Font saved. Restart Instagram to use it</string>

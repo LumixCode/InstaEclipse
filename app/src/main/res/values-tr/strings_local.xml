@@ -6,7 +6,6 @@
     <string name="ig_hide_chats_picker_empty">Henüz sohbet yüklenmedi. Gelen kutunuzu bir kez açın, sonra buraya dönün.</string>
     <string name="ig_hide_chats_picker_hint">Sohbetleri buradan seçin ya da bir sohbeti açıp InstaEclipse menüsünü açın (başlıktaki düğme veya düğme gizliyse sohbet adının yanına üç kez dokunma) ve “Sohbeti gizle”ye dokunun. Gizli sohbetler bu listeden geri getirilebilir.</string>
     <string name="ig_hide_chat_menu_button">InstaEclipse sohbet düğmesini gizle</string>
-    <string name="ig_restart_to_apply_hint">Açtığınızda Instagram yeniden başlatılınca geçerli olur</string>
     <string name="ig_dialog_ghost_keep_unsent_chat">Geri alınan mesajları sakla</string>
     <string name="ig_feature_keep_unsent_in_chat">Sohbette tut</string>
     <string name="ig_unsent_detail_unknown">Ayrıntılar kaydedilmedi</string>

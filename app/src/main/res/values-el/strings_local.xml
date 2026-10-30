@@ -6,7 +6,6 @@
     <string name="ig_hide_chats_picker_empty">Δεν έχουν φορτωθεί ακόμα συνομιλίες. Ανοίξτε μία φορά τα εισερχόμενα και επιστρέψτε εδώ.</string>
     <string name="ig_hide_chats_picker_hint">Επιλέξτε συνομιλίες εδώ ή ανοίξτε μια συνομιλία, ανοίξτε το μενού InstaEclipse της (το κουμπί στην κεφαλίδα ή τριπλό πάτημα μετά το όνομα της συνομιλίας, όταν το κουμπί είναι κρυφό) και επιλέξτε «Απόκρυψη συνομιλίας». Οι κρυφές συνομιλίες επαναφέρονται από αυτή τη λίστα.</string>
     <string name="ig_hide_chat_menu_button">Απόκρυψη κουμπιού InstaEclipse στις συνομιλίες</string>
-    <string name="ig_restart_to_apply_hint">Η ενεργοποίηση ισχύει μετά από επανεκκίνηση του Instagram</string>
     <string name="ig_dialog_ghost_keep_unsent_chat">Διατήρηση αναιρεμένων μηνυμάτων</string>
     <string name="ig_feature_keep_unsent_in_chat">Διατήρηση μέσα στη συνομιλία</string>
     <string name="ig_unsent_detail_unknown">Δεν αποθηκεύτηκαν λεπτομέρειες</string>

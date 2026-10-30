@@ -26,7 +26,7 @@
     <string name="ig_restart_bar">Zum Übernehmen Instagram neu starten</string>
     <string name="ig_restart_bar_action">Neu starten</string>
     <string name="menu_health_broken">Anbindung an diese Instagram-Version fehlgeschlagen</string>
-    <string name="menu_health_restart">Nach dem Start von Instagram eingeschaltet – zum Übernehmen neu starten</string>
+    <string name="menu_health_restart">Nach dem Start von Instagram geändert – zum Übernehmen neu starten</string>
     <string name="menu_health_locks">Sperren brauchen einen Code</string>
     <string name="menu_health_unconfirmed">Noch nicht bestätigt</string>
     <string name="ie_font_saved">Schrift gespeichert. Wirkt nach Instagram-Neustart</string>

@@ -2,7 +2,6 @@ package ps.reso.instaeclipse.utils.feature;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -13,7 +12,7 @@ import java.util.function.Function;
 public final class RestartPending {
 
     private static final Map<String, String> SEEN = new ConcurrentHashMap<>();
-    private static volatile Map<String, Boolean> rules;
+    private static volatile Set<String> rules;
 
     private RestartPending() {}
 
@@ -25,20 +24,18 @@ public final class RestartPending {
         return key == null ? null : SEEN.get(key);
     }
 
-    public static Map<String, Boolean> rules() {
-        Map<String, Boolean> out = rules;
+    public static Set<String> rules() {
+        Set<String> out = rules;
         if (out != null) return out;
-        Map<String, Boolean> built = new LinkedHashMap<>();
+        Set<String> built = new LinkedHashSet<>();
         for (FeatureCatalog.Category c : FeatureCatalog.CATEGORIES) {
             for (FeatureCatalog.Item item : c.items()) {
-                if (item.restartOn != FeatureCatalog.Restart.NONE) {
-                    built.put(item.key, item.restartOn == FeatureCatalog.Restart.ON_ONLY);
-                }
+                if (item.restartOn != FeatureCatalog.Restart.NONE) built.add(item.key);
             }
         }
-        built.put("customFontPath", false);
-        built.put("customEmojiPath", false);
-        out = Collections.unmodifiableMap(built);
+        built.add("customFontPath");
+        built.add("customEmojiPath");
+        out = Collections.unmodifiableSet(built);
         rules = out;
         return out;
     }
@@ -52,31 +49,30 @@ public final class RestartPending {
         return key != null && SEEN.containsKey(key);
     }
 
-    public static Set<String> pending(Map<String, Boolean> onOnly) {
-        return pending(onOnly, RestartPending::flag);
+    public static Set<String> pending(Set<String> restarts) {
+        return pending(restarts, RestartPending::flag);
     }
 
-    public static Set<String> pending(Map<String, Boolean> onOnly, Function<String, Object> current) {
+    public static Set<String> pending(Set<String> restarts, Function<String, Object> current) {
         Set<String> out = new TreeSet<>();
-        for (Map.Entry<String, Boolean> rule : onOnly.entrySet()) {
-            String was = SEEN.get(rule.getKey());
+        for (String key : restarts) {
+            String was = SEEN.get(key);
             if (was == null) continue;
-            String now = String.valueOf(current.apply(rule.getKey()));
-            String[] parents = FeatureCatalog.restartParents(rule.getKey());
+            String now = String.valueOf(current.apply(key));
+            String[] parents = FeatureCatalog.restartParents(key);
             if (parents.length > 0 && capturedAll(parents)) {
                 was = String.valueOf(on(was) && anyOn(parents, SEEN::get));
-                now = String.valueOf(on(now) && anyOn(parents, key -> String.valueOf(current.apply(key))));
+                now = String.valueOf(on(now) && anyOn(parents, parent -> String.valueOf(current.apply(parent))));
             }
             if (was.equals(now)) continue;
-            if (Boolean.TRUE.equals(rule.getValue()) && (!on(now) || on(was))) continue;
-            out.add(rule.getKey());
+            out.add(key);
         }
         return out;
     }
 
     public static Set<String> affected(Collection<String> applied) {
         Set<String> out = new LinkedHashSet<>(applied);
-        for (String key : rules().keySet()) {
+        for (String key : rules()) {
             for (String parent : FeatureCatalog.restartParents(key)) {
                 if (applied.contains(parent)) out.add(key);
             }

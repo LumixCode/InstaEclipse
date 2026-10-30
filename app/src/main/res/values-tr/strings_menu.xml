@@ -26,7 +26,7 @@
     <string name="ig_restart_bar">Uygulamak için Instagram\'ı yeniden başlatın</string>
     <string name="ig_restart_bar_action">Yeniden başlat</string>
     <string name="menu_health_broken">Bu Instagram sürümüne bağlanılamadı</string>
-    <string name="menu_health_restart">Instagram başladıktan sonra açıldı – uygulamak için yeniden başlatın</string>
+    <string name="menu_health_restart">Instagram başladıktan sonra değiştirildi – uygulamak için yeniden başlatın</string>
     <string name="menu_health_locks">Kilitler için şifre gerekiyor</string>
     <string name="menu_health_unconfirmed">Henüz doğrulanmadı</string>
     <string name="ie_font_saved">Yazı tipi kaydedildi. Instagram\'ı yeniden başlatın</string>

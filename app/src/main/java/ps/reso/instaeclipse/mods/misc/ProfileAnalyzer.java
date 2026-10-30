@@ -76,7 +76,7 @@ public final class ProfileAnalyzer {
     public static void start(Activity a, Object user, String username) {
         if (!FeatureFlags.profileAnalyzer || a == null) return;
         if (!InstallRunner.ran("FollowListExportHook")) {
-            IeToast.makeText(a, I18n.t(a, R.string.ig_restart_to_apply_hint), Toast.LENGTH_SHORT).show();
+            IeToast.makeText(a, I18n.t(a, R.string.ig_restart_to_apply_both), Toast.LENGTH_SHORT).show();
             return;
         }
         String id = user != null ? FollowListLoader.idOf(user) : null;

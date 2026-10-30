@@ -6,7 +6,6 @@
     <string name="ig_hide_chats_picker_empty">Noch keine Chats geladen. Öffne einmal dein Postfach und komm dann hierher zurück.</string>
     <string name="ig_hide_chats_picker_hint">Wähle hier Chats aus oder öffne einen Chat, dann sein InstaEclipse-Menü (Button in der Kopfzeile; ist er ausgeblendet, dreimal hinter den Chatnamen tippen) und wähle „Chat ausblenden“. Ausgeblendete Chats lassen sich in dieser Liste wiederherstellen.</string>
     <string name="ig_hide_chat_menu_button">InstaEclipse-Chat-Button ausblenden</string>
-    <string name="ig_restart_to_apply_hint">Das Einschalten wirkt erst nach einem Neustart von Instagram</string>
     <string name="ig_dialog_ghost_keep_unsent_chat">Zurückgezogene Nachrichten behalten</string>
     <string name="ig_feature_keep_unsent_in_chat">Im Chat behalten</string>
     <string name="ig_unsent_detail_unknown">Details nicht gespeichert</string>

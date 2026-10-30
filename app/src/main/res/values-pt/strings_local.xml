@@ -6,7 +6,6 @@
     <string name="ig_hide_chats_picker_empty">Nenhuma conversa carregada ainda. Abra sua caixa de entrada uma vez e volte aqui.</string>
     <string name="ig_hide_chats_picker_hint">Selecione conversas aqui ou abra uma conversa, abra o menu do InstaEclipse dela (o botão no topo, ou três toques depois do nome da conversa quando esse botão está oculto) e escolha “Ocultar conversa”. As conversas ocultas podem ser restauradas nesta lista.</string>
     <string name="ig_hide_chat_menu_button">Ocultar o botão do InstaEclipse na conversa</string>
-    <string name="ig_restart_to_apply_hint">Ao ativar, só vale depois de reiniciar o Instagram</string>
     <string name="ig_dialog_ghost_keep_unsent_chat">Manter mensagens apagadas</string>
     <string name="ig_feature_keep_unsent_in_chat">Mantê-las na conversa</string>
     <string name="ig_unsent_detail_unknown">Detalhes não salvos</string>

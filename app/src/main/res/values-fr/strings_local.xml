@@ -6,7 +6,6 @@
     <string name="ig_hide_chats_picker_empty">Aucune discussion chargée. Ouvrez votre boîte de réception une fois, puis revenez ici.</string>
     <string name="ig_hide_chats_picker_hint">Sélectionnez des discussions ici, ou ouvrez une discussion, puis son menu InstaEclipse (le bouton dans son en-tête, ou trois appuis après le nom de la discussion si ce bouton est masqué) et choisissez « Masquer la discussion ». Les discussions masquées peuvent être restaurées depuis cette liste.</string>
     <string name="ig_hide_chat_menu_button">Masquer le bouton InstaEclipse des discussions</string>
-    <string name="ig_restart_to_apply_hint">L\'activation prend effet après un redémarrage d\'Instagram</string>
     <string name="ig_dialog_ghost_keep_unsent_chat">Conserver les messages annulés</string>
     <string name="ig_feature_keep_unsent_in_chat">Les garder dans la discussion</string>
     <string name="ig_unsent_detail_unknown">Détails non enregistrés</string>

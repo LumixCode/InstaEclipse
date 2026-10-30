@@ -6,7 +6,6 @@
     <string name="ig_hide_chats_picker_empty">Chưa tải đoạn chat nào. Hãy mở hộp thư một lần, rồi quay lại đây.</string>
     <string name="ig_hide_chats_picker_hint">Chọn đoạn chat ở đây, hoặc mở một đoạn chat, mở menu InstaEclipse của nó (nút ở đầu đoạn chat, hoặc chạm 3 lần sau tên đoạn chat khi nút đó bị ẩn) và chọn “Ẩn đoạn chat”. Có thể khôi phục đoạn chat ẩn từ danh sách này.</string>
     <string name="ig_hide_chat_menu_button">Ẩn nút chat InstaEclipse</string>
-    <string name="ig_restart_to_apply_hint">Khi bật, tùy chọn có hiệu lực sau khi khởi động lại Instagram</string>
     <string name="ig_dialog_ghost_keep_unsent_chat">Giữ tin nhắn đã thu hồi</string>
     <string name="ig_feature_keep_unsent_in_chat">Giữ trong đoạn chat</string>
     <string name="ig_unsent_detail_unknown">Không lưu chi tiết</string>

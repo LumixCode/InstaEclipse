@@ -43,6 +43,21 @@ public final class RestartPrompt {
         return new HashSet<>(SHOWN);
     }
 
+    public static void retain(Set<String> pending) {
+        synchronized (RestartPrompt.class) {
+            SHOWN.removeIf(signature -> !pending.containsAll(RestartPromptRule.parse(signature)));
+            if (waiting != null) {
+                List<String> kept = keep(waiting, pending);
+                waiting = kept.isEmpty() ? null : kept;
+            }
+        }
+        View view = bar.get();
+        if (view == null) return;
+        Runnable apply = () -> narrow(view, pending);
+        if (Looper.myLooper() == Looper.getMainLooper()) apply.run();
+        else new Handler(Looper.getMainLooper()).post(apply);
+    }
+
     public static void show(Activity activity, List<String> keys) {
         if (keys == null || keys.isEmpty()) return;
         synchronized (RestartPrompt.class) {
@@ -105,6 +120,21 @@ public final class RestartPrompt {
             ModuleLog.warn("(InstaEclipse) Could not show the restart prompt: "
                     + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
+    }
+
+    private static void narrow(View view, Set<String> pending) {
+        List<String> shown = visible;
+        if (shown == null || view != bar.get()) return;
+        List<String> kept = keep(shown, pending);
+        if (kept.size() == shown.size()) return;
+        dismiss(view);
+        if (!kept.isEmpty() && view.getContext() instanceof Activity) attach((Activity) view.getContext(), kept);
+    }
+
+    private static List<String> keep(List<String> keys, Set<String> pending) {
+        List<String> out = new ArrayList<>();
+        for (String key : keys) if (pending.contains(key)) out.add(key);
+        return out;
     }
 
     private static void dismiss(View view) {

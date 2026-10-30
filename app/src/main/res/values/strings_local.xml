@@ -13,7 +13,6 @@
     <string name="ig_hide_chat_menu_button">Hide the InstaEclipse chat button</string>
 
     <!-- Features whose hook is installed only when they are on at Instagram's start -->
-    <string name="ig_restart_to_apply_hint">Turning it on takes effect after restarting Instagram</string>
 
     <!-- Unsent messages: local behaviour keeps them in the chat (upstream only logs them) -->
     <string name="ig_dialog_ghost_keep_unsent_chat">Keep unsent messages</string>
