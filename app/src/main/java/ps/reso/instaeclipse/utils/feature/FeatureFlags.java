@@ -57,6 +57,7 @@ public class FeatureFlags {
     public static volatile boolean backLeavesHome = false;
     public static volatile boolean readReceiptChats = false;
     public static volatile boolean markSeenOnInteraction = false;
+    public static volatile boolean markSeenLocally = false;
     public static volatile boolean hideDmBlend = false;
     public static volatile boolean hideThreadsButton = false;
     public static volatile boolean hideNotesTray = false;

@@ -25,6 +25,8 @@
     <string name="cat_readReceiptChats_desc_list">צ\'אטים נבחרים עדיין מקבלים אישורי קריאה. נהל אותם ב\"צ\'אטים שמקבלים אישורי קריאה\"</string>
     <string name="cat_markSeenOnInteraction">שלח אישור קריאה בעת מענה או תגובה</string>
     <string name="cat_markSeenOnInteraction_desc">שליחה מהצ\'אט הפתוח או תגובה להודעה שולחת אישור קריאה לאותו צ\'אט</string>
+    <string name="cat_markSeenLocally">סמן צ\'אטים כנקראו במכשיר הזה</string>
+    <string name="cat_markSeenLocally_desc">הודעות שפתחת כבר לא נספרות כלא נקראו כאן, והצד השני לא מקבל אישור קריאה</string>
     <string name="cat_airplaneMode">להיראות לא מחובר</string>
     <string name="cat_airplaneMode_desc">מסתיר את \"פעיל עכשיו\"; הודעות ושיחות מפסיקות להגיע בזמן אמת</string>
     <string name="cat_quickToggle_desc">לחץ לחיצה ארוכה על כפתור ההודעות כדי להפעיל או לכבות את מה שבחרת</string>

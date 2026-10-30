@@ -25,6 +25,8 @@
     <string name="cat_readReceiptChats_desc_list">Gewählte Chats bekommen weiterhin „Gesehen“. Verwalte sie unter „Chats mit Lesebestätigung“</string>
     <string name="cat_markSeenOnInteraction">„Gesehen“ beim Antworten oder Reagieren senden</string>
     <string name="cat_markSeenOnInteraction_desc">Etwas im offenen Chat senden oder auf eine Nachricht reagieren sendet „Gesehen“ für diesen Chat</string>
+    <string name="cat_markSeenLocally">Chats auf diesem Gerät als gelesen markieren</string>
+    <string name="cat_markSeenLocally_desc">Geöffnete Nachrichten zählen hier nicht mehr als ungelesen, die andere Person bekommt kein „Gesehen“</string>
     <string name="cat_airplaneMode">Offline erscheinen</string>
     <string name="cat_airplaneMode_desc">Blendet „Jetzt aktiv“ aus; Nachrichten und Anrufe kommen nicht mehr live an</string>
     <string name="cat_quickToggle_desc">Halte das Nachrichten-Symbol gedrückt, um deine Auswahl ein- oder auszuschalten</string>

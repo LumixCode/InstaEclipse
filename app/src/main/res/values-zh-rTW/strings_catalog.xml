@@ -25,6 +25,8 @@
     <string name="cat_readReceiptChats_desc_list">所選聊天仍會收到已讀。可在「會收到已讀回條的聊天」中管理</string>
     <string name="cat_markSeenOnInteraction">回覆或回應時傳送已讀</string>
     <string name="cat_markSeenOnInteraction_desc">在開啟的聊天中傳送內容或回應訊息時，會為該聊天傳送已讀</string>
+    <string name="cat_markSeenLocally">在此裝置上將聊天標示為已讀</string>
+    <string name="cat_markSeenLocally_desc">你開啟的訊息在這裡不再算作未讀，對方也不會收到已讀</string>
     <string name="cat_airplaneMode">顯示為離線</string>
     <string name="cat_airplaneMode_desc">隱藏「目前在線上」；訊息和通話將不再即時送達</string>
     <string name="cat_quickToggle_desc">長按「訊息」按鈕即可開啟或關閉你選擇的項目</string>

@@ -259,6 +259,9 @@ public final class FeatureCatalog {
                             sw("markSeenOnInteraction", R.string.cat_markSeenOnInteraction, R.drawable.ic_eye)
                                     .desc(R.string.cat_markSeenOnInteraction_desc).requires("isGhostSeen")
                                     .status("MarkSeenOnInteraction").words("seen", "read receipt", "reaction"),
+                            sw("markSeenLocally", R.string.cat_markSeenLocally, R.drawable.ic_eye)
+                                    .desc(R.string.cat_markSeenLocally_desc).requires("isGhostSeen")
+                                    .status("MarkSeenLocally").words("seen", "read receipt", "unread", "badge"),
                             sw("airplaneMode", R.string.cat_airplaneMode, R.drawable.ic_eye_off)
                                     .desc(R.string.cat_airplaneMode_desc).status("airplaneMode")
                                     .aliases(R.string.ig_dialog_extras_airplane_mode).words("airplane", "offline"),

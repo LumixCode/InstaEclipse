@@ -5,22 +5,28 @@ import org.luckypray.dexkit.query.matchers.MethodMatcher;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.List;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.Xposed.Module;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
+import ps.reso.instaeclipse.utils.core.SafeReflect;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
+import ps.reso.instaeclipse.utils.ghost.LocalSeen;
 import ps.reso.instaeclipse.utils.ghost.MarkSeen;
 import ps.reso.instaeclipse.utils.ghost.ReadReceiptWhitelist;
 import ps.reso.instaeclipse.utils.ghost.SeenPause;
+import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class GhostDMSeenHook {
+    private static final String LOCAL_SEEN = "MarkSeenLocally";
+
     public void handleSeenBlock() {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
@@ -33,6 +39,7 @@ public class GhostDMSeenHook {
                             break;
                         }
                     }
+                    if (FeatureFlags.markSeenLocally) LocalSeen.mark(param.args);
                 }
                 param.setResult(null);
                 MarkSeen.remember(param.args);
@@ -47,6 +54,7 @@ public class GhostDMSeenHook {
                 ModuleLog.detail("(InstaEclipse | GhostModeSeen): hooked (cached): " + cached.getDeclaringClass().getName() + "." + cached.getName());
                 FeatureStatusTracker.setHooked("GhostSeen");
                 bindMarkSeen(cached);
+                bindLocalSeen(cached);
                 return;
             }
         }
@@ -86,6 +94,7 @@ public class GhostDMSeenHook {
                                 method.getClassName() + "." + method.getName());
                         FeatureStatusTracker.setHooked("GhostSeen");
                         bindMarkSeen(reflectMethod);
+                        bindLocalSeen(reflectMethod);
                         return;
 
                     } catch (Throwable e) {
@@ -127,6 +136,69 @@ public class GhostDMSeenHook {
         } catch (Throwable e) {
             ModuleLog.warn("(InstaEclipse | GhostModeSeen): Mark as seen can only send the last message Instagram tried to mark: " + e);
         }
+    }
+
+    private static void bindLocalSeen(Method sender) {
+        try {
+            Method echo = seenEcho();
+            Method store = echo == null ? null : seenStore(echo);
+            if (store != null && LocalSeen.use(sender, echo, store)) {
+                FeatureStatusTracker.setHooked(LOCAL_SEEN);
+                ModuleLog.detail("(IE|LocalSeen) ready: " + echo.getDeclaringClass().getName() + "." + echo.getName()
+                        + ", store " + store.getDeclaringClass().getName() + "." + store.getName());
+                return;
+            }
+            ModuleLog.warn("(IE|LocalSeen) Could not turn on marking chats read on this device: not supported by this Instagram version (echo " + echo + ", store " + store + ")");
+        } catch (Throwable e) {
+            ModuleLog.warn("(IE|LocalSeen) Could not turn on marking chats read on this device: " + e);
+        }
+        if (FeatureFlags.markSeenLocally) FeatureStatusTracker.setBroken(LOCAL_SEEN);
+    }
+
+    private static Method seenEcho() throws NoSuchMethodException {
+        if (DexKitCache.isCacheValid()) {
+            Method cached = DexKitCache.loadMethod("LocalSeen_echo", Module.hostClassLoader);
+            if (cached != null) return cached;
+        }
+        for (Found found : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
+                .usingStrings("Can't find thread to update seen messages.").returnType("void").paramCount(4)))) {
+            if (!found.isMethod()) continue;
+            Method method = found.getMethodInstance(Module.hostClassLoader);
+            Class<?>[] params = method.getParameterTypes();
+            if (Modifier.isStatic(method.getModifiers()) || params[2] != String.class || params[3] != boolean.class) continue;
+            DexKitCache.saveMethod("LocalSeen_echo", method);
+            return method;
+        }
+        return null;
+    }
+
+    private static Method seenStore(Method echo) throws NoSuchMethodException {
+        if (DexKitCache.isCacheValid()) {
+            Method cached = DexKitCache.loadMethod("LocalSeen_store", Module.hostClassLoader);
+            if (cached != null) return cached;
+        }
+        for (Class<?> type : echo.getDeclaringClass().getInterfaces()) {
+            if (!declares(type, echo)) continue;
+            for (Found found : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
+                    .returnType(type.getName()).paramTypes(UnsentIdentity.SESSION)))) {
+                if (!found.isMethod()) continue;
+                Method method = found.getMethodInstance(Module.hostClassLoader);
+                if (!Modifier.isStatic(method.getModifiers())) continue;
+                DexKitCache.saveMethod("LocalSeen_store", method);
+                return method;
+            }
+        }
+        return null;
+    }
+
+    private static boolean declares(Class<?> type, Method method) {
+        for (Method declared : SafeReflect.methods(type)) {
+            if (declared.getName().equals(method.getName())
+                    && Arrays.equals(declared.getParameterTypes(), method.getParameterTypes())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Method callerOf(Method callee, int params, Class<?> lastParam) {

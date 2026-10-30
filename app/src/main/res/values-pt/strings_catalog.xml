@@ -25,6 +25,8 @@
     <string name="cat_readReceiptChats_desc_list">As conversas escolhidas ainda recebem o Visto. Gerencie em “Conversas com confirmação de leitura”</string>
     <string name="cat_markSeenOnInteraction">Enviar Visto ao responder ou reagir</string>
     <string name="cat_markSeenOnInteraction_desc">Enviar algo da conversa aberta ou reagir a uma mensagem envia o Visto dessa conversa</string>
+    <string name="cat_markSeenLocally">Marcar conversas como lidas neste dispositivo</string>
+    <string name="cat_markSeenLocally_desc">As mensagens que você abre deixam de contar como não lidas aqui e a outra pessoa não recebe o Visto</string>
     <string name="cat_airplaneMode">Aparecer offline</string>
     <string name="cat_airplaneMode_desc">Oculta “Ativo agora”; mensagens e chamadas param de chegar em tempo real</string>
     <string name="cat_quickToggle_desc">Toque e segure o botão de Mensagens para ativar ou desativar suas escolhas</string>

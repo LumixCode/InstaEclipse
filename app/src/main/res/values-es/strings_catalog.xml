@@ -25,6 +25,8 @@
     <string name="cat_readReceiptChats_desc_list">Los chats elegidos siguen recibiendo el «Visto». Gestiónalos en «Chats con confirmaciones de lectura»</string>
     <string name="cat_markSeenOnInteraction">Enviar «Visto» al responder o reaccionar</string>
     <string name="cat_markSeenOnInteraction_desc">Enviar algo desde el chat abierto o reaccionar a un mensaje envía el «Visto» de ese chat</string>
+    <string name="cat_markSeenLocally">Marcar chats como leídos en este dispositivo</string>
+    <string name="cat_markSeenLocally_desc">Los mensajes que abres dejan de contar como no leídos aquí y la otra persona no recibe el «Visto»</string>
     <string name="cat_airplaneMode">Aparecer desconectado</string>
     <string name="cat_airplaneMode_desc">Oculta «Activo ahora»; los mensajes y las llamadas dejan de llegar en tiempo real</string>
     <string name="cat_quickToggle_desc">Mantén pulsado el botón de Mensajes para activar o desactivar lo que elegiste</string>

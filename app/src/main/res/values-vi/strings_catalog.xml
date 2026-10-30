@@ -25,6 +25,8 @@
     <string name="cat_readReceiptChats_desc_list">Đoạn chat đã chọn vẫn nhận Đã xem. Quản lý trong “Đoạn chat nhận xác nhận đã đọc”</string>
     <string name="cat_markSeenOnInteraction">Gửi Đã xem khi trả lời hoặc bày tỏ cảm xúc</string>
     <string name="cat_markSeenOnInteraction_desc">Gửi từ đoạn chat đang mở hoặc bày tỏ cảm xúc với tin nhắn sẽ gửi Đã xem cho đoạn chat đó</string>
+    <string name="cat_markSeenLocally">Đánh dấu đoạn chat là đã đọc trên thiết bị này</string>
+    <string name="cat_markSeenLocally_desc">Tin nhắn bạn mở không còn tính là chưa đọc ở đây, và người kia không nhận được Đã xem</string>
     <string name="cat_airplaneMode">Hiện ngoại tuyến</string>
     <string name="cat_airplaneMode_desc">Ẩn “Đang hoạt động”; tin nhắn và cuộc gọi không còn đến theo thời gian thực</string>
     <string name="cat_quickToggle_desc">Nhấn giữ nút Tin nhắn để bật hoặc tắt các mục bạn chọn</string>

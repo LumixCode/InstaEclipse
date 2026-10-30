@@ -25,6 +25,8 @@
     <string name="cat_readReceiptChats_desc_list">Le « Vu » reste envoyé aux discussions choisies. Gérez-les dans « Discussions avec accusés de lecture »</string>
     <string name="cat_markSeenOnInteraction">Envoyer le « Vu » en répondant ou en réagissant</string>
     <string name="cat_markSeenOnInteraction_desc">Envoyer depuis la discussion ouverte ou réagir à un message envoie le « Vu » de cette discussion</string>
+    <string name="cat_markSeenLocally">Marquer les discussions comme lues sur cet appareil</string>
+    <string name="cat_markSeenLocally_desc">Les messages ouverts ne comptent plus comme non lus ici et l\'autre personne ne reçoit pas de « Vu »</string>
     <string name="cat_airplaneMode">Paraître hors ligne</string>
     <string name="cat_airplaneMode_desc">Masque « En ligne » ; les messages et appels n\'arrivent plus en direct</string>
     <string name="cat_quickToggle_desc">Appui long sur le bouton Messages pour activer ou désactiver vos choix</string>

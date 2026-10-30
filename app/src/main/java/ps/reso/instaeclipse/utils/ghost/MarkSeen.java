@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.mods.ghost.ChatExportHook;
 import ps.reso.instaeclipse.mods.ghost.HideChatsHook;
 import ps.reso.instaeclipse.mods.ui.UIHookManager;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -101,21 +102,29 @@ public final class MarkSeen {
                 return false;
             }
             askInstagram();
-            Unseen unseen;
-            synchronized (UNSEEN) {
-                unseen = UNSEEN.remove(thread);
-            }
+            Unseen unseen = takeUnseen(thread);
             if (unseen == null) {
                 ModuleLog.detail("(IE|MarkAsRead) Nothing new to mark as seen in chat " + thread);
                 return false;
             }
             XposedBridge.invokeOriginalMethod(out, null, unseen.args());
+            LocalSeen.sent(thread);
             ModuleLog.detail("(IE|MarkAsRead) Sent the read receipt for message " + unseen.item() + " in chat " + thread);
             return true;
         } catch (Throwable t) {
             ModuleLog.warn("(IE|MarkAsRead) Could not mark this chat as seen", t);
             return false;
         }
+    }
+
+    private static Unseen takeUnseen(String thread) {
+        synchronized (UNSEEN) {
+            Unseen known = UNSEEN.remove(thread);
+            if (known != null) return known;
+        }
+        if (!LocalSeen.waiting(thread)) return null;
+        Object[] args = LocalSeen.replay(thread, ChatExportHook.openChatSession(UIHookManager.getCurrentActivity()));
+        return args == null ? null : new Unseen(args, (String) args[3]);
     }
 
     private static void askInstagram() {

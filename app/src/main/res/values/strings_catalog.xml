@@ -25,6 +25,8 @@
     <string name="cat_readReceiptChats_desc_list">Chosen chats still get Seen. Manage them in Chats that get read receipts</string>
     <string name="cat_markSeenOnInteraction">Send Seen when you reply or react</string>
     <string name="cat_markSeenOnInteraction_desc">Sending from the open chat or reacting to a message sends Seen for that chat</string>
+    <string name="cat_markSeenLocally">Mark chats read on this device</string>
+    <string name="cat_markSeenLocally_desc">Messages you open stop counting as unread here, and the other person gets no Seen</string>
     <string name="cat_airplaneMode">Appear offline</string>
     <string name="cat_airplaneMode_desc">Hides “Active now”; messages and calls stop arriving live</string>
     <string name="cat_quickToggle_desc">Long-press the Messages button to turn your picks on or off</string>

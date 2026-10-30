@@ -875,7 +875,7 @@ public class ChatExportHook {
         }
     }
 
-    private static Object openChatSession(Activity a) {
+    public static Object openChatSession(Activity a) {
         Object manager = call(a, "getSupportFragmentManager");
         Object session = fragmentSession(manager, true);
         return session != null ? session : fragmentSession(manager, false);

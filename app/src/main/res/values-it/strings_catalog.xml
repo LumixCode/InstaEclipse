@@ -25,6 +25,8 @@
     <string name="cat_readReceiptChats_desc_list">Le chat scelte ricevono comunque le conferme di lettura. Gestiscile in Chat con conferme di lettura</string>
     <string name="cat_markSeenOnInteraction">Invia «Visualizzato» quando rispondi o reagisci</string>
     <string name="cat_markSeenOnInteraction_desc">Inviare dalla chat aperta o reagire a un messaggio invia «Visualizzato» per quella chat</string>
+    <string name="cat_markSeenLocally">Segna le chat come lette su questo dispositivo</string>
+    <string name="cat_markSeenLocally_desc">I messaggi che apri non contano più come non letti qui e l\'altra persona non riceve «Visualizzato»</string>
     <string name="cat_airplaneMode">Appari offline</string>
     <string name="cat_airplaneMode_desc">Nasconde «Attivo ora»; messaggi e chiamate non arrivano più in tempo reale</string>
     <string name="cat_quickToggle_desc">Tieni premuto il pulsante Messaggi per attivare o disattivare le opzioni scelte</string>

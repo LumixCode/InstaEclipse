@@ -25,6 +25,8 @@
     <string name="cat_readReceiptChats_desc_list">Seçili sohbetler yine Görüldü bilgisi alır. Bunları “Okundu bilgisi alan sohbetler” bölümünden yönetin</string>
     <string name="cat_markSeenOnInteraction">Yanıtlayınca veya tepki verince Görüldü gönder</string>
     <string name="cat_markSeenOnInteraction_desc">Açık sohbetten bir şey göndermek veya bir mesaja tepki vermek o sohbete Görüldü gönderir</string>
+    <string name="cat_markSeenLocally">Sohbetleri bu cihazda okundu olarak işaretle</string>
+    <string name="cat_markSeenLocally_desc">Açtığın mesajlar burada okunmamış sayılmaz, karşı tarafa Görüldü gitmez</string>
     <string name="cat_airplaneMode">Çevrimdışı görün</string>
     <string name="cat_airplaneMode_desc">“Şu an aktif” bilgisini gizler; mesajlar ve aramalar anlık gelmez</string>
     <string name="cat_quickToggle_desc">Seçtiklerinizi açıp kapatmak için Mesajlar düğmesine uzun basın</string>

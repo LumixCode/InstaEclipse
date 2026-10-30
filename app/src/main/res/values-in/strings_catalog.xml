@@ -25,6 +25,8 @@
     <string name="cat_readReceiptChats_desc_list">Obrolan pilihan tetap dikirimi tanda baca. Kelola di Obrolan yang dikirimi tanda baca</string>
     <string name="cat_markSeenOnInteraction">Kirim tanda baca saat membalas atau bereaksi</string>
     <string name="cat_markSeenOnInteraction_desc">Mengirim dari obrolan yang terbuka atau bereaksi pada pesan akan mengirim tanda baca untuk obrolan itu</string>
+    <string name="cat_markSeenLocally">Tandai obrolan sudah dibaca di perangkat ini</string>
+    <string name="cat_markSeenLocally_desc">Pesan yang Anda buka tidak lagi dihitung belum dibaca di sini, dan orang lain tidak menerima tanda baca</string>
     <string name="cat_airplaneMode">Tampak offline</string>
     <string name="cat_airplaneMode_desc">Menyembunyikan “Aktif sekarang”; pesan dan panggilan tidak lagi masuk secara langsung</string>
     <string name="cat_quickToggle_desc">Tekan lama tombol Pesan untuk mengaktifkan atau menonaktifkan pilihan Anda</string>

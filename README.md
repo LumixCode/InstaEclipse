@@ -199,6 +199,7 @@ The whole menu, grouped the way it is inside Instagram. Option names match the m
 | ✨ Mark stories seen when you interact | With View stories anonymously on, a like, reply, comment or reaction sends the view for that one story, once. With Wait before sending likes on, the view goes out just before the like, and a like you take back sends nothing |
 | ✨ Send Seen in chosen chats | With Hide Seen on, the chats you choose still get Seen. Manage them in one list |
 | 🆕 Send Seen when you reply or react | With Hide Seen on, sending a message, sticker, photo, voice note or reel from the open chat, or reacting to a message, sends Seen for that chat. Sends from other screens stay hidden |
+| 🆕 Mark chats read on this device | With Hide Seen on, chats you open stop counting as unread here and the DM badge clears, while the other person gets no Seen. Mark as seen still sends it later. Instagram's servers and your other devices still count those chats as unread |
 | Appear offline | Hides *Active now*; messages and calls stop arriving live |
 | Quick toggle | Pick the options that holding the Messages icon turns on or off |
 
