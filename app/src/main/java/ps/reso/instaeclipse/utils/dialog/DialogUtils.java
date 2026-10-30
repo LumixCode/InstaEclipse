@@ -1068,7 +1068,6 @@ public class DialogUtils {
             Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(packageName);
 
             if (launchIntent != null) {
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                 if (clearCache) {
                     android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
                     ps.reso.instaeclipse.utils.core.CacheAutoClear.clearNow(context,
@@ -1087,8 +1086,7 @@ public class DialogUtils {
     private static void relaunch(Context context, Intent launchIntent) {
         try {
             waitForQueuedPreferenceWrites();
-            context.startActivity(launchIntent);
-            exit.run();
+            ps.reso.instaeclipse.utils.core.IgRelaunch.request(context, launchIntent.getComponent(), exit);
         } catch (Exception e) {
             restartFailed(context, e);
         }

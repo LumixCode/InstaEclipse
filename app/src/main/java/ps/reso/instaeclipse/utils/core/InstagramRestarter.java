@@ -1,15 +1,20 @@
 package ps.reso.instaeclipse.utils.core;
 
 import android.app.Activity;
+import android.app.ActivityOptions;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.widget.Toast;
+import android.window.SplashScreen;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +25,7 @@ import java.util.function.Consumer;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.ipc.ModuleReplies;
+import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.toast.IeToast;
 
 public final class InstagramRestarter {
@@ -32,7 +38,7 @@ public final class InstagramRestarter {
         Runnable ask(Context context, Intent request, Runnable answered);
     }
 
-    public static final long ACK_TIMEOUT_MS = 1_500;
+    public static final long ACK_TIMEOUT_MS = IgSelfRestart.MAX_AGE_MS + 1_000;
     public static final long PING_TIMEOUT_MS = 1_000;
     private static final long FORCE_STOP_TIMEOUT_S = 15;
     private static final Channel IPC = InstagramRestarter::askInstagram;
@@ -67,33 +73,34 @@ public final class InstagramRestarter {
     }
 
     public static void restart(Activity activity, String pkg, Callback callback) {
+        Context app = activity.getApplicationContext();
         Handler main = new Handler(Looper.getMainLooper());
         if (pkg == null || !isInstalled(activity.getPackageManager(), pkg)) {
-            finish(activity, null, RestartDecision.decide(null, false, false, false, null), 0, callback);
+            finish(app, null, RestartDecision.decide(null, false, false, false, null), 0, callback);
             return;
         }
         Intent request = new Intent(CommonUtils.ACTION_RESTART_INSTAGRAM).setPackage(pkg)
                 .putExtra(CommonUtils.EXTRA_REQUEST_TIME, SystemClock.elapsedRealtime());
         boolean asked = ask(activity, request, ACK_TIMEOUT_MS, main, ack -> {
             if (!ack) {
-                finish(activity, pkg, RestartDecision.decide(pkg, false, false, false, null), 0, callback);
+                finish(app, pkg, RestartDecision.decide(pkg, false, false, false, null), 0, callback);
                 return;
             }
             main.postDelayed(() -> {
-                boolean pinged = ping(activity, pkg, running -> afterAck(activity, pkg, running, callback));
-                if (!pinged) afterAck(activity, pkg, false, callback);
+                boolean pinged = ping(app, pkg, running -> afterAck(app, pkg, running, callback));
+                if (!pinged) afterAck(app, pkg, false, callback);
             }, RestartDecision.RELAUNCH_DELAY_MS);
         });
-        if (!asked) forceStop(pkg, main, (su, exit) -> finish(activity, pkg,
+        if (!asked) forceStop(pkg, main, (su, exit) -> finish(app, pkg,
                 RestartDecision.unreachable(pkg, su, exit), RestartDecision.RELAUNCH_DELAY_MS, callback));
     }
 
-    private static void afterAck(Activity activity, String pkg, boolean running, Callback callback) {
+    private static void afterAck(Context app, String pkg, boolean running, Callback callback) {
         if (!running) {
-            finish(activity, pkg, RestartDecision.decide(pkg, true, false, false, null), 0, callback);
+            finish(app, pkg, RestartDecision.decide(pkg, true, false, false, null), 0, callback);
             return;
         }
-        forceStop(pkg, new Handler(Looper.getMainLooper()), (su, exit) -> finish(activity, pkg,
+        forceStop(pkg, new Handler(Looper.getMainLooper()), (su, exit) -> finish(app, pkg,
                 RestartDecision.decide(pkg, true, true, su, exit), RestartDecision.RELAUNCH_DELAY_MS, callback));
     }
 
@@ -156,31 +163,35 @@ public final class InstagramRestarter {
         return pending == null ? null : pending::cancel;
     }
 
-    private static void finish(Activity activity, String pkg, RestartDecision.Outcome outcome, long relaunchDelayMs,
+    private static void finish(Context app, String pkg, RestartDecision.Outcome outcome, long relaunchDelayMs,
                                Callback callback) {
-        if (activity.isFinishing() || activity.isDestroyed()) return;
+        ModuleLog.detail("(IE|Restart) Decision for " + pkg + ": " + outcome);
         switch (outcome) {
             case RELAUNCH:
                 if (relaunchDelayMs <= 0) {
-                    launch(activity, pkg);
+                    launch(app, pkg);
                 } else {
-                    new Handler(Looper.getMainLooper()).postDelayed(() -> launch(activity, pkg), relaunchDelayMs);
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        launch(app, pkg);
+                        callback.onDone(outcome);
+                    }, relaunchDelayMs);
+                    return;
                 }
                 break;
             case NOT_RUNNING:
-                IeToast.makeText(activity, activity.getString(R.string.home_restart_applies_on_open), Toast.LENGTH_LONG).show();
+                IeToast.makeText(app, app.getString(R.string.home_restart_applies_on_open), Toast.LENGTH_LONG).show();
                 break;
             case APP_INFO:
-                IeToast.makeText(activity, activity.getString(R.string.ig_toast_restart_manual), Toast.LENGTH_LONG).show();
+                IeToast.makeText(app, app.getString(R.string.ig_toast_restart_manual), Toast.LENGTH_LONG).show();
                 try {
                     Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
                     intent.setData(Uri.parse("package:" + pkg));
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    activity.startActivity(intent);
+                    app.startActivity(intent);
                 } catch (Throwable ignored) { }
                 break;
             case NOT_INSTALLED:
-                IeToast.makeText(activity, activity.getString(R.string.not_installed_instagram), Toast.LENGTH_SHORT).show();
+                IeToast.makeText(app, app.getString(R.string.not_installed_instagram), Toast.LENGTH_SHORT).show();
                 break;
         }
         callback.onDone(outcome);
@@ -195,13 +206,25 @@ public final class InstagramRestarter {
         }
     }
 
-    private static void launch(Activity activity, String pkg) {
-        if (activity.isFinishing() || activity.isDestroyed()) return;
-        Intent launch = activity.getPackageManager().getLaunchIntentForPackage(pkg);
-        if (launch != null) {
-            activity.startActivity(launch);
-        } else {
-            IeToast.makeText(activity, activity.getString(R.string.not_installed_instagram), Toast.LENGTH_SHORT).show();
+    static Bundle iconSplash() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null;
+        ActivityOptions options = ActivityOptions.makeBasic();
+        options.setSplashScreenStyle(SplashScreen.SPLASH_SCREEN_STYLE_ICON);
+        return options.toBundle();
+    }
+
+    private static void launch(Context app, String pkg) {
+        Intent found = app.getPackageManager().getLaunchIntentForPackage(pkg);
+        ComponentName component = found == null ? null : found.getComponent();
+        if (component == null) {
+            IeToast.makeText(app, app.getString(R.string.not_installed_instagram), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            app.startActivity(Intent.makeRestartActivityTask(component), iconSplash());
+            ModuleLog.line("(IE|Restart) The InstaEclipse app opened Instagram again");
+        } catch (Throwable t) {
+            ModuleLog.warn("(IE|Restart) Instagram could not be opened again", t);
         }
     }
 }
