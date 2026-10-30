@@ -13,8 +13,10 @@ import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import ps.reso.instaeclipse.Xposed.Module;
@@ -22,6 +24,7 @@ import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
+import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
@@ -30,10 +33,12 @@ public class StoryLikeUndoHook {
 
     private static final String TAG = "(InstaEclipse | LikeUndo): ";
     private static final String CACHE_KEY = "StoryLikeUndo_v1";
+    private static final String WRITE_KEY = "StoryLikeWrite_v1";
     private static final String MEDIA = "com.instagram.feed.media.Media";
     private static final ThreadLocal<Member> REPLAYING = new ThreadLocal<>();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final PendingLikes<HeldLike> pending = PendingLikes.byId();
+    private static final Set<String> keptRed = ConcurrentHashMap.newKeySet();
 
     private static Class<?> mediaClass;
     private static Method mediaId;
@@ -84,11 +89,30 @@ public class StoryLikeUndoHook {
         }
         ModuleLog.ok(TAG + "Ready for story likes");
         ModuleLog.detail(TAG + "story likes hooked: " + name(like) + ", liked check " + name(check) + ", button " + name(bind));
+        try {
+            Method queue = queueOf(check);
+            hookQueue(queue);
+            ModuleLog.detail(TAG + "saved story likes hooked: " + name(queue));
+        } catch (Throwable t) {
+            ModuleLog.warn(TAG + "Liked stories may look unliked after a restart: " + t);
+            return;
+        }
+        try {
+            Method write = likeWrite(loader, like);
+            hookWrite(write);
+            ModuleLog.detail(TAG + "failed story likes hooked: " + name(write));
+        } catch (Throwable t) {
+            ModuleLog.detail(TAG + "A story like that fails may stay red for up to a day: " + t);
+        }
+    }
+
+    private static Found performCoroutine() {
+        return only(DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
+                .name("invokeSuspend").usingStrings("on_story_like_success", "transient_retry_queued"))), "story like coroutine");
     }
 
     private static List<Method> find(ClassLoader loader) throws Throwable {
-        Found perform = only(DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
-                .name("invokeSuspend").usingStrings("on_story_like_success", "transient_retry_queued"))), "story like coroutine");
+        Found perform = performCoroutine();
         Method like = null;
         for (MethodData init : perform.data().getDeclaredClass().getMethods()) {
             if (!init.isConstructor()) continue;
@@ -120,6 +144,36 @@ public class StoryLikeUndoHook {
         return methods;
     }
 
+    private static Method queueOf(Method check) {
+        Method queue = null;
+        for (Method m : check.getDeclaringClass().getDeclaredMethods()) {
+            if (Modifier.isStatic(m.getModifiers()) || stateAt(m) < 0 || paramAt(m, String.class) < 0) continue;
+            if (queue != null) throw new IllegalStateException("two story like queues: " + name(queue) + ", " + name(m));
+            queue = m;
+        }
+        if (queue == null) throw new IllegalStateException("story like queue not found");
+        return queue;
+    }
+
+    private static Method likeWrite(ClassLoader loader, Method like) throws Throwable {
+        List<Method> cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethods(WRITE_KEY, loader) : null;
+        if (cached != null && cached.size() == 1) return cached.get(0);
+        String state = like.getParameterTypes()[stateAt(like)].getName();
+        Method write = null;
+        for (MethodData call : DexKitQueryCache.invokes(performCoroutine())) {
+            if (!call.isMethod() || !"void".equals(call.getReturnTypeName())) continue;
+            List<String> types = call.getParamTypeNames();
+            if (types.size() != 2 || !MEDIA.equals(types.get(0)) || !state.equals(types.get(1))) continue;
+            Method m = call.getMethodInstance(loader);
+            if (!Modifier.isStatic(m.getModifiers())) continue;
+            if (write != null && !write.equals(m)) throw new IllegalStateException("two story like writes: " + name(write) + ", " + name(m));
+            write = m;
+        }
+        if (write == null) throw new IllegalStateException("story like write not found");
+        DexKitCache.saveMethods(WRITE_KEY, Collections.singletonList(write));
+        return write;
+    }
+
     private static Found only(List<Found> found, String what) {
         List<Found> methods = new ArrayList<>();
         for (Found md : found) if (md.isMethod()) methods.add(md);
@@ -138,7 +192,7 @@ public class StoryLikeUndoHook {
                 if (!FeatureFlags.likeUndo && pending.isEmpty()) return;
                 String id = idOf(param.args[mediaAt]);
                 if (id == null) return;
-                boolean liked = param.args[stateAt] instanceof Enum<?> e && "LIKED".equals(e.name());
+                boolean liked = isLiked(param.args[stateAt]);
                 boolean superlike = (countAt >= 0 && param.args[countAt] != null)
                         || (sourceAt >= 0 && param.args[sourceAt] instanceof Enum<?> s && "SUPERLIKE".equals(s.name()));
                 switch (StoryLikeUndoPolicy.decide(FeatureFlags.likeUndo, liked, superlike, pending.contains(id))) {
@@ -166,11 +220,65 @@ public class StoryLikeUndoHook {
         XposedBridge.hookMethod(check, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                if (pending.isEmpty() || param.hasThrowable() || Boolean.TRUE.equals(param.getResult())) return;
-                String id = idOf(mediaIn(param.args[0]));
-                if (id != null && pending.contains(id)) param.setResult(true);
+                if (param.hasThrowable() || Boolean.TRUE.equals(param.getResult())) return;
+                try {
+                    String id = idOf(mediaIn(param.args[0]));
+                    if (id == null) return;
+                    if (pending.contains(id)) {
+                        param.setResult(true);
+                    } else if (StoryLikeMemory.has(UnsentIdentity.account(param.thisObject), id)) {
+                        param.setResult(true);
+                        if (keptRed.add(id)) ModuleLog.detail(TAG + "story heart kept red from the saved like (Instagram's copy said not liked)");
+                    }
+                } catch (Throwable t) {
+                    ModuleLog.detail(TAG + "story liked check: " + t);
+                }
             }
         });
+    }
+
+    private static void hookQueue(Method queue) {
+        final int stateAt = stateAt(queue), idAt = paramAt(queue, String.class);
+        XposedBridge.hookMethod(queue, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                if (param.hasThrowable() || !(param.args[idAt] instanceof String id)) return;
+                try {
+                    if (isLiked(param.args[stateAt])) {
+                        StoryLikeMemory.remember(UnsentIdentity.account(param.thisObject), id);
+                        ModuleLog.detail(TAG + "story like saved on this device");
+                    } else {
+                        forget(id);
+                    }
+                } catch (Throwable t) {
+                    ModuleLog.detail(TAG + "story like queue: " + t);
+                }
+            }
+        });
+    }
+
+    private static void hookWrite(Method write) {
+        final int mediaAt = paramAt(write, mediaClass), stateAt = stateAt(write);
+        XposedBridge.hookMethod(write, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                if (param.hasThrowable() || isLiked(param.args[stateAt])) return;
+                try {
+                    String id = idOf(param.args[mediaAt]);
+                    if (id != null) forget(id);
+                } catch (Throwable t) {
+                    ModuleLog.detail(TAG + "story like write: " + t);
+                }
+            }
+        });
+    }
+
+    private static void forget(String id) {
+        if (StoryLikeMemory.forget(id)) ModuleLog.detail(TAG + "saved story like cleared (unliked or the like failed)");
+    }
+
+    private static boolean isLiked(Object state) {
+        return state instanceof Enum<?> e && "LIKED".equals(e.name());
     }
 
     private static void hookButton(Method bind) throws NoSuchFieldException {
