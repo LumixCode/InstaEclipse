@@ -71,10 +71,15 @@ public class FollowListExportHook {
                         live.put(param.thisObject, new java.lang.ref.WeakReference<>(root));
                         Object frag = param.thisObject;
                         root.post(() -> {
-                            if (FeatureFlags.profileAnalyzer) {
-                                ListInfo info = listInfo(frag);
-                                if (info != null)
-                                    ps.reso.instaeclipse.utils.users.WatchlistStore.setSelf(root.getContext().getApplicationContext(), info.self);
+                            try {
+                                ModuleLog.detail(TAG + "follow list screen created: " + frag.getClass().getName());
+                                if (FeatureFlags.profileAnalyzer) {
+                                    ListInfo info = listInfo(frag);
+                                    if (info != null)
+                                        ps.reso.instaeclipse.utils.users.WatchlistStore.setSelf(root.getContext().getApplicationContext(), info.self);
+                                }
+                            } catch (Throwable t) {
+                                ModuleLog.detail(TAG + "list screen: " + t);
                             }
                             FollowListToolsIcon.attach(root);
                         });

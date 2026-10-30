@@ -1,6 +1,7 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import android.content.Context;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
@@ -46,7 +47,9 @@ final class FollowListToolsIcon {
     private static final Map<Object, long[]> screens = Collections.synchronizedMap(new WeakHashMap<>());
     private static final int SCREEN = 1, KNOWN = 2;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    private static final long[] RESYNC_MS = {400, 1200, 2600};
     private static boolean loggedNoBar;
+    private static WeakReference<View> reported;
 
     private FollowListToolsIcon() {}
 
@@ -76,7 +79,10 @@ final class FollowListToolsIcon {
                 bar.getViewTreeObserver().addOnGlobalLayoutListener(watch);
                 ModuleLog.detail(TAG + "layout listeners: " + watchedBars.size());
             }
+            ModuleLog.detail(TAG + "title bar " + bar.getClass().getName() + " " + bar.getWidth() + "x" + bar.getHeight()
+                    + ", " + bar.getChildCount() + " children" + (tries > 0 ? ", found after " + tries + " retries" : ""));
             sync(bar);
+            for (long ms : RESYNC_MS) MAIN.postDelayed(() -> sync(bar), ms);
         } catch (Throwable t) {
             ModuleLog.detail(TAG + "attach: " + t);
         }
@@ -108,12 +114,36 @@ final class FollowListToolsIcon {
     static ViewGroup barAbove(View v) {
         int id = ResIds.id(v.getContext(), "action_bar");
         if (id == 0) return null;
+        Rect seen = new Rect();
+        int listTop = v.getGlobalVisibleRect(seen) ? seen.top : Integer.MAX_VALUE;
         for (View p = v; p != null; p = p.getParent() instanceof View pv ? pv : null) {
             if (!(p instanceof ViewGroup g)) continue;
-            View bar = g.findViewById(id);
-            if (bar instanceof ViewGroup b && b.isShown()) return b;
+            ViewGroup bar = shownBar(g, id, listTop);
+            if (bar != null) return bar;
         }
         return null;
+    }
+
+    private static ViewGroup shownBar(ViewGroup scope, int id, int listTop) {
+        ViewGroup firstShown = null, lastAbove = null;
+        int found = 0;
+        int[] at = new int[2];
+        ArrayDeque<View> st = new ArrayDeque<>();
+        st.push(scope);
+        while (!st.isEmpty()) {
+            View c = st.pop();
+            if (c.getVisibility() != View.VISIBLE) continue;
+            if (c.getId() == id && c instanceof ViewGroup b && b.isShown()) {
+                found++;
+                if (firstShown == null) firstShown = b;
+                b.getLocationInWindow(at);
+                if (at[1] <= listTop) lastAbove = b;
+            }
+            if (c instanceof ViewGroup g) for (int i = g.getChildCount() - 1; i >= 0; i--) st.push(g.getChildAt(i));
+        }
+        if (found > 1) ModuleLog.detail(TAG + found + " shown title bars under " + scope.getClass().getName() + ", using the "
+                + (lastAbove != null ? "last one above the list" : "first one"));
+        return lastAbove != null ? lastAbove : firstShown;
     }
 
     private static void sync(ViewGroup bar) {
@@ -127,9 +157,22 @@ final class FollowListToolsIcon {
             if (icon == null) icon = add(bar);
             if (!icon.hasOnClickListeners()) icon.setOnClickListener(FollowListToolsIcon::onTap);
             place(bar, icon);
+            report(bar, icon);
         } catch (Throwable t) {
             ModuleLog.detail(TAG + "sync: " + t);
         }
+    }
+
+    private static void report(ViewGroup bar, View icon) {
+        if (icon.getWidth() == 0 || (reported != null && reported.get() == icon)) return;
+        reported = new WeakReference<>(icon);
+        Rect at = new Rect(), within = new Rect();
+        boolean seen = icon.getGlobalVisibleRect(at);
+        bar.getGlobalVisibleRect(within);
+        ModuleLog.detail(TAG + "tools icon " + icon.getWidth() + "x" + icon.getHeight() + " at " + at.flattenToString()
+                + " in a title bar at " + within.flattenToString() + (seen ? "" : ", not visible"));
+        if (!seen || at.width() < icon.getWidth() / 2)
+            ModuleLog.warn(TAG + "The tools icon is in the title bar but is off screen or cut off");
     }
 
     private static boolean listLive(ViewGroup bar) {
@@ -156,6 +199,8 @@ final class FollowListToolsIcon {
                 FollowListExportHook.ListInfo info = FollowListExportHook.listInfo(e[0]);
                 int f = (FollowListExportHook.tabsOf(e[0]) != null ? SCREEN : 0) | (info != null ? KNOWN : 0);
                 screens.put(e[0], s = new long[]{f, now});
+                ModuleLog.detail(TAG + "list screen: tabs " + ((f & SCREEN) != 0 ? "found" : "not found") + ", profile "
+                        + ((f & KNOWN) != 0 ? "known" : "unknown"));
             }
             long f = s[0];
             if ((f & SCREEN) == 0) continue;
@@ -216,13 +261,15 @@ final class FollowListToolsIcon {
         if (icon.getWidth() == 0) return;
         if (icon.getParent() == bar && !(bar instanceof FrameLayout) && !(bar instanceof RelativeLayout)) {
             boolean rtl = bar.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
-            int limit = rtl ? bar.getPaddingLeft() : bar.getWidth() - bar.getPaddingRight();
+            int end = rtl ? bar.getPaddingLeft() : bar.getWidth() - bar.getPaddingRight();
+            int limit = end;
             for (int i = bar.indexOfChild(icon) + 1; i < bar.getChildCount(); i++) {
                 View c = bar.getChildAt(i);
                 if (c.getVisibility() != View.VISIBLE || c.getWidth() == 0) continue;
                 limit = rtl ? Math.max(limit, c.getRight()) : Math.min(limit, c.getLeft());
             }
             float dx = rtl ? Math.min(0, limit - icon.getLeft()) : Math.max(0, limit - icon.getRight());
+            if (rtl ? icon.getLeft() < end : icon.getRight() > end) dx = rtl ? end - icon.getLeft() : end - icon.getRight();
             if (icon.getTranslationX() != dx) icon.setTranslationX(dx);
         }
         TextView title = title(bar);
