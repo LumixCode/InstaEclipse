@@ -30,8 +30,7 @@ public final class UnlockPlusBenefitsHook {
                 }
                 Set<Method> candidates = new LinkedHashSet<>();
                 for (var logger : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
-                        .usingStrings("is_benefit_active", "SUBSBenefitDataProvider")
-                        .paramTypes(String.class, String.class).returnType(void.class)))) {
+                        .usingStrings("is_benefit_active", "SUBSBenefitDataProvider").returnType(void.class)))) {
                     for (var caller : DexKitQueryCache.callersUncached(logger)) {
                         if (!caller.getClassName().equals(logger.getClassName())) continue;
                         Method candidate = caller.getMethodInstance(loader);

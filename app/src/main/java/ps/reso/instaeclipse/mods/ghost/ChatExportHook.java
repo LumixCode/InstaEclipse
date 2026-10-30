@@ -69,12 +69,20 @@ public class ChatExportHook {
     private static final String USER = "com.instagram.user.model.User";
     private static final String SESSION = "com.instagram.common.session.UserSession";
     private static final String DTK = "com.instagram.model.direct.DirectThreadKey";
+    private static final String AR_EFFECT_SHARE = "com.instagram.direct.model.DirectAREffectShare";
     private static final String PREFS = "instaeclipse_chat_export";
     private static Method messagesMethod, serializer, factoryWriterMethod;
     private static Constructor<?> factoryConstructor;
     private static Class<?> entryClass;
     private static final Map<Class<?>, Optional<Method>> entryGetters = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Optional<Method>> lazyChecks = new ConcurrentHashMap<>();
+
+    private static boolean holdsEffectShare(Class<?> message) {
+        for (java.lang.reflect.Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(message)) {
+            if (AR_EFFECT_SHARE.equals(f.getType().getName())) return true;
+        }
+        return false;
+    }
 
     public void install(ClassLoader cl) {
         try {
@@ -90,11 +98,15 @@ public class ChatExportHook {
                 Class<?>[] p = m.getParameterTypes();
                 if (p.length == 1 && p[0] == boolean.class && m.getReturnType() == java.util.ArrayList.class) messagesMethod = m;
             }
+            Method firstSerializer = null;
             for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .usingStrings("timestamp_in_micro", "client_context").returnType("void").paramCount(2)))) {
                 Method m = md.getMethodInstance(cl);
-                if (Modifier.isStatic(m.getModifiers())) { serializer = m; break; }
+                if (!Modifier.isStatic(m.getModifiers())) continue;
+                if (firstSerializer == null) firstSerializer = m;
+                if (holdsEffectShare(m.getParameterTypes()[1])) { serializer = m; break; }
             }
+            if (serializer == null) serializer = firstSerializer;
             if (serializer != null) {
                 Class<?> gen = serializer.getParameterTypes()[0];
                 for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()

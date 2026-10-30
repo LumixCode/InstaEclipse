@@ -69,6 +69,7 @@ public final class DexKitStats {
     private static final ThreadLocal<String> STEP = new ThreadLocal<>();
     private static final ThreadLocal<String> SEGMENT = new ThreadLocal<>();
     private static final ThreadLocal<Collection<String>> SINK = new ThreadLocal<>();
+    private static final ThreadLocal<long[]> EMPTY = ThreadLocal.withInitial(() -> new long[1]);
     private static final Map<String, Counter> COUNTERS = new LinkedHashMap<>();
     private static final Counter TOTAL = new Counter();
     private static final Map<String, List<String>> KEYS = new LinkedHashMap<>();
@@ -97,6 +98,14 @@ public final class DexKitStats {
 
     public static void exitStep() {
         STEP.remove();
+    }
+
+    public static void emptyLookup() {
+        EMPTY.get()[0]++;
+    }
+
+    public static long emptyLookups() {
+        return EMPTY.get()[0];
     }
 
     public static String currentStep() {

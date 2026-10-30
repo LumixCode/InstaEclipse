@@ -4,7 +4,10 @@ import android.os.Handler;
 import android.os.Looper;
 import android.widget.ImageView;
 
+import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
+import org.luckypray.dexkit.query.matchers.ClassMatcher;
+import org.luckypray.dexkit.query.matchers.FieldMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
 
@@ -24,6 +27,7 @@ import ps.reso.instaeclipse.mods.ghost.ManualStorySeenHook;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
+import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -36,6 +40,7 @@ public class StoryLikeUndoHook {
     private static final String CACHE_KEY = "StoryLikeUndo_v1";
     private static final String WRITE_KEY = "StoryLikeWrite_v1";
     private static final String MEDIA = "com.instagram.feed.media.Media";
+    private static final String LIKE_VIEW = "com.instagram.ui.widget.bouncyufibutton.IgBouncyUfiButtonImageView";
     private static final ThreadLocal<Member> REPLAYING = new ThreadLocal<>();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final PendingLikes<HeldLike> pending = PendingLikes.byId();
@@ -126,14 +131,18 @@ public class StoryLikeUndoHook {
             }
         }
         if (like == null) throw new IllegalStateException("story like call not found");
-        Found check = only(DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
-                .usingStrings("send_story_like").returnType("boolean").paramCount(1))), "story liked check");
+        Found check = likedCheck(loader);
         Found named = only(DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingStrings("StoryLikeButtonViewComponent").returnType("java.lang.String").paramCount(0))), "story like button");
+        Class<?> owner = named.getMethodInstance(loader).getDeclaringClass();
+        boolean shared = Modifier.isAbstract(owner.getModifiers());
+        Class<?> button = shared ? likeButton(owner, loader) : owner;
         Method bind = null;
-        for (Method m : named.getMethodInstance(loader).getDeclaringClass().getDeclaredMethods()) {
+        for (Method m : button.getDeclaredMethods()) {
             if (Modifier.isStatic(m.getModifiers()) || m.getReturnType() != void.class
-                    || m.getParameterTypes().length != 1 || m.getParameterTypes()[0] != Object.class) continue;
+                    || m.getParameterTypes().length != 1) continue;
+            Class<?> state = m.getParameterTypes()[0];
+            if (shared ? state.isPrimitive() : state != Object.class) continue;
             if (bind != null) throw new IllegalStateException("two story like button binds");
             bind = m;
         }
@@ -173,6 +182,41 @@ public class StoryLikeUndoHook {
         if (write == null) throw new IllegalStateException("story like write not found");
         DexKitCache.saveMethods(WRITE_KEY, Collections.singletonList(write));
         return write;
+    }
+
+    private static Class<?> likeButton(Class<?> base, ClassLoader loader) throws Throwable {
+        Class<?> button = null;
+        for (FoundClass found : DexKitQueryCache.classes(FindClass.create().matcher(ClassMatcher.create()
+                .addField(FieldMatcher.create().type(LIKE_VIEW))))) {
+            Class<?> type = found.getInstance(loader);
+            if (!base.isAssignableFrom(type)) continue;
+            if (button != null) throw new IllegalStateException("two story like buttons: " + button.getName() + ", " + type.getName());
+            button = type;
+        }
+        if (button == null) throw new IllegalStateException("story like button class not found");
+        return button;
+    }
+
+    private static Found likedCheck(ClassLoader loader) throws Throwable {
+        List<Found> plain = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
+                .usingStrings("send_story_like").returnType("boolean").paramCount(1)));
+        if (!plain.isEmpty()) return only(plain, "story liked check");
+        List<Found> states = new ArrayList<>();
+        for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
+                .usingStrings("send_story_like").paramCount(2)))) {
+            if (md.isMethod() && likedValue(md.getMethodInstance(loader).getReturnType()) != null) states.add(md);
+        }
+        return only(states, "story liked state");
+    }
+
+    private static Object likedValue(Class<?> type) {
+        if (type == boolean.class) return true;
+        Object[] constants = type.getEnumConstants();
+        if (constants == null) return null;
+        for (Object c : constants) {
+            if ("LIKED".equals(((Enum<?>) c).name())) return c;
+        }
+        return null;
     }
 
     private static Found only(List<Found> found, String what) {
@@ -226,17 +270,20 @@ public class StoryLikeUndoHook {
     }
 
     private static void hookCheck(Method check) {
+        final Object liked = likedValue(check.getReturnType());
+        final int treeAt = check.getParameterCount() - 1;
+        if (liked == null) throw new IllegalStateException("story liked check without a liked result: " + check);
         XposedBridge.hookMethod(check, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                if (param.hasThrowable() || Boolean.TRUE.equals(param.getResult())) return;
+                if (param.hasThrowable() || liked.equals(param.getResult())) return;
                 try {
-                    String id = idOf(mediaIn(param.args[0]));
+                    String id = idOf(mediaIn(param.args[treeAt]));
                     if (id == null) return;
                     if (pending.contains(id)) {
-                        param.setResult(true);
-                    } else if (StoryLikeMemory.has(UnsentIdentity.account(param.thisObject), id)) {
-                        param.setResult(true);
+                        param.setResult(liked);
+                    } else if (StoryLikeMemory.has(UnsentIdentity.account(param.thisObject != null ? param.thisObject : param.args[0]), id)) {
+                        param.setResult(liked);
                         if (keptRed.add(id)) ModuleLog.detail(TAG + "story heart kept red from the saved like (Instagram's copy said not liked)");
                     }
                 } catch (Throwable t) {

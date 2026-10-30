@@ -23,6 +23,8 @@
     <string name="home_instagram_version">Instagram %1$s</string>
     <string name="home_tested_version">Δοκιμασμένη έκδοση</string>
     <string name="home_untested_version">Όχι η δοκιμασμένη έκδοση (%1$s): κάποιες λειτουργίες ίσως δεν δουλεύουν</string>
+    <string name="home_features_active">%1$d από %2$d λειτουργίες ενεργές σε αυτό το Instagram</string>
+    <string name="home_safe_start">Ασφαλής εκκίνηση: το Instagram έκλεισε κατά την εκκίνηση, οπότε είναι ενεργές μόνο οι βασικές λειτουργίες. Η επόμενη εκκίνηση θα δοκιμάσει ξανά τα πάντα</string>
     <string name="home_status_worked">Λειτούργησε στο Instagram: %1$s</string>
     <string name="home_status_not_confirmed">Δεν επιβεβαιώθηκε ακόμα</string>
     <string name="home_status_open_to_check">Ανοίξτε το Instagram για έλεγχο</string>

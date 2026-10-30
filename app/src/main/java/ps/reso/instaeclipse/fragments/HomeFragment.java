@@ -198,6 +198,9 @@ public class HomeFragment extends Fragment implements TabFragment {
 
     private String pingNonce;
     private ps.reso.instaeclipse.utils.ipc.ModuleReplies.Pending pingReply;
+    private int featuresActive;
+    private int featuresOn;
+    private boolean safeStart;
 
     private final BroadcastReceiver pingReceiver = new BroadcastReceiver() {
         @Override
@@ -205,6 +208,9 @@ public class HomeFragment extends Fragment implements TabFragment {
             if ("ps.reso.instaeclipse.ACTION_SEND_PREFS".equals(intent.getAction())
                     && ps.reso.instaeclipse.utils.core.IpcSecurity.nonceMatches(pingNonce, intent)) {
                 moduleConfirmed = true;
+                featuresActive = intent.getIntExtra(ps.reso.instaeclipse.utils.core.CommonUtils.EXTRA_FEATURES_ACTIVE, 0);
+                featuresOn = intent.getIntExtra(ps.reso.instaeclipse.utils.core.CommonUtils.EXTRA_FEATURES_ON, 0);
+                safeStart = intent.getBooleanExtra(ps.reso.instaeclipse.utils.core.CommonUtils.EXTRA_SAFE_START, false);
                 if (isAdded() && getView() != null) updateStatusPill();
             }
         }
@@ -436,6 +442,8 @@ public class HomeFragment extends Fragment implements TabFragment {
             case MODULE_ACTIVE:
                 color = COLOR_OK;
                 label = getString(R.string.home_status_module_active);
+                if (safeStart) hint = getString(R.string.home_safe_start);
+                else if (featuresOn > 0) hint = getString(R.string.home_features_active, featuresActive, featuresOn);
                 break;
             case WORKED:
                 color = COLOR_OK;

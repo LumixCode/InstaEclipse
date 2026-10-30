@@ -21,6 +21,8 @@ public final class StartupIdle {
     static final String STATE_FILE = "ie_startup_state";
     static final String STARTING = "starting";
     static final String OK = "ok";
+    static final String GUARD_FILE = "ie_startup_guard";
+    static final int SAFE_AFTER = 2;
 
     private static StartupIdle instance;
 
@@ -60,6 +62,44 @@ public final class StartupIdle {
             return true;
         }
         return dir == null || get().beginStart(dir);
+    }
+
+    public static boolean safeStart(Context context, String build) {
+        File dir;
+        try {
+            dir = context.getFilesDir();
+        } catch (Throwable t) {
+            return false;
+        }
+        return dir != null && get().decideSafeStart(dir, build);
+    }
+
+    boolean decideSafeStart(File dir, String build) {
+        File guard = new File(dir, GUARD_FILE);
+        boolean early = beginStart(dir);
+        int strikes = 0;
+        String good = "";
+        try {
+            if (guard.isFile()) {
+                String[] saved = read(guard).split("\n", 2);
+                strikes = Integer.parseInt(saved[0]);
+                if (saved.length > 1) good = saved[1];
+            }
+        } catch (IOException | RuntimeException ignored) {
+        }
+        strikes = early ? strikes + 1 : 0;
+        boolean safe = strikes >= SAFE_AFTER && !build.equals(good);
+        String lastGood = safe ? good : build;
+        writeGuard(guard, safe ? 0 : strikes, good);
+        add(() -> writeGuard(guard, 0, lastGood), 0);
+        return safe;
+    }
+
+    private static void writeGuard(File guard, int strikes, String good) {
+        try {
+            write(guard, strikes + "\n" + good);
+        } catch (IOException | RuntimeException ignored) {
+        }
     }
 
     boolean beginStart(File dir) {

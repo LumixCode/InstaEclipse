@@ -20,8 +20,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
@@ -46,6 +48,7 @@ public final class ProfileFollowStatusHook {
     private static final Set<String> diagnostics = Collections.synchronizedSet(new HashSet<>());
     private static final String[] NAME_IDS = {"profile_header_full_name", "profile_header_full_name_above_vanity"};
     private static volatile int secondaryTextAttr = -1;
+    private static volatile ProfileReader headerReader;
 
     public boolean install(ClassLoader loader) {
         try {
@@ -63,6 +66,7 @@ public final class ProfileFollowStatusHook {
                 final Field session = uniqueField(binder.getDeclaringClass(), SESSION);
                 if (viewIndex < 0 || session == null) continue;
                 final ProfileReader reader = resolveReader(loader, binder, index);
+                headerReader = reader;
                 final int rootArg = viewIndex;
                 XposedBridge.hookMethod(binder, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam param) {
@@ -100,6 +104,22 @@ public final class ProfileFollowStatusHook {
             ModuleLog.error("(IE|FollowLabel) Could not turn on the follow label on profiles: the profile header was not found", t);
             return false;
         }
+    }
+
+    static void loadHeaderReader(ClassLoader loader) throws Exception {
+        if (headerReader != null) return;
+        List<Method> binders = resolveBinders(loader);
+        for (int index = 0; index < binders.size(); index++) {
+            if (Modifier.isStatic(binders.get(index).getModifiers())) continue;
+            headerReader = resolveReader(loader, binders.get(index), index);
+            return;
+        }
+        throw new NoSuchMethodException("Profile header binder");
+    }
+
+    static String headerProfileId(Object[] arguments) throws Exception {
+        ProfileReader reader = headerReader;
+        return reader == null ? null : reader.profileId(arguments);
     }
 
     public static void showFromNetwork(View root, boolean followsMe, String profileId) {
@@ -211,7 +231,8 @@ public final class ProfileFollowStatusHook {
         String key = "ProfileFollowSchemaChild_v3";
         Method cached = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(key, loader) : null;
         if (cached != null) return cached;
-        Set<Method> common = null;
+        Map<Method, Integer> votes = new HashMap<>();
+        int callers = 0;
         for (var caller : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                 .usingNumbers("friendship_status".hashCode(), "followed_by".hashCode())))) {
             Set<Method> children = new HashSet<>();
@@ -224,11 +245,20 @@ public final class ProfileFollowStatusHook {
                 children.add(method);
             }
             if (children.isEmpty()) continue;
-            if (common == null) common = children;
-            else common.retainAll(children);
+            callers++;
+            for (Method child : children) votes.merge(child, 1, Integer::sum);
         }
-        if (common == null || common.size() != 1) throw new NoSuchMethodException("Nullable relationship accessor ambiguous");
-        Method result = common.iterator().next();
+        Method result = null;
+        int best = 0;
+        boolean tied = false;
+        for (Map.Entry<Method, Integer> vote : votes.entrySet()) {
+            if (vote.getValue() == best) tied = true;
+            if (vote.getValue() <= best) continue;
+            result = vote.getKey();
+            best = vote.getValue();
+            tied = false;
+        }
+        if (result == null || tied || best * 2 <= callers) throw new NoSuchMethodException("Nullable relationship accessor ambiguous");
         result.setAccessible(true);
         DexKitCache.saveMethod(key, result);
         return result;

@@ -24,6 +24,8 @@
     <string name="home_instagram_version">Instagram %1$s</string>
     <string name="home_tested_version">גרסה שנבדקה</string>
     <string name="home_untested_version">לא הגרסה שנבדקה (%1$s): ייתכן שחלק מהתכונות לא יעבדו</string>
+    <string name="home_features_active">%1$d מתוך %2$d תכונות פעילות ב-Instagram הזה</string>
+    <string name="home_safe_start">הפעלה בטוחה: Instagram נסגר במהלך ההפעלה, ולכן רק התכונות הבסיסיות פעילות. ההפעלה הבאה תנסה הכול שוב</string>
     <string name="home_status_worked">עבד ב-Instagram ב-%1$s</string>
     <string name="home_status_not_confirmed">עדיין לא אושר</string>
     <string name="home_status_open_to_check">פתח את Instagram כדי לבדוק</string>

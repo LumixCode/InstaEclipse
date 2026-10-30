@@ -23,6 +23,8 @@
     <string name="home_instagram_version">Instagram %1$s</string>
     <string name="home_tested_version">Sınanmış versiya</string>
     <string name="home_untested_version">Sınanmış versiya deyil (%1$s): bəzi funksiyalar işləməyə bilər</string>
+    <string name="home_features_active">Bu Instagram-da %2$d funksiyadan %1$d aktivdir</string>
+    <string name="home_safe_start">Təhlükəsiz başlanğıc: Instagram açılarkən bağlandı, ona görə yalnız əsas funksiyalar aktivdir. Növbəti başlanğıcda hamısı yenidən sınanacaq</string>
     <string name="home_status_worked">Instagram-da işlədi: %1$s</string>
     <string name="home_status_not_confirmed">Hələ təsdiqlənməyib</string>
     <string name="home_status_open_to_check">Yoxlamaq üçün Instagram-ı açın</string>

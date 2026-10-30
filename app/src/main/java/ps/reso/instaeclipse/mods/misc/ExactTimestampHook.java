@@ -35,7 +35,7 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 public final class ExactTimestampHook {
     private static final String CACHE_KEY = "ExactTimestampAbsoluteFormatters_v1";
     private static final String STORY_ITEM = "com.instagram.model.reels.ReelItem";
-    private static final String COMPOSE_STORY_CACHE = "ExactTimestampComposeStory_v1";
+    private static final String COMPOSE_STORY_CACHE = "ExactTimestampComposeStory_v2";
     private static final String CONTENT_SCOPE_CACHE = "ExactTimestampContentScopes_v1";
     private static final String DM_TIME_CACHE = "ExactTimestampDmTime_v1";
     private static final String DM_SCOPE_CACHE = "ExactTimestampDmScopes_v1";
@@ -176,19 +176,18 @@ public final class ExactTimestampHook {
             if (knownAbsent(COMPOSE_STORY_CACHE)) throw new IllegalStateException("Compose story timestamp entry missing");
             List<Found> entries = DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
                     .returnType("void").addUsingString(
-                            "instagram.features.stories.mvvm.feature.header.compose.Timestamp (Timestamp.kt:",
-                            StringMatchType.StartsWith)));
+                            ".Timestamp (Timestamp.kt:", StringMatchType.Contains)));
             if (entries.size() != 1) throw absent(COMPOSE_STORY_CACHE, "Compose story timestamp entry missing");
             Found entry = entries.get(0);
-            MethodData text = null;
-            for (MethodData call : entry.data().getInvokes()) {
-                boolean igText = false;
-                for (String marker : call.getUsingStrings()) {
-                    igText |= marker.startsWith("com.instagram.compose.core.ui.IgText (IgText.kt:");
+            MethodData text = composeText(entry.data());
+            if (text == null) {
+                for (MethodData call : entry.data().getInvokes()) {
+                    if (!call.getParamTypeNames().contains("java.lang.String")) continue;
+                    MethodData wrapped = composeText(call);
+                    if (wrapped == null) continue;
+                    if (text != null) throw absent(COMPOSE_STORY_CACHE, "Ambiguous Compose story text layout");
+                    text = wrapped;
                 }
-                if (!igText || !StoryTimestampComposeLayout.matches(call.getParamTypeNames())) continue;
-                if (text != null) throw absent(COMPOSE_STORY_CACHE, "Ambiguous Compose story text layout");
-                text = call;
             }
             if (text == null) throw absent(COMPOSE_STORY_CACHE, "Compose story text layout missing");
             methods = java.util.Arrays.asList(entry.getMethodInstance(loader), text.getMethodInstance(loader));
@@ -203,6 +202,20 @@ public final class ExactTimestampHook {
             }
         });
         ModuleLog.detail("(ExactTimestamps) Installed scoped Compose story wrapping");
+    }
+
+    private static MethodData composeText(MethodData caller) {
+        MethodData text = null;
+        for (MethodData call : caller.getInvokes()) {
+            boolean igText = false;
+            for (String marker : call.getUsingStrings()) {
+                igText |= marker.contains(".IgText (IgText.kt:");
+            }
+            if (!igText || !StoryTimestampComposeLayout.matches(call.getParamTypeNames())) continue;
+            if (text != null) throw absent(COMPOSE_STORY_CACHE, "Ambiguous Compose story text layout");
+            text = call;
+        }
+        return text;
     }
 
     private static boolean knownAbsent(String cacheKey) {

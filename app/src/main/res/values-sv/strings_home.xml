@@ -23,6 +23,8 @@
     <string name="home_instagram_version">Instagram %1$s</string>
     <string name="home_tested_version">Testad version</string>
     <string name="home_untested_version">Inte den testade versionen (%1$s): vissa funktioner kanske inte fungerar</string>
+    <string name="home_features_active">%1$d av %2$d funktioner aktiva i denna Instagram</string>
+    <string name="home_safe_start">Säker start: Instagram stängdes under uppstarten, så bara grundfunktioner är på. Nästa start försöker med allt igen</string>
     <string name="home_status_worked">Fungerade i Instagram: %1$s</string>
     <string name="home_status_not_confirmed">Inte bekräftat ännu</string>
     <string name="home_status_open_to_check">Öppna Instagram för kontroll</string>

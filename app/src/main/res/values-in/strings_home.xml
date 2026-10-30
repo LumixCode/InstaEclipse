@@ -22,6 +22,8 @@
     <string name="home_instagram_version">Instagram %1$s</string>
     <string name="home_tested_version">Versi yang diuji</string>
     <string name="home_untested_version">Bukan versi yang diuji (%1$s): beberapa fitur mungkin tidak berfungsi</string>
+    <string name="home_features_active">%1$d dari %2$d fitur aktif di Instagram ini</string>
+    <string name="home_safe_start">Mulai aman: Instagram tertutup saat dimulai, jadi hanya fitur dasar yang aktif. Mulai berikutnya akan mencoba semuanya lagi</string>
     <string name="home_status_worked">Berfungsi di Instagram pada %1$s</string>
     <string name="home_status_not_confirmed">Belum dikonfirmasi</string>
     <string name="home_status_open_to_check">Buka Instagram untuk memeriksa</string>

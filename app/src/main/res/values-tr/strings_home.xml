@@ -23,6 +23,8 @@
     <string name="home_instagram_version">Instagram %1$s</string>
     <string name="home_tested_version">Test edilen sürüm</string>
     <string name="home_untested_version">Test edilen sürüm değil (%1$s): bazı özellikler çalışmayabilir</string>
+    <string name="home_features_active">Bu Instagram\'da %2$d özellikten %1$d tanesi etkin</string>
+    <string name="home_safe_start">Güvenli başlatma: Instagram açılırken kapandı, bu yüzden yalnızca temel özellikler açık. Sonraki başlatmada her şey yeniden denenecek</string>
     <string name="home_status_worked">Instagram\'da çalıştı: %1$s</string>
     <string name="home_status_not_confirmed">Henüz doğrulanmadı</string>
     <string name="home_status_open_to_check">Kontrol için Instagram\'ı açın</string>

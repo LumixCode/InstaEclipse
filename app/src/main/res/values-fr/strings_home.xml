@@ -24,6 +24,8 @@
     <string name="home_instagram_version">Instagram %1$s</string>
     <string name="home_tested_version">Version testée</string>
     <string name="home_untested_version">Pas la version testée (%1$s) : certaines fonctionnalités peuvent ne pas marcher</string>
+    <string name="home_features_active">%1$d fonctionnalités sur %2$d actives sur cet Instagram</string>
+    <string name="home_safe_start">Démarrage sécurisé : Instagram s\'est fermé au démarrage, seules les fonctionnalités de base sont donc actives. Le prochain démarrage réessaiera tout</string>
     <string name="home_status_worked">A fonctionné dans Instagram (%1$s)</string>
     <string name="home_status_not_confirmed">Pas encore confirmé</string>
     <string name="home_status_open_to_check">Ouvrez Instagram pour vérifier</string>

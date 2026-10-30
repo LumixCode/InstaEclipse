@@ -1,6 +1,7 @@
 package ps.reso.instaeclipse.Xposed;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -15,6 +16,7 @@ import ps.reso.instaeclipse.utils.core.DexKitSeed;
 import ps.reso.instaeclipse.utils.core.DexKitStats;
 import ps.reso.instaeclipse.utils.core.ModuleBridge;
 import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
+import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.feature.RestartPending;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.log.StartupTrace;
@@ -49,6 +51,8 @@ public final class InstallRunner {
     };
 
     private static final Set<String> RAN = ConcurrentHashMap.newKeySet();
+    private static final List<String> CONFIRMED_WHEN_FIRED = Arrays.asList("AdBlocker", "GhostScreenshot", "GhostSeen",
+            "GhostTyping", "KeepEphemeralMessages", "ReelDownload", "RemoveBuildExpiredPopup", "RemoveMetaAI");
 
     private final Set<String> skipped;
     private final LongSupplier clock;
@@ -56,6 +60,7 @@ public final class InstallRunner {
     private final List<Object[]> marks = Collections.synchronizedList(new ArrayList<>());
     private int withoutBridge;
     private volatile Ledger ledger;
+    private volatile boolean safeStart;
 
     public InstallRunner(Set<String> skipped, LongSupplier clock, String segment) {
         this.skipped = skipped == null ? Collections.emptySet() : skipped;
@@ -65,6 +70,10 @@ public final class InstallRunner {
 
     public void setLedger(Ledger ledger) {
         this.ledger = ledger;
+    }
+
+    public void setSafeStart(boolean safeStart) {
+        this.safeStart = safeStart;
     }
 
     public void runAll(InstallPlan plan, InstallPlan.InstallCtx ctx, Reporter reporter) {
@@ -133,6 +142,10 @@ public final class InstallRunner {
             if (step.gateKey != null && !plan.gateOpen(step.gateKey)) return;
             mark(step.name);
             if (step.skippedBy(skipped)) return;
+            if (safeStart && !plan.safeAtStart(step)) {
+                markFailed(step, false);
+                return;
+            }
             if (step.dexKit && ModuleBridge.failed()) {
                 withoutBridge++;
                 return;
@@ -146,11 +159,17 @@ public final class InstallRunner {
                 }
                 searches = DexKitStats.totals().queryMisses;
             }
+            long empties = DexKitStats.emptyLookups();
             plan.run(step, ctx);
             RAN.add(step.name);
+            if (DexKitStats.emptyLookups() > empties) markFailed(step, true);
         } catch (Throwable t) {
-            if (step.dexKit && ModuleBridge.failed()) withoutBridge++;
-            else reporter.error(step.failTag + step.failText, t);
+            if (step.dexKit && ModuleBridge.failed()) {
+                withoutBridge++;
+            } else {
+                reporter.error(step.failTag + step.failText, t);
+                markFailed(step, false);
+            }
         } finally {
             if (span != null) {
                 if (keys != null) DexKitStats.collectKeys(null);
@@ -164,6 +183,12 @@ public final class InstallRunner {
                     ModuleLog.detail("(IE|Startup) Could not note that " + step.name + " is set up: " + t);
                 }
             }
+        }
+    }
+
+    private static void markFailed(InstallStep step, boolean lookupMissed) {
+        for (String key : step.features()) {
+            if (!lookupMissed || !CONFIRMED_WHEN_FIRED.contains(key)) FeatureStatusTracker.setFailed(key);
         }
     }
 

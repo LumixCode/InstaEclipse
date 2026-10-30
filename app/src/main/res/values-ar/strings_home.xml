@@ -27,6 +27,8 @@
     <string name="home_instagram_version">Instagram %1$s</string>
     <string name="home_tested_version">الإصدار المختبَر</string>
     <string name="home_untested_version">ليس الإصدار المختبَر (%1$s): قد لا تعمل بعض الميزات</string>
+    <string name="home_features_active">%1$d من %2$d ميزة نشطة على Instagram هذا</string>
+    <string name="home_safe_start">بدء آمن: أُغلق Instagram أثناء التشغيل، لذا الميزات الأساسية فقط مفعّلة. سيحاول التشغيل التالي تفعيل كل شيء</string>
     <string name="home_status_worked">عمل في Instagram: %1$s</string>
     <string name="home_status_not_confirmed">لم يُؤكَّد بعد</string>
     <string name="home_status_open_to_check">افتح Instagram للتحقق</string>

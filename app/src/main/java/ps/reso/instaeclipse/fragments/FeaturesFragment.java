@@ -144,6 +144,9 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                     for (String key : bundle.keySet()) incoming.put(key, bundle.get(key));
                     Object watched = incoming.remove("dailyReelsWatchedToday");
                     Object usageDate = incoming.remove("dailyReelUsageDate");
+                    incoming.remove(ps.reso.instaeclipse.utils.core.CommonUtils.EXTRA_FEATURES_ACTIVE);
+                    incoming.remove(ps.reso.instaeclipse.utils.core.CommonUtils.EXTRA_FEATURES_ON);
+                    incoming.remove(ps.reso.instaeclipse.utils.core.CommonUtils.EXTRA_SAFE_START);
                     if (watched instanceof Integer) {
                         reelsWatchedToday = (Integer) watched;
                         reelUsageDate = usageDate instanceof String ? (String) usageDate : "";

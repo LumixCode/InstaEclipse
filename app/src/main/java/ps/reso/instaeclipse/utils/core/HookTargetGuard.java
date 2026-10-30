@@ -1,5 +1,6 @@
 package ps.reso.instaeclipse.utils.core;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.List;
 
@@ -24,10 +25,15 @@ public final class HookTargetGuard {
     }
 
     static boolean hasLambdaGroupField(Class<?> c) {
+        return lambdaGroupField(c) != null;
+    }
+
+    public static Field lambdaGroupField(Class<?> c) {
         try {
-            return c != null && c.getDeclaredField(LAMBDA_GROUP_FIELD).getType() == int.class;
+            Field field = c == null ? null : c.getDeclaredField(LAMBDA_GROUP_FIELD);
+            return field != null && field.getType() == int.class ? field : null;
         } catch (Throwable t) {
-            return false;
+            return null;
         }
     }
 

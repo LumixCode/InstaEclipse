@@ -16,14 +16,16 @@ public final class InstallStep {
     public final boolean phaseA;
     private final String[] lookupFlags;
     private final String[] restartKeys;
+    private final String[] features;
 
     public InstallStep(int id, String name, String[] skipAliases, String failTag, String failText,
                        boolean dexKit, String gateKey) {
-        this(id, name, skipAliases, failTag, failText, dexKit, gateKey, false, NONE, NONE);
+        this(id, name, skipAliases, failTag, failText, dexKit, gateKey, false, NONE, NONE, NONE);
     }
 
     private InstallStep(int id, String name, String[] skipAliases, String failTag, String failText,
-                        boolean dexKit, String gateKey, boolean phaseA, String[] lookupFlags, String[] restartKeys) {
+                        boolean dexKit, String gateKey, boolean phaseA, String[] lookupFlags, String[] restartKeys,
+                        String[] features) {
         this.id = id;
         this.name = name;
         this.skipAliases = skipAliases == null ? NONE : skipAliases.clone();
@@ -34,18 +36,23 @@ public final class InstallStep {
         this.phaseA = phaseA;
         this.lookupFlags = lookupFlags == null ? NONE : lookupFlags.clone();
         this.restartKeys = restartKeys == null ? NONE : restartKeys.clone();
+        this.features = features == null ? NONE : features.clone();
     }
 
     public InstallStep inPhaseA() {
-        return new InstallStep(id, name, skipAliases, failTag, failText, dexKit, gateKey, true, lookupFlags, restartKeys);
+        return new InstallStep(id, name, skipAliases, failTag, failText, dexKit, gateKey, true, lookupFlags, restartKeys, features);
     }
 
     public InstallStep withLookupFlags(String... flags) {
-        return new InstallStep(id, name, skipAliases, failTag, failText, dexKit, gateKey, phaseA, flags, restartKeys);
+        return new InstallStep(id, name, skipAliases, failTag, failText, dexKit, gateKey, phaseA, flags, restartKeys, features);
     }
 
     public InstallStep withRestartKeys(String... keys) {
-        return new InstallStep(id, name, skipAliases, failTag, failText, dexKit, gateKey, phaseA, lookupFlags, keys);
+        return new InstallStep(id, name, skipAliases, failTag, failText, dexKit, gateKey, phaseA, lookupFlags, keys, features);
+    }
+
+    public InstallStep withFeatures(String... keys) {
+        return new InstallStep(id, name, skipAliases, failTag, failText, dexKit, gateKey, phaseA, lookupFlags, restartKeys, keys);
     }
 
     public String[] skipAliases() {
@@ -58,6 +65,10 @@ public final class InstallStep {
 
     public String[] restartKeys() {
         return restartKeys.clone();
+    }
+
+    public String[] features() {
+        return features.clone();
     }
 
     public boolean skippedBy(Set<String> skipped) {

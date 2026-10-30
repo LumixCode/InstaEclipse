@@ -348,8 +348,8 @@ public class HideChatsHook {
         try {
             int count = 0;
             for (Method method : KeepUnsentMessagesHook.cachedMethods("HideChats_inbox", classLoader,
-                    () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.methods(FindMethod.create()
-                            .matcher(MethodMatcher.create().usingStrings(INBOX_ANCHOR))), classLoader))) {
+                    () -> KeepUnsentMessagesHook.methodsOf(DexKitQueryCache.hookable(DexKitQueryCache.methods(FindMethod.create()
+                            .matcher(MethodMatcher.create().usingStrings(INBOX_ANCHOR))), classLoader), classLoader))) {
                 try {
                     XposedBridge.hookMethod(method, filter);
                     count++;

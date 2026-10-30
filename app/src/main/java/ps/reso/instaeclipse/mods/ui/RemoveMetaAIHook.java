@@ -198,8 +198,8 @@ public class RemoveMetaAIHook {
         java.util.Set<String> hooked = new HashSet<>();
         for (String a : anchors) {
             try {
-                for (Found md : DexKitQueryCache.methods(FindMethod.create()
-                        .matcher(MethodMatcher.create().usingStrings(a)))) {
+                for (Found md : DexKitQueryCache.hookable(DexKitQueryCache.methods(FindMethod.create()
+                        .matcher(MethodMatcher.create().usingStrings(a))), cl)) {
                     String key = md.getDescriptor();
                     if (!hooked.add(key)) continue;
                     try { XposedBridge.hookMethod(md.getMethodInstance(cl), skip); n++; }
@@ -234,8 +234,10 @@ public class RemoveMetaAIHook {
                 "video-attribution", null);
     }
 
-    private static final long META_AI_GATE_451_ID_1 = 0x8110d700005b5bL;
-    private static final long META_AI_GATE_451_ID_2 = 0x81103500005795L;
+    private static final String REEL_MENU_MARKER =
+            "android_purge_26_q3_ClipsOrganicMediaItemViewMoreOptionsController_maybeAddGenAIInfoRow";
+    private static final String SESSION = "com.instagram.common.session.UserSession";
+    private static final int GATE_MIN_SIBLINGS = 2;
 
     private void installReelsOverflowGate(ClassLoader classLoader) {
         XC_MethodHook forceFalse = new XC_MethodHook() {
@@ -243,25 +245,44 @@ public class RemoveMetaAIHook {
                 if (FeatureFlags.removeMetaAI) param.setResult(false);
             }
         };
-        int n = hookGate(classLoader, forceFalse, new Number[]{META_AI_GATE_451_ID_1, META_AI_GATE_451_ID_2});
+        int n = hookGate(classLoader, forceFalse);
         ModuleLog.detail("(IE|RemoveMetaAI) reels-overflow gate: " + n + " method(s)");
     }
 
-    private int hookGate(ClassLoader cl, XC_MethodHook hook, Number[] ids) {
+    private int hookGate(ClassLoader cl, XC_MethodHook hook) {
         int n = 0;
         try {
-            MethodMatcher m = MethodMatcher.create()
-                    .returnType("boolean")
-                    .paramTypes("com.instagram.common.session.UserSession")
-                    .usingNumbers(ids);
-            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(m))) {
-                try { XposedBridge.hookMethod(md.getMethodInstance(cl), hook); n++; }
+            for (Method gate : findOverflowGate(cl)) {
+                try { XposedBridge.hookMethod(gate, hook); n++; }
                 catch (Throwable ignored) {}
             }
         } catch (Throwable t) {
             ModuleLog.detail("(IE|RemoveMetaAI) overflow gate search failed: " + t.getClass().getSimpleName() + ": " + t.getMessage());
         }
         return n;
+    }
+
+    private static List<Method> findOverflowGate(ClassLoader cl) throws NoSuchMethodException {
+        Set<Method> gates = new HashSet<>();
+        for (Found marker : DexKitQueryCache.methods(FindMethod.create().matcher(
+                MethodMatcher.create().usingStrings(REEL_MENU_MARKER)))) {
+            for (Found gate : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
+                    .returnType("boolean").paramTypes(SESSION)
+                    .addCaller(MethodMatcher.create().declaredClass(marker.getClassName()))))) {
+                Method method = gate.getMethodInstance(cl);
+                if (!Modifier.isStatic(method.getModifiers()) && sessionSiblings(gate) >= GATE_MIN_SIBLINGS) gates.add(method);
+            }
+        }
+        return gates.size() == 1 ? new ArrayList<>(gates) : List.of();
+    }
+
+    private static int sessionSiblings(Found gate) {
+        int siblings = 0;
+        for (Found caller : DexKitQueryCache.callers(gate)) {
+            if (caller.getClassName().equals(gate.getClassName())
+                    && caller.getParamTypeNames().equals(List.of(SESSION))) siblings++;
+        }
+        return siblings;
     }
 
     private void installMenuOptionFilter(ClassLoader cl) {
@@ -353,7 +374,7 @@ public class RemoveMetaAIHook {
     private void hookBuilder(ClassLoader cl, XC_MethodHook hook, FindMethod q, String label) {
         try {
             int n = 0;
-            for (Found md : DexKitQueryCache.methods(q)) {
+            for (Found md : DexKitQueryCache.hookable(DexKitQueryCache.methods(q), cl)) {
                 try { XposedBridge.hookMethod(md.getMethodInstance(cl), hook); n++; } catch (Throwable ignored) {}
             }
             ModuleLog.detail("(IE|RemoveMetaAI) " + label + " filter: " + n + " method(s)");

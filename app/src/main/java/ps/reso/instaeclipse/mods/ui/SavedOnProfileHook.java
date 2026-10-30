@@ -60,8 +60,7 @@ public class SavedOnProfileHook {
                     }
                     if (p.length == 2 && Activity.class.isAssignableFrom(p[0]) && m.getReturnType() != void.class
                             && !m.getReturnType().isPrimitive()) { navMake = m; continue; }
-                    if (p.length == 4 && p[1] == String.class && p[2] == boolean.class && p[3] == boolean.class
-                            && fragment.isAssignableFrom(m.getReturnType())) factory = m;
+                    if (savedFactory(p) && fragment.isAssignableFrom(m.getReturnType())) factory = m;
                     else if (p.length == 3 && p[0] == fragment && Activity.class.isAssignableFrom(p[1])
                             && m.getReturnType() == void.class) {
                         navigator = m;
@@ -110,6 +109,12 @@ public class SavedOnProfileHook {
         } catch (Throwable t) {
             ModuleLog.error(TAG + "Will not work: setup failed", t);
         }
+    }
+
+    private static boolean savedFactory(Class<?>[] p) {
+        if (p.length < 4 || p[1] != String.class) return false;
+        for (int i = 2; i < p.length; i++) if (p[i] != boolean.class) return false;
+        return true;
     }
 
     private static void watch(Object frag, View root) {
@@ -238,7 +243,10 @@ public class SavedOnProfileHook {
                 ModuleLog.detail(TAG + "session=" + session + " activity=" + act);
                 return;
             }
-            Object saved = factory.invoke(null, session, null, false, false);
+            Object[] args = new Object[factory.getParameterCount()];
+            args[0] = session;
+            java.util.Arrays.fill(args, 2, args.length, false);
+            Object saved = factory.invoke(null, args);
             if (navMake != null) {
                 Object nav = navMake.invoke(null, act, session);
                 navPush.invoke(nav, null, saved);

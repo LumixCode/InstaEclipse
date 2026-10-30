@@ -22,6 +22,8 @@
     <string name="home_instagram_version">Instagram %1$s</string>
     <string name="home_tested_version">Bản đã thử nghiệm</string>
     <string name="home_untested_version">Không phải phiên bản đã thử nghiệm (%1$s): một số tính năng có thể không hoạt động</string>
+    <string name="home_features_active">%1$d trên %2$d tính năng đang hoạt động trên Instagram này</string>
+    <string name="home_safe_start">Khởi động an toàn: Instagram đã đóng khi khởi động nên chỉ các tính năng cơ bản được bật. Lần khởi động sau sẽ thử lại tất cả</string>
     <string name="home_status_worked">Đã hoạt động trong Instagram: %1$s</string>
     <string name="home_status_not_confirmed">Chưa được xác nhận</string>
     <string name="home_status_open_to_check">Mở Instagram để kiểm tra</string>

@@ -40,6 +40,7 @@ public final class OpenLinksExternallyHook {
                     if (ownerIndex < 0) continue;
                 }
                 final int index = ownerIndex;
+                final Object opened = openedResult(method.getReturnType());
                 XposedBridge.hookMethod(method, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
                         if (!FeatureFlags.openLinksExternally) return;
@@ -50,7 +51,7 @@ public final class OpenLinksExternallyHook {
                             Context ctx = (Context) context.get(launcher);
                             if (target == null || ctx == null) return;
                             ctx.startActivity(browserIntent(ctx, target));
-                            param.setResult(true);
+                            param.setResult(opened);
                         } catch (Throwable t) {
                             ModuleLog.warn("(IE|ExternalLinks) Could not open the link in your browser, so it opens in Instagram: "
                                     + t.getClass().getSimpleName());
@@ -75,12 +76,23 @@ public final class OpenLinksExternallyHook {
         if (cached != null) return cached;
         List<Method> methods = new ArrayList<>();
         for (var data : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
-                .usingStrings("Tracking.ARG_CLICK_SOURCE", "in_app_browser_v2")
-                .returnType("boolean")))) {
-            methods.add(data.getMethodInstance(loader));
+                .usingStrings("Tracking.ARG_CLICK_SOURCE", "in_app_browser_v2")))) {
+            if (!data.isMethod()) continue;
+            Method method = data.getMethodInstance(loader);
+            if (openedResult(method.getReturnType()) != null) methods.add(method);
         }
         DexKitCache.saveMethods(CACHE_KEY, methods);
         return methods;
+    }
+
+    private static Object openedResult(Class<?> type) {
+        if (type == boolean.class) return true;
+        Object[] constants = type.getEnumConstants();
+        if (constants == null) return null;
+        for (Object constant : constants) {
+            if ("EXTERNAL_BROWSER".equals(((Enum<?>) constant).name())) return constant;
+        }
+        return null;
     }
 
     static Intent browserIntent(Context context, String url) {

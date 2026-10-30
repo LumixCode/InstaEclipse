@@ -73,8 +73,8 @@ public class DisableRepostHook {
         Set<String> hooked = new HashSet<>();
         for (String anchor : NEUTRALIZE_ANCHORS) {
             try {
-                for (Found md : DexKitQueryCache.methods(FindMethod.create()
-                        .matcher(MethodMatcher.create().usingStrings(anchor)))) {
+                for (Found md : DexKitQueryCache.hookable(DexKitQueryCache.methods(FindMethod.create()
+                        .matcher(MethodMatcher.create().usingStrings(anchor))), classLoader)) {
                     String key = md.getDescriptor();
                     if (!hooked.add(key)) continue;
                     try {

@@ -22,6 +22,8 @@
     <string name="home_instagram_version">Instagram %1$s</string>
     <string name="home_tested_version">已测试版本</string>
     <string name="home_untested_version">不是已测试的版本（%1$s）：部分功能可能无法使用</string>
+    <string name="home_features_active">此 Instagram 上已启用 %2$d 项功能中的 %1$d 项</string>
+    <string name="home_safe_start">安全启动:Instagram 在启动时关闭,因此仅启用基本功能。下次启动时会重新尝试所有功能</string>
     <string name="home_status_worked">已于 %1$s 在 Instagram 中生效</string>
     <string name="home_status_not_confirmed">尚未确认</string>
     <string name="home_status_open_to_check">打开 Instagram 以检查</string>

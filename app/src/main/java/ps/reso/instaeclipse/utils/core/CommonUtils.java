@@ -18,6 +18,9 @@ public class CommonUtils {
 
     public static final String ACTION_APPLY_SETTINGS = "ps.reso.instaeclipse.ACTION_APPLY_SETTINGS";
     public static final String ACTION_RESTART_INSTAGRAM = "ps.reso.instaeclipse.ACTION_RESTART_INSTAGRAM";
+    public static final String EXTRA_FEATURES_ACTIVE = "ie_features_active";
+    public static final String EXTRA_FEATURES_ON = "ie_features_on";
+    public static final String EXTRA_SAFE_START = "ie_safe_start";
     public static final String ACTION_RESTART_ACK = "ps.reso.instaeclipse.ACTION_RESTART_ACK";
     public static final String ACTION_REQUEST_PREFS = "ps.reso.instaeclipse.ACTION_REQUEST_PREFS";
     public static final String EXTRA_REQUEST_TIME = "request_time";

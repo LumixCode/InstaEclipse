@@ -3,7 +3,6 @@ package ps.reso.instaeclipse.mods.ghost;
 import android.view.View;
 
 import org.luckypray.dexkit.query.FindMethod;
-import org.luckypray.dexkit.query.enums.StringMatchType;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.MethodData;
 
@@ -24,21 +23,23 @@ import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.HookFrames;
+import ps.reso.instaeclipse.utils.core.MergedLambda;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 final class UnsentBubbleHook {
     private static final long UNSENT_RED = (long) UnsentMediaMark.COLOR << 32;
-    private static final String ITEM = "instagram.features.direct.messagethread.TextMessageComposableHolder.Item (TextMessageComposableHolder.kt:61)";
-    private static final String PROVIDED_VALUES = "instagram.features.direct.messagethread.MessageComposableHolder.getProvidedValues (MessageComposableHolder.kt:167)";
-    private static final String TEXT = "com.instagram.direct.messagethread.compose.TextMessageInternal (TextMessage.kt:134)";
-    private static final String BACKGROUND = "com.instagram.direct.messagethread.compose.background.bubbleBackground.<anonymous> (MessageBubbleBackground.kt:";
-    private static final String VOICE = "instagram.features.direct.thread.feature.messagelist.message.voice.ui.VoiceMessage (VoiceMessage.kt:105)";
-    private static final String VOICE_CONTENT = "instagram.features.direct.thread.feature.messagelist.message.voice.ui.VoiceMessage.<anonymous> (VoiceMessage.kt:246)";
-    private static final String PORTRAIT = "instagram.features.direct.thread.feature.messagelist.message.portraitxma.ui.PortraitXmaMessage (PortraitXmaMessage.kt:179)";
-    private static final String GENERIC = "instagram.features.direct.thread.feature.messagelist.message.genericxma.ui.GenericXmaMessage (GenericXmaMessage.kt:267)";
-    private static final List<String> PREVIEWS = List.of(PORTRAIT, GENERIC);
+    private static final String ITEM = ".TextMessageComposableHolder.Item (TextMessageComposableHolder.kt:";
+    private static final String PROVIDED_VALUES = ".MessageComposableHolder.getProvidedValues (MessageComposableHolder.kt:";
+    private static final String TEXT = ".TextMessageInternal (TextMessage.kt:";
+    private static final String BACKGROUND = ".background.bubbleBackground.<anonymous> (MessageBubbleBackground.kt:";
+    private static final String VOICE = ".voice.ui.VoiceMessage (VoiceMessage.kt:";
+    private static final String VOICE_CONTENT = ".voice.ui.VoiceMessage.<anonymous> (VoiceMessage.kt:";
+    private static final List<String> PORTRAIT = List.of(".portraitxma.ui.PortraitXmaMessageBody (PortraitXmaMessage.kt:",
+            ".portraitxma.ui.PortraitXmaMessage (PortraitXmaMessage.kt:");
+    private static final List<String> GENERIC = List.of(".genericxma.ui.GenericXmaMessage (GenericXmaMessage.kt:");
+    private static final List<List<String>> PREVIEWS = List.of(PORTRAIT, GENERIC);
     private final Map<View, State> views = Collections.synchronizedMap(new WeakHashMap<>());
     private final ThreadLocal<State> bindingState = new ThreadLocal<>();
     private final ThreadLocal<MediaScope> voiceScope = new ThreadLocal<>();
@@ -53,9 +54,9 @@ final class UnsentBubbleHook {
         if (installed) return true;
         try {
             resolveState(loader);
-            List<Method> text = KeepUnsentMessagesHook.cachedMethods("UnsentBubble_text2", loader,
+            List<Method> text = KeepUnsentMessagesHook.cachedMethods("UnsentBubble_text3", loader,
                     () -> findText(loader));
-            if (text.size() != 3) throw new IllegalStateException("Text bubble surfaces ambiguous");
+            if (text.size() != 4) throw new IllegalStateException("Text bubble surfaces ambiguous");
             Method item = text.get(0);
             if (Modifier.isStatic(item.getModifiers())
                     || !itemView.getDeclaringClass().isAssignableFrom(item.getDeclaringClass())) {
@@ -63,7 +64,7 @@ final class UnsentBubbleHook {
             }
             textHolder = item.getDeclaringClass();
             resolveLocalView(loader, item);
-            installBackground(text.get(1), text.get(2));
+            installBackground(text.get(1), text.get(2), text.get(3));
             XposedBridge.hookMethod(item, new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam param) {
                     if (!UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) return;
@@ -84,42 +85,49 @@ final class UnsentBubbleHook {
     }
 
     private static List<Method> findText(ClassLoader loader) throws Exception {
-        List<Found> items = anchored(ITEM, true, m -> m.returnType("void"));
+        List<Found> items = anchored(ITEM, m -> m.returnType("void"));
         Set<String> textCalls = new LinkedHashSet<>();
-        for (Found composable : anchored(TEXT, true, m -> m)) {
+        for (Found composable : anchored(TEXT, m -> m)) {
             for (MethodData call : composable.data().getInvokes()) textCalls.add(call.getDescriptor());
         }
         List<Found> backgrounds = new ArrayList<>();
-        for (Found lambda : anchored(BACKGROUND, false,
+        Set<MethodData> factories = new LinkedHashSet<>();
+        for (Found lambda : anchored(BACKGROUND,
                 m -> m.paramTypes(Object.class, Object.class, Object.class).returnType(Object.class))) {
-            if (builtBy(lambda.getMethodInstance(loader).getDeclaringClass(), textCalls)) backgrounds.add(lambda);
+            Set<MethodData> built = builtBy(lambda.getMethodInstance(loader).getDeclaringClass(), textCalls);
+            if (built.isEmpty()) continue;
+            backgrounds.add(lambda);
+            factories.addAll(built);
         }
-        if (items.size() != 1 || backgrounds.size() != 1) return List.of();
+        if (items.size() != 1 || backgrounds.size() != 1 || factories.size() != 1) return List.of();
         Method fill = null;
         for (MethodData call : backgrounds.get(0).data().getInvokes()) {
             List<String> types = call.getParamTypeNames();
             if (call.isConstructor() || !Modifier.isStatic(call.getModifiers()) || types.size() != 3
                     || !types.get(2).equals("long") || !call.getReturnTypeName().equals(types.get(0))) continue;
-            if (fill != null) return List.of();
-            fill = call.getMethodInstance(loader);
+            Method candidate = call.getMethodInstance(loader);
+            if (fill != null && !fill.equals(candidate)) return List.of();
+            fill = candidate;
         }
         if (fill == null) return List.of();
-        return List.of(items.get(0).getMethodInstance(loader), backgrounds.get(0).getMethodInstance(loader), fill);
+        return List.of(items.get(0).getMethodInstance(loader), backgrounds.get(0).getMethodInstance(loader), fill,
+                factories.iterator().next().getMethodInstance(loader));
     }
 
-    private static boolean builtBy(Class<?> lambda, Set<String> factories) {
+    private static Set<MethodData> builtBy(Class<?> lambda, Set<String> factories) {
+        Set<MethodData> built = new LinkedHashSet<>();
         for (Constructor<?> constructor : lambda.getDeclaredConstructors()) {
             for (MethodData caller : DexKitQueryCache.callersUncached(DexKitQueryCache.methodData(constructor))) {
-                if (factories.contains(caller.getDescriptor())) return true;
+                if (factories.contains(caller.getDescriptor())) built.add(caller);
             }
         }
-        return false;
+        return built;
     }
 
     private void resolveLocalView(ClassLoader loader, Method item) throws Throwable {
         Field field = KeepUnsentMessagesHook.cachedField("UnsentBubble_localView", loader, () -> {
             Set<Field> locals = new LinkedHashSet<>();
-            for (Found provider : anchored(PROVIDED_VALUES, true,
+            for (Found provider : anchored(PROVIDED_VALUES,
                     m -> m.declaredClass(item.getDeclaringClass().getName()))) {
                 for (var usage : provider.data().getUsingFields()) {
                     Field local = usage.getField().getFieldInstance(loader);
@@ -180,26 +188,32 @@ final class UnsentBubbleHook {
         if (writeState == null) throw new NoSuchMethodException("Native state setter");
     }
 
-    private void installBackground(Method background, Method fill) throws Exception {
+    private void installBackground(Method background, Method fill, Method factory) throws Exception {
+        Class<?> lambda = background.getDeclaringClass();
+        Class<?> shapeType = fill.getParameterTypes()[1];
+        MergedLambda bubble = MergedLambda.watch(factory, lambda);
         Field shape = null;
-        for (Field field : background.getDeclaringClass().getDeclaredFields()) {
-            if (Modifier.isStatic(field.getModifiers()) || !fill.getParameterTypes()[1].isAssignableFrom(field.getType())) continue;
+        for (Field field : lambda.getDeclaredFields()) {
+            if (Modifier.isStatic(field.getModifiers()) || !shapeType.isAssignableFrom(field.getType())) continue;
             if (shape != null) throw new IllegalStateException("Bubble shape ambiguous");
             field.setAccessible(true);
             shape = field;
         }
-        if (shape == null) throw new NoSuchFieldException("Native bubble shape");
+        if (shape == null && !bubble.merged()) throw new NoSuchFieldException("Native bubble shape");
         nativeFill = fill;
-        Field nativeShape = shape;
+        Field typedShape = shape;
         XposedBridge.hookMethod(background, new XC_MethodHook() {
             @Override protected void afterHookedMethod(MethodHookParam param) {
                 if (!UnsentGate.active(FeatureFlags.keepUnsentMessages, FeatureFlags.showUnsentIndicator)) return;
                 if (param.hasThrowable() || views.isEmpty()) return;
                 try {
+                    if (!bubble.owns(param.thisObject)) return;
                     Object view = consumeLocal.invoke(param.args[1], localView);
                     State state = view instanceof View ? views.get(view) : null;
                     if (state == null || !state.textBubble) return;
                     if (Boolean.TRUE.equals(readState.invoke(state.nativeValue))) {
+                        Field nativeShape = typedShape != null ? typedShape : MergedLambda.fieldHolding(param.thisObject, shapeType);
+                        if (nativeShape == null) throw new NoSuchFieldException("Native bubble shape");
                         param.setResult(nativeFill.invoke(null, param.args[0], nativeShape.get(param.thisObject), UNSENT_RED));
                     }
                 } catch (Throwable error) { report(error); }
@@ -332,31 +346,34 @@ final class UnsentBubbleHook {
     }
 
     private List<Method> findVoice(ClassLoader loader) throws Exception {
-        List<Found> voices = anchored(VOICE, true, m -> m);
-        List<Found> contents = anchored(VOICE_CONTENT, true, m -> m);
-        if (voices.size() != 1 || contents.size() != 1) return List.of();
+        List<Found> voices = anchored(VOICE, m -> m);
+        if (voices.size() != 1) return List.of();
+        Found content = null;
         Method factory = null;
-        for (MethodData call : contents.get(0).data().getInvokes()) {
-            if (call.isConstructor()) continue;
-            Method method = call.getMethodInstance(loader);
-            Class<?>[] types = method.getParameterTypes();
-            if (!Modifier.isStatic(method.getModifiers()) || types.length != 8
-                    || types[2] != nativeFill.getParameterTypes()[0]
-                    || !nativeFill.getParameterTypes()[1].isAssignableFrom(types[1])
-                    || method.getReturnType() != types[2]) continue;
-            if (factory != null) return List.of();
-            factory = method;
+        for (Found candidate : anchored(VOICE_CONTENT, m -> m)) {
+            for (MethodData call : candidate.data().getInvokes()) {
+                if (call.isConstructor()) continue;
+                Method method = call.getMethodInstance(loader);
+                Class<?>[] types = method.getParameterTypes();
+                if (!Modifier.isStatic(method.getModifiers()) || types.length != 8
+                        || types[2] != nativeFill.getParameterTypes()[0]
+                        || !nativeFill.getParameterTypes()[1].isAssignableFrom(types[1])
+                        || method.getReturnType() != types[2]) continue;
+                if (factory != null) return List.of();
+                factory = method;
+                content = candidate;
+            }
         }
         if (factory == null) return List.of();
-        return List.of(voices.get(0).getMethodInstance(loader), contents.get(0).getMethodInstance(loader), factory);
+        return List.of(voices.get(0).getMethodInstance(loader), content.getMethodInstance(loader), factory);
     }
 
     private List<Method> findPreview(ClassLoader loader) throws Exception {
         Method border = resolveBorder(loader);
         if (border == null) return List.of();
         List<Method> parts = new ArrayList<>(List.of(border));
-        for (String anchor : PREVIEWS) {
-            List<Found> renders = anchored(anchor, true, m -> m);
+        for (List<String> anchors : PREVIEWS) {
+            List<Found> renders = DexKitQueryCache.firstAnchor(m -> m, anchors);
             if (renders.size() != 1) return List.of();
             Found data = renders.get(0);
             Method render = data.getMethodInstance(loader);
@@ -429,7 +446,7 @@ final class UnsentBubbleHook {
     }
 
     private Method resolveBorder(ClassLoader loader) throws Exception {
-        List<Found> elements = anchored("BorderModifierNodeElement(width=", false, m -> m);
+        List<Found> elements = anchored("BorderModifierNodeElement(width=", m -> m);
         if (elements.size() != 1) return null;
         Class<?> element = elements.get(0).getMethodInstance(loader).getDeclaringClass();
         Set<Class<?>> factories = new LinkedHashSet<>();
@@ -449,14 +466,8 @@ final class UnsentBubbleHook {
         return borders.size() == 1 ? borders.iterator().next() : null;
     }
 
-    private static List<Found> anchored(String anchor, boolean byPrefix,
-                                        java.util.function.UnaryOperator<MethodMatcher> shape) {
-        List<Found> exact = DexKitQueryCache.methods(FindMethod.create().matcher(
-                shape.apply(MethodMatcher.create().usingStrings(anchor))));
-        int line = anchor.lastIndexOf(".kt:");
-        if (!exact.isEmpty() || !byPrefix || line < 0) return exact;
-        return DexKitQueryCache.methods(FindMethod.create().matcher(shape.apply(MethodMatcher.create()
-                .addUsingString(anchor.substring(0, line + 4), StringMatchType.StartsWith))));
+    private static List<Found> anchored(String anchor, java.util.function.UnaryOperator<MethodMatcher> shape) {
+        return DexKitQueryCache.firstAnchor(shape, List.of(anchor));
     }
 
     private static Field uniqueField(Class<?> owner, Class<?> type) throws Exception {

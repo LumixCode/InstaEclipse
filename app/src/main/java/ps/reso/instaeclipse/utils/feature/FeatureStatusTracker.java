@@ -54,6 +54,13 @@ public class FeatureStatusTracker {
         changed();
     }
 
+    public static void setFailed(String name) {
+        if (hooked.contains(name)) return;
+        broken.add(name);
+        if (features.containsKey(name)) features.put(name, false);
+        changed();
+    }
+
     public static boolean isBroken(String name) {
         return broken.contains(name) && !hooked.contains(name);
     }
@@ -89,6 +96,18 @@ public class FeatureStatusTracker {
         return !features.isEmpty();
     }
 
+    public static int enabledCount() {
+        return features.size();
+    }
+
+    public static int activeCount() {
+        synchronized (features) {
+            int active = 0;
+            for (Boolean on : features.values()) if (Boolean.TRUE.equals(on)) active++;
+            return active;
+        }
+    }
+
     public static void logSummary(Context ctx) {
         try {
             String version = "?";
@@ -117,6 +136,10 @@ public class FeatureStatusTracker {
             if (!unconfirmed.isEmpty()) {
                 ps.reso.instaeclipse.utils.log.ModuleLog.detail("(InstaEclipse) Turned on, not confirmed by their hooks yet: "
                         + String.join(", ", unconfirmed));
+            }
+            Map<String, String> fallbacks = ps.reso.instaeclipse.utils.core.DexKitQueryCache.fallbacksUsed();
+            if (!fallbacks.isEmpty()) {
+                ps.reso.instaeclipse.utils.log.ModuleLog.detail("(InstaEclipse) Found through a fallback: " + fallbacks);
             }
         } catch (Throwable t) {
             ps.reso.instaeclipse.utils.log.ModuleLog.detail("(InstaEclipse) Feature summary unavailable: " + t);

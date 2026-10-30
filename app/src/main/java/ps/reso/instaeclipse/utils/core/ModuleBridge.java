@@ -49,6 +49,7 @@ public final class ModuleBridge {
     private static String libDir;
     private static String apkPath;
     private static boolean started;
+    private static boolean blocked;
     private static String startedBy;
     private static volatile boolean done;
     private static volatile DexKitBridge bridge;
@@ -73,6 +74,12 @@ public final class ModuleBridge {
 
     public static boolean start(String reason) {
         return begin(reason, true);
+    }
+
+    public static void block() {
+        synchronized (LOCK) {
+            blocked = true;
+        }
     }
 
     public static boolean shouldStart(boolean legacyWarmbridge, String stamp, boolean scheduleNeedsBridge) {
@@ -237,7 +244,7 @@ public final class ModuleBridge {
         int gen;
         synchronized (LOCK) {
             if (started) return true;
-            if (apkPath == null) return false;
+            if (apkPath == null || blocked) return false;
             started = true;
             startedBy = reason;
             f = factory;

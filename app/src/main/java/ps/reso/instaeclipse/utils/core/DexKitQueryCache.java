@@ -4,6 +4,7 @@ import org.luckypray.dexkit.DexKitBridge;
 import org.luckypray.dexkit.query.FindClass;
 import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.base.BaseFinder;
+import org.luckypray.dexkit.query.matchers.MethodMatcher;
 import org.luckypray.dexkit.result.ClassData;
 import org.luckypray.dexkit.result.ClassDataList;
 import org.luckypray.dexkit.result.MethodData;
@@ -16,13 +17,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.UnaryOperator;
 
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 
 public final class DexKitQueryCache {
 
-    static final int QUERY_SCHEMA = 1;
+    static final int QUERY_SCHEMA = 2;
     static final String NO_BRIDGE = "Instagram's code can't be searched right now";
+    private static final Map<String, String> FALLBACKS = new ConcurrentHashMap<>();
 
     public static final class Found {
         private final String descriptor;
@@ -202,16 +207,57 @@ public final class DexKitQueryCache {
             List<Found> hit = foundMethods(cached);
             if (hit != null) {
                 DexKitStats.hit();
+                if (hit.isEmpty()) DexKitStats.emptyLookup();
                 return hit;
             }
         }
         DexKitBridge bridge = ifReady ? ModuleBridge.request() : bridge();
         if (bridge == null) return null;
         long start = System.nanoTime();
-        MethodDataList result = bridge.findMethod(query);
+        List<MethodData> result = bridge.findMethod(query);
         searched(key, start);
+        if (OutlinedStrings.onlyTables(result)) {
+            List<MethodData> outlined = OutlinedStrings.search(bridge, query);
+            if (outlined != null) result = outlined;
+        }
+        result = OutlinedStrings.withoutTables(result);
+        if (result.isEmpty()) DexKitStats.emptyLookup();
         if (key != null) DexKitCache.saveString(key, joinMethods(result));
         return wrap(result);
+    }
+
+    public static List<Found> hookable(List<Found> found, ClassLoader loader) {
+        List<Found> out = new ArrayList<>(found.size());
+        for (Found f : found) {
+            try {
+                if (HookTargetGuard.lambdaGroupField(Class.forName(f.getClassName(), false, loader)) != null) {
+                    ModuleLog.detail("(DexKitCache) Not hooking " + f + ": merged lambdas share its body");
+                    continue;
+                }
+            } catch (Throwable ignored) {}
+            out.add(f);
+        }
+        return out;
+    }
+
+    public static List<Found> firstAnchor(UnaryOperator<MethodMatcher> shape, List<String> anchors) {
+        for (int i = 0; i < anchors.size(); i++) {
+            List<Found> found = methods(FindMethod.create().matcher(
+                    shape.apply(MethodMatcher.create().usingStrings(anchors.get(i)))));
+            if (found == null || found.isEmpty()) continue;
+            if (i > 0) noteFallback(anchors.get(0), anchors.get(i));
+            return found;
+        }
+        return Collections.emptyList();
+    }
+
+    static void noteFallback(String anchor, String used) {
+        FALLBACKS.put(anchor, used);
+        ModuleLog.detail("(DexKitCache) Lookup \"" + anchor + "\" used its fallback \"" + used + "\"");
+    }
+
+    public static Map<String, String> fallbacksUsed() {
+        return Collections.unmodifiableMap(FALLBACKS);
     }
 
     public static List<FoundClass> classes(FindClass query) {
@@ -221,6 +267,7 @@ public final class DexKitQueryCache {
             List<FoundClass> hit = foundClasses(cached);
             if (hit != null) {
                 DexKitStats.hit();
+                if (hit.isEmpty()) DexKitStats.emptyLookup();
                 return hit;
             }
         }
@@ -228,6 +275,7 @@ public final class DexKitQueryCache {
         long start = System.nanoTime();
         ClassDataList result = bridge.findClass(query);
         searched(key, start);
+        if (result.isEmpty()) DexKitStats.emptyLookup();
         List<String> descriptors = new ArrayList<>();
         List<FoundClass> out = new ArrayList<>();
         for (ClassData c : result) {

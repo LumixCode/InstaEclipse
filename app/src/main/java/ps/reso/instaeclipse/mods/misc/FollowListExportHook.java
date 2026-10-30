@@ -10,9 +10,6 @@ import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.Toast;
 
-import org.luckypray.dexkit.query.FindMethod;
-import org.luckypray.dexkit.query.matchers.MethodMatcher;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -37,12 +34,13 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 public class FollowListExportHook {
 
     private static final String TAG = "(IE|FollowExport) ";
+    private static final List<String> FRAGMENT_ANCHORS = List.of("FollowListFragment.AutoExpandChaining",
+            "FollowListFragment.AllowActionBarBulkManage", "FollowListFragment.FilterDismissedUsers");
 
     public void install(ClassLoader cl) {
         try {
             Class<?> frag = null;
-            for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
-                    .usingStrings("Invalid entry type for FollowListFragment")))) {
+            for (Found md : DexKitQueryCache.firstAnchor(m -> m.name("onCreate").paramTypes(android.os.Bundle.class), FRAGMENT_ANCHORS)) {
                 frag = cl.loadClass(md.getClassName());
                 break;
             }

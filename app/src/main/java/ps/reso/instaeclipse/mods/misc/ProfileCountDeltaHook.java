@@ -57,6 +57,7 @@ public final class ProfileCountDeltaHook {
     private static final String ID_KEY = "ProfileCountDelta_id_v1";
     private static final String METRICS_KEY = "ProfileCountDelta_metrics_v1";
     private static final String STATE_KEY = "ProfileCountDelta_state_v1";
+    private static final String HEADER_ID = "header";
     private static final String SESSION = "com.instagram.common.session.UserSession";
     private static final String FOLLOWERS_VALUE = "profile_header_familiar_followers_value";
     private static final String FOLLOWING_VALUE = "profile_header_familiar_following_value";
@@ -98,7 +99,8 @@ public final class ProfileCountDeltaHook {
             FeatureStatusTracker.setHooked(KEY);
             ModuleLog.ok(TAG + "Ready");
             ModuleLog.detail(TAG + "metrics " + stepMethod.getDeclaringClass().getName() + "." + stepMethod.getName()
-                    + " (state arg " + stateArg + ", id " + profileIdField.getDeclaringClass().getName() + "." + profileIdField.getName()
+                    + " (state arg " + stateArg + ", id " + (profileIdField == null ? "profile header"
+                    : profileIdField.getDeclaringClass().getName() + "." + profileIdField.getName())
                     + "), cell " + cellMethod.getDeclaringClass().getName() + "." + cellMethod.getName());
         } catch (Throwable t) {
             if (FeatureFlags.profileAnalyzer) FeatureStatusTracker.setBroken(KEY, R.string.ig_pa_count_delta);
@@ -110,9 +112,14 @@ public final class ProfileCountDeltaHook {
         if (!DexKitCache.isCacheValid()) return null;
         try {
             List<Method> methods = DexKitCache.loadMethods(METHODS_KEY, loader);
-            Field id = DexKitCache.loadField(ID_KEY, loader);
             String state = DexKitCache.loadString(STATE_KEY);
-            if (methods == null || methods.size() != 2 || id == null || state == null) return null;
+            if (methods == null || methods.size() != 2 || state == null) return null;
+            if (HEADER_ID.equals(state)) {
+                ProfileFollowStatusHook.loadHeaderReader(loader);
+                return methods;
+            }
+            Field id = DexKitCache.loadField(ID_KEY, loader);
+            if (id == null) return null;
             int space = state.indexOf(' ');
             int arg = Integer.parseInt(state.substring(0, space));
             Class<?> metrics = Class.forName(state.substring(space + 1), false, loader);
@@ -136,8 +143,12 @@ public final class ProfileCountDeltaHook {
     }
 
     private static void save(List<Method> methods) {
-        Class<?> metrics = metricsField != null ? metricsField.getType() : methods.get(0).getParameterTypes()[stateArg];
         DexKitCache.saveMethods(METHODS_KEY, methods);
+        if (profileIdField == null) {
+            DexKitCache.saveString(STATE_KEY, HEADER_ID);
+            return;
+        }
+        Class<?> metrics = metricsField != null ? metricsField.getType() : methods.get(0).getParameterTypes()[stateArg];
         DexKitCache.saveField(ID_KEY, profileIdField);
         if (metricsField != null) DexKitCache.saveField(METRICS_KEY, metricsField);
         DexKitCache.saveString(STATE_KEY, stateArg + " " + metrics.getName());
@@ -175,7 +186,10 @@ public final class ProfileCountDeltaHook {
             field.setAccessible(true);
             profileIdField = field;
         }
-        if (profileIdField == null) throw new IllegalStateException("metrics id missing");
+        if (profileIdField == null) {
+            ProfileFollowStatusHook.loadHeaderReader(loader);
+            return;
+        }
         Class<?>[] parameters = stepMethod.getParameterTypes();
         for (int i = 0; i < parameters.length; i++) {
             Class<?> type = parameters[i];
@@ -215,13 +229,17 @@ public final class ProfileCountDeltaHook {
         countArg = integers.get(0);
     }
 
+    private static Object metricsId(Object[] arguments) throws IllegalAccessException {
+        Object holder = arguments[stateArg];
+        Object metrics = metricsField == null || holder == null ? holder : metricsField.get(holder);
+        return metrics != null ? profileIdField.get(metrics) : null;
+    }
+
     private static final XC_MethodHook STEP = new XC_MethodHook() {
         @Override protected void beforeHookedMethod(MethodHookParam param) {
             String profile = null;
             try {
-                Object holder = param.args[stateArg];
-                Object metrics = metricsField == null || holder == null ? holder : metricsField.get(holder);
-                Object id = metrics != null ? profileIdField.get(metrics) : null;
+                Object id = profileIdField == null ? ProfileFollowStatusHook.headerProfileId(param.args) : metricsId(param.args);
                 if (id instanceof String s && !s.isEmpty()) profile = s;
             } catch (Throwable t) {
                 diagnostic("profile id unreadable: " + t);

@@ -320,7 +320,7 @@ final class SelectedMediaAdapter implements SelectedMediaSnapshot.Access {
         if (queries == Queries.NONE) return;
         Resolution result = new Resolution();
         if (queries == Queries.BOTH) collectCandidates(loader, type, key, false, result);
-        collectCandidates(loader, type, key, true, result);
+        if (result.matches.size() != 1) collectCandidates(loader, type, key, true, result);
         if (result.errors != 0 || result.matches.size() != 1) return;
         try {
             Method method = result.matches.iterator().next();

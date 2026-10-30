@@ -559,8 +559,8 @@ public class StoryDownloadHook {
             List<Method> binds = DexKitCache.loadMethods(CAPTURE, cl);
             if (binds == null) {
                 binds = new ArrayList<>();
-                for (Found md : DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
-                        .usingStrings("ReelViewerFragment.onCurrentActiveItemBound")))) {
+                for (Found md : DexKitQueryCache.hookable(DexKitQueryCache.methods(FindMethod.create().matcher(MethodMatcher.create()
+                        .usingStrings("ReelViewerFragment.onCurrentActiveItemBound"))), cl)) {
                     try { binds.add(md.getMethodInstance(cl)); } catch (Throwable ignored) {}
                 }
                 DexKitCache.saveMethods(CAPTURE, binds);

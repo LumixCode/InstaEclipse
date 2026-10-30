@@ -108,10 +108,9 @@ public class StoryMentionHook {
         }
 
         try {
-            List<Found> converters = DexKitQueryCache.methods(FindMethod.create()
-                    .matcher(MethodMatcher.create()
-                            .paramCount(1)
-                            .usingEqStrings(List.of("MentionTappableObject.user is null; dropping mention sticker"))));
+            List<Found> converters = DexKitQueryCache.firstAnchor(m -> m.paramCount(1).returnType("java.util.List"),
+                    List.of("MentionTappableObject.user is null; dropping mention sticker",
+                            "StoryTappableObjectExt.mentionStickerstoReelInteractives"));
             for (Found md : converters) {
                 try {
                     Method m = md.getMethodInstance(classLoader);

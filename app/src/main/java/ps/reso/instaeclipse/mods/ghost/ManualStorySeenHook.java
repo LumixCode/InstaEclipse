@@ -217,8 +217,11 @@ public final class ManualStorySeenHook {
                     && types[0].getName().equals(SESSION) && !types[1].isPrimitive()
                     && types[2] == String.class;
             if (!legacy && !current) continue;
+            List<Method> tracked = reelTrackers(method, loader);
+            if (tracked.isEmpty()) continue;
             if (populateItem != null) throw new IllegalStateException("Ambiguous story population helper");
             populateItem = method;
+            trackers = tracked;
             method.setAccessible(true);
         }
         if (populateItem == null) throw new NoSuchMethodException("Single story population");
@@ -261,18 +264,18 @@ public final class ManualStorySeenHook {
             }
         }
         if (pathSetter == null) throw new NoSuchMethodException("Request path setter");
+    }
 
-        resolutionStage = "per-story tracking";
+    private static List<Method> reelTrackers(Method population, ClassLoader loader) throws Exception {
         List<Method> found = new ArrayList<>();
-        MethodData populationData = DexKitQueryCache.methodData(populateItem);
+        MethodData populationData = DexKitQueryCache.methodData(population);
         if (populationData == null) throw new NoSuchMethodException("Population method metadata");
         for (MethodData data : DexKitQueryCache.callersUncached(populationData)) {
             if (!data.getParamTypeNames().contains(REEL_ITEM)) continue;
             Method method = data.getMethodInstance(loader);
             if (reelItemIndex(method) != -1) found.add(method);
         }
-        if (found.isEmpty()) throw new NoSuchMethodException("Per-story receipt tracking");
-        trackers = found;
+        return found;
     }
 
     private void hookReceiptPipeline() throws Exception {

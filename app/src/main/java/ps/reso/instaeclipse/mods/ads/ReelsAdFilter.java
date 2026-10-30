@@ -88,10 +88,22 @@ public final class ReelsAdFilter {
     }
 
     private static Method findIsAdCheck(String organicOnly, ClassLoader classLoader) throws NoSuchMethodException {
-        for (Found found : DexKitQueryCache.methods(isAdCheckQuery(organicOnly))) {
-            if (!found.getParamTypeNames().get(0).equals(found.getClassName())) continue;
+        List<Found> calls = DexKitQueryCache.methods(isAdCheckQuery(organicOnly));
+        Method check = enumCheck(calls, classLoader);
+        if (check != null) return check;
+        for (Found wrapper : calls) {
+            check = enumCheck(DexKitQueryCache.invokesCached(wrapper), classLoader);
+            if (check != null) return check;
+        }
+        return null;
+    }
+
+    private static Method enumCheck(List<Found> calls, ClassLoader classLoader) throws NoSuchMethodException {
+        for (Found found : calls) {
+            if (!found.isMethod() || !found.getReturnTypeName().equals("boolean")
+                    || !found.getParamTypeNames().equals(List.of(found.getClassName()))) continue;
             Method check = found.getMethodInstance(classLoader);
-            if (check.getDeclaringClass().isEnum()) return check;
+            if (check.getDeclaringClass().isEnum() && Modifier.isStatic(check.getModifiers())) return check;
         }
         return null;
     }

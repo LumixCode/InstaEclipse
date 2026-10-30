@@ -116,8 +116,8 @@ public class VoiceMessageDownloadHook {
                             if (param.getResult() != null) {
                                 MATCH.onLookup(stringArg(param.args, 0), stringArg(param.args, 1),
                                         param.getResult(), System.currentTimeMillis());
-                                if (param.thisObject == null && param.args.length > 0 && !(param.args[0] instanceof String))
-                                    ps.reso.instaeclipse.mods.ghost.BulkUnsend.onLookup(param.args[0]);
+                                ps.reso.instaeclipse.mods.ghost.BulkUnsend.onLookup(owner.isInstance(param.thisObject) ? param.thisObject
+                                        : param.args.length > 0 && owner.isInstance(param.args[0]) ? param.args[0] : null);
                             }
                         }
                     });

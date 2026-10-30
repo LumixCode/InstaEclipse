@@ -105,6 +105,7 @@ public class Module {
 
     private static volatile InstallRunner lastRunner;
     private static volatile InstallSchedule.Split lastSchedule;
+    private static volatile boolean safeStart;
     private static volatile boolean inlineOnMainThread;
     private static volatile String backgroundThread;
     private static volatile Consumer<Runnable> backgroundStarter = Module::startInitThread;
@@ -199,10 +200,12 @@ public class Module {
                     : moduleSourceDir + "|" + new java.io.File(moduleSourceDir).length();
             DexKitCache.init(context, vc + "|" + module,
                     DexKitCache.queryKey(vc, new java.io.File(lpparam.appInfo.sourceDir).length()));
+            safeStart = StartupIdle.safeStart(context, vc + "|" + moduleBuild());
         } catch (Throwable e) {
             ModuleLog.warn("(DexKitCache) Could not read the saved lookups, so this start takes longer: " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
-        startBridgeIfNeeded();
+        if (safeStart) ModuleBridge.block();
+        else startBridgeIfNeeded();
         StartupTrace.end(span);
     }
 
@@ -310,18 +313,24 @@ public class Module {
         boolean reuse = kept != null && keptSchedule != null;
         InstallPlan plan = reuse ? kept : new InstallPlan();
         InstallSchedule.Split split = reuse ? keptSchedule : schedule(plan);
-        if (!reuse && backgroundNeedsBridge(split)) ModuleBridge.start(ModuleBridge.INSTALL);
+        if (!reuse && !safeStart && backgroundNeedsBridge(split)) ModuleBridge.start(ModuleBridge.INSTALL);
         lastSchedule = split;
         InstallRunner runner = new InstallRunner(skipSet(), android.os.SystemClock::elapsedRealtimeNanos, DexKitStats.INLINE);
         lastRunner = runner;
-        if (!split.legacy) {
+        runner.setSafeStart(safeStart);
+        if (safeStart) {
+            ModuleLog.error("(InstaEclipse): Instagram closed during startup twice in a row on this version, so this start"
+                    + " only runs the features that don't depend on Instagram's code. The next start tries everything again");
+        }
+        Runnable saveStamp = safeStart ? null : ModuleBridge::saveStamp;
+        if (!split.legacy && !safeStart) {
             runner.setLedger(new InstallSchedule.Book(CACHE_STORE, split,
                     step -> InstallSchedule.lookupState(step, plan::flag), moduleBuild(), ModuleLog::detail));
         }
         InstallPlan.InstallCtx ctx = new InstallPlan.InstallCtx(context, lpparam, hostClassLoader);
         inlineOnMainThread = DexKitStats.onMainThread();
         runner.run(plan, split.inline, DexKitStats.INLINE, ctx, InstallRunner.LOG, -1, null,
-                split.background.isEmpty() ? ModuleBridge::saveStamp : null);
+                split.background.isEmpty() ? saveStamp : null);
         if (split.background.isEmpty()) {
             finishInstall(context, runner, span, true);
             return;
@@ -344,7 +353,7 @@ public class Module {
                 if (INIT_THREAD.equals(Thread.currentThread().getName())) {
                     Thread.currentThread().setPriority(Thread.NORM_PRIORITY - 1);
                 }
-            }, ModuleBridge::saveStamp);
+            }, saveStamp);
             finishInstall(context, runner, span, false);
             ModuleLog.ok("(InstaEclipse): Features are ready (background setup took "
                     + (android.os.SystemClock.elapsedRealtime() - start) + " ms, "
@@ -356,7 +365,7 @@ public class Module {
     private static void finishInstall(Context context, InstallRunner runner, StartupTrace.Span span, boolean warm) {
         runner.report(InstallRunner.LOG);
         runner.mark("(finish)");
-        DexKitCache.saveString(CACHE_COMPLETE_KEY, CACHE_COMPLETE_VALUE);
+        if (!safeStart) DexKitCache.saveString(CACHE_COMPLETE_KEY, CACHE_COMPLETE_VALUE);
         FeatureStatusTracker.logSummary(context);
         runner.mark(null);
         StartupTrace.end(span);
@@ -455,6 +464,9 @@ public class Module {
                         bundle.putInt("dailyReelsWatchedToday", ps.reso.instaeclipse.mods.reels.DailyReelLimit.watchedToday());
                         bundle.putString("dailyReelUsageDate", java.time.LocalDate.now().toString());
                     }
+                    bundle.putInt(CommonUtils.EXTRA_FEATURES_ACTIVE, FeatureStatusTracker.activeCount());
+                    bundle.putInt(CommonUtils.EXTRA_FEATURES_ON, FeatureStatusTracker.enabledCount());
+                    bundle.putBoolean(CommonUtils.EXTRA_SAFE_START, safeStart);
                     reply.putExtras(bundle);
                     ps.reso.instaeclipse.utils.core.IpcSecurity.echoNonce(intent, reply);
                     ps.reso.instaeclipse.utils.ipc.ModuleReplies.reply(intent, reply.getExtras());
