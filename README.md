@@ -120,7 +120,7 @@ Compared with [upstream InstaEclipse 0.8.2](https://github.com/ReSo7200/InstaEcl
 
 | Feature | Upstream 0.8.2 | This fork |
 |---|---|---|
-| Keep unsent messages | Logs unsent text. Keeping it in the chat is opt-in, for received messages, until Instagram restarts | Messages others unsend stay in the chat, also after Instagram restarts, and are logged per account and chat |
+| Keep unsent messages | Logs unsent text. Keeping it in the chat is opt-in, for received messages, until Instagram restarts | Messages you or others unsend stay in the chat, also after Instagram restarts, and are logged per account and chat |
 | Earlier versions of edits | Shown through Instagram's own view, until Instagram restarts | Tap *Edited* on a message to see every earlier version with its time, kept after restarts |
 | Hide chosen chats | Filtered out of the inbox, managed in a list of hidden chats | Pick them from your chats or the chat menu; triple-tap your name in Messages and unlock to see only the hidden ones |
 | Send Seen in chosen chats | Set per chat from the chat menu | Also one list to see and edit every chat that still gets Seen |
@@ -340,7 +340,7 @@ Turning off Reels overrides the reel limits. A blocked reel says why and until w
 | Option | What it does |
 |---|---|
 | Keep disappearing messages | They stop deleting themselves |
-| ✨ Keep unsent messages | Messages others unsend stay readable, in the chat and in the *Unsent messages* list |
+| ✨ Keep unsent messages | Messages you or others unsend stay readable, in the chat and in the *Unsent messages* list. *Unsend multiple* still removes them for good |
 | 🆕 Mark unsent messages | Kept unsent messages show in red |
 | ✨ Keep earlier versions of edits | Tap *Edited* to see them |
 | ✨ Jump to first message | Scrolls a chat back to its first message |

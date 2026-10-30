@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">Extremmodus</string>
     <string name="cat_isExtremeMode_desc">Sperrt deine Auswahl unter „Ausschalten“ und „Reel-Limits“ endgültig</string>
     <string name="cat_sec_keep_messages">Nachrichten behalten</string>
-    <string name="cat_keepUnsentMessages_desc">Nachrichten, die andere zurückziehen, bleiben lesbar</string>
+    <string name="cat_keepUnsentMessages_desc">Zurückgezogene Nachrichten bleiben lesbar</string>
     <string name="cat_keepUnsentInChat_desc">Aus: Nur die Liste „Zurückgezogene Nachrichten“ behält sie</string>
     <string name="cat_showUnsentIndicator_desc">Zeigt jede rot an</string>
     <string name="cat_keepEditHistory_desc">Zum Ansehen „Bearbeitet“ antippen</string>

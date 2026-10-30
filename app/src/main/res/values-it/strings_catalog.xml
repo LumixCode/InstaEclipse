@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">Modalità estrema</string>
     <string name="cat_isExtremeMode_desc">Blocca per sempre le tue scelte in Disattiva e nei limiti dei reel</string>
     <string name="cat_sec_keep_messages">Conserva messaggi</string>
-    <string name="cat_keepUnsentMessages_desc">I messaggi annullati dagli altri restano leggibili</string>
+    <string name="cat_keepUnsentMessages_desc">I messaggi annullati restano leggibili</string>
     <string name="cat_keepUnsentInChat_desc">Se è disattivato, li conserva solo l\'elenco Messaggi annullati</string>
     <string name="cat_showUnsentIndicator_desc">Mostra ognuno in rosso</string>
     <string name="cat_keepEditHistory_desc">Tocca «Modificato» per vederle</string>

@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">Aşırı mod</string>
     <string name="cat_isExtremeMode_desc">“Kapat” ve Reels sınırı seçimlerinizi kalıcı olarak kilitler</string>
     <string name="cat_sec_keep_messages">Mesajları sakla</string>
-    <string name="cat_keepUnsentMessages_desc">Başkalarının geri aldığı mesajlar okunabilir kalır</string>
+    <string name="cat_keepUnsentMessages_desc">Geri alınan mesajlar okunabilir kalır</string>
     <string name="cat_keepUnsentInChat_desc">Kapalıyken onları yalnızca Geri alınan mesajlar listesi saklar</string>
     <string name="cat_showUnsentIndicator_desc">Her birini kırmızı gösterir</string>
     <string name="cat_keepEditHistory_desc">Görmek için “Düzenlendi”ye dokunun</string>

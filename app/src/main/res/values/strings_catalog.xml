@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">Extreme mode</string>
     <string name="cat_isExtremeMode_desc">Locks your Turn off and reel limit choices for good</string>
     <string name="cat_sec_keep_messages">Keep messages</string>
-    <string name="cat_keepUnsentMessages_desc">Messages others unsend stay readable</string>
+    <string name="cat_keepUnsentMessages_desc">Unsent messages stay readable</string>
     <string name="cat_keepUnsentInChat_desc">Off: only the Unsent messages list keeps them</string>
     <string name="cat_showUnsentIndicator_desc">Shows each one in red</string>
     <string name="cat_keepEditHistory_desc">Tap “Edited” to see them</string>

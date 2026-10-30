@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">Ακραία λειτουργία</string>
     <string name="cat_isExtremeMode_desc">Κλειδώνει οριστικά τις επιλογές σας στο Απενεργοποίηση και στα όρια reels</string>
     <string name="cat_sec_keep_messages">Διατήρηση μηνυμάτων</string>
-    <string name="cat_keepUnsentMessages_desc">Όσα μηνύματα αναιρούν οι άλλοι μένουν αναγνώσιμα</string>
+    <string name="cat_keepUnsentMessages_desc">Τα μηνύματα που αναιρέθηκαν μένουν αναγνώσιμα</string>
     <string name="cat_keepUnsentInChat_desc">Ανενεργό: τα κρατά μόνο η λίστα «Αναιρεμένα μηνύματα»</string>
     <string name="cat_showUnsentIndicator_desc">Εμφανίζει καθένα με κόκκινο</string>
     <string name="cat_keepEditHistory_desc">Πατήστε «Επεξεργάστηκε» για προβολή</string>

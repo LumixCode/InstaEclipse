@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">極端模式</string>
     <string name="cat_isExtremeMode_desc">永久鎖定你在「停用」和 Reels 限制中的選擇</string>
     <string name="cat_sec_keep_messages">保留訊息</string>
-    <string name="cat_keepUnsentMessages_desc">對方收回的訊息仍可閱讀</string>
+    <string name="cat_keepUnsentMessages_desc">已收回的訊息仍可閱讀</string>
     <string name="cat_keepUnsentInChat_desc">關閉時：只保留在「已收回訊息」清單中</string>
     <string name="cat_showUnsentIndicator_desc">將每則訊息顯示為紅色</string>
     <string name="cat_keepEditHistory_desc">點按「已編輯」即可查看</string>

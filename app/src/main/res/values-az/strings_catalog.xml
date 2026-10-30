@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">Ekstremal rejim</string>
     <string name="cat_isExtremeMode_desc">«Söndür» və Reels limiti seçimlərinizi həmişəlik kilidləyir</string>
     <string name="cat_sec_keep_messages">Mesajları saxla</string>
-    <string name="cat_keepUnsentMessages_desc">Başqalarının geri götürdüyü mesajlar oxunaqlı qalır</string>
+    <string name="cat_keepUnsentMessages_desc">Geri götürülən mesajlar oxunaqlı qalır</string>
     <string name="cat_keepUnsentInChat_desc">Deaktiv: yalnız «Geri götürülən mesajlar» siyahısında qalır</string>
     <string name="cat_showUnsentIndicator_desc">Hər birini qırmızı rəngdə göstərir</string>
     <string name="cat_keepEditHistory_desc">«Redaktə olunub» yazısına toxunub baxın</string>

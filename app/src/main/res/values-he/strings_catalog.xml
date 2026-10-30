@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">מצב קיצוני</string>
     <string name="cat_isExtremeMode_desc">נועל לצמיתות את הבחירות שלך ב\"השבתה\" ובמגבלות ה-Reels</string>
     <string name="cat_sec_keep_messages">שמירת הודעות</string>
-    <string name="cat_keepUnsentMessages_desc">הודעות שאחרים ביטלו את שליחתן נשארות קריאות</string>
+    <string name="cat_keepUnsentMessages_desc">הודעות שבוטלה שליחתן נשארות קריאות</string>
     <string name="cat_keepUnsentInChat_desc">כבוי: רק רשימת \"הודעות שבוטלו\" שומרת אותן</string>
     <string name="cat_showUnsentIndicator_desc">מציג כל אחת מהן באדום</string>
     <string name="cat_keepEditHistory_desc">הקש על \"נערכה\" כדי לראות אותן</string>

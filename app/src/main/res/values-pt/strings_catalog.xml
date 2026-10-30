@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">Modo extremo</string>
     <string name="cat_isExtremeMode_desc">Trava de vez suas escolhas em Desativar e nos limites de reels</string>
     <string name="cat_sec_keep_messages">Manter mensagens</string>
-    <string name="cat_keepUnsentMessages_desc">Mensagens que os outros apagam continuam legíveis</string>
+    <string name="cat_keepUnsentMessages_desc">Mensagens apagadas continuam legíveis</string>
     <string name="cat_keepUnsentInChat_desc">Desativado: só a lista Mensagens apagadas as mantém</string>
     <string name="cat_showUnsentIndicator_desc">Mostra cada uma em vermelho</string>
     <string name="cat_keepEditHistory_desc">Toque em “Editada” para vê-las</string>

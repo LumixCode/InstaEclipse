@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">Chế độ nghiêm ngặt</string>
     <string name="cat_isExtremeMode_desc">Khóa vĩnh viễn các lựa chọn Tắt và giới hạn reel của bạn</string>
     <string name="cat_sec_keep_messages">Giữ tin nhắn</string>
-    <string name="cat_keepUnsentMessages_desc">Tin nhắn người khác thu hồi vẫn đọc được</string>
+    <string name="cat_keepUnsentMessages_desc">Tin nhắn đã thu hồi vẫn đọc được</string>
     <string name="cat_keepUnsentInChat_desc">Tắt: chỉ danh sách Tin nhắn đã thu hồi giữ chúng</string>
     <string name="cat_showUnsentIndicator_desc">Hiển thị từng tin nhắn bằng màu đỏ</string>
     <string name="cat_keepEditHistory_desc">Chạm “Đã chỉnh sửa” để xem</string>

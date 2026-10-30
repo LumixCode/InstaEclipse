@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">Extremläge</string>
     <string name="cat_isExtremeMode_desc">Låser dina val under Stäng av och Reel-gränser för gott</string>
     <string name="cat_sec_keep_messages">Behåll meddelanden</string>
-    <string name="cat_keepUnsentMessages_desc">Meddelanden som andra ångrar förblir läsbara</string>
+    <string name="cat_keepUnsentMessages_desc">Ångrade meddelanden förblir läsbara</string>
     <string name="cat_keepUnsentInChat_desc">Av: bara listan Ångrade meddelanden sparar dem</string>
     <string name="cat_showUnsentIndicator_desc">Visar vart och ett i rött</string>
     <string name="cat_keepEditHistory_desc">Tryck på ”Redigerat” för att se dem</string>

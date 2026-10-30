@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">Mode extrême</string>
     <string name="cat_isExtremeMode_desc">Verrouille définitivement vos choix « Désactiver » et vos limites de reels</string>
     <string name="cat_sec_keep_messages">Conserver les messages</string>
-    <string name="cat_keepUnsentMessages_desc">Les messages annulés par les autres restent lisibles</string>
+    <string name="cat_keepUnsentMessages_desc">Les messages annulés restent lisibles</string>
     <string name="cat_keepUnsentInChat_desc">Désactivé : seule la liste Messages annulés les garde</string>
     <string name="cat_showUnsentIndicator_desc">Affiche chacun en rouge</string>
     <string name="cat_keepEditHistory_desc">Touchez « Modifié » pour les voir</string>

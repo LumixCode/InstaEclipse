@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">Tryb ekstremalny</string>
     <string name="cat_isExtremeMode_desc">Na stałe blokuje wybory w „Wyłącz” i limitach rolek</string>
     <string name="cat_sec_keep_messages">Zachowuj wiadomości</string>
-    <string name="cat_keepUnsentMessages_desc">Wiadomości cofnięte przez innych można dalej czytać</string>
+    <string name="cat_keepUnsentMessages_desc">Cofnięte wiadomości można dalej czytać</string>
     <string name="cat_keepUnsentInChat_desc">Gdy wył.: są tylko na liście „Cofnięte wiadomości”</string>
     <string name="cat_showUnsentIndicator_desc">Pokazuje każdą na czerwono</string>
     <string name="cat_keepEditHistory_desc">Dotknij „Edytowano”, aby je zobaczyć</string>

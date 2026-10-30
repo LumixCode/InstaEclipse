@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">الوضع المتطرف</string>
     <string name="cat_isExtremeMode_desc">يقفل اختياراتك في «إيقاف» و«حدود الريلز» نهائيًا</string>
     <string name="cat_sec_keep_messages">الاحتفاظ بالرسائل</string>
-    <string name="cat_keepUnsentMessages_desc">تبقى الرسائل التي يلغي الآخرون إرسالها قابلة للقراءة</string>
+    <string name="cat_keepUnsentMessages_desc">تبقى الرسائل الملغى إرسالها قابلة للقراءة</string>
     <string name="cat_keepUnsentInChat_desc">عند الإيقاف: تحتفظ بها قائمة «الرسائل الملغاة» فقط</string>
     <string name="cat_showUnsentIndicator_desc">يُظهر كل واحدة منها باللون الأحمر</string>
     <string name="cat_keepEditHistory_desc">اضغط على «تم التعديل» لرؤيتها</string>

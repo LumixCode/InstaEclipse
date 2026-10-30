@@ -96,7 +96,7 @@
     <string name="cat_isExtremeMode">Mode ekstrem</string>
     <string name="cat_isExtremeMode_desc">Mengunci pilihan Nonaktifkan dan batas reel Anda secara permanen</string>
     <string name="cat_sec_keep_messages">Simpan pesan</string>
-    <string name="cat_keepUnsentMessages_desc">Pesan yang dibatalkan orang lain tetap bisa dibaca</string>
+    <string name="cat_keepUnsentMessages_desc">Pesan yang dibatalkan tetap bisa dibaca</string>
     <string name="cat_keepUnsentInChat_desc">Nonaktif: pesan hanya disimpan di daftar Pesan yang dibatalkan</string>
     <string name="cat_showUnsentIndicator_desc">Menampilkan tiap pesan dengan warna merah</string>
     <string name="cat_keepEditHistory_desc">Ketuk “Diedit” untuk melihatnya</string>
