@@ -92,13 +92,14 @@ public class StoryInfoHook {
             }
 
             @Override
-            public void tap(CharSequence tapped, Object media, Context ctx) {
+            public void tap(CharSequence tapped, Object menu, Object media, Context ctx, Runnable resume) {
                 ensureGetters();
                 int which = which(tapped);
-                if (which == 0) showInfo(ctx, media);
-                else if (which == 1) showQuiz(ctx, media);
-                else if (which == 2) showPolls(ctx, media);
-                else if (which == 3) showSliders(ctx, media);
+                if (which == 0) showInfo(ctx, media, resume);
+                else if (which == 1) showQuiz(ctx, media, resume);
+                else if (which == 2) showPolls(ctx, media, resume);
+                else if (which == 3) showSliders(ctx, media, resume);
+                else resume.run();
             }
         });
         FeatureStatusTracker.setHooked("StoryInfo");
@@ -274,7 +275,7 @@ public class StoryInfoHook {
         return TimestampFormat.dialogDateTime(ctx, secs * 1000);
     }
 
-    private static void showInfo(Context ctx, Object media) {
+    private static void showInfo(Context ctx, Object media, Runnable resume) {
         IeDialog dlg = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_btn_story_info))
                 .message(I18n.t(ctx, R.string.ig_story_info_hint));
         int rows = 0;
@@ -374,7 +375,7 @@ public class StoryInfoHook {
             rows += row(dlg, ctx, R.string.ig_si_mention_request, I18n.t(ctx, R.string.ig_si_yes), null);
 
         if (rows == 0) dlg.message(I18n.t(ctx, R.string.ig_si_none));
-        dlg.show();
+        dlg.onDismiss(resume).show();
     }
 
     public static boolean addMusic(IeDialog dlg, Context ctx, Object media) {
@@ -452,7 +453,7 @@ public class StoryInfoHook {
         return out;
     }
 
-    private static void showQuiz(Context ctx, Object media) {
+    private static void showQuiz(Context ctx, Object media, Runnable resume) {
         IeDialog dlg = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_btn_quiz_answer));
         for (Object quiz : stickers(media, "story_quizs", "quiz_sticker")) {
             String question = str(quiz, "question");
@@ -465,11 +466,11 @@ public class StoryInfoHook {
             if (StoryInfoPolicy.anyPicked(choices))
                 dlg.view(note(dlg, ctx, "•  " + I18n.t(ctx, R.string.ig_si_your_answer)));
         }
-        dlg.show();
+        dlg.onDismiss(resume).show();
     }
 
-    private static void showPolls(Context ctx, Object media) {
-        pollDialog(ctx, stickers(media, "story_polls", "poll_sticker")).show();
+    private static void showPolls(Context ctx, Object media, Runnable resume) {
+        pollDialog(ctx, stickers(media, "story_polls", "poll_sticker")).onDismiss(resume).show();
     }
 
     static IeDialog pollDialog(Context ctx, List<Object> polls) {
@@ -491,7 +492,7 @@ public class StoryInfoHook {
         return dlg;
     }
 
-    private static void showSliders(Context ctx, Object media) {
+    private static void showSliders(Context ctx, Object media, Runnable resume) {
         IeDialog dlg = new IeDialog(ctx).title(I18n.t(ctx, R.string.ig_btn_slider_results));
         for (Object slider : stickers(media, "story_sliders", "slider_sticker")) {
             dlg.view(heading(dlg, ctx, StoryInfoPolicy.sliderHeading(slider)));
@@ -502,7 +503,7 @@ public class StoryInfoHook {
             Long count = StoryInfoPolicy.sliderVotes(slider);
             if (count != null) dlg.view(note(dlg, ctx, votesLine(ctx, count)));
         }
-        dlg.show();
+        dlg.onDismiss(resume).show();
     }
 
     private static String votesLine(Context ctx, long n) {

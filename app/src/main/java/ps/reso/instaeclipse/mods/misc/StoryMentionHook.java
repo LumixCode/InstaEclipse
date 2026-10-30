@@ -61,8 +61,8 @@ public class StoryMentionHook {
             }
 
             @Override
-            public void tap(CharSequence tapped, Object media, Context ctx) {
-                showMentionsDialog(ctx, resolveMentions(media));
+            public void tap(CharSequence tapped, Object menu, Object media, Context ctx, Runnable resume) {
+                showMentionsDialog(ctx, resolveMentions(media), resume);
             }
         });
         FeatureStatusTracker.setHooked("StoryMentions");
@@ -175,12 +175,13 @@ public class StoryMentionHook {
         return usernames;
     }
 
-    private static void showMentionsDialog(Context ctx, List<String> usernames) {
+    private static void showMentionsDialog(Context ctx, List<String> usernames, Runnable resume) {
         mainHandler.post(() -> {
             try {
-                mentionsDialog(ctx, usernames).show();
+                mentionsDialog(ctx, usernames).onDismiss(resume).show();
             } catch (Throwable t) {
                 ModuleLog.error("(IE|Mention) Could not show the mentions", t);
+                resume.run();
             }
         });
     }

@@ -340,8 +340,9 @@ public final class ManualStorySeenHook {
             return tapped != null && label().contentEquals(tapped);
         }
 
-        @Override public void tap(CharSequence tapped, Object media, Context ctx) {
+        @Override public void tap(CharSequence tapped, Object menu, Object media, Context ctx, Runnable resume) {
             markSeen(ctx, mediaId(media));
+            resume.run();
         }
     }
 

@@ -68,6 +68,7 @@ public final class StoryMenu {
 
         default void tap(CharSequence tapped, Object menu, Object media, Context ctx, Runnable resume) {
             tap(tapped, media, ctx);
+            resume.run();
         }
     }
 
@@ -361,20 +362,29 @@ public final class StoryMenu {
 
     private static Runnable resumeOf(XC_MethodHook.MethodHookParam param) {
         Member method = param.method;
-        if (!resumes.contains(method)) return NO_RESUME;
+        boolean labelled = resumes.contains(method);
+        DialogInterface.OnDismissListener viewer = labelled ? null : viewerListener(param.args);
+        if (!labelled && viewer == null) return NO_RESUME;
         Object self = param.thisObject;
-        Object[] args = StoryMenuRows.resumeArgs(param.args);
+        Object[] args = labelled ? StoryMenuRows.resumeArgs(param.args) : param.args;
         AtomicBoolean once = new AtomicBoolean();
         return () -> {
             if (!once.compareAndSet(false, true)) return;
             mainHandler.post(() -> {
                 try {
-                    XposedBridge.invokeOriginalMethod(method, self, args);
+                    if (labelled) XposedBridge.invokeOriginalMethod(method, self, args);
+                    else viewer.onDismiss(null);
+                    ModuleLog.detail("(IE|StoryMenu) Resumed the story through " + method.getName()
+                            + (labelled ? " (resume label)" : " (viewer listener)"));
                 } catch (Throwable t) {
                     ModuleLog.warn("(IE|StoryMenu) Could not resume the story: " + t);
                 }
             });
         };
+    }
+
+    private static DialogInterface.OnDismissListener viewerListener(Object[] args) {
+        return args.length > 0 && args[0] instanceof DialogInterface.OnDismissListener listener ? listener : null;
     }
 
     private static void wrapDialog(XC_MethodHook.MethodHookParam param) {

@@ -67,10 +67,14 @@ public class StoryLinksHook {
             }
 
             @Override
-            public void tap(CharSequence tapped, Object media, Context ctx) {
+            public void tap(CharSequence tapped, Object menu, Object media, Context ctx, Runnable resume) {
                 List<String> links = linksOf(media);
+                if (links.size() > 1) {
+                    showLinks(ctx, links, resume);
+                    return;
+                }
                 if (links.size() == 1) CopyFeedback.copy(ctx, "link", links.get(0), R.string.ig_toast_link_copied);
-                else if (!links.isEmpty()) showLinks(ctx, links);
+                resume.run();
             }
         });
         FeatureStatusTracker.setHooked("StoryLinks");
@@ -168,11 +172,12 @@ public class StoryLinksHook {
                 : I18n.t(app, R.string.ig_sticker_links_title) + " (" + count + ")";
     }
 
-    private static void showLinks(Context ctx, List<String> links) {
+    private static void showLinks(Context ctx, List<String> links, Runnable resume) {
         try {
-            linksDialog(ctx, links).show();
+            linksDialog(ctx, links).onDismiss(resume).show();
         } catch (Throwable t) {
             ModuleLog.error("(IE|StoryLinks) Could not show the story's links", t);
+            resume.run();
         }
     }
 
