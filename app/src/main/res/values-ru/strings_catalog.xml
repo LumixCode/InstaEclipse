@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">Разрешить скриншоты и запись экрана</string>
     <string name="cat_allowScreenshots_desc">Там, где Instagram их запрещает, например в исчезающих медиа</string>
     <string name="cat_permanentViewMode">Пересматривать одноразовые медиа</string>
-    <string name="cat_permanentViewMode_desc">Фото и видео на один или два просмотра открываются как обычные</string>
+    <string name="cat_permanentViewMode_desc">Фото и видео на один или два просмотра можно открывать снова и снова; остальные медиа не меняются</string>
     <string name="cat_sec_seen_online">Прочтение и «В сети»</string>
     <string name="cat_manualStorySeen_desc">Добавляет «Отметить как просмотренную» в меню ⋮ истории</string>
     <string name="cat_autoStorySeen_desc">Лайк, ответ, комментарий или реакция отправляют просмотр этой истории. Отменённый лайк ничего не отправляет</string>

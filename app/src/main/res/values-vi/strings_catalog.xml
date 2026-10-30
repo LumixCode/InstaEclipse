@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">Cho phép chụp và quay màn hình</string>
     <string name="cat_allowScreenshots_desc">Ở những nơi Instagram chặn, như phương tiện tự biến mất</string>
     <string name="cat_permanentViewMode">Xem lại phương tiện xem 1 lần</string>
-    <string name="cat_permanentViewMode_desc">Ảnh và video xem 1 lần, xem 2 lần mở như ảnh, video thường</string>
+    <string name="cat_permanentViewMode_desc">Ảnh và video xem 1 lần, xem 2 lần mở được nhiều lần; ảnh, video khác giữ nguyên</string>
     <string name="cat_sec_seen_online">Đã xem và trực tuyến</string>
     <string name="cat_manualStorySeen_desc">Thêm “Đánh dấu đã xem tin này” vào menu ⋮ của tin</string>
     <string name="cat_autoStorySeen_desc">Lượt thích, trả lời, bình luận hoặc bày tỏ cảm xúc sẽ gửi lượt xem của tin đó. Lượt thích bạn rút lại sẽ không gửi gì</string>

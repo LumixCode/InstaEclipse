@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">Permitir capturas e gravação de tela</string>
     <string name="cat_allowScreenshots_desc">Onde o Instagram bloqueia, como em mídias temporárias</string>
     <string name="cat_permanentViewMode">Rever mídia de visualização única</string>
-    <string name="cat_permanentViewMode_desc">Fotos e vídeos de visualização única ou com repetição abrem como os normais</string>
+    <string name="cat_permanentViewMode_desc">Fotos e vídeos de visualização única ou com repetição abrem quantas vezes quiser; os outros conteúdos ficam como estão</string>
     <string name="cat_sec_seen_online">Visto e online</string>
     <string name="cat_manualStorySeen_desc">Adiciona “Marcar este story como visto” ao menu ⋮ do story</string>
     <string name="cat_autoStorySeen_desc">Uma curtida, resposta, comentário ou reação envia a visualização daquele story. Uma curtida desfeita não envia nada</string>

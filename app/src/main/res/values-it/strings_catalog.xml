@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">Consenti screenshot e registrazione dello schermo</string>
     <string name="cat_allowScreenshots_desc">Dove Instagram li blocca, come nei contenuti effimeri</string>
     <string name="cat_permanentViewMode">Rivedi i «Visualizza una volta»</string>
-    <string name="cat_permanentViewMode_desc">Foto e video da vedere una o due volte si aprono come quelli normali</string>
+    <string name="cat_permanentViewMode_desc">Foto e video da vedere una o due volte si aprono più e più volte; gli altri contenuti restano come sono</string>
     <string name="cat_sec_seen_online">Visualizzato e online</string>
     <string name="cat_manualStorySeen_desc">Aggiunge «Segna questa storia come vista» al menu ⋮</string>
     <string name="cat_autoStorySeen_desc">Un Mi piace, una risposta, un commento o una reazione invia la visualizzazione di quella storia. Un Mi piace annullato non invia nulla</string>

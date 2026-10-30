@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">Allow screenshots and screen recording</string>
     <string name="cat_allowScreenshots_desc">Where Instagram blocks them, such as disappearing media</string>
     <string name="cat_permanentViewMode">Replay view-once media</string>
-    <string name="cat_permanentViewMode_desc">View-once and view-twice photos and videos open like normal ones</string>
+    <string name="cat_permanentViewMode_desc">View-once and view-twice photos and videos open again and again; other media stays as it is</string>
     <string name="cat_sec_seen_online">Seen and online</string>
     <string name="cat_manualStorySeen_desc">Adds “Mark this story as seen” to the story ⋮ menu</string>
     <string name="cat_autoStorySeen_desc">A like, reply, comment or reaction sends the view for that story. A like you take back sends nothing</string>

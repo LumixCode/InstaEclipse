@@ -12,7 +12,6 @@ import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
-import ps.reso.instaeclipse.utils.ghost.IdKeys;
 
 public class ViewOnceBadgeHook {
 
@@ -63,14 +62,14 @@ public class ViewOnceBadgeHook {
                 Object[] args = param.args;
                 if (args == null) return;
                 try {
-                    int modeIdx = -1;
                     for (int i = 0; i < args.length; i++) {
-                        if (GhostPermanentViewHook.PERMANENT.equals(args[i])) { modeIdx = i; break; }
+                        if (!GhostPermanentViewHook.PERMANENT.equals(args[i])) continue;
+                        String original = GhostPermanentViewHook.STASH.originalOf(args[i]);
+                        if (original == null) continue;
+                        ViewOnceBadgeMode.rewrite(original, args, i);
+                        ModuleLog.detail("(IE|VOBadge) showing the " + original + " icon on an unlocked photo or video");
+                        return;
                     }
-                    if (modeIdx < 0) return;
-
-                    List<Long> candidates = IdKeys.collect(args, ViewOnceStash::mediaKey);
-                    ViewOnceBadgeMode.rewrite(GhostPermanentViewHook.STASH.find(candidates), args, modeIdx);
                 } catch (Throwable t) {
                     ModuleLog.detail("(IE|VOBadge) badge update failed: " + t);
                 }

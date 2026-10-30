@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">Ekran görüntüsü və ekran yazısına icazə ver</string>
     <string name="cat_allowScreenshots_desc">Instagram-ın onları blokladığı yerlərdə, məsələn, yox olan mediada</string>
     <string name="cat_permanentViewMode">Bir dəfəlik medianı təkrar aç</string>
-    <string name="cat_permanentViewMode_desc">Bir və iki dəfəlik foto və videolar adi kimi açılır</string>
+    <string name="cat_permanentViewMode_desc">Bir və iki dəfəlik foto və videolar dəfələrlə açılır; digər medialar olduğu kimi qalır</string>
     <string name="cat_sec_seen_online">Oxunma və onlayn</string>
     <string name="cat_manualStorySeen_desc">Hekayənin ⋮ menyusuna «Bu hekayəni baxılmış kimi işarələ» əlavə edir</string>
     <string name="cat_autoStorySeen_desc">Bəyənmə, cavab, şərh və ya reaksiya həmin hekayə üçün baxışı göndərir. Geri aldığınız bəyənmə heç nə göndərmir</string>

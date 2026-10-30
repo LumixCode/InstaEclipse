@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">אפשר צילומי מסך והקלטת מסך</string>
     <string name="cat_allowScreenshots_desc">במקומות ש-Instagram חוסם אותם, כמו מדיה נעלמת</string>
     <string name="cat_permanentViewMode">צפה שוב במדיה חד-פעמית</string>
-    <string name="cat_permanentViewMode_desc">תמונות וסרטונים לצפייה חד-פעמית או דו-פעמית נפתחים כמו רגילים</string>
+    <string name="cat_permanentViewMode_desc">תמונות וסרטונים לצפייה חד-פעמית או דו-פעמית נפתחים שוב ושוב; שאר המדיה נשארת כמו שהיא</string>
     <string name="cat_sec_seen_online">צפייה ומצב מחובר</string>
     <string name="cat_manualStorySeen_desc">מוסיף \"סמן את הסטורי הזה כנצפה\" לתפריט ⋮ של הסטורי</string>
     <string name="cat_autoStorySeen_desc">לייק, תשובה, תגובה או ריאקשן שולחים את הצפייה בסטורי הזה. לייק שביטלת לא שולח כלום</string>

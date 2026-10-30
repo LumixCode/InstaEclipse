@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">Izinkan tangkapan layar dan rekam layar</string>
     <string name="cat_allowScreenshots_desc">Di tempat Instagram memblokirnya, seperti media yang menghilang</string>
     <string name="cat_permanentViewMode">Putar ulang media sekali lihat</string>
-    <string name="cat_permanentViewMode_desc">Foto dan video sekali lihat dan dua kali lihat terbuka seperti biasa</string>
+    <string name="cat_permanentViewMode_desc">Foto dan video sekali lihat dan dua kali lihat bisa dibuka berulang kali; media lainnya tidak diubah</string>
     <string name="cat_sec_seen_online">Dilihat dan online</string>
     <string name="cat_manualStorySeen_desc">Menambahkan “Tandai cerita ini sudah dilihat” ke menu ⋮ cerita</string>
     <string name="cat_autoStorySeen_desc">Suka, balasan, komentar, atau reaksi mengirim tayangan untuk cerita itu. Suka yang Anda batalkan tidak mengirim apa pun</string>

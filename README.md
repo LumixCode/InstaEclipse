@@ -194,7 +194,7 @@ The whole menu, grouped the way it is inside Instagram. Option names match the m
 | Don't report screenshots | The sender isn't told when you screenshot disappearing media |
 | Open view-once secretly | The sender isn't told that you opened it |
 | Allow screenshots and screen recording | Also where Instagram blocks them, such as disappearing media |
-| Replay view-once media | View-once and view-twice photos and videos open like normal ones |
+| Replay view-once media | View-once and view-twice photos and videos open again and again; other media stays as it is |
 | ✨ Mark stories seen by hand | With View stories anonymously on, *Mark this story as seen* in the story ⋮ menu sends the view for that one story |
 | ✨ Mark stories seen when you interact | With View stories anonymously on, a like, reply, comment or reaction sends the view for that one story, once. With Wait before sending likes on, the view goes out just before the like, and a like you take back sends nothing |
 | ✨ Send Seen in chosen chats | With Hide Seen on, the chats you choose still get Seen. Manage them in one list |

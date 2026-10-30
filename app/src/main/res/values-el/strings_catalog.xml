@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">Να επιτρέπονται στιγμιότυπα και εγγραφή οθόνης</string>
     <string name="cat_allowScreenshots_desc">Όπου τα μπλοκάρει το Instagram, π.χ. σε εξαφανιζόμενα πολυμέσα</string>
     <string name="cat_permanentViewMode">Επανάληψη πολυμέσων μίας προβολής</string>
-    <string name="cat_permanentViewMode_desc">Φωτογραφίες και βίντεο μίας ή δύο προβολών ανοίγουν σαν κανονικά</string>
+    <string name="cat_permanentViewMode_desc">Φωτογραφίες και βίντεο μίας ή δύο προβολών ανοίγουν ξανά και ξανά· τα υπόλοιπα μέσα μένουν όπως είναι</string>
     <string name="cat_sec_seen_online">Ανάγνωση και παρουσία</string>
     <string name="cat_manualStorySeen_desc">Προσθέτει «Σήμανση ως προβεβλημένης» στο μενού ⋮ ιστορίας</string>
     <string name="cat_autoStorySeen_desc">Ένα like, μια απάντηση, ένα σχόλιο ή μια αντίδραση στέλνει την προβολή για αυτή την ιστορία. Ένα like που παίρνετε πίσω δεν στέλνει τίποτα</string>

@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">Ekran görüntüsü ve ekran kaydına izin ver</string>
     <string name="cat_allowScreenshots_desc">Instagram\'ın engellediği yerlerde, örneğin kaybolan medyada</string>
     <string name="cat_permanentViewMode">Tek seferlik medyayı tekrar aç</string>
-    <string name="cat_permanentViewMode_desc">Bir kez ve iki kez görüntülenebilen fotoğraf ve videolar normal olanlar gibi açılır</string>
+    <string name="cat_permanentViewMode_desc">Bir kez ve iki kez görüntülenebilen fotoğraf ve videolar tekrar tekrar açılır; diğer medyalar olduğu gibi kalır</string>
     <string name="cat_sec_seen_online">Görüldü ve çevrimiçi</string>
     <string name="cat_manualStorySeen_desc">Hikaye ⋮ menüsüne “Hikayeyi görüldü olarak işaretle” ekler</string>
     <string name="cat_autoStorySeen_desc">Beğeni, yanıt, yorum veya tepki o hikayenin görüntülenmesini gönderir. Geri aldığınız beğeni hiçbir şey göndermez</string>

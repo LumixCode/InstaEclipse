@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">السماح بلقطات الشاشة وتسجيل الشاشة</string>
     <string name="cat_allowScreenshots_desc">حيث يمنعها Instagram، مثل الوسائط المختفية</string>
     <string name="cat_permanentViewMode">إعادة مشاهدة العرض لمرة واحدة</string>
-    <string name="cat_permanentViewMode_desc">تُفتح صور وفيديوهات العرض لمرة واحدة أو لمرتين كأي وسائط عادية</string>
+    <string name="cat_permanentViewMode_desc">تُفتح صور وفيديوهات العرض لمرة واحدة أو لمرتين مرارًا وتكرارًا، وتبقى الوسائط الأخرى كما هي</string>
     <string name="cat_sec_seen_online">المشاهدة وحالة الاتصال</string>
     <string name="cat_manualStorySeen_desc">يضيف «تحديد القصة كمُشاهَدة» إلى قائمة ⋮ في القصة</string>
     <string name="cat_autoStorySeen_desc">الإعجاب أو الرد أو التعليق أو التفاعل يرسل المشاهدة لتلك القصة. الإعجاب الذي تتراجع عنه لا يرسل شيئًا</string>

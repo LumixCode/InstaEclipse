@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">允许截图和录屏</string>
     <string name="cat_allowScreenshots_desc">适用于 Instagram 禁止截图的地方，例如阅后即焚的媒体</string>
     <string name="cat_permanentViewMode">重播“查看一次”的媒体</string>
-    <string name="cat_permanentViewMode_desc">“查看一次”和“查看两次”的照片和视频可以像普通内容一样打开</string>
+    <string name="cat_permanentViewMode_desc">“查看一次”和“查看两次”的照片和视频可以反复打开；其他内容保持不变</string>
     <string name="cat_sec_seen_online">已读与在线</string>
     <string name="cat_manualStorySeen_desc">在快拍的 ⋮ 菜单中添加“将此快拍标记为已看”</string>
     <string name="cat_autoStorySeen_desc">点赞、回复、评论或回应时，会发送该快拍的观看记录。已取消的赞不会发送任何内容</string>

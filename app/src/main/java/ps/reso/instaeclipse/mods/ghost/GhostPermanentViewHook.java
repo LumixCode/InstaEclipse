@@ -95,14 +95,19 @@ public class GhostPermanentViewHook {
                         if (f.getType() != String.class) continue;
                         f.setAccessible(true);
                         try {
-                            String original = ViewOnceStash.original((String) f.get(result));
-                            if (original == null) continue;
+                            String mode = (String) f.get(result);
+                            String original = ViewOnceStash.original(mode);
+                            if (original == null) {
+                                if (PERMANENT.equals(mode)) ModuleLog.detail("(IE|ViewOnceMedia) kept mode=permanent as it is");
+                                continue;
+                            }
                             if (seenCount < 0) seenCount = seenCount(result);
-                            if (seenCount >= ("once".equals(original) ? 1 : 2)) return;
-                            String mediaId = mediaId(result);
-                            STASH.remember(mediaId, original);
-                            ModuleLog.detail("(IE|ViewOnceMedia) mode=" + original + " media=" + mediaId);
-                            f.set(result, PERMANENT);
+                            if (seenCount >= ("once".equals(original) ? 1 : 2)) {
+                                ModuleLog.detail("(IE|ViewOnceMedia) left mode=" + original + " as it is, already opened " + seenCount + "x");
+                                return;
+                            }
+                            f.set(result, STASH.mark(PERMANENT, original));
+                            ModuleLog.detail("(IE|ViewOnceMedia) unlocked mode=" + original + " media=" + mediaId(result));
                         } catch (Throwable ignored) {}
                     }
                 }

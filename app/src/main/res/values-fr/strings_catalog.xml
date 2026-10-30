@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">Autoriser les captures et l\'enregistrement d\'écran</string>
     <string name="cat_allowScreenshots_desc">Là où Instagram les bloque, comme les médias éphémères</string>
     <string name="cat_permanentViewMode">Revoir les médias à vue unique</string>
-    <string name="cat_permanentViewMode_desc">Les photos et vidéos à voir une ou deux fois s\'ouvrent comme les autres</string>
+    <string name="cat_permanentViewMode_desc">Les photos et vidéos à voir une ou deux fois s\'ouvrent encore et encore ; les autres médias ne changent pas</string>
     <string name="cat_sec_seen_online">Vu et en ligne</string>
     <string name="cat_manualStorySeen_desc">Ajoute « Marquer cette story comme vue » au menu ⋮ des stories</string>
     <string name="cat_autoStorySeen_desc">Un J\'aime, une réponse, un commentaire ou une réaction envoie la vue de cette story. Un J\'aime annulé n\'envoie rien</string>

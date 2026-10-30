@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">Screenshots und Bildschirmaufnahmen erlauben</string>
     <string name="cat_allowScreenshots_desc">Wo Instagram sie blockiert, etwa bei verschwindenden Medien</string>
     <string name="cat_permanentViewMode">Einmal-Medien erneut ansehen</string>
-    <string name="cat_permanentViewMode_desc">Fotos und Videos zum einmaligen oder zweimaligen Ansehen öffnen sich wie normale</string>
+    <string name="cat_permanentViewMode_desc">Fotos und Videos zum einmaligen oder zweimaligen Ansehen lassen sich beliebig oft öffnen; andere Medien bleiben unverändert</string>
     <string name="cat_sec_seen_online">Gesehen und online</string>
     <string name="cat_manualStorySeen_desc">Fügt „Diese Story als gesehen markieren“ zum ⋮-Menü der Story hinzu</string>
     <string name="cat_autoStorySeen_desc">Ein Like, eine Antwort, ein Kommentar oder eine Reaktion markiert diese Story als gesehen. Ein zurückgenommenes Like sendet nichts</string>

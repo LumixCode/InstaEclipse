@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">Permitir capturas y grabación de pantalla</string>
     <string name="cat_allowScreenshots_desc">Donde Instagram las bloquea, como en el contenido que desaparece</string>
     <string name="cat_permanentViewMode">Repetir contenido «ver una vez»</string>
-    <string name="cat_permanentViewMode_desc">Las fotos y vídeos de ver una o dos veces se abren como los normales</string>
+    <string name="cat_permanentViewMode_desc">Las fotos y vídeos de ver una o dos veces se abren una y otra vez; el resto del contenido no cambia</string>
     <string name="cat_sec_seen_online">Visto y en línea</string>
     <string name="cat_manualStorySeen_desc">Añade «Marcar esta historia como vista» al menú ⋮ de la historia</string>
     <string name="cat_autoStorySeen_desc">Un me gusta, una respuesta, un comentario o una reacción envía la visualización de esa historia. Un me gusta que retiras no envía nada</string>

@@ -18,7 +18,7 @@
     <string name="cat_allowScreenshots">Tillåt skärmdumpar och skärminspelning</string>
     <string name="cat_allowScreenshots_desc">Där Instagram blockerar dem, till exempel i försvinnande media</string>
     <string name="cat_permanentViewMode">Spela upp engångsmedia igen</string>
-    <string name="cat_permanentViewMode_desc">Foton och videor som visas en eller två gånger öppnas som vanliga</string>
+    <string name="cat_permanentViewMode_desc">Foton och videor som visas en eller två gånger går att öppna om och om igen; övriga medier lämnas som de är</string>
     <string name="cat_sec_seen_online">Sett och online</string>
     <string name="cat_manualStorySeen_desc">Lägger till ”Markera storyn som sedd” i storyns ⋮-meny</string>
     <string name="cat_autoStorySeen_desc">En gillning, ett svar, en kommentar eller en reaktion skickar visningen av den storyn. En gillning du tar tillbaka skickar ingenting</string>
