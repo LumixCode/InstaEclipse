@@ -21,6 +21,7 @@
     <string name="cat_permanentViewMode_desc">תמונות וסרטונים לצפייה חד-פעמית או דו-פעמית נפתחים כמו רגילים</string>
     <string name="cat_sec_seen_online">צפייה ומצב מחובר</string>
     <string name="cat_manualStorySeen_desc">מוסיף \"סמן את הסטורי הזה כנצפה\" לתפריט ⋮ של הסטורי</string>
+    <string name="cat_autoStorySeen_desc">לייק, תשובה, תגובה או ריאקשן שולחים את הצפייה בסטורי הזה. לייק שביטלת לא שולח כלום</string>
     <string name="cat_readReceiptChats_desc_list">צ\'אטים נבחרים עדיין מקבלים אישורי קריאה. נהל אותם ב\"צ\'אטים שמקבלים אישורי קריאה\"</string>
     <string name="cat_airplaneMode">להיראות לא מחובר</string>
     <string name="cat_airplaneMode_desc">מסתיר את \"פעיל עכשיו\"; הודעות ושיחות מפסיקות להגיע בזמן אמת</string>

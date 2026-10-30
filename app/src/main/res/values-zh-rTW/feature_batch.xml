@@ -4,4 +4,5 @@
     <string name="ig_feature_show_unsent_button">在聊天選單顯示「已收回訊息」</string>
     <string name="ig_feature_following_follow_status">顯示哪些人也追蹤你</string>
     <string name="ig_feature_manual_story_seen">手動將限時動態標記為已看</string>
+    <string name="ig_feature_auto_story_seen">互動時將限時動態標記為已看</string>
 </resources>

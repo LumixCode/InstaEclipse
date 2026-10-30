@@ -21,6 +21,7 @@
     <string name="cat_permanentViewMode_desc">Ảnh và video xem 1 lần, xem 2 lần mở như ảnh, video thường</string>
     <string name="cat_sec_seen_online">Đã xem và trực tuyến</string>
     <string name="cat_manualStorySeen_desc">Thêm “Đánh dấu đã xem tin này” vào menu ⋮ của tin</string>
+    <string name="cat_autoStorySeen_desc">Lượt thích, trả lời, bình luận hoặc bày tỏ cảm xúc sẽ gửi lượt xem của tin đó. Lượt thích bạn rút lại sẽ không gửi gì</string>
     <string name="cat_readReceiptChats_desc_list">Đoạn chat đã chọn vẫn nhận Đã xem. Quản lý trong “Đoạn chat nhận xác nhận đã đọc”</string>
     <string name="cat_airplaneMode">Hiện ngoại tuyến</string>
     <string name="cat_airplaneMode_desc">Ẩn “Đang hoạt động”; tin nhắn và cuộc gọi không còn đến theo thời gian thực</string>

@@ -326,6 +326,8 @@ public class FeatureManager {
                 "UnsentIndicator", R.string.ig_feature_unsent_indicator);
         reg(FeatureFlags.manualStorySeen && FeatureFlags.isGhostStory,
                 "ManualStorySeen", R.string.ig_feature_manual_story_seen);
+        reg(FeatureFlags.autoStorySeen && FeatureFlags.isGhostStory,
+                "AutoStorySeen", R.string.ig_feature_auto_story_seen);
         reg(FeatureFlags.showFollowingFollowStatus, "FollowingFollowStatus", R.string.ig_feature_following_follow_status);
         reg(FeatureFlags.hideChatMenuButton,   "ChatMenuTripleTap",    R.string.ig_hide_chat_menu_button);
         reg(FeatureFlags.isAdBlockEnabled,     "AdBlocker",            R.string.ig_dialog_ad_block_ads);

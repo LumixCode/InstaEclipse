@@ -4,4 +4,5 @@
     <string name="ig_feature_show_unsent_button">Показывать «Удалённые сообщения» в меню чата</string>
     <string name="ig_feature_following_follow_status">Показывать взаимные подписки</string>
     <string name="ig_feature_manual_story_seen">Ручная отметка просмотра историй</string>
+    <string name="ig_feature_auto_story_seen">Отмечать истории просмотренными при взаимодействии</string>
 </resources>

@@ -4,4 +4,5 @@
     <string name="ig_feature_show_unsent_button">Pokazuj „Cofnięte wiadomości” w menu czatu</string>
     <string name="ig_feature_following_follow_status">Pokazuj, kto Cię obserwuje</string>
     <string name="ig_feature_manual_story_seen">Ręczne oznaczanie wyświetleń</string>
+    <string name="ig_feature_auto_story_seen">Oznaczaj wyświetlenie przy interakcji</string>
 </resources>

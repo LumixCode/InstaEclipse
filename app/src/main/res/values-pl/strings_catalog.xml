@@ -21,6 +21,7 @@
     <string name="cat_permanentViewMode_desc">Zdjęcia i filmy do jednorazowego lub dwukrotnego wyświetlenia otwierają się jak zwykłe</string>
     <string name="cat_sec_seen_online">Odczyt i status online</string>
     <string name="cat_manualStorySeen_desc">Dodaje „Oznacz relację jako wyświetloną” do menu ⋮ relacji</string>
+    <string name="cat_autoStorySeen_desc">Polubienie, odpowiedź, komentarz lub reakcja wysyłają wyświetlenie tej relacji. Cofnięte polubienie nie wysyła nic</string>
     <string name="cat_readReceiptChats_desc_list">W wybranych czatach odczyt jest nadal widoczny. Zarządzaj nimi w „Czaty z potwierdzeniami odczytu”</string>
     <string name="cat_airplaneMode">Udawaj offline</string>
     <string name="cat_airplaneMode_desc">Ukrywa status aktywności; wiadomości i połączenia przestają docierać na bieżąco</string>

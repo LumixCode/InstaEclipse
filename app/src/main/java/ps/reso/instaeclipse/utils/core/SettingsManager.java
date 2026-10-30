@@ -65,6 +65,7 @@ public class SettingsManager {
         editor.putBoolean("isGhostViewOnce", FeatureFlags.isGhostViewOnce);
         editor.putBoolean("isGhostStory", FeatureFlags.isGhostStory);
         editor.putBoolean("manualStorySeen", FeatureFlags.manualStorySeen);
+        editor.putBoolean("autoStorySeen", FeatureFlags.autoStorySeen);
         editor.putBoolean("isGhostLive", FeatureFlags.isGhostLive);
         editor.putBoolean("allowScreenshots", FeatureFlags.allowScreenshots);
         editor.putBoolean("keepEphemeralMessages", FeatureFlags.keepEphemeralMessages);
@@ -305,6 +306,7 @@ public class SettingsManager {
         FeatureFlags.isGhostViewOnce = prefs.getBoolean("isGhostViewOnce", false);
         FeatureFlags.isGhostStory = prefs.getBoolean("isGhostStory", false);
         FeatureFlags.manualStorySeen = prefs.getBoolean("manualStorySeen", false);
+        FeatureFlags.autoStorySeen = prefs.getBoolean("autoStorySeen", false);
         FeatureFlags.isGhostLive = prefs.getBoolean("isGhostLive", false);
         FeatureFlags.allowScreenshots = prefs.getBoolean("allowScreenshots", false);
         FeatureFlags.keepEphemeralMessages = prefs.getBoolean("keepEphemeralMessages", false);

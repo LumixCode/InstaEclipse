@@ -21,6 +21,7 @@
     <string name="cat_permanentViewMode_desc">Les photos et vidéos à voir une ou deux fois s\'ouvrent comme les autres</string>
     <string name="cat_sec_seen_online">Vu et en ligne</string>
     <string name="cat_manualStorySeen_desc">Ajoute « Marquer cette story comme vue » au menu ⋮ des stories</string>
+    <string name="cat_autoStorySeen_desc">Un J\'aime, une réponse, un commentaire ou une réaction envoie la vue de cette story. Un J\'aime annulé n\'envoie rien</string>
     <string name="cat_readReceiptChats_desc_list">Le « Vu » reste envoyé aux discussions choisies. Gérez-les dans « Discussions avec accusés de lecture »</string>
     <string name="cat_airplaneMode">Paraître hors ligne</string>
     <string name="cat_airplaneMode_desc">Masque « En ligne » ; les messages et appels n\'arrivent plus en direct</string>

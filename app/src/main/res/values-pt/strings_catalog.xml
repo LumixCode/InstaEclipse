@@ -21,6 +21,7 @@
     <string name="cat_permanentViewMode_desc">Fotos e vídeos de visualização única ou com repetição abrem como os normais</string>
     <string name="cat_sec_seen_online">Visto e online</string>
     <string name="cat_manualStorySeen_desc">Adiciona “Marcar este story como visto” ao menu ⋮ do story</string>
+    <string name="cat_autoStorySeen_desc">Uma curtida, resposta, comentário ou reação envia a visualização daquele story. Uma curtida desfeita não envia nada</string>
     <string name="cat_readReceiptChats_desc_list">As conversas escolhidas ainda recebem o Visto. Gerencie em “Conversas com confirmação de leitura”</string>
     <string name="cat_airplaneMode">Aparecer offline</string>
     <string name="cat_airplaneMode_desc">Oculta “Ativo agora”; mensagens e chamadas param de chegar em tempo real</string>

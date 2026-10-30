@@ -21,6 +21,7 @@
     <string name="cat_permanentViewMode_desc">Las fotos y vídeos de ver una o dos veces se abren como los normales</string>
     <string name="cat_sec_seen_online">Visto y en línea</string>
     <string name="cat_manualStorySeen_desc">Añade «Marcar esta historia como vista» al menú ⋮ de la historia</string>
+    <string name="cat_autoStorySeen_desc">Un me gusta, una respuesta, un comentario o una reacción envía la visualización de esa historia. Un me gusta que retiras no envía nada</string>
     <string name="cat_readReceiptChats_desc_list">Los chats elegidos siguen recibiendo el «Visto». Gestiónalos en «Chats con confirmaciones de lectura»</string>
     <string name="cat_airplaneMode">Aparecer desconectado</string>
     <string name="cat_airplaneMode_desc">Oculta «Activo ahora»; los mensajes y las llamadas dejan de llegar en tiempo real</string>

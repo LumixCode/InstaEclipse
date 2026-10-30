@@ -4,4 +4,5 @@
     <string name="ig_feature_show_unsent_button">„Zurückgezogene Nachrichten“ im Chatmenü anzeigen</string>
     <string name="ig_feature_following_follow_status">Anzeigen, wer dir zurückfolgt</string>
     <string name="ig_feature_manual_story_seen">Storys manuell als gesehen markieren</string>
+    <string name="ig_feature_auto_story_seen">Storys bei Interaktion als gesehen markieren</string>
 </resources>

@@ -4,4 +4,5 @@
     <string name="ig_feature_show_unsent_button">Tampilkan “Pesan yang dibatalkan” di menu obrolan</string>
     <string name="ig_feature_following_follow_status">Tampilkan siapa yang mengikuti balik</string>
     <string name="ig_feature_manual_story_seen">Tandai cerita dilihat secara manual</string>
+    <string name="ig_feature_auto_story_seen">Tandai cerita dilihat saat berinteraksi</string>
 </resources>

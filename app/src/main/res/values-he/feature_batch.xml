@@ -4,4 +4,5 @@
     <string name="ig_feature_show_unsent_button">הצג \"הודעות שבוטלו\" בתפריט הצ\'אט</string>
     <string name="ig_feature_following_follow_status">הצג מי עוקב אחריך בחזרה</string>
     <string name="ig_feature_manual_story_seen">סמן סטוריז כנצפו ידנית</string>
+    <string name="ig_feature_auto_story_seen">סמן סטוריז כנצפו כשאתה מגיב אליהם</string>
 </resources>

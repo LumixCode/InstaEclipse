@@ -3,6 +3,8 @@ package ps.reso.instaeclipse.mods.ghost;
 import ps.reso.instaeclipse.xposedcompat.AndroidAppHelper;
 import android.app.Activity;
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.widget.Toast;
 
@@ -20,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -44,16 +47,21 @@ import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.toast.IeToast;
 
 public final class ManualStorySeenHook {
-    private static final String SESSION = "com.instagram.common.session.UserSession";
-    private static final String REEL_ITEM = "com.instagram.model.reels.ReelItem";
+    static final String SESSION = "com.instagram.common.session.UserSession";
+    static final String REEL_ITEM = "com.instagram.model.reels.ReelItem";
     private static final int MENU_ORDER = 3;
+    private static final long RETRY_MS = 1500;
+    private static final int SENT_LIMIT = 256;
     private static final String CACHE_PIPELINE = "ManualStorySeen_pipeline_v1";
     private static final String CACHE_TRACKERS = "ManualStorySeen_trackers_v1";
     private static final ManualStorySeenPolicy approvals = new ManualStorySeenPolicy();
     private static final ThreadLocal<Dispatch> dispatch = new ThreadLocal<>();
     private static final AtomicBoolean loggedRejection = new AtomicBoolean();
+    private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    private static volatile ManualStorySeenHook instance;
     private final ManualStorySeenPolicy.Tracking tracking = new ManualStorySeenPolicy.Tracking();
     private final Map<Object, LinkedHashMap<String, Receipt>> receipts = new WeakHashMap<>();
+    private final Set<String> sent = new LinkedHashSet<>();
     private Constructor<?> itemConstructor;
     private Method populateItem;
     private Method getStore;
@@ -91,6 +99,7 @@ public final class ManualStorySeenHook {
         try {
             resolveReceiptPipeline(loader);
             receiptPipelineReady = true;
+            instance = this;
             ModuleLog.detail("(IE|ManualStorySeen) receipt pipeline installed");
         } catch (Throwable t) {
             ModuleLog.error("(IE|ManualStorySeen) Could not turn on \"Mark as seen\" for stories: not supported by this Instagram version");
@@ -132,6 +141,7 @@ public final class ManualStorySeenHook {
                 return false;
             }
             ManualStorySeenPolicy.stripMarker(request, uri, clean);
+            ModuleLog.detail("(IE|ManualStorySeen) story seen request let through");
             notifyResult(token, R.string.ig_manual_story_seen_sent);
             return true;
         } catch (Throwable t) {
@@ -286,7 +296,7 @@ public final class ManualStorySeenHook {
 
                 @Override protected void beforeHookedMethod(MethodHookParam p) {
                     HookFrames.Frame frame = frames.enter();
-                    frame.put("manual_story_previous", tracking.enter(enabled(), () -> mediaId(p.args[index])));
+                    frame.put("manual_story_previous", tracking.enter(capturing(), () -> mediaId(p.args[index])));
                 }
                 @Override protected void afterHookedMethod(MethodHookParam p) {
                     tracking.exit(frames.exit().get("manual_story_previous"));
@@ -300,7 +310,7 @@ public final class ManualStorySeenHook {
         XposedBridge.hookMethod(populateItem, new XC_MethodHook() {
             @Override protected void beforeHookedMethod(MethodHookParam p) {
                 String id = tracking.current();
-                if (!enabled() || dispatch.get() != null || id == null || p.args[graphIndex] == null
+                if (!capturing() || dispatch.get() != null || id == null || p.args[graphIndex] == null
                         || p.args[sessionIndex] == null || !(p.args[reelIndex] instanceof String reelId)) return;
                 synchronized (receipts) {
                     LinkedHashMap<String, Receipt> account = receipts.computeIfAbsent(p.args[sessionIndex], ignored -> new LinkedHashMap<>());
@@ -370,11 +380,44 @@ public final class ManualStorySeenHook {
         return new Target(session, receipt);
     }
 
-    private void markSeen(Context context, String id) {
+    public static boolean autoEnabled() { return FeatureFlags.autoStorySeen && FeatureFlags.isGhostStory; }
+
+    public static void interacted(String id, String action) {
+        ManualStorySeenHook hook = instance;
+        if (hook == null || id == null || !autoEnabled()) return;
+        if (Looper.myLooper() == Looper.getMainLooper()) hook.autoMark(id, action, true);
+        else MAIN.post(() -> hook.autoMark(id, action, true));
+    }
+
+    private void autoMark(String id, String action, boolean retry) {
+        try {
+            if (!autoEnabled()) return;
+            Target target = target(id, null);
+            if (target == null) {
+                ModuleLog.detail("(IE|ManualStorySeen) no receipt for this story after " + action
+                        + (retry ? ", trying once more" : ", so no view was sent"));
+                if (retry) MAIN.postDelayed(() -> autoMark(id, action, false), RETRY_MS);
+                return;
+            }
+            if (sent.contains(sentKey(target.session(), id))) {
+                ModuleLog.detail("(IE|ManualStorySeen) story already marked as seen, nothing sent after " + action);
+                return;
+            }
+            if (markSeen(null, id)) ModuleLog.line("(IE|ManualStorySeen) Story marked as seen after " + action);
+        } catch (Throwable t) {
+            ModuleLog.warn("(IE|ManualStorySeen) Could not mark the story as seen after " + action + ": " + t);
+        }
+    }
+
+    private static String sentKey(Object session, String id) {
+        return UnsentIdentity.account(session) + ":" + id;
+    }
+
+    private boolean markSeen(Context context, String id) {
         if (!receiptPipelineReady) {
             if (actionDiagnostics.getAndIncrement() < 3) ModuleLog.warn("(IE|ManualStorySeen) \"Mark as seen\" is not available on this Instagram version");
             toast(context, R.string.ig_manual_story_seen_unsupported);
-            return;
+            return false;
         }
         String token = null;
         String stage = "receipt lookup";
@@ -400,6 +443,9 @@ public final class ManualStorySeenHook {
             stage = "native dispatch";
             sendItem.invoke(getStore.invoke(null, session), item);
             if (!active.tagged) throw new IllegalStateException("Request was not tagged");
+            sent.add(sentKey(session, id));
+            while (sent.size() > SENT_LIMIT) sent.remove(sent.iterator().next());
+            return true;
         } catch (Throwable t) {
             if (token != null) {
                 approvals.revoke(token);
@@ -408,12 +454,15 @@ public final class ManualStorySeenHook {
             toast(context, R.string.ig_manual_story_seen_unavailable);
             ModuleLog.error("(IE|ManualStorySeen) Could not mark the story as seen: " + t.getClass().getSimpleName() + ": " + t.getMessage());
             ModuleLog.detail("(IE|ManualStorySeen) send failed at " + stage);
+            return false;
         } finally { dispatch.remove(); }
     }
 
     private static boolean enabled() { return FeatureFlags.manualStorySeen && FeatureFlags.isGhostStory; }
 
-    private static Object typedValue(Object object, String type, int depth) {
+    private static boolean capturing() { return enabled() || autoEnabled(); }
+
+    static Object typedValue(Object object, String type, int depth) {
         Set<Object> matches = Collections.newSetFromMap(new IdentityHashMap<>());
         collectTyped(object, type, depth, matches);
         return matches.size() == 1 ? matches.iterator().next() : null;
@@ -436,7 +485,7 @@ public final class ManualStorySeenHook {
         }
     }
 
-    private static String mediaId(Object reelItem) {
+    static String mediaId(Object reelItem) {
         try {
             Object value = reelItem.getClass().getMethod("getId").invoke(reelItem);
             return value instanceof String && !((String) value).isEmpty() ? (String) value : null;
@@ -444,6 +493,7 @@ public final class ManualStorySeenHook {
     }
 
     private static void toast(Context context, int message) {
+        if (context == null) return;
         IeToast.makeText(context, I18n.t(context, message), Toast.LENGTH_SHORT).show();
     }
 }

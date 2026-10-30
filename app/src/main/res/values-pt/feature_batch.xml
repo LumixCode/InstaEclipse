@@ -4,4 +4,5 @@
     <string name="ig_feature_show_unsent_button">Mostrar “Mensagens apagadas” no menu da conversa</string>
     <string name="ig_feature_following_follow_status">Mostrar quem segue você de volta</string>
     <string name="ig_feature_manual_story_seen">Marcar stories vistos manualmente</string>
+    <string name="ig_feature_auto_story_seen">Marcar stories como vistos ao interagir</string>
 </resources>

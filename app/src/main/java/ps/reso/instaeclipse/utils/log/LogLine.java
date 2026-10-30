@@ -142,6 +142,7 @@ public final class LogLine {
         NAMES.put("UnsentIndicator", "Unsent message marker");
         NAMES.put("ReadReceiptChat", "Read receipts per chat");
         NAMES.put("ManualStorySeen", "Mark story as seen");
+        NAMES.put("AutoStorySeen", "Mark story seen on interaction");
         NAMES.put("SearchHistory", "Don't save searches");
         NAMES.put("PROBE", "debug");
         NAMES.put("DistractUI", "Distraction-free mode");

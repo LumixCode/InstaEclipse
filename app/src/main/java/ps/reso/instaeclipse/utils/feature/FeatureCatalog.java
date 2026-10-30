@@ -248,6 +248,9 @@ public final class FeatureCatalog {
                             sw("manualStorySeen", R.string.ig_feature_manual_story_seen, R.drawable.ic_eye)
                                     .desc(R.string.cat_manualStorySeen_desc).requires("isGhostStory")
                                     .status("ManualStorySeen"),
+                            sw("autoStorySeen", R.string.ig_feature_auto_story_seen, R.drawable.ic_eye)
+                                    .desc(R.string.cat_autoStorySeen_desc).requires("isGhostStory")
+                                    .status("AutoStorySeen").words("like", "reply", "comment", "reaction"),
                             sw("readReceiptChats", R.string.ig_dialog_ghost_read_receipt_chats, R.drawable.ic_eye)
                                     .desc(R.string.cat_readReceiptChats_desc_list).requires("isGhostSeen")
                                     .status("ReadReceiptChats"),

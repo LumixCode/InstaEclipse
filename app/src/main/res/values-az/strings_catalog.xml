@@ -21,6 +21,7 @@
     <string name="cat_permanentViewMode_desc">Bir və iki dəfəlik foto və videolar adi kimi açılır</string>
     <string name="cat_sec_seen_online">Oxunma və onlayn</string>
     <string name="cat_manualStorySeen_desc">Hekayənin ⋮ menyusuna «Bu hekayəni baxılmış kimi işarələ» əlavə edir</string>
+    <string name="cat_autoStorySeen_desc">Bəyənmə, cavab, şərh və ya reaksiya həmin hekayə üçün baxışı göndərir. Geri aldığınız bəyənmə heç nə göndərmir</string>
     <string name="cat_readReceiptChats_desc_list">Seçilən söhbətlər yenə oxunma bildirişi alır. Onları «Oxunma bildirişi alan söhbətlər» bölməsində idarə edin</string>
     <string name="cat_airplaneMode">Oflayn görün</string>
     <string name="cat_airplaneMode_desc">«İndi aktiv» gizlənir; mesaj və zənglər anında gəlmir</string>

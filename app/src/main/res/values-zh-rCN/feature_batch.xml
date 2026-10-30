@@ -4,4 +4,5 @@
     <string name="ig_feature_show_unsent_button">在聊天菜单中显示“已撤回消息”</string>
     <string name="ig_feature_following_follow_status">显示谁回关了你</string>
     <string name="ig_feature_manual_story_seen">手动将快拍标记为已看</string>
+    <string name="ig_feature_auto_story_seen">互动时将快拍标记为已看</string>
 </resources>

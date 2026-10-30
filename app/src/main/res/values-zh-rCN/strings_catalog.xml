@@ -21,6 +21,7 @@
     <string name="cat_permanentViewMode_desc">“查看一次”和“查看两次”的照片和视频可以像普通内容一样打开</string>
     <string name="cat_sec_seen_online">已读与在线</string>
     <string name="cat_manualStorySeen_desc">在快拍的 ⋮ 菜单中添加“将此快拍标记为已看”</string>
+    <string name="cat_autoStorySeen_desc">点赞、回复、评论或回应时，会发送该快拍的观看记录。已取消的赞不会发送任何内容</string>
     <string name="cat_readReceiptChats_desc_list">所选聊天仍会收到已读。可在“会收到已读回执的聊天”中管理</string>
     <string name="cat_airplaneMode">显示为离线</string>
     <string name="cat_airplaneMode_desc">隐藏“在线”状态；消息和通话不再实时送达</string>

@@ -37,6 +37,7 @@ import ps.reso.instaeclipse.mods.ghost.EditHistoryHook;
 import ps.reso.instaeclipse.mods.ghost.GhostChannelMarkAsReadHook;
 import ps.reso.instaeclipse.mods.ghost.GhostDMMarkAsReadHook;
 import ps.reso.instaeclipse.mods.ghost.GhostDMSeenHook;
+import ps.reso.instaeclipse.mods.ghost.AutoStorySeenHook;
 import ps.reso.instaeclipse.mods.ghost.GhostEphemeralKeepHook;
 import ps.reso.instaeclipse.mods.ghost.GhostPermanentViewHook;
 import ps.reso.instaeclipse.mods.ghost.GhostScreenshotDetectionHook;
@@ -229,6 +230,7 @@ public class InstallPlan {
     static final int INTERCEPTOR_CHAIN_ENTRY = 103;
     static final int BACK_LEAVES_HOME_DISPATCHER = 104;
     static final int VOICE_USER_CACHE_TRACKER = 105;
+    static final int AUTO_STORY_SEEN_HOOK = 106;
 
     private static final List<String> EARLY = Arrays.asList(
             "interceptorChainEntry", "ExecGuardDispatchers", "BackLeavesHomeDispatcher",
@@ -325,6 +327,7 @@ public class InstallPlan {
         s.add(new InstallStep(STORY_LINKS_HOOK, "StoryLinksHook", null, "(IE|StoryLinks) ", COULD_NOT_START, true, null));
         s.add(new InstallStep(STORY_INFO_HOOK, "StoryInfoHook", null, "(IE|StoryInfo) ", COULD_NOT_START, true, null));
         s.add(new InstallStep(MANUAL_STORY_SEEN_HOOK, "ManualStorySeenHook", null, "(InstaEclipse | ManualStorySeen): ", COULD_NOT_START, true, null));
+        s.add(new InstallStep(AUTO_STORY_SEEN_HOOK, "AutoStorySeenHook", null, "(IE|AutoStorySeen) ", COULD_NOT_START, true, null));
         s.add(new InstallStep(COMMENT_COPY_HOOK, "CommentCopyHook", null, "(InstaEclipse | CopyComment): ", COULD_NOT_START, false, null));
         s.add(new InstallStep(CAPTION_COPY_HOOK, "CaptionCopyHook", null, "(InstaEclipse | Caption): ", COULD_NOT_START, true, null)
                 .withLookupFlags("enableCaptionCopy").withRestartKeys("enableCaptionCopy"));
@@ -649,6 +652,9 @@ public class InstallPlan {
                 return;
             case MANUAL_STORY_SEEN_HOOK:
                 new ManualStorySeenHook().install(ctx.lpparam.classLoader);
+                return;
+            case AUTO_STORY_SEEN_HOOK:
+                new AutoStorySeenHook().install(ctx.lpparam.classLoader);
                 return;
             case COMMENT_COPY_HOOK:
                 new CommentCopyHook().install(ctx.lpparam.classLoader);

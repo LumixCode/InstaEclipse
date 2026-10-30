@@ -23,6 +23,7 @@ public class FeatureFlags {
     public static volatile boolean isGhostViewOnce = false;
     public static volatile boolean isGhostStory = false;
     public static volatile boolean manualStorySeen = false;
+    public static volatile boolean autoStorySeen = false;
     public static volatile boolean isGhostLive = false;
     public static volatile boolean allowScreenshots = false;
     public static volatile boolean keepEphemeralMessages = false;

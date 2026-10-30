@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import ps.reso.instaeclipse.Xposed.Module;
+import ps.reso.instaeclipse.mods.ghost.ManualStorySeenHook;
 import ps.reso.instaeclipse.utils.core.DexKitCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
@@ -213,6 +214,14 @@ public class StoryLikeUndoHook {
                         break;
                 }
             }
+
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                if (!ManualStorySeenHook.autoEnabled() || param.hasThrowable()
+                        || param.method.equals(REPLAYING.get()) || !isLiked(param.args[stateAt])) return;
+                String id = idOf(param.args[mediaAt]);
+                if (id != null && !pending.contains(id)) ManualStorySeenHook.interacted(id, "like");
+            }
         });
     }
 
@@ -313,7 +322,9 @@ public class StoryLikeUndoHook {
         HeldLike like = new HeldLike(method, self, args);
         like.fire = () -> {
             like.clearTint();
-            if (pending.release(id, like)) send(like);
+            if (!pending.release(id, like)) return;
+            ManualStorySeenHook.interacted(id, "held like");
+            send(like);
         };
         pending.hold(id, like);
         like.tint = LikeHeartTint.showById(id);

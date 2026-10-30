@@ -21,6 +21,7 @@
     <string name="cat_permanentViewMode_desc">Fotos und Videos zum einmaligen oder zweimaligen Ansehen öffnen sich wie normale</string>
     <string name="cat_sec_seen_online">Gesehen und online</string>
     <string name="cat_manualStorySeen_desc">Fügt „Diese Story als gesehen markieren“ zum ⋮-Menü der Story hinzu</string>
+    <string name="cat_autoStorySeen_desc">Ein Like, eine Antwort, ein Kommentar oder eine Reaktion markiert diese Story als gesehen. Ein zurückgenommenes Like sendet nichts</string>
     <string name="cat_readReceiptChats_desc_list">Gewählte Chats bekommen weiterhin „Gesehen“. Verwalte sie unter „Chats mit Lesebestätigung“</string>
     <string name="cat_airplaneMode">Offline erscheinen</string>
     <string name="cat_airplaneMode_desc">Blendet „Jetzt aktiv“ aus; Nachrichten und Anrufe kommen nicht mehr live an</string>

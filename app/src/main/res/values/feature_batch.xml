@@ -5,4 +5,5 @@
     <string name="ig_feature_show_unsent_button">Show “Unsent messages” in the chat menu</string>
     <string name="ig_feature_following_follow_status">Show who follows you back</string>
     <string name="ig_feature_manual_story_seen">Mark stories seen by hand</string>
+    <string name="ig_feature_auto_story_seen">Mark stories seen when you interact</string>
 </resources>

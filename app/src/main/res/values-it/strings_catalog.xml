@@ -21,6 +21,7 @@
     <string name="cat_permanentViewMode_desc">Foto e video da vedere una o due volte si aprono come quelli normali</string>
     <string name="cat_sec_seen_online">Visualizzato e online</string>
     <string name="cat_manualStorySeen_desc">Aggiunge «Segna questa storia come vista» al menu ⋮</string>
+    <string name="cat_autoStorySeen_desc">Un Mi piace, una risposta, un commento o una reazione invia la visualizzazione di quella storia. Un Mi piace annullato non invia nulla</string>
     <string name="cat_readReceiptChats_desc_list">Le chat scelte ricevono comunque le conferme di lettura. Gestiscile in Chat con conferme di lettura</string>
     <string name="cat_airplaneMode">Appari offline</string>
     <string name="cat_airplaneMode_desc">Nasconde «Attivo ora»; messaggi e chiamate non arrivano più in tempo reale</string>

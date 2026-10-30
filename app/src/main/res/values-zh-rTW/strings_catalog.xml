@@ -21,6 +21,7 @@
     <string name="cat_permanentViewMode_desc">限看一次和限看兩次的相片與影片會像一般內容一樣開啟</string>
     <string name="cat_sec_seen_online">已讀與上線狀態</string>
     <string name="cat_manualStorySeen_desc">在限時動態的 ⋮ 選單加入「將此限時動態標記為已看」</string>
+    <string name="cat_autoStorySeen_desc">按讚、回覆、留言或回應時，會送出該限時動態的觀看紀錄。已收回的讚不會送出任何內容</string>
     <string name="cat_readReceiptChats_desc_list">所選聊天仍會收到已讀。可在「會收到已讀回條的聊天」中管理</string>
     <string name="cat_airplaneMode">顯示為離線</string>
     <string name="cat_airplaneMode_desc">隱藏「目前在線上」；訊息和通話將不再即時送達</string>

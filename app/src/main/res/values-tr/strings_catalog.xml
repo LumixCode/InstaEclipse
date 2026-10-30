@@ -21,6 +21,7 @@
     <string name="cat_permanentViewMode_desc">Bir kez ve iki kez görüntülenebilen fotoğraf ve videolar normal olanlar gibi açılır</string>
     <string name="cat_sec_seen_online">Görüldü ve çevrimiçi</string>
     <string name="cat_manualStorySeen_desc">Hikaye ⋮ menüsüne “Hikayeyi görüldü olarak işaretle” ekler</string>
+    <string name="cat_autoStorySeen_desc">Beğeni, yanıt, yorum veya tepki o hikayenin görüntülenmesini gönderir. Geri aldığınız beğeni hiçbir şey göndermez</string>
     <string name="cat_readReceiptChats_desc_list">Seçili sohbetler yine Görüldü bilgisi alır. Bunları “Okundu bilgisi alan sohbetler” bölümünden yönetin</string>
     <string name="cat_airplaneMode">Çevrimdışı görün</string>
     <string name="cat_airplaneMode_desc">“Şu an aktif” bilgisini gizler; mesajlar ve aramalar anlık gelmez</string>

@@ -4,4 +4,5 @@
     <string name="ig_feature_show_unsent_button">Visa ”Ångrade meddelanden” i chattmenyn</string>
     <string name="ig_feature_following_follow_status">Visa vem som följer dig tillbaka</string>
     <string name="ig_feature_manual_story_seen">Markera stories som sedda manuellt</string>
+    <string name="ig_feature_auto_story_seen">Markera stories som sedda när du interagerar</string>
 </resources>
