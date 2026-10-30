@@ -23,6 +23,8 @@
     <string name="cat_manualStorySeen_desc">在限時動態的 ⋮ 選單加入「將此限時動態標記為已看」</string>
     <string name="cat_autoStorySeen_desc">按讚、回覆、留言或回應時，會送出該限時動態的觀看紀錄。已收回的讚不會送出任何內容</string>
     <string name="cat_readReceiptChats_desc_list">所選聊天仍會收到已讀。可在「會收到已讀回條的聊天」中管理</string>
+    <string name="cat_markSeenOnInteraction">回覆或回應時傳送已讀</string>
+    <string name="cat_markSeenOnInteraction_desc">在開啟的聊天中傳送內容或回應訊息時，會為該聊天傳送已讀</string>
     <string name="cat_airplaneMode">顯示為離線</string>
     <string name="cat_airplaneMode_desc">隱藏「目前在線上」；訊息和通話將不再即時送達</string>
     <string name="cat_quickToggle_desc">長按「訊息」按鈕即可開啟或關閉你選擇的項目</string>

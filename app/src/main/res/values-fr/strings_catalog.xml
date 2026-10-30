@@ -23,6 +23,8 @@
     <string name="cat_manualStorySeen_desc">Ajoute « Marquer cette story comme vue » au menu ⋮ des stories</string>
     <string name="cat_autoStorySeen_desc">Un J\'aime, une réponse, un commentaire ou une réaction envoie la vue de cette story. Un J\'aime annulé n\'envoie rien</string>
     <string name="cat_readReceiptChats_desc_list">Le « Vu » reste envoyé aux discussions choisies. Gérez-les dans « Discussions avec accusés de lecture »</string>
+    <string name="cat_markSeenOnInteraction">Envoyer le « Vu » en répondant ou en réagissant</string>
+    <string name="cat_markSeenOnInteraction_desc">Envoyer depuis la discussion ouverte ou réagir à un message envoie le « Vu » de cette discussion</string>
     <string name="cat_airplaneMode">Paraître hors ligne</string>
     <string name="cat_airplaneMode_desc">Masque « En ligne » ; les messages et appels n\'arrivent plus en direct</string>
     <string name="cat_quickToggle_desc">Appui long sur le bouton Messages pour activer ou désactiver vos choix</string>

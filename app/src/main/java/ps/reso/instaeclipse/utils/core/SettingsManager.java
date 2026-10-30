@@ -158,6 +158,7 @@ public class SettingsManager {
         editor.putBoolean("hideInstants", FeatureFlags.hideInstants);
         editor.putBoolean("hideDmBlend", FeatureFlags.hideDmBlend);
         editor.putBoolean("readReceiptChats", FeatureFlags.readReceiptChats);
+        editor.putBoolean("markSeenOnInteraction", FeatureFlags.markSeenOnInteraction);
         editor.putBoolean("hideThreadsButton", FeatureFlags.hideThreadsButton);
 
         editor.putBoolean("isAdBlockEnabled", FeatureFlags.isAdBlockEnabled);
@@ -403,6 +404,7 @@ public class SettingsManager {
         FeatureFlags.hideInstants = prefs.getBoolean("hideInstants", false);
         FeatureFlags.hideDmBlend = prefs.getBoolean("hideDmBlend", false);
         FeatureFlags.readReceiptChats = prefs.getBoolean("readReceiptChats", false);
+        FeatureFlags.markSeenOnInteraction = prefs.getBoolean("markSeenOnInteraction", false);
         FeatureFlags.hideThreadsButton = prefs.getBoolean("hideThreadsButton", false);
 
         FeatureFlags.isAdBlockEnabled = prefs.getBoolean("isAdBlockEnabled", false);

@@ -23,6 +23,8 @@
     <string name="cat_manualStorySeen_desc">Hekayənin ⋮ menyusuna «Bu hekayəni baxılmış kimi işarələ» əlavə edir</string>
     <string name="cat_autoStorySeen_desc">Bəyənmə, cavab, şərh və ya reaksiya həmin hekayə üçün baxışı göndərir. Geri aldığınız bəyənmə heç nə göndərmir</string>
     <string name="cat_readReceiptChats_desc_list">Seçilən söhbətlər yenə oxunma bildirişi alır. Onları «Oxunma bildirişi alan söhbətlər» bölməsində idarə edin</string>
+    <string name="cat_markSeenOnInteraction">Cavab və ya reaksiya verəndə oxunma bildirişi göndər</string>
+    <string name="cat_markSeenOnInteraction_desc">Açıq söhbətdən göndərmək və ya mesaja reaksiya vermək həmin söhbətə oxunma bildirişi göndərir</string>
     <string name="cat_airplaneMode">Oflayn görün</string>
     <string name="cat_airplaneMode_desc">«İndi aktiv» gizlənir; mesaj və zənglər anında gəlmir</string>
     <string name="cat_quickToggle_desc">Seçdiklərinizi açıb-bağlamaq üçün Mesajlar düyməsini basıb saxlayın</string>

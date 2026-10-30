@@ -23,6 +23,8 @@
     <string name="cat_manualStorySeen_desc">Menambahkan “Tandai cerita ini sudah dilihat” ke menu ⋮ cerita</string>
     <string name="cat_autoStorySeen_desc">Suka, balasan, komentar, atau reaksi mengirim tayangan untuk cerita itu. Suka yang Anda batalkan tidak mengirim apa pun</string>
     <string name="cat_readReceiptChats_desc_list">Obrolan pilihan tetap dikirimi tanda baca. Kelola di Obrolan yang dikirimi tanda baca</string>
+    <string name="cat_markSeenOnInteraction">Kirim tanda baca saat membalas atau bereaksi</string>
+    <string name="cat_markSeenOnInteraction_desc">Mengirim dari obrolan yang terbuka atau bereaksi pada pesan akan mengirim tanda baca untuk obrolan itu</string>
     <string name="cat_airplaneMode">Tampak offline</string>
     <string name="cat_airplaneMode_desc">Menyembunyikan “Aktif sekarang”; pesan dan panggilan tidak lagi masuk secara langsung</string>
     <string name="cat_quickToggle_desc">Tekan lama tombol Pesan untuk mengaktifkan atau menonaktifkan pilihan Anda</string>

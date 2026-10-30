@@ -23,6 +23,8 @@
     <string name="cat_manualStorySeen_desc">Προσθέτει «Σήμανση ως προβεβλημένης» στο μενού ⋮ ιστορίας</string>
     <string name="cat_autoStorySeen_desc">Ένα like, μια απάντηση, ένα σχόλιο ή μια αντίδραση στέλνει την προβολή για αυτή την ιστορία. Ένα like που παίρνετε πίσω δεν στέλνει τίποτα</string>
     <string name="cat_readReceiptChats_desc_list">Οι επιλεγμένες λαμβάνουν ακόμα ανάγνωση. Διαχείριση στο «Συνομιλίες με επιβεβαιώσεις ανάγνωσης»</string>
+    <string name="cat_markSeenOnInteraction">Ανάγνωση όταν απαντάτε ή αντιδράτε</string>
+    <string name="cat_markSeenOnInteraction_desc">Η αποστολή από την ανοιχτή συνομιλία ή η αντίδραση σε μήνυμα στέλνει ανάγνωση σε αυτή τη συνομιλία</string>
     <string name="cat_airplaneMode">Εμφάνιση εκτός σύνδεσης</string>
     <string name="cat_airplaneMode_desc">Κρύβει το «Ενεργός τώρα»· μηνύματα και κλήσεις δεν φτάνουν πια σε πραγματικό χρόνο</string>
     <string name="cat_quickToggle_desc">Κρατήστε πατημένο το κουμπί Μηνύματα για εναλλαγή των επιλογών σας</string>

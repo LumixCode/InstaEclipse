@@ -23,6 +23,8 @@
     <string name="cat_manualStorySeen_desc">Dodaje „Oznacz relację jako wyświetloną” do menu ⋮ relacji</string>
     <string name="cat_autoStorySeen_desc">Polubienie, odpowiedź, komentarz lub reakcja wysyłają wyświetlenie tej relacji. Cofnięte polubienie nie wysyła nic</string>
     <string name="cat_readReceiptChats_desc_list">W wybranych czatach odczyt jest nadal widoczny. Zarządzaj nimi w „Czaty z potwierdzeniami odczytu”</string>
+    <string name="cat_markSeenOnInteraction">Pokazuj odczyt po odpowiedzi lub reakcji</string>
+    <string name="cat_markSeenOnInteraction_desc">Wysłanie czegoś z otwartego czatu lub reakcja na wiadomość pokazuje odczyt w tym czacie</string>
     <string name="cat_airplaneMode">Udawaj offline</string>
     <string name="cat_airplaneMode_desc">Ukrywa status aktywności; wiadomości i połączenia przestają docierać na bieżąco</string>
     <string name="cat_quickToggle_desc">Przytrzymaj przycisk Wiadomości, aby włączyć lub wyłączyć wybrane opcje</string>

@@ -23,6 +23,8 @@
     <string name="cat_manualStorySeen_desc">يضيف «تحديد القصة كمُشاهَدة» إلى قائمة ⋮ في القصة</string>
     <string name="cat_autoStorySeen_desc">الإعجاب أو الرد أو التعليق أو التفاعل يرسل المشاهدة لتلك القصة. الإعجاب الذي تتراجع عنه لا يرسل شيئًا</string>
     <string name="cat_readReceiptChats_desc_list">تظل المحادثات المختارة تتلقى «تمت المشاهدة». أدِرها في «المحادثات التي تتلقى إشعارات القراءة»</string>
+    <string name="cat_markSeenOnInteraction">إرسال إشعار القراءة عند الرد أو التفاعل</string>
+    <string name="cat_markSeenOnInteraction_desc">الإرسال من المحادثة المفتوحة أو التفاعل مع رسالة يرسل إشعار القراءة لتلك المحادثة</string>
     <string name="cat_airplaneMode">الظهور غير متصل</string>
     <string name="cat_airplaneMode_desc">يخفي «نشط الآن»؛ ولا تصل الرسائل والمكالمات فوريًا</string>
     <string name="cat_quickToggle_desc">اضغط مطولًا على زر الرسائل لتفعيل اختياراتك أو إيقافها</string>

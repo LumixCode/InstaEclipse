@@ -48,6 +48,7 @@ import ps.reso.instaeclipse.mods.ghost.HideChatsHook;
 import ps.reso.instaeclipse.mods.ghost.JumpToFirstMessageHook;
 import ps.reso.instaeclipse.mods.ghost.KeepUnsentMessagesHook;
 import ps.reso.instaeclipse.mods.ghost.ManualStorySeenHook;
+import ps.reso.instaeclipse.mods.ghost.MarkSeenOnInteractionHook;
 import ps.reso.instaeclipse.mods.ghost.ReadReceiptChatHook;
 import ps.reso.instaeclipse.mods.ghost.ScreenshotPermissionHook;
 import ps.reso.instaeclipse.mods.ghost.SearchHistoryHook;
@@ -231,6 +232,7 @@ public class InstallPlan {
     static final int BACK_LEAVES_HOME_DISPATCHER = 104;
     static final int VOICE_USER_CACHE_TRACKER = 105;
     static final int AUTO_STORY_SEEN_HOOK = 106;
+    static final int MARK_SEEN_ON_INTERACTION_HOOK = 107;
 
     private static final List<String> EARLY = Arrays.asList(
             "interceptorChainEntry", "ExecGuardDispatchers", "BackLeavesHomeDispatcher",
@@ -250,6 +252,7 @@ public class InstallPlan {
         s.add(new InstallStep(GHOST_DM_SEEN_HOOK, "GhostDMSeenHook", null, "(InstaEclipse | GhostSeen): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(GHOST_DM_MARK_AS_READ_HOOK, "GhostDMMarkAsReadHook", null, "(InstaEclipse | MarkAsRead): ", COULD_NOT_START, false, null));
         s.add(new InstallStep(GHOST_CHANNEL_MARK_AS_READ_HOOK, "GhostChannelMarkAsReadHook", null, "(InstaEclipse | ChannelMarkAsRead): ", COULD_NOT_START, false, null));
+        s.add(new InstallStep(MARK_SEEN_ON_INTERACTION_HOOK, "MarkSeenOnInteractionHook", null, "(IE|AutoSeen) ", COULD_NOT_START, true, null));
         s.add(new InstallStep(GHOST_TYPING_INDICATOR_HOOK, "GhostTypingIndicatorHook", null, "(InstaEclipse | GhostTyping): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(GHOST_SCREENSHOT_DETECTION_HOOK, "GhostScreenshotDetectionHook", null, "(InstaEclipse | GhostScreenshot): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(SCREENSHOT_PERMISSION_HOOK, "ScreenshotPermissionHook", null, "(InstaEclipse | ScreenshotPermission): ", COULD_NOT_START, false, null).inPhaseA());
@@ -465,6 +468,9 @@ public class InstallPlan {
                 return;
             case GHOST_CHANNEL_MARK_AS_READ_HOOK:
                 new GhostChannelMarkAsReadHook().install(ctx.lpparam.classLoader);
+                return;
+            case MARK_SEEN_ON_INTERACTION_HOOK:
+                new MarkSeenOnInteractionHook().install();
                 return;
             case GHOST_TYPING_INDICATOR_HOOK:
                 new GhostTypingIndicatorHook().handleTypingBlock();

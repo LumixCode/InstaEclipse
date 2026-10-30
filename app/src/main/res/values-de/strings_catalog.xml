@@ -23,6 +23,8 @@
     <string name="cat_manualStorySeen_desc">Fügt „Diese Story als gesehen markieren“ zum ⋮-Menü der Story hinzu</string>
     <string name="cat_autoStorySeen_desc">Ein Like, eine Antwort, ein Kommentar oder eine Reaktion markiert diese Story als gesehen. Ein zurückgenommenes Like sendet nichts</string>
     <string name="cat_readReceiptChats_desc_list">Gewählte Chats bekommen weiterhin „Gesehen“. Verwalte sie unter „Chats mit Lesebestätigung“</string>
+    <string name="cat_markSeenOnInteraction">„Gesehen“ beim Antworten oder Reagieren senden</string>
+    <string name="cat_markSeenOnInteraction_desc">Etwas im offenen Chat senden oder auf eine Nachricht reagieren sendet „Gesehen“ für diesen Chat</string>
     <string name="cat_airplaneMode">Offline erscheinen</string>
     <string name="cat_airplaneMode_desc">Blendet „Jetzt aktiv“ aus; Nachrichten und Anrufe kommen nicht mehr live an</string>
     <string name="cat_quickToggle_desc">Halte das Nachrichten-Symbol gedrückt, um deine Auswahl ein- oder auszuschalten</string>

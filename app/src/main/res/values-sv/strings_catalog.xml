@@ -23,6 +23,8 @@
     <string name="cat_manualStorySeen_desc">Lägger till ”Markera storyn som sedd” i storyns ⋮-meny</string>
     <string name="cat_autoStorySeen_desc">En gillning, ett svar, en kommentar eller en reaktion skickar visningen av den storyn. En gillning du tar tillbaka skickar ingenting</string>
     <string name="cat_readReceiptChats_desc_list">Valda chattar får fortfarande Sett. Hantera dem i Chattar som får läskvitton</string>
+    <string name="cat_markSeenOnInteraction">Skicka Sett när du svarar eller reagerar</string>
+    <string name="cat_markSeenOnInteraction_desc">Att skicka från den öppna chatten eller reagera på ett meddelande skickar Sett för den chatten</string>
     <string name="cat_airplaneMode">Visas som offline</string>
     <string name="cat_airplaneMode_desc">Döljer ”Aktiv nu”; meddelanden och samtal kommer inte längre in direkt</string>
     <string name="cat_quickToggle_desc">Håll in Meddelanden-knappen för att slå på eller av dina val</string>

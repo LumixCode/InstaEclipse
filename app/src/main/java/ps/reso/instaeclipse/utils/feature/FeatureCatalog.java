@@ -256,6 +256,9 @@ public final class FeatureCatalog {
                                     .status("ReadReceiptChats"),
                             action("readReceiptChatList", R.string.ig_read_receipt_list_title, R.drawable.ic_chat)
                                     .requires("readReceiptChats").side(Side.IG_ONLY),
+                            sw("markSeenOnInteraction", R.string.cat_markSeenOnInteraction, R.drawable.ic_eye)
+                                    .desc(R.string.cat_markSeenOnInteraction_desc).requires("isGhostSeen")
+                                    .status("MarkSeenOnInteraction").words("seen", "read receipt", "reaction"),
                             sw("airplaneMode", R.string.cat_airplaneMode, R.drawable.ic_eye_off)
                                     .desc(R.string.cat_airplaneMode_desc).status("airplaneMode")
                                     .aliases(R.string.ig_dialog_extras_airplane_mode).words("airplane", "offline"),

@@ -23,6 +23,8 @@
     <string name="cat_manualStorySeen_desc">Добавляет «Отметить как просмотренную» в меню ⋮ истории</string>
     <string name="cat_autoStorySeen_desc">Лайк, ответ, комментарий или реакция отправляют просмотр этой истории. Отменённый лайк ничего не отправляет</string>
     <string name="cat_readReceiptChats_desc_list">В выбранных чатах прочтение видно. Управлять ими можно в разделе «Чаты с отметками о прочтении»</string>
+    <string name="cat_markSeenOnInteraction">Отмечать прочтение при ответе или реакции</string>
+    <string name="cat_markSeenOnInteraction_desc">Отправка из открытого чата или реакция на сообщение отмечает этот чат прочитанным</string>
     <string name="cat_airplaneMode">Быть не в сети</string>
     <string name="cat_airplaneMode_desc">Скрывает «В сети»; сообщения и звонки перестают приходить в реальном времени</string>
     <string name="cat_quickToggle_desc">Удерживайте кнопку «Сообщения», чтобы включить или выключить выбранное</string>

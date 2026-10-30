@@ -305,6 +305,8 @@ public class FeatureManager {
         reg(FeatureFlags.backLeavesHome,       "BackLeavesHome",       R.string.ig_back_leaves_home);
         reg(FeatureFlags.hideDmBlend,          "HideDmBlend",          R.string.ig_dialog_hide_dm_blend);
         reg(FeatureFlags.readReceiptChats,     "ReadReceiptChats",     R.string.ig_dialog_ghost_read_receipt_chats);
+        reg(FeatureFlags.markSeenOnInteraction && FeatureFlags.isGhostSeen,
+                "MarkSeenOnInteraction", R.string.cat_markSeenOnInteraction);
         reg(FeatureFlags.hideThreadsButton,    "HideThreadsButton",    R.string.ig_dialog_hide_threads_button);
         reg(FeatureFlags.offerPlaybackSpeed,   "PlaybackSpeed",        R.string.cat_offerPlaybackSpeed);
         reg(FeatureFlags.holdLeftSlowMotion,   "HoldSlowMotion",       R.string.cat_holdLeftSlowMotion);
