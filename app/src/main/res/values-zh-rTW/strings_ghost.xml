@@ -3,6 +3,7 @@
     <string name="ie_unsent_log_set_aside">無法讀取已儲存的清單，已先將它移到一旁。</string>
     <string name="ig_toast_marked_as_seen">已標記為已讀</string>
     <string name="ig_toast_channel_marked_as_seen">頻道已標記為已讀</string>
+    <string name="ig_toast_nothing_to_mark_seen">沒有可標記為已讀的新內容</string>
     <string name="ig_chat_export_banner">聊天匯出</string>
     <plurals name="ig_chat_export_messages">
         <item quantity="other">%1$d 則訊息</item>

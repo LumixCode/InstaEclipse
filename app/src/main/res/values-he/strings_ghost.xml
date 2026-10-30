@@ -3,6 +3,7 @@
     <string name="ie_unsent_log_set_aside">לא ניתן לקרוא את הרשימה השמורה; היא הועברה הצידה.</string>
     <string name="ig_toast_marked_as_seen">סומן כנצפה</string>
     <string name="ig_toast_channel_marked_as_seen">הערוץ סומן כנצפה</string>
+    <string name="ig_toast_nothing_to_mark_seen">אין שום דבר חדש לסימון כנצפה</string>
     <string name="ig_chat_export_banner">ייצוא צ\'אט</string>
     <plurals name="ig_chat_export_messages">
         <item quantity="one">%1$d הודעה</item>

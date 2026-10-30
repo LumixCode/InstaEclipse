@@ -3,6 +3,7 @@
     <string name="ie_unsent_log_set_aside">Nie udało się odczytać zapisanej listy; odłożono ją osobno.</string>
     <string name="ig_toast_marked_as_seen">Oznaczono jako wyświetlone</string>
     <string name="ig_toast_channel_marked_as_seen">Kanał oznaczono jako wyświetlony</string>
+    <string name="ig_toast_nothing_to_mark_seen">Nie ma nic nowego do oznaczenia jako wyświetlone</string>
     <string name="ig_chat_export_banner">Eksport czatu</string>
     <plurals name="ig_chat_export_messages">
         <item quantity="one">%1$d wiadomość</item>

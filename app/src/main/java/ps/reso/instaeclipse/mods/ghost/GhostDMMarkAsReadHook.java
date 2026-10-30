@@ -62,8 +62,7 @@ public class GhostDMMarkAsReadHook {
         lp.setMargins(dp(ctx, 5), dp(ctx, 8), 0, 0);
 
         ghostBtn.setLayoutParams(lp);
-        ghostBtn.setOnClickListener(v -> MarkSeen.scroll(parent, messageList(parent), 300, 200,
-                R.string.ig_toast_marked_as_seen));
+        ghostBtn.setOnClickListener(v -> MarkSeen.press(parent, messageList(parent), R.string.ig_toast_marked_as_seen));
 
         parent.post(() -> {
             try {

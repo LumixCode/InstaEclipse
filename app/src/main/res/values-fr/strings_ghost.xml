@@ -3,6 +3,7 @@
     <string name="ie_unsent_log_set_aside">Impossible de lire la liste enregistrée ; elle a été mise de côté.</string>
     <string name="ig_toast_marked_as_seen">Marqué comme vu</string>
     <string name="ig_toast_channel_marked_as_seen">Canal marqué comme vu</string>
+    <string name="ig_toast_nothing_to_mark_seen">Rien de nouveau à marquer comme vu</string>
     <string name="ig_chat_export_banner">Export de discussion</string>
     <plurals name="ig_chat_export_messages">
         <item quantity="one">%1$d message</item>

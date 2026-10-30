@@ -3,6 +3,7 @@
     <string name="ie_unsent_log_set_aside">无法读取已保存的列表，已将其单独存放。</string>
     <string name="ig_toast_marked_as_seen">已标记为已读</string>
     <string name="ig_toast_channel_marked_as_seen">频道已标记为已读</string>
+    <string name="ig_toast_nothing_to_mark_seen">没有可标记为已读的新内容</string>
     <string name="ig_chat_export_banner">聊天导出</string>
     <plurals name="ig_chat_export_messages">
         <item quantity="other">%1$d 条消息</item>

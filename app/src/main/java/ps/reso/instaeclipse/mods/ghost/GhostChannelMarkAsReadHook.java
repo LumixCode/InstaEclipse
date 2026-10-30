@@ -69,7 +69,7 @@ public class GhostChannelMarkAsReadHook {
             seen.setCompoundDrawablesRelative(eye.icon(), d[1], d[2], d[3]);
             seen.setCompoundDrawablePadding((int) (4 * seen.getResources().getDisplayMetrics().density));
         }
-        seen.setOnClickListener(v -> MarkSeen.scroll(seen, GhostDMMarkAsReadHook.messageList(seen), 400, 300,
+        seen.setOnClickListener(v -> MarkSeen.press(seen, GhostDMMarkAsReadHook.messageList(seen),
                 R.string.ig_toast_channel_marked_as_seen));
     }
 

@@ -3,6 +3,7 @@
     <string name="ie_unsent_log_set_aside">تعذّرت قراءة القائمة المحفوظة، فوُضعت جانبًا.</string>
     <string name="ig_toast_marked_as_seen">تم التحديد كمُشاهَد</string>
     <string name="ig_toast_channel_marked_as_seen">تم تحديد القناة كمُشاهَدة</string>
+    <string name="ig_toast_nothing_to_mark_seen">لا يوجد جديد لتحديده كمُشاهَد</string>
     <string name="ig_chat_export_banner">تصدير المحادثة</string>
     <plurals name="ig_chat_export_messages">
         <item quantity="zero">%1$d رسالة</item>

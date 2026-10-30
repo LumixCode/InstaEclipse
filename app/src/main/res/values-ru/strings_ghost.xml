@@ -3,6 +3,7 @@
     <string name="ie_unsent_log_set_aside">Не удалось прочитать сохранённый список; он сохранён отдельно.</string>
     <string name="ig_toast_marked_as_seen">Отмечено прочитанным</string>
     <string name="ig_toast_channel_marked_as_seen">Канал отмечен прочитанным</string>
+    <string name="ig_toast_nothing_to_mark_seen">Нет ничего нового, что можно отметить прочитанным</string>
     <string name="ig_chat_export_banner">Экспорт чата</string>
     <plurals name="ig_chat_export_messages">
         <item quantity="one">%1$d сообщение</item>

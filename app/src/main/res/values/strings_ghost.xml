@@ -3,6 +3,7 @@
     <string name="ie_unsent_log_set_aside">Couldn\'t read the saved list; it was set aside.</string>
     <string name="ig_toast_marked_as_seen">Marked as seen</string>
     <string name="ig_toast_channel_marked_as_seen">Channel marked as seen</string>
+    <string name="ig_toast_nothing_to_mark_seen">Nothing new to mark as seen</string>
     <string name="ig_chat_export_banner">Chat export</string>
     <plurals name="ig_chat_export_messages">
         <item quantity="one">%1$d message</item>

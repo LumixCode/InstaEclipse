@@ -3,6 +3,7 @@
     <string name="ie_unsent_log_set_aside">Η αποθηκευμένη λίστα δεν διαβάστηκε· φυλάχτηκε ξεχωριστά.</string>
     <string name="ig_toast_marked_as_seen">Σημάνθηκε ως αναγνωσμένο</string>
     <string name="ig_toast_channel_marked_as_seen">Το κανάλι σημάνθηκε ως αναγνωσμένο</string>
+    <string name="ig_toast_nothing_to_mark_seen">Δεν υπάρχει κάτι νέο για σήμανση ως αναγνωσμένο</string>
     <string name="ig_chat_export_banner">Εξαγωγή συνομιλίας</string>
     <plurals name="ig_chat_export_messages">
         <item quantity="one">%1$d μήνυμα</item>

@@ -3,6 +3,7 @@
     <string name="ie_unsent_log_set_aside">Không đọc được danh sách đã lưu; danh sách đã được để riêng.</string>
     <string name="ig_toast_marked_as_seen">Đã đánh dấu đã xem</string>
     <string name="ig_toast_channel_marked_as_seen">Đã đánh dấu kênh là đã xem</string>
+    <string name="ig_toast_nothing_to_mark_seen">Không có gì mới để đánh dấu đã xem</string>
     <string name="ig_chat_export_banner">Bản xuất đoạn chat</string>
     <plurals name="ig_chat_export_messages">
         <item quantity="other">%1$d tin nhắn</item>

@@ -3,6 +3,7 @@
     <string name="ie_unsent_log_set_aside">Kunde inte läsa den sparade listan; den lades åt sidan.</string>
     <string name="ig_toast_marked_as_seen">Markerat som sett</string>
     <string name="ig_toast_channel_marked_as_seen">Kanalen markerad som sedd</string>
+    <string name="ig_toast_nothing_to_mark_seen">Inget nytt att markera som sett</string>
     <string name="ig_chat_export_banner">Chattexport</string>
     <plurals name="ig_chat_export_messages">
         <item quantity="one">%1$d meddelande</item>

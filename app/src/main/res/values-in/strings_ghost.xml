@@ -3,6 +3,7 @@
     <string name="ie_unsent_log_set_aside">Tidak dapat membaca daftar tersimpan; daftar itu disisihkan.</string>
     <string name="ig_toast_marked_as_seen">Ditandai dilihat</string>
     <string name="ig_toast_channel_marked_as_seen">Saluran ditandai sudah dilihat</string>
+    <string name="ig_toast_nothing_to_mark_seen">Tidak ada yang baru untuk ditandai dilihat</string>
     <string name="ig_chat_export_banner">Ekspor obrolan</string>
     <plurals name="ig_chat_export_messages">
         <item quantity="other">%1$d pesan</item>

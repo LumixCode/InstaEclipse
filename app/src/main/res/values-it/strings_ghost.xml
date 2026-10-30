@@ -3,6 +3,7 @@
     <string name="ie_unsent_log_set_aside">Impossibile leggere l\'elenco salvato; è stato messo da parte.</string>
     <string name="ig_toast_marked_as_seen">Segnato come visto</string>
     <string name="ig_toast_channel_marked_as_seen">Canale segnato come visto</string>
+    <string name="ig_toast_nothing_to_mark_seen">Niente di nuovo da segnare come visto</string>
     <string name="ig_chat_export_banner">Esportazione chat</string>
     <plurals name="ig_chat_export_messages">
         <item quantity="one">%1$d messaggio</item>
