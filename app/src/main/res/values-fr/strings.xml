@@ -32,7 +32,7 @@
     <string name="frequently_asked_questions">FAQ</string>
     <string name="faq_1"><b>1. Ne fonctionne pas ou plante avec la version Google Play ?</b>\n- Utilisez les APK d\'APKMirror</string>
     <string name="faq_3"><b>3. Les fonctionnalités ne fonctionnent pas ?</b>\n- Forcez l\'arrêt et redémarrez Instagram.</string>
-    <string name="faq_6"><b>6. Le mode Sans Distractions est activé mais le contenu apparaît toujours ?</b>\n- Forcez l\'arrêt d\'Instagram et videz son cache.</string>
+    <string name="faq_6"><b>6. Le mode concentration est activé mais le contenu apparaît toujours ?</b>\n- Forcez l\'arrêt d\'Instagram et videz son cache.</string>
 
     <!-- features fragment section headers -->
     <string name="feat_config">Configuration</string>

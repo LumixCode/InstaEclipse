@@ -98,7 +98,7 @@
     <string name="cat_sec_keep_messages">Simpan pesan</string>
     <string name="cat_keepUnsentMessages_desc">Pesan yang dibatalkan orang lain tetap bisa dibaca</string>
     <string name="cat_keepUnsentInChat_desc">Nonaktif: pesan hanya disimpan di daftar Pesan yang dibatalkan</string>
-    <string name="cat_showUnsentIndicator_desc">Menambahkan label “Dibatalkan” ke tiap pesan</string>
+    <string name="cat_showUnsentIndicator_desc">Menampilkan tiap pesan dengan warna merah</string>
     <string name="cat_keepEditHistory_desc">Ketuk “Diedit” untuk melihatnya</string>
     <string name="cat_sec_chat_tools">Alat obrolan</string>
     <string name="cat_jumpToFirstMessage">Lompat ke pesan pertama</string>
@@ -154,7 +154,7 @@
     <string name="cat_rescan">Pindai ulang Instagram</string>
     <string name="cat_rescan_desc">Gunakan saat fitur berhenti berfungsi setelah Instagram diperbarui</string>
     <string name="cat_dataBackup">Cadangkan data</string>
-    <string name="cat_dataBackup_desc">Pesan yang dibatalkan, profil yang dianalisis, dan riwayat pengikut</string>
+    <string name="cat_dataBackup_desc">Pesan yang dibatalkan, riwayat edit, obrolan tersembunyi dan yang dikirimi tanda baca, angka postingan yang diubah, dan analisis profil</string>
     <string name="cat_isDevEnabled_desc">Pengaturan internal Meta, untuk pengguna mahir</string>
     <string name="cat_download_quality_hint">Standar menyimpan apa yang ditampilkan Instagram (foto hingga selebar layar Anda). Terbaik memeriksa setiap versi, termasuk HDR, lalu menyimpan yang paling tajam, atau yang paling tajam hingga resolusi yang Anda pilih.</string>
     <plurals name="ig_story_cache_days">

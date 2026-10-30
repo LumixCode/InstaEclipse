@@ -33,7 +33,7 @@
     <string name="frequently_asked_questions">Συχνές ερωτήσεις</string>
     <string name="faq_1"><b>1. Δεν λειτουργεί ή κλείνει απότομα η έκδοση από το Google Play Store;</b>\n- Χρησιμοποιήστε APK από το APKMirror</string>
     <string name="faq_3"><b>3. Δεν δουλεύουν οι λειτουργίες;</b>\n- Κάντε αναγκαστική διακοπή και ανοίξτε ξανά το Instagram.</string>
-    <string name="faq_6"><b>6. Ενεργό το «Χωρίς περισπασμούς» αλλά φαίνεται ακόμα περιεχόμενο;</b>\n- Αναγκαστική διακοπή του Instagram και εκκαθάριση της cache του.</string>
+    <string name="faq_6"><b>6. Ενεργή η «Λειτουργία εστίασης» αλλά φαίνεται ακόμα περιεχόμενο;</b>\n- Αναγκαστική διακοπή του Instagram και εκκαθάριση της cache του.</string>
 
     <!-- features fragment section headers -->
     <string name="feat_config">Ρυθμίσεις</string>

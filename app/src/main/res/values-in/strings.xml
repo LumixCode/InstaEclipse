@@ -32,7 +32,7 @@
     <string name="frequently_asked_questions">Pertanyaan yang Sering Diajukan</string>
     <string name="faq_1"><b>1. Tidak berfungsi/crash saat menggunakan Versi Google Play?</b>\n- Gunakan APK dari APKMirror</string>
     <string name="faq_3"><b>3. Fitur tidak berfungsi?</b>\n- Paksa berhenti dan mulai ulang Instagram.</string>
-    <string name="faq_6"><b>6. Mode Bebas Gangguan diaktifkan tetapi konten masih muncul?</b>\n- Paksa berhenti Instagram dan bersihkan cache-nya.</string>
+    <string name="faq_6"><b>6. Mode fokus diaktifkan tetapi konten masih muncul?</b>\n- Paksa berhenti Instagram dan bersihkan cache-nya.</string>
 
     <!-- features fragment section headers -->
     <string name="feat_config">Konfigurasi</string>

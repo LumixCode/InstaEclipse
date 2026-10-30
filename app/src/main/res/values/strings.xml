@@ -36,7 +36,7 @@
     <string name="frequently_asked_questions">Frequently Asked Questions</string>
     <string name="faq_1"><b>1. Not working/crashes when using Google Play Version?</b>\n- Use APKMirror APKs</string>
     <string name="faq_3"><b>3. Features not working?</b>\n- Force stop and restart Instagram.</string>
-    <string name="faq_6"><b>6. Distraction Free enabled but content still appears?</b>\n- Force stop Instagram and clear its cache.</string>
+    <string name="faq_6"><b>6. Focus mode enabled but content still appears?</b>\n- Force stop Instagram and clear its cache.</string>
 
     <!-- features fragment section headers -->
     <string name="feat_group_appearance">Appearance</string>

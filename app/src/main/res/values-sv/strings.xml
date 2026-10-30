@@ -32,7 +32,7 @@
     <string name="frequently_asked_questions">Vanliga frågor</string>
     <string name="faq_1"><b>1. Fungerar det inte eller kraschar det med Google Play-versionen?</b>\n- Använd APK:er från APKMirror</string>
     <string name="faq_3"><b>3. Fungerar inte funktionerna?</b>\n- Tvångsstoppa Instagram och starta om det.</string>
-    <string name="faq_6"><b>6. Är Instagram utan distraktioner på men innehåll visas ändå?</b>\n- Tvångsstoppa Instagram och rensa dess cache.</string>
+    <string name="faq_6"><b>6. Är fokusläget på men innehåll visas ändå?</b>\n- Tvångsstoppa Instagram och rensa dess cache.</string>
 
     <!-- Don't translate! -->
 

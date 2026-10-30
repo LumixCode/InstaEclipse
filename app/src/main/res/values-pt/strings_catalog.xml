@@ -98,7 +98,7 @@
     <string name="cat_sec_keep_messages">Manter mensagens</string>
     <string name="cat_keepUnsentMessages_desc">Mensagens que os outros apagam continuam legíveis</string>
     <string name="cat_keepUnsentInChat_desc">Desativado: só a lista Mensagens apagadas as mantém</string>
-    <string name="cat_showUnsentIndicator_desc">Adiciona a etiqueta “Apagada” a cada uma</string>
+    <string name="cat_showUnsentIndicator_desc">Mostra cada uma em vermelho</string>
     <string name="cat_keepEditHistory_desc">Toque em “Editada” para vê-las</string>
     <string name="cat_sec_chat_tools">Ferramentas de conversa</string>
     <string name="cat_jumpToFirstMessage">Ir para a primeira mensagem</string>
@@ -154,7 +154,7 @@
     <string name="cat_rescan">Reanalisar o Instagram</string>
     <string name="cat_rescan_desc">Use quando recursos pararem de funcionar após uma atualização do Instagram</string>
     <string name="cat_dataBackup">Backup dos dados</string>
-    <string name="cat_dataBackup_desc">Mensagens apagadas, perfis analisados e histórico de seguidores</string>
+    <string name="cat_dataBackup_desc">Mensagens apagadas, histórico de edições, conversas ocultas e com confirmação de leitura, números alterados das publicações e análises de perfis</string>
     <string name="cat_isDevEnabled_desc">Configurações internas da Meta, para usuários avançados</string>
     <string name="cat_download_quality_hint">Padrão salva o que o Instagram mostra (fotos até a largura da sua tela). Melhor verifica todas as versões, HDR incluído, e salva a mais nítida, ou a mais nítida até a resolução que você escolher.</string>
     <plurals name="ig_story_cache_days">

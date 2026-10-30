@@ -29,7 +29,7 @@
     <string name="frequently_asked_questions">Câu hỏi thường gặp</string>
     <string name="faq_1"><b>1. Không hoạt động hoặc văng app khi dùng bản Google Play?</b>\n- Hãy tải và cài đặt bản APK từ APKMirror</string>
     <string name="faq_3"><b>3. Tính năng không có hiệu lực?</b>\n- Buộc dừng (Force Stop) và mở lại ứng dụng Instagram.</string>
-    <string name="faq_6"><b>6. Đã bật Không xao nhãng nhưng nội dung vẫn hiển thị?</b>\n- Hãy buộc dừng Instagram và xóa bộ nhớ đệm (cache).</string>
+    <string name="faq_6"><b>6. Đã bật Chế độ tập trung nhưng nội dung vẫn hiển thị?</b>\n- Hãy buộc dừng Instagram và xóa bộ nhớ đệm (cache).</string>
 
     <!-- features fragment section headers -->
     <string name="feat_config">Cấu hình</string>

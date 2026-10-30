@@ -34,7 +34,7 @@
     <string name="frequently_asked_questions">Często zadawane pytania</string>
     <string name="faq_1"><b>1. Wersja ze Sklepu Play nie działa stabilnie?</b>\n- Użyj plików APK z APKMirror</string>
     <string name="faq_3"><b>3. Wybrane funkcje nie działają?</b>\n- Wymuś zatrzymanie i uruchom ponownie Instagrama.</string>
-    <string name="faq_6"><b>6. Instagram bez rozproszeń włączony, ale rozpraszacze nie zniknęły?</b>\n- Wymuś zatrzymanie Instagrama i wyczyść jego pamięć podręczną.</string>
+    <string name="faq_6"><b>6. Tryb skupienia włączony, ale rozpraszacze nie zniknęły?</b>\n- Wymuś zatrzymanie Instagrama i wyczyść jego pamięć podręczną.</string>
 
     <!-- features fragment section headers -->
     <string name="feat_config">Konfiguracja</string>

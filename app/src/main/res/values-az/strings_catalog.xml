@@ -98,7 +98,7 @@
     <string name="cat_sec_keep_messages">Mesajları saxla</string>
     <string name="cat_keepUnsentMessages_desc">Başqalarının geri götürdüyü mesajlar oxunaqlı qalır</string>
     <string name="cat_keepUnsentInChat_desc">Deaktiv: yalnız «Geri götürülən mesajlar» siyahısında qalır</string>
-    <string name="cat_showUnsentIndicator_desc">Hər birinə «Geri götürülüb» etiketi əlavə edir</string>
+    <string name="cat_showUnsentIndicator_desc">Hər birini qırmızı rəngdə göstərir</string>
     <string name="cat_keepEditHistory_desc">«Redaktə olunub» yazısına toxunub baxın</string>
     <string name="cat_sec_chat_tools">Söhbət alətləri</string>
     <string name="cat_jumpToFirstMessage">İlk mesaja keç</string>
@@ -154,7 +154,7 @@
     <string name="cat_rescan">Instagram-ı yenidən skan et</string>
     <string name="cat_rescan_desc">Instagram yeniləməsindən sonra funksiyalar işləməyəndə istifadə edin</string>
     <string name="cat_dataBackup">Məlumatları yedəklə</string>
-    <string name="cat_dataBackup_desc">Geri götürülən mesajlar, analiz edilən profillər və izləyici tarixçəsi</string>
+    <string name="cat_dataBackup_desc">Geri götürülən mesajlar, redaktə tarixçəsi, gizli və oxunma bildirişi alan söhbətlər, dəyişdirilmiş paylaşım sayları və profil analizləri</string>
     <string name="cat_isDevEnabled_desc">Meta-nın daxili ayarları, təcrübəli istifadəçilər üçün</string>
     <string name="cat_download_quality_hint">Standart Instagram-ın sizə göstərdiyini saxlayır (fotolar ekranınızın eninə qədər). Ən yaxşı HDR daxil olmaqla bütün versiyaları yoxlayır və ən aydınını, ya da seçdiyiniz təsvir ölçüsünə qədər ən aydınını saxlayır.</string>
     <plurals name="ig_story_cache_days">

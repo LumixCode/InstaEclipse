@@ -98,7 +98,7 @@
     <string name="cat_sec_keep_messages">Conservar mensajes</string>
     <string name="cat_keepUnsentMessages_desc">Los mensajes que otros anulan se pueden seguir leyendo</string>
     <string name="cat_keepUnsentInChat_desc">Desactivado: solo los guarda la lista «Mensajes anulados»</string>
-    <string name="cat_showUnsentIndicator_desc">Añade la etiqueta «Anulado» a cada uno</string>
+    <string name="cat_showUnsentIndicator_desc">Muestra cada uno en rojo</string>
     <string name="cat_keepEditHistory_desc">Toca «Editado» para verlas</string>
     <string name="cat_sec_chat_tools">Herramientas de chat</string>
     <string name="cat_jumpToFirstMessage">Ir al primer mensaje</string>
@@ -154,7 +154,7 @@
     <string name="cat_rescan">Reescanear Instagram</string>
     <string name="cat_rescan_desc">Úsalo cuando las funciones dejen de funcionar tras una actualización de Instagram</string>
     <string name="cat_dataBackup">Copia de datos</string>
-    <string name="cat_dataBackup_desc">Mensajes anulados, perfiles analizados e historial de seguidores</string>
+    <string name="cat_dataBackup_desc">Mensajes anulados, historial de ediciones, chats ocultos y con confirmaciones de lectura, cifras cambiadas de publicaciones y análisis de perfiles</string>
     <string name="cat_isDevEnabled_desc">Ajustes internos de Meta, para usuarios avanzados</string>
     <string name="cat_download_quality_hint">Estándar guarda lo que Instagram te muestra (fotos hasta el ancho de tu pantalla). Máxima revisa todas las versiones, HDR incluido, y guarda la más nítida, o la más nítida hasta la resolución que elijas.</string>
     <plurals name="ig_story_cache_days">

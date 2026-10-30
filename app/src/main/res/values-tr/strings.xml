@@ -34,7 +34,7 @@
     <string name="frequently_asked_questions">Sıkça Sorulan Sorular</string>
     <string name="faq_1"><b>1. Google Play Sürümünü kullanırken çalışmıyor veya çöküyor mu?</b>\n- APKMirror APK\'lerini kullanın.</string>
     <string name="faq_3"><b>3. Özellikler çalışmıyor mu?</b>\n- Instagram\'ı zorla durdurup yeniden başlatın.</string>
-    <string name="faq_6"><b>6. Dikkat Dağıtıcıları Kapat seçeneği etkin ancak içerik hâlâ görünüyor mu?</b>\n- Instagram\'ı zorla durdurun ve önbelleğini temizleyin.</string>
+    <string name="faq_6"><b>6. Odak modu etkin ancak içerik hâlâ görünüyor mu?</b>\n- Instagram\'ı zorla durdurun ve önbelleğini temizleyin.</string>
 
     <!-- features fragment section headers -->
     <string name="feat_group_appearance">Görünüm</string>

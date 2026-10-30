@@ -33,7 +33,7 @@
     <string name="frequently_asked_questions">常见问题</string>
     <string name="faq_1"><b>1. 使用 Google Play 版本时无法正常运行或崩溃？</b>\n- 请使用 APKMirror 下载的版本。</string>
     <string name="faq_3"><b>3. 功能无法使用？</b>\n- 强制停止并重新启动 Instagram。</string>
-    <string name="faq_6"><b>6. 启用了无干扰模式，但内容仍然显示？</b>\n- 强制停止 Instagram 并清除其缓存。</string>
+    <string name="faq_6"><b>6. 启用了专注模式，但内容仍然显示？</b>\n- 强制停止 Instagram 并清除其缓存。</string>
 
     <!-- features fragment section headers -->
     <string name="feat_config">配置</string>

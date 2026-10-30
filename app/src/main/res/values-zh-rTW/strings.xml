@@ -32,7 +32,7 @@
     <string name="frequently_asked_questions">常見問題</string>
     <string name="faq_1"><b>1. 使用 Google Play 版本時無法正常執行或崩潰？</b>\n- 請使用 APKMirror 下載的版本。</string>
     <string name="faq_3"><b>3. 功能無法使用？</b>\n- 強制停止並重新啟動 Instagram。</string>
-    <string name="faq_6"><b>6. 啟用了無干擾模式，但內容仍然顯示？</b>\n- 強制停止 Instagram 並清除其快取。</string>
+    <string name="faq_6"><b>6. 啟用了專注模式，但內容仍然顯示？</b>\n- 強制停止 Instagram 並清除其快取。</string>
 
     <!-- Don't translate! -->
 

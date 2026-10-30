@@ -98,7 +98,7 @@
     <string name="cat_sec_keep_messages">Giữ tin nhắn</string>
     <string name="cat_keepUnsentMessages_desc">Tin nhắn người khác thu hồi vẫn đọc được</string>
     <string name="cat_keepUnsentInChat_desc">Tắt: chỉ danh sách Tin nhắn đã thu hồi giữ chúng</string>
-    <string name="cat_showUnsentIndicator_desc">Thêm nhãn “Đã thu hồi” vào từng tin nhắn</string>
+    <string name="cat_showUnsentIndicator_desc">Hiển thị từng tin nhắn bằng màu đỏ</string>
     <string name="cat_keepEditHistory_desc">Chạm “Đã chỉnh sửa” để xem</string>
     <string name="cat_sec_chat_tools">Công cụ chat</string>
     <string name="cat_jumpToFirstMessage">Nhảy tới tin nhắn đầu tiên</string>
@@ -154,7 +154,7 @@
     <string name="cat_rescan">Quét lại Instagram</string>
     <string name="cat_rescan_desc">Dùng khi tính năng ngừng hoạt động sau khi cập nhật Instagram</string>
     <string name="cat_dataBackup">Sao lưu dữ liệu</string>
-    <string name="cat_dataBackup_desc">Tin nhắn đã thu hồi, hồ sơ đã phân tích và lịch sử người theo dõi</string>
+    <string name="cat_dataBackup_desc">Tin nhắn đã thu hồi, lịch sử chỉnh sửa, đoạn chat ẩn và đoạn chat nhận xác nhận đã đọc, số liệu bài viết đã đổi và kết quả phân tích hồ sơ</string>
     <string name="cat_isDevEnabled_desc">Cài đặt nội bộ của Meta, dành cho người dùng nâng cao</string>
     <string name="cat_download_quality_hint">Tiêu chuẩn lưu những gì Instagram hiển thị cho bạn (ảnh tối đa bằng chiều rộng màn hình). Tốt nhất kiểm tra mọi phiên bản, kể cả HDR, rồi lưu bản nét nhất, hoặc bản nét nhất trong giới hạn độ phân giải bạn chọn.</string>
     <plurals name="ig_story_cache_days">

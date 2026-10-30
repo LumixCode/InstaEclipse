@@ -33,7 +33,7 @@
     <string name="frequently_asked_questions">Часто задаваемые вопросы</string>
     <string name="faq_1"><b>1. Не работает или вылетает с версией из Google Play?</b>\n- Используйте APK-файлы с APKMirror</string>
     <string name="faq_3"><b>3. Функции не работают?</b>\n- Принудительно остановите и перезапустите Instagram.</string>
-    <string name="faq_6"><b>6. Включён режим «Без отвлечений», но контент всё ещё появляется?</b>\n- Принудительно остановите Instagram и очистите его кэш.</string>
+    <string name="faq_6"><b>6. Включён «Режим фокусировки», но контент всё ещё появляется?</b>\n- Принудительно остановите Instagram и очистите его кэш.</string>
 
     <!-- Don't translate! -->
 
