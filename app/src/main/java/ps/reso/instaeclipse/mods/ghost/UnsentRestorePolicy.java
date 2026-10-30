@@ -16,6 +16,15 @@ final class UnsentRestorePolicy {
         return loaded.length;
     }
 
+    static int keptIndex(long[] loaded, long time, Boolean learned) {
+        Boolean own = direction(loaded);
+        boolean newestFirst = own != null ? own : Boolean.TRUE.equals(learned);
+        for (int i = 0; i < loaded.length; i++) {
+            if (newestFirst ? loaded[i] < time : loaded[i] > time) return i;
+        }
+        return loaded.length;
+    }
+
     static Boolean direction(long[] loaded) {
         if (loaded.length < 2 || loaded[0] == loaded[loaded.length - 1]) return null;
         return loaded[0] > loaded[loaded.length - 1];

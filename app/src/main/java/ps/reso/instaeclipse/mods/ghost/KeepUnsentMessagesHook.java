@@ -69,6 +69,8 @@ public class KeepUnsentMessagesHook {
     private static Field messageText;
     private static boolean localClearingAvailable;
     private static final ThreadLocal<Boolean> clearingLocally = new ThreadLocal<>();
+    private static final ThreadLocal<Boolean> removingFromDevice = new ThreadLocal<>();
+    private static final Set<String> deviceRemoved = ConcurrentHashMap.newKeySet();
     private static final Map<Key, NativeThread> nativeThreads = new LinkedHashMap<>();
     private static final Map<Object, String> entryThreads = new WeakHashMap<>();
     private static final Map<Object, String> ownerAccounts = new WeakHashMap<>();
@@ -294,12 +296,25 @@ public class KeepUnsentMessagesHook {
                     });
                     localClearingAvailable = true;
                 }
+                Method deviceRemoval = deviceRemoval(removal);
+                if (deviceRemoval != null) {
+                    XposedBridge.hookMethod(deviceRemoval, new XC_MethodHook() {
+                        @Override protected void beforeHookedMethod(MethodHookParam param) {
+                            removingFromDevice.set(true);
+                        }
+                        @Override protected void afterHookedMethod(MethodHookParam param) {
+                            removingFromDevice.remove();
+                        }
+                    });
+                } else {
+                    ModuleLog.detail("(IE|KeepUnsent) device removal missing: messages you delete or fail to send may stay in the chat");
+                }
                 XposedBridge.hookMethod(removal, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
                         if (Boolean.TRUE.equals(clearingLocally.get())) return;
                         List<String> bulk = bulkUnsendIds(param.args, BulkUnsend::isOwnUnsend);
                         if (!bulk.isEmpty()) {
-                            try { releaseBulkUnsend(param.thisObject, param.args[0], cacheGetter, bulk); }
+                            try { release(param.thisObject, param.args[0], cacheGetter, bulk); }
                             catch (Throwable t) {
                                 ModuleLog.warn("(IE|KeepUnsent) Messages you removed with bulk unsend may still show as unsent: " + t.getClass().getSimpleName());
                             }
@@ -326,12 +341,14 @@ public class KeepUnsentMessagesHook {
                             }
                             Object message = cachedMessage(entry, lookups, ids, thread);
                             boolean own = UnsentIdentity.isFromAccount(message, account);
-                            byte[] copy = own || message == null ? null : encodeCopy(entry, message, param.args[0]);
                             if (message != null) ids.addAll(UnsentIdentity.messageIds(message));
-                            if (passesThrough(own, !own && alreadyUnsent(account, thread, ids), copy,
+                            boolean deviceOnly = removedFromDevice(own, ids);
+                            byte[] copy = deviceOnly || message == null ? null : encodeCopy(entry, message, param.args[0]);
+                            if (deviceOnly) release(param.thisObject, param.args[0], cacheGetter, ids);
+                            if (passesThrough(deviceOnly, !deviceOnly && alreadyUnsent(account, thread, ids), copy,
                                     System.currentTimeMillis())) {
-                                block = !own && FeatureFlags.keepEphemeralMessages;
-                                ModuleLog.detail("(IE|KeepUnsent) " + (own ? "own removal passed through"
+                                block = !own && !deviceOnly && FeatureFlags.keepEphemeralMessages;
+                                ModuleLog.detail("(IE|KeepUnsent) " + (deviceOnly ? "own device removal passed through"
                                         : block ? "expired message kept for Keep disappearing messages"
                                         : "expired removal passed through"));
                                 return;
@@ -369,6 +386,18 @@ public class KeepUnsentMessagesHook {
         } catch (Throwable t) {
             ModuleLog.error("(IE|KeepUnsent) Could not turn on keeping unsent messages", t);
         }
+    }
+
+    private static Method deviceRemoval(Method removal) {
+        List<Class<?>> params = List.of(removal.getParameterTypes()[0], String.class, String.class);
+        Method found = null;
+        for (Method candidate : removal.getDeclaringClass().getDeclaredMethods()) {
+            if (Modifier.isStatic(candidate.getModifiers()) || candidate.getReturnType() != void.class
+                    || !List.of(candidate.getParameterTypes()).equals(params)) continue;
+            if (found != null) return null;
+            found = candidate;
+        }
+        return found;
     }
 
     private static List<Method> nativeParts(ClassLoader loader, Method removal) throws Throwable {
@@ -451,14 +480,21 @@ public class KeepUnsentMessagesHook {
         return protectedIds.find(account, thread, ids) != null || UnsentLog.findUnsent(account, thread, ids) != null;
     }
 
-    static boolean passesThrough(boolean own, boolean unsent, byte[] copy, long now) {
-        if (own) return true;
+    private static boolean removedFromDevice(boolean own, List<String> ids) {
+        if (!own || !Boolean.TRUE.equals(removingFromDevice.get())) return !Collections.disjoint(deviceRemoved, ids);
+        if (deviceRemoved.size() > 1000) deviceRemoved.clear();
+        deviceRemoved.addAll(ids);
+        return true;
+    }
+
+    static boolean passesThrough(boolean deviceOnly, boolean unsent, byte[] copy, long now) {
+        if (deviceOnly) return true;
         if (unsent) return false;
         Long expiry = UnsentIdentity.expiry(copy);
         return expiry != null && now - expiry > EXPIRY_MARGIN_MS;
     }
 
-    private static void releaseBulkUnsend(Object store, Object threadKey, Method cacheGetter, List<String> ids) {
+    private static void release(Object store, Object threadKey, Method cacheGetter, List<String> ids) {
         String thread = UnsentIdentity.thread(threadKey);
         String account = UnsentIdentity.account(store);
         if (account == null && cacheGetter != null) {
@@ -660,6 +696,13 @@ public class KeepUnsentMessagesHook {
         if (restored > 0) ModuleLog.detail("(IE|KeepUnsent) restored " + restored + " saved unsent message(s)");
     }
 
+    private static int keptIndex(List<Object> live, Object message) throws ReflectiveOperationException {
+        if (messageTime == null) return live.size();
+        long[] times = new long[live.size()];
+        for (int i = 0; i < times.length; i++) times[i] = (long) messageTime.invoke(live.get(i));
+        return UnsentRestorePolicy.keptIndex(times, (long) messageTime.invoke(message), listNewestFirst);
+    }
+
     private static void learnOrder(List<Object> live, Collection<Object> kept) throws ReflectiveOperationException {
         if (listNewestFirst != null || live == null || messageTime == null) return;
         Set<Object> ours = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -816,7 +859,7 @@ public class KeepUnsentMessagesHook {
 
             @SuppressWarnings("unchecked")
             private void keepOwned(Object[] args, List<Object> liveList, Map<Key, Object> owned,
-                                   String account, String thread) {
+                                   String account, String thread) throws ReflectiveOperationException {
                 for (int i = 1; i < args.length; i++) {
                     if (!(args[i] instanceof List) || args[i] == liveList) continue;
                     Iterator<Object> it = ((List<Object>) args[i]).iterator();
@@ -835,7 +878,7 @@ public class KeepUnsentMessagesHook {
                     }
                     boolean present = false;
                     for (Object cur : liveList) if (cur == kept.getValue()) { present = true; break; }
-                    if (!present) { liveList.add(kept.getValue()); added++; }
+                    if (!present) { liveList.add(keptIndex(liveList, kept.getValue()), kept.getValue()); added++; }
                 }
                 if (added > 0) ModuleLog.detail("(IE|KeepUnsent) re-injected " + added + " kept msg(s) into this thread");
             }
