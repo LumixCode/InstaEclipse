@@ -185,7 +185,9 @@ public class HideChatsHook {
             @Override protected void afterHookedMethod(MethodHookParam param) {
                 Activity activity = fragmentActivity(param.thisObject);
                 WeakReference<Object> current = foregroundInboxes.get(activity);
-                if (current != null && current.get() == param.thisObject) foregroundInboxes.remove(activity);
+                if (current == null || current.get() != param.thisObject) return;
+                foregroundInboxes.remove(activity);
+                if (hiddenOnlyMode) activity.runOnUiThread(() -> hideInboxControl(activity));
             }
         });
         inboxesTracked = inboxResumes > 0;
@@ -278,6 +280,13 @@ public class HideChatsHook {
         return inbox != null && inbox.get() != null;
     }
 
+    private static boolean inboxOnScreen(Activity activity) {
+        if (!inboxesTracked) return true;
+        WeakReference<Object> inbox = foregroundInboxes.get(activity);
+        View root = inbox == null ? null : fragmentView(inbox.get());
+        return root != null && root.isShown() && root.getGlobalVisibleRect(new Rect());
+    }
+
     private Rect inboxGestureBounds(Activity activity) {
         ensureIds(activity);
         View decor = activity.getWindow().getDecorView();
@@ -288,6 +297,7 @@ public class HideChatsHook {
         View bar = ThreadHeaderMenu.findShown(decor, inboxActionBarId);
         Rect bounds = new Rect();
         if (bar == null || !bar.getGlobalVisibleRect(bounds)) {
+            if (!inboxOnScreen(activity)) return null;
             View content = activity.findViewById(android.R.id.content);
             if (content == null || !content.getGlobalVisibleRect(bounds)) return null;
             android.view.WindowInsets insets = decor.getRootWindowInsets();
@@ -810,9 +820,10 @@ public class HideChatsHook {
         Rect area = hiddenOnlyMode ? inboxGestureBounds(activity) : null;
         InboxControlBinding binding = inboxControls.get(activity);
         if (area == null) {
-            if (binding != null) binding.control.setVisibility(View.GONE);
+            hideInboxControl(activity);
             return;
         }
+        boolean showing = binding != null && binding.control.getVisibility() == View.VISIBLE;
         if (!(decor instanceof FrameLayout content)) return;
         if (binding == null || binding.control.getParent() != content) {
             ImageView control = new ImageView(activity);
@@ -845,6 +856,14 @@ public class HideChatsHook {
         binding.control.setX(area.left - contentLocation[0]);
         binding.control.setY(area.top - contentLocation[1]);
         binding.control.setVisibility(View.VISIBLE);
+        if (!showing) ModuleLog.detail("(IE|HideChats) hidden chats back arrow shown over the inbox");
+    }
+
+    private static void hideInboxControl(Activity activity) {
+        InboxControlBinding binding = inboxControls.get(activity);
+        if (binding == null || binding.control.getVisibility() == View.GONE) return;
+        binding.control.setVisibility(View.GONE);
+        ModuleLog.detail("(IE|HideChats) hidden chats back arrow removed");
     }
 
     private static void renderInboxControl(Activity activity, ImageView control) {
