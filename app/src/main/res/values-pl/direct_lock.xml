@@ -16,6 +16,14 @@
     <string name="ig_lock_biometric_confirm">Potwierdź, że to Ty</string>
     <string name="ig_hidden_inbox_show_all">Pokaż wszystkie czaty</string>
     <string name="ig_hidden_inbox_unavailable">Ukryte czaty są niedostępne w tej skrzynce odbiorczej.</string>
+    <plurals name="ig_hidden_inbox_more">
+        <item quantity="one">Jeszcze %1$d ukryty czat</item>
+        <item quantity="few">Jeszcze %1$d ukryte czaty</item>
+        <item quantity="many">Jeszcze %1$d ukrytych czatów</item>
+        <item quantity="other">Jeszcze %1$d ukrytego czatu</item>
+    </plurals>
+    <string name="ig_hidden_inbox_more_title">Więcej ukrytych czatów</string>
+    <string name="ig_hidden_inbox_more_help">Tych czatów nie ma jeszcze na tej liście. Stuknij jeden, aby go otworzyć.</string>
     <string name="ig_lock_set_passcode">Ustaw kod</string>
     <string name="ig_lock_change_passcode">Zmień kod</string>
     <string name="ig_lock_remove_passcode">Usuń kod</string>

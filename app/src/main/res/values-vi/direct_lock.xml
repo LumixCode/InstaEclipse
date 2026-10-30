@@ -16,6 +16,11 @@
     <string name="ig_lock_biometric_confirm">Xác nhận đó là bạn</string>
     <string name="ig_hidden_inbox_show_all">Hiện tất cả tin nhắn</string>
     <string name="ig_hidden_inbox_unavailable">Không dùng được đoạn chat ẩn cho hộp thư này.</string>
+    <plurals name="ig_hidden_inbox_more">
+        <item quantity="other">Thêm %1$d đoạn chat ẩn</item>
+    </plurals>
+    <string name="ig_hidden_inbox_more_title">Các đoạn chat ẩn khác</string>
+    <string name="ig_hidden_inbox_more_help">Những đoạn chat này chưa có trong danh sách. Nhấn vào một đoạn chat để mở.</string>
     <string name="ig_lock_set_passcode">Đặt mã khóa</string>
     <string name="ig_lock_change_passcode">Đổi mã khóa</string>
     <string name="ig_lock_remove_passcode">Xóa mã khóa</string>

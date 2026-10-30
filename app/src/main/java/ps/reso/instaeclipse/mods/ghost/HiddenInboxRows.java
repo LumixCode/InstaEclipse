@@ -1,12 +1,16 @@
 package ps.reso.instaeclipse.mods.ghost;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
 public final class HiddenInboxRows<T> {
     private List<T> source = new ArrayList<>();
+    private List<T> missingFrom;
+    private Set<String> missingOf;
+    private Set<String> missing;
 
     public synchronized void replace(List<? extends T> rows) {
         source = new ArrayList<>(rows);
@@ -16,6 +20,16 @@ public final class HiddenInboxRows<T> {
                                         boolean hiddenOnly, Function<T, String> identity) {
         if (!enabled) return new ArrayList<>(source);
         return select(source, hiddenIds, hiddenOnly, identity);
+    }
+
+    public synchronized Set<String> missing(Set<String> hiddenIds, Function<T, String> identity) {
+        if (missingFrom == source && missingOf == hiddenIds) return missing;
+        Set<String> left = new LinkedHashSet<>(hiddenIds);
+        for (T row : source) left.remove(identity.apply(row));
+        missingFrom = source;
+        missingOf = hiddenIds;
+        missing = left;
+        return left;
     }
 
     public static <T> ArrayList<T> select(List<? extends T> rows, Set<String> hiddenIds,

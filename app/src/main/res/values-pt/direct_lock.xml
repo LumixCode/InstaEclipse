@@ -16,6 +16,13 @@
     <string name="ig_lock_biometric_confirm">Confirme que é você</string>
     <string name="ig_hidden_inbox_show_all">Ver todas as mensagens</string>
     <string name="ig_hidden_inbox_unavailable">As conversas ocultas não estão disponíveis nesta caixa de entrada.</string>
+    <plurals name="ig_hidden_inbox_more">
+        <item quantity="one">Mais %1$d conversa oculta</item>
+        <item quantity="many">Mais %1$d conversas ocultas</item>
+        <item quantity="other">Mais %1$d conversas ocultas</item>
+    </plurals>
+    <string name="ig_hidden_inbox_more_title">Mais conversas ocultas</string>
+    <string name="ig_hidden_inbox_more_help">Estas conversas ainda não estão nesta lista. Toque em uma para abrir.</string>
     <string name="ig_lock_set_passcode">Definir código</string>
     <string name="ig_lock_change_passcode">Alterar código</string>
     <string name="ig_lock_remove_passcode">Remover código</string>

@@ -5,8 +5,11 @@ import android.app.Activity;
 import ps.reso.instaeclipse.xposedcompat.AndroidAppHelper;
 import android.app.Application;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Rect;
+import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -17,6 +20,7 @@ import android.view.ViewConfiguration;
 import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.luckypray.dexkit.query.FindMethod;
@@ -47,6 +51,7 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.LegacyPaths;
 import ps.reso.instaeclipse.utils.core.ModuleResources;
+import ps.reso.instaeclipse.utils.dialog.DialogUtils;
 import ps.reso.instaeclipse.utils.dialog.LockFlows;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
@@ -57,6 +62,7 @@ import ps.reso.instaeclipse.utils.ghost.ThreadNames;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
 import ps.reso.instaeclipse.utils.toast.IeToast;
+import ps.reso.instaeclipse.utils.ui.IePalette;
 import ps.reso.instaeclipse.utils.ui.IgTint;
 
 public class HideChatsHook {
@@ -69,6 +75,9 @@ public class HideChatsHook {
     private static final int BACK_ARROW_GROW_DP = 2;
     private static final int BACK_ARROW_CENTER_X_DP = 34;
     private static final String[] ACCOUNT_NAME_IDS = {"action_bar_title_textview", "action_bar_title"};
+    private static final String MAIN_ACTIVITY = "com.instagram.mainactivity.InstagramMainActivity";
+    private static final int MORE_CHATS_GAP_DP = 12;
+    private static final int MORE_CHATS_NO_TAB_BAR_DP = 68;
 
     private static final Map<View, WeakReference<Activity>> watchedRoots = new WeakHashMap<>();
     private static final Map<View, ViewTreeObserver.OnGlobalLayoutListener> layoutListeners = new WeakHashMap<>();
@@ -91,6 +100,7 @@ public class HideChatsHook {
     private static HideChatsHook activeHook;
     private static volatile boolean hiddenOnlyMode;
     private static volatile String hiddenAccount;
+    private static volatile WeakReference<NativeInbox> hiddenInbox;
     private static WeakReference<Activity> recentsHidden;
     private static boolean lifecycleRegistered;
     private static boolean threadsTracked, inboxesTracked;
@@ -138,8 +148,12 @@ public class HideChatsHook {
         final String account;
         final HiddenInboxRows<Object> rows = new HiddenInboxRows<>();
         final InboxReplayGate gate = new InboxReplayGate();
+        final HiddenChatLoader chats;
 
-        NativeInbox(Object owner) { account = UnsentIdentity.account(owner); }
+        NativeInbox(Object owner) {
+            account = UnsentIdentity.account(owner);
+            chats = new HiddenChatLoader(owner, account);
+        }
 
         boolean hiddenOnly() {
             return hiddenOnlyMode && account != null && account.equals(hiddenAccount);
@@ -153,10 +167,15 @@ public class HideChatsHook {
             return rows.visible(HiddenThreads.ids(), FeatureFlags.hideSpecificChats, hiddenOnly(),
                     HideChatsHook::threadIdOfRow);
         }
+
+        Set<String> missing() {
+            return rows.missing(HiddenThreads.ids(), HideChatsHook::threadIdOfRow);
+        }
     }
 
     private static final class InboxControlBinding {
         final ImageView control;
+        TextView more;
 
         InboxControlBinding(ImageView control) {
             this.control = control;
@@ -166,6 +185,7 @@ public class HideChatsHook {
 
     public void install(ClassLoader classLoader) {
         activeHook = this;
+        HiddenChatLoader.install(classLoader);
         resolveTitleFormatter(classLoader);
         installInboxPresentation(classLoader);
         installInboxFilter(classLoader);
@@ -373,6 +393,7 @@ public class HideChatsHook {
                     long revision = state.revision();
                     if (FeatureFlags.hideSpecificChats || hiddenOnlyMode) param.args[0] = state.visible();
                     state.gate.applied(revision);
+                    if (state.hiddenOnly()) loadMissingChats(state);
                 }
             });
             inboxPath = path;
@@ -833,7 +854,9 @@ public class HideChatsHook {
             control.setClickable(true);
             control.setFocusable(true);
             control.setElevation(dp(activity, 24));
+            TextView more = binding == null ? null : binding.more;
             binding = new InboxControlBinding(control);
+            binding.more = more;
             control.setOnClickListener(view -> setHiddenOnlyMode(activity, false));
             renderInboxControl(activity, control);
             content.addView(control, new FrameLayout.LayoutParams(area.width(), area.height(),
@@ -857,13 +880,104 @@ public class HideChatsHook {
         binding.control.setY(area.top - contentLocation[1]);
         binding.control.setVisibility(View.VISIBLE);
         if (!showing) ModuleLog.detail("(IE|HideChats) hidden chats back arrow shown over the inbox");
+        updateMoreChats(activity, content, binding);
     }
 
     private static void hideInboxControl(Activity activity) {
         InboxControlBinding binding = inboxControls.get(activity);
-        if (binding == null || binding.control.getVisibility() == View.GONE) return;
+        if (binding == null) return;
+        if (binding.more != null) binding.more.setVisibility(View.GONE);
+        if (binding.control.getVisibility() == View.GONE) return;
         binding.control.setVisibility(View.GONE);
         ModuleLog.detail("(IE|HideChats) hidden chats back arrow removed");
+    }
+
+    private static void updateMoreChats(Activity activity, FrameLayout content, InboxControlBinding binding) {
+        NativeInbox state = hiddenInbox();
+        List<String> unloaded = state == null ? Collections.emptyList() : state.chats.unloaded(state.missing());
+        if (unloaded.isEmpty()) {
+            if (binding.more != null) binding.more.setVisibility(View.GONE);
+            return;
+        }
+        if (binding.more == null || binding.more.getParent() != content) {
+            binding.more = moreChatsButton(activity);
+            content.addView(binding.more, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL));
+        }
+        String label = moreChatsLabel(activity, unloaded.size());
+        if (!label.contentEquals(binding.more.getText())) {
+            binding.more.setText(label);
+            ModuleLog.detail("(IE|HideChats) hidden chats not in the list: " + unloaded.size());
+        }
+        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) binding.more.getLayoutParams();
+        int margin = moreChatsMargin(activity, content);
+        if (params.bottomMargin != margin) {
+            params.bottomMargin = margin;
+            binding.more.setLayoutParams(params);
+        }
+        binding.more.setVisibility(View.VISIBLE);
+    }
+
+    private static String moreChatsLabel(Activity activity, int count) {
+        try {
+            return ps.reso.instaeclipse.utils.i18n.I18n.moduleResources(activity)
+                    .getQuantityString(R.plurals.ig_hidden_inbox_more, count, count);
+        } catch (Exception e) {
+            return text(activity, R.string.ig_hidden_inbox_more_title);
+        }
+    }
+
+    private static TextView moreChatsButton(Activity activity) {
+        IePalette palette = IePalette.of(activity);
+        GradientDrawable background = new GradientDrawable();
+        background.setCornerRadius(dp(activity, 20));
+        background.setColor(palette.card);
+        TextView button = new TextView(activity);
+        button.setBackground(background);
+        button.setTextColor(palette.text);
+        button.setTextSize(14);
+        button.setGravity(Gravity.CENTER);
+        button.setPadding(dp(activity, 18), dp(activity, 10), dp(activity, 18), dp(activity, 10));
+        button.setClickable(true);
+        button.setFocusable(true);
+        button.setElevation(dp(activity, 24));
+        button.setOnClickListener(view -> showMoreChats(activity));
+        return button;
+    }
+
+    private static int moreChatsMargin(Activity activity, View decor) {
+        int tabBarId = ps.reso.instaeclipse.utils.ui.ResIds.id(activity, "tab_bar");
+        View tabBar = tabBarId == 0 ? null : ThreadHeaderMenu.findShown(decor, tabBarId);
+        Rect bounds = new Rect();
+        if (tabBar != null && tabBar.getGlobalVisibleRect(bounds)) {
+            return Math.max(0, decor.getHeight() - bounds.top) + dp(activity, MORE_CHATS_GAP_DP);
+        }
+        android.view.WindowInsets insets = decor.getRootWindowInsets();
+        return (insets == null ? 0 : insets.getSystemWindowInsetBottom()) + dp(activity, MORE_CHATS_NO_TAB_BAR_DP);
+    }
+
+    private static void showMoreChats(Activity activity) {
+        NativeInbox state = hiddenInbox();
+        if (state == null) return;
+        DialogUtils.showUnloadedHiddenChats(activity, state.chats.unloaded(state.missing()),
+                threadId -> openHiddenChat(activity, threadId));
+    }
+
+    private static void openHiddenChat(Activity activity, String threadId) {
+        String account = hiddenAccount;
+        if (account == null) return;
+        try {
+            Uri link = new Uri.Builder().scheme("ig").authority("direct_v2")
+                    .appendQueryParameter("id", threadId)
+                    .appendQueryParameter("user_id", account)
+                    .appendQueryParameter("calling_package", activity.getPackageName()).build();
+            activity.startActivity(new Intent().setClassName(activity.getPackageName(), MAIN_ACTIVITY)
+                    .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP).setData(link));
+            ModuleLog.detail("(IE|HideChats) opening hidden chat " + threadId + " by its link");
+        } catch (Throwable t) {
+            ModuleLog.warn("(IE|HideChats) Could not open a hidden chat: " + t.getClass().getSimpleName() + ": " + t.getMessage());
+            IeToast.makeText(activity, text(activity, R.string.ig_hide_chat_no_thread), Toast.LENGTH_SHORT).show();
+        }
     }
 
     private static void renderInboxControl(Activity activity, ImageView control) {
@@ -914,14 +1028,33 @@ public class HideChatsHook {
                 return;
             }
             hiddenAccount = state.account;
+            hiddenInbox = new WeakReference<>(state);
+            state.chats.reopen();
         } else hiddenAccount = null;
         hiddenOnlyMode = enabled;
         syncRecents(activity);
+        NativeInbox opened = hiddenInbox();
+        if (opened != null) loadMissingChats(opened);
         if (activeHook != null) {
             activeHook.refreshInbox(activity);
             activeHook.tryInject(activity);
         }
         ModuleLog.line("(IE|HideChats) " + (enabled ? "Hidden chats opened" : "Hidden chats closed"));
+    }
+
+    private static NativeInbox hiddenInbox() {
+        WeakReference<NativeInbox> current = hiddenInbox;
+        NativeInbox state = current == null ? null : current.get();
+        return state != null && state.hiddenOnly() ? state : null;
+    }
+
+    private static void loadMissingChats(NativeInbox state) {
+        try {
+            hiddenInbox = new WeakReference<>(state);
+            state.chats.load(state.missing(), state::hiddenOnly, HideChatsHook::refreshVisibleButtons);
+        } catch (Throwable t) {
+            ModuleLog.detail("(IE|HideChats) could not load hidden chats: " + t.getMessage());
+        }
     }
 
     private static void syncRecents(Activity activity) {

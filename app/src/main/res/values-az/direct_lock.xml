@@ -16,6 +16,12 @@
     <string name="ig_lock_biometric_confirm">Kimliyinizi təsdiqləyin</string>
     <string name="ig_hidden_inbox_show_all">Bütün mesajları göstər</string>
     <string name="ig_hidden_inbox_unavailable">Bu gələnlər qutusu üçün gizli söhbətlər mövcud deyil.</string>
+    <plurals name="ig_hidden_inbox_more">
+        <item quantity="one">%1$d gizli söhbət daha</item>
+        <item quantity="other">%1$d gizli söhbət daha</item>
+    </plurals>
+    <string name="ig_hidden_inbox_more_title">Daha çox gizli söhbət</string>
+    <string name="ig_hidden_inbox_more_help">Bu söhbətlər hələ bu siyahıda deyil. Açmaq üçün birinə toxunun.</string>
     <string name="ig_lock_set_passcode">Parol təyin et</string>
     <string name="ig_lock_change_passcode">Parolu dəyiş</string>
     <string name="ig_lock_remove_passcode">Parolu sil</string>

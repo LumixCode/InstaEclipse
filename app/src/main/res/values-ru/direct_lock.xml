@@ -16,6 +16,14 @@
     <string name="ig_lock_biometric_confirm">Подтвердите, что это вы</string>
     <string name="ig_hidden_inbox_show_all">Показать все сообщения</string>
     <string name="ig_hidden_inbox_unavailable">Скрытые чаты недоступны в этом списке чатов.</string>
+    <plurals name="ig_hidden_inbox_more">
+        <item quantity="one">Ещё %1$d скрытый чат</item>
+        <item quantity="few">Ещё %1$d скрытых чата</item>
+        <item quantity="many">Ещё %1$d скрытых чатов</item>
+        <item quantity="other">Ещё %1$d скрытого чата</item>
+    </plurals>
+    <string name="ig_hidden_inbox_more_title">Другие скрытые чаты</string>
+    <string name="ig_hidden_inbox_more_help">Этих чатов пока нет в этом списке. Нажмите на чат, чтобы открыть его.</string>
     <string name="ig_lock_set_passcode">Задать код-пароль</string>
     <string name="ig_lock_change_passcode">Сменить код-пароль</string>
     <string name="ig_lock_remove_passcode">Удалить код-пароль</string>

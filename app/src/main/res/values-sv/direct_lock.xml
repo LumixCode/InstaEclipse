@@ -16,6 +16,12 @@
     <string name="ig_lock_biometric_confirm">Bekräfta att det är du</string>
     <string name="ig_hidden_inbox_show_all">Visa alla meddelanden</string>
     <string name="ig_hidden_inbox_unavailable">Dolda chattar är inte tillgängliga för den här inkorgen.</string>
+    <plurals name="ig_hidden_inbox_more">
+        <item quantity="one">%1$d dold chatt till</item>
+        <item quantity="other">%1$d dolda chattar till</item>
+    </plurals>
+    <string name="ig_hidden_inbox_more_title">Fler dolda chattar</string>
+    <string name="ig_hidden_inbox_more_help">De här chattarna finns inte i listan än. Tryck på en för att öppna den.</string>
     <string name="ig_lock_set_passcode">Ange kod</string>
     <string name="ig_lock_change_passcode">Ändra kod</string>
     <string name="ig_lock_remove_passcode">Ta bort kod</string>

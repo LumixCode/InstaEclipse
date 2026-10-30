@@ -16,6 +16,13 @@
     <string name="ig_lock_biometric_confirm">Conferma la tua identità</string>
     <string name="ig_hidden_inbox_show_all">Mostra tutti i messaggi</string>
     <string name="ig_hidden_inbox_unavailable">Le chat nascoste non sono disponibili per questa posta in arrivo.</string>
+    <plurals name="ig_hidden_inbox_more">
+        <item quantity="one">%1$d altra chat nascosta</item>
+        <item quantity="many">%1$d altre chat nascoste</item>
+        <item quantity="other">%1$d altre chat nascoste</item>
+    </plurals>
+    <string name="ig_hidden_inbox_more_title">Altre chat nascoste</string>
+    <string name="ig_hidden_inbox_more_help">Queste chat non sono ancora in questo elenco. Toccane una per aprirla.</string>
     <string name="ig_lock_set_passcode">Imposta codice</string>
     <string name="ig_lock_change_passcode">Cambia codice</string>
     <string name="ig_lock_remove_passcode">Rimuovi codice</string>

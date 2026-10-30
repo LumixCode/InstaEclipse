@@ -16,6 +16,11 @@
     <string name="ig_lock_biometric_confirm">确认是你本人</string>
     <string name="ig_hidden_inbox_show_all">显示所有消息</string>
     <string name="ig_hidden_inbox_unavailable">此收件箱无法使用隐藏聊天。</string>
+    <plurals name="ig_hidden_inbox_more">
+        <item quantity="other">还有 %1$d 个隐藏聊天</item>
+    </plurals>
+    <string name="ig_hidden_inbox_more_title">更多隐藏聊天</string>
+    <string name="ig_hidden_inbox_more_help">这些聊天还不在此列表中。轻触即可打开。</string>
     <string name="ig_lock_set_passcode">设置密码</string>
     <string name="ig_lock_change_passcode">更改密码</string>
     <string name="ig_lock_remove_passcode">移除密码</string>

@@ -3403,6 +3403,34 @@ public class DialogUtils {
                 .show();
     }
 
+    public static void showUnloadedHiddenChats(Context context, java.util.List<String> threadIds,
+                                               java.util.function.Consumer<String> open) {
+        java.util.Map<String, String> saved = ps.reso.instaeclipse.utils.ghost.HiddenThreads.all();
+        MenuWorker.load(() -> ps.reso.instaeclipse.utils.ghost.ThreadNames.resolveAll(threadIds), names -> {
+            try {
+                LinearLayout layout = createSwitchLayout(context);
+                layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_hidden_inbox_more_help)));
+                LinearLayout cardView = IeRows.card(context, 5);
+                for (String id : threadIds) {
+                    String title = saved.getOrDefault(id, "").trim();
+                    if (title.isEmpty() && names != null) title = names.getOrDefault(id, "");
+                    String suffix = id.length() > 6 ? id.substring(id.length() - 6) : id;
+                    String label = title.isEmpty()
+                            ? I18n.t(context, R.string.ig_hide_chats_unknown) + "  ·  …" + suffix : title;
+                    cardView.addView(detailRow(context, R.drawable.ic_chat, accentHex(FeatureCatalog.Group.PRIVACY),
+                            label, view -> {
+                                IeSheet.close();
+                                open.accept(id);
+                            }));
+                }
+                layout.addView(cardView);
+                showSectionDialog(context, I18n.t(context, R.string.ig_hidden_inbox_more_title), layout);
+            } catch (Throwable t) {
+                ModuleLog.warn("(IE|Menu) Could not show the other hidden chats", t);
+            }
+        });
+    }
+
     private static IeSheet.Page showSectionDialog(Context context, String title, View content) {
         return showSection(context, new IeSheet.Page(title, content));
     }

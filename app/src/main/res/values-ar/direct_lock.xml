@@ -16,6 +16,16 @@
     <string name="ig_lock_biometric_confirm">أكّد هويتك</string>
     <string name="ig_hidden_inbox_show_all">عرض كل الرسائل</string>
     <string name="ig_hidden_inbox_unavailable">المحادثات المخفية غير متاحة لصندوق الوارد هذا.</string>
+    <plurals name="ig_hidden_inbox_more">
+        <item quantity="zero">%1$d محادثة مخفية أخرى</item>
+        <item quantity="one">%1$d محادثة مخفية أخرى</item>
+        <item quantity="two">%1$d محادثتان مخفيتان أخريان</item>
+        <item quantity="few">%1$d محادثات مخفية أخرى</item>
+        <item quantity="many">%1$d محادثة مخفية أخرى</item>
+        <item quantity="other">%1$d محادثة مخفية أخرى</item>
+    </plurals>
+    <string name="ig_hidden_inbox_more_title">محادثات مخفية أخرى</string>
+    <string name="ig_hidden_inbox_more_help">هذه المحادثات غير موجودة في هذه القائمة بعد. اضغط على إحداها لفتحها.</string>
     <string name="ig_lock_set_passcode">تعيين رمز المرور</string>
     <string name="ig_lock_change_passcode">تغيير رمز المرور</string>
     <string name="ig_lock_remove_passcode">إزالة رمز المرور</string>

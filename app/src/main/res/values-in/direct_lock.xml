@@ -16,6 +16,11 @@
     <string name="ig_lock_biometric_confirm">Konfirmasi bahwa ini Anda</string>
     <string name="ig_hidden_inbox_show_all">Tampilkan semua pesan</string>
     <string name="ig_hidden_inbox_unavailable">Obrolan tersembunyi tidak tersedia untuk kotak masuk ini.</string>
+    <plurals name="ig_hidden_inbox_more">
+        <item quantity="other">%1$d obrolan tersembunyi lainnya</item>
+    </plurals>
+    <string name="ig_hidden_inbox_more_title">Obrolan tersembunyi lainnya</string>
+    <string name="ig_hidden_inbox_more_help">Obrolan ini belum ada di daftar ini. Ketuk salah satu untuk membukanya.</string>
     <string name="ig_lock_set_passcode">Atur kode sandi</string>
     <string name="ig_lock_change_passcode">Ubah kode sandi</string>
     <string name="ig_lock_remove_passcode">Hapus kode sandi</string>

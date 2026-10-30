@@ -16,6 +16,12 @@
     <string name="ig_lock_biometric_confirm">Επιβεβαίωση ταυτότητας</string>
     <string name="ig_hidden_inbox_show_all">Εμφάνιση όλων των μηνυμάτων</string>
     <string name="ig_hidden_inbox_unavailable">Οι κρυφές συνομιλίες δεν είναι διαθέσιμες για αυτά τα εισερχόμενα.</string>
+    <plurals name="ig_hidden_inbox_more">
+        <item quantity="one">%1$d ακόμα κρυφή συνομιλία</item>
+        <item quantity="other">%1$d ακόμα κρυφές συνομιλίες</item>
+    </plurals>
+    <string name="ig_hidden_inbox_more_title">Περισσότερες κρυφές συνομιλίες</string>
+    <string name="ig_hidden_inbox_more_help">Αυτές οι συνομιλίες δεν είναι ακόμα σε αυτή τη λίστα. Πάτησε μία για να την ανοίξεις.</string>
     <string name="ig_lock_set_passcode">Ορισμός κωδικού</string>
     <string name="ig_lock_change_passcode">Αλλαγή κωδικού</string>
     <string name="ig_lock_remove_passcode">Αφαίρεση κωδικού</string>

@@ -16,6 +16,12 @@
     <string name="ig_lock_biometric_confirm">Bestätige, dass du es bist</string>
     <string name="ig_hidden_inbox_show_all">Alle Nachrichten anzeigen</string>
     <string name="ig_hidden_inbox_unavailable">Ausgeblendete Chats sind für dieses Postfach nicht verfügbar.</string>
+    <plurals name="ig_hidden_inbox_more">
+        <item quantity="one">%1$d weiterer ausgeblendeter Chat</item>
+        <item quantity="other">%1$d weitere ausgeblendete Chats</item>
+    </plurals>
+    <string name="ig_hidden_inbox_more_title">Weitere ausgeblendete Chats</string>
+    <string name="ig_hidden_inbox_more_help">Diese Chats sind noch nicht in dieser Liste. Tippe auf einen, um ihn zu öffnen.</string>
     <string name="ig_lock_set_passcode">Code festlegen</string>
     <string name="ig_lock_change_passcode">Code ändern</string>
     <string name="ig_lock_remove_passcode">Code entfernen</string>

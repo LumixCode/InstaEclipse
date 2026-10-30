@@ -16,6 +16,13 @@
     <string name="ig_lock_biometric_confirm">Confirmez votre identité</string>
     <string name="ig_hidden_inbox_show_all">Voir tous les messages</string>
     <string name="ig_hidden_inbox_unavailable">Discussions masquées indisponibles pour cette boîte de réception.</string>
+    <plurals name="ig_hidden_inbox_more">
+        <item quantity="one">%1$d autre discussion masquée</item>
+        <item quantity="many">%1$d autres discussions masquées</item>
+        <item quantity="other">%1$d autres discussions masquées</item>
+    </plurals>
+    <string name="ig_hidden_inbox_more_title">Autres discussions masquées</string>
+    <string name="ig_hidden_inbox_more_help">Ces discussions ne sont pas encore dans cette liste. Appuyez sur l\'une d\'elles pour l\'ouvrir.</string>
     <string name="ig_lock_set_passcode">Définir le code</string>
     <string name="ig_lock_change_passcode">Modifier le code</string>
     <string name="ig_lock_remove_passcode">Supprimer le code</string>

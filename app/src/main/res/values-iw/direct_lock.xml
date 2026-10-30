@@ -16,6 +16,13 @@
     <string name="ig_lock_biometric_confirm">אמת את זהותך</string>
     <string name="ig_hidden_inbox_show_all">הצג את כל ההודעות</string>
     <string name="ig_hidden_inbox_unavailable">צ\'אטים מוסתרים לא זמינים בתיבת ההודעות הזו.</string>
+    <plurals name="ig_hidden_inbox_more">
+        <item quantity="one">%1$d צ\'אט מוסתר נוסף</item>
+        <item quantity="two">%1$d צ\'אטים מוסתרים נוספים</item>
+        <item quantity="other">%1$d צ\'אטים מוסתרים נוספים</item>
+    </plurals>
+    <string name="ig_hidden_inbox_more_title">צ\'אטים מוסתרים נוספים</string>
+    <string name="ig_hidden_inbox_more_help">הצ\'אטים האלה עדיין לא ברשימה הזו. הקש על אחד מהם כדי לפתוח אותו.</string>
     <string name="ig_lock_set_passcode">הגדר קוד גישה</string>
     <string name="ig_lock_change_passcode">שנה קוד גישה</string>
     <string name="ig_lock_remove_passcode">הסר קוד גישה</string>

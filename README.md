@@ -122,7 +122,7 @@ Compared with [upstream InstaEclipse 0.8.2](https://github.com/ReSo7200/InstaEcl
 |---|---|---|
 | Keep unsent messages | Logs unsent text. Keeping it in the chat is opt-in, for received messages, until Instagram restarts | Messages you or others unsend stay in the chat, also after Instagram restarts, and are logged per account and chat |
 | Earlier versions of edits | Shown through Instagram's own view, until Instagram restarts | Tap *Edited* on a message to see every earlier version with its time, kept after restarts |
-| Hide chosen chats | Filtered out of the inbox, managed in a list of hidden chats | Pick them from your chats or the chat menu; triple-tap your name in Messages and unlock to see only the hidden ones |
+| Hide chosen chats | Filtered out of the inbox, managed in a list of hidden chats | Pick them from your chats or the chat menu; triple-tap your name in Messages and unlock to see only the hidden ones, even chats Instagram has not loaded yet |
 | Send Seen in chosen chats | Set per chat from the chat menu | Also one list to see and edit every chat that still gets Seen |
 | Chat menu button | Always in the chat header | Can be hidden: a triple tap on the empty header space opens the same menu |
 | Jump to first message | Tap its entry again to stop | Also stops when you scroll yourself, or with its Stop button |

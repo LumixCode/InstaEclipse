@@ -156,6 +156,41 @@ public class ThreadNames {
         return pick(rows, account != null);
     }
 
+    static String ownerSql(int count) {
+        return "SELECT thread_id, user_id FROM threads WHERE thread_id IN ("
+                + String.join(", ", Collections.nCopies(count, "?")) + ")";
+    }
+
+    static Set<String> notOwned(List<String[]> rows, String account) {
+        Set<String> others = new LinkedHashSet<>();
+        Set<String> own = new HashSet<>();
+        for (String[] row : rows) {
+            if (row[1] == null || row[1].equals(account)) own.add(row[0]);
+            else others.add(row[0]);
+        }
+        others.removeAll(own);
+        return others;
+    }
+
+    public static Set<String> otherAccounts(String account, Collection<String> threadIds) {
+        Context ctx = AndroidAppHelper.currentApplication();
+        if (ctx == null || account == null) return Collections.emptySet();
+        File db = ctx.getDatabasePath("direct.db");
+        if (!db.exists()) return Collections.emptySet();
+        List<String[]> rows = new ArrayList<>();
+        try (android.database.sqlite.SQLiteDatabase d = android.database.sqlite.SQLiteDatabase.openDatabase(
+                db.getPath(), null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY)) {
+            for (List<String> chunk : chunks(new ArrayList<>(threadIds))) {
+                try (android.database.Cursor c = d.rawQuery(ownerSql(chunk.size()), chunk.toArray(new String[0]))) {
+                    while (c.moveToNext()) rows.add(new String[]{c.getString(0), c.getString(1)});
+                }
+            }
+        } catch (Throwable t) {
+            ModuleLog.detail("(IE|ThreadNames) owner lookup failed: " + t.getMessage());
+        }
+        return notOwned(rows, account);
+    }
+
     private static String nameOf(JSONObject info) {
         String title = info.optString("thread_title", "").trim();
         if (!title.isEmpty()) return title;
