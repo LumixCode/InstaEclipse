@@ -100,13 +100,17 @@ public final class CurrentThreadTracker {
     }
 
     public static String threadIdOf(Object fragment) {
+        Object key = threadKeyOf(fragment);
+        return key == null ? null : UnsentIdentity.threadId(key.toString());
+    }
+
+    public static Object threadKeyOf(Object fragment) {
         if (fragment == null) return null;
         for (Object[] path : controllers(fragment.getClass())) {
             try {
                 Object controller = ((Field) path[0]).get(fragment);
                 Object key = controller == null ? null : ((Method) path[1]).invoke(controller);
-                String id = key == null ? null : UnsentIdentity.threadId(key.toString());
-                if (id != null) return id;
+                if (key != null && UnsentIdentity.threadId(key.toString()) != null) return key;
             } catch (ReflectiveOperationException | RuntimeException ignored) {
             }
         }

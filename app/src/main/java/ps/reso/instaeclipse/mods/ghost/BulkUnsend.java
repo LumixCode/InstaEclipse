@@ -239,6 +239,7 @@ public final class BulkUnsend {
     static final class Ctx {
         Object sender;
         Object session;
+        Object threadKey;
     }
 
     private static Ctx chatContext(Activity act, String openThread) {
@@ -251,6 +252,7 @@ public final class BulkUnsend {
             try { c.sender = accessor.invoke(null, c.session); } catch (Throwable ignored) {}
         }
         if (c.sender == null && lastCache != null) fromCache(c, lastCache);
+        c.threadKey = HideChatsHook.openThreadKey(act, openThread);
         return c;
     }
 
@@ -409,7 +411,7 @@ public final class BulkUnsend {
             return;
         }
         Selection selection = start(act, rv, c, me, open, pressed);
-        ModuleLog.detail(TAG + "selection mode: thread=" + (open != null) + " rows=" + selection.rows.size());
+        ModuleLog.detail(TAG + "selection mode: thread=" + (open != null) + " key=" + (c.threadKey != null) + " rows=" + selection.rows.size());
     }
 
     static Selection start(Activity act, ViewGroup rv, Ctx c, String me, String thread, Object pressed) {
@@ -763,6 +765,7 @@ public final class BulkUnsend {
                 int at = i + 1;
                 main.post(() -> selection.progress(at, msgs.size()));
                 Object key = threadKeyOf(m);
+                if (key == null) key = c.threadKey;
                 if (!UnsendTally.sameChat(thread, key != null ? UnsentIdentity.thread(key) : null)) {
                     ModuleLog.detail(TAG + "skipped a message: " + (key == null ? "no thread key" : "another chat"));
                     continue;

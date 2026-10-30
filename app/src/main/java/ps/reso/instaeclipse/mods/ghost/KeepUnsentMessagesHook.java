@@ -312,15 +312,6 @@ public class KeepUnsentMessagesHook {
                 XposedBridge.hookMethod(removal, new XC_MethodHook() {
                     @Override protected void beforeHookedMethod(MethodHookParam param) {
                         if (Boolean.TRUE.equals(clearingLocally.get())) return;
-                        List<String> bulk = bulkUnsendIds(param.args, BulkUnsend::isOwnUnsend);
-                        if (!bulk.isEmpty()) {
-                            try { release(param.thisObject, param.args[0], cacheGetter, bulk); }
-                            catch (Throwable t) {
-                                ModuleLog.warn("(IE|KeepUnsent) Messages you removed with bulk unsend may still show as unsent: " + t.getClass().getSimpleName());
-                            }
-                            ModuleLog.detail("(IE|KeepUnsent) bulk unsend passthrough");
-                            return;
-                        }
                         if (!FeatureFlags.keepUnsentMessages) return;
                         boolean block = false;
                         try {
@@ -368,7 +359,8 @@ public class KeepUnsentMessagesHook {
                                 UnsentIndicatorHook.refreshVisibleRows();
                             }
                             ModuleLog.detail("(IE|KeepUnsent) removal captured=" + (key != null)
-                                    + " kept=" + block + " cachedBody=" + (message != null));
+                                    + " kept=" + block + " cachedBody=" + (message != null)
+                                    + (bulkUnsendIds(param.args, BulkUnsend::isOwnUnsend).isEmpty() ? "" : " via=unsend-multiple"));
                         } catch (Throwable t) {
                             ModuleLog.warn("(IE|KeepUnsent) Could not keep an unsent message", t);
                         } finally {

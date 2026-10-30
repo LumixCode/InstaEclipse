@@ -1116,6 +1116,20 @@ public class HideChatsHook {
         return LegacyPaths.has(LegacyPaths.HEADER) ? directThreadId(fragment) : CurrentThreadTracker.threadIdOf(fragment);
     }
 
+    static Object openThreadKey(Activity activity, String threadId) {
+        if (threadId == null) return null;
+        Object[] key = new Object[1];
+        CurrentThreadTracker.fragment(activity, fragment -> (key[0] = threadKeyIn(fragment, threadId)) != null);
+        return key[0] != null ? key[0]
+                : threadKeyIn(findVisibleDirectFragment(invokeNoArg(activity, "getSupportFragmentManager")), threadId);
+    }
+
+    private static Object threadKeyIn(Object fragment, String threadId) {
+        Object key = CurrentThreadTracker.threadKeyOf(fragment);
+        if (key == null) key = findDirectThreadKey(fragment, 0, Collections.newSetFromMap(new IdentityHashMap<>()));
+        return key != null && threadId.equals(UnsentIdentity.thread(key)) ? key : null;
+    }
+
     public static String resolveThreadId(Activity activity) {
         String id = activity == null ? null : currentThreadId(activity);
         return id != null ? id : CurrentThreadTracker.currentThreadId();
