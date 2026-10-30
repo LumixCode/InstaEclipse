@@ -47,6 +47,7 @@ public final class CurrentThreadTracker {
 
     private static volatile boolean sInstalled;
     private static volatile Field argumentsField, viewField;
+    private static volatile Method activityGetter;
     private static final Map<Class<?>, Object[][]> CONTROLLERS = new ConcurrentHashMap<>();
 
     private static final java.util.ArrayList<Object[]> RESUMED = new java.util.ArrayList<>();
@@ -162,6 +163,7 @@ public final class CurrentThreadTracker {
             Class<?> fragment = Class.forName("androidx.fragment.app.Fragment", false, classLoader);
             argumentsField = field(fragment, "mArguments");
             viewField = field(fragment, "mView");
+            activityGetter = method(fragment, "getActivity");
             XposedHelpers.findAndHookMethod(fragment, "onResume", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
@@ -190,6 +192,14 @@ public final class CurrentThreadTracker {
             Field field = type.getDeclaredField(name);
             field.setAccessible(true);
             return field;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static Method method(Class<?> type, String name) {
+        try {
+            return type.getMethod(name);
         } catch (Throwable t) {
             return null;
         }
@@ -241,6 +251,7 @@ public final class CurrentThreadTracker {
 
     private static Activity activityOf(Object fragment) {
         try {
+            if (activityGetter != null && activityGetter.invoke(fragment) instanceof Activity host) return host;
             Object view = read(viewField, fragment, "mView");
             return view instanceof View v ? findActivity(v.getContext()) : null;
         } catch (Throwable t) {
