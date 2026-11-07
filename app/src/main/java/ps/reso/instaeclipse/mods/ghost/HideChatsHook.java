@@ -1380,7 +1380,7 @@ public class HideChatsHook {
         return null;
     }
 
-    private static Object invokeNoArg(Object object, String name) {
+    static Object invokeNoArg(Object object, String name) {
         if (object == null) return null;
         try {
             Method method = noArgMethod(object.getClass(), name);

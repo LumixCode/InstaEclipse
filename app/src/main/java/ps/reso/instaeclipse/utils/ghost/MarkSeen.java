@@ -78,31 +78,35 @@ public final class MarkSeen {
     }
 
     public static void markOpenThreadSeen() {
-        if (Looper.myLooper() == Looper.getMainLooper()) send();
-        else new Handler(Looper.getMainLooper()).post(MarkSeen::send);
+        markThreadSeen(null, null);
+    }
+
+    public static void markThreadSeen(String thread, Object session) {
+        if (Looper.myLooper() == Looper.getMainLooper()) send(thread, session);
+        else new Handler(Looper.getMainLooper()).post(() -> send(thread, session));
     }
 
     public static void press(View anchor, View messageList, int toast) {
         try {
             Context ctx = anchor.getContext();
             if (messageList != null) messageList.scrollBy(0, 100_000);
-            int text = send() ? toast : R.string.ig_toast_nothing_to_mark_seen;
+            int text = send(null, null) ? toast : R.string.ig_toast_nothing_to_mark_seen;
             IeToast.makeText(ctx, I18n.t(ctx, text), Toast.LENGTH_SHORT).show();
         } catch (Throwable t) {
             ModuleLog.warn("(IE|MarkAsRead) The mark as seen button failed", t);
         }
     }
 
-    private static boolean send() {
+    private static boolean send(String chat, Object session) {
         try {
             Method out = sender;
-            String thread = HideChatsHook.resolveThreadId(UIHookManager.getCurrentActivity());
+            String thread = chat != null ? chat : HideChatsHook.resolveThreadId(UIHookManager.getCurrentActivity());
             if (out == null || thread == null) {
                 ModuleLog.detail("(IE|MarkAsRead) Nothing sent: open chat " + thread + ", sender ready " + (out != null));
                 return false;
             }
             askInstagram();
-            Unseen unseen = takeUnseen(thread);
+            Unseen unseen = takeUnseen(thread, session);
             if (unseen == null) {
                 ModuleLog.detail("(IE|MarkAsRead) Nothing new to mark as seen in chat " + thread);
                 return false;
@@ -117,13 +121,16 @@ public final class MarkSeen {
         }
     }
 
-    private static Unseen takeUnseen(String thread) {
+    private static Unseen takeUnseen(String thread, Object session) {
         synchronized (UNSEEN) {
             Unseen known = UNSEEN.remove(thread);
             if (known != null) return known;
         }
         if (!LocalSeen.waiting(thread)) return null;
-        Object[] args = LocalSeen.replay(thread, ChatExportHook.openChatSession(UIHookManager.getCurrentActivity()));
+        if (session == null || !UnsentIdentity.SESSION.equals(session.getClass().getName())) {
+            session = ChatExportHook.openChatSession(UIHookManager.getCurrentActivity());
+        }
+        Object[] args = LocalSeen.replay(thread, session);
         return args == null ? null : new Unseen(args, (String) args[3]);
     }
 
