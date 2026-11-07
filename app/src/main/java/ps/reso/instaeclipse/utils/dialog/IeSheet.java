@@ -9,7 +9,9 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.res.Configuration;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
@@ -24,7 +26,9 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.view.Window;
+import android.view.animation.DecelerateInterpolator;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
@@ -125,21 +129,43 @@ public final class IeSheet {
         IePalette p = IePalette.of(context);
 
         FrameLayout root = new FrameLayout(context) {
+            private boolean outsideDown;
+
             @Override
             protected void onConfigurationChanged(Configuration newConfig) {
                 super.onConfigurationChanged(newConfig);
                 fitWindow();
             }
+
+            @Override
+            public boolean onTouchEvent(MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        outsideDown = outsideSheet(event);
+                        return outsideDown;
+                    case MotionEvent.ACTION_UP:
+                        if (outsideDown && outsideSheet(event)) dialog.cancel();
+                        outsideDown = false;
+                        return true;
+                    case MotionEvent.ACTION_CANCEL:
+                        outsideDown = false;
+                        return true;
+                    default:
+                        return outsideDown;
+                }
+            }
         };
 
-        sheet = new LinearLayout(context);
+        sheet = new SheetLayout(context, p.sheet);
         sheet.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable background = new GradientDrawable();
         background.setColor(p.sheet);
         float corner = dp(context, 16);
         background.setCornerRadii(new float[]{corner, corner, corner, corner, 0, 0, 0, 0});
         sheet.setBackground(background);
-        root.addView(sheet, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.setClipChildren(false);
+        root.addView(sheet, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
 
         LinearLayout chrome = new Chrome(context);
         chrome.setOrientation(LinearLayout.VERTICAL);
@@ -184,7 +210,7 @@ public final class IeSheet {
         sheet.addView(pinned, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         sheet.addView(IeRows.divider(context));
 
-        pages = new FrameLayout(context);
+        pages = new Pages(context);
         sheet.addView(pages, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
         pageFooter = new FrameLayout(context);
@@ -357,6 +383,7 @@ public final class IeSheet {
 
     public Page push(Page page) {
         Page below = stack.peek();
+        keepTop();
         attach(page);
         stack.push(page);
         showHeader(page);
@@ -365,6 +392,7 @@ public final class IeSheet {
     }
 
     public Page replaceTop(Page page) {
+        keepTop();
         Page old = stack.poll();
         attach(page);
         stack.push(page);
@@ -378,6 +406,7 @@ public final class IeSheet {
             back();
             return;
         }
+        keepTop();
         Page top = stack.pop();
         Page below = stack.peek();
         showHeader(below);
@@ -557,7 +586,38 @@ public final class IeSheet {
         Window window = dialog == null ? null : dialog.getWindow();
         if (window == null) return;
         int screen = context.getResources().getDisplayMetrics().widthPixels;
-        window.setLayout(Math.min(screen, dp(context, MAX_WIDTH_DP)), ViewGroup.LayoutParams.WRAP_CONTENT);
+        window.setLayout(Math.min(screen, dp(context, MAX_WIDTH_DP)), ViewGroup.LayoutParams.MATCH_PARENT);
+    }
+
+    private boolean outsideSheet(MotionEvent event) {
+        float x = event.getX();
+        float y = event.getY();
+        return x < sheet.getX() || x > sheet.getX() + sheet.getWidth()
+                || y < sheet.getY() || y > sheet.getY() + sheet.getHeight();
+    }
+
+    private void keepTop() {
+        if (!sheet.isLaidOut()) return;
+        float from = sheet.getY();
+        sheet.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+            @Override
+            public boolean onPreDraw() {
+                ViewTreeObserver observer = sheet.getViewTreeObserver();
+                if (observer.isAlive()) observer.removeOnPreDrawListener(this);
+                float offset = from - sheet.getTop();
+                if (Math.abs(offset) >= 1f) glide(offset);
+                return true;
+            }
+        });
+    }
+
+    private void glide(float offset) {
+        sheet.animate().cancel();
+        sheet.setTranslationY(offset);
+        sheet.animate().translationY(0f)
+                .setDuration(context.getResources().getInteger(android.R.integer.config_mediumAnimTime))
+                .setInterpolator(new DecelerateInterpolator(2.5f))
+                .start();
     }
 
     private void slideAway() {
@@ -634,7 +694,10 @@ public final class IeSheet {
                     return true;
                 case MotionEvent.ACTION_MOVE:
                     if (!dragging && dy > slop) dragging = true;
-                    if (dragging) sheet.setTranslationY(dy);
+                    if (dragging) {
+                        sheet.animate().cancel();
+                        sheet.setTranslationY(dy);
+                    }
                     return true;
                 case MotionEvent.ACTION_UP:
                     if (dragging && dy > sheet.getHeight() * DRAG_TO_CLOSE) slideAway();
@@ -648,6 +711,39 @@ public final class IeSheet {
                 default:
                     return true;
             }
+        }
+    }
+
+    private static final class SheetLayout extends LinearLayout {
+        private final Paint below = new Paint();
+
+        SheetLayout(Context context, int color) {
+            super(context);
+            below.setColor(color);
+            setWillNotDraw(false);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            int height = getHeight();
+            canvas.drawRect(0, height, getWidth(), height + getResources().getDisplayMetrics().heightPixels, below);
+        }
+    }
+
+    private final class Pages extends FrameLayout {
+        Pages(Context context) {
+            super(context);
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+            Page top = stack.peek();
+            View shown = top == null ? null : top.scroll;
+            if (shown == null || shown.getParent() != this || shown.getVisibility() == GONE) return;
+            int height = shown.getMeasuredHeight() + getPaddingTop() + getPaddingBottom();
+            setMeasuredDimension(getMeasuredWidthAndState(), resolveSizeAndState(height, heightMeasureSpec, 0));
         }
     }
 
