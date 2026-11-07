@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_manual_story_seen_action">Markera storyn som sedd</string>
+    <string name="ig_manual_story_seen_again">Markera som sedd igen</string>
     <string name="ig_manual_story_seen_sent">Visningen skickades för den här storyn</string>
     <string name="ig_manual_story_seen_unavailable">Kunde inte skicka visningen för den här storyn. Spökläget är fortfarande på.</string>
     <string name="ig_manual_story_seen_unsupported">Markera som sedd är inte tillgängligt i den här Instagram-versionen. Spökläget är fortfarande på.</string>

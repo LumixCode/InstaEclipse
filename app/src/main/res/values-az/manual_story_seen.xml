@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_manual_story_seen_action">Bu hekayəni baxılmış kimi işarələ</string>
+    <string name="ig_manual_story_seen_again">Yenidən baxılmış kimi işarələ</string>
     <string name="ig_manual_story_seen_sent">Bu hekayə üçün baxış bildirişi göndərildi</string>
     <string name="ig_manual_story_seen_unavailable">Bu hekayənin baxış bildirişi göndərilə bilmədi. Kölgə rejimi hələ də aktivdir.</string>
     <string name="ig_manual_story_seen_unsupported">«Baxılmış kimi işarələ» bu Instagram versiyasında mövcud deyil. Kölgə rejimi hələ də aktivdir.</string>

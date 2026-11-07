@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_manual_story_seen_action">將此限時動態標記為已看</string>
+    <string name="ig_manual_story_seen_again">再次標記為已看</string>
     <string name="ig_manual_story_seen_sent">已為此限時動態送出已看回條</string>
     <string name="ig_manual_story_seen_unavailable">無法送出此限時動態的已看回條。幽靈模式仍然開啟。</string>
     <string name="ig_manual_story_seen_unsupported">此 Instagram 版本無法使用「標記為已看」。幽靈模式仍然開啟。</string>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_manual_story_seen_action">סמן את הסטורי הזה כנצפה</string>
+    <string name="ig_manual_story_seen_again">סמן שוב כנצפה</string>
     <string name="ig_manual_story_seen_sent">אישור צפייה נשלח לסטורי הזה</string>
     <string name="ig_manual_story_seen_unavailable">לא ניתן לשלוח אישור צפייה לסטורי הזה. מצב רפאים עדיין מופעל.</string>
     <string name="ig_manual_story_seen_unsupported">\"סמן כנצפה\" לא זמין בגרסה הזו של Instagram. מצב רפאים עדיין מופעל.</string>

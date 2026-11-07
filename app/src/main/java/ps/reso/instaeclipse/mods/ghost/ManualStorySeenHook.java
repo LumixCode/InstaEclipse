@@ -41,6 +41,7 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 import ps.reso.instaeclipse.utils.core.HookFrames;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
+import ps.reso.instaeclipse.utils.ghost.MarkedStories;
 import ps.reso.instaeclipse.utils.ghost.UnsentIdentity;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
@@ -61,7 +62,7 @@ public final class ManualStorySeenHook {
     private static volatile ManualStorySeenHook instance;
     private final ManualStorySeenPolicy.Tracking tracking = new ManualStorySeenPolicy.Tracking();
     private final Map<Object, LinkedHashMap<String, Receipt>> receipts = new WeakHashMap<>();
-    private final Set<String> sent = new LinkedHashSet<>();
+    private static final Set<String> sent = new LinkedHashSet<>();
     private Constructor<?> itemConstructor;
     private Method populateItem;
     private Method getStore;
@@ -93,9 +94,12 @@ public final class ManualStorySeenHook {
         }
     }
 
-    private static final Map<String, WeakReference<Context>> notifications = new LinkedHashMap<>();
+    private record Pending(WeakReference<Context> context, String key) {}
+
+    private static final Map<String, Pending> pending = new LinkedHashMap<>();
 
     public void install(ClassLoader loader) {
+        if (capturing()) MarkedStories.load();
         try {
             resolveReceiptPipeline(loader);
             receiptPipelineReady = true;
@@ -137,25 +141,28 @@ public final class ManualStorySeenHook {
                 if (!loggedRejection.getAndSet(true)) {
                     ModuleLog.warn("(IE|ManualStorySeen) A \"Mark as seen\" request was not sent: " + approvals.rejection());
                 }
-                notifyResult(token, R.string.ig_manual_story_seen_unavailable);
+                finish(token, false);
                 return false;
             }
             ManualStorySeenPolicy.stripMarker(request, uri, clean);
             ModuleLog.detail("(IE|ManualStorySeen) story seen request let through");
-            notifyResult(token, R.string.ig_manual_story_seen_sent);
+            finish(token, true);
             return true;
         } catch (Throwable t) {
             ModuleLog.error("(IE|ManualStorySeen) Could not send \"Mark as seen\"", t);
-            notifyResult(token, R.string.ig_manual_story_seen_unavailable);
+            finish(token, false);
             return false;
         }
     }
 
-    private static void notifyResult(String token, int message) {
-        WeakReference<Context> reference;
-        synchronized (notifications) { reference = token == null ? null : notifications.remove(token); }
-        Context context = reference == null ? null : reference.get();
-        if (context != null) toast(context, message);
+    private static void finish(String token, boolean sentOut) {
+        Pending done;
+        synchronized (pending) { done = token == null ? null : pending.remove(token); }
+        if (done == null) return;
+        if (sentOut) MarkedStories.add(done.key());
+        else synchronized (sent) { sent.remove(done.key()); }
+        Context context = done.context().get();
+        if (context != null) toast(context, sentOut ? R.string.ig_manual_story_seen_sent : R.string.ig_manual_story_seen_unavailable);
     }
 
     private void resolveReceiptPipeline(ClassLoader loader) throws Exception {
@@ -346,11 +353,20 @@ public final class ManualStorySeenHook {
         }
 
         @Override public void rows(Object media, List<CharSequence> out) {
-            if (!receiptPipelineReady || target(mediaId(media), null) != null) out.add(label());
+            if (!receiptPipelineReady) {
+                out.add(label(R.string.ig_manual_story_seen_action));
+                return;
+            }
+            String id = mediaId(media);
+            Target target = target(id, null);
+            if (target == null) return;
+            boolean marked = MarkedStories.contains(sentKey(target.session(), id));
+            out.add(label(marked ? R.string.ig_manual_story_seen_again : R.string.ig_manual_story_seen_action));
         }
 
         @Override public boolean owns(CharSequence tapped) {
-            return tapped != null && label().contentEquals(tapped);
+            return tapped != null && (label(R.string.ig_manual_story_seen_action).contentEquals(tapped)
+                    || label(R.string.ig_manual_story_seen_again).contentEquals(tapped));
         }
 
         @Override public void tap(CharSequence tapped, Object menu, Object media, Context ctx, Runnable resume) {
@@ -359,8 +375,8 @@ public final class ManualStorySeenHook {
         }
     }
 
-    private static String label() {
-        return I18n.t(AndroidAppHelper.currentApplication(), R.string.ig_manual_story_seen_action);
+    private static String label(int text) {
+        return I18n.t(AndroidAppHelper.currentApplication(), text);
     }
 
     private Target target(String id, Context context) {
@@ -402,7 +418,10 @@ public final class ManualStorySeenHook {
                 if (retry) MAIN.postDelayed(() -> autoMark(id, action, false), RETRY_MS);
                 return;
             }
-            if (sent.contains(sentKey(target.session(), id))) {
+            String key = sentKey(target.session(), id);
+            boolean inFlight;
+            synchronized (sent) { inFlight = sent.contains(key); }
+            if (inFlight || MarkedStories.contains(key)) {
                 ModuleLog.detail("(IE|ManualStorySeen) story already marked as seen, nothing sent after " + action);
                 return;
             }
@@ -413,7 +432,7 @@ public final class ManualStorySeenHook {
     }
 
     private static String sentKey(Object session, String id) {
-        return UnsentIdentity.account(session) + ":" + id;
+        return MarkedStories.key(UnsentIdentity.account(session), id);
     }
 
     private boolean markSeen(Context context, String id) {
@@ -423,6 +442,7 @@ public final class ManualStorySeenHook {
             return false;
         }
         String token = null;
+        String key = null;
         String stage = "receipt lookup";
         try {
             Target target = target(id, context);
@@ -438,21 +458,25 @@ public final class ManualStorySeenHook {
                     receipt.graph, session, receipt.reelId);
             token = approvals.authorize(session, SystemClock.elapsedRealtime());
             Dispatch active = new Dispatch(item, token, context);
-            synchronized (notifications) {
-                while (notifications.size() >= 8) notifications.remove(notifications.keySet().iterator().next());
-                notifications.put(token, active.context);
+            key = sentKey(session, id);
+            synchronized (sent) {
+                sent.add(key);
+                while (sent.size() > SENT_LIMIT) sent.remove(sent.iterator().next());
+            }
+            synchronized (pending) {
+                while (pending.size() >= 8) pending.remove(pending.keySet().iterator().next());
+                pending.put(token, new Pending(active.context, key));
             }
             dispatch.set(active);
             stage = "native dispatch";
             sendItem.invoke(getStore.invoke(null, session), item);
             if (!active.tagged) throw new IllegalStateException("Request was not tagged");
-            sent.add(sentKey(session, id));
-            while (sent.size() > SENT_LIMIT) sent.remove(sent.iterator().next());
             return true;
         } catch (Throwable t) {
             if (token != null) {
                 approvals.revoke(token);
-                synchronized (notifications) { notifications.remove(token); }
+                synchronized (pending) { pending.remove(token); }
+                synchronized (sent) { sent.remove(key); }
             }
             toast(context, R.string.ig_manual_story_seen_unavailable);
             ModuleLog.error("(IE|ManualStorySeen) Could not mark the story as seen: " + t.getClass().getSimpleName() + ": " + t.getMessage());

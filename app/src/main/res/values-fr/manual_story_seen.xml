@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_manual_story_seen_action">Marquer cette story comme vue</string>
+    <string name="ig_manual_story_seen_again">Marquer de nouveau comme vue</string>
     <string name="ig_manual_story_seen_sent">« Vu » envoyé pour cette story</string>
     <string name="ig_manual_story_seen_unavailable">Impossible d\'envoyer le « Vu » de cette story. Le mode fantôme reste activé.</string>
     <string name="ig_manual_story_seen_unsupported">« Marquer comme vu » n\'est pas disponible sur cette version d\'Instagram. Le mode fantôme reste activé.</string>

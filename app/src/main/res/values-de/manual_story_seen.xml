@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_manual_story_seen_action">Diese Story als gesehen markieren</string>
+    <string name="ig_manual_story_seen_again">Erneut als gesehen markieren</string>
     <string name="ig_manual_story_seen_sent">„Gesehen“ für diese Story gesendet</string>
     <string name="ig_manual_story_seen_unavailable">„Gesehen“ konnte für diese Story nicht gesendet werden. Der Geistermodus bleibt an.</string>
     <string name="ig_manual_story_seen_unsupported">„Als gesehen markieren“ ist in dieser Instagram-Version nicht verfügbar. Der Geistermodus bleibt an.</string>

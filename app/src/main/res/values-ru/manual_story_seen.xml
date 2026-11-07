@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_manual_story_seen_action">Отметить как просмотренную</string>
+    <string name="ig_manual_story_seen_again">Снова отметить как просмотренную</string>
     <string name="ig_manual_story_seen_sent">Отметка о просмотре истории отправлена</string>
     <string name="ig_manual_story_seen_unavailable">Не удалось отправить отметку о просмотре истории. Режим призрака по-прежнему включён.</string>
     <string name="ig_manual_story_seen_unsupported">«Отметить как просмотренную» недоступно в этой сборке Instagram. Режим призрака по-прежнему включён.</string>
