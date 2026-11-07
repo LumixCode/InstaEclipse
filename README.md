@@ -189,7 +189,7 @@ The whole menu, grouped the way it is inside Instagram. Option names match the m
 |---|---|
 | Hide Seen in chats | People don't see that you read their messages |
 | Hide typing indicator | Type without the other person seeing the dots |
-| View stories anonymously | You don't appear in the viewer list |
+| View stories anonymously | You don't appear in the viewer list. Stories and highlights you watched stay grey on this device, also after Instagram forgets older ones |
 | Watch lives anonymously | Join lives without being counted |
 | Don't report screenshots | The sender isn't told when you screenshot disappearing media |
 | Open view-once secretly | The sender isn't told that you opened it |

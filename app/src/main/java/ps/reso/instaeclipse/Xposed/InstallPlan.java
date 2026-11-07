@@ -42,6 +42,7 @@ import ps.reso.instaeclipse.mods.ghost.GhostEphemeralKeepHook;
 import ps.reso.instaeclipse.mods.ghost.GhostPermanentViewHook;
 import ps.reso.instaeclipse.mods.ghost.GhostScreenshotDetectionHook;
 import ps.reso.instaeclipse.mods.ghost.GhostStorySeenHook;
+import ps.reso.instaeclipse.mods.ghost.LocalReelSeenHook;
 import ps.reso.instaeclipse.mods.ghost.GhostTypingIndicatorHook;
 import ps.reso.instaeclipse.mods.ghost.GhostViewOnceHook;
 import ps.reso.instaeclipse.mods.ghost.HideChatsHook;
@@ -585,6 +586,7 @@ public class InstallPlan {
                 return;
             case GHOST_STORY_SEEN_HOOK:
                 new GhostStorySeenHook().handleStorySeenBlock();
+                new LocalReelSeenHook().install(ctx.lpparam.classLoader);
                 return;
             case KEEP_UNSENT_MESSAGES_HOOK:
                 new KeepUnsentMessagesHook().install(ctx.lpparam.classLoader);
