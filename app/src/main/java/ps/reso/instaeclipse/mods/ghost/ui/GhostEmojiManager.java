@@ -2,7 +2,7 @@ package ps.reso.instaeclipse.mods.ghost.ui;
 
 import android.app.Activity;
 import android.graphics.Color;
-import android.graphics.ColorFilter;
+import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.ColorDrawable;
@@ -12,8 +12,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.widget.ImageView;
-
-import java.lang.ref.WeakReference;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.utils.i18n.I18n;
@@ -31,8 +29,7 @@ public class GhostEmojiManager {
 
     private record Label(CharSequence original, String ghost) {}
 
-    private record Tint(PorterDuffColorFilter ours, int color, ColorFilter viewFilter,
-                        WeakReference<Drawable> drawable, ColorFilter drawableFilter) {}
+    private record Tint(int color, int layerType) {}
 
     public static void addGhostEmojiNextToInbox(Activity activity, boolean showGhost) {
         try {
@@ -55,40 +52,29 @@ public class GhostEmojiManager {
 
     private static void paint(String name, ImageView iv, boolean showGhost) {
         Tint saved = iv.getTag(TINT_TAG) instanceof Tint t ? t : null;
-        ColorFilter now = iv.getColorFilter();
-        boolean ours = saved != null && now == saved.ours();
-        Drawable d = iv.getDrawable();
-        boolean sameDrawable = ours && saved.drawable().get() == d;
+        boolean ours = saved != null && iv.getLayerType() == View.LAYER_TYPE_HARDWARE;
 
         if (showGhost) {
             int color = tint(iv);
             if (ours && saved.color() == color) return;
-            ColorFilter viewFilter = ours ? saved.viewFilter() : now;
-            ColorFilter drawableFilter = sameDrawable ? saved.drawableFilter() : ours || d == null ? null : d.getColorFilter();
-            PorterDuffColorFilter gold = new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP);
-            iv.setTag(TINT_TAG, new Tint(gold, color, viewFilter, new WeakReference<>(d), drawableFilter));
-            iv.setColorFilter(gold);
-            ModuleLog.detail("(IE|GhostTint) " + name + " icon tinted gold; Instagram's own icon colour kept: view filter "
-                    + kind(viewFilter) + ", drawable " + (d == null ? "none" : d.getClass().getSimpleName())
-                    + " filter " + kind(drawableFilter) + ", tint list " + (iv.getImageTintList() != null ? "yes" : "no"));
+            int layerType = ours ? saved.layerType() : iv.getLayerType();
+            Paint gold = new Paint();
+            gold.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP));
+            iv.setTag(TINT_TAG, new Tint(color, layerType));
+            iv.setLayerType(View.LAYER_TYPE_HARDWARE, gold);
+            ModuleLog.detail("(IE|GhostTint) " + name + " icon tinted gold on its own layer; Instagram's icon colour untouched: layer type was "
+                    + layerType + ", view filter " + (iv.getColorFilter() == null ? "none" : "set")
+                    + ", tint list " + (iv.getImageTintList() != null ? "yes" : "no"));
         } else if (saved != null) {
             iv.setTag(TINT_TAG, null);
             if (!ours) {
-                ModuleLog.detail("(IE|GhostTint) " + name + " icon left alone: Instagram set its own colour filter after the ghost tint");
+                ModuleLog.detail("(IE|GhostTint) " + name + " icon left alone: Instagram changed its layer after the ghost tint");
                 return;
             }
-            ColorFilter live = d == null ? null : d.getColorFilter();
-            iv.setColorFilter(saved.viewFilter());
-            ColorFilter keep = live != null && live != saved.ours() ? live : sameDrawable ? saved.drawableFilter() : null;
-            if (keep != null && d != null) d.setColorFilter(keep);
-            ModuleLog.detail("(IE|GhostTint) " + name + " icon back to Instagram's own colour: view filter "
-                    + kind(saved.viewFilter()) + ", drawable filter " + kind(keep) + ", tint list "
-                    + (iv.getImageTintList() != null ? "yes" : "no"));
+            iv.setLayerType(saved.layerType(), null);
+            ModuleLog.detail("(IE|GhostTint) " + name + " icon back to Instagram's own colour: layer type " + saved.layerType()
+                    + ", tint list " + (iv.getImageTintList() != null ? "yes" : "no"));
         }
-    }
-
-    private static String kind(ColorFilter filter) {
-        return filter == null ? "none" : filter.getClass().getSimpleName();
     }
 
     private static int tint(View icon) {
