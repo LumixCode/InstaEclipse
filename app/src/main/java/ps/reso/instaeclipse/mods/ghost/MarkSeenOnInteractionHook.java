@@ -43,6 +43,7 @@ public class MarkSeenOnInteractionHook {
     private static final String REEL_CONFIG_KEY = "ClipsViewerLauncher.KEY_CONFIG";
     private static final String REPLY_BAR = "com.instagram.clips.model.ClipsReplyBarData";
     private static final Set<Object> REELS = Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
+    private static final Set<String> SHARES = Set.of("send_clips_share_message", "send_media_share_message");
     private static final String REACTION = "send_reaction";
     private static final Set<String> INTERACTIONS = Set.of(REACTION,
             "send_text_message", "send_link_message", "send_like_message",
@@ -109,7 +110,8 @@ public class MarkSeenOnInteractionHook {
                 main.post(MarkSeen::markOpenThreadSeen);
                 return;
             }
-            main.post(() -> fromReel(type, thread));
+            Set<String> targets = messageIds(mutation, thread);
+            main.post(() -> fromReel(type, thread, targets));
         } catch (Throwable t) {
             ModuleLog.detail(TAG + "Could not check what was sent: " + t);
         }
@@ -142,7 +144,7 @@ public class MarkSeenOnInteractionHook {
         }
     }
 
-    private static void fromReel(String type, String thread) {
+    private static void fromReel(String type, String thread, Set<String> targets) {
         try {
             List<Object> reels;
             synchronized (REELS) {
@@ -154,7 +156,13 @@ public class MarkSeenOnInteractionHook {
                 Set<String> ids = replyBarIds(reel);
                 looked.append(", reply bar for ").append(numeric(ids));
                 if (!ids.contains(thread)) continue;
-                ModuleLog.detail(TAG + type + " from a reel opened in chat " + thread + ": marking it as seen");
+                String why = notAReply(type, targets, ids);
+                if (why != null) {
+                    ModuleLog.detail(TAG + "Skipped " + type + " from a reel opened in chat " + thread + ": " + why);
+                    return;
+                }
+                ModuleLog.detail(TAG + type + " from a reel opened in chat " + thread + " (answers "
+                        + (targets.isEmpty() ? "no message" : String.join("/", targets)) + "): marking it as seen");
                 MarkSeen.markThreadSeen(thread, HideChatsHook.invokeNoArg(reel, "getSession"));
                 return;
             }
@@ -163,6 +171,27 @@ public class MarkSeenOnInteractionHook {
         } catch (Throwable t) {
             ModuleLog.detail(TAG + "Could not check the open reel: " + t);
         }
+    }
+
+    private static String notAReply(String type, Set<String> targets, Set<String> replyBar) {
+        if (SHARES.contains(type)) return "it sends them a reel instead of answering theirs";
+        if (targets.isEmpty() || !Collections.disjoint(targets, replyBar)) return null;
+        return "it answers message " + String.join("/", targets) + ", not the one this reel came from";
+    }
+
+    private static Set<String> messageIds(Object mutation, String thread) throws IllegalAccessException {
+        Set<String> found = new LinkedHashSet<>();
+        strings(mutation, found, 0, Collections.newSetFromMap(new IdentityHashMap<>()));
+        Set<String> ids = new LinkedHashSet<>();
+        for (String s : found) {
+            if (!s.equals(thread) && isMessageId(s)) ids.add(s);
+        }
+        return ids;
+    }
+
+    private static boolean isMessageId(String s) {
+        if (s.startsWith("mid.")) return true;
+        return s.length() >= 30 && s.chars().allMatch(Character::isDigit);
     }
 
     private static Set<String> replyBarIds(Object reel) throws IllegalAccessException {
