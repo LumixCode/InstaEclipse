@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_voice_download_unavailable">無法取得音訊。請先播放此訊息，然後再試一次。</string>
+    <string name="ig_voice_messages">語音訊息</string>
+    <string name="ig_voice_messages_loaded">僅列出聊天中已載入的訊息。在聊天中向上捲動以載入更早的訊息。</string>
+    <string name="ig_voice_messages_empty">此聊天已載入的部分中沒有語音訊息。</string>
+    <string name="ig_voice_messages_no_chat">請先開啟此聊天，然後再試一次。</string>
+    <string name="ig_voice_play_failed">無法播放此語音訊息</string>
+    <string name="ig_voice_you">你</string>
+    <string name="ig_voice_sender_unknown">未知傳送者</string>
+    <string name="ig_voice_time_unknown">時間不明</string>
+    <string name="ig_voice_play">播放</string>
+    <string name="ig_voice_pause">暫停</string>
 </resources>

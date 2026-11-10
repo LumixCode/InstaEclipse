@@ -23,7 +23,7 @@ public final class Gestures {
             new Gesture("hiddenChats", R.string.ig_gesture_hidden_chats, R.string.ig_gesture_hidden_chats_desc, false,
                     "hideSpecificChats"),
             new Gesture("chatMenu", R.string.ig_gesture_chat_menu, R.string.ig_gesture_chat_menu_desc, true,
-                    "chatExport", "jumpToFirstMessage", "readReceiptChats", "keepUnsentMessages",
+                    "chatExport", "voiceMessagesList", "jumpToFirstMessage", "readReceiptChats", "keepUnsentMessages",
                     "hideSpecificChats", "lockSpecificMessages"),
             new Gesture("reelSpeed", R.string.ig_gesture_reel_speed, R.string.ig_gesture_reel_speed_desc, true,
                     "holdLeftSlowMotion"),

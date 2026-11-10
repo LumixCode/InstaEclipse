@@ -123,6 +123,8 @@
     <string name="cat_jumpToFirstMessage_desc">Söhbət menyusunda</string>
     <string name="cat_chatExport">Söhbəti ixrac et</string>
     <string name="cat_chatExport_desc">Söhbət menyusunda; yüklənmiş mesajları HTML kimi saxlayır</string>
+    <string name="cat_voiceMessagesList">Səsli mesajların siyahısı</string>
+    <string name="cat_voiceMessagesList_desc">Söhbət detalları səhifəsində və söhbət menyusunda; yüklənmiş səsli mesajları oxudun və ya saxlayın</string>
     <string name="cat_translateMessages">Mesajları tərcümə et</string>
     <string name="cat_translateMessages_desc">Mesajı basıb saxlayın</string>
     <string name="cat_bulkUnsend_desc">Mesajınızı basıb saxlayın › Çoxlu geri götür</string>

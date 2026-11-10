@@ -123,6 +123,8 @@
     <string name="cat_jumpToFirstMessage_desc">Nel menu della chat</string>
     <string name="cat_chatExport">Esporta chat</string>
     <string name="cat_chatExport_desc">Nel menu della chat; salva i messaggi caricati in HTML</string>
+    <string name="cat_voiceMessagesList">Elenco dei messaggi vocali</string>
+    <string name="cat_voiceMessagesList_desc">Nella pagina dei dettagli della chat e nel menu della chat; riproduci o salva i messaggi vocali caricati</string>
     <string name="cat_translateMessages">Traduci i messaggi</string>
     <string name="cat_translateMessages_desc">Tieni premuto un messaggio</string>
     <string name="cat_bulkUnsend_desc">Tieni premuto un tuo messaggio › Annulla più messaggi</string>

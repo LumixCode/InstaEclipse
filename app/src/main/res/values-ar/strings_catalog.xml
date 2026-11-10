@@ -123,6 +123,8 @@
     <string name="cat_jumpToFirstMessage_desc">في قائمة المحادثة</string>
     <string name="cat_chatExport">تصدير المحادثة</string>
     <string name="cat_chatExport_desc">في قائمة المحادثة؛ يحفظ الرسائل المحمّلة كملف HTML</string>
+    <string name="cat_voiceMessagesList">قائمة الرسائل الصوتية</string>
+    <string name="cat_voiceMessagesList_desc">في صفحة تفاصيل المحادثة وفي قائمة المحادثة؛ شغّل الرسائل الصوتية المحمّلة أو احفظها</string>
     <string name="cat_translateMessages">ترجمة الرسائل</string>
     <string name="cat_translateMessages_desc">اضغط مطولًا على رسالة</string>
     <string name="cat_bulkUnsend_desc">اضغط مطولًا على رسالتك › إلغاء إرسال عدة رسائل</string>

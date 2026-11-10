@@ -350,6 +350,7 @@ Turning off Reels overrides the reel limits. A blocked reel says why and until w
 | ✨ Keep earlier versions of edits | Tap *Edited* to see them |
 | ✨ Jump to first message | Scrolls a chat back to its first message |
 | Export chat | Saves a chat as a readable HTML page with replies, reactions, edit history and optional media |
+| 🆕 Voice messages list | *Voice messages* on a chat's details page and in the chat menu lists the voice messages the chat has loaded, with sender and time. Tap one to play it, or download it |
 | Translate messages | Long-press a message to send it to your translator app |
 | Unsend multiple messages | Long-press your message › *Unsend multiple*, tick the ones you want and unsend them at once |
 | Ask before calling | Calls never start by accident |

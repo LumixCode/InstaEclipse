@@ -123,6 +123,8 @@
     <string name="cat_jumpToFirstMessage_desc">Στο μενού της συνομιλίας</string>
     <string name="cat_chatExport">Εξαγωγή συνομιλίας</string>
     <string name="cat_chatExport_desc">Στο μενού της συνομιλίας· αποθηκεύει τα φορτωμένα μηνύματα ως HTML</string>
+    <string name="cat_voiceMessagesList">Λίστα φωνητικών μηνυμάτων</string>
+    <string name="cat_voiceMessagesList_desc">Στη σελίδα λεπτομερειών της συνομιλίας και στο μενού της συνομιλίας· αναπαραγωγή ή αποθήκευση των φορτωμένων φωνητικών μηνυμάτων</string>
     <string name="cat_translateMessages">Μετάφραση μηνυμάτων</string>
     <string name="cat_translateMessages_desc">Παρατεταμένο πάτημα σε μήνυμα</string>
     <string name="cat_bulkUnsend_desc">Παρατεταμένο πάτημα στο μήνυμά σας › Αναίρεση πολλών</string>

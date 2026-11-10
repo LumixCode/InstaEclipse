@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_voice_download_unavailable">Ο ήχος δεν είναι διαθέσιμος. Παίξτε το μήνυμα και δοκιμάστε ξανά.</string>
+    <string name="ig_voice_messages">Φωνητικά μηνύματα</string>
+    <string name="ig_voice_messages_loaded">Εμφανίζονται μόνο τα μηνύματα που έχουν φορτωθεί στη συνομιλία. Κάντε κύλιση προς τα πάνω στη συνομιλία για να φορτώσετε παλαιότερα.</string>
+    <string name="ig_voice_messages_empty">Δεν υπάρχουν φωνητικά μηνύματα στο φορτωμένο μέρος αυτής της συνομιλίας.</string>
+    <string name="ig_voice_messages_no_chat">Ανοίξτε πρώτα αυτή τη συνομιλία και δοκιμάστε ξανά.</string>
+    <string name="ig_voice_play_failed">Δεν ήταν δυνατή η αναπαραγωγή αυτού του φωνητικού μηνύματος</string>
+    <string name="ig_voice_you">Εσείς</string>
+    <string name="ig_voice_sender_unknown">Άγνωστος αποστολέας</string>
+    <string name="ig_voice_time_unknown">Άγνωστη ώρα</string>
+    <string name="ig_voice_play">Αναπαραγωγή</string>
+    <string name="ig_voice_pause">Παύση</string>
 </resources>

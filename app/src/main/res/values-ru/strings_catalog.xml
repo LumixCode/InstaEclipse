@@ -123,6 +123,8 @@
     <string name="cat_jumpToFirstMessage_desc">В меню чата</string>
     <string name="cat_chatExport">Экспорт чата</string>
     <string name="cat_chatExport_desc">В меню чата; сохраняет загруженные сообщения в HTML</string>
+    <string name="cat_voiceMessagesList">Список голосовых сообщений</string>
+    <string name="cat_voiceMessagesList_desc">На странице сведений о чате и в меню чата; воспроизведение и сохранение загруженных голосовых сообщений</string>
     <string name="cat_translateMessages">Перевод сообщений</string>
     <string name="cat_translateMessages_desc">Удерживайте сообщение</string>
     <string name="cat_bulkUnsend_desc">Удерживайте своё сообщение › «Отменить несколько»</string>

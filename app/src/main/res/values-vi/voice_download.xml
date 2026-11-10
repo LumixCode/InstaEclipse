@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_voice_download_unavailable">Âm thanh không khả dụng. Hãy phát tin nhắn, rồi thử lại.</string>
+    <string name="ig_voice_messages">Tin nhắn thoại</string>
+    <string name="ig_voice_messages_loaded">Chỉ hiển thị các tin nhắn đã tải trong đoạn chat. Cuộn lên trong đoạn chat để tải tin cũ hơn.</string>
+    <string name="ig_voice_messages_empty">Không có tin nhắn thoại trong phần đã tải của đoạn chat này.</string>
+    <string name="ig_voice_messages_no_chat">Hãy mở đoạn chat này trước rồi thử lại.</string>
+    <string name="ig_voice_play_failed">Không thể phát tin nhắn thoại này</string>
+    <string name="ig_voice_you">Bạn</string>
+    <string name="ig_voice_sender_unknown">Người gửi không rõ</string>
+    <string name="ig_voice_time_unknown">Không rõ thời gian</string>
+    <string name="ig_voice_play">Phát</string>
+    <string name="ig_voice_pause">Tạm dừng</string>
 </resources>

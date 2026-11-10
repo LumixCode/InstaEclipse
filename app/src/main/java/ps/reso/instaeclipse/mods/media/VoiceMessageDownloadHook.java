@@ -829,6 +829,10 @@ public class VoiceMessageDownloadHook {
             if (id == null) id = voiceMediaId;
         }
         if (id == null) id = String.valueOf(System.currentTimeMillis());
+        saveVoice(ctx, url, user, id);
+    }
+
+    public static void saveVoice(Context ctx, String url, String user, String id) {
         String name = FeedVideoDownloadHook.buildFilename(user, "voice", id, true).replace(".mp4", ".m4a");
         FeedVideoDownloadHook.downloadAudio(ctx, url, name, user);
     }

@@ -281,6 +281,7 @@ public class FeatureManager {
         }
 
         reg(FeatureFlags.chatExport,           "ChatExport",           R.string.cat_chatExport);
+        reg(FeatureFlags.voiceMessagesList,    "VoiceMessagesList",    R.string.cat_voiceMessagesList);
         reg(FeatureFlags.fancyBioFont,         "FancyBioFont",         R.string.ig_dialog_fancy_bio_font);
         reg(FeatureFlags.keepEditHistory,      "EditHistory",          R.string.ig_dialog_ghost_edit_history);
         reg(FeatureFlags.jumpToFirstMessage,   "JumpToFirstMessage",   R.string.cat_jumpToFirstMessage);

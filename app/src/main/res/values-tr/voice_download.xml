@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_voice_download_unavailable">Ses kullanılamıyor. Mesajı oynatın, sonra tekrar deneyin.</string>
+    <string name="ig_voice_messages">Sesli mesajlar</string>
+    <string name="ig_voice_messages_loaded">Yalnızca sohbette yüklenmiş mesajlar listelenir. Eskileri yüklemek için sohbette yukarı kaydırın.</string>
+    <string name="ig_voice_messages_empty">Bu sohbetin yüklenmiş kısmında sesli mesaj yok.</string>
+    <string name="ig_voice_messages_no_chat">Önce bu sohbeti açın, sonra tekrar deneyin.</string>
+    <string name="ig_voice_play_failed">Bu sesli mesaj oynatılamadı</string>
+    <string name="ig_voice_you">Siz</string>
+    <string name="ig_voice_sender_unknown">Bilinmeyen gönderen</string>
+    <string name="ig_voice_time_unknown">Zaman bilinmiyor</string>
+    <string name="ig_voice_play">Oynat</string>
+    <string name="ig_voice_pause">Duraklat</string>
 </resources>

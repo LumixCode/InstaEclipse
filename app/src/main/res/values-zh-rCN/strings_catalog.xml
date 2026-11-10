@@ -123,6 +123,8 @@
     <string name="cat_jumpToFirstMessage_desc">在聊天菜单中</string>
     <string name="cat_chatExport">导出聊天</string>
     <string name="cat_chatExport_desc">在聊天菜单中；将已加载的消息保存为 HTML</string>
+    <string name="cat_voiceMessagesList">语音消息列表</string>
+    <string name="cat_voiceMessagesList_desc">在聊天详情页和聊天菜单中；播放或保存已加载的语音消息</string>
     <string name="cat_translateMessages">翻译消息</string>
     <string name="cat_translateMessages_desc">长按消息</string>
     <string name="cat_bulkUnsend_desc">长按你的消息 › 批量撤回</string>

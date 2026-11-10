@@ -123,6 +123,8 @@
     <string name="cat_jumpToFirstMessage_desc">I chattmenyn</string>
     <string name="cat_chatExport">Exportera chatt</string>
     <string name="cat_chatExport_desc">I chattmenyn; sparar de laddade meddelandena som HTML</string>
+    <string name="cat_voiceMessagesList">Lista över röstmeddelanden</string>
+    <string name="cat_voiceMessagesList_desc">På chattens detaljsida och i chattmenyn; spela upp eller spara de laddade röstmeddelandena</string>
     <string name="cat_translateMessages">Översätt meddelanden</string>
     <string name="cat_translateMessages_desc">Håll in ett meddelande</string>
     <string name="cat_bulkUnsend_desc">Håll in ditt meddelande › Ångra flera</string>

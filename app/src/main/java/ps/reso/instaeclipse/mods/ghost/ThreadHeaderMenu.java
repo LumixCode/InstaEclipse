@@ -35,7 +35,7 @@ import ps.reso.instaeclipse.utils.ui.ResIds;
 
 final class ThreadHeaderMenu {
     static final String TAG = "ie_thread_menu";
-    static final String[] ORDER = {"unsent", "export", "jump", "read", "hide", "lock"};
+    static final String[] ORDER = {"unsent", "export", "voice", "jump", "read", "hide", "lock"};
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final long REPLAY_DELAY_MS = 400;
 

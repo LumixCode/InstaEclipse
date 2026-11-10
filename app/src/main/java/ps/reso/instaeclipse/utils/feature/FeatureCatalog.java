@@ -552,6 +552,9 @@ public final class FeatureCatalog {
                             sw("chatExport", R.string.cat_chatExport, R.drawable.ic_download)
                                     .desc(R.string.cat_chatExport_desc).status("ChatExport")
                                     .aliases(R.string.ig_dialog_ghost_chat_export),
+                            sw("voiceMessagesList", R.string.cat_voiceMessagesList, R.drawable.ic_mic)
+                                    .desc(R.string.cat_voiceMessagesList_desc).restart(Restart.BOTH)
+                                    .status("VoiceMessagesList").words("audio", "voice note", "play", "download"),
                             sw("translateMessages", R.string.cat_translateMessages, R.drawable.ic_chat)
                                     .desc(R.string.cat_translateMessages_desc).restart(Restart.BOTH).status("ChatTranslate")
                                     .aliases(R.string.ig_dialog_translate_messages),

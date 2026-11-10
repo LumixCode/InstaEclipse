@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_voice_download_unavailable">Audio non disponibile. Riproduci il messaggio, poi riprova.</string>
+    <string name="ig_voice_messages">Messaggi vocali</string>
+    <string name="ig_voice_messages_loaded">Sono elencati solo i messaggi caricati nella chat. Scorri in alto nella chat per caricare quelli più vecchi.</string>
+    <string name="ig_voice_messages_empty">Nessun messaggio vocale nella parte caricata di questa chat.</string>
+    <string name="ig_voice_messages_no_chat">Apri prima questa chat, poi riprova.</string>
+    <string name="ig_voice_play_failed">Impossibile riprodurre questo messaggio vocale</string>
+    <string name="ig_voice_you">Tu</string>
+    <string name="ig_voice_sender_unknown">Mittente sconosciuto</string>
+    <string name="ig_voice_time_unknown">Ora sconosciuta</string>
+    <string name="ig_voice_play">Riproduci</string>
+    <string name="ig_voice_pause">Pausa</string>
 </resources>

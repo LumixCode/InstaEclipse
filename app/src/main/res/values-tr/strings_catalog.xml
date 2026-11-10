@@ -123,6 +123,8 @@
     <string name="cat_jumpToFirstMessage_desc">Sohbet menüsünde</string>
     <string name="cat_chatExport">Sohbeti dışa aktar</string>
     <string name="cat_chatExport_desc">Sohbet menüsünde; yüklenen mesajları HTML olarak kaydeder</string>
+    <string name="cat_voiceMessagesList">Sesli mesaj listesi</string>
+    <string name="cat_voiceMessagesList_desc">Sohbet ayrıntıları sayfasında ve sohbet menüsünde; yüklenen sesli mesajları oynatın veya kaydedin</string>
     <string name="cat_translateMessages">Mesajları çevir</string>
     <string name="cat_translateMessages_desc">Bir mesaja uzun basın</string>
     <string name="cat_bulkUnsend_desc">Mesajınıza uzun basın › Birden çok geri al</string>

@@ -1,4 +1,14 @@
 <!-- New optional features use English until localized resources are available. -->
 <resources>
     <string name="ig_voice_download_unavailable">Audio is unavailable. Play the message, then try again.</string>
+    <string name="ig_voice_messages">Voice messages</string>
+    <string name="ig_voice_messages_loaded">Only messages loaded in the chat are listed. Scroll up in the chat to load older ones.</string>
+    <string name="ig_voice_messages_empty">No voice messages in the loaded part of this chat.</string>
+    <string name="ig_voice_messages_no_chat">Open this chat first, then try again.</string>
+    <string name="ig_voice_play_failed">Couldn\'t play this voice message</string>
+    <string name="ig_voice_you">You</string>
+    <string name="ig_voice_sender_unknown">Unknown sender</string>
+    <string name="ig_voice_time_unknown">Time unknown</string>
+    <string name="ig_voice_play">Play</string>
+    <string name="ig_voice_pause">Pause</string>
 </resources>

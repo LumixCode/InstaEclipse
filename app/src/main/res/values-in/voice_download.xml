@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_voice_download_unavailable">Audio tidak tersedia. Putar pesannya, lalu coba lagi.</string>
+    <string name="ig_voice_messages">Pesan suara</string>
+    <string name="ig_voice_messages_loaded">Hanya pesan yang sudah dimuat di obrolan yang ditampilkan. Gulir ke atas di obrolan untuk memuat yang lebih lama.</string>
+    <string name="ig_voice_messages_empty">Tidak ada pesan suara di bagian obrolan yang sudah dimuat.</string>
+    <string name="ig_voice_messages_no_chat">Buka obrolan ini dulu, lalu coba lagi.</string>
+    <string name="ig_voice_play_failed">Tidak dapat memutar pesan suara ini</string>
+    <string name="ig_voice_you">Anda</string>
+    <string name="ig_voice_sender_unknown">Pengirim tidak dikenal</string>
+    <string name="ig_voice_time_unknown">Waktu tidak diketahui</string>
+    <string name="ig_voice_play">Putar</string>
+    <string name="ig_voice_pause">Jeda</string>
 </resources>

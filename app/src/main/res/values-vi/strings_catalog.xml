@@ -123,6 +123,8 @@
     <string name="cat_jumpToFirstMessage_desc">Trong menu chat</string>
     <string name="cat_chatExport">Xuất đoạn chat</string>
     <string name="cat_chatExport_desc">Trong menu chat; lưu các tin nhắn đã tải dưới dạng HTML</string>
+    <string name="cat_voiceMessagesList">Danh sách tin nhắn thoại</string>
+    <string name="cat_voiceMessagesList_desc">Trong trang chi tiết đoạn chat và trong menu chat; phát hoặc lưu các tin nhắn thoại đã tải</string>
     <string name="cat_translateMessages">Dịch tin nhắn</string>
     <string name="cat_translateMessages_desc">Nhấn giữ một tin nhắn</string>
     <string name="cat_bulkUnsend_desc">Nhấn giữ tin nhắn của bạn › Thu hồi nhiều</string>

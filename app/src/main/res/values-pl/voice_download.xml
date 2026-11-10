@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_voice_download_unavailable">Dźwięk jest niedostępny. Odtwórz wiadomość i spróbuj ponownie.</string>
+    <string name="ig_voice_messages">Wiadomości głosowe</string>
+    <string name="ig_voice_messages_loaded">Widoczne są tylko wiadomości wczytane w czacie. Przewiń czat w górę, aby wczytać starsze.</string>
+    <string name="ig_voice_messages_empty">Brak wiadomości głosowych we wczytanej części tego czatu.</string>
+    <string name="ig_voice_messages_no_chat">Najpierw otwórz ten czat, potem spróbuj ponownie.</string>
+    <string name="ig_voice_play_failed">Nie udało się odtworzyć tej wiadomości głosowej</string>
+    <string name="ig_voice_you">Ty</string>
+    <string name="ig_voice_sender_unknown">Nieznany nadawca</string>
+    <string name="ig_voice_time_unknown">Czas nieznany</string>
+    <string name="ig_voice_play">Odtwórz</string>
+    <string name="ig_voice_pause">Wstrzymaj</string>
 </resources>

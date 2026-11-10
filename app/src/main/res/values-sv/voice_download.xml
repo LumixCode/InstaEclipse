@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_voice_download_unavailable">Ljudet är inte tillgängligt. Spela upp meddelandet och försök sedan igen.</string>
+    <string name="ig_voice_messages">Röstmeddelanden</string>
+    <string name="ig_voice_messages_loaded">Endast meddelanden som laddats i chatten visas. Skrolla upp i chatten för att ladda äldre.</string>
+    <string name="ig_voice_messages_empty">Inga röstmeddelanden i den laddade delen av chatten.</string>
+    <string name="ig_voice_messages_no_chat">Öppna chatten först och försök sedan igen.</string>
+    <string name="ig_voice_play_failed">Kunde inte spela upp röstmeddelandet</string>
+    <string name="ig_voice_you">Du</string>
+    <string name="ig_voice_sender_unknown">Okänd avsändare</string>
+    <string name="ig_voice_time_unknown">Okänd tid</string>
+    <string name="ig_voice_play">Spela upp</string>
+    <string name="ig_voice_pause">Pausa</string>
 </resources>

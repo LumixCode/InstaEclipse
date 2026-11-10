@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_voice_download_unavailable">الصوت غير متاح. شغّل الرسالة، ثم حاول مرة أخرى.</string>
+    <string name="ig_voice_messages">الرسائل الصوتية</string>
+    <string name="ig_voice_messages_loaded">تظهر فقط الرسائل المحمّلة في المحادثة. مرّر للأعلى في المحادثة لتحميل الأقدم.</string>
+    <string name="ig_voice_messages_empty">لا توجد رسائل صوتية في الجزء المحمّل من هذه المحادثة.</string>
+    <string name="ig_voice_messages_no_chat">افتح هذه المحادثة أولاً ثم حاول مجدداً.</string>
+    <string name="ig_voice_play_failed">تعذّر تشغيل هذه الرسالة الصوتية</string>
+    <string name="ig_voice_you">أنت</string>
+    <string name="ig_voice_sender_unknown">مرسل غير معروف</string>
+    <string name="ig_voice_time_unknown">الوقت غير معروف</string>
+    <string name="ig_voice_play">تشغيل</string>
+    <string name="ig_voice_pause">إيقاف مؤقت</string>
 </resources>

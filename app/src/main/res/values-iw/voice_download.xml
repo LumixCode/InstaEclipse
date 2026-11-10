@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_voice_download_unavailable">השמע לא זמין. נגן את ההודעה ונסה שוב.</string>
+    <string name="ig_voice_messages">הודעות קוליות</string>
+    <string name="ig_voice_messages_loaded">מוצגות רק הודעות שנטענו בצ\'אט. גלול למעלה בצ\'אט כדי לטעון ישנות יותר.</string>
+    <string name="ig_voice_messages_empty">אין הודעות קוליות בחלק הטעון של הצ\'אט הזה.</string>
+    <string name="ig_voice_messages_no_chat">פתח קודם את הצ\'אט הזה ונסה שוב.</string>
+    <string name="ig_voice_play_failed">לא ניתן להשמיע את ההודעה הקולית הזו</string>
+    <string name="ig_voice_you">את/ה</string>
+    <string name="ig_voice_sender_unknown">שולח לא ידוע</string>
+    <string name="ig_voice_time_unknown">זמן לא ידוע</string>
+    <string name="ig_voice_play">נגן</string>
+    <string name="ig_voice_pause">השהה</string>
 </resources>

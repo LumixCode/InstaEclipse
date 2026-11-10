@@ -123,6 +123,8 @@
     <string name="cat_jumpToFirstMessage_desc">W menu czatu</string>
     <string name="cat_chatExport">Eksportuj czat</string>
     <string name="cat_chatExport_desc">W menu czatu; zapisuje wczytane wiadomości jako HTML</string>
+    <string name="cat_voiceMessagesList">Lista wiadomości głosowych</string>
+    <string name="cat_voiceMessagesList_desc">Na stronie szczegółów czatu i w menu czatu; odtwarzaj lub zapisuj wczytane wiadomości głosowe</string>
     <string name="cat_translateMessages">Tłumacz wiadomości</string>
     <string name="cat_translateMessages_desc">Przytrzymaj wiadomość</string>
     <string name="cat_bulkUnsend_desc">Przytrzymaj swoją wiadomość › Cofnij wiele</string>

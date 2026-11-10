@@ -64,6 +64,7 @@ public class FeatureFlags {
     public static volatile boolean hideInstants = false;
     public static volatile boolean hideDmSuggestions = false;
     public static volatile boolean chatExport = false;
+    public static volatile boolean voiceMessagesList = false;
     public static volatile boolean jumpToFirstMessage = false;
     public static volatile boolean hideChatMenuButton = false;
     public static volatile boolean translateMessages = false;

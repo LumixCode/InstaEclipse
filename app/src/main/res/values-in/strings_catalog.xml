@@ -123,6 +123,8 @@
     <string name="cat_jumpToFirstMessage_desc">Di menu obrolan</string>
     <string name="cat_chatExport">Ekspor obrolan</string>
     <string name="cat_chatExport_desc">Di menu obrolan; menyimpan pesan yang dimuat sebagai HTML</string>
+    <string name="cat_voiceMessagesList">Daftar pesan suara</string>
+    <string name="cat_voiceMessagesList_desc">Di halaman detail obrolan dan di menu obrolan; putar atau simpan pesan suara yang dimuat</string>
     <string name="cat_translateMessages">Terjemahkan pesan</string>
     <string name="cat_translateMessages_desc">Tekan lama pesan</string>
     <string name="cat_bulkUnsend_desc">Tekan lama pesan Anda › Batalkan banyak</string>

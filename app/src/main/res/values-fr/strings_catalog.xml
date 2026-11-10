@@ -123,6 +123,8 @@
     <string name="cat_jumpToFirstMessage_desc">Dans le menu de discussion</string>
     <string name="cat_chatExport">Exporter la discussion</string>
     <string name="cat_chatExport_desc">Dans le menu de discussion ; enregistre les messages chargés en HTML</string>
+    <string name="cat_voiceMessagesList">Liste des messages vocaux</string>
+    <string name="cat_voiceMessagesList_desc">Sur la page de détails de la discussion et dans le menu de discussion ; écoutez ou enregistrez les messages vocaux chargés</string>
     <string name="cat_translateMessages">Traduire les messages</string>
     <string name="cat_translateMessages_desc">Appui long sur un message</string>
     <string name="cat_bulkUnsend_desc">Appui long sur votre message › Annuler plusieurs</string>

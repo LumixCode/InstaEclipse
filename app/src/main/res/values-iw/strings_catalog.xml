@@ -123,6 +123,8 @@
     <string name="cat_jumpToFirstMessage_desc">בתפריט הצ\'אט</string>
     <string name="cat_chatExport">ייצא צ\'אט</string>
     <string name="cat_chatExport_desc">בתפריט הצ\'אט; שומר את ההודעות שנטענו כ-HTML</string>
+    <string name="cat_voiceMessagesList">רשימת הודעות קוליות</string>
+    <string name="cat_voiceMessagesList_desc">בדף פרטי הצ\'אט ובתפריט הצ\'אט; נגן או שמור את ההודעות הקוליות שנטענו</string>
     <string name="cat_translateMessages">תרגם הודעות</string>
     <string name="cat_translateMessages_desc">לחיצה ארוכה על הודעה</string>
     <string name="cat_bulkUnsend_desc">לחיצה ארוכה על הודעה שלך › ביטול שליחה מרובה</string>

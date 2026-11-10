@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 import ps.reso.instaeclipse.R;
 import ps.reso.instaeclipse.mods.media.DownloadFiles;
@@ -646,7 +647,7 @@ public class ChatExportHook {
             + ".e{font-size:12px;opacity:.78;margin-top:4px;border-left:2px solid var(--line);padding-left:8px}.row.me .e{border-left-color:rgba(255,255,255,.5)}"
             + ".like{font-size:30px;line-height:1.1}";
 
-    private static long timestampMs(JSONObject j) {
+    static long timestampMs(JSONObject j) {
         try { return Long.parseLong(j.optString("timestamp", "0")) / 1000L; } catch (Throwable t) { return 0; }
     }
 
@@ -742,7 +743,7 @@ public class ChatExportHook {
         return b.toString();
     }
 
-    private static String first(Object o, String... keys) {
+    static String first(Object o, String... keys) {
         for (String k : keys) { String v = find(o, k, 0); if (v != null && !v.isEmpty()) return v; }
         return "";
     }
@@ -841,6 +842,28 @@ public class ChatExportHook {
         } catch (Throwable t) {
             return null;
         }
+    }
+
+    record LoadedChat(List<JSONObject> messages, Map<String, String> names, String selfId) {}
+
+    static LoadedChat loadedChat(Object session, String threadId, Predicate<JSONObject> keep)
+            throws ReflectiveOperationException {
+        if (!ready() || session == null || threadId == null) return null;
+        Object entry = threadEntry(session, threadId);
+        if (entry == null) return null;
+        Object factory = factoryConstructor.newInstance();
+        List<JSONObject> messages = new ArrayList<>();
+        Set<String> senders = new HashSet<>();
+        if (messagesMethod.invoke(entry, true) instanceof List<?> loaded) {
+            for (Object message : loaded) {
+                JSONObject json = toJson(factory, message);
+                if (json == null || !keep.test(json)) continue;
+                messages.add(json);
+                String sender = json.optString("user_id", "");
+                if (!sender.isEmpty()) senders.add(sender);
+            }
+        }
+        return new LoadedChat(messages, participants(entry, senders), UnsentIdentity.account(session));
     }
 
     private static ChatExportLabels labels(Context c) {

@@ -173,6 +173,7 @@ public class InstallPlan {
     static final int PLAYBACK_SPEED_HOOK = 42;
     static final int HIDE_NOTES_TRAY_HOOK = 43;
     static final int VOICE_MESSAGE_DOWNLOAD_HOOK = 44;
+    static final int VOICE_MESSAGES_HOOK = 111;
     static final int EDIT_HISTORY_HOOK = 45;
     static final int JUMP_TO_FIRST_MESSAGE_HOOK = 46;
     static final int READ_RECEIPT_CHAT_HOOK = 47;
@@ -354,6 +355,9 @@ public class InstallPlan {
                 .withFeatures("VoiceDownload", "StickerDownload", "DmMediaDownload", "ChatTranslate")
                 .withLookupFlags("bulkUnsend")
                 .withRestartKeys("enableVoiceDownload", "enableStickerDownload", "enableDmMediaDownload", "translateMessages", "bulkUnsend"));
+        s.add(new InstallStep(VOICE_MESSAGES_HOOK, "VoiceMessagesHook", null, "(IE|VoiceList) ", COULD_NOT_START, true,
+                "voiceMessagesList")
+                .withFeatures("VoiceMessagesList").withRestartKeys("voiceMessagesList"));
         s.add(new InstallStep(EDIT_HISTORY_HOOK, "EditHistoryHook", null, "(IE|EditHistory) ", COULD_NOT_START, true, null)
                 .withFeatures("EditHistory"));
         s.add(new InstallStep(JUMP_TO_FIRST_MESSAGE_HOOK, "JumpToFirstMessageHook", null, "(IE|JumpFirst) ", COULD_NOT_START, false, null)
@@ -548,6 +552,8 @@ public class InstallPlan {
             case "enableVoiceDownload|enableStickerDownload|enableDmMediaDownload|translateMessages|bulkUnsend":
                 return FeatureFlags.enableVoiceDownload || FeatureFlags.enableStickerDownload
                         || FeatureFlags.enableDmMediaDownload || FeatureFlags.translateMessages || FeatureFlags.bulkUnsend;
+            case "voiceMessagesList":
+                return FeatureFlags.voiceMessagesList;
             case "offerPlaybackSpeed|holdLeftSlowMotion|forceReelScrubber":
                 return FeatureFlags.offerPlaybackSpeed || FeatureFlags.holdLeftSlowMotion || FeatureFlags.forceReelScrubber;
             case "reelsBlurBars":
@@ -705,6 +711,9 @@ public class InstallPlan {
                 return;
             case VOICE_MESSAGE_DOWNLOAD_HOOK:
                 new VoiceMessageDownloadHook().install(ctx.loader);
+                return;
+            case VOICE_MESSAGES_HOOK:
+                new ps.reso.instaeclipse.mods.ghost.VoiceMessagesHook().install(ctx.loader);
                 return;
             case EDIT_HISTORY_HOOK:
                 new EditHistoryHook().install(ctx.loader);

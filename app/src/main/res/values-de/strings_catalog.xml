@@ -123,6 +123,8 @@
     <string name="cat_jumpToFirstMessage_desc">Im Chatmenü</string>
     <string name="cat_chatExport">Chat exportieren</string>
     <string name="cat_chatExport_desc">Im Chatmenü; speichert die geladenen Nachrichten als HTML</string>
+    <string name="cat_voiceMessagesList">Liste der Sprachnachrichten</string>
+    <string name="cat_voiceMessagesList_desc">Auf der Chat-Detailseite und im Chatmenü; geladene Sprachnachrichten abspielen oder speichern</string>
     <string name="cat_translateMessages">Nachrichten übersetzen</string>
     <string name="cat_translateMessages_desc">Nachricht lange drücken</string>
     <string name="cat_bulkUnsend_desc">Eigene Nachricht lange drücken › Mehrere zurückziehen</string>

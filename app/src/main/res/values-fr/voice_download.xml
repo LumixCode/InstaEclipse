@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_voice_download_unavailable">Audio indisponible. Lisez le message, puis réessayez.</string>
+    <string name="ig_voice_messages">Messages vocaux</string>
+    <string name="ig_voice_messages_loaded">Seuls les messages chargés dans la discussion sont listés. Remontez dans la discussion pour charger les plus anciens.</string>
+    <string name="ig_voice_messages_empty">Aucun message vocal dans la partie chargée de cette discussion.</string>
+    <string name="ig_voice_messages_no_chat">Ouvrez d\'abord cette discussion, puis réessayez.</string>
+    <string name="ig_voice_play_failed">Impossible de lire ce message vocal</string>
+    <string name="ig_voice_you">Vous</string>
+    <string name="ig_voice_sender_unknown">Expéditeur inconnu</string>
+    <string name="ig_voice_time_unknown">Heure inconnue</string>
+    <string name="ig_voice_play">Lire</string>
+    <string name="ig_voice_pause">Pause</string>
 </resources>

@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ig_voice_download_unavailable">Аудио недоступно. Воспроизведите сообщение и попробуйте снова.</string>
+    <string name="ig_voice_messages">Голосовые сообщения</string>
+    <string name="ig_voice_messages_loaded">Показаны только сообщения, загруженные в чате. Прокрутите чат вверх, чтобы загрузить более старые.</string>
+    <string name="ig_voice_messages_empty">В загруженной части этого чата нет голосовых сообщений.</string>
+    <string name="ig_voice_messages_no_chat">Сначала откройте этот чат, затем повторите попытку.</string>
+    <string name="ig_voice_play_failed">Не удалось воспроизвести это голосовое сообщение</string>
+    <string name="ig_voice_you">Вы</string>
+    <string name="ig_voice_sender_unknown">Неизвестный отправитель</string>
+    <string name="ig_voice_time_unknown">Время неизвестно</string>
+    <string name="ig_voice_play">Воспроизвести</string>
+    <string name="ig_voice_pause">Пауза</string>
 </resources>
