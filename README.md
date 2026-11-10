@@ -326,7 +326,7 @@ Without a switch:
 | Turn off the feed, stories, Reels, Explore or comments | One by one. Reels opened from chats can stay allowed |
 | 🆕 Limit reels per day | 1 to 10000 a day (100 by default), with warnings when 10 and 5 are left |
 | 🆕 Block reels at night | From 22:00 to 07:00 by default, or the hours you set |
-| ✨ Remove Meta AI | From search, chats, Reels and the post and reel ⋮ menus |
+| ✨ Remove Meta AI | From search, chats, Reels, the post and reel ⋮ menus and the AI bots offered in Messages search |
 | ✨ Skip contact and location prompts | Also declines Instagram's location requests without asking |
 | Hide Instagram Plus offers | Hides the Plus upsell buttons and badges |
 | Extreme mode | Locks your Turn off and reel limit choices. Undoing it means clearing the data of both Instagram and InstaEclipse |

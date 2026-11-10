@@ -40,6 +40,7 @@ public final class NetworkDropRules {
                     || path.contains("/ig_meta_ai_side_chat_new_session/")
                     || path.contains("/create_ig_meta_ai_side_chat/")
                     || path.contains("/genai/response")
+                    || path.contains("/direct_v2/search_gen_ai_bots/")
                     || (host != null && host.contains("aistudio.instagram.com"));
         }
         if (FeatureFlags.disableStories) {
