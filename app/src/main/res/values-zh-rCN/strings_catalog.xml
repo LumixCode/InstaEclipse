@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">赞、评论、转发和分享数；只有你能看到</string>
     <string name="cat_disableSwipeToCamera_desc">在动态中左右滑动不再打开相机</string>
     <string name="cat_backLeavesHome_desc">而不是跳到动态顶部</string>
+    <string name="cat_sec_nav_bar">导航栏</string>
+    <string name="cat_glassTabBar">毛玻璃导航栏</string>
+    <string name="cat_glassTabBar_desc">实验性功能。底栏变为悬浮的半透明毛玻璃。需要重启 Instagram</string>
     <string name="cat_removeBuildExpiredPopup">阻止强制更新锁定</string>
     <string name="cat_removeBuildExpiredPopup_desc">当 Instagram 服务器认为此版本太旧时出现</string>
     <string name="cat_fixNotificationRegistration">修复收不到通知的问题</string>

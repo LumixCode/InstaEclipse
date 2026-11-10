@@ -414,6 +414,7 @@ Turning off Reels overrides the reel limits. A blocked reel says why and until w
 | Option | What it does |
 |---|---|
 | Hide Home, Reels, Create, Messages, Activity or Profile tab | One switch each |
+| 🆕 Glass navigation bar | Experimental. Instagram's own floating bottom bar, drawn as a see-through pill that blurs what is behind it on Android 12 and newer. Needs an Instagram restart |
 | Tab order | Put the bottom tabs in any order |
 | Startup tab | The tab Instagram opens on |
 | Turn off swipe to camera | Swiping sideways on the feed no longer opens the camera |

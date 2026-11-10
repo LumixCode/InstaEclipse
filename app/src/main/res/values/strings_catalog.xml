@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">Likes, comments, reposts and shares; only you see them</string>
     <string name="cat_disableSwipeToCamera_desc">Swiping sideways on the feed no longer opens the camera</string>
     <string name="cat_backLeavesHome_desc">Instead of jumping to the top of the feed</string>
+    <string name="cat_sec_nav_bar">Navigation bar</string>
+    <string name="cat_glassTabBar">Glass navigation bar</string>
+    <string name="cat_glassTabBar_desc">Experimental. The bottom bar floats as see-through, blurred glass. Needs an Instagram restart</string>
     <string name="cat_removeBuildExpiredPopup">Block the forced-update lockout</string>
     <string name="cat_removeBuildExpiredPopup_desc">Shown when Instagram\'s servers say this version is too old</string>
     <string name="cat_fixNotificationRegistration">Fix missing notifications</string>

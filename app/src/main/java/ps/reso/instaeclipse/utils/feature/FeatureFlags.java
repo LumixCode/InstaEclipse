@@ -54,6 +54,7 @@ public class FeatureFlags {
     public static volatile boolean hideTabMessages = false;
     public static volatile boolean hideTabActivity = false;
     public static volatile boolean hideTabProfile = false;
+    public static volatile boolean glassTabBar = false;
     public static volatile boolean backLeavesHome = false;
     public static volatile boolean readReceiptChats = false;
     public static volatile boolean markSeenOnInteraction = false;

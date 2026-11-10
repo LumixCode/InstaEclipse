@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">Beğeni, yorum, yeniden paylaşım ve paylaşım sayıları; yalnızca siz görürsünüz</string>
     <string name="cat_disableSwipeToCamera_desc">Akışta yana kaydırmak artık kamerayı açmaz</string>
     <string name="cat_backLeavesHome_desc">Akışın en üstüne atlamak yerine</string>
+    <string name="cat_sec_nav_bar">Gezinme çubuğu</string>
+    <string name="cat_glassTabBar">Cam gezinme çubuğu</string>
+    <string name="cat_glassTabBar_desc">Deneysel. Alt çubuk yarı saydam, bulanık bir cam olarak yüzer. Instagram\'ın yeniden başlatılması gerekir</string>
     <string name="cat_removeBuildExpiredPopup">Zorunlu güncelleme kilidini engelle</string>
     <string name="cat_removeBuildExpiredPopup_desc">Instagram sunucuları bu sürümün çok eski olduğunu söylediğinde gösterilir</string>
     <string name="cat_fixNotificationRegistration">Eksik bildirimleri düzelt</string>

@@ -164,6 +164,7 @@ public class InstallPlan {
     static final int ONBOARDING_PROMPT_HOOK = 31;
     static final int NOTIFICATION_REGISTRATION_HOOK = 32;
     static final int STARTUP_TAB_HOOK = 33;
+    static final int GLASS_TAB_BAR_HOOK = 113;
     static final int BACK_LEAVES_HOME_HOOK = 34;
     static final int SWIPE_TO_CAMERA_HOOK = 35;
     static final int FOLLOWING_ONLY_FEED_HOOK = 36;
@@ -338,6 +339,8 @@ public class InstallPlan {
                 .withFeatures("fixNotificationRegistration").inPhaseA());
         s.add(new InstallStep(STARTUP_TAB_HOOK, "StartupTabHook", null, "(InstaEclipse | StartupTab): ", COULD_NOT_START, false, "startupTab")
                 .withFeatures("StartupTab").inPhaseA());
+        s.add(new InstallStep(GLASS_TAB_BAR_HOOK, "GlassTabBarHook", null, "(IE|GlassTabBar) ", COULD_NOT_START, true, "glassTabBar")
+                .withFeatures("GlassTabBar").withRestartKeys("glassTabBar"));
         s.add(new InstallStep(BACK_LEAVES_HOME_HOOK, "BackLeavesHomeHook", null, "(IE|BackLeavesHome): ", COULD_NOT_START, false, null)
                 .withFeatures("BackLeavesHome").inPhaseA());
         s.add(new InstallStep(BACK_LEAVES_HOME_DISPATCHER, "BackLeavesHomeDispatcher", new String[]{"BackLeavesHomeHook"}, "(IE|BackLeavesHome): ", BACK_DISPATCHER, false, null));
@@ -550,6 +553,8 @@ public class InstallPlan {
                 return FeatureFlags.hideSuggestionsInReels || FeatureFlags.hidePaidPartnerships;
             case "startupTab":
                 return FeatureFlags.startupTab != null && !FeatureFlags.startupTab.isEmpty();
+            case "glassTabBar":
+                return FeatureFlags.glassTabBar;
             case "postCountSpoof":
                 return FeatureFlags.postCountSpoof;
             case "profileSpoofer|postCountSpoof":
@@ -693,6 +698,9 @@ public class InstallPlan {
                 return;
             case STARTUP_TAB_HOOK:
                 new StartupTabHook().install(ctx.loader);
+                return;
+            case GLASS_TAB_BAR_HOOK:
+                new ps.reso.instaeclipse.mods.ui.GlassTabBarHook().install(ctx.loader);
                 return;
             case BACK_LEAVES_HOME_HOOK:
                 new BackLeavesHomeHook().install(ctx.loader);

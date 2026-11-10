@@ -357,6 +357,7 @@ public class FeatureManager {
         reg(FeatureFlags.hideTabHome || FeatureFlags.hideTabReels || FeatureFlags.hideTabCreate
                 || FeatureFlags.hideTabMessages || FeatureFlags.hideTabActivity || FeatureFlags.hideTabProfile,
                 "HideNavTabs", R.string.menu_nav_tabs);
+        reg(FeatureFlags.glassTabBar,          "GlassTabBar",          R.string.cat_glassTabBar);
         reg(FeatureFlags.disableStories,       "DisableStoriesSection",  R.string.ig_dialog_distraction_disable_stories);
         reg(FeatureFlags.disableFeed,          "DisableFeedSection",     R.string.ig_dialog_distraction_disable_feed);
         reg(FeatureFlags.disableReels || FeatureFlags.disableReelsExceptDM,

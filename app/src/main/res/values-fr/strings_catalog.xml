@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">J\'aime, commentaires, republications et partages ; vous seul les voyez</string>
     <string name="cat_disableSwipeToCamera_desc">Balayer le fil sur le côté n\'ouvre plus la caméra</string>
     <string name="cat_backLeavesHome_desc">Au lieu de remonter en haut du fil</string>
+    <string name="cat_sec_nav_bar">Barre de navigation</string>
+    <string name="cat_glassTabBar">Barre de navigation en verre</string>
+    <string name="cat_glassTabBar_desc">Expérimental. La barre inférieure flotte comme du verre translucide et flouté. Nécessite un redémarrage d\'Instagram</string>
     <string name="cat_removeBuildExpiredPopup">Contourner la mise à jour forcée</string>
     <string name="cat_removeBuildExpiredPopup_desc">Affiché quand les serveurs d\'Instagram jugent cette version trop ancienne</string>
     <string name="cat_fixNotificationRegistration">Réparer les notifications manquantes</string>

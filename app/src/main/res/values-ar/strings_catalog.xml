@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">الإعجابات والتعليقات وإعادات النشر والمشاركات؛ أنت فقط تراها</string>
     <string name="cat_disableSwipeToCamera_desc">لم يعد السحب جانبًا في الخلاصة يفتح الكاميرا</string>
     <string name="cat_backLeavesHome_desc">بدلًا من الانتقال إلى أعلى الخلاصة</string>
+    <string name="cat_sec_nav_bar">شريط التنقل</string>
+    <string name="cat_glassTabBar">شريط تنقل زجاجي</string>
+    <string name="cat_glassTabBar_desc">تجريبي. يطفو الشريط السفلي كزجاج شفاف مموّه. يتطلب إعادة تشغيل Instagram</string>
     <string name="cat_removeBuildExpiredPopup">منع القفل بسبب التحديث الإجباري</string>
     <string name="cat_removeBuildExpiredPopup_desc">يظهر عندما تقول خوادم Instagram إن هذا الإصدار قديم جدًا</string>
     <string name="cat_fixNotificationRegistration">إصلاح الإشعارات المفقودة</string>

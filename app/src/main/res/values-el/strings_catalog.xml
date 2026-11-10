@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">«Μου αρέσει», σχόλια, αναδημοσιεύσεις και κοινοποιήσεις· τα βλέπετε μόνο εσείς</string>
     <string name="cat_disableSwipeToCamera_desc">Το πλάγιο σύρσιμο στη ροή δεν ανοίγει πια την κάμερα</string>
     <string name="cat_backLeavesHome_desc">Αντί να πηγαίνει στην αρχή της ροής</string>
+    <string name="cat_sec_nav_bar">Γραμμή πλοήγησης</string>
+    <string name="cat_glassTabBar">Γυάλινη γραμμή πλοήγησης</string>
+    <string name="cat_glassTabBar_desc">Πειραματικό. Η κάτω γραμμή αιωρείται ως ημιδιαφανές, θολό γυαλί. Απαιτεί επανεκκίνηση του Instagram</string>
     <string name="cat_removeBuildExpiredPopup">Αποκλεισμός υποχρεωτικής ενημέρωσης</string>
     <string name="cat_removeBuildExpiredPopup_desc">Εμφανίζεται όταν οι διακομιστές του Instagram θεωρούν την έκδοση πολύ παλιά</string>
     <string name="cat_fixNotificationRegistration">Διόρθωση ειδοποιήσεων που λείπουν</string>

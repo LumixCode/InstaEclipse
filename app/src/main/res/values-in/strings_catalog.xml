@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">Suka, komentar, posting ulang, dan berbagi; hanya Anda yang melihatnya</string>
     <string name="cat_disableSwipeToCamera_desc">Menggeser ke samping di feed tidak lagi membuka kamera</string>
     <string name="cat_backLeavesHome_desc">Bukan melompat ke atas feed</string>
+    <string name="cat_sec_nav_bar">Bilah navigasi</string>
+    <string name="cat_glassTabBar">Bilah navigasi kaca</string>
+    <string name="cat_glassTabBar_desc">Eksperimental. Bilah bawah mengambang sebagai kaca tembus pandang yang buram. Perlu memulai ulang Instagram</string>
     <string name="cat_removeBuildExpiredPopup">Blokir layar wajib perbarui</string>
     <string name="cat_removeBuildExpiredPopup_desc">Muncul saat server Instagram menganggap versi ini terlalu lama</string>
     <string name="cat_fixNotificationRegistration">Perbaiki notifikasi yang tidak muncul</string>

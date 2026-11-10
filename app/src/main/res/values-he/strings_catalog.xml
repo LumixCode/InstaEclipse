@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">לייקים, תגובות, פרסומים מחדש ושיתופים; רק אתה רואה אותם</string>
     <string name="cat_disableSwipeToCamera_desc">החלקה הצידה בפיד כבר לא פותחת את המצלמה</string>
     <string name="cat_backLeavesHome_desc">במקום לקפוץ לראש הפיד</string>
+    <string name="cat_sec_nav_bar">סרגל ניווט</string>
+    <string name="cat_glassTabBar">סרגל ניווט מזכוכית</string>
+    <string name="cat_glassTabBar_desc">ניסיוני. הסרגל התחתון צף כזכוכית שקופה ומטושטשת. דורש הפעלה מחדש של Instagram</string>
     <string name="cat_removeBuildExpiredPopup">חסום את נעילת העדכון הכפוי</string>
     <string name="cat_removeBuildExpiredPopup_desc">מוצגת כשהשרתים של Instagram קובעים שהגרסה הזו ישנה מדי</string>
     <string name="cat_fixNotificationRegistration">תקן התראות חסרות</string>

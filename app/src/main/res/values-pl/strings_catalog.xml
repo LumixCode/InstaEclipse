@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">Polubienia, komentarze, reposty i udostępnienia; widzisz je tylko Ty</string>
     <string name="cat_disableSwipeToCamera_desc">Przesunięcie w bok w kanale nie otwiera już aparatu</string>
     <string name="cat_backLeavesHome_desc">Zamiast przewijać na górę kanału</string>
+    <string name="cat_sec_nav_bar">Pasek nawigacji</string>
+    <string name="cat_glassTabBar">Szklany pasek nawigacji</string>
+    <string name="cat_glassTabBar_desc">Eksperymentalne. Dolny pasek unosi się jako półprzezroczyste, rozmyte szkło. Wymaga ponownego uruchomienia Instagrama</string>
     <string name="cat_removeBuildExpiredPopup">Blokuj wymuszoną aktualizację</string>
     <string name="cat_removeBuildExpiredPopup_desc">Pojawia się, gdy serwery Instagrama uznają tę wersję za zbyt starą</string>
     <string name="cat_fixNotificationRegistration">Napraw brakujące powiadomienia</string>

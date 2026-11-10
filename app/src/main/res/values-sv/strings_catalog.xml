@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">Gillningar, kommentarer, återpubliceringar och delningar; bara du ser dem</string>
     <string name="cat_disableSwipeToCamera_desc">Att svepa åt sidan i flödet öppnar inte längre kameran</string>
     <string name="cat_backLeavesHome_desc">I stället för att hoppa till toppen av flödet</string>
+    <string name="cat_sec_nav_bar">Navigeringsfält</string>
+    <string name="cat_glassTabBar">Navigeringsfält av glas</string>
+    <string name="cat_glassTabBar_desc">Experimentellt. Det nedre fältet svävar som genomskinligt, suddigt glas. Kräver att Instagram startas om</string>
     <string name="cat_removeBuildExpiredPopup">Blockera spärren för tvingad uppdatering</string>
     <string name="cat_removeBuildExpiredPopup_desc">Visas när Instagrams servrar säger att den här versionen är för gammal</string>
     <string name="cat_fixNotificationRegistration">Åtgärda saknade aviseringar</string>

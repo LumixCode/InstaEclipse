@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">Лайки, комментарии, репосты, «Поделились»; видите только вы</string>
     <string name="cat_disableSwipeToCamera_desc">Свайп в сторону в ленте больше не открывает камеру</string>
     <string name="cat_backLeavesHome_desc">Вместо прокрутки в начало ленты</string>
+    <string name="cat_sec_nav_bar">Панель навигации</string>
+    <string name="cat_glassTabBar">Стеклянная панель навигации</string>
+    <string name="cat_glassTabBar_desc">Экспериментально. Нижняя панель парит как полупрозрачное размытое стекло. Требуется перезапуск Instagram</string>
     <string name="cat_removeBuildExpiredPopup">Обходить требование обновиться</string>
     <string name="cat_removeBuildExpiredPopup_desc">Появляется, когда серверы Instagram считают эту версию устаревшей</string>
     <string name="cat_fixNotificationRegistration">Исправить пропавшие уведомления</string>

@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">讚、留言、轉發和分享次數；只有你看得到</string>
     <string name="cat_disableSwipeToCamera_desc">在動態消息上左右滑動不會再開啟相機</string>
     <string name="cat_backLeavesHome_desc">而不是跳回動態消息頂端</string>
+    <string name="cat_sec_nav_bar">導覽列</string>
+    <string name="cat_glassTabBar">毛玻璃導覽列</string>
+    <string name="cat_glassTabBar_desc">實驗性功能。底部列變為懸浮的半透明毛玻璃。需要重新啟動 Instagram</string>
     <string name="cat_removeBuildExpiredPopup">阻擋強制更新鎖定</string>
     <string name="cat_removeBuildExpiredPopup_desc">在 Instagram 伺服器判定此版本過舊時出現</string>
     <string name="cat_fixNotificationRegistration">修正收不到通知的問題</string>

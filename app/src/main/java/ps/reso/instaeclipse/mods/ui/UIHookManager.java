@@ -130,6 +130,7 @@ public class UIHookManager {
 
         ps.reso.instaeclipse.mods.ui.DistractionFreeUIHook.watchActivity(activity);
         ps.reso.instaeclipse.mods.ui.StoryTrayHook.watchActivity(activity);
+        if (isMain && FeatureFlags.glassTabBar) ps.reso.instaeclipse.mods.ui.GlassTabBarHook.watchActivity(activity);
 
         ensureIdsCached(activity);
 

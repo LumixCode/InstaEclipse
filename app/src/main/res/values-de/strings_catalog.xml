@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">Likes, Kommentare, Reposts und Geteilt-Zahlen; nur du siehst sie</string>
     <string name="cat_disableSwipeToCamera_desc">Seitliches Wischen im Feed öffnet nicht mehr die Kamera</string>
     <string name="cat_backLeavesHome_desc">Statt an den Anfang des Feeds zu springen</string>
+    <string name="cat_sec_nav_bar">Navigationsleiste</string>
+    <string name="cat_glassTabBar">Navigationsleiste aus Glas</string>
+    <string name="cat_glassTabBar_desc">Experimentell. Die untere Leiste schwebt als durchscheinendes, unscharfes Glas. Erfordert einen Neustart von Instagram</string>
     <string name="cat_removeBuildExpiredPopup">Sperre durch Update-Zwang verhindern</string>
     <string name="cat_removeBuildExpiredPopup_desc">Erscheint, wenn die Instagram-Server diese Version für zu alt halten</string>
     <string name="cat_fixNotificationRegistration">Fehlende Benachrichtigungen beheben</string>

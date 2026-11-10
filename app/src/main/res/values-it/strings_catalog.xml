@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">Mi piace, commenti, repost e condivisioni; li vedi solo tu</string>
     <string name="cat_disableSwipeToCamera_desc">Scorrere di lato nel feed non apre più la fotocamera</string>
     <string name="cat_backLeavesHome_desc">Invece di tornare all\'inizio del feed</string>
+    <string name="cat_sec_nav_bar">Barra di navigazione</string>
+    <string name="cat_glassTabBar">Barra di navigazione in vetro</string>
+    <string name="cat_glassTabBar_desc">Sperimentale. La barra inferiore fluttua come vetro traslucido e sfocato. Richiede il riavvio di Instagram</string>
     <string name="cat_removeBuildExpiredPopup">Evita il blocco per aggiornamento obbligatorio</string>
     <string name="cat_removeBuildExpiredPopup_desc">Appare quando i server di Instagram dicono che questa versione è troppo vecchia</string>
     <string name="cat_fixNotificationRegistration">Correggi le notifiche mancanti</string>

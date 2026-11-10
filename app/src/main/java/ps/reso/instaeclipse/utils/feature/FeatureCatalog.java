@@ -680,6 +680,10 @@ public final class FeatureCatalog {
                             sw("hideTabActivity", R.string.ig_nav_tab_activity, R.drawable.ic_heart)
                                     .status("HideNavTabs"),
                             sw("hideTabProfile", R.string.ig_nav_tab_profile, R.drawable.ic_at).status("HideNavTabs")),
+                    section(R.string.cat_sec_nav_bar,
+                            sw("glassTabBar", R.string.cat_glassTabBar, R.drawable.ic_tune)
+                                    .desc(R.string.cat_glassTabBar_desc).restart(Restart.BOTH)
+                                    .status("GlassTabBar").words("glass", "blur", "floating", "tab bar")),
                     section(R.string.menu_nav_order,
                             picker("navTabOrder", R.string.ig_nav_tab_order, R.drawable.ic_tune)
                                     .countWhen(FeatureCatalog::reordersTabs),

@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">Me gusta, comentarios, republicaciones y compartidos; solo los ves tú</string>
     <string name="cat_disableSwipeToCamera_desc">Deslizar hacia un lado en el feed ya no abre la cámara</string>
     <string name="cat_backLeavesHome_desc">En lugar de saltar al principio del feed</string>
+    <string name="cat_sec_nav_bar">Barra de navegación</string>
+    <string name="cat_glassTabBar">Barra de navegación de cristal</string>
+    <string name="cat_glassTabBar_desc">Experimental. La barra inferior flota como cristal translúcido y difuminado. Requiere reiniciar Instagram</string>
     <string name="cat_removeBuildExpiredPopup">Evitar el bloqueo de actualización forzada</string>
     <string name="cat_removeBuildExpiredPopup_desc">Aparece cuando los servidores de Instagram dicen que esta versión es demasiado antigua</string>
     <string name="cat_fixNotificationRegistration">Arreglar notificaciones que faltan</string>

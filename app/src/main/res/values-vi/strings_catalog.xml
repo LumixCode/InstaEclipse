@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">Lượt thích, bình luận, đăng lại và chia sẻ; chỉ bạn thấy</string>
     <string name="cat_disableSwipeToCamera_desc">Vuốt ngang trên bảng feed không còn mở camera</string>
     <string name="cat_backLeavesHome_desc">Thay vì nhảy lên đầu bảng feed</string>
+    <string name="cat_sec_nav_bar">Thanh điều hướng</string>
+    <string name="cat_glassTabBar">Thanh điều hướng kính mờ</string>
+    <string name="cat_glassTabBar_desc">Thử nghiệm. Thanh dưới nổi lên như kính mờ trong suốt. Cần khởi động lại Instagram</string>
     <string name="cat_removeBuildExpiredPopup">Chặn màn hình buộc cập nhật</string>
     <string name="cat_removeBuildExpiredPopup_desc">Hiện khi máy chủ Instagram báo phiên bản này quá cũ</string>
     <string name="cat_fixNotificationRegistration">Sửa lỗi thiếu thông báo</string>

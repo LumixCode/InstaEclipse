@@ -170,6 +170,9 @@
     <string name="cat_postCountSpoof_desc">Bəyənmə, şərh, təkrar paylaşım və paylaşma sayları; yalnız siz görürsünüz</string>
     <string name="cat_disableSwipeToCamera_desc">Lentdə yana sürüşdürmək artıq kameranı açmır</string>
     <string name="cat_backLeavesHome_desc">Lentin yuxarısına keçmək əvəzinə</string>
+    <string name="cat_sec_nav_bar">Naviqasiya paneli</string>
+    <string name="cat_glassTabBar">Şüşə naviqasiya paneli</string>
+    <string name="cat_glassTabBar_desc">Eksperimentaldır. Alt panel şəffaf, bulanıq şüşə kimi üzür. Instagram-ı yenidən başlatmaq lazımdır</string>
     <string name="cat_removeBuildExpiredPopup">Məcburi yeniləmə kilidini blokla</string>
     <string name="cat_removeBuildExpiredPopup_desc">Instagram serverləri bu versiyanın çox köhnə olduğunu deyəndə göstərilir</string>
     <string name="cat_fixNotificationRegistration">Gəlməyən bildirişləri düzəlt</string>
