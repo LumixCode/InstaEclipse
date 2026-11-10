@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">Gelen kutunuzdan kaybolurlar ama bildirim gelmeye ve aramada görünmeye devam ederler</string>
     <string name="cat_sec_block">Engelleme</string>
     <string name="cat_isAnalyticsBlocked_desc">Meta\'ya giden kullanım raporlarını durdurur</string>
+    <string name="cat_risk_analytics">Bu açıkken Instagram bu telefondan kullanım raporu almaz. Hiçbir şey bildirmeyen bir uygulama değiştirilmiş görünebilir ve hesabınız işaretlenebilir. Yine de açılsın mı?</string>
+    <string name="cat_risk_dev">Bunlar Meta\'nın dahili ayarlarıdır. Değiştirmek hesabınıza Instagram\'ın hiç göndermediği bir yapılandırma verir ve hesabınız işaretlenebilir. Yine de açılsın mı?</string>
+    <string name="cat_risk_dev_import">İçe aktarılan yapılandırma hesabınıza Instagram\'ın hiç göndermediği ayarlar verir ve hesabınız işaretlenebilir. Yine de içe aktarılsın mı?</string>
     <string name="cat_disableTrackingLinks_desc">Kopyaladığınız veya paylaştığınız bağlantılardan takip kodlarını kaldırır</string>
     <string name="cat_sec_links">Bağlantılar</string>
     <string name="cat_openLinksExternally_desc">Instagram\'ın yerleşik tarayıcısı yerine</string>

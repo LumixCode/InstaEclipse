@@ -9,7 +9,9 @@ import java.util.Map;
 import java.util.Set;
 
 import ps.reso.instaeclipse.R;
+import ps.reso.instaeclipse.utils.dialog.IeDialog;
 import ps.reso.instaeclipse.utils.dialog.LockFlows;
+import ps.reso.instaeclipse.utils.feature.FeatureCatalog;
 import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.toast.IeToast;
@@ -62,6 +64,11 @@ public final class SettingsGuard {
             IeToast.makeText(context, I18n.t(context, R.string.ig_extreme_refused), Toast.LENGTH_LONG).show();
             return false;
         }
+        int risk = riskOf(key, value);
+        if (risk != 0) {
+            askRisk(context, I18n.t(context, FeatureCatalog.item(key).label), I18n.t(context, risk), apply);
+            return false;
+        }
         switch (decide(key, value, SettingsManager.passcodeSet(FeatureFlags.lockDirectPasscode))) {
             case AUTHENTICATE:
                 LockFlows.authenticate(LockFlows.activity(context), I18n.t(context, R.string.ig_lock_settings_prompt),
@@ -76,6 +83,20 @@ public final class SettingsGuard {
                 apply.run();
                 return true;
         }
+    }
+
+    public static int riskOf(String key, Object value) {
+        if (key == null || !Boolean.TRUE.equals(value)) return 0;
+        FeatureCatalog.Item item = FeatureCatalog.item(key);
+        return item == null ? 0 : item.risk;
+    }
+
+    public static void askRisk(Context context, CharSequence title, CharSequence warning, Runnable apply) {
+        Context ui = LockFlows.activity(context);
+        IeDialog dlg = new IeDialog(ui != null ? ui : context).title(title).message(warning);
+        dlg.secondary(I18n.t(context, R.string.ig_dialog_cancel), null);
+        dlg.primary(I18n.t(context, R.string.ig_dialog_yes), apply);
+        dlg.show();
     }
 
     private static boolean extremeOn(Map<String, ?> companion) {

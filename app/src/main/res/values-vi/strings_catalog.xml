@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">Chúng rời khỏi hộp thư nhưng vẫn thông báo và hiện trong tìm kiếm</string>
     <string name="cat_sec_block">Chặn</string>
     <string name="cat_isAnalyticsBlocked_desc">Ngăn Instagram gửi báo cáo sử dụng cho Meta</string>
+    <string name="cat_risk_analytics">Khi bật, Instagram không nhận được báo cáo sử dụng nào từ điện thoại này. Một ứng dụng không báo cáo gì có thể trông như đã bị chỉnh sửa và tài khoản của bạn có thể bị gắn cờ. Vẫn bật?</string>
+    <string name="cat_risk_dev">Đây là các cài đặt nội bộ của Meta. Thay đổi chúng khiến tài khoản của bạn có cấu hình mà Instagram chưa từng gửi và tài khoản có thể bị gắn cờ. Vẫn bật?</string>
+    <string name="cat_risk_dev_import">Cấu hình được nhập khiến tài khoản của bạn có các cài đặt mà Instagram chưa từng gửi và tài khoản có thể bị gắn cờ. Vẫn nhập?</string>
     <string name="cat_disableTrackingLinks_desc">Xóa mã theo dõi khỏi liên kết bạn sao chép hoặc chia sẻ</string>
     <string name="cat_sec_links">Liên kết</string>
     <string name="cat_openLinksExternally_desc">Thay vì trình duyệt tích hợp của Instagram</string>

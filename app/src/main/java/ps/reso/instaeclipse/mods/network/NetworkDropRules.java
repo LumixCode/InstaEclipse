@@ -65,9 +65,6 @@ public final class NetworkDropRules {
         if (FeatureFlags.isAdBlockEnabled) {
             shouldDrop |= isAdRequest(path);
         }
-        if (FeatureFlags.isAnalyticsBlocked) {
-            shouldDrop |= isAnalyticsRequest(path);
-        }
         if (FeatureFlags.disableDiscoverPeople) {
             shouldDrop |= path.contains("/discover/ayml/");
             shouldDrop |= path.contains("discover/chaining/");
@@ -94,12 +91,6 @@ public final class NetworkDropRules {
                 || path.contains("/discover/chaining_experience_notification_ads/")
                 || path.contains("/feed/contextual_multi_ads/")
                 || path.contains("/feed/user_interests_contextual_feed_of_ads/");
-    }
-
-    static boolean isAnalyticsRequest(String path) {
-        return path.contains("/logging_client_events")
-                || path.contains("/pigeon_nest")
-                || path.contains("/sonar_prober");
     }
 
     public static void neutralize(Object requestObj, URI original, URI fake, String fakeUrl) {

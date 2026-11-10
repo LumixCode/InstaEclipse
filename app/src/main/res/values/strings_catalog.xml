@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">They leave your inbox but still notify and show in search</string>
     <string name="cat_sec_block">Block</string>
     <string name="cat_isAnalyticsBlocked_desc">Stops Instagram\'s usage reports to Meta</string>
+    <string name="cat_risk_analytics">With this on, Instagram gets no usage reports from this phone. An app that reports nothing can look modified, which may get your account flagged. Turn it on anyway?</string>
+    <string name="cat_risk_dev">These are Meta\'s internal settings. Changing them gives your account a setup Instagram never sent it, which may get your account flagged. Turn them on anyway?</string>
+    <string name="cat_risk_dev_import">An imported config gives your account settings Instagram never sent it, which may get your account flagged. Import anyway?</string>
     <string name="cat_disableTrackingLinks_desc">Strips tracking codes from links you copy or share</string>
     <string name="cat_sec_links">Links</string>
     <string name="cat_openLinksExternally_desc">Instead of Instagram\'s built-in browser</string>

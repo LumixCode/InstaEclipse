@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">Saem da caixa de entrada, mas ainda notificam e aparecem na pesquisa</string>
     <string name="cat_sec_block">Bloquear</string>
     <string name="cat_isAnalyticsBlocked_desc">Impede os relatórios de uso do Instagram para a Meta</string>
+    <string name="cat_risk_analytics">Com isto ativado, o Instagram não recebe relatórios de uso deste telefone. Um app que não informa nada pode parecer modificado, e sua conta pode ser sinalizada. Ativar mesmo assim?</string>
+    <string name="cat_risk_dev">Estas são as configurações internas da Meta. Alterá-las dá à sua conta uma configuração que o Instagram nunca enviou, e sua conta pode ser sinalizada. Ativar mesmo assim?</string>
+    <string name="cat_risk_dev_import">Uma configuração importada dá à sua conta ajustes que o Instagram nunca enviou, e sua conta pode ser sinalizada. Importar mesmo assim?</string>
     <string name="cat_disableTrackingLinks_desc">Tira os códigos de rastreamento dos links que você copia ou compartilha</string>
     <string name="cat_sec_links">Links</string>
     <string name="cat_openLinksExternally_desc">Em vez do navegador do próprio Instagram</string>

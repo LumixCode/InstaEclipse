@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">De försvinner från inkorgen men ger fortfarande aviseringar och syns i sökningen</string>
     <string name="cat_sec_block">Blockera</string>
     <string name="cat_isAnalyticsBlocked_desc">Stoppar Instagrams användningsrapporter till Meta</string>
+    <string name="cat_risk_analytics">När det här är på får Instagram inga användningsrapporter från den här telefonen. En app som inte rapporterar något kan se modifierad ut, och ditt konto kan flaggas. Slå på ändå?</string>
+    <string name="cat_risk_dev">Det här är Metas interna inställningar. Att ändra dem ger ditt konto en konfiguration som Instagram aldrig skickade, och ditt konto kan flaggas. Slå på ändå?</string>
+    <string name="cat_risk_dev_import">En importerad konfiguration ger ditt konto inställningar som Instagram aldrig skickade, och ditt konto kan flaggas. Importera ändå?</string>
     <string name="cat_disableTrackingLinks_desc">Tar bort spårningskoder från länkar du kopierar eller delar</string>
     <string name="cat_sec_links">Länkar</string>
     <string name="cat_openLinksExternally_desc">I stället för Instagrams inbyggda webbläsare</string>

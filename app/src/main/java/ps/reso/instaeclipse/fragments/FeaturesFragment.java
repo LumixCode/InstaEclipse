@@ -634,6 +634,23 @@ public class FeaturesFragment extends Fragment implements TabFragment {
                             return;
                         }
 
+                        int risk = item.type == FeatureItem.TYPE_MASTER_SWITCH ? 0
+                                : ps.reso.instaeclipse.utils.core.SettingsGuard.riskOf(item.prefKey, checked);
+                        if (risk != 0) {
+                            new MaterialAlertDialogBuilder(itemHolder.itemView.getContext())
+                                    .setTitle(item.title)
+                                    .setMessage(getString(risk))
+                                    .setPositiveButton(getString(R.string.ig_dialog_yes), (dialog, which) -> {
+                                        stageChange(item.prefKey, true);
+                                        updateMasterSwitches();
+                                        refreshConditionalItems();
+                                    })
+                                    .setNegativeButton(getString(R.string.ig_dialog_cancel), (dialog, which) -> rebind(item))
+                                    .setOnCancelListener(dialog -> rebind(item))
+                                    .show();
+                            return;
+                        }
+
                         if (checked && item.onTurnOn != null) {
                             rebind(item);
                             item.onTurnOn.run();

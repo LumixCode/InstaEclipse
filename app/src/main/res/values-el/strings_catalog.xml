@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">Φεύγουν από τα εισερχόμενα, αλλά ειδοποιούν και εμφανίζονται στην αναζήτηση</string>
     <string name="cat_sec_block">Αποκλεισμός</string>
     <string name="cat_isAnalyticsBlocked_desc">Σταματά τις αναφορές χρήσης του Instagram προς τη Meta</string>
+    <string name="cat_risk_analytics">Όταν είναι ενεργό, το Instagram δεν λαμβάνει αναφορές χρήσης από αυτό το τηλέφωνο. Μια εφαρμογή που δεν αναφέρει τίποτα μπορεί να φαίνεται τροποποιημένη και ο λογαριασμός σας μπορεί να επισημανθεί. Να ενεργοποιηθεί ούτως ή άλλως;</string>
+    <string name="cat_risk_dev">Αυτές είναι οι εσωτερικές ρυθμίσεις της Meta. Η αλλαγή τους δίνει στον λογαριασμό σας μια διαμόρφωση που το Instagram δεν έστειλε ποτέ και ο λογαριασμός μπορεί να επισημανθεί. Να ενεργοποιηθούν ούτως ή άλλως;</string>
+    <string name="cat_risk_dev_import">Μια εισαγόμενη διαμόρφωση δίνει στον λογαριασμό σας ρυθμίσεις που το Instagram δεν έστειλε ποτέ και ο λογαριασμός μπορεί να επισημανθεί. Να γίνει εισαγωγή ούτως ή άλλως;</string>
     <string name="cat_disableTrackingLinks_desc">Αφαιρεί την παρακολούθηση από συνδέσμους που αντιγράφετε ή κοινοποιείτε</string>
     <string name="cat_sec_links">Σύνδεσμοι</string>
     <string name="cat_openLinksExternally_desc">Αντί για το ενσωματωμένο πρόγραμμα περιήγησης του Instagram</string>

@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">Nicht mehr im Postfach, aber weiter mit Benachrichtigungen und in der Suche</string>
     <string name="cat_sec_block">Blockieren</string>
     <string name="cat_isAnalyticsBlocked_desc">Stoppt die Nutzungsberichte von Instagram an Meta</string>
+    <string name="cat_risk_analytics">Wenn das an ist, bekommt Instagram von diesem Handy keine Nutzungsberichte mehr. Eine App, die nichts meldet, kann verändert wirken, und dein Konto könnte dadurch auffallen. Trotzdem einschalten?</string>
+    <string name="cat_risk_dev">Das sind Metas interne Einstellungen. Wer sie ändert, gibt seinem Konto eine Konfiguration, die Instagram nie gesendet hat, und das Konto könnte dadurch auffallen. Trotzdem einschalten?</string>
+    <string name="cat_risk_dev_import">Eine importierte Konfiguration gibt deinem Konto Einstellungen, die Instagram nie gesendet hat, und das Konto könnte dadurch auffallen. Trotzdem importieren?</string>
     <string name="cat_disableTrackingLinks_desc">Entfernt Tracking-Codes aus Links, die du kopierst oder teilst</string>
     <string name="cat_sec_links">Links</string>
     <string name="cat_openLinksExternally_desc">Statt im integrierten Browser von Instagram</string>

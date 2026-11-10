@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">הם נעלמים מתיבת ההודעות, אבל עדיין שולחים התראות ומופיעים בחיפוש</string>
     <string name="cat_sec_block">חסימה</string>
     <string name="cat_isAnalyticsBlocked_desc">עוצר את דוחות השימוש ש-Instagram שולח ל-Meta</string>
+    <string name="cat_risk_analytics">כשזה פועל, Instagram לא מקבל דוחות שימוש מהטלפון הזה. אפליקציה שלא מדווחת דבר עלולה להיראות כאילו שונתה, והחשבון שלך עלול להיות מסומן. להפעיל בכל זאת?</string>
+    <string name="cat_risk_dev">אלה ההגדרות הפנימיות של Meta. שינוי שלהן נותן לחשבון שלך תצורה ש-Instagram מעולם לא שלח, והחשבון עלול להיות מסומן. להפעיל בכל זאת?</string>
+    <string name="cat_risk_dev_import">תצורה מיובאת נותנת לחשבון שלך הגדרות ש-Instagram מעולם לא שלח, והחשבון עלול להיות מסומן. לייבא בכל זאת?</string>
     <string name="cat_disableTrackingLinks_desc">מסיר קודי מעקב מקישורים שאתה מעתיק או משתף</string>
     <string name="cat_sec_links">קישורים</string>
     <string name="cat_openLinksExternally_desc">במקום הדפדפן המובנה של Instagram</string>

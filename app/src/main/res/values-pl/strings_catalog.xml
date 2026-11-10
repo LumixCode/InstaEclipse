@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">Znikają ze skrzynki, ale nadal powiadamiają i są w wyszukiwaniu</string>
     <string name="cat_sec_block">Blokowanie</string>
     <string name="cat_isAnalyticsBlocked_desc">Blokuje raporty o użyciu wysyłane do Mety</string>
+    <string name="cat_risk_analytics">Po włączeniu Instagram nie dostaje z tego telefonu raportów o użyciu. Aplikacja, która nic nie zgłasza, może wyglądać na zmodyfikowaną, a konto może zostać oznaczone. Włączyć mimo to?</string>
+    <string name="cat_risk_dev">To wewnętrzne ustawienia Meta. Ich zmiana daje kontu konfigurację, której Instagram nigdy nie wysłał, a konto może zostać oznaczone. Włączyć mimo to?</string>
+    <string name="cat_risk_dev_import">Zaimportowana konfiguracja daje kontu ustawienia, których Instagram nigdy nie wysłał, a konto może zostać oznaczone. Importować mimo to?</string>
     <string name="cat_disableTrackingLinks_desc">Usuwa kody śledzące z kopiowanych i udostępnianych linków</string>
     <string name="cat_sec_links">Linki</string>
     <string name="cat_openLinksExternally_desc">Zamiast wbudowanej przeglądarki Instagrama</string>

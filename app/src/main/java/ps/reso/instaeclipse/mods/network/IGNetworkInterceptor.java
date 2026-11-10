@@ -98,7 +98,7 @@ public class IGNetworkInterceptor {
                         random_param_1, random_param_2, random_param_3, dropHook);
                 IGNetworkInterceptor.dropHook = dropHook;
                 startRequestParams = new Class<?>[]{random_param_1, random_param_2, random_param_3};
-                for (String key : new String[]{"BlockAnalytics", "DisableStoriesSection", "DisableFeedSection",
+                for (String key : new String[]{"DisableStoriesSection", "DisableFeedSection",
                         "DisableReelsSection", "DisableExploreSection", "DisableCommentsSection", "HideDmSuggestions",
                         "GhostStories", "GhostLive", "DisableDiscoverPeople"})
                     FeatureStatusTracker.setHooked(key);

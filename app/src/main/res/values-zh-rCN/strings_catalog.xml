@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">它们会从收件箱中消失，但仍会发送通知并出现在搜索结果中</string>
     <string name="cat_sec_block">屏蔽</string>
     <string name="cat_isAnalyticsBlocked_desc">阻止 Instagram 向 Meta 发送使用情况报告</string>
+    <string name="cat_risk_analytics">开启后，Instagram 不会再收到这部手机的使用情况报告。完全不上报的应用可能看起来像被修改过，你的账号可能因此被标记。仍要开启吗？</string>
+    <string name="cat_risk_dev">这些是 Meta 的内部设置。更改它们会让你的账号带有 Instagram 从未下发的配置，账号可能因此被标记。仍要开启吗？</string>
+    <string name="cat_risk_dev_import">导入的配置会让你的账号带有 Instagram 从未下发的设置，账号可能因此被标记。仍要导入吗？</string>
     <string name="cat_disableTrackingLinks_desc">移除你复制或分享的链接中的追踪代码</string>
     <string name="cat_sec_links">链接</string>
     <string name="cat_openLinksExternally_desc">而不是使用 Instagram 的内置浏览器</string>

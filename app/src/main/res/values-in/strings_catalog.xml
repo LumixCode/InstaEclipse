@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">Hilang dari kotak masuk, tetapi tetap memberi notifikasi dan muncul di pencarian</string>
     <string name="cat_sec_block">Blokir</string>
     <string name="cat_isAnalyticsBlocked_desc">Menghentikan laporan penggunaan Instagram ke Meta</string>
+    <string name="cat_risk_analytics">Jika aktif, Instagram tidak menerima laporan penggunaan dari ponsel ini. Aplikasi yang tidak melaporkan apa pun bisa terlihat dimodifikasi, dan akun Anda bisa ditandai. Tetap aktifkan?</string>
+    <string name="cat_risk_dev">Ini adalah pengaturan internal Meta. Mengubahnya memberi akun Anda konfigurasi yang tidak pernah dikirim Instagram, dan akun Anda bisa ditandai. Tetap aktifkan?</string>
+    <string name="cat_risk_dev_import">Konfigurasi yang diimpor memberi akun Anda pengaturan yang tidak pernah dikirim Instagram, dan akun Anda bisa ditandai. Tetap impor?</string>
     <string name="cat_disableTrackingLinks_desc">Menghapus kode pelacakan dari tautan yang Anda salin atau bagikan</string>
     <string name="cat_sec_links">Tautan</string>
     <string name="cat_openLinksExternally_desc">Bukan di browser bawaan Instagram</string>

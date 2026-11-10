@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">Исчезают из списка чатов, но уведомления приходят и в поиске они видны</string>
     <string name="cat_sec_block">Блокировка</string>
     <string name="cat_isAnalyticsBlocked_desc">Отключает отчёты Instagram об использовании для Meta</string>
+    <string name="cat_risk_analytics">Если включить, Instagram не будет получать отчёты об использовании с этого телефона. Приложение, которое ничего не сообщает, может выглядеть изменённым, и аккаунт могут отметить как подозрительный. Всё равно включить?</string>
+    <string name="cat_risk_dev">Это внутренние настройки Meta. Их изменение даёт аккаунту конфигурацию, которую Instagram не отправлял, и аккаунт могут отметить как подозрительный. Всё равно включить?</string>
+    <string name="cat_risk_dev_import">Импортированная конфигурация даёт аккаунту настройки, которые Instagram не отправлял, и аккаунт могут отметить как подозрительный. Всё равно импортировать?</string>
     <string name="cat_disableTrackingLinks_desc">Удаляет коды отслеживания из ссылок, которые вы копируете или отправляете</string>
     <string name="cat_sec_links">Ссылки</string>
     <string name="cat_openLinksExternally_desc">Вместо встроенного браузера Instagram</string>

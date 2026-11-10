@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">Gələnlər qutusundan çıxır, amma bildiriş gəlir və axtarışda görünür</string>
     <string name="cat_sec_block">Bloklama</string>
     <string name="cat_isAnalyticsBlocked_desc">Instagram-ın Meta-ya istifadə hesabatlarını dayandırır</string>
+    <string name="cat_risk_analytics">Bu aktiv olanda Instagram bu telefondan istifadə hesabatı almır. Heç nə bildirməyən tətbiq dəyişdirilmiş görünə bilər və hesabınız işarələnə bilər. Yenə də aktiv edilsin?</string>
+    <string name="cat_risk_dev">Bunlar Meta-nın daxili ayarlarıdır. Onları dəyişmək hesabınıza Instagram-ın heç vaxt göndərmədiyi konfiqurasiya verir və hesabınız işarələnə bilər. Yenə də aktiv edilsin?</string>
+    <string name="cat_risk_dev_import">İdxal edilən konfiqurasiya hesabınıza Instagram-ın heç vaxt göndərmədiyi ayarlar verir və hesabınız işarələnə bilər. Yenə də idxal edilsin?</string>
     <string name="cat_disableTrackingLinks_desc">Kopyaladığınız və ya paylaşdığınız linklərdən izləmə kodlarını silir</string>
     <string name="cat_sec_links">Linklər</string>
     <string name="cat_openLinksExternally_desc">Instagram-ın daxili brauzeri əvəzinə</string>

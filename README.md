@@ -220,7 +220,7 @@ The whole menu, grouped the way it is inside Instagram. Option names match the m
 | Option | What it does |
 |---|---|
 | Block ads | Sponsored posts, stories and reels, including the ads between reels |
-| Block analytics | Stops Instagram's usage reports to Meta |
+| ✨ Block analytics | Instagram's usage reports are dropped before they are built, so nothing is sent and no request fails. Asks first, because an app that reports nothing can get an account flagged. Needs an Instagram restart |
 | ✨ Remove tracking from links | Strips tracking codes from links you copy or share |
 | ✨ Open links in your browser | Instead of Instagram's built-in browser. Instagram, Facebook and Threads links stay in the app |
 | Share domain | Replaces instagram.com in links you copy or share |

@@ -761,8 +761,27 @@ public class HomeFragment extends Fragment implements TabFragment {
                     getString(SettingsGuard.refusalHint(entry.key, checked, all)), Toast.LENGTH_LONG).show();
             return;
         }
+        int risk = SettingsGuard.riskOf(entry.key, checked);
+        if (risk != 0) {
+            setQuietly(entry, false);
+            confirmRisk(entry, risk);
+            return;
+        }
         setFeature(entry.key, checked);
         updateFeatureCount();
+    }
+
+    private void confirmRisk(ShortcutRow entry, int risk) {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(FeatureCatalog.item(entry.key).label)
+                .setMessage(risk)
+                .setPositiveButton(R.string.ig_dialog_yes, (dialog, which) -> {
+                    setQuietly(entry, true);
+                    setFeature(entry.key, true);
+                    updateFeatureCount();
+                })
+                .setNegativeButton(R.string.ig_dialog_cancel, null)
+                .show();
     }
 
     private void confirmExtreme(ShortcutRow entry) {

@@ -68,6 +68,7 @@ public final class FeatureCatalog {
         public final Predicate<Values> countWhen;
         public final int[] aliases;
         public final String[] words;
+        public final int risk;
 
         private Item(Builder b) {
             key = b.key;
@@ -87,6 +88,7 @@ public final class FeatureCatalog {
             countWhen = b.countWhen;
             aliases = b.aliases;
             words = b.words;
+            risk = b.risk;
         }
     }
 
@@ -142,6 +144,7 @@ public final class FeatureCatalog {
         Predicate<Values> countWhen;
         int[] aliases = {};
         String[] words = {};
+        int risk;
 
         Builder(String key, Kind kind, int label, int icon) {
             this.key = key;
@@ -208,6 +211,11 @@ public final class FeatureCatalog {
 
         Builder words(String... list) {
             words = list;
+            return this;
+        }
+
+        Builder risk(int warning) {
+            risk = warning;
             return this;
         }
     }
@@ -302,11 +310,12 @@ public final class FeatureCatalog {
                                     .requires("hideSpecificChats").side(Side.IG_ONLY))),
             page("ads", Group.PRIVACY, R.drawable.ic_block, R.string.menu_ads_tracking,
                     section(R.string.cat_sec_block,
-                            master("adsAll", "isAdBlockEnabled", "isAnalyticsBlocked", "disableTrackingLinks"),
+                            master("adsAll", "isAdBlockEnabled", "disableTrackingLinks"),
                             sw("isAdBlockEnabled", R.string.ig_dialog_ad_block_ads, R.drawable.ic_shield)
                                     .status("AdBlocker"),
                             sw("isAnalyticsBlocked", R.string.ig_dialog_ad_block_analytics, R.drawable.ic_shield)
-                                    .desc(R.string.cat_isAnalyticsBlocked_desc).status("BlockAnalytics"),
+                                    .desc(R.string.cat_isAnalyticsBlocked_desc).restart(Restart.BOTH)
+                                    .risk(R.string.cat_risk_analytics).status("BlockAnalytics"),
                             sw("disableTrackingLinks", R.string.ig_dialog_ad_disable_tracking, R.drawable.ic_link)
                                     .desc(R.string.cat_disableTrackingLinks_desc).status("DisableTrackingLinks")),
                     section(R.string.cat_sec_links,

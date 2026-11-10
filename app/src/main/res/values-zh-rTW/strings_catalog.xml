@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">它們會從收件匣消失，但仍會發出通知並出現在搜尋結果中</string>
     <string name="cat_sec_block">封鎖</string>
     <string name="cat_isAnalyticsBlocked_desc">停止 Instagram 向 Meta 傳送使用情況報告</string>
+    <string name="cat_risk_analytics">開啟後，Instagram 不會再收到這支手機的使用情況報告。完全不回報的應用程式看起來可能像被修改過，你的帳號可能因此被標記。仍要開啟嗎？</string>
+    <string name="cat_risk_dev">這些是 Meta 的內部設定。變更它們會讓你的帳號帶有 Instagram 從未下發的設定檔，帳號可能因此被標記。仍要開啟嗎？</string>
+    <string name="cat_risk_dev_import">匯入的設定檔會讓你的帳號帶有 Instagram 從未下發的設定，帳號可能因此被標記。仍要匯入嗎？</string>
     <string name="cat_disableTrackingLinks_desc">移除你複製或分享的連結中的追蹤碼</string>
     <string name="cat_sec_links">連結</string>
     <string name="cat_openLinksExternally_desc">而不是在 Instagram 的內建瀏覽器中開啟</string>

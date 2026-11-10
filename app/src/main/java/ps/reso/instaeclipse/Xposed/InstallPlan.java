@@ -150,6 +150,7 @@ public class InstallPlan {
     static final int HIDE_SUGGESTED_FEED_ITEMS_HOOK = 21;
     static final int AD_BLOCKER = 22;
     static final int TRACKING_LINK_DISABLE = 23;
+    static final int ANALYTICS_SKIP_HOOK = 115;
     static final int EXACT_TIMESTAMP_HOOK = 24;
     static final int EXPAND_CAPTIONS_HOOK = 25;
     static final int HIDE_COMMUNITY_NOTES_HOOK = 26;
@@ -300,6 +301,8 @@ public class InstallPlan {
                 .withFeatures("AdBlocker"));
         s.add(new InstallStep(TRACKING_LINK_DISABLE, "TrackingLinkDisable", null, "(InstaEclipse | TrackingLinkDisable): ", COULD_NOT_START, false, null)
                 .withFeatures("DisableTrackingLinks"));
+        s.add(new InstallStep(ANALYTICS_SKIP_HOOK, "AnalyticsSkipHook", null, "(IE|Analytics) ", COULD_NOT_START, true, "isAnalyticsBlocked")
+                .withFeatures("BlockAnalytics").withRestartKeys("isAnalyticsBlocked"));
         s.add(new InstallStep(EXACT_TIMESTAMP_HOOK, "ExactTimestampHook", null, "(InstaEclipse | ExactTime): ", COULD_NOT_START, true, null)
                 .withFeatures("ExactTimestamps")
                 .withLookupFlags("exactTimestamps").withRestartKeys("exactTimestamps"));
@@ -521,6 +524,8 @@ public class InstallPlan {
                 return FeatureFlags.confirmFollows;
             case "confirmCalls":
                 return FeatureFlags.confirmCalls;
+            case "isAnalyticsBlocked":
+                return FeatureFlags.isAnalyticsBlocked;
             case "expandCaptions":
                 return FeatureFlags.expandCaptions;
             case "startupTab":
@@ -620,6 +625,9 @@ public class InstallPlan {
                 return;
             case TRACKING_LINK_DISABLE:
                 new TrackingLinkDisable().disableTrackingLinks(ctx.loader);
+                return;
+            case ANALYTICS_SKIP_HOOK:
+                new ps.reso.instaeclipse.mods.ads.AnalyticsSkipHook().install(ctx.loader);
                 return;
             case EXACT_TIMESTAMP_HOOK:
                 new ExactTimestampHook().install(ctx.loader);

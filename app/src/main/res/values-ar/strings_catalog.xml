@@ -41,6 +41,9 @@
     <string name="cat_hideSpecificChats_desc">تختفي من صندوق الوارد لكنها تظل تُرسل إشعارات وتظهر في البحث</string>
     <string name="cat_sec_block">الحظر</string>
     <string name="cat_isAnalyticsBlocked_desc">يوقف تقارير استخدام Instagram المرسلة إلى Meta</string>
+    <string name="cat_risk_analytics">عند التفعيل لن يتلقى Instagram أي تقارير استخدام من هذا الهاتف. التطبيق الذي لا يرسل أي تقارير قد يبدو معدّلاً، وقد يُوضع حسابك تحت المراقبة. هل تريد التفعيل على أي حال؟</string>
+    <string name="cat_risk_dev">هذه إعدادات Meta الداخلية. تغييرها يمنح حسابك إعدادات لم يرسلها Instagram قط، وقد يُوضع حسابك تحت المراقبة. هل تريد التفعيل على أي حال؟</string>
+    <string name="cat_risk_dev_import">الإعدادات المستوردة تمنح حسابك إعدادات لم يرسلها Instagram قط، وقد يُوضع حسابك تحت المراقبة. هل تريد الاستيراد على أي حال؟</string>
     <string name="cat_disableTrackingLinks_desc">يزيل رموز التتبع من الروابط التي تنسخها أو تشاركها</string>
     <string name="cat_sec_links">الروابط</string>
     <string name="cat_openLinksExternally_desc">بدلًا من المتصفح المدمج في Instagram</string>
