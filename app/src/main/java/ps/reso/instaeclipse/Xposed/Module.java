@@ -288,6 +288,11 @@ public class Module {
             ModuleLog.error("(InstaEclipse | ImportReceiver): Importing a developer config from the InstaEclipse app will not work", e);
         }
         try {
+            UIHookManager.registerToastRelayReceiver(context);
+        } catch (Throwable e) {
+            ModuleLog.warn("(IE|Toast) Download messages from the InstaEclipse app will show in Android's plain style", e);
+        }
+        try {
             UIHookManager.registerSettingsRestoreReceiver(context);
             ps.reso.instaeclipse.mods.media.DataBackup.registerRestoreReceiver(context);
         } catch (Throwable e) {

@@ -394,6 +394,28 @@ public class UIHookManager {
                 new IntentFilter("ps.reso.instaeclipse.ACTION_IMPORT_CONFIG"));
     }
 
+    public static void registerToastRelayReceiver(android.content.Context context) {
+        BroadcastReceiver receiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(android.content.Context ctx, Intent intent) {
+                try {
+                    String text = intent.getStringExtra(ps.reso.instaeclipse.utils.toast.IeToast.EXTRA_TEXT);
+                    if (text == null || text.isEmpty()
+                            || text.length() > ps.reso.instaeclipse.utils.toast.IeToast.RELAY_MAX_CHARS) return;
+                    if (!ps.reso.instaeclipse.utils.toast.IeToast.inForeground(ctx)) return;
+                    ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx.getApplicationContext(), text,
+                            intent.getBooleanExtra(ps.reso.instaeclipse.utils.toast.IeToast.EXTRA_LONG, false)
+                                    ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT).show();
+                    if (isOrderedBroadcast()) setResultCode(ps.reso.instaeclipse.utils.toast.IeToast.RELAY_SHOWN);
+                } catch (Throwable t) {
+                    ModuleLog.detail("(IE|Toast) relay failed: " + t);
+                }
+            }
+        };
+        ps.reso.instaeclipse.utils.core.IpcSecurity.registerCompanionOnlyReceiver(context, receiver,
+                new IntentFilter(ps.reso.instaeclipse.utils.toast.IeToast.ACTION_RELAY));
+    }
+
     public static void registerSettingsRestoreReceiver(android.content.Context context) {
         BroadcastReceiver receiver = new BroadcastReceiver() {
             @Override

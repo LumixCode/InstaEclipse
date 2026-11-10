@@ -742,7 +742,7 @@ public class DownloadSaveService extends Service {
     private void showToast(String msg) {
         Context appCtx = getApplicationContext();
         new Handler(Looper.getMainLooper()).post(() ->
-                ps.reso.instaeclipse.utils.toast.IeToast.makeText(appCtx, msg, Toast.LENGTH_SHORT).show());
+                ps.reso.instaeclipse.utils.toast.IeToast.relayFromCompanion(appCtx, msg, Toast.LENGTH_SHORT));
     }
 
     private void ensureChannel() {

@@ -25,6 +25,11 @@ import ps.reso.instaeclipse.utils.ui.IePalette;
 
 public final class IeToast {
 
+    public static final String ACTION_RELAY = "ps.reso.instaeclipse.ACTION_TOAST";
+    public static final String EXTRA_TEXT = "text";
+    public static final String EXTRA_LONG = "long";
+    public static final int RELAY_SHOWN = 1;
+    public static final int RELAY_MAX_CHARS = 500;
     static final int BADGE_DP = 28;
     static final int BADGE_GAP_DP = 10;
 
@@ -40,6 +45,31 @@ public final class IeToast {
 
     public static IeToast makeText(Context ctx, CharSequence text, int duration) {
         return new IeToast(ctx, text, duration);
+    }
+
+    public static void relayFromCompanion(Context ctx, CharSequence text, int duration) {
+        if (ctx == null || text == null || text.length() == 0) return;
+        Context app = ctx.getApplicationContext() != null ? ctx.getApplicationContext() : ctx;
+        Runnable local = () -> makeText(app, text, duration).show();
+        try {
+            String host = ps.reso.instaeclipse.utils.ipc.BrokerPayload.HOST;
+            if (text.length() > RELAY_MAX_CHARS
+                    || !ps.reso.instaeclipse.utils.ipc.CompanionBridge.isTrustedHost(app, host)) {
+                local.run();
+                return;
+            }
+            android.content.Intent relay = new android.content.Intent(ACTION_RELAY).setPackage(host)
+                    .putExtra(EXTRA_TEXT, text.toString())
+                    .putExtra(EXTRA_LONG, duration == Toast.LENGTH_LONG);
+            app.sendOrderedBroadcast(relay, null, new android.content.BroadcastReceiver() {
+                @Override
+                public void onReceive(Context c, android.content.Intent i) {
+                    if (getResultCode() != RELAY_SHOWN) local.run();
+                }
+            }, new Handler(Looper.getMainLooper()), 0, null, null);
+        } catch (Throwable t) {
+            local.run();
+        }
     }
 
     public static IeToast makeText(Context ctx, int resId, int duration) {
@@ -129,7 +159,7 @@ public final class IeToast {
         return mark;
     }
 
-    private static boolean inForeground(Context c) {
+    public static boolean inForeground(Context c) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return true;
         try {
             ActivityManager.RunningAppProcessInfo info = new ActivityManager.RunningAppProcessInfo();
