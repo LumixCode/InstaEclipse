@@ -782,7 +782,11 @@ public final class BulkUnsend {
                     ModuleLog.detail(TAG + "unsend failed: " + t + " / " + t.getCause());
                 }
                 if (tally.finish(ids, r)) {
-                    try { Thread.sleep(250); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                    try {
+                        Thread.sleep(ps.reso.instaeclipse.utils.core.Pace.next(tally.unsent(), 1200, 2500, 15, 5000, 8000));
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
                 }
             }
             int done = tally.unsent();

@@ -27,7 +27,7 @@ public final class ProfileDownloadAll {
     private static final String TAG = "(IE|ProfileDL) ";
     private static final String MEDIA = "com.instagram.feed.media.Media";
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
-    private static final long TICK_MS = 600, IDLE_MS = 6000, SPACING_MS = 700;
+    private static final long TICK_MIN_MS = 2000, TICK_MAX_MS = 3000, IDLE_MS = 9000, SPACING_MS = 700;
     private static boolean busy;
 
     private ProfileDownloadAll() {}
@@ -112,7 +112,7 @@ public final class ProfileDownloadAll {
                     return;
                 }
                 swipeUp(a, grid);
-                MAIN.postDelayed(this, TICK_MS);
+                MAIN.postDelayed(this, ps.reso.instaeclipse.utils.core.Pace.between(TICK_MIN_MS, TICK_MAX_MS));
             }
         };
         MAIN.post(tick);
@@ -160,6 +160,7 @@ public final class ProfileDownloadAll {
         downloading = true;
         toast(a, I18n.t(a, R.string.ig_profile_dl_started, posts.size()));
         BatchTally batch = new BatchTally(posts.size());
+        long at = 0;
         for (int i = 0; i < posts.size(); i++) {
             final Post post = posts.get(i);
             final boolean last = i == posts.size() - 1;
@@ -176,7 +177,8 @@ public final class ProfileDownloadAll {
                     SelectedMediaDownloads.reportFailed(a, batch);
                 }
                 if (last) { downloading = false; busy = false; }
-            }, i * SPACING_MS);
+            }, at);
+            at += ps.reso.instaeclipse.utils.core.Pace.between(SPACING_MS, SPACING_MS * 2);
         }
     }
 

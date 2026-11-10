@@ -779,7 +779,8 @@ final class FollowListLoader {
         final Set<String> cursors = new HashSet<>();
         String cursor;
         int lastUnique = -1, pages, retries, retriesTotal;
-        long lastProgressAt, lastAskAt, lastFetchAt, retryAt, lastWalkAt;
+        long lastProgressAt, lastAskAt, lastFetchAt, retryAt, lastWalkAt, paceUntil;
+        boolean paced;
         volatile boolean stopped;
         boolean finished;
         int pagesSeen, pagesLimited, usersSeen, hiddenFollowing;
@@ -995,6 +996,10 @@ final class FollowListLoader {
                 retries = 0;
                 retryAt = 0;
                 lastFailure = null;
+                if (newPage && next != null) {
+                    paceUntil = now + ps.reso.instaeclipse.utils.core.Pace.next(pages, 2000, 4000, 10, 6000, 10000);
+                    paced = true;
+                }
             }
             boolean failed = next != null && failed();
             if (next == null) {
@@ -1002,12 +1007,18 @@ final class FollowListLoader {
                         : FollowListPolicy.passAtEnd(listed.unique(), passPageSeen || expected == 0, now - passStarted);
                 if (end == FollowListPolicy.End.COMPLETE) { endPass(true, "end"); return; }
                 if (end == FollowListPolicy.End.INCOMPLETE) { endPass(false, "no first page"); return; }
-            } else if (retryAt == 0 && !failed && (newPage || now - lastAskAt >= FollowListPolicy.REASK_MS)) {
+            } else if (retryAt == 0 && !failed && now >= paceUntil
+                    && (paced || now - lastAskAt >= FollowListPolicy.REASK_MS)) {
+                if (paced) {
+                    paced = false;
+                    lastProgressAt = now;
+                }
                 ask(pagerLoadMore, now);
             }
             boolean failedAgain = failed && now - lastFetchAt >= FollowListPolicy.REASK_MS + 500;
             boolean passFirstPage = fromStart && next == null;
-            if (retryAt == 0 && !passFirstPage && (failedAgain || now - lastProgressAt >= FollowListPolicy.STALL_MS)) {
+            if (retryAt == 0 && !passFirstPage
+                    && (failedAgain || (!paced && now - lastProgressAt >= FollowListPolicy.STALL_MS))) {
                 FollowListPolicy.Failure cause = lastFailure;
                 long wait = FollowListPolicy.retryDelayMs(retries + 1, cause);
                 if (wait < 0) {
