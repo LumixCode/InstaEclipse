@@ -293,7 +293,7 @@ Without a switch:
 | ✨ Show exact dates and times | Instead of "2h ago", in the format you pick |
 | ✨ Hold a photo to zoom | Opens the sharp photo; swipe down to close |
 | Don't autoplay videos | Videos start when you tap play |
-| Ask before refreshing | So a pull doesn't lose your place in the feed |
+| Ask before refreshing | So a pull, or Back on the scrolled feed, doesn't lose your place |
 | Rounded post corners | 8 to 24 dp |
 
 #### 📖 Stories

@@ -76,7 +76,7 @@
     <string name="cat_exactTimestamps_desc">Gönderi, yorum, hikaye ve sohbetlerde “2 sa önce” yerine</string>
     <string name="cat_enablePhotoZoom">Basılı tutarak yakınlaştır</string>
     <string name="cat_disableVideoAutoPlay_desc">Videolar oynata dokununca başlar</string>
-    <string name="cat_confirmFeedRefresh_desc">Böylece aşağı çekince akıştaki yerinizi kaybetmezsiniz</string>
+    <string name="cat_confirmFeedRefresh_desc">Böylece aşağı çekince veya Geri tuşuna basınca akıştaki yerinizi kaybetmezsiniz</string>
     <string name="cat_sec_watching">İzlerken</string>
     <string name="cat_disableStoryFlipping_desc">Hikaye bitince ekranda kalır</string>
     <string name="cat_enableStoryMentions_desc">Hikaye ⋮ menüsüne “Bahsetmeleri gör” ekler</string>

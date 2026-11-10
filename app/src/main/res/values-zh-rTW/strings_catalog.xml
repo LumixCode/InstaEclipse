@@ -76,7 +76,7 @@
     <string name="cat_exactTimestamps_desc">在貼文、留言、限時動態和聊天中取代「2小時前」</string>
     <string name="cat_enablePhotoZoom">按住相片即可縮放</string>
     <string name="cat_disableVideoAutoPlay_desc">點按播放後影片才會開始播放</string>
-    <string name="cat_confirmFeedRefresh_desc">避免下拉時失去你在動態消息中的位置</string>
+    <string name="cat_confirmFeedRefresh_desc">避免下拉或按返回鍵時失去你在動態消息中的位置</string>
     <string name="cat_sec_watching">觀看</string>
     <string name="cat_disableStoryFlipping_desc">限時動態播完後會停留在畫面上</string>
     <string name="cat_enableStoryMentions_desc">在限時動態的 ⋮ 選單加入「查看提及」</string>

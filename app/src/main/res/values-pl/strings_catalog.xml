@@ -76,7 +76,7 @@
     <string name="cat_exactTimestamps_desc">Zamiast „2 godz. temu” w postach, komentarzach, relacjach i czatach</string>
     <string name="cat_enablePhotoZoom">Przytrzymaj, by powiększyć</string>
     <string name="cat_disableVideoAutoPlay_desc">Film rusza po dotknięciu odtwarzania</string>
-    <string name="cat_confirmFeedRefresh_desc">Żeby przypadkowe przeciągnięcie nie gubiło miejsca w kanale</string>
+    <string name="cat_confirmFeedRefresh_desc">Żeby przeciągnięcie ani przycisk Wstecz nie gubiły miejsca w kanale</string>
     <string name="cat_sec_watching">Oglądanie</string>
     <string name="cat_disableStoryFlipping_desc">Relacja zostaje na ekranie po zakończeniu</string>
     <string name="cat_enableStoryMentions_desc">Dodaje „Pokaż wzmianki” do menu ⋮ relacji</string>

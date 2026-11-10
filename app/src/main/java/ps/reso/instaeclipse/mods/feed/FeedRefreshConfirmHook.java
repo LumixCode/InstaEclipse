@@ -105,6 +105,10 @@ public final class FeedRefreshConfirmHook {
         return trayId != 0 && container.findViewById(trayId) != null;
     }
 
+    public static void askBeforeRefresh(View view, Runnable refresh) {
+        ask(view, refresh, () -> { });
+    }
+
     private static void ask(View view, Runnable refresh, Runnable cancel) {
         Context ctx = view.getContext();
         for (Context c = ctx; c instanceof android.content.ContextWrapper w; c = w.getBaseContext()) {

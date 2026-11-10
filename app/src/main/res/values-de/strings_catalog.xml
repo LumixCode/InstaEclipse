@@ -76,7 +76,7 @@
     <string name="cat_exactTimestamps_desc">Statt „vor 2 Std.“ bei Beiträgen, Kommentaren, Storys und Chats</string>
     <string name="cat_enablePhotoZoom">Foto zum Zoomen halten</string>
     <string name="cat_disableVideoAutoPlay_desc">Videos starten erst, wenn du auf Play tippst</string>
-    <string name="cat_confirmFeedRefresh_desc">Damit du beim Herunterziehen nicht deine Position im Feed verlierst</string>
+    <string name="cat_confirmFeedRefresh_desc">Damit du beim Herunterziehen oder mit „Zurück“ nicht deine Position im Feed verlierst</string>
     <string name="cat_sec_watching">Ansehen</string>
     <string name="cat_disableStoryFlipping_desc">Eine Story bleibt am Ende auf dem Bildschirm</string>
     <string name="cat_enableStoryMentions_desc">Fügt „Erwähnungen anzeigen“ zum ⋮-Menü der Story hinzu</string>

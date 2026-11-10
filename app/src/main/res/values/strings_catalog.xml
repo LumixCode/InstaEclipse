@@ -76,7 +76,7 @@
     <string name="cat_exactTimestamps_desc">Instead of “2h ago” on posts, comments, stories and chats</string>
     <string name="cat_enablePhotoZoom">Hold a photo to zoom</string>
     <string name="cat_disableVideoAutoPlay_desc">Videos start when you tap play</string>
-    <string name="cat_confirmFeedRefresh_desc">So a pull doesn\'t lose your place in the feed</string>
+    <string name="cat_confirmFeedRefresh_desc">So a pull or Back doesn\'t lose your place in the feed</string>
     <string name="cat_sec_watching">Watching</string>
     <string name="cat_disableStoryFlipping_desc">A story stays on screen when it ends</string>
     <string name="cat_enableStoryMentions_desc">Adds “View mentions” to the story ⋮ menu</string>

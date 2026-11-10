@@ -76,7 +76,7 @@
     <string name="cat_exactTimestamps_desc">Paylaşım, şərh, hekayə və söhbətlərdə «2 saat əvvəl» əvəzinə</string>
     <string name="cat_enablePhotoZoom">Fotonu basıb yaxınlaşdır</string>
     <string name="cat_disableVideoAutoPlay_desc">Videolar oynat düyməsinə toxunanda başlayır</string>
-    <string name="cat_confirmFeedRefresh_desc">Aşağı çəkmək lentdəki yerinizi itirməsin deyə</string>
+    <string name="cat_confirmFeedRefresh_desc">Aşağı çəkmək və ya Geri düyməsi lentdəki yerinizi itirməsin deyə</string>
     <string name="cat_sec_watching">Baxarkən</string>
     <string name="cat_disableStoryFlipping_desc">Hekayə bitəndə ekranda qalır</string>
     <string name="cat_enableStoryMentions_desc">Hekayənin ⋮ menyusuna «Qeydlərə bax» əlavə edir</string>

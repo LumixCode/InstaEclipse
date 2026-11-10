@@ -76,7 +76,7 @@
     <string name="cat_exactTimestamps_desc">Au lieu de « il y a 2 h » sur les publications, commentaires, stories et discussions</string>
     <string name="cat_enablePhotoZoom">Maintenir une photo pour zoomer</string>
     <string name="cat_disableVideoAutoPlay_desc">Les vidéos démarrent quand vous les lancez</string>
-    <string name="cat_confirmFeedRefresh_desc">Pour ne pas perdre votre place dans le fil en tirant vers le bas</string>
+    <string name="cat_confirmFeedRefresh_desc">Pour ne pas perdre votre place dans le fil en tirant vers le bas ou avec Retour</string>
     <string name="cat_sec_watching">Visionnage</string>
     <string name="cat_disableStoryFlipping_desc">Une story reste à l\'écran quand elle se termine</string>
     <string name="cat_enableStoryMentions_desc">Ajoute « Voir les mentions » au menu ⋮ des stories</string>

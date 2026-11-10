@@ -19,6 +19,7 @@ public final class BackLeavesHomeHook {
     private static final String TAG = "(IE|BackLeavesHome) ";
     private static final String MAIN_CLASS = "com.instagram.mainactivity.InstagramMainActivity";
     private static final String FEED_LIST = "MainFeedRecyclerView";
+    private static final ThreadLocal<Boolean> REPLAYING = new ThreadLocal<>();
     private static int sheetId = -1;
     private static Class<?> mainActivity;
 
@@ -40,7 +41,7 @@ public final class BackLeavesHomeHook {
             XposedBridge.hookMethod(back, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
-                    if (param.thisObject instanceof Activity a && leaveIfHomeFeed(a)) param.setResult(null);
+                    if (param.thisObject instanceof Activity a && handleBack(a, replayOf(param))) param.setResult(null);
                 }
             });
             FeatureStatusTracker.setHooked("BackLeavesHome");
@@ -51,11 +52,39 @@ public final class BackLeavesHomeHook {
         }
     }
 
-    static boolean leaveIfHomeFeed(Activity a) {
-        if (!FeatureFlags.backLeavesHome || mainActivity == null || !mainActivity.isInstance(a)) return false;
+    static Runnable replayOf(XC_MethodHook.MethodHookParam param) {
+        final java.lang.reflect.Member method = param.method;
+        final Object target = param.thisObject;
+        final Object[] args = param.args;
+        return () -> {
+            try {
+                XposedBridge.invokeOriginalMethod(method, target, args);
+            } catch (Throwable t) {
+                ModuleLog.warn(TAG + "Back could not refresh the feed after you confirmed: "
+                        + t.getClass().getSimpleName() + ": " + t.getMessage());
+            }
+        };
+    }
+
+    static boolean handleBack(Activity a, Runnable replay) {
+        if (!FeatureFlags.backLeavesHome && !FeatureFlags.confirmFeedRefresh) return false;
+        if (mainActivity == null || !mainActivity.isInstance(a) || Boolean.TRUE.equals(REPLAYING.get())) return false;
         try {
             if (!homeFeedInFront(a)) return false;
-            a.moveTaskToBack(true);
+            if (FeatureFlags.backLeavesHome) {
+                a.moveTaskToBack(true);
+                return true;
+            }
+            View content = a.findViewById(android.R.id.content);
+            if (content == null) return false;
+            ps.reso.instaeclipse.mods.feed.FeedRefreshConfirmHook.askBeforeRefresh(content, () -> {
+                REPLAYING.set(Boolean.TRUE);
+                try {
+                    replay.run();
+                } finally {
+                    REPLAYING.remove();
+                }
+            });
             return true;
         } catch (Throwable ignored) {
             return false;

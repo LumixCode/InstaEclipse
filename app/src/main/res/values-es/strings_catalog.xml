@@ -76,7 +76,7 @@
     <string name="cat_exactTimestamps_desc">En lugar de «hace 2 h» en publicaciones, comentarios, historias y chats</string>
     <string name="cat_enablePhotoZoom">Zoom en fotos al mantenerlas</string>
     <string name="cat_disableVideoAutoPlay_desc">Los vídeos empiezan cuando tocas reproducir</string>
-    <string name="cat_confirmFeedRefresh_desc">Para que deslizar hacia abajo no te haga perder tu sitio en el feed</string>
+    <string name="cat_confirmFeedRefresh_desc">Para que deslizar hacia abajo o pulsar Atrás no te haga perder tu sitio en el feed</string>
     <string name="cat_sec_watching">Al ver historias</string>
     <string name="cat_disableStoryFlipping_desc">La historia se queda en pantalla al terminar</string>
     <string name="cat_enableStoryMentions_desc">Añade «Ver menciones» al menú ⋮ de la historia</string>

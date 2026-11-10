@@ -76,7 +76,7 @@
     <string name="cat_exactTimestamps_desc">Em vez de “há 2 h” em publicações, comentários, stories e conversas</string>
     <string name="cat_enablePhotoZoom">Segurar uma foto para dar zoom</string>
     <string name="cat_disableVideoAutoPlay_desc">Os vídeos começam quando você toca no play</string>
-    <string name="cat_confirmFeedRefresh_desc">Para não perder seu lugar no feed ao puxar a tela</string>
+    <string name="cat_confirmFeedRefresh_desc">Para não perder seu lugar no feed ao puxar a tela ou tocar em Voltar</string>
     <string name="cat_sec_watching">Ao assistir</string>
     <string name="cat_disableStoryFlipping_desc">O story fica na tela quando termina</string>
     <string name="cat_enableStoryMentions_desc">Adiciona “Ver menções” ao menu ⋮ do story</string>

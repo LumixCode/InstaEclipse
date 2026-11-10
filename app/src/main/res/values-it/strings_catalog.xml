@@ -76,7 +76,7 @@
     <string name="cat_exactTimestamps_desc">Invece di «2 ore fa» su post, commenti, storie e chat</string>
     <string name="cat_enablePhotoZoom">Zoom tenendo premuta una foto</string>
     <string name="cat_disableVideoAutoPlay_desc">I video partono solo quando li avvii tu</string>
-    <string name="cat_confirmFeedRefresh_desc">Così trascinare verso il basso non ti fa perdere il punto nel feed</string>
+    <string name="cat_confirmFeedRefresh_desc">Così trascinare verso il basso o premere Indietro non ti fa perdere il punto nel feed</string>
     <string name="cat_sec_watching">Visione</string>
     <string name="cat_disableStoryFlipping_desc">Una storia resta sullo schermo quando finisce</string>
     <string name="cat_enableStoryMentions_desc">Aggiunge «Visualizza menzioni» al menu ⋮ della storia</string>

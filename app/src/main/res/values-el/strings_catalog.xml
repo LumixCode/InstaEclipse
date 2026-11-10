@@ -76,7 +76,7 @@
     <string name="cat_exactTimestamps_desc">Αντί για «πριν από 2 ώρες» σε δημοσιεύσεις, σχόλια, ιστορίες και συνομιλίες</string>
     <string name="cat_enablePhotoZoom">Ζουμ κρατώντας μια φωτογραφία</string>
     <string name="cat_disableVideoAutoPlay_desc">Τα βίντεο ξεκινούν όταν πατήσετε αναπαραγωγή</string>
-    <string name="cat_confirmFeedRefresh_desc">Ώστε ένα τράβηγμα να μη χάνει τη θέση σας στη ροή</string>
+    <string name="cat_confirmFeedRefresh_desc">Ώστε ένα τράβηγμα ή το «Πίσω» να μη χάνει τη θέση σας στη ροή</string>
     <string name="cat_sec_watching">Προβολή</string>
     <string name="cat_disableStoryFlipping_desc">Η ιστορία μένει στην οθόνη όταν τελειώσει</string>
     <string name="cat_enableStoryMentions_desc">Προσθέτει «Προβολή αναφορών» στο μενού ⋮ ιστορίας</string>

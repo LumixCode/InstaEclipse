@@ -48,10 +48,10 @@ public final class BackLeavesHomeDispatcher {
             XposedBridge.hookMethod(dispatch, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
-                    if (!FeatureFlags.backLeavesHome) return;
+                    if (!FeatureFlags.backLeavesHome && !FeatureFlags.confirmFeedRefresh) return;
                     Activity a = UIHookManager.getCurrentActivity();
                     if (a == null || a.isFinishing() || !owns(a, param.thisObject)) return;
-                    if (BackLeavesHomeHook.leaveIfHomeFeed(a)) param.setResult(null);
+                    if (BackLeavesHomeHook.handleBack(a, BackLeavesHomeHook.replayOf(param))) param.setResult(null);
                 }
             });
             ModuleLog.detail(TAG + "hooked " + dispatch.getDeclaringClass().getName() + "." + dispatch.getName()

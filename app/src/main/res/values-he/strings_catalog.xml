@@ -76,7 +76,7 @@
     <string name="cat_exactTimestamps_desc">במקום \"לפני שעתיים\" בפוסטים, בתגובות, בסטוריז ובצ\'אטים</string>
     <string name="cat_enablePhotoZoom">החזק תמונה כדי להגדיל</string>
     <string name="cat_disableVideoAutoPlay_desc">סרטונים מתחילים כשאתה מקיש על הפעלה</string>
-    <string name="cat_confirmFeedRefresh_desc">כדי שמשיכה למטה לא תאבד את המקום שלך בפיד</string>
+    <string name="cat_confirmFeedRefresh_desc">כדי שמשיכה למטה או כפתור החזרה לא יאבדו את המקום שלך בפיד</string>
     <string name="cat_sec_watching">צפייה</string>
     <string name="cat_disableStoryFlipping_desc">סטורי נשאר על המסך כשהוא מסתיים</string>
     <string name="cat_enableStoryMentions_desc">מוסיף \"צפה באזכורים\" לתפריט ⋮ של הסטורי</string>

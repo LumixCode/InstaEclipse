@@ -76,7 +76,7 @@
     <string name="cat_exactTimestamps_desc">替代帖子、评论、快拍和聊天中的“2小时前”</string>
     <string name="cat_enablePhotoZoom">长按照片放大</string>
     <string name="cat_disableVideoAutoPlay_desc">点按播放后视频才会开始</string>
-    <string name="cat_confirmFeedRefresh_desc">避免下拉时丢失你在动态中的位置</string>
+    <string name="cat_confirmFeedRefresh_desc">避免下拉或按返回键时丢失你在动态中的位置</string>
     <string name="cat_sec_watching">观看</string>
     <string name="cat_disableStoryFlipping_desc">快拍播放完后停留在屏幕上</string>
     <string name="cat_enableStoryMentions_desc">在快拍的 ⋮ 菜单中添加“查看提及”</string>
