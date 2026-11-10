@@ -191,6 +191,8 @@ public class FeatureFlags {
     public static volatile String themePaletteJson = "";
 
     public static volatile boolean hideSuggestionsInFeed = false;
+    public static volatile boolean hideSuggestionsInReels = false;
+    public static volatile boolean hidePaidPartnerships = false;
     public static volatile boolean hideThreadsSuggestions = false;
 
     public static volatile boolean enablePostDownload = false;

@@ -82,6 +82,10 @@
     <string name="cat_qualityPointer">Kualitas unduhan: di Unduhan</string>
     <string name="cat_hideThreadsSuggestions_desc">Juga menyembunyikan tombol Threads di profil Anda</string>
     <string name="cat_disableDiscoverPeople_desc">“Temukan orang” di feed, profil, dan Pesan</string>
+    <string name="cat_hideSuggestionsInReels">Sembunyikan saran di Reels</string>
+    <string name="cat_hideSuggestionsInReels_desc">Menghapus akun yang disarankan serta kartu promosi Threads atau Meta AI di antara reel</string>
+    <string name="cat_hidePaidPartnerships">Sembunyikan kemitraan berbayar</string>
+    <string name="cat_hidePaidPartnerships_desc">Menghapus reel bersponsor dan kemitraan berbayar saat Anda menggulir Reels. Reel yang Anda buka sendiri tetap ditampilkan</string>
     <string name="cat_sec_posts">Postingan</string>
     <string name="cat_expandCaptions">Tampilkan keterangan penuh</string>
     <string name="cat_exactTimestamps_desc">Bukan “2 jam lalu” di postingan, komentar, cerita, dan obrolan</string>

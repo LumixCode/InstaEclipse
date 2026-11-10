@@ -82,6 +82,10 @@
     <string name="cat_qualityPointer">Jakość pobierania: w sekcji Pobieranie</string>
     <string name="cat_hideThreadsSuggestions_desc">Ukrywa też przycisk Threads na Twoim profilu</string>
     <string name="cat_disableDiscoverPeople_desc">Propozycje osób w kanale, na profilach i w Wiadomościach</string>
+    <string name="cat_hideSuggestionsInReels">Ukryj sugestie w Rolkach</string>
+    <string name="cat_hideSuggestionsInReels_desc">Usuwa sugerowane konta oraz karty promujące Threads lub Meta AI spomiędzy rolek</string>
+    <string name="cat_hidePaidPartnerships">Ukryj płatne partnerstwa</string>
+    <string name="cat_hidePaidPartnerships_desc">Usuwa rolki sponsorowane i z płatnym partnerstwem podczas przewijania Rolek. Rolka, którą otwierasz samodzielnie, nadal się wyświetla</string>
     <string name="cat_sec_posts">Posty</string>
     <string name="cat_expandCaptions">Pokazuj pełne opisy</string>
     <string name="cat_exactTimestamps_desc">Zamiast „2 godz. temu” w postach, komentarzach, relacjach i czatach</string>

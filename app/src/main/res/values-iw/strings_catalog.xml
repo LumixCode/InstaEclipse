@@ -82,6 +82,10 @@
     <string name="cat_qualityPointer">איכות הורדה: בדף \"הורדות\"</string>
     <string name="cat_hideThreadsSuggestions_desc">מסתיר גם את כפתור Threads בפרופיל שלך</string>
     <string name="cat_disableDiscoverPeople_desc">\"גלה אנשים\" בפיד, בפרופילים ובהודעות</string>
+    <string name="cat_hideSuggestionsInReels">הסתר הצעות ב-Reels</string>
+    <string name="cat_hideSuggestionsInReels_desc">מסיר חשבונות מוצעים וכרטיסי קידום של Threads או Meta AI שמופיעים בין סרטוני Reels</string>
+    <string name="cat_hidePaidPartnerships">הסתר שותפויות בתשלום</string>
+    <string name="cat_hidePaidPartnerships_desc">מסיר סרטוני Reels ממומנים ובשותפות בתשלום בזמן הגלילה ב-Reels. סרטון שפתחת בעצמך עדיין מוצג</string>
     <string name="cat_sec_posts">פוסטים</string>
     <string name="cat_expandCaptions">הצג כיתובים מלאים</string>
     <string name="cat_exactTimestamps_desc">במקום \"לפני שעתיים\" בפוסטים, בתגובות, בסטוריז ובצ\'אטים</string>

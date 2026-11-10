@@ -97,6 +97,8 @@ public class FeatureManager {
         } else {
             FeatureStatusTracker.setDisabled("HideSuggestionsInFeed");
         }
+        reg(FeatureFlags.hideSuggestionsInReels, "HideSuggestionsInReels", R.string.cat_hideSuggestionsInReels);
+        reg(FeatureFlags.hidePaidPartnerships, "HidePaidPartnerships", R.string.cat_hidePaidPartnerships);
 
         if (FeatureFlags.hideThreadsSuggestions) {
             FeatureStatusTracker.setEnabled("HideThreadsSuggestions", R.string.ig_dialog_clean_feed_hide_threads);

@@ -409,6 +409,12 @@ public final class FeatureCatalog {
                     section(R.string.ig_dialog_menu_clean_feed,
                             sw("hideSuggestionsInFeed", R.string.ig_dialog_clean_feed_hide_suggested, R.drawable.ic_sparkle)
                                     .status("HideSuggestionsInFeed"),
+                            sw("hideSuggestionsInReels", R.string.cat_hideSuggestionsInReels, R.drawable.ic_sparkle)
+                                    .desc(R.string.cat_hideSuggestionsInReels_desc).restart(Restart.BOTH)
+                                    .status("HideSuggestionsInReels").words("reels", "suggested", "threads", "meta ai"),
+                            sw("hidePaidPartnerships", R.string.cat_hidePaidPartnerships, R.drawable.ic_block)
+                                    .desc(R.string.cat_hidePaidPartnerships_desc).restart(Restart.BOTH)
+                                    .status("HidePaidPartnerships").words("reels", "sponsored", "partnership"),
                             sw("hideThreadsSuggestions", R.string.ig_dialog_clean_feed_hide_threads, R.drawable.ic_sparkle)
                                     .desc(R.string.cat_hideThreadsSuggestions_desc).status("HideThreadsSuggestions"),
                             sw("hideLikedPosts", R.string.ig_dialog_clean_feed_hide_liked, R.drawable.ic_sparkle)

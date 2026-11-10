@@ -285,6 +285,8 @@ Without a switch:
 | Option | What it does |
 |---|---|
 | ✨ Hide suggested posts | Removes the suggestion blocks Instagram mixes into your feed, such as suggested reels and accounts |
+| 🆕 Hide suggestions in Reels | Removes suggested accounts and Threads or Meta AI promo cards between reels |
+| 🆕 Hide paid partnerships | Removes paid partnership and sponsored reels as you scroll Reels. A reel you open yourself, from a chat, a profile or a link, still shows |
 | ✨ Hide Threads posts | Removes Threads posts, and the Threads button on your own profile |
 | Hide posts you already liked | Drops them from the feed |
 | Hide community notes | Removes notes added under posts and reels |

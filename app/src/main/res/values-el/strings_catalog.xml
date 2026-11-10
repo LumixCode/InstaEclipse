@@ -82,6 +82,10 @@
     <string name="cat_qualityPointer">Ποιότητα λήψης: στις Λήψεις</string>
     <string name="cat_hideThreadsSuggestions_desc">Κρύβει και το κουμπί Threads στο προφίλ σας</string>
     <string name="cat_disableDiscoverPeople_desc">«Ανακαλύψτε άτομα» στη ροή, στα προφίλ και στα Μηνύματα</string>
+    <string name="cat_hideSuggestionsInReels">Απόκρυψη προτάσεων στα Reels</string>
+    <string name="cat_hideSuggestionsInReels_desc">Αφαιρεί προτεινόμενους λογαριασμούς και κάρτες προώθησης, όπως Threads ή Meta AI, ανάμεσα στα reels</string>
+    <string name="cat_hidePaidPartnerships">Απόκρυψη πληρωμένων συνεργασιών</string>
+    <string name="cat_hidePaidPartnerships_desc">Αφαιρεί χορηγούμενα reels και reels πληρωμένης συνεργασίας καθώς κάνετε κύλιση στα Reels. Ένα reel που ανοίγετε εσείς εμφανίζεται κανονικά</string>
     <string name="cat_sec_posts">Δημοσιεύσεις</string>
     <string name="cat_expandCaptions">Εμφάνιση πλήρων λεζαντών</string>
     <string name="cat_exactTimestamps_desc">Αντί για «πριν από 2 ώρες» σε δημοσιεύσεις, σχόλια, ιστορίες και συνομιλίες</string>

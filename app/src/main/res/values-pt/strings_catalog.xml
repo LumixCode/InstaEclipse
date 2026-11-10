@@ -82,6 +82,10 @@
     <string name="cat_qualityPointer">Qualidade do download: em Downloads</string>
     <string name="cat_hideThreadsSuggestions_desc">Também oculta o botão do Threads no seu perfil</string>
     <string name="cat_disableDiscoverPeople_desc">“Descobrir pessoas” no feed, nos perfis e em Mensagens</string>
+    <string name="cat_hideSuggestionsInReels">Ocultar sugestões nos Reels</string>
+    <string name="cat_hideSuggestionsInReels_desc">Remove contas sugeridas e cartões promocionais do Threads ou da Meta AI entre os reels</string>
+    <string name="cat_hidePaidPartnerships">Ocultar parcerias pagas</string>
+    <string name="cat_hidePaidPartnerships_desc">Remove reels patrocinados e de parceria paga enquanto você rola os Reels. Um reel que você mesmo abre continua aparecendo</string>
     <string name="cat_sec_posts">Publicações</string>
     <string name="cat_expandCaptions">Mostrar legendas completas</string>
     <string name="cat_exactTimestamps_desc">Em vez de “há 2 h” em publicações, comentários, stories e conversas</string>

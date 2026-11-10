@@ -82,6 +82,10 @@
     <string name="cat_qualityPointer">İndirme kalitesi: İndirmeler bölümünde</string>
     <string name="cat_hideThreadsSuggestions_desc">Profilinizdeki Threads düğmesini de gizler</string>
     <string name="cat_disableDiscoverPeople_desc">Akışta, profillerde ve Mesajlar\'da “Kişileri keşfet”</string>
+    <string name="cat_hideSuggestionsInReels">Reels önerilerini gizle</string>
+    <string name="cat_hideSuggestionsInReels_desc">Reels videoları arasındaki önerilen hesapları ve Threads veya Meta AI tanıtım kartlarını kaldırır</string>
+    <string name="cat_hidePaidPartnerships">Ücretli ortaklıkları gizle</string>
+    <string name="cat_hidePaidPartnerships_desc">Reels\'te gezinirken sponsorlu ve ücretli ortaklık içeren videoları kaldırır. Kendi açtığınız video yine gösterilir</string>
     <string name="cat_sec_posts">Gönderiler</string>
     <string name="cat_expandCaptions">Açıklamaları tam göster</string>
     <string name="cat_exactTimestamps_desc">Gönderi, yorum, hikaye ve sohbetlerde “2 sa önce” yerine</string>

@@ -149,6 +149,7 @@ public class InstallPlan {
     static final int META_AI_REELS = 18;
     static final int DISABLE_REPOST_HOOK = 19;
     static final int HIDE_SUGGESTED_FEED_ITEMS_HOOK = 21;
+    static final int HIDE_REELS_ITEMS_HOOK = 108;
     static final int AD_BLOCKER = 22;
     static final int TRACKING_LINK_DISABLE = 23;
     static final int ANALYTICS_SKIP_HOOK = 115;
@@ -301,6 +302,10 @@ public class InstallPlan {
                 .withFeatures("DisableRepost"));
         s.add(new InstallStep(HIDE_SUGGESTED_FEED_ITEMS_HOOK, "HideSuggestedFeedItemsHook", null, "(InstaEclipse | HideSuggested): ", COULD_NOT_START, true, null)
                 .withFeatures("HideSuggestionsInFeed", "HideThreadsSuggestions", "HideLikedPosts"));
+        s.add(new InstallStep(HIDE_REELS_ITEMS_HOOK, "HideReelsItemsHook", null, "(IE|ReelsFilter) ", COULD_NOT_START, true, "hideSuggestionsInReels|hidePaidPartnerships")
+                .withFeatures("HideSuggestionsInReels", "HidePaidPartnerships")
+                .withLookupFlags("hideSuggestionsInReels", "hidePaidPartnerships")
+                .withRestartKeys("hideSuggestionsInReels", "hidePaidPartnerships"));
         s.add(new InstallStep(AD_BLOCKER, "AdBlocker", null, "(InstaEclipse | AdBlocker): ", COULD_NOT_START, true, null)
                 .withFeatures("AdBlocker"));
         s.add(new InstallStep(TRACKING_LINK_DISABLE, "TrackingLinkDisable", null, "(InstaEclipse | TrackingLinkDisable): ", COULD_NOT_START, false, null)
@@ -535,6 +540,8 @@ public class InstallPlan {
                 return FeatureFlags.isAnalyticsBlocked;
             case "expandCaptions":
                 return FeatureFlags.expandCaptions;
+            case "hideSuggestionsInReels|hidePaidPartnerships":
+                return FeatureFlags.hideSuggestionsInReels || FeatureFlags.hidePaidPartnerships;
             case "startupTab":
                 return FeatureFlags.startupTab != null && !FeatureFlags.startupTab.isEmpty();
             case "postCountSpoof":
@@ -633,6 +640,9 @@ public class InstallPlan {
                 return;
             case HIDE_SUGGESTED_FEED_ITEMS_HOOK:
                 new HideSuggestedFeedItemsHook().install(ctx.loader);
+                return;
+            case HIDE_REELS_ITEMS_HOOK:
+                new ps.reso.instaeclipse.mods.feed.HideReelsItemsHook().install(ctx.loader);
                 return;
             case AD_BLOCKER:
                 new AdBlocker().disableSponsoredContent(ctx.loader);

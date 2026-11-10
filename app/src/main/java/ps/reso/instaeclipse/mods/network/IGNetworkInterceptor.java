@@ -90,6 +90,9 @@ public class IGNetworkInterceptor {
                                     }
 
                                     if (FollowStatusHook.wanted()) FollowStatusHook.handleRequest(uri);
+                                    if (FeatureFlags.hidePaidPartnerships) {
+                                        ps.reso.instaeclipse.mods.feed.PaidPartnershipFilter.noteRequest(uri);
+                                    }
                                 }
                               } catch (Throwable ignored) {}
                             }

@@ -82,6 +82,10 @@
     <string name="cat_qualityPointer">Qualité de téléchargement : dans Téléchargements</string>
     <string name="cat_hideThreadsSuggestions_desc">Masque aussi le bouton Threads sur votre profil</string>
     <string name="cat_disableDiscoverPeople_desc">« Découvrir des personnes » dans le fil, sur les profils et dans Messages</string>
+    <string name="cat_hideSuggestionsInReels">Masquer les suggestions dans les Reels</string>
+    <string name="cat_hideSuggestionsInReels_desc">Retire les comptes suggérés et les cartes promotionnelles Threads ou Meta AI entre les reels</string>
+    <string name="cat_hidePaidPartnerships">Masquer les partenariats rémunérés</string>
+    <string name="cat_hidePaidPartnerships_desc">Retire les reels sponsorisés ou en partenariat rémunéré quand vous faites défiler les Reels. Un reel que vous ouvrez vous-même reste affiché</string>
     <string name="cat_sec_posts">Publications</string>
     <string name="cat_expandCaptions">Voir les légendes entières</string>
     <string name="cat_exactTimestamps_desc">Au lieu de « il y a 2 h » sur les publications, commentaires, stories et discussions</string>

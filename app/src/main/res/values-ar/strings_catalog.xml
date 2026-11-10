@@ -82,6 +82,10 @@
     <string name="cat_qualityPointer">جودة التنزيل: في «التنزيلات»</string>
     <string name="cat_hideThreadsSuggestions_desc">يخفي أيضًا زر Threads في ملفك الشخصي</string>
     <string name="cat_disableDiscoverPeople_desc">«اكتشاف الأشخاص» في الخلاصة والملفات الشخصية والرسائل</string>
+    <string name="cat_hideSuggestionsInReels">إخفاء الاقتراحات في الريلز</string>
+    <string name="cat_hideSuggestionsInReels_desc">يزيل الحسابات المقترحة وبطاقات الترويج مثل Threads أو Meta AI بين مقاطع الريلز</string>
+    <string name="cat_hidePaidPartnerships">إخفاء الشراكات المدفوعة</string>
+    <string name="cat_hidePaidPartnerships_desc">يزيل مقاطع الريلز المموّلة وذات الشراكة المدفوعة أثناء تصفح الريلز. المقطع الذي تفتحه بنفسك يبقى ظاهرًا</string>
     <string name="cat_sec_posts">المنشورات</string>
     <string name="cat_expandCaptions">إظهار الأوصاف كاملة</string>
     <string name="cat_exactTimestamps_desc">بدلًا من «منذ ساعتين» في المنشورات والتعليقات والقصص والمحادثات</string>

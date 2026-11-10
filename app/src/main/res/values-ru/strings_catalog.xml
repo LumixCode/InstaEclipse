@@ -82,6 +82,10 @@
     <string name="cat_qualityPointer">Качество загрузки: в разделе «Загрузки»</string>
     <string name="cat_hideThreadsSuggestions_desc">Также скрывает кнопку Threads в вашем профиле</string>
     <string name="cat_disableDiscoverPeople_desc">«Интересные люди» в ленте, профилях и «Сообщениях»</string>
+    <string name="cat_hideSuggestionsInReels">Скрыть рекомендации в Reels</string>
+    <string name="cat_hideSuggestionsInReels_desc">Убирает рекомендуемые аккаунты и рекламные карточки Threads или Meta AI между видео Reels</string>
+    <string name="cat_hidePaidPartnerships">Скрыть платные партнёрства</string>
+    <string name="cat_hidePaidPartnerships_desc">Убирает спонсируемые видео Reels и видео с платным партнёрством при прокрутке. Видео, которое вы открыли сами, по-прежнему показывается</string>
     <string name="cat_sec_posts">Публикации</string>
     <string name="cat_expandCaptions">Раскрывать подписи</string>
     <string name="cat_exactTimestamps_desc">Вместо «2 ч назад» в публикациях, комментариях, историях и чатах</string>

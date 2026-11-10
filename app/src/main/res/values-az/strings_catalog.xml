@@ -82,6 +82,10 @@
     <string name="cat_qualityPointer">Yükləmə keyfiyyəti: Yükləmələr bölməsində</string>
     <string name="cat_hideThreadsSuggestions_desc">Profilinizdəki Threads düyməsini də gizlədir</string>
     <string name="cat_disableDiscoverPeople_desc">Lentdə, profillərdə və Mesajlarda «İnsanları kəşf et»</string>
+    <string name="cat_hideSuggestionsInReels">Reels-də tövsiyələri gizlət</string>
+    <string name="cat_hideSuggestionsInReels_desc">Reels arasındakı tövsiyə olunan hesabları və Threads, yaxud Meta AI tanıtım kartlarını silir</string>
+    <string name="cat_hidePaidPartnerships">Ödənişli əməkdaşlıqları gizlət</string>
+    <string name="cat_hidePaidPartnerships_desc">Reels-i vərəqləyərkən ödənişli əməkdaşlıq və sponsorlu reels-ləri silir. Özünüz açdığınız reels yenə göstərilir</string>
     <string name="cat_sec_posts">Paylaşımlar</string>
     <string name="cat_expandCaptions">Tam açıqlamaları göstər</string>
     <string name="cat_exactTimestamps_desc">Paylaşım, şərh, hekayə və söhbətlərdə «2 saat əvvəl» əvəzinə</string>

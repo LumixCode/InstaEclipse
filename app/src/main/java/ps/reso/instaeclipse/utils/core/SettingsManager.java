@@ -123,6 +123,8 @@ public class SettingsManager {
         editor.putBoolean("nightReelBlockAllowDM", FeatureFlags.nightReelBlockAllowDM);
 
         editor.putBoolean("hideSuggestionsInFeed", FeatureFlags.hideSuggestionsInFeed);
+        editor.putBoolean("hideSuggestionsInReels", FeatureFlags.hideSuggestionsInReels);
+        editor.putBoolean("hidePaidPartnerships", FeatureFlags.hidePaidPartnerships);
         editor.putBoolean("hideThreadsSuggestions", FeatureFlags.hideThreadsSuggestions);
         editor.putBoolean("hideLikedPosts", FeatureFlags.hideLikedPosts);
         editor.putBoolean("confirmFeedRefresh", FeatureFlags.confirmFeedRefresh);
@@ -372,6 +374,8 @@ public class SettingsManager {
         FeatureFlags.nightReelBlockAllowDM = prefs.getBoolean("nightReelBlockAllowDM", true);
 
         FeatureFlags.hideSuggestionsInFeed = prefs.getBoolean("hideSuggestionsInFeed", false);
+        FeatureFlags.hideSuggestionsInReels = prefs.getBoolean("hideSuggestionsInReels", false);
+        FeatureFlags.hidePaidPartnerships = prefs.getBoolean("hidePaidPartnerships", false);
         FeatureFlags.hideThreadsSuggestions = prefs.getBoolean("hideThreadsSuggestions", false);
         FeatureFlags.hideLikedPosts = prefs.getBoolean("hideLikedPosts", false);
         FeatureFlags.confirmFeedRefresh = prefs.getBoolean("confirmFeedRefresh", false);

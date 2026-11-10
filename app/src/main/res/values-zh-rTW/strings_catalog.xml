@@ -82,6 +82,10 @@
     <string name="cat_qualityPointer">下載畫質：在「下載」中設定</string>
     <string name="cat_hideThreadsSuggestions_desc">也會隱藏你個人檔案上的 Threads 按鈕</string>
     <string name="cat_disableDiscoverPeople_desc">動態消息、個人檔案和「訊息」中的「探索用戶」</string>
+    <string name="cat_hideSuggestionsInReels">隱藏 Reels 中的推薦內容</string>
+    <string name="cat_hideSuggestionsInReels_desc">移除 Reels 之間的推薦帳號以及 Threads 或 Meta AI 推廣卡片</string>
+    <string name="cat_hidePaidPartnerships">隱藏付費合作</string>
+    <string name="cat_hidePaidPartnerships_desc">瀏覽 Reels 時移除贊助和付費合作的 Reels。你自己開啟的 Reels 仍會顯示</string>
     <string name="cat_sec_posts">貼文</string>
     <string name="cat_expandCaptions">顯示完整說明文字</string>
     <string name="cat_exactTimestamps_desc">在貼文、留言、限時動態和聊天中取代「2小時前」</string>

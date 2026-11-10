@@ -82,6 +82,10 @@
     <string name="cat_qualityPointer">Nedladdningskvalitet: under Nedladdningar</string>
     <string name="cat_hideThreadsSuggestions_desc">Döljer även Threads-knappen på din profil</string>
     <string name="cat_disableDiscoverPeople_desc">”Upptäck personer” i flödet, på profiler och i Meddelanden</string>
+    <string name="cat_hideSuggestionsInReels">Dölj förslag i Reels</string>
+    <string name="cat_hideSuggestionsInReels_desc">Tar bort föreslagna konton och reklamkort för Threads eller Meta AI mellan reels</string>
+    <string name="cat_hidePaidPartnerships">Dölj betalda samarbeten</string>
+    <string name="cat_hidePaidPartnerships_desc">Tar bort sponsrade reels och reels med betalt samarbete när du bläddrar i Reels. Ett reel som du själv öppnar visas fortfarande</string>
     <string name="cat_sec_posts">Inlägg</string>
     <string name="cat_expandCaptions">Visa hela bildtexter</string>
     <string name="cat_exactTimestamps_desc">I stället för ”för 2 tim sedan” på inlägg, kommentarer, stories och i chattar</string>

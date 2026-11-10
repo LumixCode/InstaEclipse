@@ -82,6 +82,10 @@
     <string name="cat_qualityPointer">Download quality: in Downloads</string>
     <string name="cat_hideThreadsSuggestions_desc">Also hides the Threads button on your profile</string>
     <string name="cat_disableDiscoverPeople_desc">“Discover people” in the feed, on profiles and in Messages</string>
+    <string name="cat_hideSuggestionsInReels">Hide suggestions in Reels</string>
+    <string name="cat_hideSuggestionsInReels_desc">Removes suggested accounts and Threads or Meta AI promo cards between reels</string>
+    <string name="cat_hidePaidPartnerships">Hide paid partnerships</string>
+    <string name="cat_hidePaidPartnerships_desc">Removes paid partnership and sponsored reels as you scroll Reels. A reel you open yourself still shows</string>
     <string name="cat_sec_posts">Posts</string>
     <string name="cat_expandCaptions">Show full captions</string>
     <string name="cat_exactTimestamps_desc">Instead of “2h ago” on posts, comments, stories and chats</string>

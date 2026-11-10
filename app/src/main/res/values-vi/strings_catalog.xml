@@ -82,6 +82,10 @@
     <string name="cat_qualityPointer">Chất lượng tải xuống: trong Tải xuống</string>
     <string name="cat_hideThreadsSuggestions_desc">Cũng ẩn nút Threads trên trang cá nhân của bạn</string>
     <string name="cat_disableDiscoverPeople_desc">“Khám phá mọi người” trên bảng feed, trang cá nhân và trong Tin nhắn</string>
+    <string name="cat_hideSuggestionsInReels">Ẩn gợi ý trong Reels</string>
+    <string name="cat_hideSuggestionsInReels_desc">Xóa tài khoản được gợi ý và thẻ quảng bá Threads hoặc Meta AI xen giữa các reel</string>
+    <string name="cat_hidePaidPartnerships">Ẩn bài hợp tác có trả phí</string>
+    <string name="cat_hidePaidPartnerships_desc">Xóa reel được tài trợ và reel hợp tác có trả phí khi bạn lướt Reels. Reel do chính bạn mở vẫn hiển thị</string>
     <string name="cat_sec_posts">Bài viết</string>
     <string name="cat_expandCaptions">Hiện đầy đủ chú thích</string>
     <string name="cat_exactTimestamps_desc">Thay vì “2 giờ trước” trên bài viết, bình luận, tin và đoạn chat</string>
