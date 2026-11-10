@@ -20,6 +20,7 @@ import org.luckypray.dexkit.query.FindMethod;
 import org.luckypray.dexkit.query.matchers.ClassMatcher;
 import org.luckypray.dexkit.query.matchers.MethodMatcher;
 
+import ps.reso.instaeclipse.mods.extras.ReelsOverlay;
 import ps.reso.instaeclipse.xposedcompat.XC_MethodHook;
 import ps.reso.instaeclipse.xposedcompat.XposedBridge;
 import ps.reso.instaeclipse.xposedcompat.XposedHelpers;
@@ -35,6 +36,11 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 public class RemoveMetaAIHook {
 
     private static final String ADD_BUTTON_CACHE = "RemoveMetaAI_addButton";
+    private static final String[] REEL_OVERLAY = {
+            "android_purge_26_q3_ClipsMetaAiPillComponent_render",
+            "android_purge_26_q2_ClipsContentDeepDiveComponent_render",
+    };
+    private static final String[] REEL_PILL_TYPES = {"CONTENT_DEEP_DIVE", "SEE_MORE_PROMPTS"};
 
     private static volatile boolean idsResolved = false;
     private static final Set<Integer> targetLayoutIds = new HashSet<>();
@@ -113,6 +119,21 @@ public class RemoveMetaAIHook {
         installMenuOptionFilter(classLoader);
         installAddButtonFilter(classLoader);
         installReelContentDeepDive(classLoader);
+        installReelOverlay(classLoader);
+    }
+
+    private void installReelOverlay(ClassLoader cl) {
+        try {
+            int hidden = ReelsOverlay.hide(cl, () -> FeatureFlags.removeMetaAI, REEL_OVERLAY)
+                    + (ReelsOverlay.hidePills(cl, () -> FeatureFlags.removeMetaAI, REEL_PILL_TYPES) ? 1 : 0);
+            if (hidden <= REEL_OVERLAY.length) {
+                ModuleLog.warn("(IE|RemoveMetaAI) Some Meta AI prompts on reels may still show (not found in this Instagram version)");
+            }
+            ModuleLog.detail("(IE|RemoveMetaAI) reel overlay: " + hidden + " of " + (REEL_OVERLAY.length + 1) + " part(s)");
+        } catch (Throwable t) {
+            ModuleLog.warn("(IE|RemoveMetaAI) Meta AI prompts on reels may still show: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
+        }
     }
 
     private void installReelContentDeepDive(ClassLoader cl) {

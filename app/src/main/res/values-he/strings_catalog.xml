@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">0.5× בחצי השמאלי; החצי הימני נשאר 2×</string>
     <string name="cat_offerPlaybackSpeed">שנה מהירות ניגון</string>
     <string name="cat_offerPlaybackSpeed_desc">בתפריט ⋮ של סרטונים, Reels וסטוריז</string>
+    <string name="cat_sec_clean_reels">ניקוי Reels</string>
+    <string name="cat_reelsHideFollow">הסתרת כפתור המעקב</string>
+    <string name="cat_reelsHideFollow_desc">עדיין אפשר לעקוב מהפרופיל</string>
+    <string name="cat_reelsHidePills">הסתרת כפתורי תבנית ואודיו</string>
+    <string name="cat_reelsHidePills_desc">מסיר את תוויות התבנית, Edits והמוזיקה</string>
+    <string name="cat_reelsHideCommentBar">הסתרת שורת התגובה</string>
+    <string name="cat_reelsHideCommentBar_desc">עדיין אפשר לפתוח תגובות מכפתור התגובות</string>
     <string name="cat_title_focus">מצב מיקוד</string>
     <string name="cat_sec_today">היום</string>
     <string name="cat_sec_turn_off">השבתה</string>

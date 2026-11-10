@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">0,5× na lewej połowie; prawa połowa nadal daje 2×</string>
     <string name="cat_offerPlaybackSpeed">Zmieniaj prędkość odtwarzania</string>
     <string name="cat_offerPlaybackSpeed_desc">W menu ⋮ filmów, rolek i relacji</string>
+    <string name="cat_sec_clean_reels">Uporządkuj Reels</string>
+    <string name="cat_reelsHideFollow">Ukryj przycisk Obserwuj</string>
+    <string name="cat_reelsHideFollow_desc">Nadal możesz obserwować z profilu</string>
+    <string name="cat_reelsHidePills">Ukryj przyciski szablonu i audio</string>
+    <string name="cat_reelsHidePills_desc">Usuwa etykiety szablonu, Edits i muzyki</string>
+    <string name="cat_reelsHideCommentBar">Ukryj pasek komentarza</string>
+    <string name="cat_reelsHideCommentBar_desc">Komentarze nadal otworzysz przyciskiem komentarzy</string>
     <string name="cat_title_focus">Tryb skupienia</string>
     <string name="cat_sec_today">Dzisiaj</string>
     <string name="cat_sec_turn_off">Wyłącz</string>

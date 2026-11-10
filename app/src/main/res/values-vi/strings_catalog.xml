@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">0,5× ở nửa trái; nửa phải vẫn là 2×</string>
     <string name="cat_offerPlaybackSpeed">Đổi tốc độ phát</string>
     <string name="cat_offerPlaybackSpeed_desc">Trong menu ⋮ của video, reel và tin</string>
+    <string name="cat_sec_clean_reels">Dọn gọn Reels</string>
+    <string name="cat_reelsHideFollow">Ẩn nút Theo dõi</string>
+    <string name="cat_reelsHideFollow_desc">Vẫn theo dõi được từ trang cá nhân</string>
+    <string name="cat_reelsHidePills">Ẩn nút mẫu và âm thanh</string>
+    <string name="cat_reelsHidePills_desc">Gỡ nhãn mẫu, Edits và nhạc</string>
+    <string name="cat_reelsHideCommentBar">Ẩn thanh bình luận</string>
+    <string name="cat_reelsHideCommentBar_desc">Vẫn mở được bình luận từ nút bình luận</string>
     <string name="cat_title_focus">Chế độ tập trung</string>
     <string name="cat_sec_today">Hôm nay</string>
     <string name="cat_sec_turn_off">Tắt</string>

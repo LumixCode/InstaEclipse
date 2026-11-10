@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">Sol yarıda 0,5×; sağ yarı 2× kalır</string>
     <string name="cat_offerPlaybackSpeed">Oynatma hızını değiştir</string>
     <string name="cat_offerPlaybackSpeed_desc">Video, Reels ve hikayelerin ⋮ menüsünde</string>
+    <string name="cat_sec_clean_reels">Reels\'i sadeleştir</string>
+    <string name="cat_reelsHideFollow">Takip et düğmesini gizle</string>
+    <string name="cat_reelsHideFollow_desc">Profilden yine takip edebilirsiniz</string>
+    <string name="cat_reelsHidePills">Şablon ve ses düğmelerini gizle</string>
+    <string name="cat_reelsHidePills_desc">Şablon, Edits ve müzik etiketlerini kaldırır</string>
+    <string name="cat_reelsHideCommentBar">Yorum çubuğunu gizle</string>
+    <string name="cat_reelsHideCommentBar_desc">Yorumlar yorum düğmesinden yine açılır</string>
     <string name="cat_title_focus">Odak modu</string>
     <string name="cat_sec_today">Bugün</string>
     <string name="cat_sec_turn_off">Kapat</string>

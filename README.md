@@ -320,6 +320,9 @@ Without a switch:
 | 🆕 Blur the bars around Reels | Fills the black bars around a reel with a blurred, darkened copy of its cover. Needs Android 12 or newer |
 | Lock swiping between reels | No accidental swipes |
 | Always show the seek bar | Scrub through any reel |
+| 🆕 Hide the Follow button | No Follow button on reels; you can still follow from the profile |
+| 🆕 Hide template and audio pills | Removes the template, Edits and music labels from reels |
+| 🆕 Hide the comment bar | Removes the comment box under reels; the comment button stays |
 | ✨ Hold left side for slow motion | 0.5× on the left half; the right half stays 2× |
 | Change playback speed | 0.5× to 3× from the ⋮ menu of videos, reels and stories |
 

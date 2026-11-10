@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">0,5× sur la moitié gauche ; la moitié droite reste à 2×</string>
     <string name="cat_offerPlaybackSpeed">Modifier la vitesse de lecture</string>
     <string name="cat_offerPlaybackSpeed_desc">Dans le menu ⋮ des vidéos, reels et stories</string>
+    <string name="cat_sec_clean_reels">Épurer les Reels</string>
+    <string name="cat_reelsHideFollow">Masquer le bouton Suivre</string>
+    <string name="cat_reelsHideFollow_desc">Suivre reste possible depuis le profil</string>
+    <string name="cat_reelsHidePills">Masquer les pastilles modèle et audio</string>
+    <string name="cat_reelsHidePills_desc">Retire les étiquettes de modèle, d\'Edits et de musique</string>
+    <string name="cat_reelsHideCommentBar">Masquer la barre de commentaire</string>
+    <string name="cat_reelsHideCommentBar_desc">Commentaires toujours accessibles via le bouton de commentaire</string>
     <string name="cat_title_focus">Mode concentration</string>
     <string name="cat_sec_today">Aujourd\'hui</string>
     <string name="cat_sec_turn_off">Désactiver</string>

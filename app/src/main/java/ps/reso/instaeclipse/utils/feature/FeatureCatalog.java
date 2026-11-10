@@ -477,7 +477,17 @@ public final class FeatureCatalog {
                                     .status("HoldSlowMotion").aliases(R.string.ig_dialog_reels_hold_left_slow),
                             sw("offerPlaybackSpeed", R.string.cat_offerPlaybackSpeed, R.drawable.ic_movie)
                                     .desc(R.string.cat_offerPlaybackSpeed_desc).restart(Restart.BOTH).status("PlaybackSpeed")
-                                    .aliases(R.string.ig_dialog_downloader_offer_speed))),
+                                    .aliases(R.string.ig_dialog_downloader_offer_speed)),
+                    section(R.string.cat_sec_clean_reels,
+                            sw("reelsHideFollow", R.string.cat_reelsHideFollow, R.drawable.ic_eye_off)
+                                    .desc(R.string.cat_reelsHideFollow_desc).restart(Restart.BOTH)
+                                    .status("reelsHideFollow").words("follow", "clean up"),
+                            sw("reelsHidePills", R.string.cat_reelsHidePills, R.drawable.ic_eye_off)
+                                    .desc(R.string.cat_reelsHidePills_desc).restart(Restart.BOTH)
+                                    .status("reelsHidePills").words("template", "music", "edits", "clean up"),
+                            sw("reelsHideCommentBar", R.string.cat_reelsHideCommentBar, R.drawable.ic_chat)
+                                    .desc(R.string.cat_reelsHideCommentBar_desc).restart(Restart.BOTH)
+                                    .status("reelsHideCommentBar").words("comment box", "clean up"))),
             page("focus", Group.BROWSE, R.drawable.ic_timer, R.string.cat_title_focus,
                     section(R.string.cat_sec_today,
                             info("reelUsage", R.string.ig_reel_usage_count)),

@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">0,5× auf der linken Hälfte; die rechte bleibt bei 2×</string>
     <string name="cat_offerPlaybackSpeed">Wiedergabetempo ändern</string>
     <string name="cat_offerPlaybackSpeed_desc">Im ⋮-Menü von Videos, Reels und Storys</string>
+    <string name="cat_sec_clean_reels">Reels aufräumen</string>
+    <string name="cat_reelsHideFollow">Folgen-Button ausblenden</string>
+    <string name="cat_reelsHideFollow_desc">Folgen geht weiter über das Profil</string>
+    <string name="cat_reelsHidePills">Vorlagen- und Audio-Pillen ausblenden</string>
+    <string name="cat_reelsHidePills_desc">Entfernt die Labels für Vorlagen, Edits und Musik</string>
+    <string name="cat_reelsHideCommentBar">Kommentarleiste ausblenden</string>
+    <string name="cat_reelsHideCommentBar_desc">Kommentare lassen sich weiter über den Kommentar-Button öffnen</string>
     <string name="cat_title_focus">Fokusmodus</string>
     <string name="cat_sec_today">Heute</string>
     <string name="cat_sec_turn_off">Ausschalten</string>

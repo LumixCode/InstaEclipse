@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">0,5× на левой половине; на правой остаётся 2×</string>
     <string name="cat_offerPlaybackSpeed">Скорость воспроизведения</string>
     <string name="cat_offerPlaybackSpeed_desc">В меню ⋮ видео, Reels и историй</string>
+    <string name="cat_sec_clean_reels">Очистить Reels</string>
+    <string name="cat_reelsHideFollow">Скрыть кнопку «Подписаться»</string>
+    <string name="cat_reelsHideFollow_desc">Подписаться по-прежнему можно из профиля</string>
+    <string name="cat_reelsHidePills">Скрыть кнопки шаблона и аудио</string>
+    <string name="cat_reelsHidePills_desc">Убирает метки шаблона, Edits и музыки</string>
+    <string name="cat_reelsHideCommentBar">Скрыть строку комментария</string>
+    <string name="cat_reelsHideCommentBar_desc">Комментарии по-прежнему открываются кнопкой комментариев</string>
     <string name="cat_title_focus">Режим фокусировки</string>
     <string name="cat_sec_today">Сегодня</string>
     <string name="cat_sec_turn_off">Отключить</string>

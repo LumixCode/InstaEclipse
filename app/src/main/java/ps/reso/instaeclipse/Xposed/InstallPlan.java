@@ -157,6 +157,7 @@ public class InstallPlan {
     static final int EXPAND_CAPTIONS_HOOK = 25;
     static final int HIDE_COMMUNITY_NOTES_HOOK = 26;
     static final int REELS_CONTROLS_HOOK = 27;
+    static final int REELS_CLEANUP_HOOK = 109;
     static final int ACCOUNT_LIMIT_HOOK = 28;
     static final int AIRPLANE_MODE_HOOK = 29;
     static final int HIGH_RESOLUTION_IMAGE_HOOK = 30;
@@ -321,6 +322,11 @@ public class InstallPlan {
                 .withFeatures("HideCommunityNotes"));
         s.add(new InstallStep(REELS_CONTROLS_HOOK, "ReelsControlsHook", null, "(InstaEclipse | Reels): ", COULD_NOT_START, true, null)
                 .withFeatures("reelsAutoScroll"));
+        s.add(new InstallStep(REELS_CLEANUP_HOOK, "ReelsCleanupHook", null, "(IE|ReelsCleanup) ", COULD_NOT_START, true,
+                "reelsHideFollow|reelsHidePills|reelsHideCommentBar")
+                .withFeatures("reelsHideFollow", "reelsHidePills", "reelsHideCommentBar")
+                .withLookupFlags("reelsHideFollow", "reelsHidePills", "reelsHideCommentBar")
+                .withRestartKeys("reelsHideFollow", "reelsHidePills", "reelsHideCommentBar"));
         s.add(new InstallStep(ACCOUNT_LIMIT_HOOK, "AccountLimitHook", null, "(InstaEclipse | UnlimitedAccounts): ", COULD_NOT_START, true, null)
                 .withFeatures("unlimitedAccounts"));
         s.add(new InstallStep(AIRPLANE_MODE_HOOK, "AirplaneModeHook", null, "(InstaEclipse | Airplane): ", COULD_NOT_START, false, null)
@@ -565,6 +571,8 @@ public class InstallPlan {
                 return FeatureFlags.offerPlaybackSpeed || FeatureFlags.holdLeftSlowMotion || FeatureFlags.forceReelScrubber;
             case "reelsBlurBars":
                 return FeatureFlags.reelsBlurBars;
+            case "reelsHideFollow|reelsHidePills|reelsHideCommentBar":
+                return FeatureFlags.reelsHideFollow || FeatureFlags.reelsHidePills || FeatureFlags.reelsHideCommentBar;
             case "followListExport|profileAnalyzer":
                 return FeatureFlags.followListExport || FeatureFlags.profileAnalyzer;
             default:
@@ -664,6 +672,9 @@ public class InstallPlan {
                 return;
             case REELS_CONTROLS_HOOK:
                 new ReelsControlsHook().install(ctx.loader);
+                return;
+            case REELS_CLEANUP_HOOK:
+                new ps.reso.instaeclipse.mods.extras.ReelsCleanupHook().install(ctx.loader);
                 return;
             case ACCOUNT_LIMIT_HOOK:
                 new AccountLimitHook().install(ctx.loader);

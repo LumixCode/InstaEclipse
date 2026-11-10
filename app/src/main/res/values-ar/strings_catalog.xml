@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">0.5× في النصف الأيسر؛ ويبقى النصف الأيمن 2×</string>
     <string name="cat_offerPlaybackSpeed">تغيير سرعة التشغيل</string>
     <string name="cat_offerPlaybackSpeed_desc">في قائمة ⋮ للفيديوهات ومقاطع الريلز والقصص</string>
+    <string name="cat_sec_clean_reels">تنظيف الريلز</string>
+    <string name="cat_reelsHideFollow">إخفاء زر المتابعة</string>
+    <string name="cat_reelsHideFollow_desc">لا تزال المتابعة ممكنة من الملف الشخصي</string>
+    <string name="cat_reelsHidePills">إخفاء أزرار القالب والصوت</string>
+    <string name="cat_reelsHidePills_desc">يزيل تسميات القالب و Edits والموسيقى</string>
+    <string name="cat_reelsHideCommentBar">إخفاء شريط التعليق</string>
+    <string name="cat_reelsHideCommentBar_desc">لا تزال التعليقات تُفتح من زر التعليق</string>
     <string name="cat_title_focus">وضع التركيز</string>
     <string name="cat_sec_today">اليوم</string>
     <string name="cat_sec_turn_off">إيقاف</string>

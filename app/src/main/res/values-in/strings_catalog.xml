@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">0,5× di separuh kiri; separuh kanan tetap 2×</string>
     <string name="cat_offerPlaybackSpeed">Ubah kecepatan putar</string>
     <string name="cat_offerPlaybackSpeed_desc">Di menu ⋮ video, reel, dan cerita</string>
+    <string name="cat_sec_clean_reels">Rapikan Reels</string>
+    <string name="cat_reelsHideFollow">Sembunyikan tombol Ikuti</string>
+    <string name="cat_reelsHideFollow_desc">Anda tetap bisa mengikuti dari profil</string>
+    <string name="cat_reelsHidePills">Sembunyikan tombol template dan audio</string>
+    <string name="cat_reelsHidePills_desc">Menghapus label template, Edits, dan musik</string>
+    <string name="cat_reelsHideCommentBar">Sembunyikan bilah komentar</string>
+    <string name="cat_reelsHideCommentBar_desc">Komentar tetap bisa dibuka dari tombol komentar</string>
     <string name="cat_title_focus">Mode fokus</string>
     <string name="cat_sec_today">Hari ini</string>
     <string name="cat_sec_turn_off">Nonaktifkan</string>

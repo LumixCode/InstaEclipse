@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">0,5× sulla metà sinistra; la metà destra resta a 2×</string>
     <string name="cat_offerPlaybackSpeed">Cambia velocità di riproduzione</string>
     <string name="cat_offerPlaybackSpeed_desc">Nel menu ⋮ di video, reel e storie</string>
+    <string name="cat_sec_clean_reels">Pulisci i Reels</string>
+    <string name="cat_reelsHideFollow">Nascondi il pulsante Segui</string>
+    <string name="cat_reelsHideFollow_desc">Puoi comunque seguire dal profilo</string>
+    <string name="cat_reelsHidePills">Nascondi i pulsanti modello e audio</string>
+    <string name="cat_reelsHidePills_desc">Rimuove le etichette di modello, Edits e musica</string>
+    <string name="cat_reelsHideCommentBar">Nascondi la barra dei commenti</string>
+    <string name="cat_reelsHideCommentBar_desc">I commenti si aprono comunque dal pulsante dei commenti</string>
     <string name="cat_title_focus">Modalità concentrazione</string>
     <string name="cat_sec_today">Oggi</string>
     <string name="cat_sec_turn_off">Disattiva</string>

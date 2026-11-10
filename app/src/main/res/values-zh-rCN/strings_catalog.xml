@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">左半边 0.5×；右半边仍为 2×</string>
     <string name="cat_offerPlaybackSpeed">更改播放速度</string>
     <string name="cat_offerPlaybackSpeed_desc">在视频、Reels 和快拍的 ⋮ 菜单中</string>
+    <string name="cat_sec_clean_reels">精简 Reels</string>
+    <string name="cat_reelsHideFollow">隐藏关注按钮</string>
+    <string name="cat_reelsHideFollow_desc">仍可从主页关注</string>
+    <string name="cat_reelsHidePills">隐藏模板和音频标签</string>
+    <string name="cat_reelsHidePills_desc">移除模板、Edits 和音乐标签</string>
+    <string name="cat_reelsHideCommentBar">隐藏评论栏</string>
+    <string name="cat_reelsHideCommentBar_desc">仍可通过评论按钮打开评论</string>
     <string name="cat_title_focus">专注模式</string>
     <string name="cat_sec_today">今天</string>
     <string name="cat_sec_turn_off">关闭</string>

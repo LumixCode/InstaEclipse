@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">0,5× στο αριστερό μισό· το δεξί μισό μένει 2×</string>
     <string name="cat_offerPlaybackSpeed">Αλλαγή ταχύτητας αναπαραγωγής</string>
     <string name="cat_offerPlaybackSpeed_desc">Στο μενού ⋮ βίντεο, reels και ιστοριών</string>
+    <string name="cat_sec_clean_reels">Καθαρισμός Reels</string>
+    <string name="cat_reelsHideFollow">Απόκρυψη κουμπιού Ακολούθησης</string>
+    <string name="cat_reelsHideFollow_desc">Μπορείτε ακόμα να ακολουθήσετε από το προφίλ</string>
+    <string name="cat_reelsHidePills">Απόκρυψη κουμπιών προτύπου και ήχου</string>
+    <string name="cat_reelsHidePills_desc">Αφαιρεί τις ετικέτες προτύπου, Edits και μουσικής</string>
+    <string name="cat_reelsHideCommentBar">Απόκρυψη γραμμής σχολίων</string>
+    <string name="cat_reelsHideCommentBar_desc">Τα σχόλια ανοίγουν ακόμα από το κουμπί σχολίων</string>
     <string name="cat_title_focus">Λειτουργία εστίασης</string>
     <string name="cat_sec_today">Σήμερα</string>
     <string name="cat_sec_turn_off">Απενεργοποίηση</string>

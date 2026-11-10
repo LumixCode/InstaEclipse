@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">0,5× på vänstra halvan; högra halvan är kvar på 2×</string>
     <string name="cat_offerPlaybackSpeed">Ändra uppspelningshastighet</string>
     <string name="cat_offerPlaybackSpeed_desc">I ⋮-menyn för videor, reels och stories</string>
+    <string name="cat_sec_clean_reels">Rensa Reels</string>
+    <string name="cat_reelsHideFollow">Dölj Följ-knappen</string>
+    <string name="cat_reelsHideFollow_desc">Du kan fortfarande följa från profilen</string>
+    <string name="cat_reelsHidePills">Dölj mall- och ljudknappar</string>
+    <string name="cat_reelsHidePills_desc">Tar bort etiketterna för mall, Edits och musik</string>
+    <string name="cat_reelsHideCommentBar">Dölj kommentarsfältet</string>
+    <string name="cat_reelsHideCommentBar_desc">Kommentarer kan fortfarande öppnas med kommentarsknappen</string>
     <string name="cat_title_focus">Fokusläge</string>
     <string name="cat_sec_today">I dag</string>
     <string name="cat_sec_turn_off">Stäng av</string>

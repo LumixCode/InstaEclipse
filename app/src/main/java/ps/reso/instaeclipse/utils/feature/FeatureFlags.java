@@ -73,6 +73,9 @@ public class FeatureFlags {
     public static volatile boolean offerMediaInfo = false;
     public static volatile boolean offerPlaybackSpeed = false;
     public static volatile boolean forceReelScrubber = false;
+    public static volatile boolean reelsHideFollow = false;
+    public static volatile boolean reelsHidePills = false;
+    public static volatile boolean reelsHideCommentBar = false;
     public static volatile boolean holdLeftSlowMotion = false;
     public static volatile boolean offerCopyImage = false;
     public static volatile boolean enableVoiceDownload = false;

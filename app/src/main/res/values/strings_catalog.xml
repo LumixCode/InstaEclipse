@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">0.5× on the left half; the right half stays 2×</string>
     <string name="cat_offerPlaybackSpeed">Change playback speed</string>
     <string name="cat_offerPlaybackSpeed_desc">In the ⋮ menu of videos, reels and stories</string>
+    <string name="cat_sec_clean_reels">Clean up Reels</string>
+    <string name="cat_reelsHideFollow">Hide the Follow button</string>
+    <string name="cat_reelsHideFollow_desc">You can still follow from the profile</string>
+    <string name="cat_reelsHidePills">Hide template and audio pills</string>
+    <string name="cat_reelsHidePills_desc">Removes the template, Edits and music labels</string>
+    <string name="cat_reelsHideCommentBar">Hide the comment bar</string>
+    <string name="cat_reelsHideCommentBar_desc">Comments still open from the comment button</string>
     <string name="cat_title_focus">Focus mode</string>
     <string name="cat_sec_today">Today</string>
     <string name="cat_sec_turn_off">Turn off</string>

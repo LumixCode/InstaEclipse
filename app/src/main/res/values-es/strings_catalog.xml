@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">0,5× en la mitad izquierda; la derecha sigue a 2×</string>
     <string name="cat_offerPlaybackSpeed">Cambiar velocidad de vídeo</string>
     <string name="cat_offerPlaybackSpeed_desc">En el menú ⋮ de vídeos, reels e historias</string>
+    <string name="cat_sec_clean_reels">Limpiar Reels</string>
+    <string name="cat_reelsHideFollow">Ocultar botón Seguir</string>
+    <string name="cat_reelsHideFollow_desc">Aún puedes seguir desde el perfil</string>
+    <string name="cat_reelsHidePills">Ocultar botones de plantilla y audio</string>
+    <string name="cat_reelsHidePills_desc">Quita las etiquetas de plantilla, Edits y música</string>
+    <string name="cat_reelsHideCommentBar">Ocultar barra de comentarios</string>
+    <string name="cat_reelsHideCommentBar_desc">Los comentarios aún se abren desde el botón de comentarios</string>
     <string name="cat_title_focus">Modo concentración</string>
     <string name="cat_sec_today">Hoy</string>
     <string name="cat_sec_turn_off">Desactivar</string>

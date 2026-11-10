@@ -141,6 +141,9 @@ public class SettingsManager {
         editor.putBoolean("offerPlaybackSpeed", FeatureFlags.offerPlaybackSpeed);
         editor.putBoolean("maxUploadQuality", FeatureFlags.maxUploadQuality);
         editor.putBoolean("forceReelScrubber", FeatureFlags.forceReelScrubber);
+        editor.putBoolean("reelsHideFollow", FeatureFlags.reelsHideFollow);
+        editor.putBoolean("reelsHidePills", FeatureFlags.reelsHidePills);
+        editor.putBoolean("reelsHideCommentBar", FeatureFlags.reelsHideCommentBar);
         editor.putBoolean("holdLeftSlowMotion", FeatureFlags.holdLeftSlowMotion);
         editor.putBoolean("keepEditHistory", FeatureFlags.keepEditHistory);
         editor.putBoolean("jumpToFirstMessage", FeatureFlags.jumpToFirstMessage);
@@ -392,6 +395,9 @@ public class SettingsManager {
         FeatureFlags.offerPlaybackSpeed = prefs.getBoolean("offerPlaybackSpeed", false);
         FeatureFlags.maxUploadQuality = prefs.getBoolean("maxUploadQuality", false);
         FeatureFlags.forceReelScrubber = prefs.getBoolean("forceReelScrubber", false);
+        FeatureFlags.reelsHideFollow = prefs.getBoolean("reelsHideFollow", false);
+        FeatureFlags.reelsHidePills = prefs.getBoolean("reelsHidePills", false);
+        FeatureFlags.reelsHideCommentBar = prefs.getBoolean("reelsHideCommentBar", false);
         FeatureFlags.holdLeftSlowMotion = prefs.getBoolean("holdLeftSlowMotion", false);
         FeatureFlags.keepEditHistory = prefs.getBoolean("keepEditHistory", false);
         FeatureFlags.jumpToFirstMessage = prefs.getBoolean("jumpToFirstMessage", false);

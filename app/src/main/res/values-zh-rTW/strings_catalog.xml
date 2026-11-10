@@ -107,6 +107,13 @@
     <string name="cat_holdLeftSlowMotion_desc">左半邊為 0.5×；右半邊仍為 2×</string>
     <string name="cat_offerPlaybackSpeed">變更播放速度</string>
     <string name="cat_offerPlaybackSpeed_desc">在影片、Reels 和限時動態的 ⋮ 選單中</string>
+    <string name="cat_sec_clean_reels">精簡 Reels</string>
+    <string name="cat_reelsHideFollow">隱藏追蹤按鈕</string>
+    <string name="cat_reelsHideFollow_desc">仍可從個人檔案追蹤</string>
+    <string name="cat_reelsHidePills">隱藏範本和音訊標籤</string>
+    <string name="cat_reelsHidePills_desc">移除範本、Edits 和音樂標籤</string>
+    <string name="cat_reelsHideCommentBar">隱藏留言列</string>
+    <string name="cat_reelsHideCommentBar_desc">仍可透過留言按鈕開啟留言</string>
     <string name="cat_title_focus">專注模式</string>
     <string name="cat_sec_today">今天</string>
     <string name="cat_sec_turn_off">停用</string>

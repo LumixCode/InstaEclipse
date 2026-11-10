@@ -343,6 +343,9 @@ public class FeatureManager {
         reg(FeatureFlags.hidePlusUpsells,      "HidePlusUpsells",      R.string.ig_dialog_clean_feed_hide_plus);
         reg(FeatureFlags.disableVideoAutoPlay, "DisableVideoAutoPlay", R.string.ig_dialog_misc_disable_video_autoplay);
         reg(FeatureFlags.forceReelScrubber,    "ForceReelScrubber",    R.string.ig_dialog_downloader_reel_scrubber);
+        reg(FeatureFlags.reelsHideFollow,      "reelsHideFollow",      R.string.cat_reelsHideFollow);
+        reg(FeatureFlags.reelsHidePills,       "reelsHidePills",       R.string.cat_reelsHidePills);
+        reg(FeatureFlags.reelsHideCommentBar,  "reelsHideCommentBar",  R.string.cat_reelsHideCommentBar);
         reg(FeatureFlags.disableStoryFlipping, "DisableStoryFlipping", R.string.ig_dialog_misc_disable_story_autoswipe);
         reg(FeatureFlags.lockWholeApp,         "LockWholeApp",         R.string.ig_dialog_misc_lock_whole_app);
         reg(FeatureFlags.offerAudioDownload,   "AudioDownload",        R.string.ig_dialog_downloader_offer_audio);
