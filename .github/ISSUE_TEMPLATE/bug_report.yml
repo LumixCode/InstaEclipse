@@ -39,7 +39,7 @@ body:
     id: instagram_version
     attributes:
       label: Instagram version
-      placeholder: e.g. 451.0.0.20.80 (from APKMirror)
+      placeholder: e.g. 454.0.0.54.77 (from APKMirror)
     validations:
       required: true
 

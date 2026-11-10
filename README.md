@@ -8,7 +8,7 @@
   <p>
     <a href="https://github.com/LumixCode/InstaEclipse/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/LumixCode/InstaEclipse?style=for-the-badge&logo=github&label=release&color=1a1a2e&labelColor=0d0d0d"/></a>
     <a href="https://github.com/ReSo7200/InstaEclipse/releases/tag/v0.8.2"><img alt="Based on InstaEclipse 0.8.2" src="https://img.shields.io/badge/based%20on-InstaEclipse%200.8.2-1a1a2e?style=for-the-badge&labelColor=0d0d0d"/></a>
-    <a href="#compatibility"><img alt="Instagram 451.0.0.20.80" src="https://img.shields.io/badge/Instagram-451.0.0.20.80-E4405F?style=for-the-badge&logo=instagram&logoColor=white&labelColor=0d0d0d"/></a>
+    <a href="#compatibility"><img alt="Instagram 454" src="https://img.shields.io/badge/Instagram-454-E4405F?style=for-the-badge&logo=instagram&logoColor=white&labelColor=0d0d0d"/></a>
     <a href="#compatibility"><img alt="Android 9 and newer" src="https://img.shields.io/badge/Android-9%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white&labelColor=0d0d0d"/></a>
     <a href="LICENSE"><img alt="License GPL-3.0" src="https://img.shields.io/badge/license-GPL--3.0-1a1a2e?style=for-the-badge&labelColor=0d0d0d"/></a>
   </p>
@@ -42,7 +42,7 @@ Everything is an option in the InstaEclipse menu: **hold the Search tab** in Ins
 
 ## Get started
 
-**You need:** an Android 9+ phone, and [Instagram **451.0.0.20.80** from APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-451-0-0-20-80-release/), the only Instagram version this fork supports. The Play Store build is not always fully supported.
+**You need:** an Android 9+ phone, and [Instagram **454** from APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/) (a 454 build such as 454.0.0.54.77; this fork is tested on 454.0.0.1.77), the only Instagram version this fork supports. The Play Store build is not always fully supported.
 
 Download `InstaEclipse-<version>.apk` from [**Releases**](https://github.com/LumixCode/InstaEclipse/releases/latest), then pick your path.
 
@@ -456,7 +456,7 @@ Turning off Reels overrides the reel limits. A blocked reel says why and until w
 
 | | |
 |---|---|
-| **Instagram** | `451.0.0.20.80` only, [from APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-451-0-0-20-80-release/). On other builds the module still loads, but some features may not work |
+| **Instagram** | `454` only (tested on `454.0.0.1.77`), [from APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/). On other builds the module still loads, but some features may not work |
 | **Android** | 9 and newer. A few extras need Android 11 |
 | **Frameworks** | The new Xposed API (102): [JingMatrix LSPatch](https://github.com/JingMatrix/LSPatch) 1.0 or newer (no root, tested with this fork in local patch mode) or [Vector](https://github.com/JingMatrix/Vector) 2.2 or newer (root, not tested with this fork) |
 | **Releases** | Numbered after the upstream version plus a fork counter (`0.8.2-lumix.1`, `0.8.2-lumix.2`, …) and signed with the fork's own key, whose fingerprint is in the release notes |
