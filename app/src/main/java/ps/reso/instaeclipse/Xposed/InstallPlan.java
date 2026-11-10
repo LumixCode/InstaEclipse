@@ -263,8 +263,6 @@ public class InstallPlan {
         s.add(new InstallStep(INSTAGRAM_UI, "instagramUI", null, "(InstaEclipse): ", MAIN_SCREEN, false, null).inPhaseA());
         s.add(new InstallStep(REEL_VIEWER_HOOK, "ReelViewerHook", null, "(InstaEclipse | ReelViewer): ", COULD_NOT_START, true, null)
                 .withFeatures("reelsLockScroll", "NightReelBlock", "DailyReelLimit"));
-        s.add(new InstallStep(REELS_BLUR_BARS_HOOK, "ReelsBlurBarsHook", null, "(IE|ReelsBlur) ", COULD_NOT_START, true, "reelsBlurBars")
-                .withFeatures("reelsBlurBars").withRestartKeys("reelsBlurBars"));
         s.add(new InstallStep(DEV_OPTIONS_UNLOCK_HOOK, "DevOptionsUnlockHook", null, "(InstaEclipse | DevOptions): ", COULD_NOT_START, true, null)
                 .withFeatures("DevOptions"));
         s.add(new InstallStep(GHOST_DM_SEEN_HOOK, "GhostDMSeenHook", null, "(InstaEclipse | GhostSeen): ", COULD_NOT_START, true, null)
@@ -304,16 +302,10 @@ public class InstallPlan {
                 .withFeatures("DisableRepost"));
         s.add(new InstallStep(HIDE_SUGGESTED_FEED_ITEMS_HOOK, "HideSuggestedFeedItemsHook", null, "(InstaEclipse | HideSuggested): ", COULD_NOT_START, true, null)
                 .withFeatures("HideSuggestionsInFeed", "HideThreadsSuggestions", "HideLikedPosts"));
-        s.add(new InstallStep(HIDE_REELS_ITEMS_HOOK, "HideReelsItemsHook", null, "(IE|ReelsFilter) ", COULD_NOT_START, true, "hideSuggestionsInReels|hidePaidPartnerships")
-                .withFeatures("HideSuggestionsInReels", "HidePaidPartnerships")
-                .withLookupFlags("hideSuggestionsInReels", "hidePaidPartnerships")
-                .withRestartKeys("hideSuggestionsInReels", "hidePaidPartnerships"));
         s.add(new InstallStep(AD_BLOCKER, "AdBlocker", null, "(InstaEclipse | AdBlocker): ", COULD_NOT_START, true, null)
                 .withFeatures("AdBlocker"));
         s.add(new InstallStep(TRACKING_LINK_DISABLE, "TrackingLinkDisable", null, "(InstaEclipse | TrackingLinkDisable): ", COULD_NOT_START, false, null)
                 .withFeatures("DisableTrackingLinks"));
-        s.add(new InstallStep(ANALYTICS_SKIP_HOOK, "AnalyticsSkipHook", null, "(IE|Analytics) ", COULD_NOT_START, true, "isAnalyticsBlocked")
-                .withFeatures("BlockAnalytics").withRestartKeys("isAnalyticsBlocked"));
         s.add(new InstallStep(EXACT_TIMESTAMP_HOOK, "ExactTimestampHook", null, "(InstaEclipse | ExactTime): ", COULD_NOT_START, true, null)
                 .withFeatures("ExactTimestamps")
                 .withLookupFlags("exactTimestamps").withRestartKeys("exactTimestamps"));
@@ -323,11 +315,6 @@ public class InstallPlan {
                 .withFeatures("HideCommunityNotes"));
         s.add(new InstallStep(REELS_CONTROLS_HOOK, "ReelsControlsHook", null, "(InstaEclipse | Reels): ", COULD_NOT_START, true, null)
                 .withFeatures("reelsAutoScroll"));
-        s.add(new InstallStep(REELS_CLEANUP_HOOK, "ReelsCleanupHook", null, "(IE|ReelsCleanup) ", COULD_NOT_START, true,
-                "reelsHideFollow|reelsHidePills|reelsHideCommentBar")
-                .withFeatures("reelsHideFollow", "reelsHidePills", "reelsHideCommentBar")
-                .withLookupFlags("reelsHideFollow", "reelsHidePills", "reelsHideCommentBar")
-                .withRestartKeys("reelsHideFollow", "reelsHidePills", "reelsHideCommentBar"));
         s.add(new InstallStep(ACCOUNT_LIMIT_HOOK, "AccountLimitHook", null, "(InstaEclipse | UnlimitedAccounts): ", COULD_NOT_START, true, null)
                 .withFeatures("unlimitedAccounts"));
         s.add(new InstallStep(AIRPLANE_MODE_HOOK, "AirplaneModeHook", null, "(InstaEclipse | Airplane): ", COULD_NOT_START, false, null)
@@ -339,8 +326,6 @@ public class InstallPlan {
                 .withFeatures("fixNotificationRegistration").inPhaseA());
         s.add(new InstallStep(STARTUP_TAB_HOOK, "StartupTabHook", null, "(InstaEclipse | StartupTab): ", COULD_NOT_START, false, "startupTab")
                 .withFeatures("StartupTab").inPhaseA());
-        s.add(new InstallStep(GLASS_TAB_BAR_HOOK, "GlassTabBarHook", null, "(IE|GlassTabBar) ", COULD_NOT_START, true, "glassTabBar")
-                .withFeatures("GlassTabBar").withRestartKeys("glassTabBar"));
         s.add(new InstallStep(BACK_LEAVES_HOME_HOOK, "BackLeavesHomeHook", null, "(IE|BackLeavesHome): ", COULD_NOT_START, false, null)
                 .withFeatures("BackLeavesHome").inPhaseA());
         s.add(new InstallStep(BACK_LEAVES_HOME_DISPATCHER, "BackLeavesHomeDispatcher", new String[]{"BackLeavesHomeHook"}, "(IE|BackLeavesHome): ", BACK_DISPATCHER, false, null));
@@ -369,9 +354,6 @@ public class InstallPlan {
                 .withFeatures("VoiceDownload", "StickerDownload", "DmMediaDownload", "ChatTranslate")
                 .withLookupFlags("bulkUnsend")
                 .withRestartKeys("enableVoiceDownload", "enableStickerDownload", "enableDmMediaDownload", "translateMessages", "bulkUnsend"));
-        s.add(new InstallStep(VOICE_MESSAGES_HOOK, "VoiceMessagesHook", null, "(IE|VoiceList) ", COULD_NOT_START, true,
-                "voiceMessagesList")
-                .withFeatures("VoiceMessagesList").withRestartKeys("voiceMessagesList"));
         s.add(new InstallStep(EDIT_HISTORY_HOOK, "EditHistoryHook", null, "(IE|EditHistory) ", COULD_NOT_START, true, null)
                 .withFeatures("EditHistory"));
         s.add(new InstallStep(JUMP_TO_FIRST_MESSAGE_HOOK, "JumpToFirstMessageHook", null, "(IE|JumpFirst) ", COULD_NOT_START, false, null)
@@ -492,6 +474,24 @@ public class InstallPlan {
         s.add(new InstallStep(INTERCEPTOR_CHAIN_ENTRY, "interceptorChainEntry", new String[]{"interceptor"}, "(InstaEclipse | Interceptor): ", CACHED_REQUESTS, true, null));
         s.add(new InstallStep(TERMINATED_EXECUTOR_GUARD, "TerminatedExecutorGuard", null, "(InstaEclipse | ExecGuard): ", COULD_NOT_START, false, null).inPhaseA());
         s.add(new InstallStep(EXEC_GUARD_DISPATCHERS, "ExecGuardDispatchers", null, "(InstaEclipse | ExecGuard): ", COULD_NOT_START, true, null));
+        s.add(new InstallStep(ANALYTICS_SKIP_HOOK, "AnalyticsSkipHook", null, "(IE|Analytics) ", COULD_NOT_START, true, "isAnalyticsBlocked")
+                .withFeatures("BlockAnalytics").withRestartKeys("isAnalyticsBlocked"));
+        s.add(new InstallStep(HIDE_REELS_ITEMS_HOOK, "HideReelsItemsHook", null, "(IE|ReelsFilter) ", COULD_NOT_START, true, "hideSuggestionsInReels|hidePaidPartnerships")
+                .withFeatures("HideSuggestionsInReels", "HidePaidPartnerships")
+                .withLookupFlags("hideSuggestionsInReels", "hidePaidPartnerships")
+                .withRestartKeys("hideSuggestionsInReels", "hidePaidPartnerships"));
+        s.add(new InstallStep(REELS_CLEANUP_HOOK, "ReelsCleanupHook", null, "(IE|ReelsCleanup) ", COULD_NOT_START, true,
+                "reelsHideFollow|reelsHidePills|reelsHideCommentBar")
+                .withFeatures("reelsHideFollow", "reelsHidePills", "reelsHideCommentBar")
+                .withLookupFlags("reelsHideFollow", "reelsHidePills", "reelsHideCommentBar")
+                .withRestartKeys("reelsHideFollow", "reelsHidePills", "reelsHideCommentBar"));
+        s.add(new InstallStep(REELS_BLUR_BARS_HOOK, "ReelsBlurBarsHook", null, "(IE|ReelsBlur) ", COULD_NOT_START, true, "reelsBlurBars")
+                .withFeatures("reelsBlurBars").withRestartKeys("reelsBlurBars"));
+        s.add(new InstallStep(VOICE_MESSAGES_HOOK, "VoiceMessagesHook", null, "(IE|VoiceList) ", COULD_NOT_START, true,
+                "voiceMessagesList")
+                .withFeatures("VoiceMessagesList").withRestartKeys("voiceMessagesList"));
+        s.add(new InstallStep(GLASS_TAB_BAR_HOOK, "GlassTabBarHook", null, "(IE|GlassTabBar) ", COULD_NOT_START, true, "glassTabBar")
+                .withFeatures("GlassTabBar").withRestartKeys("glassTabBar"));
         LEGACY_STEPS = Collections.unmodifiableList(s);
         STEPS = Collections.unmodifiableList(order(s));
     }
