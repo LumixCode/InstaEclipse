@@ -80,6 +80,8 @@
     <string name="cat_enablePhotoZoom">Foto zum Zoomen halten</string>
     <string name="cat_disableVideoAutoPlay_desc">Videos starten erst, wenn du auf Play tippst</string>
     <string name="cat_confirmFeedRefresh_desc">Damit du beim Herunterziehen oder mit „Zurück“ nicht deine Position im Feed verlierst</string>
+    <string name="cat_reelsBlurBars">Balken um Reels weichzeichnen</string>
+    <string name="cat_reelsBlurBars_desc">Füllt die schwarzen Balken mit einer weichgezeichneten Kopie des Reel-Covers. Erfordert Android 12 oder neuer</string>
     <string name="cat_sec_watching">Ansehen</string>
     <string name="cat_disableStoryFlipping_desc">Eine Story bleibt am Ende auf dem Bildschirm</string>
     <string name="cat_enableStoryMentions_desc">Fügt „Erwähnungen anzeigen“ zum ⋮-Menü der Story hinzu</string>

@@ -80,6 +80,8 @@
     <string name="cat_enablePhotoZoom">Segurar uma foto para dar zoom</string>
     <string name="cat_disableVideoAutoPlay_desc">Os vídeos começam quando você toca no play</string>
     <string name="cat_confirmFeedRefresh_desc">Para não perder seu lugar no feed ao puxar a tela ou tocar em Voltar</string>
+    <string name="cat_reelsBlurBars">Desfocar as barras em volta dos Reels</string>
+    <string name="cat_reelsBlurBars_desc">Preenche as barras pretas com uma cópia desfocada da capa do reel. Requer Android 12 ou mais recente</string>
     <string name="cat_sec_watching">Ao assistir</string>
     <string name="cat_disableStoryFlipping_desc">O story fica na tela quando termina</string>
     <string name="cat_enableStoryMentions_desc">Adiciona “Ver menções” ao menu ⋮ do story</string>

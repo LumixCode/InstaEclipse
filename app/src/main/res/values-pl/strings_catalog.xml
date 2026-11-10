@@ -80,6 +80,8 @@
     <string name="cat_enablePhotoZoom">Przytrzymaj, by powiększyć</string>
     <string name="cat_disableVideoAutoPlay_desc">Film rusza po dotknięciu odtwarzania</string>
     <string name="cat_confirmFeedRefresh_desc">Żeby przeciągnięcie ani przycisk Wstecz nie gubiły miejsca w kanale</string>
+    <string name="cat_reelsBlurBars">Rozmyj paski wokół Reels</string>
+    <string name="cat_reelsBlurBars_desc">Wypełnia czarne paski rozmytą kopią okładki rolki. Wymaga Androida 12 lub nowszego</string>
     <string name="cat_sec_watching">Oglądanie</string>
     <string name="cat_disableStoryFlipping_desc">Relacja zostaje na ekranie po zakończeniu</string>
     <string name="cat_enableStoryMentions_desc">Dodaje „Pokaż wzmianki” do menu ⋮ relacji</string>

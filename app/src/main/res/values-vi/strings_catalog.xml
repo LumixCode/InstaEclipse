@@ -80,6 +80,8 @@
     <string name="cat_enablePhotoZoom">Giữ ảnh để phóng to</string>
     <string name="cat_disableVideoAutoPlay_desc">Video bắt đầu khi bạn nhấn phát</string>
     <string name="cat_confirmFeedRefresh_desc">Để việc kéo xuống hoặc nút Quay lại không làm mất vị trí của bạn trên bảng feed</string>
+    <string name="cat_reelsBlurBars">Làm mờ các dải quanh Reels</string>
+    <string name="cat_reelsBlurBars_desc">Lấp các dải đen bằng bản sao làm mờ của ảnh bìa reel. Cần Android 12 trở lên</string>
     <string name="cat_sec_watching">Khi xem</string>
     <string name="cat_disableStoryFlipping_desc">Tin vẫn ở trên màn hình khi kết thúc</string>
     <string name="cat_enableStoryMentions_desc">Thêm “Xem lượt nhắc” vào menu ⋮ của tin</string>

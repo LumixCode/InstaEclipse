@@ -454,6 +454,9 @@ public final class FeatureCatalog {
                     section(0,
                             sw("reelsAutoScroll", R.string.ig_dialog_extras_reels_auto_scroll, R.drawable.ic_movie)
                                     .desc(R.string.cat_reelsAutoScroll_desc).status("reelsAutoScroll"),
+                            sw("reelsBlurBars", R.string.cat_reelsBlurBars, R.drawable.ic_palette)
+                                    .desc(R.string.cat_reelsBlurBars_desc).restart(Restart.BOTH).status("reelsBlurBars")
+                                    .words("blur", "letterbox", "black bars"),
                             sw("reelsLockScroll", R.string.ig_dialog_extras_reels_lock_scroll, R.drawable.ic_movie)
                                     .status("reelsLockScroll"),
                             sw("forceReelScrubber", R.string.ig_dialog_downloader_reel_scrubber, R.drawable.ic_movie)

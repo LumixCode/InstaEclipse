@@ -80,6 +80,8 @@
     <string name="cat_enablePhotoZoom">Håll in ett foto för att zooma</string>
     <string name="cat_disableVideoAutoPlay_desc">Videor startar när du trycker på spela upp</string>
     <string name="cat_confirmFeedRefresh_desc">Så att du inte tappar din plats i flödet när du drar nedåt eller trycker på Tillbaka</string>
+    <string name="cat_reelsBlurBars">Gör fälten runt Reels suddiga</string>
+    <string name="cat_reelsBlurBars_desc">Fyller de svarta fälten med en suddig kopia av reelens omslag. Kräver Android 12 eller senare</string>
     <string name="cat_sec_watching">När du tittar</string>
     <string name="cat_disableStoryFlipping_desc">En story stannar kvar på skärmen när den är slut</string>
     <string name="cat_enableStoryMentions_desc">Lägger till ”Visa omnämnanden” i storyns ⋮-meny</string>

@@ -80,6 +80,8 @@
     <string name="cat_enablePhotoZoom">تكبير الصور بالضغط المطوّل</string>
     <string name="cat_disableVideoAutoPlay_desc">تبدأ الفيديوهات عند الضغط على تشغيل</string>
     <string name="cat_confirmFeedRefresh_desc">كي لا يُفقدك السحب للتحديث أو زر الرجوع مكانك في الخلاصة</string>
+    <string name="cat_reelsBlurBars">تمويه الأشرطة حول الريلز</string>
+    <string name="cat_reelsBlurBars_desc">يملأ الأشرطة السوداء بنسخة مموّهة من غلاف الريل. يتطلب Android 12 أو أحدث</string>
     <string name="cat_sec_watching">المشاهدة</string>
     <string name="cat_disableStoryFlipping_desc">تبقى القصة على الشاشة عند انتهائها</string>
     <string name="cat_enableStoryMentions_desc">يضيف «عرض الإشارات» إلى قائمة ⋮ في القصة</string>

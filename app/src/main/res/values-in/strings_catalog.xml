@@ -80,6 +80,8 @@
     <string name="cat_enablePhotoZoom">Tahan foto untuk zoom</string>
     <string name="cat_disableVideoAutoPlay_desc">Video diputar saat Anda mengetuk putar</string>
     <string name="cat_confirmFeedRefresh_desc">Agar tarikan atau tombol Kembali tidak membuat Anda kehilangan posisi di feed</string>
+    <string name="cat_reelsBlurBars">Buramkan bilah di sekitar Reels</string>
+    <string name="cat_reelsBlurBars_desc">Mengisi bilah hitam dengan salinan buram sampul reel. Perlu Android 12 atau yang lebih baru</string>
     <string name="cat_sec_watching">Menonton</string>
     <string name="cat_disableStoryFlipping_desc">Cerita tetap di layar saat selesai</string>
     <string name="cat_enableStoryMentions_desc">Menambahkan “Lihat sebutan” ke menu ⋮ cerita</string>

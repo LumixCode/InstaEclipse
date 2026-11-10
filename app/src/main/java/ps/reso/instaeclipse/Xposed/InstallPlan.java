@@ -130,6 +130,7 @@ public class InstallPlan {
 
     static final int INSTAGRAM_UI = 1;
     static final int REEL_VIEWER_HOOK = 2;
+    static final int REELS_BLUR_BARS_HOOK = 110;
     static final int DEV_OPTIONS_UNLOCK_HOOK = 3;
     static final int GHOST_DM_SEEN_HOOK = 4;
     static final int GHOST_DM_MARK_AS_READ_HOOK = 5;
@@ -258,6 +259,8 @@ public class InstallPlan {
         s.add(new InstallStep(INSTAGRAM_UI, "instagramUI", null, "(InstaEclipse): ", MAIN_SCREEN, false, null).inPhaseA());
         s.add(new InstallStep(REEL_VIEWER_HOOK, "ReelViewerHook", null, "(InstaEclipse | ReelViewer): ", COULD_NOT_START, true, null)
                 .withFeatures("reelsLockScroll", "NightReelBlock", "DailyReelLimit"));
+        s.add(new InstallStep(REELS_BLUR_BARS_HOOK, "ReelsBlurBarsHook", null, "(IE|ReelsBlur) ", COULD_NOT_START, true, "reelsBlurBars")
+                .withFeatures("reelsBlurBars").withRestartKeys("reelsBlurBars"));
         s.add(new InstallStep(DEV_OPTIONS_UNLOCK_HOOK, "DevOptionsUnlockHook", null, "(InstaEclipse | DevOptions): ", COULD_NOT_START, true, null)
                 .withFeatures("DevOptions"));
         s.add(new InstallStep(GHOST_DM_SEEN_HOOK, "GhostDMSeenHook", null, "(InstaEclipse | GhostSeen): ", COULD_NOT_START, true, null)
@@ -547,6 +550,8 @@ public class InstallPlan {
                         || FeatureFlags.enableDmMediaDownload || FeatureFlags.translateMessages || FeatureFlags.bulkUnsend;
             case "offerPlaybackSpeed|holdLeftSlowMotion|forceReelScrubber":
                 return FeatureFlags.offerPlaybackSpeed || FeatureFlags.holdLeftSlowMotion || FeatureFlags.forceReelScrubber;
+            case "reelsBlurBars":
+                return FeatureFlags.reelsBlurBars;
             case "followListExport|profileAnalyzer":
                 return FeatureFlags.followListExport || FeatureFlags.profileAnalyzer;
             default:
@@ -561,6 +566,9 @@ public class InstallPlan {
                 return;
             case REEL_VIEWER_HOOK:
                 new ReelViewerHook().install(ctx.loader);
+                return;
+            case REELS_BLUR_BARS_HOOK:
+                new ps.reso.instaeclipse.mods.extras.ReelsBlurBarsHook().install(ctx.loader);
                 return;
             case DEV_OPTIONS_UNLOCK_HOOK:
                 new DevOptionsUnlockHook().handleDevOptions();

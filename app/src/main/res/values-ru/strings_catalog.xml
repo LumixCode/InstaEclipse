@@ -80,6 +80,8 @@
     <string name="cat_enablePhotoZoom">Увеличение фото удержанием</string>
     <string name="cat_disableVideoAutoPlay_desc">Видео начинается только по нажатию</string>
     <string name="cat_confirmFeedRefresh_desc">Чтобы обновление свайпом или кнопка «Назад» не сбрасывали позицию в ленте</string>
+    <string name="cat_reelsBlurBars">Размыть полосы вокруг Reels</string>
+    <string name="cat_reelsBlurBars_desc">Заполняет чёрные полосы размытой копией обложки Reels. Требуется Android 12 или новее</string>
     <string name="cat_sec_watching">Просмотр</string>
     <string name="cat_disableStoryFlipping_desc">История остаётся на экране, когда заканчивается</string>
     <string name="cat_enableStoryMentions_desc">Добавляет «Показать упоминания» в меню ⋮ истории</string>

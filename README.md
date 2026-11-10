@@ -314,6 +314,7 @@ Without a switch:
 | Option | What it does |
 |---|---|
 | Unlock Reels auto-scroll | Adds Instagram's own Auto scroll option to Reels |
+| 🆕 Blur the bars around Reels | Fills the black bars around a reel with a blurred, darkened copy of its cover. Needs Android 12 or newer |
 | Lock swiping between reels | No accidental swipes |
 | Always show the seek bar | Scrub through any reel |
 | ✨ Hold left side for slow motion | 0.5× on the left half; the right half stays 2× |

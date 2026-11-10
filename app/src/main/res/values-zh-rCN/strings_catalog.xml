@@ -80,6 +80,8 @@
     <string name="cat_enablePhotoZoom">长按照片放大</string>
     <string name="cat_disableVideoAutoPlay_desc">点按播放后视频才会开始</string>
     <string name="cat_confirmFeedRefresh_desc">避免下拉或按返回键时丢失你在动态中的位置</string>
+    <string name="cat_reelsBlurBars">模糊 Reels 周围的黑边</string>
+    <string name="cat_reelsBlurBars_desc">用 Reels 封面的模糊副本填充黑边。需要 Android 12 或更高版本</string>
     <string name="cat_sec_watching">观看</string>
     <string name="cat_disableStoryFlipping_desc">快拍播放完后停留在屏幕上</string>
     <string name="cat_enableStoryMentions_desc">在快拍的 ⋮ 菜单中添加“查看提及”</string>

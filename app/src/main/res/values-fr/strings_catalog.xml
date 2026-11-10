@@ -80,6 +80,8 @@
     <string name="cat_enablePhotoZoom">Maintenir une photo pour zoomer</string>
     <string name="cat_disableVideoAutoPlay_desc">Les vidéos démarrent quand vous les lancez</string>
     <string name="cat_confirmFeedRefresh_desc">Pour ne pas perdre votre place dans le fil en tirant vers le bas ou avec Retour</string>
+    <string name="cat_reelsBlurBars">Flouter les bandes autour des Reels</string>
+    <string name="cat_reelsBlurBars_desc">Remplit les bandes noires avec une copie floutée de la couverture du reel. Nécessite Android 12 ou plus récent</string>
     <string name="cat_sec_watching">Visionnage</string>
     <string name="cat_disableStoryFlipping_desc">Une story reste à l\'écran quand elle se termine</string>
     <string name="cat_enableStoryMentions_desc">Ajoute « Voir les mentions » au menu ⋮ des stories</string>

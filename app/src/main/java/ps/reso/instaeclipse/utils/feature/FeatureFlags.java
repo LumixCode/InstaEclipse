@@ -90,6 +90,7 @@ public class FeatureFlags {
     public static volatile boolean unlimitedAccounts = false;
     public static volatile boolean reelsLockScroll = false;
     public static volatile boolean reelsAutoScroll = false;
+    public static volatile boolean reelsBlurBars = false;
     public static volatile boolean disableSwipeToCamera = false;
     public static volatile boolean followingOnlyFeed = false;
     public static volatile boolean confirmFeedRefresh = false;

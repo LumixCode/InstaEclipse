@@ -80,6 +80,8 @@
     <string name="cat_enablePhotoZoom">Fotonu basıb yaxınlaşdır</string>
     <string name="cat_disableVideoAutoPlay_desc">Videolar oynat düyməsinə toxunanda başlayır</string>
     <string name="cat_confirmFeedRefresh_desc">Aşağı çəkmək və ya Geri düyməsi lentdəki yerinizi itirməsin deyə</string>
+    <string name="cat_reelsBlurBars">Reels ətrafındakı zolaqları bulanıqlaşdır</string>
+    <string name="cat_reelsBlurBars_desc">Qara zolaqları reel üz qabığının bulanıq surəti ilə doldurur. Android 12 və ya daha yenisi lazımdır</string>
     <string name="cat_sec_watching">Baxarkən</string>
     <string name="cat_disableStoryFlipping_desc">Hekayə bitəndə ekranda qalır</string>
     <string name="cat_enableStoryMentions_desc">Hekayənin ⋮ menyusuna «Qeydlərə bax» əlavə edir</string>
