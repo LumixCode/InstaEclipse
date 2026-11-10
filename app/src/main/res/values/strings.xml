@@ -212,6 +212,10 @@
     <string name="ig_dialog_unsent_title">Unsent messages</string>
     <string name="ig_dialog_unsent_export">Export as JSON</string>
     <string name="ig_dialog_unsent_exported">Saved to %1$s</string>
+    <string name="ig_unsent_export_all">Export all chats as CSV</string>
+    <string name="ig_unsent_search_hint">Text, name or chat</string>
+    <string name="ig_unsent_search_none">Nothing matches</string>
+    <string name="ig_unsent_search_capped">Showing the first %1$d of %2$d. Type more to narrow it down.</string>
     <string name="ig_dialog_auto_clear_cache">Auto-clear cache when large</string>
     <string name="ig_dialog_section_auto_clear_cache">Auto-Clear Cache</string>
     <string name="ig_dialog_misc_remove_meta_ai">Remove Meta AI</string>

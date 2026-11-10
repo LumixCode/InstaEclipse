@@ -350,7 +350,7 @@ Turning off Reels overrides the reel limits. A blocked reel says why and until w
 | Option | What it does |
 |---|---|
 | Keep disappearing messages | They stop deleting themselves |
-| ✨ Keep unsent messages | Messages you or others unsend stay readable, in the chat and in the *Unsent messages* list, including the ones you remove with *Unsend multiple* |
+| ✨ Keep unsent messages | Messages you or others unsend stay readable, in the chat and in the *Unsent messages* list, including the ones you remove with *Unsend multiple*. 🆕 Search the list across all chats by text, name or chat, and export all chats to one CSV file |
 | 🆕 Mark unsent messages | Kept unsent messages show in red |
 | ✨ Keep earlier versions of edits | Tap *Edited* to see them |
 | ✨ Jump to first message | Scrolls a chat back to its first message |

@@ -463,6 +463,10 @@
     <string name="ig_dialog_unsent_title">Messages annulés</string>
     <string name="ig_dialog_unsent_export">Exporter en JSON</string>
     <string name="ig_dialog_unsent_exported">Enregistré dans %1$s</string>
+    <string name="ig_unsent_export_all">Exporter toutes les discussions en CSV</string>
+    <string name="ig_unsent_search_hint">Texte, nom ou discussion</string>
+    <string name="ig_unsent_search_none">Aucun résultat</string>
+    <string name="ig_unsent_search_capped">Affichage des %1$d premiers sur %2$d. Saisissez plus de texte pour affiner.</string>
     <string name="ig_dialog_auto_clear_cache">Vider le cache s\'il devient trop gros</string>
     <string name="ig_dialog_section_auto_clear_cache">Vidage auto du cache</string>
     <string name="ig_dialog_misc_remove_meta_ai">Supprimer Meta AI</string>

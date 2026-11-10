@@ -433,6 +433,10 @@
     <string name="ig_dialog_unsent_title">Ångrade meddelanden</string>
     <string name="ig_dialog_unsent_export">Exportera som JSON</string>
     <string name="ig_dialog_unsent_exported">Sparat till %1$s</string>
+    <string name="ig_unsent_export_all">Exportera alla chattar som CSV</string>
+    <string name="ig_unsent_search_hint">Text, namn eller chatt</string>
+    <string name="ig_unsent_search_none">Inga träffar</string>
+    <string name="ig_unsent_search_capped">Visar de första %1$d av %2$d. Skriv mer för att begränsa.</string>
     <string name="ig_dialog_auto_clear_cache">Rensa cache automatiskt när den är stor</string>
     <string name="ig_dialog_section_auto_clear_cache">Rensa cache automatiskt</string>
     <string name="ig_dialog_misc_remove_meta_ai">Ta bort Meta AI</string>

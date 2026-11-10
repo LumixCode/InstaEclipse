@@ -461,6 +461,10 @@
     <string name="ig_dialog_unsent_title">הודעות שבוטלו</string>
     <string name="ig_dialog_unsent_export">ייצא כ-JSON</string>
     <string name="ig_dialog_unsent_exported">נשמר אל %1$s</string>
+    <string name="ig_unsent_export_all">ייצוא כל הצ\'אטים כ-CSV</string>
+    <string name="ig_unsent_search_hint">טקסט, שם או צ\'אט</string>
+    <string name="ig_unsent_search_none">לא נמצאו תוצאות</string>
+    <string name="ig_unsent_search_capped">מוצגות %1$d התוצאות הראשונות מתוך %2$d. הקלד עוד כדי לצמצם.</string>
     <string name="ig_dialog_auto_clear_cache">נקה מטמון אוטומטית כשהוא גדול</string>
     <string name="ig_dialog_section_auto_clear_cache">ניקוי מטמון אוטומטי</string>
     <string name="ig_dialog_misc_remove_meta_ai">הסר את Meta AI</string>

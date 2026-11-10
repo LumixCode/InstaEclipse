@@ -123,7 +123,7 @@ public class DialogUtils {
         private final LinearLayout results;
         private final java.util.List<Runnable> counts;
         private final java.util.List<Runnable> refresh = new java.util.ArrayList<>();
-        private final android.widget.EditText field;
+        private final SearchBox search;
         private String shown = "";
 
         SearchPanel(Context context, IeSheet.Page page, View menu, LinearLayout results, java.util.List<Runnable> counts) {
@@ -132,71 +132,12 @@ public class DialogUtils {
             this.menu = menu;
             this.results = results;
             this.counts = counts;
-            IePalette p = IePalette.of(context);
-            field = new android.widget.EditText(context);
-            field.setSingleLine(true);
-            field.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
-            field.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
-                    | android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI);
-            field.setHint(I18n.t(context, R.string.menu_search_hint));
-            field.setTextColor(p.text);
-            field.setHintTextColor(p.sub);
-            field.setTextSize(16);
-            field.setMinHeight(dp(context, 48));
-            field.setGravity(Gravity.CENTER_VERTICAL);
-            Drawable glass = IeRows.icon(context, R.drawable.ic_search, p.sub);
-            if (glass != null) {
-                glass.setBounds(0, 0, dp(context, 20), dp(context, 20));
-                field.setCompoundDrawablesRelative(glass, null, null, null);
-            }
-            field.setCompoundDrawablePadding(dp(context, 10));
-            field.setPaddingRelative(dp(context, 14), dp(context, 6), dp(context, 48), dp(context, 6));
-            GradientDrawable background = new GradientDrawable();
-            background.setColor(p.field);
-            background.setCornerRadius(dp(context, 24));
-            background.setStroke(hairline(context), p.line);
-            field.setBackground(background);
-
-            ImageView clear = new ImageView(context);
-            Drawable cross = IeRows.icon(context, R.drawable.ic_close, p.sub);
-            if (cross != null) clear.setImageDrawable(cross);
-            clear.setScaleType(ImageView.ScaleType.CENTER);
-            clear.setContentDescription(I18n.t(context, R.string.menu_search_clear));
-            clear.setBackground(IeRows.ripple(context, 24));
-            clear.setVisibility(View.GONE);
-            clear.setOnClickListener(v -> field.setText(""));
-
-            field.addTextChangedListener(new android.text.TextWatcher() {
-                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-
-                @Override public void afterTextChanged(android.text.Editable s) {
-                    clear.setVisibility(s.length() == 0 ? View.GONE : View.VISIBLE);
-                    run(s.toString());
-                }
-            });
-            field.setOnEditorActionListener((v, actionId, event) -> {
-                if (actionId != android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) return false;
-                hideKeyboard();
-                return true;
-            });
-
-            android.widget.FrameLayout holder = new android.widget.FrameLayout(context);
-            holder.setFocusableInTouchMode(true);
-            holder.setPadding(dp(context, 12), dp(context, 2), dp(context, 12), dp(context, 6));
-            holder.addView(field, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT));
-            holder.addView(clear, new android.widget.FrameLayout.LayoutParams(dp(context, 48), dp(context, 48),
-                    Gravity.END | Gravity.CENTER_VERTICAL));
-            box = holder;
+            search = new SearchBox(context, I18n.t(context, R.string.menu_search_hint), this::run);
+            box = search.view;
         }
 
         boolean clear() {
-            if (field.getText().length() == 0) return false;
-            field.setText("");
-            hideKeyboard();
-            return true;
+            return search.clear();
         }
 
         void refresh() {
@@ -204,10 +145,7 @@ public class DialogUtils {
         }
 
         private void hideKeyboard() {
-            android.view.inputmethod.InputMethodManager keyboard = (android.view.inputmethod.InputMethodManager)
-                    context.getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (keyboard != null) keyboard.hideSoftInputFromWindow(field.getWindowToken(), 0);
-            field.clearFocus();
+            search.hideKeyboard();
         }
 
         private void run(String raw) {
@@ -291,13 +229,17 @@ public class DialogUtils {
     }
 
     private static View noResults(Context context) {
+        return noResults(context, R.string.menu_search_empty);
+    }
+
+    private static View noResults(Context context, int titleRes) {
         IePalette p = IePalette.of(context);
         LinearLayout box = new LinearLayout(context);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setGravity(Gravity.CENTER_HORIZONTAL);
         box.setPadding(dp(context, 16), dp(context, 32), dp(context, 16), dp(context, 32));
         TextView title = new TextView(context);
-        title.setText(I18n.t(context, R.string.menu_search_empty));
+        title.setText(I18n.t(context, titleRes));
         title.setTextColor(p.text);
         title.setTextSize(16);
         title.setTypeface(null, Typeface.BOLD);
@@ -1236,55 +1178,61 @@ public class DialogUtils {
         } else {
             for (int i = 0; i < entries.size(); i++) {
                 ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry e = entries.get(i);
-                LinearLayout row = new LinearLayout(context);
-                row.setOrientation(LinearLayout.VERTICAL);
-                int pad = dp(context, 14);
-                row.setPadding(pad, dp(context, 11), pad, dp(context, 12));
-                android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-                bg.setColor(p.card);
-                bg.setCornerRadius(dp(context, R_CARD));
-                bg.setStroke(Math.max(1, dp(context, 1)), p.line);
-                row.setBackground(bg);
-
-                LinearLayout meta = new LinearLayout(context);
-                meta.setGravity(Gravity.CENTER_VERTICAL);
                 String tag = FeatureFlags.showUnsentIndicator
                         ? I18n.t(context, R.string.ig_unsent_indicator_label) : "";
                 if (e.showsSender(chat)) tag = tag.isEmpty() ? e.senderLabel() : e.senderLabel() + " · " + tag;
-                TextView sender = new TextView(context);
-                sender.setText(tag);
-                if (tag.isEmpty()) sender.setVisibility(View.GONE);
-                sender.setTextColor(IePalette.readable(p.accent, p.card, IePalette.TEXT));
-                sender.setTextSize(13);
-                sender.setTypeface(Typeface.DEFAULT_BOLD);
-                sender.setSingleLine(true);
-                sender.setEllipsize(android.text.TextUtils.TruncateAt.END);
-                meta.addView(sender, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-                TextView when = new TextView(context);
-                when.setText(shortDate(context, e.time));
-                when.setTextColor(p.sub);
-                when.setTextSize(12);
-                when.setPadding(tag.isEmpty() ? 0 : dp(context, 8), 0, 0, 0);
-                meta.addView(when);
-
-                TextView body = new TextView(context);
-                body.setText(ps.reso.instaeclipse.utils.ghost.UnsentDetailText.body(context, e));
-                if (ps.reso.instaeclipse.utils.ghost.UnsentDetailText.isDescription(e)) body.setTypeface(null, Typeface.ITALIC);
-                body.setTextColor(p.text);
-                body.setTextSize(15);
-                body.setPadding(0, dp(context, 5), 0, 0);
-                body.setTextIsSelectable(true);
-                row.addView(meta);
-                row.addView(body);
-
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                lp.setMargins(0, i == 0 ? dp(context, 4) : dp(context, 8), 0, 0);
-                layout.addView(row, lp);
+                layout.addView(unsentRow(context, p, e, tag, i == 0));
             }
         }
 
         return new IeSheet.Page(chat != null ? chat : I18n.t(context, R.string.ig_dialog_unsent_unknown_chat), layout);
+    }
+
+    private static View unsentRow(Context context, IePalette p, ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry e,
+                                  String tag, boolean first) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(context, 14);
+        row.setPadding(pad, dp(context, 11), pad, dp(context, 12));
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setColor(p.card);
+        bg.setCornerRadius(dp(context, R_CARD));
+        bg.setStroke(Math.max(1, dp(context, 1)), p.line);
+        row.setBackground(bg);
+
+        LinearLayout meta = new LinearLayout(context);
+        meta.setGravity(Gravity.CENTER_VERTICAL);
+        TextView sender = new TextView(context);
+        sender.setText(tag);
+        if (tag.isEmpty()) sender.setVisibility(View.GONE);
+        sender.setTextColor(IePalette.readable(p.accent, p.card, IePalette.TEXT));
+        sender.setTextSize(13);
+        sender.setTypeface(Typeface.DEFAULT_BOLD);
+        sender.setSingleLine(true);
+        sender.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        meta.addView(sender, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        TextView when = new TextView(context);
+        when.setText(shortDate(context, e.time));
+        when.setTextColor(p.sub);
+        when.setTextSize(12);
+        when.setPadding(tag.isEmpty() ? 0 : dp(context, 8), 0, 0, 0);
+        meta.addView(when);
+
+        TextView body = new TextView(context);
+        body.setText(ps.reso.instaeclipse.utils.ghost.UnsentDetailText.body(context, e));
+        if (ps.reso.instaeclipse.utils.ghost.UnsentDetailText.isDescription(e)) body.setTypeface(null, Typeface.ITALIC);
+        body.setTextColor(p.text);
+        body.setTextSize(15);
+        body.setPadding(0, dp(context, 5), 0, 0);
+        body.setTextIsSelectable(true);
+        row.addView(meta);
+        row.addView(body);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(0, first ? dp(context, 4) : dp(context, 8), 0, 0);
+        row.setLayoutParams(lp);
+        return row;
     }
 
     private static String shortDate(Context context, long time) {
@@ -1429,12 +1377,13 @@ public class DialogUtils {
                     v -> showThreadUnsent(context, threadId.isEmpty() ? null : threadId, name[0]));
             row.addView(trailingLabel(context, java.text.NumberFormat.getIntegerInstance().format(t.getValue().size()), p.sub));
             foldersCard.addView(row);
-            if (!inboxTitle && !threadId.isEmpty()) {
-                unresolved.put(threadId, (TextView) row.getChildAt(1));
-                names.put(threadId, name);
-            }
+            names.put(threadId, name);
+            if (!inboxTitle && !threadId.isEmpty()) unresolved.put(threadId, (TextView) row.getChildAt(1));
         }
         layout.addView(foldersCard);
+        LinearLayout results = createSwitchLayout(context);
+        results.setVisibility(View.GONE);
+        UnsentSearch search = new UnsentSearch(context, layout, results, entries, names);
         if (!unresolved.isEmpty()) {
             java.util.List<String> ids = new java.util.ArrayList<>(unresolved.keySet());
             MenuWorker.load(() -> ps.reso.instaeclipse.utils.ghost.ThreadNames.resolveAll(ids), resolved -> {
@@ -1446,9 +1395,14 @@ public class DialogUtils {
                     name[0] = r.getValue();
                     label.setText(r.getValue());
                 }
+                search.namesChanged();
             });
         }
 
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_upload, I18n.t(context, R.string.ig_unsent_export_all), "#0A84FF", v -> {
+            String account = ps.reso.instaeclipse.utils.ghost.UnsentLog.viewer(context);
+            MenuWorker.execute(() -> ps.reso.instaeclipse.utils.ghost.UnsentExport.allChats(context, account));
+        }));
         layout.addView(IeRows.actionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_unsent_clear_saved), "#FF453A", v -> {
             try {
                 IeDialog dlg = new IeDialog(context)
@@ -1467,9 +1421,114 @@ public class DialogUtils {
             } catch (Throwable ignored) {}
         }));
 
-        return new IeSheet.Page(I18n.t(context, R.string.ig_dialog_unsent_title), layout).onReturn(() -> {
-            if (unsentListStale) replaceTop(context, unsentListPage(context));
-        });
+        LinearLayout content = new LinearLayout(context);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.addView(layout);
+        content.addView(results);
+        IeSheet.Page page = new IeSheet.Page(I18n.t(context, R.string.ig_dialog_unsent_title), content)
+                .pinned(search.box.view)
+                .onBack(search.box::clear)
+                .onReturn(() -> {
+                    if (unsentListStale) replaceTop(context, unsentListPage(context));
+                });
+        search.page = page;
+        return page;
+    }
+
+    private static final class UnsentSearch {
+        private static final int MAX_SHOWN = 100;
+        final SearchBox box;
+        IeSheet.Page page;
+        private final Context context;
+        private final View list;
+        private final LinearLayout results;
+        private final java.util.Map<String, String[]> chats;
+        private final java.util.Map<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry, String> haystacks =
+                new java.util.IdentityHashMap<>();
+        private java.util.List<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry> entries;
+        private boolean described;
+        private String shown = "";
+
+        UnsentSearch(Context context, View list, LinearLayout results,
+                     java.util.List<ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry> entries,
+                     java.util.Map<String, String[]> chats) {
+            this.context = context;
+            this.list = list;
+            this.results = results;
+            this.entries = entries;
+            this.chats = chats;
+            box = new SearchBox(context, I18n.t(context, R.string.ig_unsent_search_hint), this::run);
+        }
+
+        void namesChanged() {
+            haystacks.clear();
+            if (!shown.isEmpty()) show();
+        }
+
+        private void run(String raw) {
+            String folded = ps.reso.instaeclipse.utils.text.SearchText.fold(raw.trim());
+            if (folded.equals(shown)) return;
+            shown = folded;
+            if (!folded.isEmpty()) describe();
+            show();
+        }
+
+        private void describe() {
+            if (described) return;
+            described = true;
+            String account = ps.reso.instaeclipse.utils.ghost.UnsentLog.viewer(context);
+            MenuWorker.load(() -> ps.reso.instaeclipse.utils.ghost.UnsentLog.getAllDescribed(account), loaded -> {
+                if (loaded == null) return;
+                entries = loaded;
+                namesChanged();
+            });
+        }
+
+        private void show() {
+            results.removeAllViews();
+            if (shown.isEmpty()) {
+                results.setVisibility(View.GONE);
+                list.setVisibility(View.VISIBLE);
+                return;
+            }
+            list.setVisibility(View.GONE);
+            results.setVisibility(View.VISIBLE);
+            String[] words = shown.split("\\s+");
+            IePalette p = IePalette.of(context);
+            int found = 0;
+            for (ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry e : entries) {
+                String chat = chatOf(e);
+                if (!matches(e, chat, words) || ++found > MAX_SHOWN) continue;
+                String tag = chat != null ? chat : I18n.t(context, R.string.ig_dialog_unsent_unknown_chat);
+                if (e.showsSender(chat)) tag = tag + " · " + e.senderLabel();
+                results.addView(unsentRow(context, p, e, tag, found == 1));
+            }
+            if (found == 0) {
+                results.addView(noResults(context, R.string.ig_unsent_search_none));
+            } else if (found > MAX_SHOWN) {
+                results.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_unsent_search_capped, MAX_SHOWN, found)));
+            }
+            if (page != null && page.scroll != null) page.scroll.scrollTo(0, 0);
+        }
+
+        private String chatOf(ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry e) {
+            String[] name = chats.get(ps.reso.instaeclipse.utils.ghost.UnsentExport.threadOf(e));
+            if (name != null && name[0] != null) return name[0];
+            String captured = e.sender == null ? "" : e.sender.trim();
+            return captured.isEmpty() ? null : captured;
+        }
+
+        private boolean matches(ps.reso.instaeclipse.utils.ghost.UnsentLog.Entry e, String chat, String[] words) {
+            String haystack = haystacks.get(e);
+            if (haystack == null) {
+                haystack = ps.reso.instaeclipse.utils.text.SearchText.fold(
+                        ps.reso.instaeclipse.utils.ghost.UnsentDetailText.body(context, e) + "\n" + e.by + "\n"
+                                + (e.sender == null ? "" : e.sender) + "\n" + (chat == null ? "" : chat));
+                haystacks.put(e, haystack);
+            }
+            for (String word : words) if (!haystack.contains(word)) return false;
+            return true;
+        }
     }
 
     private static void showDistractionOptions(Context context) {

@@ -462,6 +462,10 @@
     <string name="ig_dialog_unsent_title">Αναιρεμένα μηνύματα</string>
     <string name="ig_dialog_unsent_export">Εξαγωγή ως JSON</string>
     <string name="ig_dialog_unsent_exported">Αποθηκεύτηκε στο %1$s</string>
+    <string name="ig_unsent_export_all">Εξαγωγή όλων των συνομιλιών ως CSV</string>
+    <string name="ig_unsent_search_hint">Κείμενο, όνομα ή συνομιλία</string>
+    <string name="ig_unsent_search_none">Δεν βρέθηκε τίποτα</string>
+    <string name="ig_unsent_search_capped">Εμφανίζονται τα πρώτα %1$d από %2$d. Πληκτρολογήστε περισσότερα για να τα περιορίσετε.</string>
     <string name="ig_dialog_auto_clear_cache">Αυτόματη εκκαθάριση cache όταν μεγαλώνει</string>
     <string name="ig_dialog_section_auto_clear_cache">Αυτόματη εκκαθάριση cache</string>
     <string name="ig_dialog_misc_remove_meta_ai">Αφαίρεση Meta AI</string>

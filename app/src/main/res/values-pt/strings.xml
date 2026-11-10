@@ -435,6 +435,10 @@
     <string name="ig_dialog_unsent_title">Mensagens apagadas</string>
     <string name="ig_dialog_unsent_export">Exportar como JSON</string>
     <string name="ig_dialog_unsent_exported">Salvo em %1$s</string>
+    <string name="ig_unsent_export_all">Exportar todas as conversas como CSV</string>
+    <string name="ig_unsent_search_hint">Texto, nome ou conversa</string>
+    <string name="ig_unsent_search_none">Nenhum resultado</string>
+    <string name="ig_unsent_search_capped">Mostrando os primeiros %1$d de %2$d. Digite mais para refinar.</string>
     <string name="ig_dialog_auto_clear_cache">Limpar o cache quando ficar grande</string>
     <string name="ig_dialog_section_auto_clear_cache">Autolimpeza do cache</string>
     <string name="ig_dialog_misc_remove_meta_ai">Remover Meta AI</string>

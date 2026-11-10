@@ -665,6 +665,35 @@ public class UnsentLog {
         return out;
     }
 
+    public static List<Entry> getAllDescribed(String account) {
+        if (!valid(account)) return new ArrayList<>();
+        awaitLoaded(VIEWER_WAIT_MS);
+        List<CopyLookup> lookups;
+        synchronized (UnsentLog.class) {
+            lookups = loaded ? pendingCopyLookups(accountEntries(account)) : List.of();
+        }
+        Map<Entry, UnsentDetail> found = Collections.emptyMap();
+        if (!lookups.isEmpty()) {
+            try {
+                found = readCopies(lookups);
+            } catch (Throwable t) {
+                ModuleLog.detail("(IE|UnsentLog) describe failed: " + t.getClass().getSimpleName());
+            }
+        }
+        synchronized (UnsentLog.class) {
+            if (!found.isEmpty()) applyDescriptions(found);
+            List<Entry> out = accountEntries(account);
+            java.util.Collections.reverse(out);
+            return out;
+        }
+    }
+
+    private static List<Entry> accountEntries(String account) {
+        List<Entry> out = new ArrayList<>();
+        for (Entry e : cache) if (!e.cleared && account.equals(e.account)) out.add(e);
+        return out;
+    }
+
     public static String clear(Context context) {
         return markCleared(viewer(context), null);
     }
@@ -688,7 +717,7 @@ public class UnsentLog {
         return thread != null ? markCleared(account, thread) : null;
     }
 
-    private static synchronized String viewer(Context context) {
+    public static synchronized String viewer(Context context) {
         refreshAccount(context);
         return currentAccount;
     }

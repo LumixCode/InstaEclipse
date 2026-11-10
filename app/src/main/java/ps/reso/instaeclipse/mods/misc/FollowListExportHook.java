@@ -1,10 +1,8 @@
 package ps.reso.instaeclipse.mods.misc;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Base64;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
@@ -13,7 +11,6 @@ import android.widget.Toast;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -197,14 +194,7 @@ public class FollowListExportHook {
         String saf = FeatureFlags.downloaderCustomUri;
         if (saf == null || saf.isEmpty()) return false;
         try {
-            Intent request = new Intent();
-            request.setClassName("ps.reso.instaeclipse", "ps.reso.instaeclipse.mods.media.DownloadSaveService");
-            request.putExtra("chatExportSubdir", "exports");
-            request.putExtra("exportMime", "text/csv");
-            request.putExtra("htmlFilename", file);
-            request.putExtra("htmlB64", Base64.encodeToString(bytes, Base64.NO_WRAP));
-            request.putExtra("saveUri", saf);
-            boolean sent = ExportDelegate.delegate(ctx, request, TAG, writeLocally);
+            boolean sent = ExportDelegate.csv(ctx, saf, bytes, file, TAG, writeLocally);
             if (sent) ModuleLog.line(TAG + "Exporting " + count + " accounts through the InstaEclipse app to exports/" + file);
             else ModuleLog.detail(TAG + "The list is outside the InstaEclipse app's limits (" + bytes.length + " bytes), saving it from Instagram");
             return sent;
@@ -221,13 +211,7 @@ public class FollowListExportHook {
             csv.append(CsvCells.cell(e.getValue()[0])).append(',').append(CsvCells.cell(e.getValue()[1])).append(',')
                     .append(CsvCells.cell(e.getKey())).append('\n');
         csv.append(ps.reso.instaeclipse.utils.core.ExportBrand.csvFooter());
-        byte[] text = csv.toString().getBytes(StandardCharsets.UTF_8);
-        byte[] bytes = new byte[text.length + 3];
-        bytes[0] = (byte) 0xEF;
-        bytes[1] = (byte) 0xBB;
-        bytes[2] = (byte) 0xBF;
-        System.arraycopy(text, 0, bytes, 3, text.length);
-        return bytes;
+        return CsvCells.bytes(csv);
     }
 
     static final String FOLLOWERS = "FOLLOWERS", FOLLOWING = "FOLLOWING";

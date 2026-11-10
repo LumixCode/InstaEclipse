@@ -461,6 +461,10 @@
     <string name="ig_dialog_unsent_title">Pesan yang dibatalkan</string>
     <string name="ig_dialog_unsent_export">Ekspor sebagai JSON</string>
     <string name="ig_dialog_unsent_exported">Disimpan ke %1$s</string>
+    <string name="ig_unsent_export_all">Ekspor semua obrolan sebagai CSV</string>
+    <string name="ig_unsent_search_hint">Teks, nama, atau obrolan</string>
+    <string name="ig_unsent_search_none">Tidak ada yang cocok</string>
+    <string name="ig_unsent_search_capped">Menampilkan %1$d pertama dari %2$d. Ketik lebih banyak untuk mempersempit.</string>
     <string name="ig_dialog_auto_clear_cache">Bersihkan cache otomatis saat besar</string>
     <string name="ig_dialog_section_auto_clear_cache">Bersihkan Cache Otomatis</string>
     <string name="ig_dialog_misc_remove_meta_ai">Hapus Meta AI</string>

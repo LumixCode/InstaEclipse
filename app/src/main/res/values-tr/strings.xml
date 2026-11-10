@@ -168,6 +168,10 @@
     <string name="ig_dialog_unsent_title">Geri alınan mesajlar</string>
     <string name="ig_dialog_unsent_export">JSON olarak kaydet</string>
     <string name="ig_dialog_unsent_exported">Kaydedildi: %1$s</string>
+    <string name="ig_unsent_export_all">Tüm sohbetleri CSV olarak dışa aktar</string>
+    <string name="ig_unsent_search_hint">Metin, ad veya sohbet</string>
+    <string name="ig_unsent_search_none">Eşleşen bir şey yok</string>
+    <string name="ig_unsent_search_capped">%2$d sonuçtan ilk %1$d tanesi gösteriliyor. Daraltmak için daha fazla yazın.</string>
     <string name="ig_dialog_auto_clear_cache">Önbellek büyüdüğünde otomatik temizle</string>
     <string name="ig_dialog_section_auto_clear_cache">Otomatik Önbellek Temizleme</string>
     <string name="ig_dialog_misc_remove_meta_ai">Meta AI\'yı kaldır</string>

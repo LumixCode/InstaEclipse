@@ -438,6 +438,10 @@
     <string name="ig_dialog_unsent_title">Mensajes anulados</string>
     <string name="ig_dialog_unsent_export">Exportar como JSON</string>
     <string name="ig_dialog_unsent_exported">Guardado en %1$s</string>
+    <string name="ig_unsent_export_all">Exportar todos los chats como CSV</string>
+    <string name="ig_unsent_search_hint">Texto, nombre o chat</string>
+    <string name="ig_unsent_search_none">No hay coincidencias</string>
+    <string name="ig_unsent_search_capped">Se muestran los primeros %1$d de %2$d. Escribe más para acotar.</string>
     <string name="ig_dialog_auto_clear_cache">Borrar caché automáticamente si es grande</string>
     <string name="ig_dialog_section_auto_clear_cache">Borrado automático de caché</string>
     <string name="ig_dialog_misc_remove_meta_ai">Quitar Meta AI</string>

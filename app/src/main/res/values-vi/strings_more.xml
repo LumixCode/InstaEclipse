@@ -45,6 +45,10 @@
     <string name="ig_dialog_unsent_title">Tin nhắn đã thu hồi</string>
     <string name="ig_dialog_unsent_export">Xuất dạng JSON</string>
     <string name="ig_dialog_unsent_exported">Đã lưu vào %1$s</string>
+    <string name="ig_unsent_export_all">Xuất tất cả đoạn chat dạng CSV</string>
+    <string name="ig_unsent_search_hint">Nội dung, tên hoặc đoạn chat</string>
+    <string name="ig_unsent_search_none">Không có kết quả phù hợp</string>
+    <string name="ig_unsent_search_capped">Đang hiện %1$d kết quả đầu tiên trong số %2$d. Nhập thêm để thu hẹp.</string>
     <string name="ig_dialog_auto_clear_cache">Tự xóa bộ nhớ đệm khi quá lớn</string>
     <string name="ig_dialog_section_auto_clear_cache">Tự xóa bộ nhớ đệm</string>
     <string name="ig_dialog_misc_remove_meta_ai">Xóa Meta AI</string>

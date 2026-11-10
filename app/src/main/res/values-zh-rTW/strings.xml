@@ -434,6 +434,10 @@
     <string name="ig_dialog_unsent_title">已收回訊息</string>
     <string name="ig_dialog_unsent_export">匯出為 JSON</string>
     <string name="ig_dialog_unsent_exported">已儲存至 %1$s</string>
+    <string name="ig_unsent_export_all">將所有聊天匯出為 CSV</string>
+    <string name="ig_unsent_search_hint">文字、名稱或聊天</string>
+    <string name="ig_unsent_search_none">沒有符合的結果</string>
+    <string name="ig_unsent_search_capped">顯示前 %1$d 筆，共 %2$d 筆。輸入更多內容以縮小範圍。</string>
     <string name="ig_dialog_auto_clear_cache">快取過大時自動清除</string>
     <string name="ig_dialog_section_auto_clear_cache">自動清除快取</string>
     <string name="ig_dialog_misc_remove_meta_ai">移除 Meta AI</string>
