@@ -708,7 +708,8 @@ public final class FeatureCatalog {
             page("dev", Group.TOOLS, R.drawable.ic_code, R.string.ig_dialog_menu_dev_options,
                     section(0,
                             sw("isDevEnabled", R.string.ig_dialog_dev_enable, R.drawable.ic_tune)
-                                    .desc(R.string.cat_isDevEnabled_desc).status("DevOptions")),
+                                    .desc(R.string.cat_isDevEnabled_desc).risk(R.string.cat_risk_dev)
+                                    .status("DevOptions")),
                     section(R.string.feat_config,
                             action("devImport", R.string.ig_dialog_dev_import, R.drawable.ic_download),
                             action("devExport", R.string.ig_dialog_dev_export, R.drawable.ic_upload),

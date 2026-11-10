@@ -985,7 +985,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         f.put("settingsBackup", () -> actionRow("settingsBackup", this::backupSettings));
         f.put("settingsRestore", () -> actionRow("settingsRestore", this::restoreSettings));
         f.put("restartNow", () -> actionRow("restartNow", this::restartInstagram));
-        f.put("devImport", () -> actionRow("devImport", this::importDevConfig));
+        f.put("devImport", () -> actionRow("devImport", this::confirmDevImport));
         f.put("devExport", () -> actionRow("devExport", this::exportDevConfig));
         f.put("devReset", () -> actionRow("devReset", this::restoreDefaultConfig));
         f.put("qualityPointer", () -> {
@@ -2355,6 +2355,15 @@ public class FeaturesFragment extends Fragment implements TabFragment {
 
     private void openHelpAbout() {
         if (getActivity() instanceof ps.reso.instaeclipse.MainActivity) ((ps.reso.instaeclipse.MainActivity) getActivity()).showHelpAbout();
+    }
+
+    private void confirmDevImport() {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.ig_dialog_dev_import)
+                .setMessage(R.string.cat_risk_dev_import)
+                .setPositiveButton(R.string.ig_dialog_yes, (dialog, which) -> importDevConfig())
+                .setNegativeButton(R.string.ig_dialog_cancel, null)
+                .show();
     }
 
     private void importDevConfig() {

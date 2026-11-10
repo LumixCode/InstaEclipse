@@ -430,7 +430,7 @@ Turning off Reels overrides the reel limits. A blocked reel says why and until w
 | Back up and restore settings | All your settings in one file |
 | Back up and restore data | Unsent messages, edit history, hidden chats, read receipt chats, edited post counts, analyzed profiles and followers history in one file |
 | ✨ Restart now | Restarts Instagram; *Clear Instagram's cache and restart* is its own button |
-| Instagram developer options | Meta's internal settings, with config import, export and *Restore to default config* |
+| Instagram developer options | Meta's internal settings, with config import, export and *Restore to default config*. Turning them on and importing a config ask first, because either can get an account flagged |
 
 </details>
 

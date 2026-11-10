@@ -767,7 +767,9 @@ public class DialogUtils {
             case "dataRestore":
                 return catalogAction(context, item, accent, refresh, v -> restoreData(context));
             case "devImport":
-                return catalogAction(context, item, accent, refresh, v -> importDevConfig(context));
+                return catalogAction(context, item, accent, refresh, v -> SettingsGuard.askRisk(context,
+                        I18n.t(context, item.label), I18n.t(context, R.string.cat_risk_dev_import),
+                        () -> importDevConfig(context)));
             case "devExport":
                 return catalogAction(context, item, accent, refresh, v -> exportDevConfig(context));
             case "devReset":
