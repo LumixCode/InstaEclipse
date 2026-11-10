@@ -244,6 +244,11 @@ public final class SelectedMediaDownloads {
     }
 
     private static void start(Context ctx, Captured captured, boolean video, BatchTally batch, boolean local) {
+        if (video && captured.original && FeatureFlags.downloaderCompatibility && captured.video != null) {
+            startVideo(ctx, captured.media.request(captured.video.filename,
+                    new DownloadRequest.Options(0, true, true)), batch, local);
+            return;
+        }
         if (captured.original && (video ? captured.media.originalPlan == null : captured.photoUrl == null)) {
             toast(ctx, I18n.t(ctx, R.string.ie_downloader_original_unavailable));
             reportFailed(ctx, batch);

@@ -731,7 +731,6 @@ public class DialogUtils {
             case "downloaderUseOriginal":
                 return catalogDetail(context, item, accent, downloadQualityRowLabel(context, item), refresh,
                         v -> showDownloadQuality(context, item, detailLabel(v), () -> runAll(refresh)));
-            case "downloaderCompatibility":
             case "downloaderAllowFallback": {
                 ToggleRow row = catalogSwitch(context, item, accent, refresh);
                 refresh.add(() -> row.setVisibility(FeatureFlags.downloaderUseOriginal ? View.GONE : View.VISIBLE));

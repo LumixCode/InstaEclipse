@@ -253,7 +253,7 @@ The whole menu, grouped the way it is inside Instagram. Option names match the m
 | Copy image | Copies the photo to the clipboard |
 | Show media info | Size, length, codec, available qualities and the song, with *Open with* |
 | Quality | *Standard* saves what Instagram shows you; *Best* saves the sharpest version, HDR included, or the sharpest up to a resolution you pick |
-| Prefer videos that play everywhere | Picks the most compatible video when there's a choice |
+| Prefer videos that play everywhere | Picks the most compatible video (H.264 instead of AV1) when there's a choice, in Standard and Best |
 | Use lower quality if Best fails | Offers to save a lower quality instead |
 | Offer audio-only downloads | Asks *Video* or *Audio* when you download a video; audio is saved as .m4a |
 | Download folder | Chosen in the companion app, with a folder per account and the date in file names if you like |

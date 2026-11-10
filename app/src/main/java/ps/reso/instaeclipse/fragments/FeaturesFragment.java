@@ -939,7 +939,6 @@ public class FeaturesFragment extends Fragment implements TabFragment {
         });
         f.put("spoofDevice", () -> valueRow("spoofDevice", spoofDeviceValue(), this::showSpoofDeviceDialog));
         f.put("downloaderUseOriginal", () -> valueRow("downloaderUseOriginal", downloadModeLabel(), this::chooseDownloadQuality));
-        f.put("downloaderCompatibility", () -> bestOnly("downloaderCompatibility"));
         f.put("downloaderAllowFallback", () -> bestOnly("downloaderAllowFallback"));
         f.put("downloadFolder", () -> valueRow("downloadFolder", downloadFolderValue(), this::pickDownloadFolder));
         f.put("downloadFolderReset", () -> {
@@ -1205,7 +1204,7 @@ public class FeaturesFragment extends Fragment implements TabFragment {
     }
 
     private boolean shownOnPage(FeatureCatalog.Item item) {
-        if ("downloaderCompatibility".equals(item.key) || "downloaderAllowFallback".equals(item.key)) {
+        if ("downloaderAllowFallback".equals(item.key)) {
             return !getCurrentState("downloaderUseOriginal");
         }
         return item.kind != FeatureCatalog.Kind.INFO || anyOn(item.requires);
