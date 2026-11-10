@@ -15,6 +15,8 @@ import ps.reso.instaeclipse.utils.feature.FeatureFlags;
 import ps.reso.instaeclipse.utils.feature.FeatureStatusTracker;
 import ps.reso.instaeclipse.utils.i18n.I18n;
 import ps.reso.instaeclipse.utils.log.ModuleLog;
+import ps.reso.instaeclipse.utils.media.InstantHistory;
+import ps.reso.instaeclipse.utils.users.UserUtils;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache;
 import ps.reso.instaeclipse.utils.core.DexKitQueryCache.FoundClass;
 
@@ -27,6 +29,8 @@ public class InstantSaveHook {
     };
     private static final String LONGPRESS_LAMBDA =
             "com.instagram.quicksnap.viewer.compose.PointerTouchKt$handleTapAndLongPressWithRelease$2$1$1$1";
+    private static final String MEDIA_CLASS = "com.instagram.feed.media.Media";
+    private static final String USER_CLASS = "com.instagram.user.model.User";
 
     private static volatile Object currentMedia;
 
@@ -38,6 +42,13 @@ public class InstantSaveHook {
             ModuleLog.ok("(IE|InstantSave) ready");
         } else if (FeatureFlags.saveInstants) {
             FeatureStatusTracker.setBroken("SaveInstants");
+        }
+        if (viewer) {
+            FeatureStatusTracker.setHooked("KeepInstantHistory");
+            ModuleLog.ok("(IE|InstantHistory) ready");
+        } else if (FeatureFlags.keepInstantHistory) {
+            FeatureStatusTracker.setBroken("KeepInstantHistory");
+            ModuleLog.error("(IE|InstantHistory) Viewed Instants will not be kept: the Instant viewer was not found in this Instagram version");
         }
     }
 
@@ -53,8 +64,10 @@ public class InstantSaveHook {
                 XposedBridge.hookMethod(c, new XC_MethodHook() {
                     @Override protected void afterHookedMethod(MethodHookParam p) {
                         try {
-                            Object media = findInstantMedia(p.args);
-                            if (media != null) currentMedia = media;
+                            Object[] instant = findInstant(p.args);
+                            if (instant == null) return;
+                            currentMedia = instant[1];
+                            if (FeatureFlags.keepInstantHistory) keep(instant[0], instant[1]);
                         } catch (Throwable ignored) {}
                     }
                 });
@@ -109,22 +122,43 @@ public class InstantSaveHook {
         return false;
     }
 
-    private static Object findInstantMedia(Object[] args) {
+    private static Object[] findInstant(Object[] args) {
         if (args == null) return null;
         for (Object a : args) {
             if (a == null) continue;
             String cn = a.getClass().getName();
             if (cn.startsWith("java.") || cn.startsWith("android") || cn.startsWith("kotlin")) continue;
             for (java.lang.reflect.Field f : ps.reso.instaeclipse.utils.core.SafeReflect.fields(a.getClass())) {
-                if (!"com.instagram.feed.media.Media".equals(f.getType().getName())) continue;
+                if (!MEDIA_CLASS.equals(f.getType().getName())) continue;
                 try {
                     f.setAccessible(true);
                     Object media = f.get(a);
-                    if (media != null) return media;
+                    if (media != null) return new Object[]{a, media};
                 } catch (Throwable ignored) {}
             }
         }
         return null;
+    }
+
+    private static void keep(Object item, Object media) {
+        String id = mediaId(media);
+        Context app = AndroidAppHelper.currentApplication();
+        if (id == null || app == null) return;
+        InstantHistory.keepAsync(id, () -> {
+            SelectedMediaAdapter.StoryFile file = keptFile(app, media);
+            if (file == null) return null;
+            String author = StoryCapturePolicy.author(item, USER_CLASS, MEDIA_CLASS,
+                    UserUtils::callUsernameGetter, FeedVideoDownloadHook::extractUsernameFromMediaObject);
+            return new InstantHistory.Source(author, file.url, file.video);
+        });
+    }
+
+    private static SelectedMediaAdapter.StoryFile keptFile(Context app, Object media) throws Exception {
+        SelectedMediaAdapter.StoryFile file = SelectedMediaAdapter.storyFile(app, media);
+        if (file != null) return file;
+        SelectedMediaSnapshot snapshot = SelectedMediaAdapter.capture(app, media, "instant");
+        return snapshot.video || snapshot.imageUrl == null ? null
+                : new SelectedMediaAdapter.StoryFile(snapshot.imageUrl, false);
     }
 
     private static final InstantSavePolicy POLICY = new InstantSavePolicy();

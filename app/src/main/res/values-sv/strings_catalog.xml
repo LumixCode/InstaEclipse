@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">Håll in ett klistermärke eller en GIF</string>
     <string name="cat_saveInstants">Spara Instants</string>
     <string name="cat_saveInstants_desc">Håll in en mottagen Instant</string>
+    <string name="cat_keepInstantHistory">Behåll visade Instants</string>
+    <string name="cat_keepInstantHistory_desc">Öppna dem igen när du har svept bort dem. Finns kvar tills du rensar dem; över 500 MB tas de äldsta bort</string>
+    <string name="cat_instantHistory">Visa tidigare Instants</string>
+    <string name="cat_instantHistory_empty">Inga Instants ännu. Slå på ”Behåll visade Instants” och öppna några Instants, så sparas de här.</string>
+    <string name="cat_instantHistory_clear">Rensa tidigare Instants</string>
+    <string name="cat_instantHistory_clear_confirm">Ta bort alla sparade Instants? Detta kan inte ångras.</string>
+    <string name="cat_instantHistory_cleared">Tidigare Instants rensade</string>
+    <string name="cat_instantHistory_open_failed">Kunde inte öppna denna Instant</string>
     <string name="cat_sec_post_menu">Mer i ⋮-menyn</string>
     <string name="cat_copyMediaLink_desc">Direktlänken till foto- eller videofilen</string>
     <string name="cat_offerCopyImage_desc">Kopierar fotot till urklipp</string>

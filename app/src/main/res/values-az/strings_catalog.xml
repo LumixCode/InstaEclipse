@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">Stikeri və ya GIF-i basıb saxlayın</string>
     <string name="cat_saveInstants">Instants-ı saxla</string>
     <string name="cat_saveInstants_desc">Gələn Instant-ı basıb saxlayın</string>
+    <string name="cat_keepInstantHistory">Baxılan Instants-ı saxla</string>
+    <string name="cat_keepInstantHistory_desc">Sürüşdürüb keçdikdən sonra onları yenidən açın. Siz təmizləyənə qədər saxlanılır; 500 MB-dan çox olduqda ən köhnələri silinir</string>
+    <string name="cat_instantHistory">Keçmiş Instants-a bax</string>
+    <string name="cat_instantHistory_empty">Hələ Instants yoxdur. «Baxılan Instants-ı saxla» seçimini aktiv edin və bir neçə Instant açın, onlar burada saxlanılacaq.</string>
+    <string name="cat_instantHistory_clear">Keçmiş Instants-ı təmizlə</string>
+    <string name="cat_instantHistory_clear_confirm">Saxlanılan bütün Instants silinsin? Bu geri qaytarıla bilməz.</string>
+    <string name="cat_instantHistory_cleared">Keçmiş Instants təmizləndi</string>
+    <string name="cat_instantHistory_open_failed">Bu Instant açıla bilmədi</string>
     <string name="cat_sec_post_menu">⋮ menyusunda daha çox</string>
     <string name="cat_copyMediaLink_desc">Foto və ya video faylının birbaşa linki</string>
     <string name="cat_offerCopyImage_desc">Fotonu mübadilə buferinə kopyalayır</string>

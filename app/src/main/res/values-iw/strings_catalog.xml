@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">לחיצה ארוכה על מדבקה או GIF</string>
     <string name="cat_saveInstants">שמור Instants</string>
     <string name="cat_saveInstants_desc">לחיצה ארוכה על Instant שקיבלת</string>
+    <string name="cat_keepInstantHistory">שמור Instants שנצפו</string>
+    <string name="cat_keepInstantHistory_desc">פתח אותם שוב אחרי שהחלקת מהם הלאה. נשמרים עד שתנקה אותם; מעל 500 MB הישנים ביותר נמחקים</string>
+    <string name="cat_instantHistory">הצג Instants קודמים</string>
+    <string name="cat_instantHistory_empty">אין עדיין Instants. הפעל את \"שמור Instants שנצפו\" ופתח כמה Instants, הם יישמרו כאן.</string>
+    <string name="cat_instantHistory_clear">נקה Instants קודמים</string>
+    <string name="cat_instantHistory_clear_confirm">למחוק את כל ה-Instants השמורים? לא ניתן לבטל פעולה זו.</string>
+    <string name="cat_instantHistory_cleared">ה-Instants הקודמים נוקו</string>
+    <string name="cat_instantHistory_open_failed">לא ניתן לפתוח את ה-Instant הזה</string>
     <string name="cat_sec_post_menu">עוד בתפריט ⋮</string>
     <string name="cat_copyMediaLink_desc">הקישור הישיר לקובץ התמונה או הסרטון</string>
     <string name="cat_offerCopyImage_desc">מעתיק את התמונה ללוח</string>

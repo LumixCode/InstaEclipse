@@ -783,7 +783,7 @@ public class FeedVideoDownloadHook {
         DownloadPublisher.save(ctx, tempFile, filename, mimeType, username, new DownloadEngine.Cancellation());
     }
 
-    public static void saveLocalFileToGallery(Context ctx, String localPath, String author,
+    public static void saveLocalFileToGallery(Context ctx, String localPath, String author, String type,
                                               String id, boolean video, String okMsg, String failMsg) {
         executor.submit(() -> {
             try {
@@ -791,10 +791,11 @@ public class FeedVideoDownloadHook {
                 if (!src.exists()) return;
                 MediaTypeDetector.Result named = MediaTypeDetector.verified(
                         ps.reso.instaeclipse.utils.media.StoryCache.mimeOf(localPath, video),
-                        buildFilename(author, "story", id, video));
+                        buildFilename(author, type, id, video));
                 String mime = named.mimeType;
                 saveFileToDestination(ctx, src, named.filename, mime, author);
-                mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, okMsg, android.widget.Toast.LENGTH_SHORT).show());
+                String saved = okMsg != null ? okMsg : I18n.t(ctx, R.string.ig_toast_file_saved, named.filename);
+                mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx, saved, android.widget.Toast.LENGTH_SHORT).show());
                 if (hasCompanionDestination() && !DownloadPublisher.reachesChosenFolder(FeatureFlags.downloaderCustomPath, mime))
                     mainHandler.post(() -> ps.reso.instaeclipse.utils.toast.IeToast.makeText(ctx,
                             I18n.t(ctx, R.string.ig_dl_companion_fallback), Toast.LENGTH_LONG).show());

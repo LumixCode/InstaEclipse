@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">长按贴纸或 GIF</string>
     <string name="cat_saveInstants">保存 Instants</string>
     <string name="cat_saveInstants_desc">长按收到的 Instant</string>
+    <string name="cat_keepInstantHistory">保留看过的 Instants</string>
+    <string name="cat_keepInstantHistory_desc">划走后仍可再次打开。会一直保留到你清除为止；超过 500 MB 时先删除最早的</string>
+    <string name="cat_instantHistory">查看以往的 Instants</string>
+    <string name="cat_instantHistory_empty">还没有 Instants。开启“保留看过的 Instants”并打开一些 Instants，它们会保留在这里。</string>
+    <string name="cat_instantHistory_clear">清除以往的 Instants</string>
+    <string name="cat_instantHistory_clear_confirm">删除所有已保留的 Instants？此操作无法撤销。</string>
+    <string name="cat_instantHistory_cleared">已清除以往的 Instants</string>
+    <string name="cat_instantHistory_open_failed">无法打开此 Instant</string>
     <string name="cat_sec_post_menu">⋮ 菜单中的更多选项</string>
     <string name="cat_copyMediaLink_desc">照片或视频文件的直接链接</string>
     <string name="cat_offerCopyImage_desc">将照片复制到剪贴板</string>

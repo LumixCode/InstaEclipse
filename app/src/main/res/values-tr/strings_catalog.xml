@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">Bir çıkartmaya veya GIF\'e uzun basın</string>
     <string name="cat_saveInstants">Instants\'ı kaydet</string>
     <string name="cat_saveInstants_desc">Gelen bir Instant\'a uzun basın</string>
+    <string name="cat_keepInstantHistory">Görüntülenen Instant\'ları sakla</string>
+    <string name="cat_keepInstantHistory_desc">Kaydırıp geçtikten sonra tekrar açın. Siz temizleyene kadar saklanır; 500 MB aşılınca en eskiler silinir</string>
+    <string name="cat_instantHistory">Geçmiş Instant\'ları gör</string>
+    <string name="cat_instantHistory_empty">Henüz Instant yok. “Görüntülenen Instant\'ları sakla” seçeneğini açın ve birkaç Instant açın; burada saklanırlar.</string>
+    <string name="cat_instantHistory_clear">Geçmiş Instant\'ları temizle</string>
+    <string name="cat_instantHistory_clear_confirm">Saklanan tüm Instant\'lar silinsin mi? Bu işlem geri alınamaz.</string>
+    <string name="cat_instantHistory_cleared">Geçmiş Instant\'lar temizlendi</string>
+    <string name="cat_instantHistory_open_failed">Bu Instant açılamadı</string>
     <string name="cat_sec_post_menu">⋮ menüsünde daha fazlası</string>
     <string name="cat_copyMediaLink_desc">Fotoğraf veya video dosyasının doğrudan bağlantısı</string>
     <string name="cat_offerCopyImage_desc">Fotoğrafı panoya kopyalar</string>

@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">Mantén pulsado un sticker o GIF</string>
     <string name="cat_saveInstants">Guardar Instants</string>
     <string name="cat_saveInstants_desc">Mantén pulsado un Instant recibido</string>
+    <string name="cat_keepInstantHistory">Conservar Instants vistos</string>
+    <string name="cat_keepInstantHistory_desc">Ábrelos de nuevo después de deslizarlos. Se conservan hasta que los borres; por encima de 500 MB se eliminan los más antiguos</string>
+    <string name="cat_instantHistory">Ver Instants anteriores</string>
+    <string name="cat_instantHistory_empty">Aún no hay Instants. Activa «Conservar Instants vistos» y abre algunos Instants; se guardarán aquí.</string>
+    <string name="cat_instantHistory_clear">Borrar Instants anteriores</string>
+    <string name="cat_instantHistory_clear_confirm">¿Eliminar todos los Instants guardados? Esta acción no se puede deshacer.</string>
+    <string name="cat_instantHistory_cleared">Instants anteriores borrados</string>
+    <string name="cat_instantHistory_open_failed">No se pudo abrir este Instant</string>
     <string name="cat_sec_post_menu">Más en el menú ⋮</string>
     <string name="cat_copyMediaLink_desc">El enlace directo al archivo de la foto o el vídeo</string>
     <string name="cat_offerCopyImage_desc">Copia la foto al portapapeles</string>

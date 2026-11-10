@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">Long-press a sticker or GIF</string>
     <string name="cat_saveInstants">Save Instants</string>
     <string name="cat_saveInstants_desc">Long-press a received Instant</string>
+    <string name="cat_keepInstantHistory">Keep viewed Instants</string>
+    <string name="cat_keepInstantHistory_desc">Open them again after you swipe them away. Kept until you clear them; above 500 MB the oldest are removed</string>
+    <string name="cat_instantHistory">View past Instants</string>
+    <string name="cat_instantHistory_empty">No past Instants yet. Turn on “Keep viewed Instants” and open some Instants; they will be kept here.</string>
+    <string name="cat_instantHistory_clear">Clear past Instants</string>
+    <string name="cat_instantHistory_clear_confirm">Delete all kept Instants? This cannot be undone.</string>
+    <string name="cat_instantHistory_cleared">Past Instants cleared</string>
+    <string name="cat_instantHistory_open_failed">Couldn\'t open this Instant</string>
     <string name="cat_sec_post_menu">More in the ⋮ menu</string>
     <string name="cat_copyMediaLink_desc">The direct link to the photo or video file</string>
     <string name="cat_offerCopyImage_desc">Copies the photo to the clipboard</string>

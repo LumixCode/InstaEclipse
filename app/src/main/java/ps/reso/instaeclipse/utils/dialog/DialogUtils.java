@@ -740,6 +740,8 @@ public class DialogUtils {
                 return downloadFolderBlock(context, item);
             case "storyCacheHours":
                 return storyCacheDurationRow(context, item, refresh);
+            case "instantHistory":
+                return catalogAction(context, item, accent, refresh, v -> showInstantHistory(context));
             case "cachedStories":
                 return catalogAction(context, item, accent, refresh, v -> showCachedStories(context));
             case "unsentLog":
@@ -2929,23 +2931,72 @@ public class DialogUtils {
         }, h -> I18n.t(context, R.string.ig_story_cache_hours, h));
     }
 
+    private static final class KeptMedia {
+        final String type;
+        final int title, empty, clear, clearConfirm, cleared, openFailed, saving, saved, saveFailed;
+        final java.util.concurrent.Callable<java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry>> entries;
+        final java.util.function.Consumer<Runnable> clearAll;
+
+        KeptMedia(String type, int title, int empty, int clear, int clearConfirm, int cleared, int openFailed,
+                  int saving, int saved, int saveFailed,
+                  java.util.concurrent.Callable<java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry>> entries,
+                  java.util.function.Consumer<Runnable> clearAll) {
+            this.type = type;
+            this.title = title;
+            this.empty = empty;
+            this.clear = clear;
+            this.clearConfirm = clearConfirm;
+            this.cleared = cleared;
+            this.openFailed = openFailed;
+            this.saving = saving;
+            this.saved = saved;
+            this.saveFailed = saveFailed;
+            this.entries = entries;
+            this.clearAll = clearAll;
+        }
+    }
+
+    private static final KeptMedia CACHED_STORIES = new KeptMedia("story",
+            R.string.ig_story_cache_view, R.string.ig_story_cache_empty_current,
+            R.string.ig_story_cache_clear, R.string.ig_story_cache_clear_confirm, R.string.ig_story_cache_cleared,
+            R.string.ig_story_cache_open_failed,
+            R.string.ig_story_cache_saving, R.string.ig_story_cache_saved, R.string.ig_story_cache_save_fail,
+            ps.reso.instaeclipse.utils.media.StoryCache::entries,
+            ps.reso.instaeclipse.utils.media.StoryCache::clearAllAsync);
+
+    private static final KeptMedia KEPT_INSTANTS = new KeptMedia("instant",
+            R.string.cat_instantHistory, R.string.cat_instantHistory_empty,
+            R.string.cat_instantHistory_clear, R.string.cat_instantHistory_clear_confirm, R.string.cat_instantHistory_cleared,
+            R.string.cat_instantHistory_open_failed,
+            R.string.ie_download_saving, 0, R.string.ie_download_reason_generic,
+            ps.reso.instaeclipse.utils.media.InstantHistory::entries,
+            ps.reso.instaeclipse.utils.media.InstantHistory::clearAllAsync);
+
     private static void showCachedStories(Context context) {
+        showKeptMedia(context, CACHED_STORIES);
+    }
+
+    private static void showInstantHistory(Context context) {
+        showKeptMedia(context, KEPT_INSTANTS);
+    }
+
+    private static void showKeptMedia(Context context, KeptMedia media) {
         IeSheet sheet = IeSheet.showing(context);
         IeSheet.Page from = sheet != null ? sheet.top() : null;
-        MenuWorker.load(ps.reso.instaeclipse.utils.media.StoryCache::entries, entries -> {
-            IeSheet.Page page = cachedStoriesPage(context, entries);
+        MenuWorker.load(media.entries, entries -> {
+            IeSheet.Page page = keptMediaPage(context, media, entries);
             if (sheet == null) IeSheet.open(context, page, null);
             else if (sheet.isShowing() && sheet.top() == from) sheet.push(page);
         });
     }
 
-    private static IeSheet.Page cachedStoriesPage(Context context,
-                                                  java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry> entries) {
+    private static IeSheet.Page keptMediaPage(Context context, KeptMedia media,
+                                              java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry> entries) {
         LinearLayout layout = createSwitchLayout(context);
         IeSheet.Page[] self = new IeSheet.Page[1];
         if (entries == null || entries.isEmpty()) {
-            layout.addView(IeRows.helpText(context, I18n.t(context, R.string.ig_story_cache_empty_current)));
-            return new IeSheet.Page(I18n.t(context, R.string.ig_story_cache_view), layout);
+            layout.addView(IeRows.helpText(context, I18n.t(context, media.empty)));
+            return new IeSheet.Page(I18n.t(context, media.title), layout);
         }
         java.util.LinkedHashMap<String, java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry>> byUser =
                 new java.util.LinkedHashMap<>();
@@ -2959,40 +3010,39 @@ public class DialogUtils {
             final String author = u.getKey().isEmpty() ? I18n.t(context, R.string.ig_story_cache_unknown_author) : u.getKey();
             final java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry> list = u.getValue();
             LinearLayout row = (LinearLayout) IeRows.actionRow(context, R.drawable.ic_folder,
-                    author, "#FF9F0A", v -> showUserStories(context, author, list));
+                    author, "#FF9F0A", v -> showKeptFrom(context, media, author, list));
             row.addView(trailingLabel(context, java.text.NumberFormat.getIntegerInstance().format(list.size()), p.sub));
             foldersCard.addView(row);
         }
         layout.addView(foldersCard);
-        layout.addView(IeRows.actionRow(context, R.drawable.ic_delete, I18n.t(context, R.string.ig_story_cache_clear),
+        layout.addView(IeRows.actionRow(context, R.drawable.ic_delete, I18n.t(context, media.clear),
                 "#FF453A", v -> {
                     try {
                         IeDialog dlg = new IeDialog(context)
-                                .title(I18n.t(context, R.string.ig_story_cache_clear))
-                                .message(I18n.t(context, R.string.ig_story_cache_clear_confirm));
+                                .title(I18n.t(context, media.clear))
+                                .message(I18n.t(context, media.clearConfirm));
                         dlg.secondary(context.getString(android.R.string.cancel), null);
-                        dlg.primary(I18n.t(context, R.string.ig_story_cache_clear), () ->
-                                ps.reso.instaeclipse.utils.media.StoryCache.clearAllAsync(() -> MenuWorker.load(
-                                        ps.reso.instaeclipse.utils.media.StoryCache::entries, left -> {
-                            ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_story_cache_cleared), Toast.LENGTH_SHORT).show();
+                        dlg.primary(I18n.t(context, media.clear), () ->
+                                media.clearAll.accept(() -> MenuWorker.load(media.entries, left -> {
+                            ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, media.cleared), Toast.LENGTH_SHORT).show();
                             IeSheet sheet = IeSheet.showing(context);
-                            if (sheet != null && sheet.top() == self[0]) sheet.replaceTop(cachedStoriesPage(context, left));
+                            if (sheet != null && sheet.top() == self[0]) sheet.replaceTop(keptMediaPage(context, media, left));
                         })));
                         dlg.show();
                     } catch (Throwable ignored) {}
                 }));
-        self[0] = new IeSheet.Page(I18n.t(context, R.string.ig_story_cache_view), layout);
+        self[0] = new IeSheet.Page(I18n.t(context, media.title), layout);
         return self[0];
     }
 
-    private static void showUserStories(Context context, String author,
-                                        java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry> list) {
+    private static void showKeptFrom(Context context, KeptMedia media, String author,
+                                     java.util.List<ps.reso.instaeclipse.utils.media.StoryCache.Entry> list) {
         LinearLayout layout = createSwitchLayout(context);
         LinearLayout cardView = IeRows.card(context, 5);
         IePalette p = IePalette.of(context);
         for (ps.reso.instaeclipse.utils.media.StoryCache.Entry e : list) {
             LinearLayout row = (LinearLayout) IeRows.actionRow(context, e.video ? R.drawable.ic_movie : R.drawable.ic_gallery,
-                    viewedAt(context, e), "#FF9F0A", v -> openCachedStory(context, e));
+                    viewedAt(context, e), "#FF9F0A", v -> openKept(context, media, e));
             if (e.isExpired()) row.addView(trailingLabel(context, I18n.t(context, R.string.ig_story_cache_expired), p.danger));
             cardView.addView(row);
         }
@@ -3001,10 +3051,11 @@ public class DialogUtils {
     }
 
     private static String viewedAt(Context context, ps.reso.instaeclipse.utils.media.StoryCache.Entry e) {
+        if (e.at <= 0) return I18n.t(context, R.string.ig_edit_history_time_unknown);
         return I18n.t(context, R.string.ig_story_cache_viewed_at, shortDate(context, e.at));
     }
 
-    private static void openCachedStory(Context context, ps.reso.instaeclipse.utils.media.StoryCache.Entry e) {
+    private static void openKept(Context context, KeptMedia media, ps.reso.instaeclipse.utils.media.StoryCache.Entry e) {
         try {
             IePalette p = IePalette.of(context);
             android.app.Dialog dialog = new android.app.Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
@@ -3036,7 +3087,7 @@ public class DialogUtils {
                     if (!dialog.isShowing()) return;
                     spinner.setVisibility(View.GONE);
                     if (bitmap == null) {
-                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_story_cache_open_failed), Toast.LENGTH_SHORT).show();
+                        ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, media.openFailed), Toast.LENGTH_SHORT).show();
                         dialog.dismiss();
                         return;
                     }
@@ -3099,13 +3150,13 @@ public class DialogUtils {
             sLp.gravity = Gravity.BOTTOM | Gravity.END;
             sLp.rightMargin = pad; sLp.bottomMargin = Math.round(28 * d);
             save.setLayoutParams(sLp);
-            save.setOnClickListener(v -> saveCachedStoryToGallery(context, e));
+            save.setOnClickListener(v -> saveKeptToGallery(context, media, e));
             root.addView(save);
 
             dialog.setContentView(root);
             dialog.show();
         } catch (Throwable t) {
-            ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_story_cache_open_failed), Toast.LENGTH_SHORT).show();
+            ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, media.openFailed), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -3125,12 +3176,12 @@ public class DialogUtils {
         return sample;
     }
 
-    private static void saveCachedStoryToGallery(Context context, ps.reso.instaeclipse.utils.media.StoryCache.Entry e) {
-        ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, R.string.ig_story_cache_saving), Toast.LENGTH_SHORT).show();
+    private static void saveKeptToGallery(Context context, KeptMedia media, ps.reso.instaeclipse.utils.media.StoryCache.Entry e) {
+        ps.reso.instaeclipse.utils.toast.IeToast.makeText(context, I18n.t(context, media.saving), Toast.LENGTH_SHORT).show();
         ps.reso.instaeclipse.mods.media.FeedVideoDownloadHook.saveLocalFileToGallery(
                 context, e.path,
-                (e.author == null || e.author.isEmpty()) ? "story" : e.author, e.id, e.video,
-                I18n.t(context, R.string.ig_story_cache_saved), I18n.t(context, R.string.ig_story_cache_save_fail));
+                (e.author == null || e.author.isEmpty()) ? media.type : e.author, media.type, e.id, e.video,
+                media.saved == 0 ? null : I18n.t(context, media.saved), I18n.t(context, media.saveFailed));
     }
 
     private static void backupSettings(Context context) {

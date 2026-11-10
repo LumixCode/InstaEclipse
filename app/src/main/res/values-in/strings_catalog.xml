@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">Tekan lama stiker atau GIF</string>
     <string name="cat_saveInstants">Simpan Instants</string>
     <string name="cat_saveInstants_desc">Tekan lama Instant yang diterima</string>
+    <string name="cat_keepInstantHistory">Pertahankan Instants yang dilihat</string>
+    <string name="cat_keepInstantHistory_desc">Buka lagi setelah Anda menggesernya. Disimpan sampai Anda menghapusnya; di atas 500 MB yang terlama dihapus</string>
+    <string name="cat_instantHistory">Lihat Instants sebelumnya</string>
+    <string name="cat_instantHistory_empty">Belum ada Instants. Aktifkan “Pertahankan Instants yang dilihat” lalu buka beberapa Instants; semuanya akan disimpan di sini.</string>
+    <string name="cat_instantHistory_clear">Hapus Instants sebelumnya</string>
+    <string name="cat_instantHistory_clear_confirm">Hapus semua Instants yang disimpan? Tindakan ini tidak dapat dibatalkan.</string>
+    <string name="cat_instantHistory_cleared">Instants sebelumnya dihapus</string>
+    <string name="cat_instantHistory_open_failed">Tidak dapat membuka Instant ini</string>
     <string name="cat_sec_post_menu">Lainnya di menu ⋮</string>
     <string name="cat_copyMediaLink_desc">Tautan langsung ke file foto atau video</string>
     <string name="cat_offerCopyImage_desc">Menyalin foto ke clipboard</string>

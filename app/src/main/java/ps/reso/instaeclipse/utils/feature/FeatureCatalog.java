@@ -356,7 +356,12 @@ public final class FeatureCatalog {
                                     .aliases(R.string.ig_dialog_downloader_stickers),
                             sw("saveInstants", R.string.cat_saveInstants, R.drawable.ic_download)
                                     .desc(R.string.cat_saveInstants_desc).status("SaveInstants")
-                                    .aliases(R.string.ig_dialog_misc_save_instants)),
+                                    .aliases(R.string.ig_dialog_misc_save_instants),
+                            sw("keepInstantHistory", R.string.cat_keepInstantHistory, R.drawable.ic_download)
+                                    .desc(R.string.cat_keepInstantHistory_desc).status("KeepInstantHistory")
+                                    .words("history", "past instants"),
+                            action("instantHistory", R.string.cat_instantHistory, R.drawable.ic_eye)
+                                    .side(Side.IG_ONLY).words("history", "past instants")),
                     section(R.string.cat_sec_post_menu,
                             sw("copyMediaLink", R.string.ig_dialog_downloader_copy_link, R.drawable.ic_link)
                                     .desc(R.string.cat_copyMediaLink_desc).status("CopyMediaLink"),

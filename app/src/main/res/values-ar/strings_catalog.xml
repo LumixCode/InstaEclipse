@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">اضغط مطولًا على ملصق أو صورة GIF</string>
     <string name="cat_saveInstants">حفظ Instants</string>
     <string name="cat_saveInstants_desc">اضغط مطولًا على Instant وصلك</string>
+    <string name="cat_keepInstantHistory">الاحتفاظ بـ Instants التي شاهدتها</string>
+    <string name="cat_keepInstantHistory_desc">افتحها مجددًا بعد تمريرها. تبقى محفوظة حتى تمسحها، وعند تجاوز 500 MB تُحذف الأقدم أولًا</string>
+    <string name="cat_instantHistory">عرض Instants السابقة</string>
+    <string name="cat_instantHistory_empty">لا توجد Instants بعد. فعّل «الاحتفاظ بـ Instants التي شاهدتها» وافتح بعض Instants، وسيتم الاحتفاظ بها هنا.</string>
+    <string name="cat_instantHistory_clear">مسح Instants السابقة</string>
+    <string name="cat_instantHistory_clear_confirm">حذف كل Instants المحفوظة؟ لا يمكن التراجع عن ذلك.</string>
+    <string name="cat_instantHistory_cleared">تم مسح Instants السابقة</string>
+    <string name="cat_instantHistory_open_failed">تعذّر فتح هذا الـ Instant</string>
     <string name="cat_sec_post_menu">المزيد في قائمة ⋮</string>
     <string name="cat_copyMediaLink_desc">الرابط المباشر لملف الصورة أو الفيديو</string>
     <string name="cat_offerCopyImage_desc">ينسخ الصورة إلى الحافظة</string>

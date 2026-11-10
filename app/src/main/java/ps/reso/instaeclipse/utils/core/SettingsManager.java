@@ -224,6 +224,7 @@ public class SettingsManager {
         editor.putBoolean("downloaderAddTimestamp", FeatureFlags.downloaderAddTimestamp);
         editor.putBoolean("copyMediaLink", FeatureFlags.copyMediaLink);
         editor.putBoolean("saveInstants", FeatureFlags.saveInstants);
+        editor.putBoolean("keepInstantHistory", FeatureFlags.keepInstantHistory);
         editor.putBoolean("uploadInstants", FeatureFlags.uploadInstants);
         editor.putBoolean("cacheStories", FeatureFlags.cacheStories);
         FeatureFlags.storyCacheHours = StoryCacheRetention.normalize(FeatureFlags.storyCacheHours);
@@ -471,6 +472,7 @@ public class SettingsManager {
         FeatureFlags.downloaderAddTimestamp   = prefs.getBoolean("downloaderAddTimestamp", false);
         FeatureFlags.copyMediaLink            = prefs.getBoolean("copyMediaLink", false);
         FeatureFlags.saveInstants             = prefs.getBoolean("saveInstants", false);
+        FeatureFlags.keepInstantHistory       = prefs.getBoolean("keepInstantHistory", false);
         FeatureFlags.uploadInstants           = prefs.getBoolean("uploadInstants", false);
         FeatureFlags.cacheStories             = prefs.getBoolean("cacheStories", false);
         FeatureFlags.storyCacheHours          = StoryCacheRetention.fromStored(all.get("storyCacheHours"));

@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">Nhấn giữ một nhãn dán hoặc GIF</string>
     <string name="cat_saveInstants">Lưu Instants</string>
     <string name="cat_saveInstants_desc">Nhấn giữ một Instant đã nhận</string>
+    <string name="cat_keepInstantHistory">Giữ Instants đã xem</string>
+    <string name="cat_keepInstantHistory_desc">Mở lại sau khi bạn vuốt qua. Được giữ đến khi bạn xóa; vượt 500 MB thì mục cũ nhất bị xóa trước</string>
+    <string name="cat_instantHistory">Xem Instants trước đây</string>
+    <string name="cat_instantHistory_empty">Chưa có Instants nào. Hãy bật “Giữ Instants đã xem” rồi mở vài Instants, chúng sẽ được giữ ở đây.</string>
+    <string name="cat_instantHistory_clear">Xóa Instants trước đây</string>
+    <string name="cat_instantHistory_clear_confirm">Xóa tất cả Instants đã giữ? Không thể hoàn tác.</string>
+    <string name="cat_instantHistory_cleared">Đã xóa Instants trước đây</string>
+    <string name="cat_instantHistory_open_failed">Không mở được Instant này</string>
     <string name="cat_sec_post_menu">Mục bổ sung trong menu ⋮</string>
     <string name="cat_copyMediaLink_desc">Liên kết trực tiếp tới tệp ảnh hoặc video</string>
     <string name="cat_offerCopyImage_desc">Sao chép ảnh vào bộ nhớ tạm</string>

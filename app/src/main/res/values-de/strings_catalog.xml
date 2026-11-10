@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">Sticker oder GIF lange drücken</string>
     <string name="cat_saveInstants">Instants speichern</string>
     <string name="cat_saveInstants_desc">Empfangenes Instant lange drücken</string>
+    <string name="cat_keepInstantHistory">Angesehene Instants behalten</string>
+    <string name="cat_keepInstantHistory_desc">Öffne sie erneut, nachdem du sie weggewischt hast. Bleiben, bis du sie löschst; über 500 MB werden die ältesten entfernt</string>
+    <string name="cat_instantHistory">Frühere Instants ansehen</string>
+    <string name="cat_instantHistory_empty">Noch keine Instants. Schalte „Angesehene Instants behalten“ ein und öffne ein paar Instants, sie werden hier aufbewahrt.</string>
+    <string name="cat_instantHistory_clear">Frühere Instants löschen</string>
+    <string name="cat_instantHistory_clear_confirm">Alle gespeicherten Instants löschen? Das lässt sich nicht rückgängig machen.</string>
+    <string name="cat_instantHistory_cleared">Frühere Instants gelöscht</string>
+    <string name="cat_instantHistory_open_failed">Instant konnte nicht geöffnet werden</string>
     <string name="cat_sec_post_menu">Mehr im ⋮-Menü</string>
     <string name="cat_copyMediaLink_desc">Der direkte Link zur Foto- oder Videodatei</string>
     <string name="cat_offerCopyImage_desc">Kopiert das Foto in die Zwischenablage</string>

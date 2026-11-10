@@ -230,6 +230,7 @@ public class FeatureManager {
         } else {
             FeatureStatusTracker.setDisabled("SaveInstants");
         }
+        reg(FeatureFlags.keepInstantHistory, "KeepInstantHistory", R.string.cat_keepInstantHistory);
 
         if (FeatureFlags.uploadInstants) {
             FeatureStatusTracker.setEnabled("UploadInstants", R.string.ig_dialog_misc_upload_instants);

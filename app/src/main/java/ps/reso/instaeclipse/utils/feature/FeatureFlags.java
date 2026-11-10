@@ -200,6 +200,7 @@ public class FeatureFlags {
     public static volatile boolean downloaderAddTimestamp = false;
     public static volatile boolean copyMediaLink = false;
     public static volatile boolean saveInstants = false;
+    public static volatile boolean keepInstantHistory = false;
     public static volatile boolean uploadInstants = false;
     public static volatile boolean cacheStories = false;
     public static volatile int storyCacheHours = 24;

@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">Appui long sur un sticker ou un GIF</string>
     <string name="cat_saveInstants">Enregistrer les Instants</string>
     <string name="cat_saveInstants_desc">Appui long sur un Instant reçu</string>
+    <string name="cat_keepInstantHistory">Conserver les Instants vus</string>
+    <string name="cat_keepInstantHistory_desc">Rouvrez-les après les avoir balayés. Conservés jusqu\'à ce que vous les effaciez ; au-delà de 500 Mo, les plus anciens sont supprimés</string>
+    <string name="cat_instantHistory">Voir les anciens Instants</string>
+    <string name="cat_instantHistory_empty">Aucun Instant pour l\'instant. Activez « Conserver les Instants vus » et ouvrez quelques Instants, ils seront conservés ici.</string>
+    <string name="cat_instantHistory_clear">Effacer les anciens Instants</string>
+    <string name="cat_instantHistory_clear_confirm">Supprimer tous les Instants conservés ? Cette action est irréversible.</string>
+    <string name="cat_instantHistory_cleared">Anciens Instants effacés</string>
+    <string name="cat_instantHistory_open_failed">Impossible d\'ouvrir cet Instant</string>
     <string name="cat_sec_post_menu">Ajouts au menu ⋮</string>
     <string name="cat_copyMediaLink_desc">Le lien direct vers le fichier photo ou vidéo</string>
     <string name="cat_offerCopyImage_desc">Copie la photo dans le presse-papiers</string>

@@ -32,6 +32,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntConsumer;
+import java.util.function.Predicate;
 
 import ps.reso.instaeclipse.utils.core.StartupIdle;
 import ps.reso.instaeclipse.utils.download.DownloadEngine;
@@ -310,7 +311,7 @@ public class StoryCache {
         return mimeOfPath(path, video);
     }
 
-    private static String fileStem(String id) {
+    static String fileStem(String id) {
         return id.replaceAll("[^A-Za-z0-9._-]", "_");
     }
 
@@ -332,6 +333,29 @@ public class StoryCache {
         }), STARTUP_PRUNE_DELAY_MS);
     }
 
+    static List<Entry> surplus(List<Entry> oldestFirst, Predicate<Entry> expired) {
+        List<Entry> drop = new ArrayList<>();
+        long[] sizes = new long[oldestFirst.size()];
+        long total = 0;
+        for (int i = 0; i < oldestFirst.size(); i++) {
+            Entry e = oldestFirst.get(i);
+            File mf = new File(e.path);
+            if (expired.test(e) || !mf.exists()) {
+                drop.add(e);
+                sizes[i] = -1;
+            } else {
+                sizes[i] = mf.length();
+                total += sizes[i];
+            }
+        }
+        for (int i = 0; i < oldestFirst.size() && total > MAX_BYTES; i++) {
+            if (sizes[i] < 0) continue;
+            total -= sizes[i];
+            drop.add(oldestFirst.get(i));
+        }
+        return drop;
+    }
+
     private static boolean prune() {
         List<Entry> snapshot;
         synchronized (StoryCache.class) {
@@ -340,25 +364,7 @@ public class StoryCache {
         }
         long now = System.currentTimeMillis();
         int hours = StoryCacheRetention.normalize(FeatureFlags.storyCacheHours);
-        List<Entry> drop = new ArrayList<>();
-        long[] sizes = new long[snapshot.size()];
-        long total = 0;
-        for (int i = 0; i < snapshot.size(); i++) {
-            Entry e = snapshot.get(i);
-            File mf = new File(e.path);
-            if (StoryCacheRetention.expired(e.at, now, hours) || !mf.exists()) {
-                drop.add(e);
-                sizes[i] = -1;
-            } else {
-                sizes[i] = mf.length();
-                total += sizes[i];
-            }
-        }
-        for (int i = 0; i < snapshot.size() && total > MAX_BYTES; i++) {
-            if (sizes[i] < 0) continue;
-            total -= sizes[i];
-            drop.add(snapshot.get(i));
-        }
+        List<Entry> drop = surplus(snapshot, e -> StoryCacheRetention.expired(e.at, now, hours));
         if (drop.isEmpty()) return false;
         List<Entry> removed = new ArrayList<>();
         synchronized (StoryCache.class) {

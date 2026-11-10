@@ -249,6 +249,7 @@ The whole menu, grouped the way it is inside Instagram. Option names match the m
 | ✨ Download voice messages | Long-press a voice message; named after the sender |
 | ✨ Download stickers and GIFs | Long-press a sticker or GIF in a chat |
 | Save Instants | Long-press a received Instant |
+| 🆕 Keep viewed Instants | Every Instant you view is kept on your phone, sorted by sender, so you can open it again after you swipe it away. *View past Instants* in the menu lists them newest first and clears them. Kept until you clear them; above 500 MB the oldest are removed |
 | Copy media link | The direct link to the photo or video file, also for a single carousel slide |
 | Copy image | Copies the photo to the clipboard |
 | Show media info | Size, length, codec, available qualities and the song, with *Open with* |

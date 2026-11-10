@@ -436,7 +436,7 @@ public class InstallPlan {
                 .withFeatures("PostDownload", "CopyMediaLink", "CopyImage", "MediaInfo"));
         s.add(new InstallStep(REEL_MENU_LABELS, "ReelMenuLabels", null, "(InstaEclipse | ReelMenuLabels): ", COULD_NOT_START, true, null));
         s.add(new InstallStep(INSTANT_SAVE_HOOK, "InstantSaveHook", null, "(InstaEclipse | InstantSave): ", COULD_NOT_START, true, null)
-                .withFeatures("SaveInstants"));
+                .withFeatures("SaveInstants", "KeepInstantHistory"));
         s.add(new InstallStep(INSTANT_UPLOAD_HOOK, "InstantUploadHook", null, "(InstaEclipse | InstantUpload): ", COULD_NOT_START, false, "uploadInstants")
                 .withFeatures("UploadInstants")
                 .withRestartKeys("uploadInstants"));

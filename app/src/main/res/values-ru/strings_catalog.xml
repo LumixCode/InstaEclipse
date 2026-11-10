@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">Удерживайте стикер или GIF</string>
     <string name="cat_saveInstants">Сохранять Instants</string>
     <string name="cat_saveInstants_desc">Удерживайте полученный Instant</string>
+    <string name="cat_keepInstantHistory">Хранить просмотренные Instants</string>
+    <string name="cat_keepInstantHistory_desc">Открывайте их снова после того, как пролистнули. Хранятся, пока вы их не очистите; при превышении 500 МБ удаляются самые старые</string>
+    <string name="cat_instantHistory">Прошлые Instants</string>
+    <string name="cat_instantHistory_empty">Instants пока нет. Включите «Хранить просмотренные Instants» и откройте несколько Instants — они сохранятся здесь.</string>
+    <string name="cat_instantHistory_clear">Очистить прошлые Instants</string>
+    <string name="cat_instantHistory_clear_confirm">Удалить все сохранённые Instants? Это действие нельзя отменить.</string>
+    <string name="cat_instantHistory_cleared">Прошлые Instants удалены</string>
+    <string name="cat_instantHistory_open_failed">Не удалось открыть Instant</string>
     <string name="cat_sec_post_menu">Дополнительно в меню ⋮</string>
     <string name="cat_copyMediaLink_desc">Прямая ссылка на файл фото или видео</string>
     <string name="cat_offerCopyImage_desc">Копирует фото в буфер обмена</string>

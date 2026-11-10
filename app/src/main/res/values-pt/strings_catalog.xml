@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">Toque e segure uma figurinha ou GIF</string>
     <string name="cat_saveInstants">Salvar Instants</string>
     <string name="cat_saveInstants_desc">Toque e segure um Instant recebido</string>
+    <string name="cat_keepInstantHistory">Guardar Instants vistos</string>
+    <string name="cat_keepInstantHistory_desc">Abra de novo depois de deslizar. Ficam guardados até você limpar; acima de 500 MB os mais antigos são removidos</string>
+    <string name="cat_instantHistory">Ver Instants anteriores</string>
+    <string name="cat_instantHistory_empty">Ainda não há Instants. Ative “Guardar Instants vistos” e abra alguns Instants; eles serão guardados aqui.</string>
+    <string name="cat_instantHistory_clear">Limpar Instants anteriores</string>
+    <string name="cat_instantHistory_clear_confirm">Excluir todos os Instants guardados? Esta ação não pode ser desfeita.</string>
+    <string name="cat_instantHistory_cleared">Instants anteriores limpos</string>
+    <string name="cat_instantHistory_open_failed">Não foi possível abrir este Instant</string>
     <string name="cat_sec_post_menu">Mais no menu ⋮</string>
     <string name="cat_copyMediaLink_desc">O link direto do arquivo da foto ou do vídeo</string>
     <string name="cat_offerCopyImage_desc">Copia a foto para a área de transferência</string>

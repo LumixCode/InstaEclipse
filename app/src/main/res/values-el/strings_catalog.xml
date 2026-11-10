@@ -61,6 +61,14 @@
     <string name="cat_enableStickerDownload_desc">Παρατεταμένο πάτημα σε αυτοκόλλητο ή GIF</string>
     <string name="cat_saveInstants">Αποθήκευση Instants</string>
     <string name="cat_saveInstants_desc">Παρατεταμένο πάτημα σε ληφθέν Instant</string>
+    <string name="cat_keepInstantHistory">Διατήρηση Instants που είδατε</string>
+    <string name="cat_keepInstantHistory_desc">Ανοίξτε τα ξανά αφού τα προσπεράσετε. Διατηρούνται μέχρι να τα διαγράψετε· πάνω από 500 MB αφαιρούνται τα παλαιότερα</string>
+    <string name="cat_instantHistory">Προβολή παλιών Instants</string>
+    <string name="cat_instantHistory_empty">Δεν υπάρχουν ακόμα Instants. Ενεργοποιήστε τη «Διατήρηση Instants που είδατε» και ανοίξτε μερικά Instants· θα διατηρούνται εδώ.</string>
+    <string name="cat_instantHistory_clear">Διαγραφή παλιών Instants</string>
+    <string name="cat_instantHistory_clear_confirm">Διαγραφή όλων των αποθηκευμένων Instants; Δεν είναι δυνατή η αναίρεση.</string>
+    <string name="cat_instantHistory_cleared">Τα παλιά Instants διαγράφηκαν</string>
+    <string name="cat_instantHistory_open_failed">Το Instant δεν άνοιξε</string>
     <string name="cat_sec_post_menu">Περισσότερα στο μενού ⋮</string>
     <string name="cat_copyMediaLink_desc">Ο απευθείας σύνδεσμος στο αρχείο φωτογραφίας ή βίντεο</string>
     <string name="cat_offerCopyImage_desc">Αντιγράφει τη φωτογραφία στο πρόχειρο</string>
