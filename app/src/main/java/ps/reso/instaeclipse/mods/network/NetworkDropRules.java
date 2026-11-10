@@ -30,6 +30,7 @@ public final class NetworkDropRules {
         if (FeatureFlags.isGhostViewOnce) {
             shouldDrop |= path.endsWith("/item_replayed/");
             shouldDrop |= (path.contains("/direct") && path.endsWith("/item_seen/"));
+            shouldDrop |= path.contains("/visual_threads/") && path.endsWith("/seen/");
         }
         if (FeatureFlags.isGhostLive) {
             shouldDrop |= path.contains("/heartbeat_and_get_viewer_count/");

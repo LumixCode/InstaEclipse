@@ -17,7 +17,50 @@ import ps.reso.instaeclipse.utils.core.DexKitQueryCache.Found;
 
 public class GhostViewOnceHook {
 
+    private static final String ITEM_CACHE = "GhostViewOnce_item_v1";
+    private static final String ITEM_ANCHOR = "direct_v2/visual_threads/%s/visual_items/%s/seen/";
+
     public void handleViewOnceBlock() {
+        if (hookOpened()) hookItemSeen();
+    }
+
+    private void hookItemSeen() {
+        try {
+            Method reporter = DexKitCache.isCacheValid() ? DexKitCache.loadMethod(ITEM_CACHE, Module.hostClassLoader) : null;
+            if (reporter == null || !isReporter(reporter)) {
+                reporter = singleReporter(FindMethod.create().matcher(MethodMatcher.create().usingStrings(ITEM_ANCHOR)));
+                if (reporter != null) DexKitCache.saveMethod(ITEM_CACHE, reporter);
+            }
+            if (reporter == null) {
+                ModuleLog.warn("(InstaEclipse | ViewOnce): Opening media that Replay view-once media keeps may still be reported: that report was not found in this Instagram version");
+                return;
+            }
+            XposedBridge.hookMethod(reporter, buildViewOnceHook());
+            ModuleLog.detail("(InstaEclipse | ViewOnce): hooked (kept media): "
+                    + reporter.getDeclaringClass().getName() + "." + reporter.getName());
+        } catch (Throwable t) {
+            ModuleLog.warn("(InstaEclipse | ViewOnce): Opening media that Replay view-once media keeps may still be reported: "
+                    + t.getClass().getSimpleName() + ": " + t.getMessage());
+        }
+    }
+
+    private static Method singleReporter(FindMethod query) {
+        Method reporter = null;
+        for (Found method : DexKitQueryCache.methods(query)) {
+            Method candidate;
+            try {
+                candidate = method.getMethodInstance(Module.hostClassLoader);
+            } catch (Throwable e) {
+                continue;
+            }
+            if (!isReporter(candidate) || candidate.equals(reporter)) continue;
+            if (reporter != null) return null;
+            reporter = candidate;
+        }
+        return reporter;
+    }
+
+    private boolean hookOpened() {
         if (DexKitCache.isCacheValid()) {
             Method cached = DexKitCache.loadMethod("GhostViewOnce", Module.hostClassLoader);
             if (cached != null && isReporter(cached)) {
@@ -26,7 +69,7 @@ public class GhostViewOnceHook {
                 ModuleLog.detail("(InstaEclipse | ViewOnce): hooked (cached): "
                         + cached.getDeclaringClass().getName() + "." + cached.getName());
                 FeatureStatusTracker.setHooked("GhostViewOnce");
-                return;
+                return true;
             }
         }
 
@@ -34,10 +77,11 @@ public class GhostViewOnceHook {
                 FindMethod.create().matcher(MethodMatcher.create()
                         .usingStrings("direct_v2/visual_threads/%s/item_seen/", "raven_media")),
                 "endpoint+raven_media")) {
-            return;
+            return true;
         }
 
         ModuleLog.error("(InstaEclipse | ViewOnce): Could not turn on hiding view-once opens: not supported by this Instagram version");
+        return false;
     }
 
     private boolean tryHookViewOnce(FindMethod query, String tag) {

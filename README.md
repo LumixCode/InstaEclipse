@@ -192,7 +192,7 @@ The whole menu, grouped the way it is inside Instagram. Option names match the m
 | View stories anonymously | You don't appear in the viewer list. Stories and highlights you watched stay grey on this device, also after Instagram forgets older ones |
 | Watch lives anonymously | Join lives without being counted |
 | Don't report screenshots | The sender isn't told when you screenshot disappearing media |
-| Open view-once secretly | The sender isn't told that you opened it |
+| Open view-once secretly | The sender isn't told that you opened it, also for media that *Replay view-once media* keeps open |
 | Allow screenshots and screen recording | Also where Instagram blocks them, such as disappearing media |
 | Replay view-once media | View-once and view-twice photos and videos open again and again; other media stays as it is |
 | ✨ Mark stories seen by hand | With View stories anonymously on, *Mark this story as seen* in the story ⋮ menu sends the view for that one story. Once it went out, the row reads *Remark as seen*, so you can tell which stories you marked, also after a restart |
