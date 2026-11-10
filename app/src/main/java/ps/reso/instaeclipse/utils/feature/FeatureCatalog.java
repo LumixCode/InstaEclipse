@@ -626,6 +626,9 @@ public final class FeatureCatalog {
                                     .aliases(R.string.ig_profile_analyzer, R.string.ig_feat_followers_history)
                                     .words("unfollow", "followers history"),
                             info("profileAnalyzerHelp", R.string.cat_profileAnalyzerHelp).requires("profileAnalyzer"),
+                            sw("followerDropAlert", R.string.cat_followerDropAlert, R.drawable.ic_notification)
+                                    .desc(R.string.cat_followerDropAlert_desc).requires("profileAnalyzer")
+                                    .status("FollowerDropAlert").words("unfollow", "lost followers", "reminder", "weekly"),
                             action("watchlist", R.string.ig_pa_watchlist, R.drawable.ic_eye)
                                     .requires("profileAnalyzer").side(Side.IG_ONLY),
                             sw("followListExport", R.string.ig_dialog_misc_follow_export, R.drawable.ic_download)

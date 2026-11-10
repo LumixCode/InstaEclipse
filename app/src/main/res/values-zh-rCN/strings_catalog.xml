@@ -158,6 +158,12 @@
     <string name="cat_profileAnalyzer">主页分析</string>
     <string name="cat_profileAnalyzer_desc">自上次检查以来谁关注或取消关注了某个账号</string>
     <string name="cat_profileAnalyzerHelp">在你自己的粉丝列表中：列表工具 &gt; 检查我的粉丝</string>
+    <string name="cat_followerDropAlert">粉丝数下降时提醒我</string>
+    <string name="cat_followerDropAlert_desc">在你的主页上：粉丝数少于上次检查时提示，并每周提醒你再次检查</string>
+    <string name="ig_follower_drop_notice">自 %2$s 的上次检查以来，你的粉丝数减少了 %1$d。</string>
+    <string name="ig_follower_reminder_notice">你上次检查粉丝是在 %1$s。</string>
+    <string name="ig_follower_counts_notice">当时的粉丝数：%1$d · 现在：%2$d</string>
+    <string name="ig_follower_week_notice">最近 7 天：%1$d 人取消关注，%2$d 位新粉丝</string>
     <string name="cat_followListExport_desc">通过粉丝或已关注列表上的工具按钮</string>
     <string name="cat_sec_profile_tools">主页工具</string>
     <string name="cat_profileMenuTools">复制用户名和简介、全部下载</string>

@@ -80,6 +80,10 @@ public final class NoticeQueue<S> {
         return done.contains(id);
     }
 
+    public synchronized void renew(String id) {
+        if (id != null && !id.equals(open)) done.remove(id);
+    }
+
     public synchronized void reset() {
         waiting.clear();
         done.clear();

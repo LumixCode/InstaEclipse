@@ -158,6 +158,12 @@
     <string name="cat_profileAnalyzer">Analisi profilo</string>
     <string name="cat_profileAnalyzer_desc">Chi ha iniziato o smesso di seguire un account dall\'ultimo controllo</string>
     <string name="cat_profileAnalyzerHelp">Nella tua lista Follower: menu Strumenti lista &gt; Controlla i miei follower</string>
+    <string name="cat_followerDropAlert">Avvisami quando il numero dei miei follower cala</string>
+    <string name="cat_followerDropAlert_desc">Sul tuo profilo: un avviso quando hai meno follower rispetto all\'ultimo controllo e un promemoria settimanale per controllare di nuovo</string>
+    <string name="ig_follower_drop_notice">Il numero dei tuoi follower è sceso di %1$d dall\'ultimo controllo del %2$s.</string>
+    <string name="ig_follower_reminder_notice">Il tuo ultimo controllo dei follower è del %1$s.</string>
+    <string name="ig_follower_counts_notice">Follower allora: %1$d · ora: %2$d</string>
+    <string name="ig_follower_week_notice">Ultimi 7 giorni: %1$d hanno smesso, %2$d nuovi</string>
     <string name="cat_followListExport_desc">Dal pulsante Strumenti lista in una lista di follower o seguiti</string>
     <string name="cat_sec_profile_tools">Strumenti profilo</string>
     <string name="cat_profileMenuTools">Copia nome utente e bio, scarica tutto</string>

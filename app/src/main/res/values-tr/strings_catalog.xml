@@ -158,6 +158,12 @@
     <string name="cat_profileAnalyzer">Profil analizi</string>
     <string name="cat_profileAnalyzer_desc">Son kontrolden bu yana bir hesabı kimlerin takip ettiği veya takibi bıraktığı</string>
     <string name="cat_profileAnalyzerHelp">Kendi Takipçiler listenizde: araçlar menüsü &gt; Takipçilerimi kontrol et</string>
+    <string name="cat_followerDropAlert">Takipçi sayım düşünce haber ver</string>
+    <string name="cat_followerDropAlert_desc">Profilinizde: son kontrolünüze göre daha az takipçiniz olduğunda bir bildirim ve yeniden kontrol etmeniz için haftalık bir hatırlatma</string>
+    <string name="ig_follower_drop_notice">Takipçi sayınız, %2$s tarihindeki son kontrolünüzden bu yana %1$d azaldı.</string>
+    <string name="ig_follower_reminder_notice">Son takipçi kontrolünüz %1$s tarihindeydi.</string>
+    <string name="ig_follower_counts_notice">Takipçi sayısı o zaman: %1$d · şimdi: %2$d</string>
+    <string name="ig_follower_week_notice">Son 7 gün: %1$d takipten çıktı, %2$d yeni</string>
     <string name="cat_followListExport_desc">Takipçi veya takip edilenler listesindeki araçlar düğmesinden</string>
     <string name="cat_sec_profile_tools">Profil araçları</string>
     <string name="cat_profileMenuTools">Kullanıcı adını ve biyografiyi kopyala, tümünü indir</string>

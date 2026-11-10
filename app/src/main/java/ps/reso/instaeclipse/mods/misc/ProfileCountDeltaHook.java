@@ -97,6 +97,7 @@ public final class ProfileCountDeltaHook {
             XposedBridge.hookMethod(cellMethod, CELL);
             WatchlistStore.setCountSource(ProfileCountDeltaHook::countsAtAnalysis);
             FeatureStatusTracker.setHooked(KEY);
+            FollowerDropAlert.attached(true);
             ModuleLog.ok(TAG + "Ready");
             ModuleLog.detail(TAG + "metrics " + stepMethod.getDeclaringClass().getName() + "." + stepMethod.getName()
                     + " (state arg " + stateArg + ", id " + (profileIdField == null ? "profile header"
@@ -104,6 +105,7 @@ public final class ProfileCountDeltaHook {
                     + "), cell " + cellMethod.getDeclaringClass().getName() + "." + cellMethod.getName());
         } catch (Throwable t) {
             if (FeatureFlags.profileAnalyzer) FeatureStatusTracker.setBroken(KEY, R.string.ig_pa_count_delta);
+            FollowerDropAlert.attached(false);
             ModuleLog.error(TAG + "Could not turn on follower count changes on profiles", t);
         }
     }
@@ -269,8 +271,9 @@ public final class ProfileCountDeltaHook {
                 Integer count = (Integer) param.args[countArg];
                 String profile = BINDING.get();
                 if (profile != null && count != null) SEEN.put(profile, followers, count, System.currentTimeMillis());
-                bind(value, param.args[cellArg] instanceof View v ? v : null, profile,
-                        viewerOf(sessionArg >= 0 ? param.args[sessionArg] : null), followers, count);
+                String viewer = viewerOf(sessionArg >= 0 ? param.args[sessionArg] : null);
+                if (followers && count != null) FollowerDropAlert.observe(value.getContext(), profile, viewer, count);
+                bind(value, param.args[cellArg] instanceof View v ? v : null, profile, viewer, followers, count);
             } catch (Throwable t) {
                 diagnostic("cell bind failed: " + t);
             }

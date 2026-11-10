@@ -387,6 +387,7 @@ Turning off Reels overrides the reel limits. A blocked reel says why and until w
 | Show follow status pop-up | A short message when you open a profile |
 | 🆕 Show who follows you back | In your own Following list |
 | ✨ Profile analyzer | Who an account followed or unfollowed, and who followed or left it, since the last check, with a dated changelog |
+| 🆕 Tell me when my follower count drops | A notice on your own profile when Instagram shows fewer followers than at your last *Check my followers*, at most every 12 hours, and a weekly reminder once that check is over 7 days old. It only reads the count Instagram already loaded |
 | Export follower lists to CSV | From the tools icon on a followers or following list |
 | ✨ Copy username and bio, download all | Hold the username or bio to copy it; ⋮ › *Download all posts* |
 | Saved button on your profile | Your Saved posts one tap away |

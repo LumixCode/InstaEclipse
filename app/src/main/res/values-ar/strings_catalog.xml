@@ -158,6 +158,12 @@
     <string name="cat_profileAnalyzer">محلل الملفات الشخصية</string>
     <string name="cat_profileAnalyzer_desc">من تابع حسابًا أو ألغى متابعته منذ آخر فحص</string>
     <string name="cat_profileAnalyzerHelp">في قائمة متابِعيك: «أدوات القائمة» &gt; «فحص متابِعيّ»</string>
+    <string name="cat_followerDropAlert">أخبرني عندما ينخفض عدد متابِعيّ</string>
+    <string name="cat_followerDropAlert_desc">في ملفك الشخصي: إشعار عندما يصبح عدد متابِعيك أقل مما كان عند آخر فحص، وتذكير أسبوعي بإعادة الفحص</string>
+    <string name="ig_follower_drop_notice">انخفض عدد متابِعيك بمقدار %1$d منذ آخر فحص في %2$s.</string>
+    <string name="ig_follower_reminder_notice">كان آخر فحص لمتابِعيك في %1$s.</string>
+    <string name="ig_follower_counts_notice">المتابِعون حينها: %1$d · الآن: %2$d</string>
+    <string name="ig_follower_week_notice">آخر 7 أيام: ‏%1$d ألغوا المتابعة، %2$d جدد</string>
     <string name="cat_followListExport_desc">من زر الأدوات في قائمة المتابِعين أو المتابَعين</string>
     <string name="cat_sec_profile_tools">أدوات الملف الشخصي</string>
     <string name="cat_profileMenuTools">نسخ اسم المستخدم والنبذة، وتنزيل الكل</string>

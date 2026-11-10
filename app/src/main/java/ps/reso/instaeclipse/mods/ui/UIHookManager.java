@@ -50,7 +50,9 @@ public class UIHookManager {
     static final String NOTICE_LOCKS = "locks";
     static final String NOTICE_STORY_CACHE = "storyCache";
     static final String NOTICE_GESTURES = "gestures";
+    static final String NOTICE_FOLLOWERS = "followers";
     static final long WHAT_CHANGED_DELAY_MS = 1500L;
+    static final long FOLLOWER_NOTICE_DELAY_MS = 1500L;
     private static final NoticeQueue<Activity> notices = new NoticeQueue<>();
 
     public static Activity getCurrentActivity() {
@@ -261,6 +263,8 @@ public class UIHookManager {
             notices.offer(new NoticeQueue.Notice<>(NoticeQueue.WhatChanged.ID, 2, a -> whatChanged));
             notices.offer(new NoticeQueue.Notice<>(NOTICE_STORY_CACHE, 3, a -> StoryCachePrompt.pending()));
             notices.offer(new NoticeQueue.Notice<>(NOTICE_GESTURES, 4, a -> !Gestures.hintShown(a)));
+            notices.offer(new NoticeQueue.Notice<>(NOTICE_FOLLOWERS, 5,
+                    a -> ps.reso.instaeclipse.mods.misc.FollowerDropAlert.pending()));
             NoticeQueue.Notice<Activity> next = notices.next(activity);
             if (next == null) return;
             switch (next.id) {
@@ -270,6 +274,7 @@ public class UIHookManager {
                 }
                 case NoticeQueue.WhatChanged.ID -> showWhatChangedLater(activity);
                 case NOTICE_STORY_CACHE -> StoryCachePrompt.onMainResume(activity);
+                case NOTICE_FOLLOWERS -> showFollowerNoticeLater(activity);
                 default -> armGestureHint(activity);
             }
         } catch (Exception e) {
@@ -293,6 +298,34 @@ public class UIHookManager {
                         + e.getClass().getSimpleName() + ": " + e.getMessage());
             }
         }, WHAT_CHANGED_DELAY_MS);
+    }
+
+    public static void followerNoticeReady() {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            notices.renew(NOTICE_FOLLOWERS);
+            Activity activity = currentActivity;
+            if (activity != null && !activity.isFinishing() && !activity.isDestroyed() && activity.hasWindowFocus()) {
+                mainNotices(activity);
+            }
+        });
+    }
+
+    private static void showFollowerNoticeLater(Activity activity) {
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            try {
+                boolean inFront = currentActivity == activity && !activity.isFinishing() && !activity.isDestroyed()
+                        && activity.hasWindowFocus();
+                if (!inFront || notices.finished(NOTICE_FOLLOWERS)) return;
+                notices.opened(NOTICE_FOLLOWERS);
+                if (!ps.reso.instaeclipse.mods.misc.FollowerDropAlert.show(activity, () -> notices.closed(NOTICE_FOLLOWERS))) {
+                    notices.closed(NOTICE_FOLLOWERS);
+                    notices.renew(NOTICE_FOLLOWERS);
+                }
+            } catch (Exception e) {
+                ModuleLog.warn("(InstaEclipse) Could not show the follower notice: "
+                        + e.getClass().getSimpleName() + ": " + e.getMessage());
+            }
+        }, FOLLOWER_NOTICE_DELAY_MS);
     }
 
     static void armGestureHint(Activity activity) {

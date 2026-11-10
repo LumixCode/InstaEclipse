@@ -158,6 +158,12 @@
     <string name="cat_profileAnalyzer">Анализ профиля</string>
     <string name="cat_profileAnalyzer_desc">Кто подписался на аккаунт или отписался с последней проверки</string>
     <string name="cat_profileAnalyzerHelp">В своём списке подписчиков: «Инструменты списка» &gt; «Проверить моих подписчиков»</string>
+    <string name="cat_followerDropAlert">Сообщать, когда число подписчиков уменьшается</string>
+    <string name="cat_followerDropAlert_desc">В вашем профиле: уведомление, если подписчиков стало меньше, чем при последней проверке, и еженедельное напоминание проверить снова</string>
+    <string name="ig_follower_drop_notice">Число ваших подписчиков уменьшилось на %1$d с последней проверки %2$s.</string>
+    <string name="ig_follower_reminder_notice">Последняя проверка подписчиков была %1$s.</string>
+    <string name="ig_follower_counts_notice">Подписчиков тогда: %1$d · сейчас: %2$d</string>
+    <string name="ig_follower_week_notice">Последние 7 дней: %1$d отписались, %2$d новых</string>
     <string name="cat_followListExport_desc">Кнопкой инструментов в списке подписчиков или подписок</string>
     <string name="cat_sec_profile_tools">Инструменты профиля</string>
     <string name="cat_profileMenuTools">Копировать имя и описание, скачать всё</string>

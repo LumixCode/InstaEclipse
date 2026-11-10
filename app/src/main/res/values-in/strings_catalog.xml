@@ -158,6 +158,12 @@
     <string name="cat_profileAnalyzer">Penganalisis profil</string>
     <string name="cat_profileAnalyzer_desc">Siapa yang mulai atau berhenti mengikuti akun sejak pemeriksaan terakhir</string>
     <string name="cat_profileAnalyzerHelp">Di daftar Pengikut Anda sendiri: menu alat &gt; Periksa pengikut saya</string>
+    <string name="cat_followerDropAlert">Beri tahu saat jumlah pengikut saya turun</string>
+    <string name="cat_followerDropAlert_desc">Di profil Anda: pemberitahuan saat pengikut Anda lebih sedikit daripada saat pemeriksaan terakhir, dan pengingat mingguan untuk memeriksa lagi</string>
+    <string name="ig_follower_drop_notice">Jumlah pengikut Anda turun %1$d sejak pemeriksaan terakhir pada %2$s.</string>
+    <string name="ig_follower_reminder_notice">Pemeriksaan pengikut terakhir Anda pada %1$s.</string>
+    <string name="ig_follower_counts_notice">Pengikut saat itu: %1$d · sekarang: %2$d</string>
+    <string name="ig_follower_week_notice">7 hari terakhir: %1$d berhenti mengikuti, %2$d baru</string>
     <string name="cat_followListExport_desc">Dari tombol alat di daftar pengikut atau mengikuti</string>
     <string name="cat_sec_profile_tools">Alat profil</string>
     <string name="cat_profileMenuTools">Salin nama pengguna dan bio, unduh semua</string>

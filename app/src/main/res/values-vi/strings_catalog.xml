@@ -158,6 +158,12 @@
     <string name="cat_profileAnalyzer">Phân tích hồ sơ</string>
     <string name="cat_profileAnalyzer_desc">Ai đã theo dõi hoặc bỏ theo dõi một tài khoản kể từ lần kiểm tra trước</string>
     <string name="cat_profileAnalyzerHelp">Trên danh sách Người theo dõi của bạn: menu công cụ &gt; Kiểm tra người theo dõi</string>
+    <string name="cat_followerDropAlert">Báo cho tôi khi số người theo dõi giảm</string>
+    <string name="cat_followerDropAlert_desc">Trên trang cá nhân của bạn: thông báo khi bạn có ít người theo dõi hơn lần kiểm tra trước, và lời nhắc hằng tuần để kiểm tra lại</string>
+    <string name="ig_follower_drop_notice">Số người theo dõi của bạn đã giảm %1$d kể từ lần kiểm tra gần nhất vào %2$s.</string>
+    <string name="ig_follower_reminder_notice">Lần kiểm tra người theo dõi gần nhất của bạn là vào %1$s.</string>
+    <string name="ig_follower_counts_notice">Người theo dõi khi đó: %1$d · hiện tại: %2$d</string>
+    <string name="ig_follower_week_notice">7 ngày qua: %1$d bỏ theo dõi, %2$d mới</string>
     <string name="cat_followListExport_desc">Từ nút công cụ trên danh sách người theo dõi hoặc đang theo dõi</string>
     <string name="cat_sec_profile_tools">Công cụ trang cá nhân</string>
     <string name="cat_profileMenuTools">Sao chép tên người dùng, tiểu sử và tải tất cả</string>

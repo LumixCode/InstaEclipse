@@ -158,6 +158,12 @@
     <string name="cat_profileAnalyzer">Analiza profilu</string>
     <string name="cat_profileAnalyzer_desc">Kto zaczął lub przestał obserwować konto od ostatniego sprawdzenia</string>
     <string name="cat_profileAnalyzerHelp">Na własnej liście obserwujących: menu narzędzi &gt; Sprawdź moich obserwujących</string>
+    <string name="cat_followerDropAlert">Powiadom mnie, gdy liczba obserwujących spadnie</string>
+    <string name="cat_followerDropAlert_desc">Na Twoim profilu: informacja, gdy masz mniej obserwujących niż przy ostatnim sprawdzeniu, oraz cotygodniowe przypomnienie o ponownym sprawdzeniu</string>
+    <string name="ig_follower_drop_notice">Liczba Twoich obserwujących spadła o %1$d od ostatniego sprawdzenia %2$s.</string>
+    <string name="ig_follower_reminder_notice">Ostatnie sprawdzenie obserwujących: %1$s.</string>
+    <string name="ig_follower_counts_notice">Obserwujący wtedy: %1$d · teraz: %2$d</string>
+    <string name="ig_follower_week_notice">Ostatnie 7 dni: %1$d przestało, %2$d nowych</string>
     <string name="cat_followListExport_desc">Przyciskiem narzędzi na liście obserwujących lub obserwowanych</string>
     <string name="cat_sec_profile_tools">Narzędzia profilu</string>
     <string name="cat_profileMenuTools">Kopiuj nazwę i bio, pobierz wszystko</string>

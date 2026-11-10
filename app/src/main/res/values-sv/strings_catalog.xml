@@ -158,6 +158,12 @@
     <string name="cat_profileAnalyzer">Profilanalys</string>
     <string name="cat_profileAnalyzer_desc">Vem som har börjat eller slutat följa ett konto sedan senaste kontrollen</string>
     <string name="cat_profileAnalyzerHelp">I din egen följarlista: Listverktyg &gt; Kontrollera mina följare</string>
+    <string name="cat_followerDropAlert">Säg till när mitt följarantal sjunker</string>
+    <string name="cat_followerDropAlert_desc">På din profil: en notis när du har färre följare än vid din senaste kontroll, och en påminnelse varje vecka om att kontrollera igen</string>
+    <string name="ig_follower_drop_notice">Ditt följarantal har sjunkit med %1$d sedan din senaste kontroll den %2$s.</string>
+    <string name="ig_follower_reminder_notice">Din senaste följarkontroll var den %1$s.</string>
+    <string name="ig_follower_counts_notice">Följare då: %1$d · nu: %2$d</string>
+    <string name="ig_follower_week_notice">Senaste 7 dagarna: %1$d slutade följa, %2$d nya</string>
     <string name="cat_followListExport_desc">Med verktygsknappen i listan Följare eller Följer</string>
     <string name="cat_sec_profile_tools">Profilverktyg</string>
     <string name="cat_profileMenuTools">Kopiera användarnamn och bio, ladda ned allt</string>

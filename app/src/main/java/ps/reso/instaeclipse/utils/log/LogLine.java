@@ -79,6 +79,7 @@ public final class LogLine {
         NAMES.put("FollowingOnlyFeed", "Following-only feed");
         NAMES.put("FollowingFeed", "Following-only feed");
         NAMES.put("FollowTools", "Follower lists");
+        NAMES.put("FollowerAlert", "Follower count notices");
         NAMES.put("HighResImages", "High-resolution images");
         NAMES.put("ImportReceiver", "Developer config import");
         NAMES.put("RestoreReceiver", "Settings restore");

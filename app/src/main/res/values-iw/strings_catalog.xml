@@ -158,6 +158,12 @@
     <string name="cat_profileAnalyzer">מנתח פרופילים</string>
     <string name="cat_profileAnalyzer_desc">מי התחיל או הפסיק לעקוב אחרי חשבון מאז הבדיקה האחרונה</string>
     <string name="cat_profileAnalyzerHelp">ברשימת העוקבים שלך: תפריט הכלים &gt; \"בדוק את העוקבים שלי\"</string>
+    <string name="cat_followerDropAlert">הודע לי כשמספר העוקבים שלי יורד</string>
+    <string name="cat_followerDropAlert_desc">בפרופיל שלך: הודעה כשיש לך פחות עוקבים מאשר בבדיקה האחרונה, ותזכורת שבועית לבדוק שוב</string>
+    <string name="ig_follower_drop_notice">מספר העוקבים שלך ירד ב-%1$d מאז הבדיקה האחרונה ב-%2$s.</string>
+    <string name="ig_follower_reminder_notice">בדיקת העוקבים האחרונה שלך הייתה ב-%1$s.</string>
+    <string name="ig_follower_counts_notice">עוקבים אז: %1$d · עכשיו: %2$d</string>
+    <string name="ig_follower_week_notice">7 הימים האחרונים: ‏%1$d הפסיקו, %2$d חדשים</string>
     <string name="cat_followListExport_desc">מכפתור הכלים ברשימת עוקבים או במעקב</string>
     <string name="cat_sec_profile_tools">כלי פרופיל</string>
     <string name="cat_profileMenuTools">העתק שם משתמש וביו, הורד הכול</string>

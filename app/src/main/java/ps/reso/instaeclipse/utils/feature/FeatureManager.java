@@ -305,6 +305,8 @@ public class FeatureManager {
         reg(FeatureFlags.postCountSpoof,       "PostCountSpoof",       R.string.cat_postCountSpoof);
         reg(FeatureFlags.profileSpoofer,       "ProfileSpoofer",       R.string.cat_profileSpoofer);
         reg(FeatureFlags.profileAnalyzer,      "ProfileAnalyzer",      R.string.cat_profileAnalyzer);
+        reg(FeatureFlags.followerDropAlert && FeatureFlags.profileAnalyzer,
+                "FollowerDropAlert", R.string.cat_followerDropAlert);
         reg(FeatureFlags.hideInstants,         "HideInstants",         R.string.ig_hide_instants);
         reg(FeatureFlags.backLeavesHome,       "BackLeavesHome",       R.string.ig_back_leaves_home);
         reg(FeatureFlags.hideDmBlend,          "HideDmBlend",          R.string.ig_dialog_hide_dm_blend);

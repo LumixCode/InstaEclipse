@@ -158,6 +158,12 @@
     <string name="cat_profileAnalyzer">Analyse de profil</string>
     <string name="cat_profileAnalyzer_desc">Qui s\'est abonné ou désabonné d\'un compte depuis la dernière vérification</string>
     <string name="cat_profileAnalyzerHelp">Dans votre liste Abonnés : menu des outils &gt; Vérifier mes abonnés</string>
+    <string name="cat_followerDropAlert">M\'avertir quand mon nombre d\'abonnés baisse</string>
+    <string name="cat_followerDropAlert_desc">Sur votre profil : un avis quand vous avez moins d\'abonnés qu\'à votre dernière vérification, et un rappel hebdomadaire pour vérifier à nouveau</string>
+    <string name="ig_follower_drop_notice">Votre nombre d\'abonnés a baissé de %1$d depuis votre dernière vérification du %2$s.</string>
+    <string name="ig_follower_reminder_notice">Votre dernière vérification des abonnés date du %1$s.</string>
+    <string name="ig_follower_counts_notice">Abonnés à ce moment-là : %1$d · maintenant : %2$d</string>
+    <string name="ig_follower_week_notice">7 derniers jours : %1$d désabonnés, %2$d nouveaux</string>
     <string name="cat_followListExport_desc">Depuis le bouton des outils d\'une liste d\'abonnés ou d\'abonnements</string>
     <string name="cat_sec_profile_tools">Outils de profil</string>
     <string name="cat_profileMenuTools">Copier le nom et la bio, tout télécharger</string>

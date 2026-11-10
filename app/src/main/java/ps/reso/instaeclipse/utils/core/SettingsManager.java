@@ -205,6 +205,7 @@ public class SettingsManager {
         editor.putString("spoofBio", FeatureFlags.spoofBio);
         editor.putString("spoofAvatar", FeatureFlags.spoofAvatar);
         editor.putBoolean("profileAnalyzer", FeatureFlags.profileAnalyzer);
+        editor.putBoolean("followerDropAlert", FeatureFlags.followerDropAlert);
         editor.putBoolean("fancyBioFont", FeatureFlags.fancyBioFont);
         editor.putBoolean("savedOnProfile", FeatureFlags.savedOnProfile);
         editor.putBoolean("lockSavedCollections", FeatureFlags.lockSavedCollections);
@@ -460,6 +461,7 @@ public class SettingsManager {
         FeatureFlags.spoofBio = prefs.getString("spoofBio", "");
         FeatureFlags.spoofAvatar = prefs.getString("spoofAvatar", "");
         FeatureFlags.profileAnalyzer = prefs.getBoolean("profileAnalyzer", false);
+        FeatureFlags.followerDropAlert = prefs.getBoolean("followerDropAlert", false);
         FeatureFlags.fancyBioFont = prefs.getBoolean("fancyBioFont", false);
         FeatureFlags.savedOnProfile = prefs.getBoolean("savedOnProfile", false);
         FeatureFlags.lockSavedCollections = prefs.getBoolean("lockSavedCollections", false);

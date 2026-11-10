@@ -158,6 +158,12 @@
     <string name="cat_profileAnalyzer">Profil analizatoru</string>
     <string name="cat_profileAnalyzer_desc">Son yoxlamadan bəri hesabı kim izləyib və ya izləməni dayandırıb</string>
     <string name="cat_profileAnalyzerHelp">Öz İzləyicilər siyahınızda: alətlər menyusu &gt; İzləyicilərimi yoxla</string>
+    <string name="cat_followerDropAlert">İzləyici sayım azalanda xəbər ver</string>
+    <string name="cat_followerDropAlert_desc">Profilinizdə: son yoxlamaya nisbətən daha az izləyiciniz olduqda bildiriş və yenidən yoxlamaq üçün həftəlik xatırlatma</string>
+    <string name="ig_follower_drop_notice">Son yoxlamanızdan (%2$s) bəri izləyici sayınız %1$d azalıb.</string>
+    <string name="ig_follower_reminder_notice">Son izləyici yoxlamanız %1$s tarixində olub.</string>
+    <string name="ig_follower_counts_notice">İzləyicilər o vaxt: %1$d · indi: %2$d</string>
+    <string name="ig_follower_week_notice">Son 7 gün: %1$d dayandırdı, %2$d yeni</string>
     <string name="cat_followListExport_desc">İzləyici və ya izlənilən siyahısındakı alətlər düyməsindən</string>
     <string name="cat_sec_profile_tools">Profil alətləri</string>
     <string name="cat_profileMenuTools">İstifadəçi adını və bionu kopyala, hamısını yüklə</string>

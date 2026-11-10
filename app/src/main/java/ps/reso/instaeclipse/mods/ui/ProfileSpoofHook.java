@@ -84,7 +84,9 @@ public final class ProfileSpoofHook {
                 @Override protected void afterHookedMethod(MethodHookParam param) {
                     if (!FeatureFlags.profileSpoofer) return;
                     Object value = spoofed(which, ((Method) param.method).getReturnType());
-                    if (value != null && isSelf(param.thisObject)) param.setResult(value);
+                    if (value == null || !isSelf(param.thisObject)) return;
+                    if (which == 0) ps.reso.instaeclipse.mods.misc.FollowerDropAlert.observeReal(selfId, param.getResult());
+                    param.setResult(value);
                 }
             };
             for (Method m : found) {

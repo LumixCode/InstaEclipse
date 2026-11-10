@@ -167,6 +167,7 @@ public class FeatureFlags {
     public static volatile String  spoofBio = "";
     public static volatile String  spoofAvatar = "";
     public static volatile boolean profileAnalyzer = false;
+    public static volatile boolean followerDropAlert = false;
     public static volatile boolean exactTimestamps = false;
     public static volatile String  exactTimestampFormat = "";
     public static volatile String  spoofDevice = "";

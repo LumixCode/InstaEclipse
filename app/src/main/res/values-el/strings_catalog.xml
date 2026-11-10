@@ -158,6 +158,12 @@
     <string name="cat_profileAnalyzer">Αναλυτής προφίλ</string>
     <string name="cat_profileAnalyzer_desc">Ποιος ακολούθησε ή σταμάτησε να ακολουθεί έναν λογαριασμό από τον τελευταίο έλεγχο</string>
     <string name="cat_profileAnalyzerHelp">Στη δική σας λίστα Ακόλουθοι: μενού εργαλείων &gt; Έλεγχος των ακολούθων μου</string>
+    <string name="cat_followerDropAlert">Ειδοποίηση όταν μειώνονται οι ακόλουθοί μου</string>
+    <string name="cat_followerDropAlert_desc">Στο προφίλ σας: ειδοποίηση όταν έχετε λιγότερους ακολούθους από τον τελευταίο έλεγχο, και εβδομαδιαία υπενθύμιση για νέο έλεγχο</string>
+    <string name="ig_follower_drop_notice">Οι ακόλουθοί σας μειώθηκαν κατά %1$d από τον τελευταίο έλεγχο στις %2$s.</string>
+    <string name="ig_follower_reminder_notice">Ο τελευταίος έλεγχος ακολούθων έγινε στις %1$s.</string>
+    <string name="ig_follower_counts_notice">Ακόλουθοι τότε: %1$d · τώρα: %2$d</string>
+    <string name="ig_follower_week_notice">Τελευταίες 7 ημέρες: %1$d σταμάτησαν, %2$d νέοι</string>
     <string name="cat_followListExport_desc">Από το κουμπί εργαλείων σε λίστα Ακόλουθοι ή Ακολουθεί</string>
     <string name="cat_sec_profile_tools">Εργαλεία προφίλ</string>
     <string name="cat_profileMenuTools">Αντιγραφή ονόματος χρήστη και βιογραφικού, λήψη όλων</string>

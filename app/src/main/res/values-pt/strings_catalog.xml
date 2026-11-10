@@ -158,6 +158,12 @@
     <string name="cat_profileAnalyzer">Analisador de perfis</string>
     <string name="cat_profileAnalyzer_desc">Quem seguiu ou deixou de seguir uma conta desde a última verificação</string>
     <string name="cat_profileAnalyzerHelp">Na sua própria lista de Seguidores: menu Ferramentas da lista &gt; Verificar meus seguidores</string>
+    <string name="cat_followerDropAlert">Avisar quando meu número de seguidores cair</string>
+    <string name="cat_followerDropAlert_desc">No seu perfil: um aviso quando você tem menos seguidores do que na última verificação e um lembrete semanal para verificar de novo</string>
+    <string name="ig_follower_drop_notice">Seu número de seguidores caiu %1$d desde a última verificação em %2$s.</string>
+    <string name="ig_follower_reminder_notice">Sua última verificação de seguidores foi em %1$s.</string>
+    <string name="ig_follower_counts_notice">Seguidores na época: %1$d · agora: %2$d</string>
+    <string name="ig_follower_week_notice">Últimos 7 dias: %1$d deixaram de seguir, %2$d novos</string>
     <string name="cat_followListExport_desc">Pelo botão de ferramentas em uma lista de seguidores ou seguindo</string>
     <string name="cat_sec_profile_tools">Ferramentas de perfil</string>
     <string name="cat_profileMenuTools">Copiar usuário e bio, baixar tudo</string>
