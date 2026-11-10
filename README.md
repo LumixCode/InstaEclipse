@@ -116,6 +116,26 @@ Compared with [upstream InstaEclipse 0.8.2](https://github.com/ReSo7200/InstaEcl
 | **Crash reports** | The companion's Logs tab shows how Instagram's earlier sessions ended (Android 11+) and keeps recent crash reports you can share or delete |
 | **Video covers** | The download sheet can also save a video's cover image |
 
+### ⬆️ Taken from upstream 0.8.3
+
+Upstream's 0.8.3 branch was reviewed feature by feature. These were rebuilt for this fork; every new switch is off by default:
+
+| Feature | What you get |
+|---|---|
+| **Reels filters** | *Hide suggestions in Reels* and *Hide paid partnerships*; a reel you open yourself always shows |
+| **Clean up Reels** | Hide the Follow button, the template and audio pills or the comment bar. *Remove Meta AI* now also clears the Meta AI pills on reels |
+| **Blur the bars around Reels** | A blurred copy of the cover instead of black bars (Android 12+) |
+| **Voice messages list** | A chat's loaded voice messages in one list, to play or download |
+| **Keep viewed Instants** | Viewed Instants stay on your phone until you clear them (500 MB cap) |
+| **Unsent messages** | Search the kept messages of all chats and export them to one CSV file |
+| **Follower drop notice** | A notice when your follower count is lower than at your last check, and a weekly reminder |
+| **Glass navigation bar** | Experimental: Instagram's floating bottom bar as blurred glass |
+| **Smaller changes** | Back on the scrolled feed asks before refreshing; *Prefer videos that play everywhere* works in Standard; *Remove Meta AI* hides the AI bots in Messages search; the second view-once report is hidden; the app icon follows themed icons; download messages from the companion show inside Instagram |
+
+Safer than upstream: follower lists, *Unsend multiple*, *Load all comments* and *Download all posts* always run at a random, human pace (upstream only with a switch); *Block analytics* drops reports before any request exists instead of failing them; *Block analytics*, developer options and config import ask before turning on; the spoofed device fingerprint keeps the phone's real Android version.
+
+Not taken from 0.8.3: the one-tap no-root patcher, copying another account's profile onto your own, trusting an Instagram that isn't signed by Instagram, the free app icon picker and keeping stories from picked accounts.
+
 ### ✨ Works differently
 
 | Feature | Upstream 0.8.2 | This fork |
