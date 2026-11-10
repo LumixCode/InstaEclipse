@@ -93,7 +93,7 @@ public final class DeviceSpoofHook {
             set(Build.class, "PRODUCT", p.product);
             set(Build.class, "HARDWARE", p.device);
             set(Build.class, "BOARD", p.device);
-            set(Build.class, "FINGERPRINT", p.fingerprint);
+            set(Build.class, "FINGERPRINT", fingerprint(p));
             set(Build.class, "ID", p.buildId);
             set(Build.class, "DISPLAY", p.buildId);
             set(Build.class, "SOC_MANUFACTURER", p.socManufacturer);
@@ -158,7 +158,7 @@ public final class DeviceSpoofHook {
                 case "name": return p.product;
             }
         }
-        if (FINGERPRINT_PROP.matcher(key).matches()) return p.fingerprint;
+        if (FINGERPRINT_PROP.matcher(key).matches()) return fingerprint(p);
         switch (key) {
             case "ro.soc.manufacturer": return p.socManufacturer;
             case "ro.soc.model": return p.socModel;
@@ -166,6 +166,13 @@ public final class DeviceSpoofHook {
             case "ro.build.id": return p.buildId;
             default: return null;
         }
+    }
+
+    static String fingerprint(Profile p) {
+        if (p == null || p.fingerprint == null) return null;
+        String release = Build.VERSION.RELEASE;
+        if (release == null || release.isEmpty()) return p.fingerprint;
+        return p.fingerprint.replaceFirst(":[0-9][0-9.]*/", ":" + java.util.regex.Matcher.quoteReplacement(release) + "/");
     }
 
     public static void syncOverrides(Context context) {
